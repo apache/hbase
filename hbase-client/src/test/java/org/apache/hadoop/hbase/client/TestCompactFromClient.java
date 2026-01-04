@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -34,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -94,7 +94,7 @@ public class TestCompactFromClient {
       mockedMeta.when(() -> ClientMetaTableAccessor.getTableHRegionLocations(any(AsyncTable.class),
         any(TableName.class))).thenReturn(nullLocationsFuture);
       AsyncTable<AdvancedScanResultConsumer> metaTable = mock(AsyncTable.class);
-      when(connection.getTable(META_TABLE_NAME)).thenReturn(metaTable);
+      when(connection.getTable(MetaTableName.getInstance())).thenReturn(metaTable);
 
       HashedWheelTimer hashedWheelTimer = mock(HashedWheelTimer.class);
       AsyncAdminBuilderBase asyncAdminBuilderBase = mock(AsyncAdminBuilderBase.class);

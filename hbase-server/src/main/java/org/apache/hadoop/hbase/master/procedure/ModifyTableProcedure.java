@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.ConcurrentTableModificationException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.CoprocessorDescriptor;
@@ -109,8 +110,8 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
       Set<byte[]> cfs = this.modifiedTableDescriptor.getColumnFamilyNames();
       for (byte[] family : UNDELETABLE_META_COLUMNFAMILIES) {
         if (!cfs.contains(family)) {
-          throw new HBaseIOException(
-            "Delete of hbase:meta column family " + Bytes.toString(family));
+          throw new HBaseIOException("Delete of " + MetaTableName.getInstance() + " column family "
+            + Bytes.toString(family));
         }
       }
     }

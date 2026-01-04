@@ -27,8 +27,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
@@ -149,7 +149,7 @@ public class HBaseFsckRepair {
   public static void fixMetaHoleOnlineAndAddReplicas(Configuration conf, RegionInfo hri,
     Collection<ServerName> servers, int numReplicas) throws IOException {
     Connection conn = ConnectionFactory.createConnection(conf);
-    Table meta = conn.getTable(TableName.META_TABLE_NAME);
+    Table meta = conn.getTable(MetaTableName.getInstance());
     Put put = MetaTableAccessor.makePutFromRegionInfo(hri);
     if (numReplicas > 1) {
       Random rand = ThreadLocalRandom.current();

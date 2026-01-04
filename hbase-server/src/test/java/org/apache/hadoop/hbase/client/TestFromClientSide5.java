@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -2532,7 +2533,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     scan.setCaching(1);
     // Filter out any records
     scan.setFilter(new FilterList(new FirstKeyOnlyFilter(), new InclusiveStopFilter(new byte[0])));
-    try (Table table = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
+    try (Table table = TEST_UTIL.getConnection().getTable(MetaTableName.getInstance())) {
       try (ResultScanner s = table.getScanner(scan)) {
         assertNull(s.next());
       }

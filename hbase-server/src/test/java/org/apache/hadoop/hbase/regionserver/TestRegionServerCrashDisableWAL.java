@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -65,7 +66,7 @@ public class TestRegionServerCrashDisableWAL {
     UTIL.createTable(TABLE_NAME, CF);
     UTIL.waitTableAvailable(TABLE_NAME);
     HRegionServer rs = UTIL.getRSForFirstRegionInTable(TABLE_NAME);
-    if (!rs.getRegions(TableName.META_TABLE_NAME).isEmpty()) {
+    if (!rs.getRegions(MetaTableName.getInstance()).isEmpty()) {
       HRegionServer rs1 = UTIL.getOtherRegionServer(rs);
       UTIL.moveRegionAndWait(
         UTIL.getMiniHBaseCluster().getRegions(TABLE_NAME).get(0).getRegionInfo(),

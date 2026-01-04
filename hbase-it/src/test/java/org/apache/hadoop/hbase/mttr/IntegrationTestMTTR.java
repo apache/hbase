@@ -34,6 +34,7 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.NamespaceExistException;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -184,7 +185,7 @@ public class IntegrationTestMTTR {
 
     // Set up the action that will move the regions of meta.
     moveMetaRegionsAction = new MoveRegionsOfTableAction(sleepTime,
-      MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME, TableName.META_TABLE_NAME);
+      MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME, MetaTableName.getInstance());
 
     // Set up the action that will move the regions of our table.
     moveRegionAction = new MoveRegionsOfTableAction(sleepTime,

@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TestMetaTableAccessor;
 import org.apache.hadoop.hbase.client.Consistency;
@@ -147,7 +148,7 @@ public class TestRegionReplicas {
     openRegion(HTU, getRS(), hriSecondary);
     Table meta = null;
     try {
-      meta = HTU.getConnection().getTable(TableName.META_TABLE_NAME);
+      meta = HTU.getConnection().getTable(MetaTableName.getInstance());
       TestMetaTableAccessor.assertMetaLocation(meta, hriPrimary.getRegionName(),
         getRS().getServerName(), -1, 1, false);
     } finally {

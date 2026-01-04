@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseRpcServicesBase;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -1925,7 +1926,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
           tableName = ProtobufUtil.toTableName(ri.getTableName());
         }
       }
-      if (!TableName.META_TABLE_NAME.equals(tableName)) {
+      if (!MetaTableName.getInstance().equals(tableName)) {
         throw new ServiceException(ie);
       }
       // We are assigning meta, wait a little for regionserver to finish initialization.

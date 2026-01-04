@@ -787,7 +787,7 @@ public class CellComparatorImpl implements CellComparator {
    */
   public static CellComparator getCellComparator(byte[] tableName) {
     // FYI, TableName.toBytes does not create an array; just returns existing array pointer.
-    return Bytes.equals(tableName, TableName.META_TABLE_NAME.toBytes())
+    return Bytes.equals(tableName, MetaTableName.getInstance().toBytes())
       ? MetaCellComparator.META_COMPARATOR
       : CellComparatorImpl.COMPARATOR;
   }

@@ -56,6 +56,7 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Size;
@@ -104,7 +105,7 @@ public class TestSimpleRegionNormalizer {
 
   @Test
   public void testNoNormalizationForMetaTable() {
-    TableName testTable = TableName.META_TABLE_NAME;
+    TableName testTable = MetaTableName.getInstance();
     TableDescriptor testMetaTd = TableDescriptorBuilder.newBuilder(testTable).build();
     List<RegionInfo> RegionInfo = new ArrayList<>();
     Map<byte[], Integer> regionSizes = new HashMap<>();

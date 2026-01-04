@@ -36,6 +36,7 @@ import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -64,7 +65,7 @@ public class TestAdmin extends TestAdminBase {
   @Test
   public void testListTableDescriptors() throws IOException {
     TableDescriptor metaTableDescriptor =
-      TEST_UTIL.getAdmin().getDescriptor(TableName.META_TABLE_NAME);
+      TEST_UTIL.getAdmin().getDescriptor(MetaTableName.getInstance());
     List<TableDescriptor> tableDescriptors = TEST_UTIL.getAdmin().listTableDescriptors(true);
     assertTrue(tableDescriptors.contains(metaTableDescriptor));
     tableDescriptors = TEST_UTIL.getAdmin().listTableDescriptors(false);

@@ -68,11 +68,11 @@ public class TestHBaseMetaEdit {
   // make sure that with every possible way, we get the same meta table descriptor.
   private TableDescriptor getMetaDescriptor() throws TableNotFoundException, IOException {
     Admin admin = UTIL.getAdmin();
-    TableDescriptor get = admin.getDescriptor(TableName.META_TABLE_NAME);
+    TableDescriptor get = admin.getDescriptor(MetaTableName.getInstance());
     TableDescriptor list =
       admin.listTableDescriptors(true).stream().filter(td -> td.isMetaTable()).findAny().get();
     TableDescriptor listByName =
-      admin.listTableDescriptors(Collections.singletonList(TableName.META_TABLE_NAME)).get(0);
+      admin.listTableDescriptors(Collections.singletonList(MetaTableName.getInstance())).get(0);
     TableDescriptor listByNs =
       admin.listTableDescriptorsByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME).stream()
         .filter(td -> td.isMetaTable()).findAny().get();
@@ -91,7 +91,7 @@ public class TestHBaseMetaEdit {
   @Test
   public void testEditMeta() throws IOException {
     Admin admin = UTIL.getAdmin();
-    admin.tableExists(TableName.META_TABLE_NAME);
+    admin.tableExists(MetaTableName.getInstance());
     TableDescriptor originalDescriptor = getMetaDescriptor();
     ColumnFamilyDescriptor cfd = originalDescriptor.getColumnFamily(HConstants.CATALOG_FAMILY);
     int oldVersions = cfd.getMaxVersions();
@@ -100,11 +100,11 @@ public class TestHBaseMetaEdit {
       .setConfiguration(ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING,
         DataBlockEncoding.ROW_INDEX_V1.toString())
       .build();
-    admin.modifyColumnFamily(TableName.META_TABLE_NAME, cfd);
+    admin.modifyColumnFamily(MetaTableName.getInstance(), cfd);
     byte[] extraColumnFamilyName = Bytes.toBytes("xtra");
     ColumnFamilyDescriptor newCfd =
       ColumnFamilyDescriptorBuilder.newBuilder(extraColumnFamilyName).build();
-    admin.addColumnFamily(TableName.META_TABLE_NAME, newCfd);
+    admin.addColumnFamily(MetaTableName.getInstance(), newCfd);
     TableDescriptor descriptor = getMetaDescriptor();
     // Assert new max versions is == old versions plus 1.
     assertEquals(oldVersions + 1,
@@ -126,11 +126,11 @@ public class TestHBaseMetaEdit {
     assertEquals(encoding, DataBlockEncoding.ROW_INDEX_V1.toString());
     assertTrue(r.getStore(extraColumnFamilyName) != null);
     // Assert we can't drop critical hbase:meta column family but we can drop any other.
-    admin.deleteColumnFamily(TableName.META_TABLE_NAME, newCfd.getName());
+    admin.deleteColumnFamily(MetaTableName.getInstance(), newCfd.getName());
     descriptor = getMetaDescriptor();
     assertTrue(descriptor.getColumnFamily(newCfd.getName()) == null);
     try {
-      admin.deleteColumnFamily(TableName.META_TABLE_NAME, HConstants.CATALOG_FAMILY);
+      admin.deleteColumnFamily(MetaTableName.getInstance(), HConstants.CATALOG_FAMILY);
       fail("Should not reach here");
     } catch (HBaseIOException hioe) {
       assertTrue(hioe.getMessage().contains("Delete of hbase:meta"));
@@ -144,7 +144,7 @@ public class TestHBaseMetaEdit {
   @Test
   public void testAlterMetaWithReadOnly() throws IOException {
     Admin admin = UTIL.getAdmin();
-    TableDescriptor origMetaTableDesc = admin.getDescriptor(TableName.META_TABLE_NAME);
+    TableDescriptor origMetaTableDesc = admin.getDescriptor(MetaTableName.getInstance());
     assertFalse(origMetaTableDesc.isReadOnly());
     TableDescriptor newTD =
       TableDescriptorBuilder.newBuilder(origMetaTableDesc).setReadOnly(true).build();
@@ -152,7 +152,7 @@ public class TestHBaseMetaEdit {
       admin.modifyTable(newTD);
       fail("Meta table can't be set as read only");
     } catch (Exception e) {
-      assertFalse(admin.getDescriptor(TableName.META_TABLE_NAME).isReadOnly());
+      assertFalse(admin.getDescriptor(MetaTableName.getInstance()).isReadOnly());
     }
 
     // Create a table to check region assignment & meta operation

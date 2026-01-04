@@ -26,6 +26,7 @@ import java.util.Optional;
 import java.util.Set;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -57,7 +58,7 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
   @Test
   public void testDisableCatalogTable() throws Exception {
     try {
-      this.admin.disableTable(TableName.META_TABLE_NAME).join();
+      this.admin.disableTable(MetaTableName.getInstance()).join();
       fail("Expected to throw ConstraintException");
     } catch (Exception e) {
     }

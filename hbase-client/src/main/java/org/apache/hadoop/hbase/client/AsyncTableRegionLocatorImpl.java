@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -63,7 +64,7 @@ class AsyncTableRegionLocatorImpl implements AsyncTableRegionLocator {
           .thenApply(locs -> Arrays.asList(locs.getRegionLocations()));
       }
       CompletableFuture<List<HRegionLocation>> future = ClientMetaTableAccessor
-        .getTableHRegionLocations(conn.getTable(TableName.META_TABLE_NAME), tableName);
+        .getTableHRegionLocations(conn.getTable(MetaTableName.getInstance()), tableName);
       addListener(future, (locs, error) -> locs.forEach(loc -> {
         // the cache assumes that all locations have a serverName. only add if that's true
         if (loc.getServerName() != null) {

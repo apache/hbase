@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -231,7 +231,7 @@ public class TruncateRegionProcedure
   }
 
   private boolean prepareTruncate() throws IOException {
-    if (getTableName().equals(TableName.META_TABLE_NAME)) {
+    if (getTableName().equals(MetaTableName.getInstance())) {
       throw new IOException("Can't truncate region in catalog tables");
     }
     return true;
