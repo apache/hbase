@@ -104,6 +104,7 @@ public class TestCompactionPolicy {
         .setColumnFamily(familyDescriptor).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
 
+    fs.mkdirs(new Path(basedir, logName));
     hlog = new FSHLog(fs, basedir, logName, conf);
     hlog.init();
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,

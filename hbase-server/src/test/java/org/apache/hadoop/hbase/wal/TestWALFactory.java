@@ -623,7 +623,7 @@ public class TestWALFactory {
   @Test
   public void testWALProviders() throws IOException {
     Configuration conf = new Configuration();
-    WALFactory walFactory = new WALFactory(conf, this.currentServername.toString());
+    WALFactory walFactory = new WALFactory(conf, this.currentServername, null);
     assertEquals(walFactory.getWALProvider().getClass(), walFactory.getMetaProvider().getClass());
 
     // if providers are not set and do not enable SyncReplicationWALProvider
@@ -635,7 +635,7 @@ public class TestWALFactory {
   public void testOnlySetWALProvider() throws IOException {
     Configuration conf = new Configuration();
     conf.set(WAL_PROVIDER, WALFactory.Providers.multiwal.name());
-    WALFactory walFactory = new WALFactory(conf, this.currentServername.toString());
+    WALFactory walFactory = new WALFactory(conf, this.currentServername, null);
     // class of WALProvider and metaWALProvider are the same when metaWALProvider is not set
     assertEquals(WALFactory.Providers.multiwal.clazz, walFactory.getWALProvider().getClass());
     assertEquals(WALFactory.Providers.multiwal.clazz, walFactory.getMetaProvider().getClass());
@@ -645,7 +645,7 @@ public class TestWALFactory {
   public void testOnlySetMetaWALProvider() throws IOException {
     Configuration conf = new Configuration();
     conf.set(META_WAL_PROVIDER, WALFactory.Providers.asyncfs.name());
-    WALFactory walFactory = new WALFactory(conf, this.currentServername.toString());
+    WALFactory walFactory = new WALFactory(conf, this.currentServername, null);
     assertEquals(WALFactory.Providers.defaultProvider.clazz,
       walFactory.getWALProvider().getClass());
     assertEquals(WALFactory.Providers.asyncfs.clazz, walFactory.getMetaProvider().getClass());
@@ -655,19 +655,18 @@ public class TestWALFactory {
   public void testDefaultProvider() throws IOException {
     final Configuration conf = new Configuration();
     // AsyncFSWal is the default, we should be able to request any WAL.
-    final WALFactory normalWalFactory = new WALFactory(conf, this.currentServername.toString());
+    final WALFactory normalWalFactory = new WALFactory(conf, this.currentServername, null);
     Class<? extends WALProvider> fshLogProvider =
       normalWalFactory.getProviderClass(WALFactory.WAL_PROVIDER, Providers.filesystem.name());
     assertEquals(Providers.filesystem.clazz, fshLogProvider);
 
     // Imagine a world where MultiWAL is the default
-    final WALFactory customizedWalFactory =
-      new WALFactory(conf, this.currentServername.toString()) {
-        @Override
-        Providers getDefaultProvider() {
-          return Providers.multiwal;
-        }
-      };
+    final WALFactory customizedWalFactory = new WALFactory(conf, this.currentServername, null) {
+      @Override
+      Providers getDefaultProvider() {
+        return Providers.multiwal;
+      }
+    };
     // If we don't specify a WALProvider, we should get the default implementation.
     Class<? extends WALProvider> multiwalProviderClass =
       customizedWalFactory.getProviderClass(WALFactory.WAL_PROVIDER, Providers.multiwal.name());
@@ -678,7 +677,7 @@ public class TestWALFactory {
   public void testCustomProvider() throws IOException {
     final Configuration config = new Configuration();
     config.set(WALFactory.WAL_PROVIDER, IOTestProvider.class.getName());
-    final WALFactory walFactory = new WALFactory(config, this.currentServername.toString());
+    final WALFactory walFactory = new WALFactory(config, this.currentServername, null);
     Class<? extends WALProvider> walProvider =
       walFactory.getProviderClass(WALFactory.WAL_PROVIDER, Providers.filesystem.name());
     assertEquals(IOTestProvider.class, walProvider);
@@ -690,7 +689,7 @@ public class TestWALFactory {
   public void testCustomMetaProvider() throws IOException {
     final Configuration config = new Configuration();
     config.set(WALFactory.META_WAL_PROVIDER, IOTestProvider.class.getName());
-    final WALFactory walFactory = new WALFactory(config, this.currentServername.toString());
+    final WALFactory walFactory = new WALFactory(config, this.currentServername, null);
     Class<? extends WALProvider> walProvider =
       walFactory.getProviderClass(WALFactory.WAL_PROVIDER, Providers.filesystem.name());
     assertEquals(Providers.filesystem.clazz, walProvider);
@@ -702,7 +701,7 @@ public class TestWALFactory {
   public void testCustomReplicationProvider() throws IOException {
     final Configuration config = new Configuration();
     config.set(WALFactory.REPLICATION_WAL_PROVIDER, IOTestProvider.class.getName());
-    final WALFactory walFactory = new WALFactory(config, this.currentServername.toString());
+    final WALFactory walFactory = new WALFactory(config, this.currentServername, null);
     Class<? extends WALProvider> walProvider =
       walFactory.getProviderClass(WALFactory.WAL_PROVIDER, Providers.filesystem.name());
     assertEquals(Providers.filesystem.clazz, walProvider);
