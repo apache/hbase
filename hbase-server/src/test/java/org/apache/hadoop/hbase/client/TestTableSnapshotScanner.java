@@ -213,6 +213,9 @@ public class TestTableSnapshotScanner {
     TableSnapshotScanner scanner = null;
     try {
       createTableAndSnapshot(UTIL, tableName, snapshotName, 50);
+      // LOG.info("Print FS state after taking snapshot of the table: ");
+      // CommonFSUtils.logFileSystemState(rootDir.getFileSystem(UTIL.getConfiguration()), rootDir,
+      // LOG);
       Path restoreDir = UTIL.getDataTestDirOnTestFS(snapshotName);
       Scan scan = new Scan().withStartRow(bbb).setLimit(100); // limit the scan
 
