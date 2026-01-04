@@ -18,9 +18,10 @@
 package org.apache.hadoop.hbase.master.http;
 
 import java.io.IOException;
-import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -54,7 +55,8 @@ public class MasterDumpServlet extends StateDumpServlet {
     assert master != null : "No Master in context!";
 
     response.setContentType("text/plain");
-    OutputStream os = response.getOutputStream();
+    OutputStreamWriter os =
+      new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8);
     try (PrintWriter out = new PrintWriter(os)) {
 
       out.println("Master status for " + master.getServerName() + " as of " + new Date());
@@ -82,15 +84,16 @@ public class MasterDumpServlet extends StateDumpServlet {
       out.println("\n\nStacks:");
       out.println(LINE);
       out.flush();
-      PrintStream ps = new PrintStream(response.getOutputStream(), false, "UTF-8");
+      PrintStream ps =
+        new PrintStream(response.getOutputStream(), false, StandardCharsets.UTF_8.toString());
       Threads.printThreadInfo(ps, "");
       ps.flush();
 
       out.println("\n\nMaster configuration:");
       out.println(LINE);
-      Configuration conf = master.getConfiguration();
+      Configuration redactedConf = getRedactedConfiguration(master.getConfiguration());
       out.flush();
-      conf.writeXml(os);
+      redactedConf.writeXml(os);
       os.flush();
 
       out.println("\n\nRecent regionserver aborts:");
@@ -104,7 +107,7 @@ public class MasterDumpServlet extends StateDumpServlet {
 
       out.println("\n\nRS Queue:");
       out.println(LINE);
-      if (isShowQueueDump(conf)) {
+      if (isShowQueueDump(master.getConfiguration())) {
         RSDumpServlet.dumpQueue(master, out);
       }
       out.flush();
