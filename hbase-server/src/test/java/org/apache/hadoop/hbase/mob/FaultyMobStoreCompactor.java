@@ -328,11 +328,11 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
             progress.cancel();
             return false;
           }
-          if (kvs != null && bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
-            ((ShipperListener) writer).beforeShipped();
-            kvs.shipped();
-            bytesWrittenProgressForShippedCall = 0;
-          }
+        }
+        if (kvs != null && bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
+          ((ShipperListener) writer).beforeShipped();
+          kvs.shipped();
+          bytesWrittenProgressForShippedCall = 0;
         }
         // Log the progress of long running compactions every minute if
         // logging at DEBUG level
