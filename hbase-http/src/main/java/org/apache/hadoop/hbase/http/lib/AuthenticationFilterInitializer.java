@@ -26,8 +26,8 @@ import org.apache.hadoop.hbase.http.FilterContainer;
 import org.apache.hadoop.hbase.http.FilterInitializer;
 import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
-import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
+import org.apache.hadoop.hbase.security.authentication.server.AuthenticationFilter;
+import org.apache.hadoop.hbase.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**

@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
+import org.apache.hadoop.hbase.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.junit.AfterClass;
