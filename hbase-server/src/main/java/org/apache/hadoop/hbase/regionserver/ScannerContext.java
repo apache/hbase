@@ -104,6 +104,14 @@ public class ScannerContext {
   private static boolean DEFAULT_KEEP_PROGRESS = false;
 
   /**
+   * For some operations (specifically Compactions) we use the block size limit to avoid next()
+   * calls taking too much time. In those cases the entire region is handled with a single
+   * ScannerContext, and we do want to reset the block progress after the next() call returns.
+   */
+  boolean keepBlockProgress;
+  private static boolean DEFAULT_KEEP_BLOCK_PROGRESS = true;
+
+  /**
    * Allows temporarily ignoring limits and skipping tracking of batch and size progress. Used when
    * skipping to the next row, in which case all processed cells are thrown away so should not count
    * towards progress.
@@ -129,6 +137,11 @@ public class ScannerContext {
 
   ScannerContext(boolean keepProgress, LimitFields limitsToCopy, boolean trackMetrics,
     ServerSideScanMetrics scanMetrics) {
+    this(keepProgress, DEFAULT_KEEP_BLOCK_PROGRESS, limitsToCopy, trackMetrics, scanMetrics);
+  }
+
+  ScannerContext(boolean keepProgress, boolean keepBlockProgress, LimitFields limitsToCopy,
+    boolean trackMetrics, ServerSideScanMetrics scanMetrics) {
     this.limits = new LimitFields();
     if (limitsToCopy != null) {
       this.limits.copy(limitsToCopy);
@@ -138,6 +151,7 @@ public class ScannerContext {
     progress = new ProgressFields(0, 0, 0, 0);
 
     this.keepProgress = keepProgress;
+    this.keepBlockProgress = keepBlockProgress;
     this.scannerState = DEFAULT_STATE;
     this.metrics =
       trackMetrics ? (scanMetrics != null ? scanMetrics : new ServerSideScanMetrics()) : null;
@@ -259,11 +273,15 @@ public class ScannerContext {
   /**
    * Clear away any progress that has been made so far. All progress fields are reset to initial
    * values. Only clears progress that should reset between rows. {@link #getBlockSizeProgress()} is
-   * not reset because it increments for all blocks scanned whether the result is included or
-   * filtered.
+   * not reset by default because it increments for all blocks scanned whether the result is
+   * included or filtered.
    */
   void clearProgress() {
-    progress.setFields(0, 0, 0, getBlockSizeProgress());
+    if (keepBlockProgress) {
+      progress.setFields(0, 0, 0, getBlockSizeProgress());
+    } else {
+      progress.setFields(0, 0, 0, 0);
+    }
   }
 
   /**
@@ -421,6 +439,7 @@ public class ScannerContext {
 
   public static final class Builder {
     boolean keepProgress = DEFAULT_KEEP_PROGRESS;
+    boolean keepBlockProgress = DEFAULT_KEEP_BLOCK_PROGRESS;
     boolean trackMetrics = false;
     LimitFields limits = new LimitFields();
     ServerSideScanMetrics scanMetrics = null;
@@ -434,6 +453,11 @@ public class ScannerContext {
 
     public Builder setKeepProgress(boolean keepProgress) {
       this.keepProgress = keepProgress;
+      return this;
+    }
+
+    public Builder setKeepBlockProgress(boolean keepBlockProgress) {
+      this.keepBlockProgress = keepBlockProgress;
       return this;
     }
 
@@ -468,7 +492,7 @@ public class ScannerContext {
     }
 
     public ScannerContext build() {
-      return new ScannerContext(keepProgress, limits, trackMetrics, scanMetrics);
+      return new ScannerContext(keepProgress, keepBlockProgress, limits, trackMetrics, scanMetrics);
     }
   }
 
