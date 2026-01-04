@@ -25,5 +25,11 @@ linklint/
 **/*.log
 tmp
 **/.flattened-pom.xml
+.sw*
+.*.sw*
+ID
+filenametags
+tags
+.codegenie/
 .vscode/
 **/__pycache__

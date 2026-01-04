@@ -1424,6 +1424,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       .setColumnFamily(FSTableDescriptors.getTableFamilyDescForMeta(conf))
       .setColumnFamily(FSTableDescriptors.getReplBarrierFamilyDescForMeta()).build();
     long pid = this.modifyTable(TableName.META_TABLE_NAME, () -> newMetaDesc, 0, 0, false);
+    waitForProcedureToComplete(pid, "Failed to add table and rep_barrier CFs to meta");
+  }
+
+  private void waitForProcedureToComplete(long pid, String errorMessage) throws IOException {
     int tries = 30;
     while (
       !(getMasterProcedureExecutor().isFinished(pid)) && getMasterProcedureExecutor().isRunning()
@@ -1442,8 +1446,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     } else {
       Procedure<?> result = getMasterProcedureExecutor().getResult(pid);
       if (result != null && result.isFailed()) {
-        throw new IOException("Failed to add table and rep_barrier CFs to meta. "
-          + MasterProcedureUtil.unwrapRemoteIOException(result));
+        throw new IOException(
+          errorMessage + ". " + MasterProcedureUtil.unwrapRemoteIOException(result));
       }
     }
   }
@@ -1630,6 +1634,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   @Override
   public MasterWalManager getMasterWalManager() {
     return this.walManager;
+  }
+
+  @Override
+  public boolean rotateSystemKeyIfChanged() throws IOException {
+    // STUB - Feature not yet implemented
+    return false;
   }
 
   @Override
@@ -2508,6 +2518,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   @Override
   public long createSystemTable(final TableDescriptor tableDescriptor) throws IOException {
+    return createSystemTable(tableDescriptor, false);
+  }
+
+  private long createSystemTable(final TableDescriptor tableDescriptor, final boolean isCritical)
+    throws IOException {
     if (isStopped()) {
       throw new MasterNotRunningException();
     }
@@ -2524,10 +2539,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
     // This special create table is called locally to master. Therefore, no RPC means no need
     // to use nonce to detect duplicated RPC call.
-    long procId = this.procedureExecutor.submitProcedure(
-      new CreateTableProcedure(procedureExecutor.getEnvironment(), tableDescriptor, newRegions));
-
-    return procId;
+    CreateTableProcedure proc =
+      new CreateTableProcedure(procedureExecutor.getEnvironment(), tableDescriptor, newRegions);
+    proc.setCriticalSystemTable(isCritical);
+    return this.procedureExecutor.submitProcedure(proc);
   }
 
   private void startActiveMasterManager(int infoPort) throws KeeperException {

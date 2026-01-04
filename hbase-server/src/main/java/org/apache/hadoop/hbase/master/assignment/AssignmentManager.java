@@ -1300,7 +1300,7 @@ public class AssignmentManager {
 
   private void updateRegionTransition(ServerStateNode serverNode, TransitionCode state,
     RegionInfo regionInfo, long seqId, long procId) throws IOException {
-    checkMetaLoaded(regionInfo);
+    checkMetaLoaded(regionInfo, procId);
 
     RegionStateNode regionNode = regionStates.getRegionStateNode(regionInfo);
     if (regionNode == null) {
@@ -1352,7 +1352,7 @@ public class AssignmentManager {
   private void updateRegionSplitTransition(final ServerStateNode serverNode,
     final TransitionCode state, final RegionInfo parent, final RegionInfo hriA,
     final RegionInfo hriB) throws IOException {
-    checkMetaLoaded(parent);
+    checkMetaLoaded(parent, Procedure.NO_PROC_ID);
 
     if (state != TransitionCode.READY_TO_SPLIT) {
       throw new UnexpectedStateException(
@@ -1406,7 +1406,7 @@ public class AssignmentManager {
   private void updateRegionMergeTransition(final ServerStateNode serverNode,
     final TransitionCode state, final RegionInfo merged, final RegionInfo hriA,
     final RegionInfo hriB) throws IOException {
-    checkMetaLoaded(merged);
+    checkMetaLoaded(merged, Procedure.NO_PROC_ID);
 
     if (state != TransitionCode.READY_TO_MERGE) {
       throw new UnexpectedStateException(
@@ -1938,13 +1938,27 @@ public class AssignmentManager {
    * Used to check if the meta loading is done.
    * <p/>
    * if not we throw PleaseHoldException since we are rebuilding the RegionStates
-   * @param hri region to check if it is already rebuild
+   * @param hri    region to check if it is already rebuild
+   * @param procId the procedure id for this region operation, or NO_PROC_ID if not available
    * @throws PleaseHoldException if meta has not been loaded yet
    */
-  private void checkMetaLoaded(RegionInfo hri) throws PleaseHoldException {
+  private void checkMetaLoaded(RegionInfo hri, long procId) throws PleaseHoldException {
     if (!isRunning()) {
       throw new PleaseHoldException("AssignmentManager not running");
     }
+
+    // Check if the procedure is for a critical system table
+    // Critical system tables can proceed even if meta is not loaded yet
+    // We are currently making procId available only for the code path which can execute during the
+    // cluster boot up. In the future, if additional code paths execute during cluster boot up, we
+    // will need to make procId available for all those code paths.
+    if (procId != Procedure.NO_PROC_ID) {
+      Procedure<?> proc = master.getMasterProcedureExecutor().getProcedure(procId);
+      if (proc != null && proc.isCriticalSystemTable()) {
+        return;
+      }
+    }
+
     boolean meta = isMetaRegion(hri);
     boolean metaLoaded = isMetaLoaded();
     if (!meta && !metaLoaded) {

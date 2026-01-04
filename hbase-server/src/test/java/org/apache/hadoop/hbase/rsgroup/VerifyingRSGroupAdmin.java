@@ -999,4 +999,5 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   public boolean isReplicationPeerModificationEnabled() throws IOException {
     return admin.isReplicationPeerModificationEnabled();
   }
+
 }
