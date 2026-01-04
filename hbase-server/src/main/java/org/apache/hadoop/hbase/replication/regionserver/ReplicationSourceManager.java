@@ -47,6 +47,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -318,7 +319,18 @@ public class ReplicationSourceManager {
     WALFileLengthProvider walFileLengthProvider = this.walFactory.getWALProvider() != null
       ? this.walFactory.getWALProvider().getWALFileLengthProvider()
       : p -> OptionalLong.empty();
-    src.init(conf, fs, this, queueStorage, replicationPeer, server, queueData, clusterId,
+
+    // Create merged configuration with peer overrides as higher priority and
+    // global config as lower priority
+    Configuration mergedConf = conf;
+    if (!replicationPeer.getPeerConfig().getConfiguration().isEmpty()) {
+      CompoundConfiguration compound = new CompoundConfiguration();
+      compound.add(conf);
+      compound.addStringMap(replicationPeer.getPeerConfig().getConfiguration());
+      mergedConf = compound;
+    }
+
+    src.init(mergedConf, fs, this, queueStorage, replicationPeer, server, queueData, clusterId,
       walFileLengthProvider, new MetricsSource(queueData.getId().toString()));
     return src;
   }

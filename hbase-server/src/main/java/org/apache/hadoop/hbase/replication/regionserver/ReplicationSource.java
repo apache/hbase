@@ -862,4 +862,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
   public long getTotalReplicatedEdits() {
     return totalReplicatedEdits.get();
   }
+
+  long getSleepForRetries() {
+    return sleepForRetries;
+  }
 }
