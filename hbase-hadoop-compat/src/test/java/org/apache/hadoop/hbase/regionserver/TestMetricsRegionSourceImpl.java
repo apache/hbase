@@ -112,6 +112,16 @@ public class TestMetricsRegionSourceImpl {
     }
 
     @Override
+    public long getMemStoreHeapSize() {
+      return 0;
+    }
+
+    @Override
+    public long getMemStoreOffHeapSize() {
+      return 0;
+    }
+
+    @Override
     public long getStoreFileSize() {
       return 0;
     }
