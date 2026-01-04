@@ -591,6 +591,18 @@ public class HStoreFile implements StoreFile {
     }
   }
 
+  public synchronized void closeStoreFile() {
+    try {
+      boolean evictOnClose = cacheConf != null ? cacheConf.shouldEvictOnClose() : true;
+      if (this.initialReader != null) {
+        this.initialReader.close(evictOnClose);
+        this.initialReader = null;
+      }
+    } catch (IOException e) {
+      LOG.warn("failed to close reader", e);
+    }
+  }
+
   /**
    * Delete this file
    */
