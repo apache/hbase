@@ -131,8 +131,7 @@ abstract class RpcConnection {
     this.connectionAttributes = connectionAttributes;
     User ticket = remoteId.getTicket();
     this.securityInfo = SecurityInfo.getInfo(remoteId.getServiceName());
-    // Avoid using SASL when retrieving the cluster ID
-    this.useSasl = isSecurityEnabled && !HConstants.CLUSTER_ID_DEFAULT.equals(clusterId);
+    this.useSasl = isSecurityEnabled;
 
     // Choose the correct Token and AuthenticationProvider for this client to use
     SaslClientAuthenticationProviders providers =
