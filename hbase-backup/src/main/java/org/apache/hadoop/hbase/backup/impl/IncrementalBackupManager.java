@@ -61,7 +61,6 @@ public class IncrementalBackupManager extends BackupManager {
    */
   public Map<String, Long> getIncrBackupLogFileMap() throws IOException {
     List<String> logList;
-    Map<String, Long> newTimestamps;
     Map<String, Long> previousTimestampMins;
 
     String savedStartCode = readBackupStartCode();
@@ -95,12 +94,48 @@ public class IncrementalBackupManager extends BackupManager {
           LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_NAME, props);
       }
     }
-    newTimestamps = readRegionServerLastLogRollResult();
+    Map<String, Long> newTimestamps = readRegionServerLastLogRollResult();
+
+    Map<String, Long> latestLogRollByHost = readRegionServerLastLogRollResult();
+    for (Map.Entry<String, Long> entry : latestLogRollByHost.entrySet()) {
+      String host = entry.getKey();
+      long latestLogRoll = entry.getValue();
+      Long earliestTimestampToIncludeInBackup = previousTimestampMins.get(host);
+
+      boolean isInactive = earliestTimestampToIncludeInBackup != null
+        && earliestTimestampToIncludeInBackup > latestLogRoll;
+
+      long latestTimestampToIncludeInBackup;
+      if (isInactive) {
+        LOG.debug("Avoided resetting latest timestamp boundary for {} from {} to {}", host,
+          earliestTimestampToIncludeInBackup, latestLogRoll);
+        latestTimestampToIncludeInBackup = earliestTimestampToIncludeInBackup;
+      } else {
+        latestTimestampToIncludeInBackup = latestLogRoll;
+      }
+      newTimestamps.put(host, latestTimestampToIncludeInBackup);
+    }
 
     logList = getLogFilesForNewBackup(previousTimestampMins, newTimestamps, conf, savedStartCode);
     logList = excludeProcV2WALs(logList);
     backupInfo.setIncrBackupFileList(logList);
 
+    // Update boundaries based on WALs that will be backed up
+    for (String logFile : logList) {
+      Path logPath = new Path(logFile);
+      String logHost = BackupUtils.parseHostFromOldLog(logPath);
+      if (logHost == null) {
+        logHost = BackupUtils.parseHostNameFromLogFile(logPath.getParent());
+      }
+      if (logHost != null) {
+        long logTs = BackupUtils.getCreationTime(logPath);
+        Long latestTimestampToIncludeInBackup = newTimestamps.get(logHost);
+        if (latestTimestampToIncludeInBackup == null || logTs > latestTimestampToIncludeInBackup) {
+          LOG.info("Updating backup boundary for inactive host {}: timestamp={}", logHost, logTs);
+          newTimestamps.put(logHost, logTs);
+        }
+      }
+    }
     return newTimestamps;
   }
 
@@ -243,28 +278,6 @@ public class IncrementalBackupManager extends BackupManager {
     }
     // remove newest log per host because they are still in use
     resultLogFiles.removeAll(newestLogs);
-
-    // Update newestTimestamps with max timestamp of files we're actually backing up.
-    // This ensures dead/decommissioned hosts get their boundaries recorded in trslm,
-    // preventing re-backup of the same WAL files on subsequent incremental backups.
-    for (String logFile : resultLogFiles) {
-      Path logPath = new Path(logFile);
-      String logHost = BackupUtils.parseHostFromOldLog(logPath);
-      if (logHost == null) {
-        logHost = BackupUtils.parseHostNameFromLogFile(logPath.getParent());
-      }
-      if (logHost != null) {
-        long logTs = BackupUtils.getCreationTime(logPath);
-        Long existingTs = newestTimestamps.get(logHost);
-        if (existingTs == null || logTs > existingTs) {
-          newestTimestamps.put(logHost, logTs);
-          if (existingTs == null) {
-            LOG.info("Updating backup boundary for inactive host {}: timestamp={}", logHost, logTs);
-          }
-        }
-      }
-    }
-
     return resultLogFiles;
   }
 
