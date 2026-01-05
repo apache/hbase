@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.List;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufWALStreamReader;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufWALTailingReader;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
@@ -203,8 +205,10 @@ public class WALFactory {
     return provider;
   }
 
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*|.*/HBaseTestingUtility.java|.*/WALPerformanceEvaluation.java")
   public WALFactory(Configuration conf, String factoryId) throws IOException {
-    this(conf, factoryId, null);
+    this(conf, factoryId, null, true);
   }
 
   /**
@@ -213,6 +217,30 @@ public class WALFactory {
    * @param abortable the server to abort
    */
   public WALFactory(Configuration conf, String factoryId, Abortable abortable) throws IOException {
+    this(conf, factoryId, abortable, false);
+  }
+
+  private static void createWALDirectory(Configuration conf, String factoryId) throws IOException {
+    FileSystem walFs = CommonFSUtils.getWALFileSystem(conf);
+    Path walRootDir = CommonFSUtils.getWALRootDir(conf);
+    Path walDir = new Path(walRootDir, AbstractFSWALProvider.getWALDirectoryName(factoryId));
+    if (!walFs.exists(walDir) && !walFs.mkdirs(walDir)) {
+      throw new IOException("Can not create wal directory " + walDir);
+    }
+  }
+
+  /**
+   * @param conf               must not be null, will keep a reference to read params in later
+   *                           reader/writer instances.
+   * @param factoryId          a unique identifier for this factory. used i.e. by filesystem
+   *                           implementations to make a directory
+   * @param abortable          the server associated with this WAL file
+   * @param createWalDirectory pass {@code true} for testing purpose, to create the wal directory
+   *                           automatically. In normal code path, we should create it in
+   *                           HRegionServer setup.
+   */
+  private WALFactory(Configuration conf, String factoryId, Abortable abortable,
+    boolean createWalDirectory) throws IOException {
     // until we've moved reader/writer construction down into providers, this initialization must
     // happen prior to provider initialization, in case they need to instantiate a reader/writer.
     timeoutMillis = conf.getInt("hbase.hlog.open.timeout", 300000);
@@ -229,6 +257,10 @@ public class WALFactory {
     this.abortable = abortable;
     // end required early initialization
     if (conf.getBoolean(WAL_ENABLED, true)) {
+      if (createWalDirectory) {
+        // for testing only
+        createWALDirectory(conf, factoryId);
+      }
       provider = getProvider(WAL_PROVIDER, DEFAULT_WAL_PROVIDER, null);
     } else {
       // special handling of existing configuration behavior.

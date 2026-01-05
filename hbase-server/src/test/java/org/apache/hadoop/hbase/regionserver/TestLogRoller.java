@@ -58,12 +58,13 @@ public class TestLogRoller {
   private static FileSystem FS;
 
   @Before
-  public void setup() throws Exception {
+  public void setUp() throws Exception {
     CONF = TEST_UTIL.getConfiguration();
     CONF.setInt("hbase.regionserver.logroll.period", LOG_ROLL_PERIOD);
     CONF.setInt(HConstants.THREAD_WAKE_FREQUENCY, 300);
     ROOT_DIR = TEST_UTIL.getRandomDir();
     FS = FileSystem.get(CONF);
+    FS.mkdirs(new Path(ROOT_DIR, LOG_DIR));
     RegionServerServices services = Mockito.mock(RegionServerServices.class);
     Mockito.when(services.getConfiguration()).thenReturn(CONF);
     ROLLER = new LogRoller(services);
@@ -74,7 +75,7 @@ public class TestLogRoller {
   public void tearDown() throws Exception {
     ROLLER.close();
     FS.close();
-    TEST_UTIL.shutdownMiniCluster();
+    TEST_UTIL.cleanupTestDir();
   }
 
   /**
