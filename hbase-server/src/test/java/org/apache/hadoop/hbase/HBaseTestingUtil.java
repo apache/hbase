@@ -2194,8 +2194,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     // The WAL subsystem will use the default rootDir rather than the passed in rootDir
     // unless I pass along via the conf.
     Configuration confForWAL = new Configuration(conf);
-    confForWAL.set(HConstants.HBASE_DIR, rootDir.toString());
-    return new WALFactory(confForWAL, "hregion-" + RandomStringUtils.randomNumeric(8)).getWAL(hri);
+    CommonFSUtils.setRootDir(confForWAL, rootDir);
+    return new WALFactory(confForWAL, "hregion-" + RandomStringUtils.insecure().nextNumeric(8))
+      .getWAL(hri);
   }
 
   /**
