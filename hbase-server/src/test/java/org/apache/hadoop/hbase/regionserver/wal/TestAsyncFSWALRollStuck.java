@@ -164,6 +164,7 @@ public class TestAsyncFSWALRollStuck {
       }
 
     };
+    UTIL.getTestFileSystem().mkdirs(new Path(rootDir, "log"));
     WAL = new AsyncFSWAL(UTIL.getTestFileSystem(), null, rootDir, "log", "oldlog", conf,
       Arrays.asList(listener), true, null, null, null, null, EVENT_LOOP_GROUP, CHANNEL_CLASS,
       StreamSlowMonitor.create(conf, "monitor"));

@@ -1047,6 +1047,7 @@ public abstract class AbstractTestWALReplay {
   }
 
   private MockWAL createMockWAL() throws IOException {
+    fs.mkdirs(new Path(hbaseRootDir, logName));
     MockWAL wal = new MockWAL(fs, hbaseRootDir, logName, conf);
     wal.init();
     // Set down maximum recovery so we dfsclient doesn't linger retrying something

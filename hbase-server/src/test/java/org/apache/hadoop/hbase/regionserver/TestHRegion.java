@@ -370,8 +370,9 @@ public class TestHRegion {
     }
 
     FileSystem fs = FileSystem.get(CONF);
-    Path rootDir = new Path(dir + "testMemstoreSnapshotSize");
-    MyFaultyFSLog faultyLog = new MyFaultyFSLog(fs, rootDir, "testMemstoreSnapshotSize", CONF);
+    Path rootDir = new Path(dir + method);
+    fs.mkdirs(new Path(rootDir, method));
+    MyFaultyFSLog faultyLog = new MyFaultyFSLog(fs, rootDir, method, CONF);
     faultyLog.init();
     region = initHRegion(tableName, null, null, CONF, false, Durability.SYNC_WAL, faultyLog,
       COLUMN_FAMILY_BYTES);
@@ -413,10 +414,10 @@ public class TestHRegion {
 
   @Test
   public void testMemstoreSizeAccountingWithFailedPostBatchMutate() throws IOException {
-    String testName = "testMemstoreSizeAccountingWithFailedPostBatchMutate";
     FileSystem fs = FileSystem.get(CONF);
-    Path rootDir = new Path(dir + testName);
-    FSHLog hLog = new FSHLog(fs, rootDir, testName, CONF);
+    Path rootDir = new Path(dir + method);
+    fs.mkdirs(new Path(rootDir, method));
+    FSHLog hLog = new FSHLog(fs, rootDir, method, CONF);
     hLog.init();
     region = initHRegion(tableName, null, null, CONF, false, Durability.SYNC_WAL, hLog,
       COLUMN_FAMILY_BYTES);
@@ -1252,8 +1253,10 @@ public class TestHRegion {
         };
       }
     }
-    FailAppendFlushMarkerWAL wal = new FailAppendFlushMarkerWAL(FileSystem.get(walConf),
-      CommonFSUtils.getRootDir(walConf), method, walConf);
+    FileSystem fs = FileSystem.get(walConf);
+    Path rootDir = CommonFSUtils.getRootDir(walConf);
+    fs.mkdirs(new Path(rootDir, method));
+    FailAppendFlushMarkerWAL wal = new FailAppendFlushMarkerWAL(fs, rootDir, method, walConf);
     wal.init();
     this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, CONF,
       false, Durability.USE_DEFAULT, wal, family);
@@ -3354,8 +3357,9 @@ public class TestHRegion {
   @Test
   public void testDataInMemoryWithoutWAL() throws IOException {
     FileSystem fs = FileSystem.get(CONF);
-    Path rootDir = new Path(dir + "testDataInMemoryWithoutWAL");
-    FSHLog hLog = new FSHLog(fs, rootDir, "testDataInMemoryWithoutWAL", CONF);
+    Path rootDir = new Path(dir + method);
+    fs.mkdirs(new Path(rootDir, method));
+    FSHLog hLog = new FSHLog(fs, rootDir, method, CONF);
     hLog.init();
     // This chunk creation is done throughout the code base. Do we want to move it into core?
     // It is missing from this test. W/o it we NPE.
