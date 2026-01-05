@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.codec.KeyValueCodec;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProviders;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.PoolMap;
@@ -112,6 +113,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   protected final String clusterId;
   protected final SocketAddress localAddr;
   protected final MetricsConnection metrics;
+  protected final SaslClientAuthenticationProviders authenticationProviders;
 
   protected final UserProvider userProvider;
   protected final CellBlockBuilder cellBlockBuilder;
@@ -180,6 +182,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     this.readTO = conf.getInt(SOCKET_TIMEOUT_READ, DEFAULT_SOCKET_TIMEOUT_READ);
     this.writeTO = conf.getInt(SOCKET_TIMEOUT_WRITE, DEFAULT_SOCKET_TIMEOUT_WRITE);
     this.metrics = metrics;
+    this.authenticationProviders = SaslClientAuthenticationProviders.getInstance(conf);
     this.maxConcurrentCallsPerServer =
       conf.getInt(HConstants.HBASE_CLIENT_PERSERVER_REQUESTS_THRESHOLD,
         HConstants.DEFAULT_HBASE_CLIENT_PERSERVER_REQUESTS_THRESHOLD);

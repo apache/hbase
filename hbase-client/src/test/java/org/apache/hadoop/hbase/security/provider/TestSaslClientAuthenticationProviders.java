@@ -68,20 +68,14 @@ public class TestSaslClientAuthenticationProviders {
   }
 
   @Test
-  public void testInstanceIsCached() {
+  public void testInstanceIsNotCached() {
     Configuration conf = HBaseConfiguration.create();
     SaslClientAuthenticationProviders providers1 =
       SaslClientAuthenticationProviders.getInstance(conf);
     SaslClientAuthenticationProviders providers2 =
       SaslClientAuthenticationProviders.getInstance(conf);
-    assertSame(providers1, providers2);
-
-    SaslClientAuthenticationProviders.reset();
-
-    SaslClientAuthenticationProviders providers3 =
-      SaslClientAuthenticationProviders.getInstance(conf);
-    assertNotSame(providers1, providers3);
-    assertEquals(providers1.getNumRegisteredProviders(), providers3.getNumRegisteredProviders());
+    assertNotSame(providers1, providers2);
+    assertEquals(providers1.getNumRegisteredProviders(), providers2.getNumRegisteredProviders());
   }
 
   @Test(expected = RuntimeException.class)

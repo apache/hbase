@@ -213,7 +213,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   BlockingRpcConnection(BlockingRpcClient rpcClient, ConnectionId remoteId) throws IOException {
     super(rpcClient.conf, AbstractRpcClient.WHEEL_TIMER, remoteId, rpcClient.clusterId,
       rpcClient.userProvider.isHBaseSecurityEnabled(), rpcClient.codec, rpcClient.compressor,
-      rpcClient.cellBlockBuilder, rpcClient.metrics, rpcClient.connectionAttributes);
+      rpcClient.cellBlockBuilder, rpcClient.metrics, rpcClient.authenticationProviders,
+      rpcClient.connectionAttributes);
     this.rpcClient = rpcClient;
     this.connectionHeaderPreamble = getConnectionHeaderPreamble();
     ConnectionHeader header = getConnectionHeader();

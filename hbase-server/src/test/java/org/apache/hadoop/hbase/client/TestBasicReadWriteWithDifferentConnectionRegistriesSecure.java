@@ -23,12 +23,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
-import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProviders;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
@@ -71,12 +69,5 @@ public class TestBasicReadWriteWithDifferentConnectionRegistriesSecure
       KDC.stop();
     }
     KEYTAB_FILE.delete();
-  }
-
-  @Override
-  @Before
-  public void setUp() throws Exception {
-    SaslClientAuthenticationProviders.reset();
-    super.setUp();
   }
 }

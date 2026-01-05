@@ -23,7 +23,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Optional;
 import java.util.ServiceLoader;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -48,9 +47,6 @@ public final class SaslClientAuthenticationProviders {
   public static final String SELECTOR_KEY = "hbase.client.sasl.provider.class";
   public static final String EXTRA_PROVIDERS_KEY = "hbase.client.sasl.provider.extras";
 
-  private static final AtomicReference<SaslClientAuthenticationProviders> providersRef =
-    new AtomicReference<>();
-
   private final Collection<SaslClientAuthenticationProvider> providers;
   private final AuthenticationProviderSelector selector;
 
@@ -68,23 +64,10 @@ public final class SaslClientAuthenticationProviders {
   }
 
   /**
-   * Returns a singleton instance of {@link SaslClientAuthenticationProviders}.
+   * Returns an instance of {@link SaslClientAuthenticationProviders}.
    */
   public static synchronized SaslClientAuthenticationProviders getInstance(Configuration conf) {
-    SaslClientAuthenticationProviders providers = providersRef.get();
-    if (providers == null) {
-      providers = instantiate(conf);
-      providersRef.set(providers);
-    }
-
-    return providers;
-  }
-
-  /**
-   * Removes the cached singleton instance of {@link SaslClientAuthenticationProviders}.
-   */
-  public static synchronized void reset() {
-    providersRef.set(null);
+    return instantiate(conf);
   }
 
   /**

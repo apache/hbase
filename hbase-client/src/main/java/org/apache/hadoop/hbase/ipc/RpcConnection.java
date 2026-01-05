@@ -121,6 +121,7 @@ abstract class RpcConnection {
   protected RpcConnection(Configuration conf, HashedWheelTimer timeoutTimer, ConnectionId remoteId,
     String clusterId, boolean isSecurityEnabled, Codec codec, CompressionCodec compressor,
     CellBlockBuilder cellBlockBuilder, MetricsConnection metrics,
+    SaslClientAuthenticationProviders authenticationProviders,
     Map<String, byte[]> connectionAttributes) throws IOException {
     this.timeoutTimer = timeoutTimer;
     this.codec = codec;
@@ -133,22 +134,20 @@ abstract class RpcConnection {
     this.securityInfo = SecurityInfo.getInfo(remoteId.getServiceName());
     this.useSasl = isSecurityEnabled;
 
-    // Choose the correct Token and AuthenticationProvider for this client to use
-    SaslClientAuthenticationProviders providers =
-      SaslClientAuthenticationProviders.getInstance(conf);
+    // Choose the correct Token for this client to use
     Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> pair;
     if (useSasl && securityInfo != null) {
-      pair = providers.selectProvider(clusterId, ticket);
+      pair = authenticationProviders.selectProvider(clusterId, ticket);
       if (pair == null) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Found no valid authentication method from providers={} with tokens={}",
-            providers.toString(), ticket.getTokens());
+            authenticationProviders.toString(), ticket.getTokens());
         }
         throw new RuntimeException("Found no valid authentication method from options");
       }
     } else if (!useSasl) {
       // Hack, while SIMPLE doesn't go via SASL.
-      pair = providers.getSimpleProvider();
+      pair = authenticationProviders.getSimpleProvider();
     } else {
       throw new RuntimeException("Could not compute valid client authentication provider");
     }
