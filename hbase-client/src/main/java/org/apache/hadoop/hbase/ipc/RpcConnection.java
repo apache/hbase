@@ -138,7 +138,7 @@ abstract class RpcConnection {
       SaslClientAuthenticationProviders.getInstance(conf);
     Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> pair;
     if (useSasl && securityInfo != null) {
-      pair = providers.selectProvider(conf, clusterId, ticket);
+      pair = providers.selectProvider(clusterId, ticket);
       if (pair == null) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Found no valid authentication method from providers={} with tokens={}",

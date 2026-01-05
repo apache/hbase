@@ -40,20 +40,9 @@ public interface AuthenticationProviderSelector {
     Collection<SaslClientAuthenticationProvider> availableProviders);
 
   /**
-   * Chooses the authentication provider which should be used given the provided client context,
-   * using a cached {@link Configuration}, from the authentication providers passed in via
-   * {@link #configure(Configuration, Collection)}.
+   * Chooses the authentication provider which should be used given the provided client context from
+   * the authentication providers passed in via {@link #configure(Configuration, Collection)}.
    */
   Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>>
     selectProvider(String clusterId, User user);
-
-  /**
-   * Chooses the authentication provider which should be used given the provided client context and
-   * the supplied {@link Configuration}, from the authentication providers passed in via
-   * {@link #configure(Configuration, Collection)}.
-   */
-  default Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>>
-    selectProvider(Configuration conf, String clusterId, User user) {
-    return selectProvider(clusterId, user);
-  }
 }

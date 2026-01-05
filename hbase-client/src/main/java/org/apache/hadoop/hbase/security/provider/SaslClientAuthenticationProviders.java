@@ -205,8 +205,8 @@ public final class SaslClientAuthenticationProviders {
    * identifier and the user.
    */
   public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>>
-    selectProvider(Configuration conf, String clusterId, User clientUser) {
-    return selector.selectProvider(conf, clusterId, clientUser);
+    selectProvider(String clusterId, User clientUser) {
+    return selector.selectProvider(clusterId, clientUser);
   }
 
   @Override
