@@ -2490,7 +2490,7 @@
                     <exclude>commons-logging:commons-logging</exclude>
                   </excludes>
                   <message>We don't use commons-logging any more, so do not depend on it directly.</message>
-                  <searchTransitive>false</searchTransitive>
+                  <searchTransitive>true</searchTransitive>
                 </bannedDependencies>
               </rules>
             </configuration>
