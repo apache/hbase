@@ -256,7 +256,7 @@ Swap: 16008732k total,  14348k used, 15994384k free, 11106908k cached
 15558 hadoop    18  -2 3292m 2.4g 3556 S   79 10.4   6523:52 java
 13268 hadoop    18  -2 8967m 8.2g 4104 S   21 35.1   5170:30 java
  8895 hadoop    18  -2 1581m 497m 3420 S   11  2.1   4002:32 java
-…
+...
 ```
 
 Here we can see that the system load average during the last five minutes is 3.75, which very roughly means that on average 3.75 threads were waiting for CPU time during these 5 minutes. In general, the *perfect* utilization equals to the number of cores, under that number the machine is under utilized and over that the machine is over utilized. This is an important concept, see this article to understand it more: [http://www.linuxjournal.com/article/9001](http://www.linuxjournal.com/article/9001).

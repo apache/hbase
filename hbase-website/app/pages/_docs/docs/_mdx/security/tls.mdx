@@ -2,6 +2,8 @@
 title: "Transport Level Security (TLS) in HBase RPC communication"
 ---
 
+import { Step, Steps } from "fumadocs-ui/components/steps";
+
 Since version `2.6.0` HBase supports TLS encryption in server-client and Master-RegionServer communication. [Transport Layer Security (TLS)](https://en.wikipedia.org/wiki/Transport_Layer_Security) is a standard cryptographic protocol designed to provide communications security over a computer network. HBase TLS implementation works exactly how secure websites are accessed via **https** prefix in a web browser: once established all communication on the channel will be securely hidden from malicious access.
 
 The encryption works at the transport level which means it’s independent of the configured authentication method. Secure client access mentioned in the previous section requires Kerberos to be configured and used in HBase authentication, while TLS can be configured with any other SASL mechanism or even with simple client access methods, effectively preventing attackers from eavesdropping the communication. No Kerberos KDC or other complicated infrastructure required.
@@ -105,11 +107,19 @@ keytool -importcert -alias [host1..3] -file [host1..3].cer -keystore truststore.
 
 ## Upgrading existing non-TLS cluster with no downtime
 
-Here are the steps needed to upgrade an already running HBase cluster to TLS without downtime by taking advantage of port unification functionality. There’s a property on server side called `hbase.server.netty.tls.supportplaintext` which makes possible to accept TLS and plaintext connections on the same socket port.
+Here are the steps needed to upgrade an already running HBase cluster to TLS without downtime by taking advantage of port unification functionality. There's a property on server side called `hbase.server.netty.tls.supportplaintext` which makes possible to accept TLS and plaintext connections on the same socket port.
 
-1. Create the necessary key stores and trust stores for all server participants as described in the previous section.
+<Steps>
 
-2. Enable secure communication on the Master node in _server-only_ mode with plaintext support.
+<Step>
+
+Create the necessary key stores and trust stores for all server participants as described in the previous section.
+
+</Step>
+
+<Step>
+
+#### Enable secure communication on the Master node in _server-only_ mode with plaintext support
 
 ```xml
 <property>
@@ -129,7 +139,13 @@ Here are the steps needed to upgrade an already running HBase cluster to TLS wit
 
 Restart the Master. Master now accepts both TLS/non-TLS connections and works with non-TLS in client mode.
 
-3. Enable secure communication on the Region Servers in both _server and client_ mode with plaintext support. Client mode here will ensure that RegionServer’s communication to Master is encrypted.
+</Step>
+
+<Step>
+
+#### Enable secure communication on the Region Servers in both _server and client_ mode with plaintext support
+
+Client mode here will ensure that RegionServer's communication to Master is encrypted.
 
 <Callout type="warn">
 **Replication**
@@ -158,7 +174,11 @@ You have to prepare all Region Servers for secure communication before upgrading
 
 Restart Region Servers in rolling restart fashion. They send requests with TLS and accept both TLS and non-TLS communication.
 
-4. Enable secure communication on the clients.
+</Step>
+
+<Step>
+
+#### Enable secure communication on the clients
 
 ```xml
 <property>
@@ -168,7 +188,11 @@ Restart Region Servers in rolling restart fashion. They send requests with TLS a
 ...truststore setup ...
 ```
 
-5. Enable client-mode TLS on master and disable plaintext mode.
+</Step>
+
+<Step>
+
+#### Enable client-mode TLS on master and disable plaintext mode
 
 ```xml
 <property>
@@ -187,13 +211,23 @@ Restart Region Servers in rolling restart fashion. They send requests with TLS a
 
 Restart Master.
 
-6. Disable plaintext communication on the Region Servers by removing `supportplaintext` property. Restart RSs in rolling restart fashion.
+</Step>
+
+<Step>
+
+#### Disable plaintext communication on the Region Servers
+
+Disable plaintext communication on the Region Servers by removing `supportplaintext` property. Restart RSs in rolling restart fashion.
 
 <Callout type="warn">
   Once `hbase.client.netty.tls.enabled` is enabled on the server side, the cluster will only be able
   to communicate with other clusters which have TLS enabled. For example, this would impact
   inter-cluster replication.
 </Callout>
+
+</Step>
+
+</Steps>
 
 ## Enable automatic certificate reloading
 

@@ -2,7 +2,7 @@
 title: "Secure Client Access to Apache HBase"
 ---
 
-Newer releases of Apache HBase (\>= 0.92) support optional SASL authentication of clients. See also Matteo Bertozzi’s article on [Understanding User Authentication and Authorization in Apache HBase](https://blog.cloudera.com/blog/2012/09/understanding-user-authentication-and-authorization-in-apache-hbase/).
+Newer releases of Apache HBase (>= 0.92) support optional SASL authentication of clients. See also Matteo Bertozzi’s article on [Understanding User Authentication and Authorization in Apache HBase](https://blog.cloudera.com/blog/2012/09/understanding-user-authentication-and-authorization-in-apache-hbase/).
 
 This describes how to set up Apache HBase and clients for connection to secure HBase resources.
 
@@ -124,7 +124,7 @@ Add the following to the `hbase-site.xml` file for every Thrift gateway:
 </property>
 ```
 
-Substitute the appropriate credential and keytab for _\$USER_ and _\$KEYTAB_ respectively.
+Substitute the appropriate credential and keytab for _$USER_ and _$KEYTAB_ respectively.
 
 In order to use the Thrift API principal to interact with HBase, it is also necessary to add the `hbase.thrift.kerberos.principal` to the `acl` table. For example, to give the Thrift API principal, `thrift_server`, administrative access, a command such as this one will suffice:
 
@@ -148,16 +148,11 @@ The Thrift gateway will authenticate with HBase using the supplied credential. N
 To enable it, do the following.
 
 1.  Be sure Thrift is running in secure mode, by following the procedure described in [Client-side Configuration for Secure Operation - Thrift Gateway](#security.client.thrift).
-
 2.  Be sure that HBase is configured to allow proxy users, as described in [REST Gateway Impersonation Configuration](#security.rest.gateway).
-
 3.  In _hbase-site.xml_ for each cluster node running a Thrift gateway, set the property `hbase.thrift.security.qop` to one of the following three values:
     - `privacy` - authentication, integrity, and confidentiality checking.
-
     - `integrity` - authentication and integrity checking
-
     - `authentication` - authentication checking only
-
 4.  Restart the Thrift gateway processes for the changes to take effect. If a node is running Thrift, the output of the `jps` command will list a `ThriftServer` process. To stop Thrift on a node, run the command `bin/hbase-daemon.sh stop thrift`. To start Thrift on a node, run the command `bin/hbase-daemon.sh start thrift`.
 
 ## Configure the Thrift Gateway to Use the `doAs` Feature
@@ -211,7 +206,7 @@ Add the following to the `hbase-site.xml` file for every REST gateway:
 </property>
 ```
 
-Substitute the appropriate credential and keytab for _\$USER_ and _\$KEYTAB_ respectively.
+Substitute the appropriate credential and keytab for _$USER_ and _$KEYTAB_ respectively.
 
 The REST gateway will authenticate with HBase using the supplied credential.
 
@@ -253,7 +248,7 @@ HBase REST gateway supports [SPNEGO HTTP authentication](https://hadoop.apache.o
 </property>
 ```
 
-Substitute the keytab for HTTP for _\$KEYTAB_.
+Substitute the keytab for HTTP for _$KEYTAB_.
 
 HBase REST gateway supports different 'hbase.rest.authentication.type': simple, kerberos. You can also implement a custom authentication by implementing Hadoop AuthenticationHandler, then specify the full class name as 'hbase.rest.authentication.type' value. For more information, refer to [SPNEGO HTTP authentication](https://hadoop.apache.org/docs/stable/hadoop-auth/index.html).
 
@@ -280,7 +275,7 @@ To allow proxy users, add the following to the `hbase-site.xml` file for every H
 </property>
 ```
 
-Substitute the REST gateway proxy user for _\$USER_, and the allowed group list for _\$GROUPS_.
+Substitute the REST gateway proxy user for _$USER_, and the allowed group list for _$GROUPS_.
 
 To enable REST gateway impersonation, add the following to the `hbase-site.xml` file for every REST gateway.
 
@@ -299,4 +294,4 @@ To enable REST gateway impersonation, add the following to the `hbase-site.xml` 
 </property>
 ```
 
-Substitute the keytab for HTTP for _\$KEYTAB_.
+Substitute the keytab for HTTP for _$KEYTAB_.

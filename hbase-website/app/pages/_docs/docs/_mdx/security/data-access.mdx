@@ -72,61 +72,40 @@ HBase has a simpler security model than relational databases, especially in term
 HBase access levels are granted independently of each other and allow for different types of operations at a given scope.
 
 - _Read (R)_ - can read data at the given scope
-
 - _Write (W)_ - can write data at the given scope
-
 - _Execute (X)_ - can execute coprocessor endpoints at the given scope
-
 - _Create (C)_ - can create tables or drop tables (even those they did not create) at the given scope
-
 - _Admin (A)_ - can perform cluster operations such as balancing the cluster or assigning regions at the given scope
 
 The possible scopes are:
 
 - _Superuser_ - superusers can perform any operation available in HBase, to any resource. The user who runs HBase on your cluster is a superuser, as are any principals assigned to the configuration property `hbase.superuser` in _hbase-site.xml_ on the HMaster.
-
 - _Global_ - permissions granted at _global_ scope allow the admin to operate on all tables of the cluster.
-
 - _Namespace_ - permissions granted at _namespace_ scope apply to all tables within a given namespace.
-
 - _Table_ - permissions granted at _table_ scope apply to data or metadata within a given table.
-
 - _ColumnFamily_ - permissions granted at _ColumnFamily_ scope apply to cells within that ColumnFamily.
-
 - _Cell_ - permissions granted at _cell_ scope apply to that exact cell coordinate (key, value, timestamp). This allows for policy evolution along with data.
-
-  To change an ACL on a specific cell, write an updated cell with new ACL to the precise coordinates of the original.
-
-  If you have a multi-versioned schema and want to update ACLs on all visible versions, you need to write new cells for all visible versions. The application has complete control over policy evolution.
-
+  To change an ACL on a specific cell, write an updated cell with new ACL to the precise coordinates of the original.  
+  If you have a multi-versioned schema and want to update ACLs on all visible versions, you need to write new cells for all visible versions. The application has complete control over policy evolution.  
   The exception to the above rule is `append` and `increment` processing. Appends and increments can carry an ACL in the operation. If one is included in the operation, then it will be applied to the result of the `append` or `increment`. Otherwise, the ACL of the existing cell you are appending to or incrementing is preserved.
 
 The combination of access levels and scopes creates a matrix of possible access levels that can be granted to a user. In a production environment, it is useful to think of access levels in terms of what is needed to do a specific job. The following list describes appropriate access levels for some common types of HBase users. It is important not to grant more access than is required for a given user to perform their required tasks.
 
 - _Superusers_ - In a production system, only the HBase user should have superuser access. In a development environment, an administrator may need superuser access in order to quickly control and manage the cluster. However, this type of administrator should usually be a Global Admin rather than a superuser.
-
 - _Global Admins_ - A global admin can perform tasks and access every table in HBase. In a typical production environment, an admin should not have Read or Write permissions to data within tables.
-
 - A global admin with Admin permissions can perform cluster-wide operations on the cluster, such as balancing, assigning or unassigning regions, or calling an explicit major compaction. This is an operations role.
-
 - A global admin with Create permissions can create or drop any table within HBase. This is more of a DBA-type role.
-
   In a production environment, it is likely that different users will have only one of Admin and Create permissions.
-
-      <Callout type="warn">
-
-        In the current implementation, a Global Admin with `Admin` permission can grant himself `Read` and `Write` permissions on a table and gain access to that table’s data. For this reason, only grant `Global Admin` permissions to trusted user who actually need them.
-
-        Also be aware that a `Global Admin` with `Create` permission can perform a `Put` operation on the ACL table, simulating a `grant` or `revoke` and circumventing the authorization check for `Global Admin` permissions.
-
-        Due to these issues, be cautious with granting `Global Admin` privileges.
-
-      </Callout>
-
+  <Callout type="warn">
+    In the current implementation, a Global Admin with `Admin` permission can grant himself `Read`
+    and `Write` permissions on a table and gain access to that table’s data. For this reason, only
+    grant `Global Admin` permissions to trusted user who actually need them. Also be aware that a
+    `Global Admin` with `Create` permission can perform a `Put` operation on the ACL table,
+    simulating a `grant` or `revoke` and circumventing the authorization check for `Global Admin`
+    permissions. Due to these issues, be cautious with granting `Global Admin` privileges.
+  </Callout>
 - _Namespace Admins_ - a namespace admin with `Create` permissions can create or drop tables within that namespace, and take and restore snapshots. A namespace admin with `Admin` permissions can perform operations such as splits or major compactions on tables within that namespace.
-
 - _Table Admins_ - A table admin can perform administrative operations only on that table. A table admin with `Create` permissions can create snapshots from that table or restore that table from a snapshot. A table admin with `Admin` permissions can perform operations such as splits or major compactions on that table.
-
 - _Users_ - Users can read or write data, or both. Users can also execute coprocessor endpoints, if given `Executable` permissions.
 
 #### Real-World Example of Access Levels [!toc]
@@ -148,22 +127,18 @@ For more details on how ACLs map to specific HBase operations and tasks, see [ap
 Cell-level ACLs are implemented using tags (see [Tags](#hbase.tags)). In order to use cell-level ACLs, you must be using HFile v3 and HBase 0.98 or newer.
 
 1.  Files created by HBase are owned by the operating system user running the HBase process. To interact with HBase files, you should use the API or bulk load facility.
-
 2.  HBase does not model "roles" internally in HBase. Instead, group names can be granted permissions. This allows external modeling of roles via group membership. Groups are created and manipulated externally to HBase, via the Hadoop group mapping service.
 
 #### Server-Side Configuration
 
 1.  As a prerequisite, perform the steps in [Procedure: Basic Server-Side Configuration.](#security.data.basic.server.side).
-
 2.  Install and configure the AccessController coprocessor, by setting the following properties in _hbase-site.xml_. These properties take a list of classes.
-
     <Callout type="info">
       If you use the AccessController along with the VisibilityController, the AccessController must
       come first in the list, because with both components active, the VisibilityController will
       delegate access control on its system tables to the AccessController. For an example of using
       both together, see [Security Configuration Example](#security.example.config).
     </Callout>
-
     ```xml
     <property>
       <name>hbase.security.authorization</name>
@@ -171,7 +146,10 @@ Cell-level ACLs are implemented using tags (see [Tags](#hbase.tags)). In order t
     </property>
     <property>
       <name>hbase.coprocessor.region.classes</name>
-      <value>org.apache.hadoop.hbase.security.access.AccessController, org.apache.hadoop.hbase.security.token.TokenProvider</value>
+      <value>
+        org.apache.hadoop.hbase.security.access.AccessController,
+        org.apache.hadoop.hbase.security.token.TokenProvider
+      </value>
     </property>
     <property>
       <name>hbase.coprocessor.master.classes</name>
@@ -185,10 +163,8 @@ Cell-level ACLs are implemented using tags (see [Tags](#hbase.tags)). In order t
       <name>hbase.security.exec.permission.checks</name>
       <value>true</value>
     </property>
-    ```
-
-    Optionally, you can enable transport security, by setting `hbase.rpc.protection` to `privacy`. This requires HBase 0.98.4 or newer.
-
+    ``` Optionally, you can enable transport security, by setting `hbase.rpc.protection` to
+    `privacy`. This requires HBase 0.98.4 or newer.
 3.  Set up the Hadoop group mapper in the Hadoop namenode’s _core-site.xml_. This is a Hadoop file, not an HBase file. Customize it to your site’s needs. Following is an example.
 
     ```xml
@@ -239,11 +215,8 @@ Cell-level ACLs are implemented using tags (see [Tags](#hbase.tags)). In order t
     ```
 
 4.  Optionally, enable the early-out evaluation strategy. Prior to HBase 0.98.0, if a user was not granted access to a column family, or at least a column qualifier, an AccessDeniedException would be thrown. HBase 0.98.0 removed this exception in order to allow cell-level exceptional grants. To restore the old behavior in HBase 0.98.0-0.98.6, set `hbase.security.access.early_out` to `true` in _hbase-site.xml_. In HBase 0.98.6, the default has been returned to `true`.
-
 5.  Distribute your configuration and restart your cluster for changes to take effect.
-
 6.  To test your configuration, log into HBase Shell as a given user and use the `whoami` command to report the groups your user is part of. In this example, the user is reported as being a member of the `services` group.
-
     ```text
         hbase> whoami
         service (auth:KERBEROS)
@@ -262,127 +235,123 @@ Neither the examples, nor the source files they are taken from, are part of the 
 </Callout>
 
 1.  User and Group Administration
-
     Users and groups are maintained external to HBase, in your directory.
-
 2.  Granting Access To A Namespace, Table, Column Family, or Cell
-
     There are a few different types of syntax for grant statements. The first, and most familiar, is as follows, with the table and column family being optional:
 
     ```sql
     grant 'user', 'RWXCA', 'TABLE', 'CF', 'CQ'
     ```
 
-Groups and users are granted access in the same way, but groups are prefixed with an `@` symbol. In the same way, tables and namespaces are specified in the same way, but namespaces are prefixed with an `@` symbol.
+    Groups and users are granted access in the same way, but groups are prefixed with an `@` symbol. In the same way, tables and namespaces are specified in the same way, but namespaces are prefixed with an `@` symbol.
 
-It is also possible to grant multiple permissions against the same resource in a single statement, as in this example. The first sub-clause maps users to ACLs and the second sub-clause specifies the resource.
+    It is also possible to grant multiple permissions against the same resource in a single statement, as in this example. The first sub-clause maps users to ACLs and the second sub-clause specifies the resource.
 
-<Callout type="info">
-  HBase Shell support for granting and revoking access at the cell level is for testing and
-  verification support, and should not be employed for production use because it won’t apply the
-  permissions to cells that don’t exist yet. The correct way to apply cell level permissions is to
-  do so in the application code when storing the values.
-</Callout>
+    <Callout type="info">
+      HBase Shell support for granting and revoking access at the cell level is for testing and
+      verification support, and should not be employed for production use because it won’t apply the
+      permissions to cells that don’t exist yet. The correct way to apply cell level permissions is
+      to do so in the application code when storing the values.
+    </Callout>
 
-#### ACL Granularity and Evaluation Order [!toc]
+    #### ACL Granularity and Evaluation Order [!toc]
 
-ACLs are evaluated from least granular to most granular, and when an ACL is reached that grants permission, evaluation stops. This means that cell ACLs do not override ACLs at less granularity.
+    ACLs are evaluated from least granular to most granular, and when an ACL is reached that grants permission, evaluation stops. This means that cell ACLs do not override ACLs at less granularity.
 
-#### HBase Shell example:
+    #### HBase Shell example:
+    - Global:
 
-- Global:
+      ```text
+      hbase> grant '@admins', 'RWXCA'
+      ```
 
-  ```text
-  hbase> grant '@admins', 'RWXCA'
-  ```
+    - Namespace:
 
-- Namespace:
+      ```text
+      hbase> grant 'service', 'RWXCA', '@test-NS'
+      ```
 
-  ```text
-  hbase> grant 'service', 'RWXCA', '@test-NS'
-  ```
+    - Table:
 
-- Table:
+      ```text
+      hbase> grant 'service', 'RWXCA', 'user'
+      ```
 
-  ```text
-  hbase> grant 'service', 'RWXCA', 'user'
-  ```
+    - Column Family:
 
-- Column Family:
+      ```text
+      hbase> grant '@developers', 'RW', 'user', 'i'
+      ```
 
-  ```text
-  hbase> grant '@developers', 'RW', 'user', 'i'
-  ```
+    - Column Qualifier:
 
-- Column Qualifier:
+      ```text
+      hbase> grant 'service, 'RW', 'user', 'i', 'foo'
+      ```
 
-  ```text
-  hbase> grant 'service, 'RW', 'user', 'i', 'foo'
-  ```
+    - Cell:
 
-- Cell:
+      The syntax for granting cell ACLs uses the following syntax:
 
-  The syntax for granting cell ACLs uses the following syntax:
+      ```text
+      grant <table>, \
+        { '<user-or-group>' => \
+          '<permissions>', ... }, \
+        { <scanner-specification> }
+      ```
 
-  ```text
-  grant <table>, \
-    { '<user-or-group>' => \
-      '<permissions>', ... }, \
-    { <scanner-specification> }
-  ```
+    - _\<user-or-group\>_ is the user or group name, prefixed with `@` in the case of a group.
+    - _\<permissions\>_ is a string containing any or all of "RWXCA", though only R and W are meaningful at cell scope.
+    - _\<scanner-specification\>_ is the scanner specification syntax and conventions used by the 'scan' shell command. For some examples of scanner specifications, issue the following HBase Shell command.
 
-- _\<user-or-group\>_ is the user or group name, prefixed with `@` in the case of a group.
-- _\<permissions\>_ is a string containing any or all of "RWXCA", though only R and W are meaningful at cell scope.
-- _\<scanner-specification\>_ is the scanner specification syntax and conventions used by the 'scan' shell command. For some examples of scanner specifications, issue the following HBase Shell command.
+      ```text
+      hbase> help "scan"
+      ```
 
-  ```text
-  hbase> help "scan"
-  ```
+      If you need to enable cell acl,the hfile.format.version option in hbase-site.xml should be greater than or equal to 3,and the hbase.security.access.early_out option should be set to false.This example grants read access to the 'testuser' user and read/write access to the 'developers' group, on cells in the 'pii' column which match the filter.
 
-  If you need to enable cell acl,the hfile.format.version option in hbase-site.xml should be greater than or equal to 3,and the hbase.security.access.early_out option should be set to false.This example grants read access to the 'testuser' user and read/write access to the 'developers' group, on cells in the 'pii' column which match the filter.
+      ```text
+      hbase> grant 'user', \
+        { '@developers' => 'RW', 'testuser' => 'R' }, \
+        { COLUMNS => 'pii', FILTER => "(PrefixFilter ('test'))" }
+      ```
 
-  ```text
-  hbase> grant 'user', \
-    { '@developers' => 'RW', 'testuser' => 'R' }, \
-    { COLUMNS => 'pii', FILTER => "(PrefixFilter ('test'))" }
-  ```
+      The shell will run a scanner with the given criteria, rewrite the found cells with new ACLs, and store them back to their exact coordinates.
 
-  The shell will run a scanner with the given criteria, rewrite the found cells with new ACLs, and store them back to their exact coordinates.
+    #### API example:
 
-#### API example:
+    The following example shows how to grant access at the table level.
 
-The following example shows how to grant access at the table level.
-
-```java
-public static void grantOnTable(final HBaseTestingUtil util, final String user,
-    final TableName table, final byte[] family, final byte[] qualifier,
-    final Permission.Action... actions) throws Exception {
-  SecureTestUtil.updateACLs(util, new Callable<Void>() {
-    @Override
-    public Void call() throws Exception {
-      try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
-        connection.getAdmin().grant(new UserPermission(user, Permission.newBuilder(table)
-            .withFamily(family).withQualifier(qualifier).withActions(actions).build()),
-          false);
-      }
-      return null;
+    ```java
+    public static void grantOnTable(final HBaseTestingUtil util, final String user,
+        final TableName table, final byte[] family, final byte[] qualifier,
+        final Permission.Action... actions) throws Exception {
+      SecureTestUtil.updateACLs(util, new Callable<Void>() {
+        @Override
+        public Void call() throws Exception {
+          try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+            connection.getAdmin().grant(new UserPermission(user, Permission.newBuilder(table)
+                .withFamily(family).withQualifier(qualifier).withActions(actions).build()),
+              false);
+          }
+          return null;
+        }
+      });
     }
-  });
-}
-```
+    ```
 
-To grant permissions at the cell level, you can use the `Mutation.setACL` method:
+    To grant permissions at the cell level, you can use the `Mutation.setACL` method:
 
-```java
-Mutation.setACL(String user, Permission perms)
-Mutation.setACL(Map<String, Permission> perms)
-```
+    ```java
+    Mutation.setACL(String user, Permission perms)
+    Mutation.setACL(Map<String, Permission> perms)
+    ```
 
-Specifically, this example provides read permission to a user called `user1` on any cells contained in a particular Put operation:
+    Specifically, this example provides read permission to a user called `user1` on any cells contained in a particular Put operation:
 
-```java
-put.setACL(“user1”, new Permission(Permission.Action.READ))
-```
+    ```java
+    put.setACL(“user1”, new Permission(Permission.Action.READ))
+    ```
 
 3.  Revoking Access Control From a Namespace, Table, Column Family, or Cell
 
@@ -395,24 +364,24 @@ put.setACL(“user1”, new Permission(Permission.Action.READ))
       application code when storing the values.
     </Callout>
 
-#### Revoking Access To a Table example:
+    #### Revoking Access To a Table example:
 
-```java
-public static void revokeFromTable(final HBaseTestingUtil util, final String user,
-    final TableName table, final byte[] family, final byte[] qualifier,
-    final Permission.Action... actions) throws Exception {
-  SecureTestUtil.updateACLs(util, new Callable<Void>() {
-    @Override
-    public Void call() throws Exception {
-      try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
-        connection.getAdmin().revoke(new UserPermission(user, Permission.newBuilder(table)
-            .withFamily(family).withQualifier(qualifier).withActions(actions).build()));
-      }
-      return null;
+    ```java
+    public static void revokeFromTable(final HBaseTestingUtil util, final String user,
+        final TableName table, final byte[] family, final byte[] qualifier,
+        final Permission.Action... actions) throws Exception {
+      SecureTestUtil.updateACLs(util, new Callable<Void>() {
+        @Override
+        public Void call() throws Exception {
+          try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+            connection.getAdmin().revoke(new UserPermission(user, Permission.newBuilder(table)
+                .withFamily(family).withQualifier(qualifier).withActions(actions).build()));
+          }
+          return null;
+        }
+      });
     }
-  });
-}
-```
+    ```
 
 4.  Showing a User’s Effective Permissions
 
@@ -455,7 +424,7 @@ A user adds visibility expressions to a cell during a Put operation. In the defa
 
 Visibility labels can also be specified during Delete operations. For details about visibility labels and Deletes, see [HBASE-10885](https://issues.apache.org/jira/browse/HBASE-10885).
 
-The user’s effective label set is built in the RPC context when a request is first received by the RegionServer. The way that users are associated with labels is pluggable. The default plugin passes through labels specified in Authorizations added to the Get or Scan and checks those against the calling user’s authenticated labels list. When the client passes labels for which the user is not authenticated, the default plugin drops them. You can pass a subset of user authenticated labels via the `Get#setAuthorizations(Authorizations(String,…​))` and `Scan#setAuthorizations(Authorizations(String,…​));` methods.
+The user’s effective label set is built in the RPC context when a request is first received by the RegionServer. The way that users are associated with labels is pluggable. The default plugin passes through labels specified in Authorizations added to the Get or Scan and checks those against the calling user’s authenticated labels list. When the client passes labels for which the user is not authenticated, the default plugin drops them. You can pass a subset of user authenticated labels via the `Get#setAuthorizations(Authorizations(String,...))` and `Scan#setAuthorizations(Authorizations(String,...));` methods.
 
 Groups can be granted visibility labels the same way as users. Groups are prefixed with an @ symbol. When checking visibility labels of a user, the server will include the visibility labels of the groups of which the user is a member, together with the user’s own labels. When the visibility labels are retrieved using API `VisibilityClient#getAuths` or Shell command `get_auths` for a user, we will return labels added specifically for that user alone, not the group level labels.
 
@@ -786,24 +755,17 @@ In some cases (e.g. due to custom security policies), the operator of the HBase 
 This procedure assumes you are using the default Java keystore implementation. If you are using a custom implementation, check its documentation and adjust accordingly.
 
 1.  Create a secret key of appropriate length for AES encryption, using the `keytool` utility.
-
     ```bash
     $ keytool -keystore /path/to/hbase/conf/hbase.jks \
       -storetype jceks -storepass **** \
       -genseckey -keyalg AES -keysize 128 \
       -alias <alias>
     ```
-
     Replace \*\*\*\* with the password for the keystore file and \<alias\> with the username of the HBase service account, or an arbitrary string. If you use an arbitrary string, you will need to configure HBase to use it, and that is covered below. Specify a keysize that is appropriate. Do not specify a separate password for the key, but press `Return` when prompted.
-
 2.  Set appropriate permissions on the keyfile and distribute it to all the HBase servers.
-
     The previous command created a file called _hbase.jks_ in the HBase _conf/_ directory. Set the permissions and ownership on this file such that only the HBase service account user can read the file, and securely distribute the key to all HBase servers.
-
 3.  Configure the HBase daemons.
-
     Set the following properties in _hbase-site.xml_ on the region servers, to configure HBase daemons to use a key provider backed by the KeyStore file or retrieving the cluster master key. In the example below, replace \*\*\*\* with the password.
-
     ```xml
     <property>
       <name>hbase.crypto.keyprovider</name>
@@ -814,40 +776,31 @@ This procedure assumes you are using the default Java keystore implementation. I
       <value>jceks:///path/to/hbase/conf/hbase.jks?password=****</value>
     </property>
     ```
-
     By default, the HBase service account name will be used to resolve the cluster master key. However, you can store it with an arbitrary alias (in the `keytool` command). In that case, set the following property to the alias you used.
-
     ```xml
     <property>
       <name>hbase.crypto.master.key.name</name>
       <value>my-alias</value>
     </property>
     ```
-
     You also need to be sure your HFiles use HFile v3, in order to use transparent encryption. This is the default configuration for HBase 1.0 onward. For previous versions, set the following property in your _hbase-site.xml_ file.
-
     ```xml
     <property>
       <name>hfile.format.version</name>
       <value>3</value>
     </property>
     ```
-
     Optionally, you can use a different cipher provider, either a Java Cryptography Encryption (JCE) algorithm provider or a custom HBase cipher implementation.
     - JCE:
       - Install a signed JCE provider (supporting `AES/CTR/NoPadding` mode with 128 bit keys)
       - Add it with highest preference to the JCE site configuration file _$JAVA_HOME/lib/security/java.security_.
       - Update `hbase.crypto.algorithm.aes.provider` and `hbase.crypto.algorithm.rng.provider` options in _hbase-site.xml_.
-
     - Custom HBase Cipher:
       - Implement `org.apache.hadoop.hbase.io.crypto.CipherProvider`.
       - Add the implementation to the server classpath.
       - Update `hbase.crypto.cipherprovider` in _hbase-site.xml_.
-
 4.  Configure WAL encryption.
-
     Configure WAL encryption in every RegionServer's _hbase-site.xml_, by setting the following properties. You can include these in the HMaster's _hbase-site.xml_ as well, but the HMaster does not have a WAL and will not use them.
-
     ```xml
     <property>
       <name>hbase.regionserver.hlog.reader.impl</name>
@@ -862,33 +815,24 @@ This procedure assumes you are using the default Java keystore implementation. I
       <value>true</value>
     </property>
     ```
-
     <Callout type="info">
       Starting from 2.6.0, the hbase.regionserver.hlog.reader.impl and
       hbase.regionserver.hlog.writer.impl configurations are removed, you do not need to specify
       them any more. Just set hbase.regionserver.wal.encryption to true is enough to enable WAL
       encryption.
     </Callout>
-
 5.  (Optional) Configure encryption key hash algorithm.
-
     Since [HBASE-25181](https://issues.apache.org/jira/browse/HBASE-25181) it is possible to use custom encryption key hash algorithm instead of the default MD5 algorithm. This hash is needed to verify the secret key during decryption. The MD5 algorithm is considered weak, and can not be used in some (e.g. FIPS compliant) clusters.
-
     The hash is set via the configuration option `hbase.crypto.key.hash.algorithm`. It should be set to a JDK `MessageDigest` algorithm like "MD5", "SHA-384" or "SHA-512". The default is "MD5" for backward compatibility. An example of this configuration parameter on a FIPS-compliant cluster:
-
     ```xml
     <property>
       <name>hbase.crypto.key.hash.algorithm</name>
       <value>SHA-384</value>
     </property>
     ```
-
 6.  Configure permissions on the _hbase-site.xml_ file.
-
     Because the keystore password is stored in the hbase-site.xml, you need to ensure that only the HBase user can read the _hbase-site.xml_ file, using file ownership and permissions.
-
 7.  Restart your cluster.
-
     Distribute the new configuration file to all nodes and restart your cluster.
 
 ### Administration

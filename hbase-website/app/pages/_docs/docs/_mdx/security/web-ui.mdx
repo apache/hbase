@@ -8,7 +8,6 @@ description: "HBase provides mechanisms to secure various components and aspects
 A default HBase install uses insecure HTTP connections for Web UIs for the master and region servers. To enable secure HTTP (HTTPS) connections instead, set `hbase.ssl.enabled` to `true` in _hbase-site.xml_(Please prepare SSL certificate and ssl configuration file in advance). This does not change the port used by the Web UI. To change the port for the web UI for a given HBase component, configure that port’s setting in hbase-site.xml. These settings are:
 
 - `hbase.master.info.port`
-
 - `hbase.regionserver.info.port`
 
 <Callout type="info">
@@ -106,17 +105,13 @@ The usernames are those which the Kerberos identity maps to, given the Hadoop `a
 Consider the following scenario to describe how the configuration properties operate. Consider three users which are defined in the Kerberos KDC:
 
 - `alice@COMPANY.COM`
-
 - `bob@COMPANY.COM`
-
 - `charlie@COMPANY.COM`
 
 The default Hadoop `auth_to_local` rules map these principals to the "shortname":
 
 - `alice`
-
 - `bob`
-
 - `charlie`
 
 Unix groups membership define that `alice` is a member of the group `admins`. `bob` and `charlie` are not members of the `admins` group.
@@ -209,11 +204,8 @@ The usernames listed in the above property should correspond to the LDAP usernam
 ### Notes
 
 - This feature is supported by only versions of HBase having [HBASE-29244](https://issues.apache.org/jira/browse/HBASE-29244)
-
 - Ensure that the LDAP server is properly configured and running. See the previous section for details.
-
 - Only users explicitly listed in the `hbase.security.authentication.ldap.admin.users` property will have access to sensitive endpoints.
-
 - Non-administrative users can still access non-sensitive endpoints, provided they are authenticated.
 
 By defining administrators in this way, you can ensure that only authorized personnel can interact with critical Web UI functionalities, thereby enhancing the security and stability of your HBase cluster.

@@ -20,7 +20,7 @@ Our dependency on Apache ZooKeeper has been upgraded to 3.5.7 ([HBASE-24132](htt
 
 ### New In-Master Procedure Store
 
-Of note, HBase 2.3.0 changes the in-Master Procedure Store implementation. It was a dedicated custom store to instead use a standard HBase Region ([HBASE-23326](https://issues.apache.org/jira/browse/HBASE-23326)). The migration from the old to new format is automatic run by the new 2.3.0 Master on startup. The old _MasterProcWALs_ dir which hosted the old custom implementation files in _\$\{hbase.rootdir\}_ is deleted on successful migration. A new _MasterProc_ sub-directory replaces it to host the Store files and WALs for the new Procedure Store in-Master Region. The in-Master Region is unusual in that it writes to an alternate location at _\$\{hbase.rootdir\}/MasterProc_ rather than under _\$\{hbase.rootdir\}/data_ in the filesystem and the special Procedure Store in-Master Region is hidden from all clients other than the active Master itself. Otherwise, it is like any other with the Master process running flushes and compactions, archiving WALs when over-flushed, and so on. Its files are readable by standard Region and Store file tooling for triage and analysis as long as they are pointed to the appropriate location in the filesystem.
+Of note, HBase 2.3.0 changes the in-Master Procedure Store implementation. It was a dedicated custom store to instead use a standard HBase Region ([HBASE-23326](https://issues.apache.org/jira/browse/HBASE-23326)). The migration from the old to new format is automatic run by the new 2.3.0 Master on startup. The old _MasterProcWALs_ dir which hosted the old custom implementation files in _$\{hbase.rootdir}_ is deleted on successful migration. A new _MasterProc_ sub-directory replaces it to host the Store files and WALs for the new Procedure Store in-Master Region. The in-Master Region is unusual in that it writes to an alternate location at _$\{hbase.rootdir\}/MasterProc_ rather than under _$\{hbase.rootdir\}/data_ in the filesystem and the special Procedure Store in-Master Region is hidden from all clients other than the active Master itself. Otherwise, it is like any other with the Master process running flushes and compactions, archiving WALs when over-flushed, and so on. Its files are readable by standard Region and Store file tooling for triage and analysis as long as they are pointed to the appropriate location in the filesystem.
 
 Notice that, after the migration, you should make sure to not start an active master with old code, as it can not recognize the new procedure store. So it is suggested to upgrade backup master(s) to new 2.3 first, and then upgrade the active master. And unless explicitly mentioned, this is the suggested way for all upgrading, i.e, upgrading backup master(s) first, then active master, and then region servers.
 
@@ -31,11 +31,8 @@ HBase 2.2+ uses a new Procedure form assigning/unassigning/moving Regions. It do
 And there is a more safer way if you are running 2.1.1+ or 2.0.3+ cluster. It need four steps to upgrade Master.
 
 1.  Shutdown both active and standby Masters (Your cluster will continue to server reads and writes without interruption).
-
 2.  Set the property hbase.procedure.upgrade-to-2-2 to true in hbase-site.xml for the Master, and start only one Master, still using the 2.1.1+ (or 2.0.3+) version.
-
-3.  Wait until the Master quits. Confirm that there is a 'UPGRADE OK: All existed procedures have been finished, quit…​' message in the Master log as the cause of the shutdown. The Procedure Store is now empty.
-
+3.  Wait until the Master quits. Confirm that there is a 'UPGRADE OK: All existed procedures have been finished, quit...' message in the Master log as the cause of the shutdown. The Procedure Store is now empty.
 4.  Start new Masters with the new 2.2+ version.
 
 Then you can rolling upgrade RegionServers one by one. See [HBASE-21075](https://issues.apache.org/jira/browse/HBASE-21075) for more details.
@@ -74,39 +71,22 @@ To read about HBCK's replacement, see [Operations and Management](/docs/ops_mgt)
 The following configuration settings are no longer applicable or available. For details, please see the detailed release notes.
 
 - hbase.config.read.zookeeper.config (see [upgrade2.0.zkconfig](#upgrade2.0.zkconfig) for migration details)
-
 - hbase.zookeeper.useMulti (HBase now always uses ZK’s multi functionality)
-
 - hbase.rpc.client.threads.max
-
 - hbase.rpc.client.nativetransport
-
 - hbase.fs.tmp.dir
-
 - hbase.bucketcache.combinedcache.enabled
-
 - hbase.bucketcache.ioengine no longer supports the 'heap' value.
-
 - hbase.bulkload.staging.dir
-
 - hbase.balancer.tablesOnMaster wasn’t removed, strictly speaking, but its meaning has fundamentally changed and users should not set it. See the section [upgrade2.0.regions.on.master](#upgrade2.0.regions.on.master) for details.
-
 - hbase.master.distributed.log.replay See the section [upgrade2.0.distributed.log.replay](#upgrade2.0.distributed.log.replay) for details
-
 - hbase.regionserver.disallow.writes.when.recovering See the section [upgrade2.0.distributed.log.replay](#upgrade2.0.distributed.log.replay) for details
-
 - hbase.regionserver.wal.logreplay.batch.size See the section [upgrade2.0.distributed.log.replay](#upgrade2.0.distributed.log.replay) for details
-
 - hbase.master.catalog.timeout
-
 - hbase.regionserver.catalog.timeout
-
 - hbase.metrics.exposeOperationTimes
-
 - hbase.metrics.showTableName
-
 - hbase.online.schema.update.enable (HBase now always supports this)
-
 - hbase.thrift.htablepool.size.max
 
 #### Configuration properties that were renamed in HBase 2.0+ [!toc]
@@ -126,37 +106,21 @@ The following properties have been renamed. Attempts to set the old property wil
 The following configuration settings changed their default value. Where applicable, the value to set to restore the behavior of HBase 1.2 is given.
 
 - hbase.security.authorization now defaults to false. set to true to restore same behavior as previous default.
-
 - hbase.client.retries.number is now set to 10. Previously it was 35. Downstream users are advised to use client timeouts as described in [Configuration](/docs/configuration#timeout-settings) instead.
-
 - hbase.client.serverside.retries.multiplier is now set to 3. Previously it was 10. Downstream users are advised to use client timeouts as described in [Configuration](/docs/configuration#timeout-settings) instead.
-
 - hbase.master.fileSplitTimeout is now set to 10 minutes. Previously it was 30 seconds.
-
 - hbase.regionserver.logroll.multiplier is now set to 0.5. Previously it was 0.95. This change is tied with the following doubling of block size. Combined, these two configuration changes should make for WALs of about the same size as those in hbase-1.x but there should be less incidence of small blocks because we fail to roll the WAL before we hit the blocksize threshold. See [HBASE-19148](https://issues.apache.org/jira/browse/HBASE-19148) for discussion.
-
 - hbase.regionserver.hlog.blocksize defaults to 2x the HDFS default block size for the WAL dir. Previously it was equal to the HDFS default block size for the WAL dir.
-
 - hbase.client.start.log.errors.counter changed to 5. Previously it was 9.
-
 - hbase.ipc.server.callqueue.type changed to 'fifo'. In HBase versions 1.0 - 1.2 it was 'deadline'. In prior and later 1.x versions it already defaults to 'fifo'.
-
 - hbase.hregion.memstore.chunkpool.maxsize is 1.0 by default. Previously it was 0.0. Effectively, this means previously we would not use a chunk pool when our memstore is onheap and now we will. See the section [Long GC pauses](#) for more information about the MSLAB chunk pool.
-
 - hbase.master.cleaner.interval is now set to 10 minutes. Previously it was 1 minute.
-
 - hbase.master.procedure.threads will now default to 1/4 of the number of available CPUs, but not less than 16 threads. Previously it would be number of threads equal to number of CPUs.
-
 - hbase.hstore.blockingStoreFiles is now 16. Previously it was 10.
-
 - hbase.http.max.threads is now 16. Previously it was 10.
-
 - hbase.client.max.perserver.tasks is now 2. Previously it was 5.
-
 - hbase.normalizer.period is now 5 minutes. Previously it was 30 minutes.
-
 - hbase.regionserver.region.split.policy is now SteppingSplitPolicy. Previously it was IncreasingToUpperBoundRegionSplitPolicy.
-
 - replication.source.ratio is now 0.5. Previously it was 0.1.
 
 #### "Master hosting regions" feature broken and unsupported [!toc]
@@ -166,11 +130,8 @@ The feature "Master acts as region server" and associated follow-on work availab
 A brief summary of related changes:
 
 - Master no longer carries regions by default
-
 - hbase.balancer.tablesOnMaster is a boolean, default false (if it holds an HBase 1.x list of tables, will default to false)
-
 - hbase.balancer.tablesOnMaster.systemTablesOnly is boolean to keep user tables off master. default false
-
 - those wishing to replicate old list-of-servers config should deploy a stand-alone RegionServer process and then rely on Region Server Groups
 
 #### "Distributed Log Replay" feature broken and removed [!toc]
@@ -189,14 +150,12 @@ The prefix-tree encoding needs to be removed from all tables before upgrading to
 
 The following metrics have changed names:
 
-- Metrics previously published under the name "AssignmentManger" \[sic\] are now published under the name "AssignmentManager"
+- Metrics previously published under the name "AssignmentManger" [sic] are now published under the name "AssignmentManager"
 
 The following metrics have changed their meaning:
 
 - The metric 'blockCacheEvictionCount' published on a per-region server basis no longer includes blocks removed from the cache due to the invalidation of the hfiles they are from (e.g. via compaction).
-
 - The metric 'totalRequestCount' increments once per request; previously it incremented by the number of `Actions` carried in the request; e.g. if a request was a `multi` made of four Gets and two Puts, we’d increment 'totalRequestCount' by six; now we increment by one regardless. Expect to see lower values for this metric in hbase-2.0.0.
-
 - The 'readRequestCount' now counts reads that return a non-empty row where in older hbases, we’d increment 'readRequestCount' whether a Result or not. This change will flatten the profile of the read-requests graphs if requests for non-existent rows. A YCSB read-heavy workload can do this dependent on how the database was loaded.
 
 The following metrics have been removed:
@@ -222,7 +181,6 @@ HBase no longer optionally reads the 'zoo.cfg' file for ZooKeeper related config
 The following permission related changes either altered semantics or defaults:
 
 - Permissions granted to a user now merge with existing permissions for that user, rather than over-writing them. (see [the release note on HBASE-17472](https://issues.apache.org/jira/browse/HBASE-17472) for details)
-
 - Region Server Group commands (added in 1.4.0) now require admin privileges.
 
 #### Most Admin APIs don’t work against an HBase 2.0+ cluster from pre-HBase 2.0 clients [!toc]
@@ -232,17 +190,11 @@ A number of admin commands are known to not work when used from a pre-HBase 2.0 
 The following client operations do not work against HBase 2.0+ cluster when executed from a pre-HBase 2.0 client:
 
 - list_procedures
-
 - split
-
 - merge_region
-
 - list_quotas
-
 - enable_table_replication
-
 - disable_table_replication
-
 - Snapshot related commands
 
 #### Deprecated in 1.0 admin commands have been removed. [!toc]
@@ -357,7 +309,6 @@ The throughput limit is defined as a range of bytes written per second, and is a
 Configuration of this throughput is governed by the following properties.
 
 - The lower bound is defined by `hbase.hstore.compaction.throughput.lower.bound` and defaults to 50 MB/s (`52428800`).
-
 - The upper bound is defined by `hbase.hstore.compaction.throughput.higher.bound` and defaults to 100 MB/s (`104857600`).
 
 To revert this behavior to the unlimited compaction throughput of earlier versions of HBase, please set the following property to the implementation that applies no limits to compactions.
@@ -369,21 +320,16 @@ To revert this behavior to the unlimited compaction throughput of earlier versio
 Coprocessors have changed substantially in 2.0 ranging from top level design changes in class hierarchies to changed/removed methods, interfaces, etc. (Parent jira: [HBASE-18169 Coprocessor fix and cleanup before 2.0.0 release](https://issues.apache.org/jira/browse/HBASE-18169)). Some of the reasons for such widespread changes:
 
 1.  Pass Interfaces instead of Implementations; e.g. TableDescriptor instead of HTableDescriptor and Region instead of HRegion ([HBASE-18241](https://issues.apache.org/jira/browse/HBASE-18241) Change client.Table and client.Admin to not use HTableDescriptor).
-
 2.  Design refactor so implementers need to fill out less boilerplate and so we can do more compile-time checking ([HBASE-17732](https://issues.apache.org/jira/browse/HBASE-17732))
-
 3.  Purge Protocol Buffers from Coprocessor API ([HBASE-18859](https://issues.apache.org/jira/browse/HBASE-18859), [HBASE-16769](https://issues.apache.org/jira/browse/HBASE-16769), etc)
-
 4.  Cut back on what we expose to Coprocessors removing hooks on internals that were too private to expose (for eg. [HBASE-18453](https://issues.apache.org/jira/browse/HBASE-18453) CompactionRequest should not be exposed to user directly; [HBASE-18298](https://issues.apache.org/jira/browse/HBASE-18298) RegionServerServices Interface cleanup for CP expose; etc)
 
 To use coprocessors in 2.0, they should be rebuilt against new API otherwise they will fail to load and HBase processes will die.
 
 Suggested order of changes to upgrade the coprocessors:
 
-1.  Directly implement observer interfaces instead of extending Base\*Observer classes. Change `Foo extends BaseXXXObserver` to `Foo implements XXXObserver`. ([HBASE-17312](https://issues.apache.org/jira/browse/HBASE-17312)).
-
+1.  Directly implement observer interfaces instead of extending Base*Observer classes. Change `Foo extends BaseXXXObserver` to `Foo implements XXXObserver`. ([HBASE-17312](https://issues.apache.org/jira/browse/HBASE-17312)).
 2.  Adapt to design change from Inheritence to Composition ([HBASE-17732](https://issues.apache.org/jira/browse/HBASE-17732)) by following [this example](https://github.com/apache/hbase/blob/master/dev-support/design-docs/Coprocessor_Design_Improvements-Use_composition_instead_of_inheritance-HBASE-17732.adoc#migrating-existing-cps-to-new-design).
-
 3.  getTable() has been removed from the CoprocessorEnvrionment, coprocessors should self-manage Table instances.
 
 Some examples of writing coprocessors with new API can be found in hbase-example module [here](https://github.com/apache/hbase/tree/branch-2.0/hbase-examples/src/main/java/org/apache/hadoop/hbase/coprocessor/example) .
@@ -399,22 +345,16 @@ That said, the below is a prescription for a rolling upgrade of a 1.4 cluster.
 #### Pre-Requirements
 
 - Upgrade to the latest 1.4.x release. Pre 1.4 releases may also work but are not tested, so please upgrade to 1.4.3+ before upgrading to 2.x, unless you are an expert and familiar with the region assignment and crash processing. See the section [Upgrading from pre-1.4 to 1.4+](#upgrade1.4) on how to upgrade to 1.4.x.
-
 - Make sure that the zk-less assignment is enabled, i.e, set `hbase.assignment.usezk` to `false`. This is the most important thing. It allows the 1.x master to assign/unassign regions to/from 2.x region servers. See the release note section of [HBASE-11059](https://issues.apache.org/jira/browse/HBASE-11059) on how to migrate from zk based assignment to zk less assignment.
-
 - Before you upgrade, ensure that _hbck1_ reports no `INCONSISTENCIES`. Fixing hbase1-type inconsistencies post-upgrade is an involved process.
-
 - We have tested rolling upgrading from 1.4.3 to 2.1.0, but it should also work if you want to upgrade to 2.0.x.
 
 #### Instructions
 
 1.  Unload a region server and upgrade it to 2.1.0. With [HBASE-17931](https://issues.apache.org/jira/browse/HBASE-17931) in place, the meta region and regions for other system tables will be moved to this region server immediately. If not, please move them manually to the new region server. This is very important because
     - The schema of meta region is hard coded, if meta is on an old region server, then the new region servers can not access it as it does not have some families, for example, table state.
-
     - Client with lower version can communicate with server with higher version, but not vice versa. If the meta region is on an old region server, the new region server will use a client with higher version to communicate with a server with lower version, this may introduce strange problems.
-
 2.  Rolling upgrade all other region servers.
-
 3.  Upgrading masters.
 
 It is OK that during the rolling upgrading there are region server crashes. The 1.x master can assign regions to both 1.x and 2.x region servers, and [HBASE-19166](https://issues.apache.org/jira/browse/HBASE-19166) fixed a problem so that 1.x region server can also read the WALs written by 2.x region server and split them.
@@ -437,15 +377,10 @@ It is OK that during the rolling upgrading there are region server crashes. The 
 To upgrade an existing HBase 1.x cluster, you should:
 
 - Ensure that _hbck1_ reports no `INCONSISTENCIES`. Fixing hbase1-type inconsistencies post-upgrade is an involved process. Fix all _hbck1_ complaints before proceeding.
-
 - Clean shutdown of existing 1.x cluster
-
 - Update coprocessors
-
 - Upgrade Master roles first
-
 - Upgrade RegionServers
-
 - (Eventually) Upgrade Clients
 
 ## Upgrading to 1.7.1+
@@ -453,9 +388,7 @@ To upgrade an existing HBase 1.x cluster, you should:
 HBase release 1.7.0 introduced an incompatible table metadata serialization format that broke the minor release compatibility guarantees. The issue was reported in [HBASE-26021](https://issues.apache.org/jira/browse/HBASE-26021) and the problematic serialization patch was reverted in HBase 1.7.1. Some important notes about 1.7.x upgrades below.
 
 - If you are considering an upgrade to 1.7.x version, skip 1.7.0 completely and upgrade to 1.7.1+ version. 1.7.0 was withdrawn and removed from the Apache sites.
-
 - If you already installed a 1.7.0 cluster from scratch and are looking to migrate to 1.7.1+, you cannot follow the regular rolling upgrade procedures due to broken compatibility contracts. Instead shutdown the cluster and reboot with 1.7.1+ binaries. Newer versions detect any existing tables with incompatible serialization and rewrite them using the correct format at bootstrap.
-
 - If you are already on 1.7.1+ version, everything is good and no additional steps need to be performed.
 
 ## Upgrading from pre-1.4 to 1.4+
@@ -469,15 +402,11 @@ Users upgrading from versions prior to HBase 1.4 should be aware that the estima
 Before 1.4, the table name can’t include namespace for replication peer’s TableCFs config. It was fixed by add TableCFs to ReplicationPeerConfig which was stored on Zookeeper. So when upgrade to 1.4, you have to update the original ReplicationPeerConfig data on Zookeeper firstly. There are four steps to upgrade when your cluster have a replication peer with TableCFs config.
 
 - Disable the replication peer.
-
 - If master has permission to write replication peer znode, then rolling update master directly. If not, use TableCFsUpdater tool to update the replication peer's config.
-
   ```bash
   $ bin/hbase org.apache.hadoop.hbase.replication.master.TableCFsUpdater update
   ```
-
 - Rolling update regionservers.
-
 - Enable the replication peer.
 
 Notes:
