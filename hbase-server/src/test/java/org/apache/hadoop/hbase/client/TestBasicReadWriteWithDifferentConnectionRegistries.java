@@ -62,7 +62,7 @@ public class TestBasicReadWriteWithDifferentConnectionRegistries {
   private static final Logger LOG =
     LoggerFactory.getLogger(TestBasicReadWriteWithDifferentConnectionRegistries.class);
 
-  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   public enum RegistryImpl {
     ZK,
@@ -100,11 +100,15 @@ public class TestBasicReadWriteWithDifferentConnectionRegistries {
     UTIL.shutdownMiniCluster();
   }
 
+  protected Connection createConnectionFromUri(URI uri) throws Exception {
+    return ConnectionFactory.createConnection(uri);
+  }
+
   @Before
   public void setUp() throws Exception {
     switch (impl) {
       case ZK: {
-        Configuration conf = HBaseConfiguration.create();
+        Configuration conf = HBaseConfiguration.create(UTIL.getConfiguration());
         conf.setClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
           ZKConnectionRegistry.class, ConnectionRegistry.class);
         String quorum = UTIL.getZkCluster().getAddress().toString();
@@ -116,7 +120,7 @@ public class TestBasicReadWriteWithDifferentConnectionRegistries {
         break;
       }
       case RPC: {
-        Configuration conf = HBaseConfiguration.create();
+        Configuration conf = HBaseConfiguration.create(UTIL.getConfiguration());
         conf.setClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
           RpcConnectionRegistry.class, ConnectionRegistry.class);
         String bootstrapServers =
@@ -131,14 +135,14 @@ public class TestBasicReadWriteWithDifferentConnectionRegistries {
         String path = UTIL.getConfiguration().get(HConstants.ZOOKEEPER_ZNODE_PARENT);
         URI connectionUri = new URI("hbase+zk://" + quorum + path);
         LOG.info("connect to cluster through connection url: {}", connectionUri);
-        conn = ConnectionFactory.createConnection(connectionUri);
+        conn = createConnectionFromUri(connectionUri);
         break;
       }
       case RPC_URI: {
         URI connectionUri = new URI("hbase+rpc://"
           + UTIL.getMiniHBaseCluster().getMaster().getServerName().getAddress().toString());
         LOG.info("connect to cluster through connection url: {}", connectionUri);
-        conn = ConnectionFactory.createConnection(connectionUri);
+        conn = createConnectionFromUri(connectionUri);
         break;
       }
       default:
