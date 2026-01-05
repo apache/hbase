@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.codec.KeyValueCodec;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProviders;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.PoolMap;
@@ -116,6 +117,8 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   protected final UserProvider userProvider;
   protected final CellBlockBuilder cellBlockBuilder;
 
+  protected final SaslClientAuthenticationProviders providers;
+
   protected final int minIdleTimeBeforeClose; // if the connection is idle for more than this
   // time (in ms), it will be closed at any moment.
   protected final int maxRetries; // the max. no. of retries for socket connections
@@ -183,6 +186,8 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     this.maxConcurrentCallsPerServer =
       conf.getInt(HConstants.HBASE_CLIENT_PERSERVER_REQUESTS_THRESHOLD,
         HConstants.DEFAULT_HBASE_CLIENT_PERSERVER_REQUESTS_THRESHOLD);
+
+    this.providers = new SaslClientAuthenticationProviders(conf);
 
     this.connections = new PoolMap<>(getPoolType(conf), getPoolSize(conf));
 
