@@ -289,6 +289,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineReg
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RegionSpecifierAndState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReopenTableRegionsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReopenTableRegionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
@@ -1486,6 +1488,29 @@ public class MasterRpcServices extends RSRpcServices
         ProtobufUtil.toTableDescriptor(req.getTableSchema()), req.getNonceGroup(), req.getNonce(),
         req.getReopenRegions());
       return ModifyTableResponse.newBuilder().setProcId(procId).build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
+  @Override
+  public ReopenTableRegionsResponse reopenTableRegions(RpcController controller,
+    ReopenTableRegionsRequest request) throws ServiceException {
+    try {
+      master.checkInitialized();
+
+      final TableName tableName = ProtobufUtil.toTableName(request.getTableName());
+      final List<byte[]> regionNames = request.getRegionNamesList().stream()
+        .map(ByteString::toByteArray).collect(Collectors.toList());
+
+      LOG.info("Reopening regions for table={}, regionCount={}", tableName,
+        regionNames.isEmpty() ? "all" : regionNames.size());
+
+      long procId = master.reopenRegionsThrottled(tableName, regionNames, request.getNonceGroup(),
+        request.getNonce());
+
+      return ReopenTableRegionsResponse.newBuilder().setProcId(procId).build();
+
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }

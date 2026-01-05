@@ -213,6 +213,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableStoreFileTrackerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableStoreFileTrackerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReopenTableRegionsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReopenTableRegionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest;
@@ -407,6 +409,34 @@ public class HBaseAdmin implements Admin {
         }
       });
     return new ModifyTableFuture(this, td.getTableName(), response);
+  }
+
+  @Override
+  public Future<Void> reopenTableRegionsAsync(TableName tableName) throws IOException {
+    return reopenTableRegionsAsync(tableName, Collections.emptyList());
+  }
+
+  @Override
+  public Future<Void> reopenTableRegionsAsync(TableName tableName, List<RegionInfo> regions)
+    throws IOException {
+    List<byte[]> regionNames =
+      regions.stream().map(RegionInfo::getRegionName).collect(Collectors.toList());
+    ;
+    ReopenTableRegionsResponse response = executeCallable(
+      new MasterCallable<ReopenTableRegionsResponse>(getConnection(), getRpcControllerFactory()) {
+        long nonceGroup = ng.getNonceGroup();
+        long nonce = ng.newNonce();
+
+        @Override
+        protected ReopenTableRegionsResponse rpcCall() throws Exception {
+          setPriority(tableName);
+          ReopenTableRegionsRequest request = RequestConverter
+            .buildReopenTableRegionsRequest(tableName, regionNames, nonceGroup, nonce);
+          return master.reopenTableRegions(getRpcController(), request);
+
+        }
+      });
+    return new ReopenTableRegionsFuture(this, tableName, response);
   }
 
   @Override
@@ -2122,6 +2152,19 @@ public class HBaseAdmin implements Admin {
     @Override
     public String getOperationType() {
       return "TRUNCATE_REGION";
+    }
+  }
+
+  private static class ReopenTableRegionsFuture extends TableFuture<Void> {
+    public ReopenTableRegionsFuture(HBaseAdmin admin, TableName tableName,
+      ReopenTableRegionsResponse response) {
+      super(admin, tableName,
+        (response != null && response.hasProcId()) ? response.getProcId() : null);
+    }
+
+    @Override
+    public String getOperationType() {
+      return "REOPEN_TABLE_REGIONS";
     }
   }
 
