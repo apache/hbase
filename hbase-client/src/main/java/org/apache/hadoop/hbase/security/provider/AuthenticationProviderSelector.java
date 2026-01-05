@@ -33,8 +33,7 @@ public interface AuthenticationProviderSelector {
 
   /**
    * Initializes the implementation with configuration and a set of providers available. This method
-   * should be called exactly once per implementation prior to calling
-   * {@link #selectProvider(String, User)}.
+   * should be called prior to calling {@link #selectProvider(String, User)}.
    */
   void configure(Configuration conf,
     Collection<SaslClientAuthenticationProvider> availableProviders);
