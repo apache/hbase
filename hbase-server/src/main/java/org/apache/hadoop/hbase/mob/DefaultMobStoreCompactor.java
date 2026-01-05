@@ -352,8 +352,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
       .build();
     throughputController.start(compactionName);
     KeyValueScanner kvs = (scanner instanceof KeyValueScanner) ? (KeyValueScanner) scanner : null;
-    long shippedCallSizeLimit =
-      (long) request.getFiles().size() * this.store.getColumnFamilyDescriptor().getBlocksize();
+    long shippedCallSizeLimit = Math.min(compactScannerSizeLimit,
+      (long) request.getFiles().size() * this.store.getColumnFamilyDescriptor().getBlocksize());
 
     ExtendedCell mobCell = null;
     List<String> committedMobWriterFileNames = new ArrayList<>();
@@ -548,6 +548,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
           if (kvs != null && bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
             ((ShipperListener) writer).beforeShipped();
             kvs.shipped();
+            scannerContext.clearBlockSizeProgress();
             bytesWrittenProgressForShippedCall = 0;
           }
         }
