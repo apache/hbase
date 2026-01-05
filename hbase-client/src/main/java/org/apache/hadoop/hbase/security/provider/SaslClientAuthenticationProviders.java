@@ -202,11 +202,20 @@ public final class SaslClientAuthenticationProviders {
 
   /**
    * Chooses the best authentication provider and corresponding token given the HBase cluster
-   * identifier and the user.
+   * identifier, the user, and the supplied {@link Configuration}.
    */
   public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>>
     selectProvider(Configuration conf, String clusterId, User clientUser) {
     return selector.selectProvider(conf, clusterId, clientUser);
+  }
+
+  /**
+   * Chooses the best authentication provider and corresponding token given the HBase cluster
+   * identifier and the user. This version was kept for backward compatibility.
+   */
+  public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>>
+    selectProvider(String clusterId, User clientUser) {
+    return selector.selectProvider(clusterId, clientUser);
   }
 
   @Override
