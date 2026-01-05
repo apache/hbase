@@ -64,13 +64,6 @@ public final class SaslClientAuthenticationProviders {
   }
 
   /**
-   * Returns an instance of {@link SaslClientAuthenticationProviders}.
-   */
-  public static synchronized SaslClientAuthenticationProviders getInstance(Configuration conf) {
-    return instantiate(conf);
-  }
-
-  /**
    * Adds the given {@code provider} to the set, only if an equivalent provider does not already
    * exist in the set.
    */
@@ -148,7 +141,7 @@ public final class SaslClientAuthenticationProviders {
    * Instantiates all client authentication providers and returns an instance of
    * {@link SaslClientAuthenticationProviders}.
    */
-  static SaslClientAuthenticationProviders instantiate(Configuration conf) {
+  public static SaslClientAuthenticationProviders getInstance(Configuration conf) {
     ServiceLoader<SaslClientAuthenticationProvider> loader =
       ServiceLoader.load(SaslClientAuthenticationProvider.class,
         SaslClientAuthenticationProviders.class.getClassLoader());
