@@ -98,6 +98,12 @@ public class BuiltInProviderSelector implements AuthenticationProviderSelector {
   @Override
   public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>>
     selectProvider(String clusterId, User user) {
+    return selectProvider(conf, clusterId, user);
+  }
+
+  @Override
+  public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>>
+    selectProvider(Configuration conf, String clusterId, User user) {
     requireNonNull(clusterId, "Null clusterId was given");
     requireNonNull(user, "Null user was given");
 
