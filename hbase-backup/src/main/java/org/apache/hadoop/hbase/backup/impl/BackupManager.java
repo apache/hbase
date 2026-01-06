@@ -132,6 +132,10 @@ public class BackupManager implements Closeable {
           + " Added master procedure manager: {}. Added master observer: {}",
         cleanerClass, masterProcedureClass, BackupHFileCleaner.class.getName(), observerClass);
     }
+
+    String observers = conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      (observers == null ? "" : observers + ",") + BackupMasterObserver.class.getName());
   }
 
   /**
