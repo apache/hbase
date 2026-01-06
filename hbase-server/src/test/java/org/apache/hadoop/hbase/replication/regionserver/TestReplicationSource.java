@@ -53,11 +53,13 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.replication.EmptyEntriesPolicy;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationQueueData;
 import org.apache.hadoop.hbase.replication.ReplicationQueueId;
+import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
@@ -490,6 +492,67 @@ public class TestReplicationSource {
       throw new RuntimeException();
     }
 
+  }
+
+  /**
+   * Custom ReplicationEndpoint that simulates an asynchronous target like S3 or cloud storage. In
+   * this case, empty entry batches should not cause WAL position to be committed immediately.
+   */
+  public static class AsyncReplicationEndpoint extends DoNothingReplicationEndpoint {
+    @Override
+    public EmptyEntriesPolicy getEmptyEntriesPolicy() {
+      return EmptyEntriesPolicy.SUBMIT;
+    }
+  }
+
+  /**
+   * Default synchronous ReplicationEndpoint that treats empty entry batches as a signal to commit
+   * WAL position, assuming all entries pushed before were safely replicated.
+   */
+  public static class SyncReplicationEndpoint extends DoNothingReplicationEndpoint {
+    // Inherits default COMMIT behavior
+  }
+
+  /**
+   * Verifies that ReplicationSourceShipper commits the WAL position when using a synchronous
+   * endpoint and the entry batch is empty.
+   */
+  @Test
+  public void testEmptyBatchCommitsPositionForCommitEndpoint() {
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    ReplicationSource source = Mockito.mock(ReplicationSource.class);
+    Mockito.when(source.getReplicationEndpoint()).thenReturn(new SyncReplicationEndpoint());
+
+    ReplicationSourceShipper shipper =
+      Mockito.spy(new ReplicationSourceShipper(conf, "testGroup", source, null));
+
+    WALEntryBatch emptyBatch = new WALEntryBatch(0, new Path("test-wal"));
+
+    shipper.shipEdits(emptyBatch);
+
+    // With default (COMMIT) policy, empty entry batch should advance WAL position
+    Mockito.verify(shipper).updateLogPosition(emptyBatch, ReplicationResult.COMMITTED);
+  }
+
+  /**
+   * Verifies that ReplicationSourceShipper does NOT commit the WAL position when using an
+   * asynchronous endpoint and the entry batch is empty.
+   */
+  @Test
+  public void testEmptyBatchSubmitsPositionForSubmitEndpoint() {
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    ReplicationSource source = Mockito.mock(ReplicationSource.class);
+    Mockito.when(source.getReplicationEndpoint()).thenReturn(new AsyncReplicationEndpoint());
+
+    ReplicationSourceShipper shipper =
+      Mockito.spy(new ReplicationSourceShipper(conf, "testGroup", source, null));
+
+    WALEntryBatch emptyBatch = new WALEntryBatch(0, new Path("test-wal"));
+
+    shipper.shipEdits(emptyBatch);
+
+    // With SUBMIT policy, empty entry batch should NOT advance WAL position
+    Mockito.verify(shipper).updateLogPosition(emptyBatch, ReplicationResult.SUBMITTED);
   }
 
   private RegionServerServices setupForAbortTests(ReplicationSource rs, Configuration conf,

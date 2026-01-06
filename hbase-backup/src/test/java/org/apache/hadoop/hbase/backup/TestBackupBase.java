@@ -17,9 +17,18 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.apache.hadoop.hbase.HConstants.REPLICATION_BULKLOAD_ENABLE_KEY;
+import static org.apache.hadoop.hbase.HConstants.REPLICATION_CLUSTER_ID;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_BACKUP_MAX_WAL_SIZE;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INITIAL_DELAY;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INTERVAL;
+import static org.apache.hadoop.hbase.mapreduce.WALPlayer.IGNORE_EMPTY_FILES;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +49,7 @@ import org.apache.hadoop.hbase.backup.BackupInfo.BackupPhase;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
+import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.impl.FullTableBackupClient;
 import org.apache.hadoop.hbase.backup.impl.IncrementalBackupManager;
@@ -168,7 +178,7 @@ public class TestBackupBase {
         // copy out the table and region info files for each table
         BackupUtils.copyTableRegionInfo(conn, backupInfo, conf);
         // convert WAL to HFiles and copy them to .tmp under BACKUP_ROOT
-        convertWALsToHFiles();
+        convertWALsToHFiles(new HashMap<>(), new HashMap<>());
         incrementalCopyHFiles(new String[] { getBulkOutputDir().toString() },
           backupInfo.getBackupRootDir());
         failStageIf(Stage.stage_2);
@@ -193,7 +203,7 @@ public class TestBackupBase {
           BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(newTableSetTimestampMap));
         backupManager.writeBackupStartCode(newStartCode);
 
-        handleBulkLoad(backupInfo.getTableNames());
+        handleBulkLoad(backupInfo.getTableNames(), new HashMap<>(), new HashMap<>());
         failStageIf(Stage.stage_4);
 
         // backup complete
@@ -294,6 +304,13 @@ public class TestBackupBase {
   public static void setUpHelper() throws Exception {
     BACKUP_ROOT_DIR = Path.SEPARATOR + "backupUT";
     BACKUP_REMOTE_ROOT_DIR = Path.SEPARATOR + "backupUT";
+
+    conf1.set(CONF_BACKUP_MAX_WAL_SIZE, "10240");
+    conf1.set(CONF_STAGED_WAL_FLUSH_INITIAL_DELAY, "10");
+    conf1.set(CONF_STAGED_WAL_FLUSH_INTERVAL, "10");
+    conf1.setBoolean(REPLICATION_BULKLOAD_ENABLE_KEY, true);
+    conf1.set(REPLICATION_CLUSTER_ID, "clusterId1");
+    conf1.setBoolean(IGNORE_EMPTY_FILES, true);
 
     if (secure) {
       // set the always on security provider
@@ -407,15 +424,30 @@ public class TestBackupBase {
     return request;
   }
 
+  protected BackupRequest createBackupRequest(BackupType type, List<TableName> tables,
+    String rootDir, boolean noChecksumVerify, boolean isContinuousBackupEnabled) {
+    BackupRequest.Builder builder = new BackupRequest.Builder();
+    return builder.withBackupType(type).withTableList(tables).withTargetRootDir(rootDir)
+      .withNoChecksumVerify(noChecksumVerify).withContinuousBackupEnabled(isContinuousBackupEnabled)
+      .build();
+  }
+
   protected String backupTables(BackupType type, List<TableName> tables, String path)
     throws IOException {
+    return backupTables(type, tables, path, false);
+  }
+
+  protected String backupTables(BackupType type, List<TableName> tables, String path,
+    boolean isContinuousBackup) throws IOException {
     Connection conn = null;
     BackupAdmin badmin = null;
     String backupId;
     try {
       conn = ConnectionFactory.createConnection(conf1);
       badmin = new BackupAdminImpl(conn);
-      BackupRequest request = createBackupRequest(type, new ArrayList<>(tables), path);
+
+      BackupRequest request =
+        createBackupRequest(type, new ArrayList<>(tables), path, false, isContinuousBackup);
       backupId = badmin.backupTables(request);
     } finally {
       if (badmin != null) {
@@ -545,6 +577,22 @@ public class TestBackupBase {
     RemoteIterator<LocatedFileStatus> it = fs.listFiles(new Path(BACKUP_ROOT_DIR), true);
     while (it.hasNext()) {
       LOG.debug(Objects.toString(it.next().getPath()));
+    }
+  }
+
+  BackupManifest getLatestBackupManifest(List<BackupInfo> backups) throws IOException {
+    BackupInfo newestBackup = backups.get(0);
+    return HBackupFileSystem.getManifest(conf1, new Path(BACKUP_ROOT_DIR),
+      newestBackup.getBackupId());
+  }
+
+  void deleteContinuousBackupReplicationPeerIfExists(Admin admin) throws IOException {
+    if (
+      admin.listReplicationPeers().stream()
+        .anyMatch(peer -> peer.getPeerId().equals(CONTINUOUS_BACKUP_REPLICATION_PEER))
+    ) {
+      admin.disableReplicationPeer(CONTINUOUS_BACKUP_REPLICATION_PEER);
+      admin.removeReplicationPeer(CONTINUOUS_BACKUP_REPLICATION_PEER);
     }
   }
 }

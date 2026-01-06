@@ -71,6 +71,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
    */
   public enum BackupPhase {
     REQUEST,
+    SETUP_WAL_REPLICATION,
     SNAPSHOT,
     PREPARE_INCREMENTAL,
     SNAPSHOTCOPY,
@@ -124,6 +125,11 @@ public class BackupInfo implements Comparable<BackupInfo> {
   private long completeTs;
 
   /**
+   * Committed WAL timestamp for incremental backup
+   */
+  private long incrCommittedWalTs;
+
+  /**
    * Total bytes of incremental logs copied
    */
   private long totalBytesCopied;
@@ -170,6 +176,8 @@ public class BackupInfo implements Comparable<BackupInfo> {
    */
   private boolean noChecksumVerify;
 
+  private boolean continuousBackupEnabled;
+
   public BackupInfo() {
     backupTableInfoMap = new HashMap<>();
   }
@@ -185,6 +193,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
     }
     this.startTs = 0;
     this.completeTs = 0;
+    this.continuousBackupEnabled = false;
   }
 
   public int getWorkers() {
@@ -287,6 +296,14 @@ public class BackupInfo implements Comparable<BackupInfo> {
 
   public void setCompleteTs(long endTs) {
     this.completeTs = endTs;
+  }
+
+  public long getIncrCommittedWalTs() {
+    return incrCommittedWalTs;
+  }
+
+  public void setIncrCommittedWalTs(long timestamp) {
+    this.incrCommittedWalTs = timestamp;
   }
 
   public long getTotalBytesCopied() {
@@ -423,6 +440,8 @@ public class BackupInfo implements Comparable<BackupInfo> {
     builder.setBackupType(BackupProtos.BackupType.valueOf(getType().name()));
     builder.setWorkersNumber(workers);
     builder.setBandwidth(bandwidth);
+    builder.setContinuousBackupEnabled(isContinuousBackupEnabled());
+    builder.setIncrCommittedWalTs(getIncrCommittedWalTs());
     return builder.build();
   }
 
@@ -518,6 +537,8 @@ public class BackupInfo implements Comparable<BackupInfo> {
     context.setType(BackupType.valueOf(proto.getBackupType().name()));
     context.setWorkers(proto.getWorkersNumber());
     context.setBandwidth(proto.getBandwidth());
+    context.setContinuousBackupEnabled(proto.getContinuousBackupEnabled());
+    context.setIncrCommittedWalTs(proto.getIncrCommittedWalTs());
     return context;
   }
 
@@ -545,6 +566,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
     sb.append("{");
     sb.append("ID=" + backupId).append(",");
     sb.append("Type=" + getType()).append(",");
+    sb.append("IsContinuous=" + isContinuousBackupEnabled()).append(",");
     sb.append("Tables=" + getTableListAsString()).append(",");
     sb.append("State=" + getState()).append(",");
     Calendar cal = Calendar.getInstance();
@@ -560,6 +582,12 @@ public class BackupInfo implements Comparable<BackupInfo> {
       cal.setTimeInMillis(getCompleteTs());
       date = cal.getTime();
       sb.append("End time=" + date).append(",");
+      if (getType() == BackupType.INCREMENTAL) {
+        cal = Calendar.getInstance();
+        cal.setTimeInMillis(getIncrCommittedWalTs());
+        date = cal.getTime();
+        sb.append("Committed WAL time for incremental backup=" + date).append(",");
+      }
     }
     sb.append("Progress=" + getProgress() + "%");
     sb.append("}");
@@ -591,5 +619,13 @@ public class BackupInfo implements Comparable<BackupInfo> {
       Long.valueOf(this.getBackupId().substring(this.getBackupId().lastIndexOf("_") + 1));
     Long otherTS = Long.valueOf(o.getBackupId().substring(o.getBackupId().lastIndexOf("_") + 1));
     return thisTS.compareTo(otherTS);
+  }
+
+  public void setContinuousBackupEnabled(boolean continuousBackupEnabled) {
+    this.continuousBackupEnabled = continuousBackupEnabled;
+  }
+
+  public boolean isContinuousBackupEnabled() {
+    return this.continuousBackupEnabled;
   }
 }
