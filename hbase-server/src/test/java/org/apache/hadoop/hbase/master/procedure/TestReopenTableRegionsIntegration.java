@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
