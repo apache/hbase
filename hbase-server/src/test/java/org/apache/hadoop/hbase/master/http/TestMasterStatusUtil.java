@@ -240,7 +240,8 @@ public class TestMasterStatusUtil {
     String link = MasterStatusUtil.serverNameLink(master, FAKE_HOST);
 
     assertNotNull(link);
-    assertEquals("<a href=\"//fakehost:16030/rs-status\">fakehost,12345,1234567890</a>", link);
+    assertEquals("<a href=\"//fakehost:16030/regionserver.jsp\">fakehost,12345,1234567890</a>",
+      link);
   }
 
   @Test
