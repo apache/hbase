@@ -39,7 +39,7 @@
   if (RSStatusConstants.FORMAT_JSON.equals(format)) {
     response.setContentType("application/json");
   } else {
-    response.setContentType("text/html");
+    response.setContentType("text/html;charset=UTF-8");
   }
 
   if (!regionServer.isOnline()) {
