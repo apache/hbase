@@ -42,10 +42,8 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ReopenTableRegionsState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ReopenTableRegionsStateData;
@@ -136,11 +134,17 @@ public class ReopenTableRegionsProcedure
       PROGRESSIVE_BATCH_SIZE_MAX_DISABLED);
   }
 
+  /**
+   * Visible for testing purposes - prefer the above methods to construct
+   */
   public ReopenTableRegionsProcedure(final TableName tableName, long reopenBatchBackoffMillis,
     int reopenBatchSizeMax) {
     this(tableName, Collections.emptyList(), reopenBatchBackoffMillis, reopenBatchSizeMax);
   }
 
+  /**
+   * Visible for testing purposes - prefer the above methods to construct
+   */
   public ReopenTableRegionsProcedure(final TableName tableName, final List<byte[]> regionNames,
     long reopenBatchBackoffMillis, int reopenBatchSizeMax) {
     this.tableName = tableName;
