@@ -263,6 +263,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineReg
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReopenTableRegionsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReopenTableRegionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RollAllWALWritersRequest;
@@ -752,6 +754,21 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         ng.newNonce(), reopenRegions),
       (s, c, req, done) -> s.modifyTable(c, req, done), (resp) -> resp.getProcId(),
       new ModifyTableProcedureBiConsumer(this, desc.getTableName()));
+  }
+
+  @Override
+  public CompletableFuture<Void> reopenTableRegions(TableName tableName) {
+    return reopenTableRegions(tableName, Collections.emptyList());
+  }
+
+  @Override
+  public CompletableFuture<Void> reopenTableRegions(TableName tableName, List<RegionInfo> regions) {
+    List<byte[]> regionNames = regions.stream().map(RegionInfo::getRegionName).toList();
+    return this.<ReopenTableRegionsRequest, ReopenTableRegionsResponse> procedureCall(tableName,
+      RequestConverter.buildReopenTableRegionsRequest(tableName, regionNames, ng.getNonceGroup(),
+        ng.newNonce()),
+      (s, c, req, done) -> s.reopenTableRegions(c, req, done), (resp) -> resp.getProcId(),
+      new ReopenTableRegionsProcedureBiConsumer(this, tableName));
   }
 
   @Override
@@ -2830,6 +2847,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     @Override
     String getOperationType() {
       return "MODIFY";
+    }
+  }
+
+  private static class ReopenTableRegionsProcedureBiConsumer extends TableProcedureBiConsumer {
+
+    ReopenTableRegionsProcedureBiConsumer(AsyncAdmin admin, TableName tableName) {
+      super(tableName);
+    }
+
+    @Override
+    String getOperationType() {
+      return "REOPEN_TABLE_REGIONS";
     }
   }
 
