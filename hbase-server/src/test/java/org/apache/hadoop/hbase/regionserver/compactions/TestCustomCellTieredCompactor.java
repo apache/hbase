@@ -19,12 +19,15 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import static org.apache.hadoop.hbase.regionserver.CustomTieringMultiFileWriter.CUSTOM_TIERING_TIME_RANGE;
 import static org.apache.hadoop.hbase.regionserver.compactions.CustomCellTieringValueProvider.TIERING_CELL_QUALIFIER;
+import static org.apache.hadoop.hbase.regionserver.compactions.CustomTieredCompactor.TIERING_VALUE_PROVIDER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -63,8 +66,6 @@ public class TestCustomCellTieredCompactor {
   @Before
   public void setUp() throws Exception {
     utility = new HBaseTestingUtil();
-    utility.getConfiguration().setInt("hbase.hfile.compaction.discharger.interval", 10);
-    utility.startMiniCluster();
   }
 
   @After
@@ -74,6 +75,9 @@ public class TestCustomCellTieredCompactor {
 
   @Test
   public void testCustomCellTieredCompactor() throws Exception {
+    utility.getConfiguration().setInt("hbase.hfile.compaction.discharger.interval", 10);
+    utility.startMiniCluster();
+
     ColumnFamilyDescriptorBuilder clmBuilder = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
     clmBuilder.setValue("hbase.hstore.engine.class", CustomTieredStoreEngine.class.getName());
     clmBuilder.setValue(TIERING_CELL_QUALIFIER, "date");
@@ -133,6 +137,96 @@ public class TestCustomCellTieredCompactor {
           > secondCompactionTime);
     numHFiles = utility.getNumHFiles(tableName, FAMILY);
     assertEquals(2, numHFiles);
+    utility.getMiniHBaseCluster().getRegions(tableName).get(0).getStore(FAMILY).getStorefiles()
+      .forEach(file -> {
+        byte[] rangeBytes = file.getMetadataValue(CUSTOM_TIERING_TIME_RANGE);
+        assertNotNull(rangeBytes);
+        try {
+          TimeRangeTracker timeRangeTracker = TimeRangeTracker.parseFrom(rangeBytes);
+          assertEquals(timeRangeTracker.getMin(), timeRangeTracker.getMax());
+        } catch (IOException e) {
+          fail(e.getMessage());
+        }
+      });
+  }
+
+  @Test
+  public void TestCustomCellTieredCompactorWithRowKeyDateTieringValueProvider() throws Exception {
+    utility.getConfiguration().set(TIERING_VALUE_PROVIDER, RowKeyDateTieringValueProvider.class.getName());
+    utility.getConfiguration().set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_PATTERN, "(\\d{17})$");
+    utility.getConfiguration().set(RowKeyDateTieringValueProvider.ROWKEY_DATE_FORMAT, "yyyyMMddHHmmssSSS");
+    utility.startMiniCluster();
+
+    ColumnFamilyDescriptorBuilder clmBuilder = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
+    clmBuilder.setValue("hbase.hstore.engine.class", CustomTieredStoreEngine.class.getName());
+
+    TableName tableName = TableName.valueOf("testCustomCellTieredCompactor");
+    TableDescriptorBuilder tblBuilder = TableDescriptorBuilder.newBuilder(tableName);
+    tblBuilder.setColumnFamily(clmBuilder.build());
+    utility.getAdmin().createTable(tblBuilder.build());
+    utility.waitTableAvailable(tableName);
+
+    Connection connection = utility.getConnection();
+    Table table = connection.getTable(tableName);
+    long recordTime = System.currentTimeMillis();
+
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS");
+
+    // Write data with date embedded in row key
+    for (int i = 0; i < 6; i++) {
+      List<Put> puts = new ArrayList<>(2);
+
+      // Old data - embed old date in row key (11 years ago)
+      String oldDate = sdf.format(new Date(recordTime - (11L * 366L * 24L * 60L * 60L * 1000L)));
+      String oldRowKey = "row_" + i + "_" + oldDate;
+      Put put = new Put(Bytes.toBytes(oldRowKey));
+      put.addColumn(FAMILY, Bytes.toBytes("val"), Bytes.toBytes("v" + i));
+      puts.add(put);
+
+      // Recent data - embed current date in row key
+      String recentDate = sdf.format(new Date(recordTime));
+      String recentRowKey = "row_" + (i + 1000) + "_" + recentDate;
+      put = new Put(Bytes.toBytes(recentRowKey));
+      put.addColumn(FAMILY, Bytes.toBytes("val"), Bytes.toBytes("v" + (i + 1000)));
+      puts.add(put);
+
+      table.put(puts);
+      utility.flush(tableName);
+    }
+    table.close();
+
+    long firstCompactionTime = System.currentTimeMillis();
+    utility.getAdmin().majorCompact(tableName);
+    Waiter.waitFor(utility.getConfiguration(), 5000,
+      () -> utility.getMiniHBaseCluster().getMaster().getLastMajorCompactionTimestamp(tableName)
+        > firstCompactionTime);
+
+    long numHFiles = utility.getNumHFiles(tableName, FAMILY);
+    assertEquals(1, numHFiles);
+
+    utility.getMiniHBaseCluster().getRegions(tableName).get(0).getStore(FAMILY).getStorefiles()
+      .forEach(file -> {
+        byte[] rangeBytes = file.getMetadataValue(CUSTOM_TIERING_TIME_RANGE);
+        assertNotNull(rangeBytes);
+        try {
+          TimeRangeTracker timeRangeTracker = TimeRangeTracker.parseFrom(rangeBytes);
+          assertEquals((recordTime - (11L * 366L * 24L * 60L * 60L * 1000L)),
+            timeRangeTracker.getMin());
+          assertEquals(recordTime, timeRangeTracker.getMax());
+        } catch (IOException e) {
+          fail(e.getMessage());
+        }
+      });
+
+    long secondCompactionTime = System.currentTimeMillis();
+    utility.getAdmin().majorCompact(tableName);
+    Waiter.waitFor(utility.getConfiguration(), 5000,
+      () -> utility.getMiniHBaseCluster().getMaster().getLastMajorCompactionTimestamp(tableName)
+        > secondCompactionTime);
+
+    numHFiles = utility.getNumHFiles(tableName, FAMILY);
+    assertEquals(2, numHFiles);
+
     utility.getMiniHBaseCluster().getRegions(tableName).get(0).getStore(FAMILY).getStorefiles()
       .forEach(file -> {
         byte[] rangeBytes = file.getMetadataValue(CUSTOM_TIERING_TIME_RANGE);
