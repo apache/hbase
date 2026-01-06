@@ -152,9 +152,12 @@ public class TestCustomCellTieredCompactor {
 
   @Test
   public void TestCustomCellTieredCompactorWithRowKeyDateTieringValueProvider() throws Exception {
-    utility.getConfiguration().set(TIERING_VALUE_PROVIDER, RowKeyDateTieringValueProvider.class.getName());
-    utility.getConfiguration().set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_PATTERN, "(\\d{17})$");
-    utility.getConfiguration().set(RowKeyDateTieringValueProvider.ROWKEY_DATE_FORMAT, "yyyyMMddHHmmssSSS");
+    utility.getConfiguration().set(TIERING_VALUE_PROVIDER,
+      RowKeyDateTieringValueProvider.class.getName());
+    utility.getConfiguration().set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_PATTERN,
+      "(\\d{17})$");
+    utility.getConfiguration().set(RowKeyDateTieringValueProvider.ROWKEY_DATE_FORMAT,
+      "yyyyMMddHHmmssSSS");
     utility.startMiniCluster();
 
     ColumnFamilyDescriptorBuilder clmBuilder = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
@@ -199,7 +202,7 @@ public class TestCustomCellTieredCompactor {
     utility.getAdmin().majorCompact(tableName);
     Waiter.waitFor(utility.getConfiguration(), 5000,
       () -> utility.getMiniHBaseCluster().getMaster().getLastMajorCompactionTimestamp(tableName)
-        > firstCompactionTime);
+          > firstCompactionTime);
 
     long numHFiles = utility.getNumHFiles(tableName, FAMILY);
     assertEquals(1, numHFiles);
@@ -222,7 +225,7 @@ public class TestCustomCellTieredCompactor {
     utility.getAdmin().majorCompact(tableName);
     Waiter.waitFor(utility.getConfiguration(), 5000,
       () -> utility.getMiniHBaseCluster().getMaster().getLastMajorCompactionTimestamp(tableName)
-        > secondCompactionTime);
+          > secondCompactionTime);
 
     numHFiles = utility.getNumHFiles(tableName, FAMILY);
     assertEquals(2, numHFiles);

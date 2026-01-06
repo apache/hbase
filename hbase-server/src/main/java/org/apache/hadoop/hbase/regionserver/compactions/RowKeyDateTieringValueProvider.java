@@ -28,6 +28,17 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Provides a tiering value for compactions by extracting and parsing a date from the row key. This
+ * implementation uses a configurable regex and date format to locate and parse a date substring
+ * from the row key and returns the parsed epoch time in milliseconds. Configuration: -
+ * `hbase.hstore.datatiering.tieringvalueprovider.regexpattern`: Regex used to match the row key. -
+ * `hbase.hstore.datatiering.tieringvalueprovider.dateformat`: `java.text.SimpleDateFormat` pattern.
+ * - `hbase.hstore.datatiering.tieringvalueprovider.regexextractgroup`: Regex group index to
+ * extract. Behavior: - Requires `init(Configuration)` to be called before use. - Returns
+ * `Long.MAX_VALUE` if the row key does not match, extraction fails, or date parsing fails. - Uses
+ * strict (non\-lenient) date parsing and validates the extract group against the pattern.
+ */
 @InterfaceAudience.Private
 public class RowKeyDateTieringValueProvider implements CustomTieredCompactor.TieringValueProvider {
   private static final Logger LOG = LoggerFactory.getLogger(RowKeyDateTieringValueProvider.class);
@@ -123,8 +134,8 @@ public class RowKeyDateTieringValueProvider implements CustomTieredCompactor.Tie
       }
       return dateFormat.parse(extractedValue).getTime();
     } catch (IndexOutOfBoundsException e) {
-        // Shouldn't throw due to validation during init
-        LOG.debug("Row key '{}' does not match the regex pattern", rowKeyStr);
+      // Shouldn't throw due to validation during init
+      LOG.debug("Row key '{}' does not match the regex pattern", rowKeyStr);
     } catch (ParseException e) {
       LOG.debug("Error parsing date value '{}' extracted from row key '{}'", extractedValue,
         rowKeyStr, e);

@@ -96,7 +96,8 @@ public class TestRowKeyDateTieringValueProvider {
   public void testInitWithExtractGroupExceedingPatternGroups() throws Exception {
     conf.set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
     conf.set(RowKeyDateTieringValueProvider.ROWKEY_DATE_FORMAT, "yyyy-MM-dd");
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_EXTRACT_GROUP, "2"); // Only 1 group in pattern
+    conf.set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_EXTRACT_GROUP, "2"); // Only 1 group in
+                                                                              // pattern
     provider.init(conf);
   }
 
@@ -141,7 +142,7 @@ public class TestRowKeyDateTieringValueProvider {
     conf.set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_EXTRACT_GROUP, "1");
     provider.init(conf);
 
-    //Invalid Month (14)
+    // Invalid Month (14)
     String rowKeyStr = "order_20151412124556_date";
     byte[] rowKey = Bytes.toBytes(rowKeyStr);
     ExtendedCell cell = PrivateCellUtil.createFirstOnRow(rowKey);
@@ -158,7 +159,8 @@ public class TestRowKeyDateTieringValueProvider {
     provider.init(conf);
 
     // Row key with non-UTF-8 bytes (invalid UTF-8 sequence)
-    byte[] rowKey = new byte[]{0x6F, 0x72, 0x64, 0x65, 0x72, 0x5F, (byte)0xFF, (byte)0xFE, 0x5F};
+    byte[] rowKey =
+      new byte[] { 0x6F, 0x72, 0x64, 0x65, 0x72, 0x5F, (byte) 0xFF, (byte) 0xFE, 0x5F };
     ExtendedCell cell = PrivateCellUtil.createFirstOnRow(rowKey);
     long timestamp = provider.getTieringValue(cell);
 
