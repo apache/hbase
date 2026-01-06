@@ -764,13 +764,15 @@ public final class BackupUtils {
 
   public static String findMostRecentBackupId(String[] backupIds) {
     long recentTimestamp = Long.MIN_VALUE;
+    String retId = null;
     for (String backupId : backupIds) {
       long ts = Long.parseLong(Iterators.get(Splitter.on('_').split(backupId).iterator(), 1));
       if (ts > recentTimestamp) {
         recentTimestamp = ts;
+        retId = backupId;
       }
     }
-    return BackupRestoreConstants.BACKUPID_PREFIX + recentTimestamp;
+    return (retId == null) ? BackupRestoreConstants.getBackupPrefix() + recentTimestamp : retId;
   }
 
   /**

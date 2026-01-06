@@ -22,6 +22,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -32,6 +33,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
@@ -57,6 +59,7 @@ import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -72,6 +75,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.util.Time;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -149,12 +153,13 @@ public final class BackupSystemTable implements Closeable {
   /**
    * Stores backup sessions (contexts)
    */
-  final static byte[] SESSIONS_FAMILY = Bytes.toBytes("session");
+  private final static String SESSIONS_FAMILY_STR = "session";
+  private final static byte[] SESSIONS_FAMILY = Bytes.toBytes(SESSIONS_FAMILY_STR);
   /**
    * Stores other meta
    */
-  final static byte[] META_FAMILY = Bytes.toBytes("meta");
-  final static byte[] BULK_LOAD_FAMILY = Bytes.toBytes("bulk");
+  private final static String META_FAMILY_STR = "meta";
+  private final static byte[] META_FAMILY = Bytes.toBytes(META_FAMILY_STR);
   /**
    * Connection to HBase cluster, shared among all instances
    */
@@ -162,11 +167,10 @@ public final class BackupSystemTable implements Closeable {
 
   private final static String BACKUP_INFO_PREFIX = "session:";
   private final static String START_CODE_ROW = "startcode:";
-  private final static byte[] ACTIVE_SESSION_ROW = Bytes.toBytes("activesession:");
-  private final static byte[] ACTIVE_SESSION_COL = Bytes.toBytes("c");
-
-  private final static byte[] ACTIVE_SESSION_YES = Bytes.toBytes("yes");
-  private final static byte[] ACTIVE_SESSION_NO = Bytes.toBytes("no");
+  private final static String ACTIVE_SESSION_ROW_STR = "activesession:";
+  private final static byte[] ACTIVE_SESSION_ROW = Bytes.toBytes(ACTIVE_SESSION_ROW_STR);
+  private final static String ACTIVE_SESSION_VERSION_STR = "version";
+  private final static byte[] ACTIVE_SESSION_VERSION = Bytes.toBytes(ACTIVE_SESSION_VERSION_STR);
 
   private final static String INCR_BACKUP_SET = "incrbackupset:";
   private final static String TABLE_RS_LOG_MAP_PREFIX = "trslm:";
@@ -272,6 +276,35 @@ public final class BackupSystemTable implements Closeable {
       }
     }
     LOG.debug("Backup table {} exists and available", tableName);
+  }
+
+  private Map<String, Map<String, Map.Entry<Long, String>>> getExistingBackupSessionsForTables()
+    throws IOException {
+    Map<String, Map<String, Map.Entry<Long, String>>> response = new HashMap<>();
+    try (Table table = connection.getTable(tableName)) {
+      Get get = new Get(ACTIVE_SESSION_ROW);
+      Result result = table.get(get);
+      NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> cfMap =
+        result.getMap();
+      if (cfMap != null) {
+        for (Map.Entry<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> cfEntry : cfMap
+          .entrySet()) {
+          String cf = Bytes.toString(cfEntry.getKey());
+          response.putIfAbsent(cf, new HashMap<>());
+          NavigableMap<byte[], NavigableMap<Long, byte[]>> columns = cfEntry.getValue();
+          if (columns != null) {
+            for (Map.Entry<byte[], NavigableMap<Long, byte[]>> colEntry : columns.entrySet()) {
+              String tableName = Bytes.toString(colEntry.getKey());
+              for (Map.Entry<Long, byte[]> valueEntry : colEntry.getValue().entrySet()) {
+                response.get(cf).put(tableName, new AbstractMap.SimpleImmutableEntry<>(
+                  valueEntry.getKey(), new String(valueEntry.getValue(), StandardCharsets.UTF_8)));
+              }
+            }
+          }
+        }
+      }
+    }
+    return response;
   }
 
   @Override
@@ -499,51 +532,106 @@ public final class BackupSystemTable implements Closeable {
    * @throws IOException if a table operation fails or an active backup exclusive operation is
    *                     already underway
    */
-  public void startBackupExclusiveOperation() throws IOException {
+  public void startBackupExclusiveOperation(List<BackupInfo> backupInfos) throws IOException {
     LOG.debug("Start new backup exclusive operation");
 
-    try (Table table = connection.getTable(tableName)) {
-      Put put = createPutForStartBackupSession();
-      // First try to put if row does not exist
-      if (
-        !table.checkAndMutate(ACTIVE_SESSION_ROW, SESSIONS_FAMILY).qualifier(ACTIVE_SESSION_COL)
-          .ifNotExists().thenPut(put)
-      ) {
-        // Row exists, try to put if value == ACTIVE_SESSION_NO
+    Map<String, Map<String, Map.Entry<Long, String>>> backupSessionsForTables =
+      getExistingBackupSessionsForTables();
+    Map<String, String> lockedTables = new HashMap<>();
+    for (BackupInfo backupInfo : backupInfos) {
+      for (TableName tableName : backupInfo.getTables()) {
         if (
-          !table.checkAndMutate(ACTIVE_SESSION_ROW, SESSIONS_FAMILY).qualifier(ACTIVE_SESSION_COL)
-            .ifEquals(ACTIVE_SESSION_NO).thenPut(put)
+          backupSessionsForTables.containsKey(META_FAMILY_STR)
+            && backupSessionsForTables.get(META_FAMILY_STR).containsKey(tableName.toString())
         ) {
-          throw new ExclusiveOperationException();
+          String lkBkpId =
+            backupSessionsForTables.get(META_FAMILY_STR).get(tableName.toString()).getValue();
+          lockedTables.put(tableName.toString(), lkBkpId);
+        }
+      }
+    }
+    if (lockedTables.size() > 0) {
+      throw new ExclusiveOperationException(
+        "Some tables have backups running. Table locks: " + lockedTables);
+    }
+
+    try (Table sysTable = connection.getTable(tableName)) {
+      Put put = new Put(ACTIVE_SESSION_ROW);
+      for (BackupInfo backupInfo : backupInfos) {
+        for (TableName table : backupInfo.getTables()) {
+          put.addColumn(META_FAMILY, table.getNameAsString().getBytes(StandardCharsets.UTF_8),
+            backupInfo.getBackupId().getBytes(StandardCharsets.UTF_8));
+        }
+      }
+      put.addColumn(SESSIONS_FAMILY, ACTIVE_SESSION_VERSION,
+        Bytes.toBytes(String.valueOf(Time.now())));
+
+      if (
+        !sysTable.checkAndMutate(CheckAndMutate.newBuilder(ACTIVE_SESSION_ROW)
+          .ifNotExists(SESSIONS_FAMILY, ACTIVE_SESSION_VERSION).build(put)).isSuccess()
+      ) {
+        String version = "0";
+        if (
+          backupSessionsForTables.containsKey(SESSIONS_FAMILY_STR) && backupSessionsForTables
+            .get(SESSIONS_FAMILY_STR).containsKey(ACTIVE_SESSION_VERSION_STR)
+        ) {
+          version = backupSessionsForTables.get(SESSIONS_FAMILY_STR).get(ACTIVE_SESSION_VERSION_STR)
+            .getValue();
+        }
+        if (
+          !sysTable.checkAndMutate(CheckAndMutate.newBuilder(ACTIVE_SESSION_ROW)
+            .ifEquals(SESSIONS_FAMILY, ACTIVE_SESSION_VERSION,
+              version.getBytes(StandardCharsets.UTF_8))
+            .build(put)).isSuccess()
+        ) {
+          throw new ExclusiveOperationException(String.format(
+            "Failed to acquire table lock. Read Version: %s, " + "for Row: %s, CF: %s, QF: %s",
+            version, ACTIVE_SESSION_ROW_STR, SESSIONS_FAMILY_STR, ACTIVE_SESSION_VERSION_STR));
         }
       }
     }
   }
 
-  private Put createPutForStartBackupSession() {
-    Put put = new Put(ACTIVE_SESSION_ROW);
-    put.addColumn(SESSIONS_FAMILY, ACTIVE_SESSION_COL, ACTIVE_SESSION_YES);
-    return put;
-  }
-
-  public void finishBackupExclusiveOperation() throws IOException {
+  public void finishBackupExclusiveOperation(List<String> backupIds) throws IOException {
     LOG.debug("Finish backup exclusive operation");
+    Map<String, Map<String, Map.Entry<Long, String>>> backupSessionsForTables =
+      getExistingBackupSessionsForTables();
 
-    try (Table table = connection.getTable(tableName)) {
-      Put put = createPutForStopBackupSession();
+    boolean hasDeletes = false;
+    try (Table sysTable = connection.getTable(tableName)) {
+      Delete delete = new Delete(ACTIVE_SESSION_ROW);
+
       if (
-        !table.checkAndMutate(ACTIVE_SESSION_ROW, SESSIONS_FAMILY).qualifier(ACTIVE_SESSION_COL)
-          .ifEquals(ACTIVE_SESSION_YES).thenPut(put)
+        backupSessionsForTables.containsKey(META_FAMILY_STR)
+          && backupSessionsForTables.get(META_FAMILY_STR).size() > 0
       ) {
+        Map<String, Entry<Long, String>> tables = backupSessionsForTables.get(META_FAMILY_STR);
+        for (Entry<String, Entry<Long, String>> entry : tables.entrySet()) {
+          String bkp = tables.get(entry.getKey()).getValue();
+          if (backupIds.contains(bkp)) {
+            delete.addColumn(META_FAMILY, entry.getKey().getBytes(StandardCharsets.UTF_8));
+            hasDeletes = true;
+          }
+        }
+      }
+      if (hasDeletes) {
+        String version = backupSessionsForTables.get(SESSIONS_FAMILY_STR)
+          .get(ACTIVE_SESSION_VERSION_STR).getValue();
+        if (
+          !sysTable.checkAndMutate(CheckAndMutate.newBuilder(ACTIVE_SESSION_ROW)
+            .ifEquals(SESSIONS_FAMILY, ACTIVE_SESSION_VERSION,
+              version.getBytes(StandardCharsets.UTF_8))
+            .build(delete)).isSuccess()
+        ) {
+          throw new ExclusiveOperationException(String.format(
+            "Failed to acquire table lock while deleting entries."
+              + "Read Version: %s, for Row: %s, CF: %s, QF: %s",
+            version, ACTIVE_SESSION_ROW_STR, SESSIONS_FAMILY_STR, ACTIVE_SESSION_VERSION_STR));
+        }
+      } else if (backupIds.size() > 0) {
         throw new IOException("There is no active backup exclusive operation");
       }
     }
-  }
-
-  private Put createPutForStopBackupSession() {
-    Put put = new Put(ACTIVE_SESSION_ROW);
-    put.addColumn(SESSIONS_FAMILY, ACTIVE_SESSION_COL, ACTIVE_SESSION_NO);
-    return put;
   }
 
   /**

@@ -24,6 +24,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 @SuppressWarnings("serial")
 public class ExclusiveOperationException extends IOException {
 
+  public ExclusiveOperationException(String msg) {
+    super(msg);
+  }
+
   public ExclusiveOperationException() {
     super();
   }

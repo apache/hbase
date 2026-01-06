@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -109,8 +110,16 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
       FileSystem fs = FileSystem.get(getConf());
 
       try {
+        List<BackupInfo> backupInfos = new ArrayList<>();
+        for (String backupId : backupIds) {
+          BackupInfo bInfo = table.readBackupInfo(backupId);
+          if (bInfo != null) {
+            backupInfos.add(bInfo);
+          }
+        }
+
         // Start backup exclusive operation
-        table.startBackupExclusiveOperation();
+        table.startBackupExclusiveOperation(backupInfos);
         // Start merge operation
         table.startMergeOperation(backupIds);
 
@@ -192,7 +201,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
         // Finish merge session
         table.finishMergeOperation();
         // Release lock
-        table.finishBackupExclusiveOperation();
+        table.finishBackupExclusiveOperation(Arrays.asList(backupIds));
       } catch (RuntimeException e) {
         throw e;
       } catch (Exception e) {
@@ -202,7 +211,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
           // merge MUST be repeated (no need for repair)
           cleanupBulkLoadDirs(fs, toPathList(processedTableList));
           table.finishMergeOperation();
-          table.finishBackupExclusiveOperation();
+          table.finishBackupExclusiveOperation(Arrays.asList(backupIds));
           throw new IOException("Backup merge operation failed, you should try it again", e);
         } else {
           // backup repair must be run
@@ -282,8 +291,8 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
 
       conf.set(FAILURE_PHASE_KEY, phase.toString());
 
+      String[] backups = new String[] { backupIdIncMultiple, backupIdIncMultiple2 };
       try (BackupAdmin bAdmin = new BackupAdminImpl(conn)) {
-        String[] backups = new String[] { backupIdIncMultiple, backupIdIncMultiple2 };
         bAdmin.mergeBackups(backups);
         Assert.fail("Expected IOException");
       } catch (IOException e) {
@@ -293,7 +302,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
           // Both Merge and backup exclusive operations are finished
           assertFalse(table.isMergeInProgress());
           try {
-            table.finishBackupExclusiveOperation();
+            table.finishBackupExclusiveOperation(Arrays.asList(backups));
             Assert.fail("IOException is expected");
           } catch (IOException ee) {
             // Expected
@@ -302,7 +311,11 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
           // Repair is required
           assertTrue(table.isMergeInProgress());
           try {
-            table.startBackupExclusiveOperation();
+            List<BackupInfo> backupInfos = new ArrayList<>();
+            for (String backupId : backups) {
+              backupInfos.add(table.readBackupInfo(backupId));
+            }
+            table.startBackupExclusiveOperation(backupInfos);
             Assert.fail("IOException is expected");
           } catch (IOException ee) {
             // Expected - clean up before proceeding

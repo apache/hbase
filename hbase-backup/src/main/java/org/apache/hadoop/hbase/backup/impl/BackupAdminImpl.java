@@ -93,15 +93,18 @@ public class BackupAdminImpl implements BackupAdmin {
   public int deleteBackups(String[] backupIds) throws IOException {
 
     int totalDeleted = 0;
+    List<BackupInfo> backupInfos = new ArrayList<>();
+    for (String backupId : backupIds) {
+      backupInfos.add(getBackupInfo(backupId));
+    }
 
     boolean deleteSessionStarted;
-    boolean snapshotDone;
     try (final BackupSystemTable sysTable = new BackupSystemTable(conn)) {
       // Step 1: Make sure there is no active session
       // is running by using startBackupSession API
       // If there is an active session in progress, exception will be thrown
       try {
-        sysTable.startBackupExclusiveOperation();
+        sysTable.startBackupExclusiveOperation(backupInfos);
         deleteSessionStarted = true;
       } catch (IOException e) {
         LOG.warn("You can not run delete command while active backup session is in progress. \n"
@@ -120,13 +123,6 @@ public class BackupAdminImpl implements BackupAdmin {
 
       // Step 3: Record delete session
       sysTable.startDeleteOperation(backupIds);
-      // Step 4: Snapshot backup system table
-      if (!BackupSystemTable.snapshotExists(conn)) {
-        BackupSystemTable.snapshot(conn);
-      } else {
-        LOG.warn("Backup system table snapshot exists");
-      }
-      snapshotDone = true;
       try {
         List<String> affectedBackupRootDirs = new ArrayList<>();
         for (int i = 0; i < backupIds.length; i++) {
@@ -140,28 +136,11 @@ public class BackupAdminImpl implements BackupAdmin {
         finalizeDelete(affectedBackupRootDirs, sysTable);
         // Finish
         sysTable.finishDeleteOperation();
-        // delete snapshot
-        BackupSystemTable.deleteSnapshot(conn);
       } catch (IOException e) {
-        // Fail delete operation
-        // Step 1
-        if (snapshotDone) {
-          if (BackupSystemTable.snapshotExists(conn)) {
-            BackupSystemTable.restoreFromSnapshot(conn);
-            // delete snapshot
-            BackupSystemTable.deleteSnapshot(conn);
-            // We still have record with unfinished delete operation
-            LOG.error("Delete operation failed, please run backup repair utility to restore "
-              + "backup system integrity", e);
-            throw e;
-          } else {
-            LOG.warn("Delete operation succeeded, there were some errors: ", e);
-          }
-        }
-
+        LOG.warn("Delete operation succeeded, there were some errors: ", e);
       } finally {
         if (deleteSessionStarted) {
-          sysTable.finishBackupExclusiveOperation();
+          sysTable.finishBackupExclusiveOperation(Arrays.asList(backupIds));
         }
       }
     }
@@ -515,7 +494,8 @@ public class BackupAdminImpl implements BackupAdmin {
     String targetRootDir = request.getTargetRootDir();
     List<TableName> tableList = request.getTableList();
 
-    String backupId = BackupRestoreConstants.BACKUPID_PREFIX + EnvironmentEdgeManager.currentTime();
+    String backupId =
+      BackupRestoreConstants.getBackupPrefix() + EnvironmentEdgeManager.currentTime();
     if (type == BackupType.INCREMENTAL) {
       Set<TableName> incrTableSet;
       try (BackupSystemTable table = new BackupSystemTable(conn)) {
