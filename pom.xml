@@ -1260,14 +1260,6 @@
         <version>${commons-cli.version}</version>
       </dependency>
       <dependency>
-        <!-- commons-logging is only used by hbase-http's HttpRequestLog and hbase-server's
-             HBaseTestingUtil.
-          -->
-        <groupId>commons-logging</groupId>
-        <artifactId>commons-logging</artifactId>
-        <version>1.2</version>
-      </dependency>
-      <dependency>
         <groupId>org.apache.zookeeper</groupId>
         <artifactId>zookeeper</artifactId>
         <version>${zookeeper.version}</version>
@@ -2175,7 +2167,7 @@
                   <excludes>
                     <exclude>commons-logging:commons-logging</exclude>
                   </excludes>
-                  <message>We don't use commons-logging any more, so do not depend on it directly.</message>
+                  <message>We don't use commons-logging any more, so do not depend on it directly. We are also using jcl-over-slf4j for libraries so exclude any transitive commons-logging dependencies.</message>
                   <searchTransitive>true</searchTransitive>
                 </bannedDependencies>
               </rules>
@@ -4278,6 +4270,10 @@
                 <groupId>org.openlabtesting.leveldbjni</groupId>
                 <artifactId>leveldbjni-all</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -4330,6 +4326,10 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -4613,6 +4613,10 @@
               <exclusion>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcpkix-jdk15on</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
