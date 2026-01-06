@@ -51,6 +51,7 @@ public class MetricsReplicationGlobalSourceSourceImpl
   private final MutableFastCounter failedRecoveryQueue;
   private final MutableGaugeLong walReaderBufferUsageBytes;
   private final MutableGaugeInt sourceInitializing;
+  private final MutableFastCounter walAppendBytesCounter;
 
   public MetricsReplicationGlobalSourceSourceImpl(MetricsReplicationSourceImpl rms) {
     this.rms = rms;
@@ -94,6 +95,7 @@ public class MetricsReplicationGlobalSourceSourceImpl
     walReaderBufferUsageBytes =
       rms.getMetricsRegistry().getGauge(SOURCE_WAL_READER_EDITS_BUFFER, 0L);
     sourceInitializing = rms.getMetricsRegistry().getGaugeInt(SOURCE_INITIALIZING, 0);
+    walAppendBytesCounter = rms.getMetricsRegistry().getCounter(SOURCE_WAL_APPEND_BYTES, 0L);
   }
 
   @Override
@@ -244,6 +246,16 @@ public class MetricsReplicationGlobalSourceSourceImpl
   @Override
   public int getSourceInitializing() {
     return sourceInitializing.value();
+  }
+
+  @Override
+  public long getWalAppendBytes() {
+    return walAppendBytesCounter.value();
+  }
+
+  @Override
+  public void incrWalAppendBytes(long size) {
+    walAppendBytesCounter.incr(size);
   }
 
   @Override

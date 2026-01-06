@@ -49,6 +49,14 @@ class ReplicationSourceWALActionListener implements WALActionsListener {
   }
 
   @Override
+  public void postAppend(final long size, final long time, final WALKey logkey,
+    final WALEdit logEdit) throws IOException {
+    if (conf.getBoolean("hbase.replication.walAppendsize.metric.enabled", true)) {
+      manager.postAppend(size, time, logkey, logEdit);
+    }
+  }
+
+  @Override
   public void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey, WALEdit logEdit) {
     scopeWALEdits(logKey, logEdit, conf);
   }
