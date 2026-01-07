@@ -355,6 +355,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
     }
     final byte[] b = Bytes.toBytes("b");
     String name = this.name.getMethodName();
+    FS.mkdirs(new Path(CommonFSUtils.getRootDir(CONF), name));
     // Have a FSHLog writer implementation that fails during close
     try (FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), name,
       HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null)) {

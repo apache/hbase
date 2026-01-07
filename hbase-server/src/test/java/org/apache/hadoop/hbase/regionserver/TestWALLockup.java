@@ -216,6 +216,7 @@ public class TestWALLockup {
     // OK. Now I have my mocked up Server & RegionServerServices and dodgy WAL, go ahead with test.
     FileSystem fs = FileSystem.get(CONF);
     Path rootDir = new Path(dir + getName());
+    fs.mkdirs(new Path(rootDir, getName()));
     DodgyFSLog dodgyWAL = new DodgyFSLog(fs, rootDir, getName(), CONF);
     dodgyWAL.init();
     Path originalWAL = dodgyWAL.getCurrentFileName();
@@ -394,6 +395,7 @@ public class TestWALLockup {
     // OK. Now I have my mocked up Server & RegionServerServices and dodgy WAL, go ahead with test.
     FileSystem fs = FileSystem.get(CONF);
     Path rootDir = new Path(dir + getName());
+    fs.mkdirs(new Path(rootDir, getName()));
     final DodgyFSLog dodgyWAL = new DodgyFSLog(fs, rootDir, getName(), CONF);
     dodgyWAL.init();
     // I need a log roller running.

@@ -73,7 +73,7 @@ public class TestWALFencing {
     // assign meta region to another rs
     RegionInfo metaRegionInfo = metaRs.getRegions().stream().map(Region::getRegionInfo)
       .filter(RegionInfo::isMetaRegion).findAny().get();
-    UTIL.getAdmin().move(metaRegionInfo.getRegionName(), otherRs.getServerName());
+    UTIL.getAdmin().move(metaRegionInfo.getEncodedNameAsBytes(), otherRs.getServerName());
     // make sure that meta region is not on otherRs
     await().during(Duration.ofSeconds(5)).atMost(Duration.ofSeconds(6))
       .until(() -> otherRs.getRegions(TableName.META_TABLE_NAME).isEmpty());
