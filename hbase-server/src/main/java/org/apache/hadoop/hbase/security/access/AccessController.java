@@ -81,6 +81,7 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.ObserverRpcCallContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
@@ -2342,7 +2343,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
    */
   private User getActiveUser(ObserverContext<?> ctx) throws IOException {
     // for non-rpc handling, fallback to system user
-    Optional<User> optionalUser = ctx.getCaller();
+    Optional<User> optionalUser = ctx.getRpcCallContext().map(ObserverRpcCallContext::getUser);
     if (optionalUser.isPresent()) {
       return optionalUser.get();
     }
