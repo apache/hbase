@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Predicate;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
@@ -46,13 +47,22 @@ public class BackupInfo implements Comparable<BackupInfo> {
   private static final Logger LOG = LoggerFactory.getLogger(BackupInfo.class);
   private static final int MAX_FAILED_MESSAGE_LENGTH = 1024;
 
-  public interface Filter {
-    /**
-     * Filter interface
-     * @param info backup info
-     * @return true if info passes filter, false otherwise
-     */
-    boolean apply(BackupInfo info);
+  public interface Filter extends Predicate<BackupInfo> {
+    /** Returns true if the BackupInfo passes the filter, false otherwise */
+    @Override
+    boolean test(BackupInfo backupInfo);
+  }
+
+  public static Filter withRoot(String backupRoot) {
+    return info -> info.getBackupRootDir().equals(backupRoot);
+  }
+
+  public static Filter withType(BackupType type) {
+    return info -> info.getType() == type;
+  }
+
+  public static Filter withState(BackupState state) {
+    return info -> info.getState() == state;
   }
 
   /**
@@ -61,8 +71,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
   public enum BackupState {
     RUNNING,
     COMPLETE,
-    FAILED,
-    ANY
+    FAILED
   }
 
   /**
