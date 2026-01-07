@@ -31,22 +31,17 @@ import org.slf4j.LoggerFactory;
 /**
  * Provides a tiering value for compactions by extracting and parsing a date from the row key. This
  * implementation uses a configurable regex and date format to locate and parse a date substring
- * from the row key and returns the parsed epoch time in milliseconds. Configuration: -
- * `hbase.hstore.datatiering.tieringvalueprovider.regexpattern`: Regex used to match the row key. -
- * `hbase.hstore.datatiering.tieringvalueprovider.dateformat`: `java.text.SimpleDateFormat` pattern.
- * - `hbase.hstore.datatiering.tieringvalueprovider.regexextractgroup`: Regex group index to
- * extract. Behavior: - Requires `init(Configuration)` to be called before use. - Returns
- * `Long.MAX_VALUE` if the row key does not match, extraction fails, or date parsing fails. - Uses
- * strict (non\-lenient) date parsing and validates the extract group against the pattern.
+ * from the row key and returns the parsed epoch time in milliseconds. Configuration properties can
+ * be set at globally or at table level.
  */
 @InterfaceAudience.Private
 public class RowKeyDateTieringValueProvider implements CustomTieredCompactor.TieringValueProvider {
   private static final Logger LOG = LoggerFactory.getLogger(RowKeyDateTieringValueProvider.class);
-  public static final String ROWKEY_REGEX_PATTERN =
+  public static final String TIERING_KEY_DATE_PATTERN =
     "hbase.hstore.datatiering.tieringvalueprovider.regexpattern";
-  public static final String ROWKEY_DATE_FORMAT =
+  public static final String TIERING_KEY_DATE_FORMAT =
     "hbase.hstore.datatiering.tieringvalueprovider.dateformat";
-  public static final String ROWKEY_REGEX_EXTRACT_GROUP =
+  public static final String TIERING_KEY_DATE_GROUP =
     "hbase.hstore.datatiering.tieringvalueprovider.regexextractgroup";
   private Pattern rowKeyPattern;
   private SimpleDateFormat dateFormat;
@@ -55,38 +50,38 @@ public class RowKeyDateTieringValueProvider implements CustomTieredCompactor.Tie
   @Override
   public void init(Configuration conf) throws Exception {
     // Initialize regex pattern
-    String regexPatternStr = conf.get(ROWKEY_REGEX_PATTERN);
+    String regexPatternStr = conf.get(TIERING_KEY_DATE_PATTERN);
     if (regexPatternStr == null || regexPatternStr.isEmpty()) {
       throw new IllegalArgumentException(
-        "Configuration property '" + ROWKEY_REGEX_PATTERN + "' is required");
+        "Configuration property '" + TIERING_KEY_DATE_PATTERN + "' is required");
     }
     rowKeyPattern = Pattern.compile(regexPatternStr);
 
     // Initialize date format
-    String dateFormatStr = conf.get(ROWKEY_DATE_FORMAT);
+    String dateFormatStr = conf.get(TIERING_KEY_DATE_FORMAT);
     if (dateFormatStr == null || dateFormatStr.isEmpty()) {
       throw new IllegalArgumentException(
-        "Configuration property '" + ROWKEY_DATE_FORMAT + "' is required");
+        "Configuration property '" + TIERING_KEY_DATE_FORMAT + "' is required");
     }
     try {
       dateFormat = new SimpleDateFormat(dateFormatStr);
       dateFormat.setLenient(false);
     } catch (Exception e) {
       throw new IllegalArgumentException("Invalid date format for Configuration property '"
-        + ROWKEY_DATE_FORMAT + "': " + dateFormatStr, e);
+        + TIERING_KEY_DATE_FORMAT + "': " + dateFormatStr, e);
     }
 
     // Initialize regex extract group
-    String extractGroupStr = conf.get(ROWKEY_REGEX_EXTRACT_GROUP, "0");
+    String extractGroupStr = conf.get(TIERING_KEY_DATE_GROUP, "0");
     try {
       rowKeyRegexExtractGroup = Integer.parseInt(extractGroupStr);
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException(
-        "Configuration property '" + ROWKEY_REGEX_EXTRACT_GROUP + "' must be a valid integer", e);
+        "Configuration property '" + TIERING_KEY_DATE_GROUP + "' must be a valid integer", e);
     }
     if (rowKeyRegexExtractGroup < 0) {
       throw new IllegalArgumentException(
-        "Configuration property '" + ROWKEY_REGEX_EXTRACT_GROUP + "' must be non-negative");
+        "Configuration property '" + TIERING_KEY_DATE_GROUP + "' must be non-negative");
     }
     // Validate extract group exists in pattern
     int groupCount = rowKeyPattern.matcher("").groupCount();
@@ -111,7 +106,7 @@ public class RowKeyDateTieringValueProvider implements CustomTieredCompactor.Tie
       rowKeyStr = Bytes.toString(rowArray);
       // Validate UTF-8 encoding
       if (rowKeyStr.contains("\ufffd")) {
-        LOG.debug("Row key contains invalid UTF-8 sequences");
+        LOG.debug("Failed to extract the date from row key due to invalid UTF-8 encoding");
         return Long.MAX_VALUE;
       }
     } catch (Exception e) {
@@ -133,9 +128,6 @@ public class RowKeyDateTieringValueProvider implements CustomTieredCompactor.Tie
         return Long.MAX_VALUE;
       }
       return dateFormat.parse(extractedValue).getTime();
-    } catch (IndexOutOfBoundsException e) {
-      // Shouldn't throw due to validation during init
-      LOG.debug("Row key '{}' does not match the regex pattern", rowKeyStr);
     } catch (ParseException e) {
       LOG.debug("Error parsing date value '{}' extracted from row key '{}'", extractedValue,
         rowKeyStr, e);

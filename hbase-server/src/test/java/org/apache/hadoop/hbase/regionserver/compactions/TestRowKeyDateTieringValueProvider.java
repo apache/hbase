@@ -56,9 +56,9 @@ public class TestRowKeyDateTieringValueProvider {
 
   @Test
   public void testInitWithValidConfig() throws Exception {
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_DATE_FORMAT, "yyyy-MM-dd");
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_EXTRACT_GROUP, "1");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyy-MM-dd");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_GROUP, "1");
     provider.init(conf);
     assertEquals(provider.getRowKeyPattern().pattern(), "(\\d{4}-\\d{2}-\\d{2})");
     assertEquals(provider.getDateFormat().toPattern(), "yyyy-MM-dd");
@@ -67,45 +67,45 @@ public class TestRowKeyDateTieringValueProvider {
 
   @Test(expected = IllegalArgumentException.class)
   public void testInitWithMissingRegexPattern() throws Exception {
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_DATE_FORMAT, "yyyy-MM-dd");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyy-MM-dd");
     provider.init(conf);
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void testInitWithMissingDateFormat() throws Exception {
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
     provider.init(conf);
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void testInitWithInvalidDateFormat() throws Exception {
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_DATE_FORMAT, "invalid-format");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "invalid-format");
     provider.init(conf);
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void testInitWithInvalidExtractGroup() throws Exception {
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_DATE_FORMAT, "yyyy-MM-dd");
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_EXTRACT_GROUP, "-1");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyy-MM-dd");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_GROUP, "-1");
     provider.init(conf);
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void testInitWithExtractGroupExceedingPatternGroups() throws Exception {
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_DATE_FORMAT, "yyyy-MM-dd");
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_EXTRACT_GROUP, "2"); // Only 1 group in
-                                                                              // pattern
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyy-MM-dd");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_GROUP, "2"); // Only 1 group in
+                                                                          // pattern
     provider.init(conf);
   }
 
   @Test
   public void testGetTieringValue() throws Exception {
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_PATTERN, "_(\\d{4}-\\d{2}-\\d{2})_");
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_DATE_FORMAT, "yyyy-MM-dd");
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_EXTRACT_GROUP, "1");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "_(\\d{4}-\\d{2}-\\d{2})_");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyy-MM-dd");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_GROUP, "1");
     provider.init(conf);
 
     String dateStr = "2023-10-15";
@@ -122,9 +122,9 @@ public class TestRowKeyDateTieringValueProvider {
 
   @Test
   public void testGetTieringValueWithNonMatchingRowKey() throws Exception {
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_PATTERN, "_(\\d{4}-\\d{2}-\\d{2})_");
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_DATE_FORMAT, "yyyy-MM-dd");
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_EXTRACT_GROUP, "1");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "_(\\d{4}-\\d{2}-\\d{2})_");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyy-MM-dd");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_GROUP, "1");
     provider.init(conf);
 
     String rowKeyStr = "order_details_no_date";
@@ -137,9 +137,9 @@ public class TestRowKeyDateTieringValueProvider {
 
   @Test
   public void testGetTieringValueWithInvalidDateInRowKey() throws Exception {
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_PATTERN, "_(\\d{14})_");
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_DATE_FORMAT, "yyyyMMddHHmmss");
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_EXTRACT_GROUP, "1");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "_(\\d{14})_");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyyMMddHHmmss");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_GROUP, "1");
     provider.init(conf);
 
     // Invalid Month (14)
@@ -153,9 +153,9 @@ public class TestRowKeyDateTieringValueProvider {
 
   @Test
   public void testGetTieringValueWithNonUTF8RowKey() throws Exception {
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_PATTERN, "_(\\d{8})_");
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_DATE_FORMAT, "yyyyMMdd");
-    conf.set(RowKeyDateTieringValueProvider.ROWKEY_REGEX_EXTRACT_GROUP, "1");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "_(\\d{8})_");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyyMMdd");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_GROUP, "1");
     provider.init(conf);
 
     // Row key with non-UTF-8 bytes (invalid UTF-8 sequence)
