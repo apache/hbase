@@ -127,7 +127,7 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
     ConnectionRegistry registry =
       ConnectionRegistryFactory.create(TEST_UTIL.getConfiguration(), User.getCurrent());
     CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
-      registry.getClusterId().get(), null, User.getCurrent());
+      registry.getClusterId().get(), org.apache.hadoop.hbase.TableName.META_TABLE_NAME, null, User.getCurrent());
     LOCATOR = new AsyncNonMetaRegionLocator(CONN, AsyncConnectionImpl.RETRY_TIMER);
     SPLIT_KEYS = IntStream.range(1, 256).mapToObj(i -> Bytes.toBytes(String.format("%02x", i)))
       .toArray(byte[][]::new);

@@ -144,8 +144,8 @@ public class TestAsyncAdminRpcPriority {
     }).when(adminStub).stopServer(any(HBaseRpcController.class), any(StopServerRequest.class),
       any());
     User user = UserProvider.instantiate(CONF).getCurrent();
-    conn = new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF, user), "test", null,
-      user) {
+    conn = new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF, user), "test",
+      org.apache.hadoop.hbase.TableName.META_TABLE_NAME, null, user) {
 
       @Override
       CompletableFuture<MasterService.Interface> getMasterStub() {

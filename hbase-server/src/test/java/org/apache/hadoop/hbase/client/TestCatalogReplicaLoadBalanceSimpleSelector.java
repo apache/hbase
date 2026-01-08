@@ -78,8 +78,8 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
           >= numOfMetaReplica);
 
     registry = ConnectionRegistryFactory.create(TEST_UTIL.getConfiguration(), User.getCurrent());
-    CONN = new AsyncConnectionImpl(conf, registry, registry.getClusterId().get(), null,
-      User.getCurrent());
+    CONN = new AsyncConnectionImpl(conf, registry, registry.getClusterId().get(),
+      org.apache.hadoop.hbase.TableName.META_TABLE_NAME, null, User.getCurrent());
   }
 
   @AfterClass

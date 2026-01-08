@@ -63,6 +63,19 @@ public interface Connection extends Abortable, Closeable {
   Configuration getConfiguration();
 
   /**
+   * Returns the meta table name for this cluster.
+   * <p>
+   * This value is fetched from the cluster during connection establishment and cached for the
+   * lifetime of this connection. For most clusters, this will be "hbase:meta". For read replica
+   * clusters or other specialized configurations, this may return a different table name.
+   * <p>
+   * This method should be used instead of static references to meta table name to ensure
+   * compatibility with clusters that use custom meta table names.
+   * @return The meta table name for this cluster
+   */
+  TableName getMetaTableName();
+
+  /**
    * Retrieve a Table implementation for accessing a table. The returned Table is not thread safe, a
    * new instance should be created for each using thread. This is a lightweight operation, pooling
    * or caching of the returned Table is neither required nor desired.

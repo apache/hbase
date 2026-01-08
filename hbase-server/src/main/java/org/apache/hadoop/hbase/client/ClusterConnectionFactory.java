@@ -42,13 +42,15 @@ public final class ClusterConnectionFactory {
   private static AsyncClusterConnection createAsyncClusterConnection(Configuration conf,
     ConnectionRegistry registry, SocketAddress localAddress, User user) throws IOException {
     String clusterId = FutureUtils.get(registry.getClusterId());
+    org.apache.hadoop.hbase.TableName metaTableName =
+      FutureUtils.get(registry.getMetaTableName());
     Class<? extends AsyncClusterConnection> clazz =
       conf.getClass(HBASE_SERVER_CLUSTER_CONNECTION_IMPL, AsyncClusterConnectionImpl.class,
         AsyncClusterConnection.class);
     try {
       return user
         .runAs((PrivilegedExceptionAction<? extends AsyncClusterConnection>) () -> ReflectionUtils
-          .newInstance(clazz, conf, registry, clusterId, localAddress, user));
+          .newInstance(clazz, conf, registry, clusterId, metaTableName, localAddress, user));
     } catch (Exception e) {
       throw new IOException(e);
     }

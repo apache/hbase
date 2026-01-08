@@ -100,7 +100,7 @@ public class TestAsyncRegionLocatorTracing {
       public CompletableFuture<RegionLocations> getMetaRegionLocations() {
         return CompletableFuture.completedFuture(locs);
       }
-    }, "test", null, user);
+    }, "test", org.apache.hadoop.hbase.TableName.META_TABLE_NAME, null, user);
   }
 
   @After

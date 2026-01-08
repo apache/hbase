@@ -45,6 +45,11 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
   }
 
   @Override
+  public TableName getMetaTableName() {
+    return TableName.META_TABLE_NAME;
+  }
+
+  @Override
   public AsyncTableRegionLocator getRegionLocator(TableName tableName) {
     return null;
   }

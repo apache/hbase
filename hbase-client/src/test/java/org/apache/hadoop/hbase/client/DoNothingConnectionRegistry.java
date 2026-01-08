@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -46,6 +47,11 @@ public class DoNothingConnectionRegistry implements ConnectionRegistry {
   @Override
   public CompletableFuture<ServerName> getActiveMaster() {
     return CompletableFuture.completedFuture(null);
+  }
+
+  @Override public CompletableFuture<TableName> getMetaTableName() {
+    return CompletableFuture.completedFuture(null);
+    
   }
 
   @Override

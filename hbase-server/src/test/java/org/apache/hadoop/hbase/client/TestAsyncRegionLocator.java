@@ -102,7 +102,7 @@ public class TestAsyncRegionLocator {
     ConnectionRegistry registry =
       ConnectionRegistryFactory.create(TEST_UTIL.getConfiguration(), User.getCurrent());
     CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
-      registry.getClusterId().get(), null, User.getCurrent());
+      registry.getClusterId().get(), org.apache.hadoop.hbase.TableName.META_TABLE_NAME, null, User.getCurrent());
     LOCATOR = CONN.getLocator();
   }
 

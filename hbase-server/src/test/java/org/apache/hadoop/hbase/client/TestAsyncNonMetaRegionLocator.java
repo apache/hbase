@@ -131,7 +131,7 @@ public class TestAsyncNonMetaRegionLocator {
     ConnectionRegistry registry =
       ConnectionRegistryFactory.create(TEST_UTIL.getConfiguration(), User.getCurrent());
     conn =
-      new AsyncConnectionImpl(c, registry, registry.getClusterId().get(), null, User.getCurrent());
+      new AsyncConnectionImpl(c, registry, registry.getClusterId().get(), org.apache.hadoop.hbase.TableName.META_TABLE_NAME, null, User.getCurrent());
     locator = new AsyncNonMetaRegionLocator(conn, AsyncConnectionImpl.RETRY_TIMER);
   }
 

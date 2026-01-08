@@ -34,8 +34,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.MasterRegistryFetchException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
@@ -55,6 +57,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetClust
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetClusterIdResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaRegionLocationsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaRegionLocationsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaTableNameRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaTableNameResponse;
 
 /**
  * Base class for rpc based connection registry implementation.
@@ -248,6 +252,24 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
           GetActiveMasterResponse::hasServerName, "getActiveMaster()")
         .thenApply(resp -> ProtobufUtil.toServerName(resp.getServerName())),
       getClass().getSimpleName() + ".getActiveMaster");
+  }
+
+  @Override
+  public CompletableFuture<TableName> getMetaTableName() {
+    return tracedFuture(
+      () -> this
+        .<GetMetaTableNameResponse> call(
+          (c, s, d) -> s.getMetaTableName(c, GetMetaTableNameRequest.getDefaultInstance(), d),
+          GetMetaTableNameResponse::hasTableName, "getMetaTableName()")
+        .thenApply(resp -> {
+          // If the response has a table name, parse it. Otherwise, return default.
+          if (resp.hasTableName() && !resp.getTableName().isEmpty()) {
+            return TableName.valueOf(resp.getTableName());
+          } else {
+            return TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
+          }
+        }),
+      getClass().getSimpleName() + ".getMetaTableName");
   }
 
   @Override

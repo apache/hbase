@@ -675,6 +675,14 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     return getServerName().toString();
   }
 
+  @Override
+  public org.apache.hadoop.hbase.TableName getMetaTableName() {
+    // For now, always return the default meta table name.
+    // Future implementations may support custom meta table names from configuration or storage.
+    return org.apache.hadoop.hbase.TableName.valueOf(
+      org.apache.hadoop.hbase.NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
+  }
+
   protected abstract CoprocessorHost<?, ?> getCoprocessorHost();
 
   protected abstract boolean canCreateBaseZNode();
