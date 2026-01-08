@@ -294,10 +294,6 @@
                     <shadedPattern>${shaded.prefix}.org.iq80</shadedPattern>
                   </relocation>
                   <relocation>
-                    <pattern>org.jamon</pattern>
-                    <shadedPattern>${shaded.prefix}.org.jamon</shadedPattern>
-                  </relocation>
-                  <relocation>
                     <pattern>org.jets3t</pattern>
                     <shadedPattern>${shaded.prefix}.org.jets3t</shadedPattern>
                   </relocation>
