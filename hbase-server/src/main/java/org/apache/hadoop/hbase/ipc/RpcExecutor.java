@@ -57,6 +57,7 @@ public abstract class RpcExecutor {
   private static final Logger LOG = LoggerFactory.getLogger(RpcExecutor.class);
 
   protected static final int DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT = 250;
+  protected static final float DEFAULT_CALL_QUEUE_HANDLER_FACTOR = 0.1f;
   public static final String CALL_QUEUE_HANDLER_FACTOR_CONF_KEY =
     "hbase.ipc.server.callqueue.handler.factor";
 
@@ -117,14 +118,14 @@ public abstract class RpcExecutor {
   private final Configuration conf;
   private final Abortable abortable;
 
-  public RpcExecutor(final String name, final int handlerCount, final String maxQueueLengthLConfKey,
+  public RpcExecutor(final String name, final int handlerCount, final int maxQueueLength,
     final PriorityFunction priority, final Configuration conf, final Abortable abortable) {
     this(name, handlerCount, conf.get(CALL_QUEUE_TYPE_CONF_KEY, CALL_QUEUE_TYPE_CONF_DEFAULT),
-      maxQueueLengthLConfKey, priority, conf, abortable);
+      maxQueueLength, priority, conf, abortable);
   }
 
   public RpcExecutor(final String name, final int handlerCount, final String callQueueType,
-    final String maxQueueLengthConfKey, final PriorityFunction priority, final Configuration conf,
+    int maxQueueLength, final PriorityFunction priority, final Configuration conf,
     final Abortable abortable) {
     this.name = Strings.nullToEmpty(name);
     this.conf = conf;
@@ -153,9 +154,12 @@ public abstract class RpcExecutor {
     this.handlerCount = Math.max(handlerCount, this.numCallQueues);
     this.handlers = new ArrayList<>(this.handlerCount);
 
-    int handlerCountPerQueue = this.handlerCount / this.numCallQueues;
-    int maxQueueLength = conf.getInt(maxQueueLengthConfKey,
-      handlerCountPerQueue * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
+    // If soft limit of queue is not provided, then calculate using
+    // DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER
+    if (maxQueueLength == -1) {
+      int handlerCountPerQueue = this.handlerCount / this.numCallQueues;
+      maxQueueLength = handlerCountPerQueue * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER;
+    }
 
     if (isDeadlineQueueType(callQueueType)) {
       this.name += ".Deadline";
@@ -226,12 +230,15 @@ public abstract class RpcExecutor {
       .collect(Collectors.groupingBy(Pair::getFirst, Collectors.summingLong(Pair::getSecond)));
   }
 
+  // IMPORTANT: Call this method only ONCE per executor instance.
+  // Before calling: queueInitArgs[0] contains the soft limit (desired queue capacity)
+  // After calling: queueInitArgs[0] is set to hard limit (max(soft limit,
+  // DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT)) and currentQueueLimit stores the original soft limit.
+  // Multiple calls would incorrectly use the hard limit as the soft limit.
   protected void initializeQueues(final int numQueues) {
     if (queueInitArgs.length > 0) {
       currentQueueLimit = (int) queueInitArgs[0];
-      queueInitArgs[0] = Math.min((int) queueInitArgs[0], DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT);
-      // queue should neven be initialised with 0 or less length
-      queueInitArgs[0] = Math.max((int) queueInitArgs[0], 1);
+      queueInitArgs[0] = Math.max((int) queueInitArgs[0], DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT);
     }
     for (int i = 0; i < numQueues; ++i) {
       queues.add(ReflectionUtils.newInstance(queueClass, queueInitArgs));
@@ -302,7 +309,7 @@ public abstract class RpcExecutor {
    */
   private static final QueueBalancer ONE_QUEUE = val -> 0;
 
-  public static QueueBalancer getBalancer(final String executorName, final Configuration conf,
+  protected static QueueBalancer getBalancer(final String executorName, final Configuration conf,
     final List<BlockingQueue<CallRunner>> queues) {
     Preconditions.checkArgument(queues.size() > 0, "Queue size is <= 0, must be at least 1");
     if (queues.size() == 1) {
@@ -476,6 +483,6 @@ public abstract class RpcExecutor {
   }
 
   protected float getCallQueueHandlerFactor(Configuration conf) {
-    return conf.getFloat(CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 0.1f);
+    return conf.getFloat(CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, DEFAULT_CALL_QUEUE_HANDLER_FACTOR);
   }
 }
