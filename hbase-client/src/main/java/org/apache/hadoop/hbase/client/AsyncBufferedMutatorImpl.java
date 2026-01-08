@@ -117,7 +117,7 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
    * Protected for being overridden in tests.
    * @return a {@link Batch} containing drained mutations and futures, or {@code null} if empty
    */
-  protected Batch drainBatch() {
+  protected List<Batch> drainBatch() {
     ArrayList<Mutation> toSend;
     ArrayList<CompletableFuture<Void>> toComplete;
     // Cancel the flush task if it is pending.
@@ -131,10 +131,35 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
     }
     toComplete = this.futures;
     assert toSend.size() == toComplete.size();
-    this.mutations = new ArrayList<>(INITIAL_CAPACITY);
-    this.futures = new ArrayList<>(INITIAL_CAPACITY);
-    bufferedSize = 0L;
-    return new Batch(toSend, toComplete);
+    List<Batch> batches = new ArrayList<>();
+    long thisHeapSize = 0;
+    int thisSendNums = 0;
+    ArrayList<Mutation> thisSend = new ArrayList<>();
+    ArrayList<CompletableFuture<Void>> thisComplete = new ArrayList<>();
+    for (int i = 0; i < toSend.size(); i++) {
+      thisSend.add(toSend.get(i));
+      thisComplete.add(toComplete.get(i));
+      thisHeapSize += toSend.get(i).heapSize();
+      thisSendNums++;
+      if ((maxMutations > 0 && thisSendNums >= maxMutations) || thisHeapSize >= writeBufferSize) {
+        batches.add(new Batch(thisSend, thisComplete));
+        thisHeapSize = 0;
+        thisSendNums = 0;
+      }
+    }
+    this.mutations = thisSendNums == 0 ? new ArrayList<>(INITIAL_CAPACITY) : new ArrayList<>(toSend.subList(toSend.size() - thisSendNums, toSend.size()));
+    this.futures = thisSendNums == 0 ? new ArrayList<>(INITIAL_CAPACITY) : new ArrayList<>(toComplete.subList(toComplete.size() - thisSendNums, toSend.size()));
+    bufferedSize = thisSendNums == 0 ? 0 : toSend.subList(toSend.size() - thisSendNums, toSend.size()).stream().mapToLong(Mutation::heapSize).sum();
+    return batches;
+  }
+
+  private void sendBatch(List<Batch> batchs) {
+    if (batchs == null || batchs.isEmpty()) {
+      return;
+    }
+    for (Batch batch : batchs) {
+      sendBatch(batch);
+    }
   }
 
   /**
@@ -179,12 +204,12 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
         validatePut((Put) mutation, maxKeyValueSize);
       }
     }
-    Batch batch = null;
+    List<Batch> batch = null;
     lock.lock();
     try {
       if (this.mutations.isEmpty() && periodicFlushTimeoutNs > 0) {
         periodicFlushTask = periodicalFlushTimer.newTimeout(timeout -> {
-          Batch flushBatch = null;
+          List<Batch> flushBatch = null;
           lock.lock();
           try {
             // confirm that we are still valid, if there is already a drainBatch call before us,
@@ -227,7 +252,7 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
   // The only difference bewteen flush and close is that, we will set closed to true before sending
   // out the batch to prevent further flush or close
   private void flushOrClose(boolean close) {
-    Batch batch = null;
+    List<Batch> batch = null;
     if (!closed) {
       lock.lock();
       try {
