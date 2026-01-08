@@ -605,12 +605,22 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
 
     public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result,
       boolean bypassable) {
-      this(observerGetter, result, null, bypassable);
+      this(observerGetter, result, (ObserverRpcCallContext) null, bypassable);
+    }
+
+    public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result, User user) {
+      this(observerGetter, result, user, false);
     }
 
     public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result,
       ObserverRpcCallContext rpcCallContext) {
       this(observerGetter, result, rpcCallContext, false);
+    }
+
+    public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result, User user,
+      boolean bypassable) {
+      super(observerGetter, user, bypassable);
+      this.result = result;
     }
 
     private ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result,

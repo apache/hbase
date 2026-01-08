@@ -59,7 +59,6 @@ import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
 import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.ObserverRpcCallContext;
-import org.apache.hadoop.hbase.coprocessor.ObserverRpcCallContextImpl;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
@@ -688,9 +687,8 @@ public class RegionCoprocessorHost
     if (coprocEnvironments.isEmpty()) {
       return defaultResult;
     }
-    ObserverRpcCallContext rpcCallContext = new ObserverRpcCallContextImpl(user, Map.of());
     return execOperationWithResult(new ObserverOperationWithResult<RegionObserver, InternalScanner>(
-      regionObserverGetter, defaultResult, rpcCallContext) {
+      regionObserverGetter, defaultResult, user) {
       @Override
       public InternalScanner call(RegionObserver observer) throws IOException {
         InternalScanner scanner =
