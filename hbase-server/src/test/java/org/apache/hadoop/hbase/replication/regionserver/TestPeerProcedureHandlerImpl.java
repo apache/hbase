@@ -30,12 +30,11 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerImpl;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
-@Tag(ReplicationTests.TAG)
-@Tag(SmallTests.TAG)
+@Category({ ReplicationTests.class, SmallTests.class })
 public class TestPeerProcedureHandlerImpl {
 
   private ReplicationSourceManager mockSourceManager;
@@ -44,7 +43,7 @@ public class TestPeerProcedureHandlerImpl {
   private PeerProcedureHandlerImpl handler;
   private static final String PEER_ID = "testPeer";
 
-  @BeforeEach
+  @Before
   public void setup() throws Exception {
     mockSourceManager = mock(ReplicationSourceManager.class);
     mockReplicationPeers = mock(ReplicationPeers.class);
