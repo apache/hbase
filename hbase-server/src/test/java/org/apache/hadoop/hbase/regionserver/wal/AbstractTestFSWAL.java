@@ -120,6 +120,7 @@ public abstract class AbstractTestFSWAL {
     final Path hbaseWALDir = TEST_UTIL.createWALRootDir();
     DIR = new Path(hbaseWALDir, currentTest.getMethodName());
     assertNotEquals(hbaseDir, hbaseWALDir);
+    FS.mkdirs(DIR);
   }
 
   @BeforeClass
@@ -392,9 +393,8 @@ public abstract class AbstractTestFSWAL {
   @Test(expected = IOException.class)
   public void testFailedToCreateWALIfParentRenamed()
     throws IOException, CommonFSUtils.StreamLacksCapabilityException {
-    final String name = "testFailedToCreateWALIfParentRenamed";
-    AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), name,
-      HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
+    AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF),
+      currentTest.getMethodName(), HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
     long filenum = EnvironmentEdgeManager.currentTime();
     Path path = wal.computeFilename(filenum);
     wal.createWriterInstance(path);
@@ -535,6 +535,7 @@ public abstract class AbstractTestFSWAL {
 
   private AbstractFSWAL<?> createHoldingWAL(String testName, AtomicBoolean startHoldingForAppend,
     CountDownLatch holdAppend) throws IOException {
+    FS.mkdirs(new Path(CommonFSUtils.getRootDir(CONF), testName));
     AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getRootDir(CONF), testName,
       HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
     wal.init();
