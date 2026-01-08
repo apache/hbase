@@ -130,6 +130,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.awaitility</groupId>
+      <artifactId>awaitility</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>com.github.stephenc.findbugs</groupId>
       <artifactId>findbugs-annotations</artifactId>
       <scope>compile</scope>
