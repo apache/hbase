@@ -1,5 +1,6 @@
 ---
 title: "Table Rename"
+description: "How to rename HBase tables using snapshots without downtime or data loss."
 ---
 
 In versions 0.90.x of hbase and earlier, we had a simple script that would rename the hdfs table directory and then do an edit of the hbase:meta table replacing all mentions of the old table name with the new. The script was called `./bin/rename_table.rb`. The script was deprecated and removed mostly because it was unmaintained and the operation performed by the script was brutal.
