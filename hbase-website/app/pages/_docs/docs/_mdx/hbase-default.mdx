@@ -16,7 +16,7 @@ The documentation below is generated using the default hbase configuration file,
 
 **`hbase.rootdir`**  
 
-**Description:** The directory shared by region servers and into which HBase persists. The URL should be 'fully-qualified' to include the filesystem scheme. For example, to specify the HDFS directory '/hbase' where the HDFS instance's namenode is running at namenode.example.org on port 9000, set this value to: hdfs://namenode.example.org:9000/hbase. By default, we write to whatever `$hbase.tmp.dir` is set to — usually /tmp —  so change this configuration or else all data will be lost on machine restart.
+**Description:** The directory shared by region servers and into which HBase persists. The URL should be 'fully-qualified' to include the filesystem scheme. For example, to specify the HDFS directory '/hbase' where the HDFS instance's namenode is running at namenode.example.org on port 9000, set this value to: hdfs://namenode.example.org:9000/hbase. By default, we write to whatever `$hbase.tmp.dir` is set to — usually /tmp —  so change this configuration or else all data will be lost on machine restart.
 
 
 **Default:** `$hbase.tmp.dir`/hbase`
@@ -376,7 +376,7 @@ BusyRegionSplitPolicy, SteppingSplitPolicy etc.
 
 **`hbase.client.write.buffer`**  
 
-**Description:** Default size of the BufferedMutator write buffer in bytes. A bigger buffer takes more memory — on both the client and server side since server instantiates the passed write buffer to process it — but a larger buffer size reduces the number of RPCs made. For an estimate of server-side memory-used, evaluate hbase.client.write.buffer \* hbase.regionserver.handler.count
+**Description:** Default size of the BufferedMutator write buffer in bytes. A bigger buffer takes more memory — on both the client and server side since server instantiates the passed write buffer to process it — but a larger buffer size reduces the number of RPCs made. For an estimate of server-side memory-used, evaluate hbase.client.write.buffer \* hbase.regionserver.handler.count
 
 
 **Default:** `2097152`

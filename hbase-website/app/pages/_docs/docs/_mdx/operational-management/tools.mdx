@@ -208,7 +208,7 @@ The default value size of each put is 10 bytes. You can set it via the config ke
 
 ### Treat read / write failure as error
 
-By default, the canary tool only logs read failures — due to e.g. RetriesExhaustedException, etc. — and will return the 'normal' exit code. To treat read/write failure as errors, you can run canary with the `-treatFailureAsError` option. When enabled, read/write failures will result in an error exit code.
+By default, the canary tool only logs read failures — due to e.g. RetriesExhaustedException, etc. — and will return the 'normal' exit code. To treat read/write failure as errors, you can run canary with the `-treatFailureAsError` option. When enabled, read/write failures will result in an error exit code.
 
 ```bash
 $ ${HBASE_HOME}/bin/hbase canary -treatFailureAsError
