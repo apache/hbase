@@ -1,5 +1,6 @@
 ---
 title: "HBase run modes: Standalone and Distributed"
+description: "Understanding HBase deployment modes: standalone mode for development and distributed mode for production clusters."
 ---
 
 HBase has two run modes: [standalone](/docs/configuration/hbase-run-models#standalone-hbase) and [distributed](/docs/configuration/hbase-run-models#distributed). Out of the box, HBase runs in standalone mode. Whatever your mode, you will need to configure HBase by editing files in the HBase _conf_ directory. At a minimum, you must edit `conf/hbase-env.sh` to tell HBase which java to use. In this file you set HBase environment variables such as the heapsize and other options for the `JVM`, the preferred location for log files, etc. Set `JAVA_HOME` to point at the root of your java install.
