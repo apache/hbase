@@ -20,8 +20,6 @@ limitations under the License.
 
 The below table lists mirrored release artifacts and their associated hashes and signatures available ONLY at apache.org. The keys used to sign releases can be found in our published [KEYS](https://downloads.apache.org/hbase/KEYS) file. See [Verify The Integrity Of The Files](https://www.apache.org/dyn/closer.cgi#verify) for how to verify your mirrored downloads.
 
-Test Bubu
-
 ## Releases
 
 | Version | Release Date | Compatibility Report | Changes | Release Notes | Download | Notices |
