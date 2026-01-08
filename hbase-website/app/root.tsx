@@ -32,8 +32,6 @@ import { SiteNavbar } from "./components/site-navbar";
 import { GettingStartedSection } from "./components/getting-started";
 import { ThemeProvider } from "./lib/theme-provider";
 
-blubb
-
 export const links: Route.LinksFunction = () => [
   {
     rel: "preload",
