@@ -171,12 +171,15 @@ public class TestWALSplitToHFile {
   }
 
   private WAL createWAL(Configuration c, Path hbaseRootDir, String logName) throws IOException {
-    FSHLog wal = new FSHLog(FileSystem.get(c), hbaseRootDir, logName, c);
+    FileSystem fs = hbaseRootDir.getFileSystem(c);
+    fs.mkdirs(new Path(hbaseRootDir, logName));
+    FSHLog wal = new FSHLog(fs, hbaseRootDir, logName, c);
     wal.init();
     return wal;
   }
 
   private WAL createWAL(FileSystem fs, Path hbaseRootDir, String logName) throws IOException {
+    fs.mkdirs(new Path(hbaseRootDir, logName));
     FSHLog wal = new FSHLog(fs, hbaseRootDir, logName, this.conf);
     wal.init();
     return wal;

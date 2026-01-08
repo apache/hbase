@@ -69,7 +69,13 @@ public abstract class WALDurabilityTestBase<T extends WAL> {
     TEST_UTIL.cleanupTestDir();
   }
 
-  protected abstract T getWAL(FileSystem fs, Path root, String logDir, Configuration conf)
+  protected final T getWAL(FileSystem fs, Path root, String logDir, Configuration conf)
+    throws IOException {
+    fs.mkdirs(new Path(root, logDir));
+    return getWAL0(fs, root, logDir, conf);
+  }
+
+  protected abstract T getWAL0(FileSystem fs, Path root, String logDir, Configuration conf)
     throws IOException;
 
   protected abstract void resetSyncFlag(T wal);
