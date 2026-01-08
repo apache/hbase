@@ -66,10 +66,9 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   private final AtomicInteger activeReadHandlerCount = new AtomicInteger(0);
   private final AtomicInteger activeScanHandlerCount = new AtomicInteger(0);
 
-  public RWQueueRpcExecutor(final String name, final int handlerCount,
-    final String maxQueueLengthConfKey, final PriorityFunction priority, final Configuration conf,
-    final Abortable abortable) {
-    super(name, handlerCount, maxQueueLengthConfKey, priority, conf, abortable);
+  public RWQueueRpcExecutor(final String name, final int handlerCount, final int maxQueueLength,
+    final PriorityFunction priority, final Configuration conf, final Abortable abortable) {
+    super(name, handlerCount, maxQueueLength, priority, conf, abortable);
 
     float callqReadShare = getReadShare(conf);
     float callqScanShare = getScanShare(conf);
@@ -98,9 +97,7 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     numScanQueues = scanQueues;
     scanHandlersCount = scanHandlers;
 
-    initializeQueues(numWriteQueues);
-    initializeQueues(numReadQueues);
-    initializeQueues(numScanQueues);
+    initializeQueues(numWriteQueues + numReadQueues + numScanQueues);
 
     this.writeBalancer = getBalancer(name, conf, queues.subList(0, numWriteQueues));
     this.readBalancer =

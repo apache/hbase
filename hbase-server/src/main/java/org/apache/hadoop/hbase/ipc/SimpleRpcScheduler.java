@@ -63,8 +63,11 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   public SimpleRpcScheduler(Configuration conf, int handlerCount, int priorityHandlerCount,
     int replicationHandlerCount, int metaTransitionHandler, PriorityFunction priority,
     Abortable server, int highPriorityLevel) {
-    int bulkLoadHandlerCount = conf.getInt(HConstants.REGION_SERVER_BULKLOAD_HANDLER_COUNT,
-      HConstants.DEFAULT_REGION_SERVER_BULKLOAD_HANDLER_COUNT);
+    int maxQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH, -1);
+    int maxPriorityQueueLength =
+      conf.getInt(RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH, -1);
+    int maxReplicationQueueLength =
+      conf.getInt(RpcScheduler.IPC_SERVER_REPLICATION_MAX_CALLQUEUE_LENGTH, -1);
 
     this.priority = priority;
     this.highPriorityLevel = highPriorityLevel;
@@ -77,17 +80,17 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     if (callqReadShare > 0) {
       // at least 1 read handler and 1 write handler
       callExecutor = new FastPathRWQueueRpcExecutor("default.FPRWQ", Math.max(2, handlerCount),
-        RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH, priority, conf, server);
+        maxQueueLength, priority, conf, server);
     } else {
       if (
         RpcExecutor.isFifoQueueType(callQueueType) || RpcExecutor.isCodelQueueType(callQueueType)
           || RpcExecutor.isPluggableQueueWithFastPath(callQueueType, conf)
       ) {
         callExecutor = new FastPathBalancedQueueRpcExecutor("default.FPBQ", handlerCount,
-          RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH, priority, conf, server);
+          maxQueueLength, priority, conf, server);
       } else {
-        callExecutor = new BalancedQueueRpcExecutor("default.BQ", handlerCount,
-          RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH, priority, conf, server);
+        callExecutor = new BalancedQueueRpcExecutor("default.BQ", handlerCount, maxQueueLength,
+          priority, conf, server);
       }
     }
 
@@ -96,27 +99,26 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
         MetaRWQueueRpcExecutor.DEFAULT_META_CALL_QUEUE_READ_SHARE);
     if (metaCallqReadShare > 0) {
       // different read/write handler for meta, at least 1 read handler and 1 write handler
-      this.priorityExecutor =
-        new MetaRWQueueRpcExecutor("priority.RWQ", Math.max(2, priorityHandlerCount),
-          RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH, priority, conf, server);
+      this.priorityExecutor = new MetaRWQueueRpcExecutor("priority.RWQ",
+        Math.max(2, priorityHandlerCount), maxPriorityQueueLength, priority, conf, server);
     } else {
       // Create 2 queues to help priorityExecutor be more scalable.
       this.priorityExecutor = priorityHandlerCount > 0
         ? new FastPathBalancedQueueRpcExecutor("priority.FPBQ", priorityHandlerCount,
-          RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE,
-          RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH, priority, conf, abortable)
+          RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE, maxPriorityQueueLength, priority, conf,
+          abortable)
         : null;
     }
     this.replicationExecutor = replicationHandlerCount > 0
       ? new FastPathBalancedQueueRpcExecutor("replication.FPBQ", replicationHandlerCount,
-        RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE,
-        RpcScheduler.IPC_SERVER_REPLICATION_MAX_CALLQUEUE_LENGTH, priority, conf, abortable)
+        RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE, maxReplicationQueueLength, priority, conf,
+        abortable)
       : null;
 
     this.metaTransitionExecutor = metaTransitionHandler > 0
       ? new FastPathBalancedQueueRpcExecutor("metaPriority.FPBQ", metaTransitionHandler,
-        RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE,
-        RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH, priority, conf, abortable)
+        RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE, maxPriorityQueueLength, priority, conf,
+        abortable)
       : null;
   }
 
