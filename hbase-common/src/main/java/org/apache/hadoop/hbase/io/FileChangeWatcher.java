@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -173,8 +174,10 @@ public final class FileChangeWatcher {
     }
   }
 
-  String getWatcherThreadName() {
-    return watcherThread.getName();
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  Thread getWatcherThread() {
+    return watcherThread;
   }
 
   private static void handleException(Thread thread, Throwable e) {
