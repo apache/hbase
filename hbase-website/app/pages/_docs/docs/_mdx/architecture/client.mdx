@@ -1,5 +1,6 @@
 ---
 title: "Client"
+description: "HBase client architecture, connection management, metadata caching, and client-side configuration for optimal performance."
 ---
 
 The HBase client finds the RegionServers that are serving the particular row range of interest. It does this by querying the `hbase:meta` table. See [hbase:meta](/docs/architecture/catalog-tables#hbasemeta) for details. After locating the required region(s), the client contacts the RegionServer serving that region, rather than going through the master, and issues the read or write request. This information is cached in the client so that subsequent requests need not go through the lookup process. Should a region be reassigned either by the master load balancer or because a RegionServer has died, the client will requery the catalog tables to determine the new location of the user region.

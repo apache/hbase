@@ -1,5 +1,6 @@
 ---
 title: "Master"
+description: "HBase Master server responsibilities including RegionServer monitoring, metadata operations, load balancing, and failover behavior."
 ---
 
 `HMaster` is the implementation of the Master Server. The Master server is responsible for monitoring all RegionServer instances in the cluster, and is the interface for all metadata changes. In a distributed cluster, the Master typically runs on the [NameNode](/docs/architecture/hdfs#namenode). J Mohamed Zahoor goes into some more detail on the Master Architecture in this blog posting, [HBase HMaster Architecture](https://web.archive.org/web/20191211053128/http://blog.zahoor.in/2012/08/hbase-hmaster-architecture/).
