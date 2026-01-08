@@ -6,9 +6,9 @@ description: "Detailed guide on how HBase uses Protocol Buffers for serializatio
 ## Protobuf
 
 HBase uses Google's [protobufs](https://developers.google.com/protocol-buffers/) wherever
-it persists metadata -- in the tail of hfiles or Cells written by
+it persists metadata — in the tail of hfiles or Cells written by
 HBase into the system hbase:meta table or when HBase writes znodes
-to zookeeper, etc. -- and when it passes objects over the wire making
+to zookeeper, etc. — and when it passes objects over the wire making
 [RPCs](/docs/rpc). HBase uses protobufs to describe the RPC
 Interfaces (Services) we expose to clients, for example the `Admin` and `Client`
 Interfaces that the RegionServer fields,

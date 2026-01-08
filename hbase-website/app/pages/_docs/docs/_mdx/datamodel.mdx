@@ -488,7 +488,7 @@ of editing an attribute on a column family descriptor).
 
 The 'new version behavior', undoes the limitations listed below
 whereby a `Delete` ALWAYS overshadows a `Put` if at the same
-location -- i.e. same row, column family, qualifier and timestamp
+location — i.e. same row, column family, qualifier and timestamp
 -- regardless of which arrived first. Version accounting is also
 changed as deleted versions are considered toward total version count.
 This is done to ensure results are not changed should a major

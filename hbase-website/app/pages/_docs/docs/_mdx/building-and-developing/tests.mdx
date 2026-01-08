@@ -113,7 +113,7 @@ is that of the local test; i.e. in the TestTimeout Test Class, you'd
 pass `TestTimeout.class` to the `CLASS_RULE` instead of the
 `TestHRegionInfo.class` we have above. The `CLASS_RULE`
 is where we'll enforce timeouts (currently set at a hard-limit of
-thirteen! minutes for all tests -- 780 seconds) and other cross-unit test facility.
+thirteen! minutes for all tests — 780 seconds) and other cross-unit test facility.
 The test is in the `SmallTest` Category.
 
 Categories can be arbitrary and provided as a list but each test MUST
@@ -180,8 +180,8 @@ parallelism to 50 minutes or less on a linux machine with dozens of CPUs and ple
 RAM.
 
 When you go to run the full test suite, make sure you up the test runner user nproc
-(`ulimit -u` -- make sure it > 6000 or more if more parallelism) and the number of
-open files (`ulimit -n` -- make sure it > 10240 or more) limits on your system.
+(`ulimit -u` — make sure it > 6000 or more if more parallelism) and the number of
+open files (`ulimit -n` — make sure it > 10240 or more) limits on your system.
 Errors because the test run hits
 limits are often only opaquely related to the constraint. You can see the current
 user settings by running `ulimit -a`.

@@ -36,7 +36,7 @@ The recommended approach is to let HBase add its dependency jars and use `HADOOP
 Since HBase `0.90.x`, HBase adds its dependency JARs to the job configuration itself.
 The dependencies only need to be available on the local `CLASSPATH` and from here they'll be picked
 up and bundled into the fat job jar deployed to the MapReduce cluster. A basic trick just passes
-the full hbase classpath -- all hbase and dependent jars as well as configurations -- to the mapreduce
+the full hbase classpath — all hbase and dependent jars as well as configurations — to the mapreduce
 job runner letting hbase utility pick out from the full-on classpath what it needs adding them to the
 MapReduce job configuration (See the source at `TableMapReduceUtil#addDependencyJars(org.apache.hadoop.mapreduce.Job)` for how this is done).
 

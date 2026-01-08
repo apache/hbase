@@ -232,9 +232,9 @@ To estimate the duration of a full backup, we have to understand the general act
 * Export the snapshot to the destination: see below. Relative to the size of the data and the network bandwidth to the destination.
 
 To approximate how long the final step will take, we have to make some assumptions on hardware. Be aware that these will *not* be accurate for your
-system -- these are numbers that your or your administrator know for your system. Let's say the speed of reading data from HDFS on a single node is
+system — these are numbers that your or your administrator know for your system. Let's say the speed of reading data from HDFS on a single node is
 capped at 80MB/s (across all Mappers that run on that host), a modern network interface controller (NIC) supports 10Gb/s, the top-of-rack switch can
-handle 40Gb/s, and the WAN between your clusters is 10Gb/s. This means that you can only ship data to your remote at a speed of 1.25GB/s -- meaning
+handle 40Gb/s, and the WAN between your clusters is 10Gb/s. This means that you can only ship data to your remote at a speed of 1.25GB/s — meaning
 that 16 nodes (`1.25 * 1024 / 80 = 16`) participating in the ExportSnapshot should be able to fully saturate the link between clusters. With more
 nodes in the cluster, we can still saturate the network but at a lesser impact on any one node which helps ensure local SLAs are made. If the size
 of the snapshot is 10TB, this would full backup would take in the ballpark of 2.5 hours (`10 * 1024 / 1.25 / (60 * 60) = 2.23hrs`)
@@ -245,7 +245,7 @@ bottleneck to the speed of a full backup.
 When the concern is restricting the computational impact of backups to a "production system", the above formulas can be reused with the optional
 command-line arguments to `hbase backup create`: `-b`, `-w`, `-q`. The `-b` option defines the bandwidth at which each worker (Mapper) would
 write data. The `-w` argument limits the number of workers that would be spawned in the DistCp job. The `-q` allows the user to specify a YARN
-queue which can limit the specific nodes where the workers will be spawned -- this can quarantine the backup workers performing the copy to
+queue which can limit the specific nodes where the workers will be spawned — this can quarantine the backup workers performing the copy to
 a set of non-critical nodes. Relating the `-b` and `-w` options to our earlier equations: `-b` would be used to restrict each node from reading
 data at the full 80MB/s and `-w` is used to limit the job from spawning 16 worker tasks.
 

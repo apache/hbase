@@ -882,7 +882,7 @@ in a staging area of the maven repository, in the 'closed' state.
 Next sign, fingerprint and then 'stage' your release candiate build output directory via svnpubsub by committing
 your directory to [The dev distribution directory](https://dist.apache.org/repos/dist/dev/hbase/)
 (See comments on [HBASE-10554 Please delete old releases from mirroring system](https://issues.apache.org/jira/browse/HBASE-10554)
-but in essence it is an svn checkout of [dev/hbase](https://dist.apache.org/repos/dist/dev/hbase) -- releases are at
+but in essence it is an svn checkout of [dev/hbase](https://dist.apache.org/repos/dist/dev/hbase) — releases are at
 [release/hbase](https://dist.apache.org/repos/dist/release/hbase)). In the _version directory_ run the following commands:
 
 ```bash
@@ -1162,7 +1162,7 @@ is that of the local test; i.e. in the TestTimeout Test Class, you'd
 pass `TestTimeout.class` to the `CLASS_RULE` instead of the
 `TestHRegionInfo.class` we have above. The `CLASS_RULE`
 is where we'll enforce timeouts (currently set at a hard-limit of
-thirteen! minutes for all tests -- 780 seconds) and other cross-unit test facility.
+thirteen! minutes for all tests — 780 seconds) and other cross-unit test facility.
 The test is in the `SmallTest` Category.
 
 Categories can be arbitrary and provided as a list but each test MUST
@@ -1227,8 +1227,8 @@ parallelism to 50 minutes or less on a linux machine with dozens of CPUs and ple
 RAM.
 
 When you go to run the full test suite, make sure you up the test runner user nproc
-(`ulimit -u` -- make sure it > 6000 or more if more parallelism) and the number of
-open files (`ulimit -n` -- make sure it > 10240 or more) limits on your system.
+(`ulimit -u` — make sure it > 6000 or more if more parallelism) and the number of
+open files (`ulimit -n` — make sure it > 10240 or more) limits on your system.
 Errors because the test run hits
 limits are often only opaquely related to the constraint. You can see the current
 user settings by running `ulimit -a`.
@@ -2555,7 +2555,7 @@ A Pull Request (PR) submission triggers the hbase yetus checks. The checks make
 sure the patch doesn't break the build or introduce test failures. The checks take
 around four hours to run (They are the same set run when you submit a patch via
 HBASE JIRA). When finished, they add a report to the PR as a comment. If a problem
-w/ the patch -- failed compile, checkstyle violation, or an added findbugs --
+w/ the patch — failed compile, checkstyle violation, or an added findbugs --
 the original author makes fixes and pushes a new patch. This re-runs the checks
 to produce a new report.
 
@@ -2567,7 +2567,7 @@ This will take you to `builds.apache.org`, to the build run that failed. See the
 "breadcrumbs" along the top (where breadcrumbs is the listing of the directories that
 gets us to this particular build page). It'll look something like
 `Jenkins > HBase-PreCommit-GitHub-PR > PR-289 > #1`. Click on the
-PR number -- i.e. PR-289 in our example -- and then, when you've arrived at the PR page,
+PR number — i.e. PR-289 in our example — and then, when you've arrived at the PR page,
 find the 'Build with Parameters' menu-item (along top left-hand menu). Click here and
 then `Build` leaving the JIRA_ISSUE_KEY empty. This will re-run your checks.
 
@@ -2584,7 +2584,7 @@ Misspellings and/or bad grammar is preferable to the disruption a JIRA comment e
 
 A new project was created for the release of hbase-2.0.0. It was called
 `hbase-thirdparty`. This project exists only to provide the main hbase
-project with relocated -- or shaded -- versions of popular thirdparty
+project with relocated — or shaded — versions of popular thirdparty
 libraries such as guava, netty, and protobuf. The mainline HBase project
 relies on the relocated versions of these libraries gotten from hbase-thirdparty
 rather than on finding these classes in their usual locations. We do this so
@@ -2602,8 +2602,8 @@ version used by HBase internals can be found at
 `org.apache.hbase.thirdparty.com.google.protobuf.Message`.
 
 For a few thirdparty libs, like protobuf (see the protobuf chapter in this book
-for the why), your IDE may give you both options -- the `com.google.protobuf.*`
-and the `org.apache.hbase.thirdparty.com.google.protobuf.*` -- because both
+for the why), your IDE may give you both options — the `com.google.protobuf.*`
+and the `org.apache.hbase.thirdparty.com.google.protobuf.*` — because both
 classes are on your CLASSPATH. Unless you are doing the particular juggling
 required in Coprocessor Endpoint development (again see above cited protobuf
 chapter), you'll want to use the shaded version, always.
@@ -2611,7 +2611,7 @@ chapter), you'll want to use the shaded version, always.
 The `hbase-thirdparty` project has groupid of `org.apache.hbase.thirdparty`.
 As of this writing, it provides three jars; one for netty with an artifactid of
 `hbase-thirdparty-netty`, one for protobuf at `hbase-thirdparty-protobuf` and then
-a jar for all else -- gson, guava -- at `hbase-thirdpaty-miscellaneous`.
+a jar for all else — gson, guava — at `hbase-thirdpaty-miscellaneous`.
 
 The hbase-thirdparty artifacts are a product produced by the Apache HBase
 project under the aegis of the HBase Project Management Committee. Releases

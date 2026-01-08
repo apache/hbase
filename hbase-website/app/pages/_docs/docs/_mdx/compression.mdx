@@ -169,9 +169,9 @@ In general, you need to weigh your options between smaller size and faster compr
 
 ## Making use of Hadoop Native Libraries in HBase
 
-The Hadoop shared library has a bunch of facility including compression libraries and fast crc'ing -- hardware crc'ing if your chipset supports it.
+The Hadoop shared library has a bunch of facility including compression libraries and fast crc'ing — hardware crc'ing if your chipset supports it.
 To make this facility available to HBase, do the following. HBase/Hadoop will fall back to use alternatives if it cannot find the native library
-versions -- or fail outright if you asking for an explicit compressor and there is no alternative available.
+versions — or fail outright if you asking for an explicit compressor and there is no alternative available.
 
 First make sure of your Hadoop. Fix this message if you are seeing it starting Hadoop processes:
 
