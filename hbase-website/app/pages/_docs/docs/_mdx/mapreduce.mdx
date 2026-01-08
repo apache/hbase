@@ -26,8 +26,8 @@ _o.a.h.h.mapred_ if that is what you are using.
 By default, MapReduce jobs deployed to a MapReduce cluster do not have access to
 either the HBase configuration under `$HBASE_CONF_DIR` or the HBase classes.
 
-To give the MapReduce jobs the access they need, you could add _hbase-site.xml_to _$HADOOP_HOME/conf_ and add HBase jars to the _$HADOOP_HOME/lib_ directory.
-You would then need to copy these changes across your cluster. Or you could edit _$HADOOP_HOME/conf/hadoop-env.sh_ and add hbase dependencies to the `HADOOP_CLASSPATH` variable.
+To give the MapReduce jobs the access they need, you could add _hbase-site.xml_to _\$HADOOP_HOME/conf_ and add HBase jars to the _\$HADOOP_HOME/lib_ directory.
+You would then need to copy these changes across your cluster. Or you could edit _\$HADOOP_HOME/conf/hadoop-env.sh_ and add hbase dependencies to the `HADOOP_CLASSPATH` variable.
 Neither of these approaches is recommended because it will pollute your Hadoop install with HBase references.
 It also requires you restart the Hadoop cluster before Hadoop can use the HBase data.
 

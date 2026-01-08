@@ -3,6 +3,8 @@ title: "Developer Guidelines"
 description: "Code standards, interface classifications, formatting conventions, Git best practices, and patch submission guidelines for HBase contributors."
 ---
 
+import { Step, Steps } from "fumadocs-ui/components/steps";
+
 ## Branches
 
 We use Git for source code management and latest development happens on `master` branch. There are
@@ -79,7 +81,7 @@ Please adhere to the following guidelines so that your patches can be reviewed m
 These guidelines have been developed based upon common feedback on patches from new contributors.
 
 See the [Code Conventions for the Java Programming Language](http://www.oracle.com/technetwork/java/index-135089.html) for more information on coding conventions in Java.
-See [Eclipse Code Formatting](/docs/developer#code-formatting) to setup Eclipse to check for some of
+See [Eclipse Code Formatting](/docs/building-and-developing#code-formatting) to setup Eclipse to check for some of
 these guidelines automatically.
 
 #### Space Invaders
@@ -357,22 +359,55 @@ Patches larger than one screen, or patches that will be tricky to review, should
 
 **Procedure: Use ReviewBoard**
 
-1. Register for an account if you don't already have one.
-   It does not use the credentials from [issues.apache.org](https://issues.apache.org).
-   Log in.
-2. Click **New Review Request**.
-3. Choose the `hbase-git` repository.
-   Click Choose File to select the diff and optionally a parent diff.
-   Click **Create Review Request**.
-4. Fill in the fields as required.
-   At the minimum, fill in the **Summary** and choose `hbase` as the **Review Group**.
-   If you fill in the **Bugs** field, the review board links back to the relevant JIRA.
-   The more fields you fill in, the better.
-   Click **Publish** to make your review request public.
-   An email will be sent to everyone in the `hbase` group, to review the patch.
-5. Back in your JIRA, click , and paste in the URL of your ReviewBoard request.
-   This attaches the ReviewBoard to the JIRA, for easy access.
-6. To cancel the request, click .
+<Steps>
+
+<Step>
+
+Register for an account if you don't already have one.
+It does not use the credentials from [issues.apache.org](https://issues.apache.org).
+Log in.
+
+</Step>
+
+<Step>
+
+Click **New Review Request**.
+
+</Step>
+
+<Step>
+
+Choose the `hbase-git` repository.
+Click Choose File to select the diff and optionally a parent diff.
+Click **Create Review Request**.
+
+</Step>
+
+<Step>
+
+Fill in the fields as required.
+At the minimum, fill in the **Summary** and choose `hbase` as the **Review Group**.
+If you fill in the **Bugs** field, the review board links back to the relevant JIRA.
+The more fields you fill in, the better.
+Click **Publish** to make your review request public.
+An email will be sent to everyone in the `hbase` group, to review the patch.
+
+</Step>
+
+<Step>
+
+Back in your JIRA, click , and paste in the URL of your ReviewBoard request.
+This attaches the ReviewBoard to the JIRA, for easy access.
+
+</Step>
+
+<Step>
+
+To cancel the request, click .
+
+</Step>
+
+</Steps>
 
 For more information on how to use ReviewBoard, see [the ReviewBoard
 documentation](http://www.reviewboard.org/docs/manual/1.5/).
@@ -491,7 +526,7 @@ then wait for a `+1` response from another committer before committing.
 #### Reject
 
 Patches which do not adhere to the guidelines in
-[HowToContribute](/docs/developer) and to the
+[HowToContribute](/docs/building-and-developing) and to the
 [code review checklist](https://cwiki.apache.org/confluence/display/HADOOP2/CodeReviewChecklist)
 should be rejected. Committers should always be polite to contributors and try
 to instruct and encourage them to contribute better patches. If a committer

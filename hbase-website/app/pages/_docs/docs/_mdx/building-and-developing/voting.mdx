@@ -29,7 +29,6 @@ Although contributors have their own checklist for verifications, the following 
   - For what should be compatible please refer the [versioning guideline](/docs/upgrading/version-number), especially for items with marked as high severity
 - Use `hbase-vote.sh` to perform sanity checks for checksum, signatures, files are licensed, built from source, and unit tests.
   - `hbase-vote.sh` shell script is available under `dev-support` directory of HBase source. Following are the usage details.
-
   ```bash
   ./dev-support/hbase-vote.sh -h
   hbase-vote. A script for standard vote which verifies the following items
@@ -52,7 +51,6 @@ Although contributors have their own checklist for verifications, the following 
     -P |                          list of maven profiles to activate for test UT/IT, i.e. <-P runSmallTests> Defaults to runAllTests
     -D |                          list of maven properties to set for the mvn invocations, i.e. <-D hadoop.profile=3.0> Defaults to unset
   ```
-
 - If you see any unit test failures, please call out the solo test result and whether it's part of flaky (nightly) tests dashboard, e.g. [dashboard of master branch](https://builds.apache.org/view/H-L/view/HBase/job/HBase-Find-Flaky-Tests/job/master/lastSuccessfulBuild/artifact/dashboard.html) (please change the test branch accordingly).
 
 ## Additional Verifications for Voting Release Candidates

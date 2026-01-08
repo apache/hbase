@@ -458,29 +458,29 @@ clusterssh+top, it's like a poor man's monitoring system and it can be quite use
 
 For more information on the HBase client, see [client](/docs/architecture/client).
 
-### ScannerTimeoutException or UnknownScannerException
+### ScannerTimeoutException or UnknownScannerException [!toc]
 
 This is thrown if the time between RPC calls from the client to RegionServer exceeds the scan timeout. For example, if `Scan.setCaching` is set to 500, then there will be an RPC call to fetch the next batch of rows every 500 `.next()` calls on the ResultScanner because data is being transferred in blocks of 500 rows to the client. Reducing the setCaching value may be an option, but setting this value too low makes for inefficient processing on numbers of rows.
 
 See [Scan Caching](/docs/performance#scan-caching).
 
-### Performance Differences in Thrift and Java APIs
+### Performance Differences in Thrift and Java APIs [!toc]
 
 Poor performance, or even `ScannerTimeoutExceptions`, can occur if `Scan.setCaching` is too high, as discussed in [ScannerTimeoutException or UnknownScannerException](/docs/troubleshooting#scannertimeoutexception-or-unknownscannerexception). If the Thrift client uses the wrong caching settings for a given workload, performance can suffer compared to the Java API. To set caching for a given scan in the Thrift client, use the `scannerGetList(scannerId, numRows)` method, where `numRows` is an integer representing the number of rows to cache. In one case, it was found that reducing the cache for Thrift scans from 1000 to 100 increased performance to near parity with the Java API given the same queries.
 
 See also Jesse Andersen's [blog post](http://blog.cloudera.com/blog/2014/04/how-to-use-the-hbase-thrift-interface-part-3-using-scans/) about using Scans with Thrift.
 
-### `LeaseException` when calling `Scanner.next`
+### `LeaseException` when calling `Scanner.next` [!toc]
 
 In some situations clients that fetch data from a RegionServer get a LeaseException instead of the usual [ScannerTimeoutException or UnknownScannerException](/docs/troubleshooting#scannertimeoutexception-or-unknownscannerexception). Usually the source of the exception is `org.apache.hadoop.hbase.regionserver.Leases.removeLease(Leases.java:230)` (line number may vary). It tends to happen in the context of a slow/freezing `RegionServer#next` call. It can be prevented by having `hbase.rpc.timeout` > `hbase.client.scanner.timeout.period`. Harsh J investigated the issue as part of the mailing list thread [HBase, mail \# user - Lease does not exist exceptions](https://mail-archives.apache.org/mod_mbox/hbase-user/201209.mbox/%3CCAOcnVr3R-LqtKhFsk8Bhrm-YW2i9O6J6Fhjz2h7q6_sxvwd2yw%40mail.gmail.com%3E)
 
-### Shell or client application throws lots of scary exceptions during normal operation
+### Shell or client application throws lots of scary exceptions during normal operation [!toc]
 
 Since 0.20.0 the default log level for `org.apache.hadoop.hbase.*` is DEBUG.
 
 On your clients, edit *$HBASE_HOME/conf/log4j.properties* and change this: `log4j.logger.org.apache.hadoop.hbase=DEBUG` to this: `log4j.logger.org.apache.hadoop.hbase=INFO`, or even `log4j.logger.org.apache.hadoop.hbase=WARN`.
 
-### Long Client Pauses With Compression
+### Long Client Pauses With Compression [!toc]
 
 This is a fairly frequent question on the Apache HBase dist-list. The scenario is that a client is typically inserting a lot of data into a relatively un-optimized HBase cluster. Compression can exacerbate the pauses, although it is not the source of the problem.
 
@@ -490,7 +490,7 @@ See [HBase Configurations](/docs/performance#hbase-configurations) for cluster c
 
 A slightly longer explanation of why pauses can happen is as follows: Puts are sometimes blocked on the MemStores which are blocked by the flusher thread which is blocked because there are too many files to compact because the compactor is given too many small files to compact and has to compact the same data repeatedly. This situation can occur even with minor compactions. Compounding this situation, Apache HBase doesn't compress data in memory. Thus, the 64MB that lives in the MemStore could become a 6MB file after compression - which results in a smaller StoreFile. The upside is that more data is packed into the same region, but performance is achieved by being able to write larger files - which is why HBase waits until the flushsize before writing a new StoreFile. And smaller StoreFiles become targets for compaction. Without compression the files are much bigger and don't need as much compaction, however this is at the expense of I/O.
 
-### Secure Client Connect ([Caused by GSSException: No valid credentials provided...])
+### Secure Client Connect ([Caused by GSSException: No valid credentials provided...]) [!toc]
 
 You may encounter the following error:
 
@@ -503,7 +503,7 @@ This issue is caused by bugs in the MIT Kerberos replay_cache component, [\#1201
 
 Alternatively, update krb5-server to a version which solves these issues, such as krb5-server-1.10.3. See JIRA [HBASE-10379](https://issues.apache.org/jira/browse/HBASE-10379) for more details.
 
-### ZooKeeper Client Connection Errors
+### ZooKeeper Client Connection Errors [!toc]
 
 Errors like this...
 
@@ -530,11 +530,11 @@ Errors like this...
 
 The utility [zkcli](/docs/troubleshooting#zkcli) may help investigate ZooKeeper issues.
 
-### Client running out of memory though heap size seems to be stable (but the off-heap/direct heap keeps growing)
+### Client running out of memory though heap size seems to be stable (but the off-heap/direct heap keeps growing) [!toc]
 
 You are likely running into the issue that is described and worked through in the mail thread [HBase, mail \# user - Suspected memory leak](https://lists.apache.org/thread.html/d12bbe56be95cf68478d1528263042730670ff39159a01eaf06d8bc8%401322622090%40%3Cuser.hbase.apache.org%3E) and continued over in [HBase, mail \# dev - FeedbackRe: Suspected memory leak](https://lists.apache.org/thread.html/621dde35479215f0b07b23af93b8fac52ff4729949b5c9af18e3a85b%401322971078%40%3Cuser.hbase.apache.org%3E). A workaround is passing your client-side JVM a reasonable value for `-XX:MaxDirectMemorySize`. By default, the `MaxDirectMemorySize` is equal to your `-Xmx` max heapsize setting (if `-Xmx` is set). Try setting it to something smaller (for example, one user had success setting it to `1g` when they had a client-side heap of `12g`). If you set it too small, it will bring on `FullGCs` so keep it a bit hefty. You want to make this setting client-side only especially if you are running the new experimental server-side off-heap cache since this feature depends on being able to use big direct buffers (You may have to keep separate client-side and server-side config dirs).
 
-### Secure Client Cannot Connect ([Caused by GSSException: No valid credentials provided(Mechanism level: Failed to find any Kerberos tgt)])
+### Secure Client Cannot Connect ([Caused by GSSException: No valid credentials provided(Mechanism level: Failed to find any Kerberos tgt)]) [!toc]
 
 There can be several causes that produce this symptom.
 
@@ -550,7 +550,7 @@ You may need to install the [Java Cryptography Extension](https://docs.oracle.co
 
 You may also need to download the [unlimited strength JCE policy files](http://www.oracle.com/technetwork/java/javase/downloads/jce-6-download-429243.html). Uncompress and extract the downloaded file, and install the policy jars into *\<java-home>/lib/security*.
 
-### Trouble shooting master registry issues
+### Trouble shooting master registry issues [!toc]
 
 - For connectivity issues, usually an exception like "MasterRegistryFetchException: Exception making rpc to masters..." is logged in the client logs. The logging includes the list of master end points that were attempted by the client. The bottom part of the stack trace should include the underlying reason. If you suspect connectivity issues (ConnectionRefused?), make sure the master end points are accessible from client.
 - If there is a suspicion of higher load on the masters due to hedging of RPCs, it can be controlled by either reducing the hedging fan out (via *hbase.rpc.hedged.fanout*) or by restricting the set of masters that clients can access for the master registry purposes (via *hbase.masters*).
@@ -559,7 +559,7 @@ Refer to [Master Registry (new as of 2.3.0)](/docs/architecture/client#masterreg
 
 ## MapReduce
 
-### You Think You're On The Cluster, But You're Actually Local
+### You Think You're On The Cluster, But You're Actually Local [!toc]
 
 This following stacktrace happened using `ImportTsv`, but things like this can happen on any job with a mis-configuration.
 
@@ -598,7 +598,7 @@ HADOOP_CLASSPATH=`hbase classpath` hadoop jar $HBASE_HOME/hbase-mapreduce-VERSIO
 
 See [HBase, MapReduce, and the CLASSPATH](/docs/mapreduce#hbase-mapreduce-and-the-classpath) for more information on HBase MapReduce jobs and classpaths.
 
-### Launching a job, you get java.lang.IllegalAccessError: com/google/protobuf/HBaseZeroCopyByteString or class com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass com.google.protobuf.LiteralByteString
+### Launching a job, you get java.lang.IllegalAccessError: com/google/protobuf/HBaseZeroCopyByteString or class com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass com.google.protobuf.LiteralByteString [!toc]
 
 See [HBASE-10304 Running an hbase job jar: IllegalAccessError: class com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass com.google.protobuf.LiteralByteString](https://issues.apache.org/jira/browse/HBASE-10304) and [HBASE-11118 non environment variable solution for "IllegalAccessError: class com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass com.google.protobuf.LiteralByteString"](https://issues.apache.org/jira/browse/HBASE-11118). The issue can also show up when trying to run spark jobs. See [HBASE-10877 HBase non-retriable exception list should be expanded](https://issues.apache.org/jira/browse/HBASE-10877).
 
@@ -657,13 +657,13 @@ The HDFS directory structure of HBase WAL is..
 
 See the [HDFS User Guide](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsUserGuide.html) for other non-shell diagnostic utilities like `fsck`.
 
-#### Zero size WALs with data in them
+#### Zero size WALs with data in them [!toc]
 
 Problem: when getting a listing of all the files in a RegionServer's *WALs* directory, one file has a size of 0 but it contains data.
 
 Answer: It's an HDFS quirk. A file that's currently being written to will appear to have a size of 0 but once it's closed it will show its true size
 
-#### Use Cases
+#### Use Cases [!toc]
 
 Two common use-cases for querying HDFS for HBase objects is research the degree of uncompaction of a table. If there are a large number of StoreFiles for each ColumnFamily it could indicate the need for a major compaction. Additionally, after a major compaction if the resulting StoreFile is "small" it could indicate the need for a reduction of ColumnFamilies for the table.
 
@@ -706,7 +706,7 @@ For more information on the RegionServers, see [RegionServer](/docs/architecture
 
 ### Startup Errors
 
-#### Master Starts, But RegionServers Do Not
+#### Master Starts, But RegionServers Do Not [!toc]
 
 The Master believes the RegionServers have the IP of 127.0.0.1 - which is localhost and resolves to the master's own localhost.
 
@@ -730,7 +730,7 @@ Modify */etc/hosts* on the region servers, from...
 ::1             localhost6.localdomain6 localhost6
 ```
 
-#### Compression Link Errors
+#### Compression Link Errors [!toc]
 
 Since compression algorithms such as LZO need to be installed and configured on each cluster this is a frequent source of startup error. If you see messages like this...
 
@@ -744,7 +744,7 @@ java.lang.UnsatisfiedLinkError: no gplcompression in java.library.path
 
 ... then there is a path issue with the compression libraries. See the Configuration section on [LZO compression configuration](/docs/compression#configure-hbase-for-compressors).
 
-#### RegionServer aborts due to lack of hsync for filesystem
+#### RegionServer aborts due to lack of hsync for filesystem [!toc]
 
 In order to provide data durability for writes to the cluster HBase relies on the ability to durably save state in a write ahead log. When using a version of Apache Hadoop Common's filesystem API that supports checking on the availability of needed calls, HBase will proactively abort the cluster if it finds it can't operate safely.
 
@@ -780,7 +780,7 @@ Caused by: org.apache.hadoop.hbase.util.CommonFSUtils$StreamLacksCapabilityExcep
 
 If you are attempting to run in standalone mode and see this error, please walk back through the section [Quick Start - Standalone HBase](/docs/getting-started#quick-start---standalone-hbase) and ensure you have included **all** the given configuration settings.
 
-#### RegionServer aborts due to can not initialize access to HDFS
+#### RegionServer aborts due to can not initialize access to HDFS [!toc]
 
 We will try to use *AsyncFSWAL* for HBase-2.x as it has better performance while consuming less resources. But the problem for *AsyncFSWAL* is that it hacks into the internal of the DFSClient implementation, so it will easily be broken when upgrading hadoop, even for a simple patch release.
 
@@ -832,11 +832,11 @@ And do not forget to send an email to the `user@hbase.apache.org` or `dev@hbase.
 
 ### Runtime Errors
 
-#### RegionServer Hanging
+#### RegionServer Hanging [!toc]
 
 Are you running an old JVM (`< `1.6.0_u21?)? When you look at a thread dump, does it look like threads are BLOCKED but no one holds the lock all are blocked on? See [HBASE 3622 Deadlock in HBaseServer (JVM bug?)](https://issues.apache.org/jira/browse/HBASE-3622). Adding `-XX:+UseMembar` to the HBase `HBASE_OPTS` in *conf/hbase-env.sh* may fix it.
 
-#### java.io.IOException...(Too many open files)
+#### java.io.IOException...(Too many open files) [!toc]
 
 If you see log messages like this...
 
@@ -849,18 +849,18 @@ Disk-related IOException in BlockReceiver constructor. Cause is java.io.IOExcept
 
 ... see the Getting Started section on [ulimit and nproc configuration](/docs/configuration/basic-prerequisites#example-ulimit-settings-on-ubuntu-toc).
 
-#### xceiverCount 258 exceeds the limit of concurrent xcievers 256
+#### xceiverCount 258 exceeds the limit of concurrent xcievers 256 [!toc]
 
 This typically shows up in the DataNode logs.
 
 TODO: add link.
 See the Getting Started section on xceivers configuration.
 
-#### System instability, and the presence of "java.lang.OutOfMemoryError: unable to createnew native thread in exceptions" HDFS DataNode logs or that of any system daemon
+#### System instability, and the presence of "java.lang.OutOfMemoryError: unable to createnew native thread in exceptions" HDFS DataNode logs or that of any system daemon [!toc]
 
 See the Getting Started section on ulimit and nproc configuration. The default on recent Linux distributions is 1024 - which is far too low for HBase.
 
-#### DFS instability and/or RegionServer lease timeouts
+#### DFS instability and/or RegionServer lease timeouts [!toc]
 
 If you see warning messages like this...
 
@@ -872,13 +872,13 @@ If you see warning messages like this...
 
 ... or see full GC compactions then you may be experiencing full GC's.
 
-#### "No live nodes contain current block" and/or YouAreDeadException
+#### "No live nodes contain current block" and/or YouAreDeadException [!toc]
 
 These errors can happen either when running out of OS file handles or in periods of severe network problems where the nodes are unreachable.
 
 See the Getting Started section on ulimit and nproc configuration and check your network.
 
-#### ZooKeeper SessionExpired events
+#### ZooKeeper SessionExpired events [!toc]
 
 Master or RegionServers shutting down with messages like those in the logs:
 
@@ -925,17 +925,17 @@ If this is happening during an upload which only happens once (like initially lo
 
 See [ZooKeeper, The Cluster Canary](/docs/troubleshooting#zookeeper-the-cluster-canary) for other general information about ZooKeeper troubleshooting.
 
-#### NotServingRegionException
+#### NotServingRegionException [!toc]
 
 This exception is "normal" when found in the RegionServer logs at DEBUG level. This exception is returned back to the client and then the client goes back to `hbase:meta` to find the new location of the moved region.
 
 However, if the NotServingRegionException is logged ERROR, then the client ran out of retries and something probably wrong.
 
-#### Logs flooded with '2011-01-10 12:40:48,407 INFO org.apache.hadoop.io.compress.CodecPool: Gotbrand-new compressor' messages
+#### Logs flooded with '2011-01-10 12:40:48,407 INFO org.apache.hadoop.io.compress.CodecPool: Gotbrand-new compressor' messages [!toc]
 
 We are not using the native versions of compression libraries. See [HBASE-1900 Put back native support when hadoop 0.21 is released](https://issues.apache.org/jira/browse/HBASE-1900). Copy the native libs from hadoop under HBase lib dir or symlink them into place and the message should go away.
 
-#### Server handler X on 60020 caught: java.nio.channels.ClosedChannelException
+#### Server handler X on 60020 caught: java.nio.channels.ClosedChannelException [!toc]
 
 If you see this type of message it means that the region server was trying to read/send data from/to a client but it already went away. Typical causes for this are if the client was killed (you see a storm of messages like this when a MapReduce job is killed or fails) or if the client receives a SocketTimeoutException. It's harmless, but you should consider digging in a bit more if you aren't doing something to trigger them.
 
@@ -963,17 +963,17 @@ For more information on the Master, see [master](/docs/architecture/master).
 
 ### Startup Errors
 
-#### Master says that you need to run the HBase migrations script
+#### Master says that you need to run the HBase migrations script [!toc]
 
 Upon running that, the HBase migrations script says no files in root directory.
 
 HBase expects the root directory to either not exist, or to have already been initialized by HBase running a previous time. If you create a new directory for HBase using Hadoop DFS, this error will occur. Make sure the HBase root directory does not currently exist or has been initialized by a previous run of HBase. Sure fire solution is to just use Hadoop dfs to delete the HBase root and let HBase create and initialize the directory itself.
 
-#### Packet len6080218 is out of range!
+#### Packet len6080218 is out of range! [!toc]
 
 If you have many regions on your cluster and you see an error like that reported above in this sections title in your logs, see [HBASE-4246 Cluster with too many regions cannot withstand some master failover scenarios](https://issues.apache.org/jira/browse/HBASE-4246).
 
-#### Master fails to become active due to lack of hsync for filesystem
+#### Master fails to become active due to lack of hsync for filesystem [!toc]
 
 HBase's internal framework for cluster operations requires the ability to durably save state in a write ahead log. When using a version of Apache Hadoop Common's filesystem API that supports checking on the availability of needed calls, HBase will proactively abort the cluster if it finds it can't operate safely.
 
@@ -1001,7 +1001,7 @@ If you are attempting to run in standalone mode and see this error, please walk 
 
 ### Startup Errors
 
-#### Could not find my address: xyz in list of ZooKeeper quorum servers
+#### Could not find my address: xyz in list of ZooKeeper quorum servers [!toc]
 
 A ZooKeeper server wasn't able to start, throws that error. xyz is the name of your server.
 
@@ -1146,7 +1146,7 @@ For Performance and Troubleshooting Case Studies, see [Apache HBase Case Studies
 
 ## Cryptographic Features
 
-### sun.security.pkcs11.wrapper.PKCS11Exception: CKR_ARGUMENTS_BAD
+### sun.security.pkcs11.wrapper.PKCS11Exception: CKR_ARGUMENTS_BAD [!toc]
 
 This problem manifests as exceptions ultimately caused by:
 
@@ -1168,7 +1168,7 @@ Then renumber the remaining providers accordingly.
 
 ## Operating System Specific Issues
 
-### Page Allocation Failure
+### Page Allocation Failure [!toc]
 
 <Callout type="info">
 This issue is known to affect CentOS 6.2 and possibly CentOS 6.5. It may also affect some versions of Red Hat Enterprise Linux, according to [https://bugzilla.redhat.com/show_bug.cgi?id=770545](https://bugzilla.redhat.com/show_bug.cgi?id=770545).
@@ -1199,7 +1199,7 @@ Use the following command to modify the value of `min_free_kbytes`, substituting
 
 ## JDK Issues
 
-### NoSuchMethodError: java.util.concurrent.ConcurrentHashMap.keySet
+### NoSuchMethodError: java.util.concurrent.ConcurrentHashMap.keySet [!toc]
 
 If you see this in your logs:
 
@@ -1216,7 +1216,7 @@ Caused by: java.lang.NoSuchMethodError: java.util.concurrent.ConcurrentHashMap.k
 
 then check if you compiled with jdk8 and tried to run it on jdk7. If so, this won't work. Run on jdk8 or recompile with jdk7. See [HBASE-10607 JDK8 NoSuchMethodError involving ConcurrentHashMap.keySet if running on JRE 7](https://issues.apache.org/jira/browse/HBASE-10607).
 
-### Full gc caused by mslab when using G1
+### Full gc caused by mslab when using G1 [!toc]
 
 The default size of chunk used by mslab is 2MB, when using G1, if heapRegionSize equals 4MB, these chunks are allocated as humongous objects, exclusively allocating one region, then the remaining 2MB become memory fragment.
 

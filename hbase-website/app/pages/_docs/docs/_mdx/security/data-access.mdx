@@ -138,101 +138,134 @@ Cell-level ACLs are implemented using tags (see [Tags](/docs/security/data-acces
 
 #### Server-Side Configuration
 
-1.  As a prerequisite, perform the steps in [Procedure: Basic Server-Side Configuration.](/docs/security/data-access#procedure-basic-server-side-configuration).
-2.  Install and configure the AccessController coprocessor, by setting the following properties in _hbase-site.xml_. These properties take a list of classes.
+<Steps>
 
-    <Callout type="info">
-      If you use the AccessController along with the VisibilityController, the AccessController must
-      come first in the list, because with both components active, the VisibilityController will
-      delegate access control on its system tables to the AccessController. For an example of using
-      both together, see [Security Configuration Example](/docs/security/example).
-    </Callout>
-    ```xml
-    <property>
-      <name>hbase.security.authorization</name>
-      <value>true</value>
-    </property>
-    <property>
-      <name>hbase.coprocessor.region.classes</name>
-      <value>
-        org.apache.hadoop.hbase.security.access.AccessController,
-        org.apache.hadoop.hbase.security.token.TokenProvider
-      </value>
-    </property>
-    <property>
-      <name>hbase.coprocessor.master.classes</name>
-      <value>org.apache.hadoop.hbase.security.access.AccessController</value>
-    </property>
-    <property>
-      <name>hbase.coprocessor.regionserver.classes</name>
-      <value>org.apache.hadoop.hbase.security.access.AccessController</value>
-    </property>
-    <property>
-      <name>hbase.security.exec.permission.checks</name>
-      <value>true</value>
-    </property>
-    ```
+<Step>
 
-    Optionally, you can enable transport security, by setting `hbase.rpc.protection` to
-    `privacy`. This requires HBase 0.98.4 or newer.
+As a prerequisite, perform the steps in [Procedure: Basic Server-Side Configuration](/docs/security/data-access#procedure-basic-server-side-configuration).
 
-3.  Set up the Hadoop group mapper in the Hadoop namenode's _core-site.xml_. This is a Hadoop file, not an HBase file. Customize it to your site's needs. Following is an example.
+</Step>
 
-    ```xml
-    <property>
-      <name>hadoop.security.group.mapping</name>
-      <value>org.apache.hadoop.security.LdapGroupsMapping</value>
-    </property>
+<Step>
 
-    <property>
-      <name>hadoop.security.group.mapping.ldap.url</name>
-      <value>ldap://server</value>
-    </property>
+Install and configure the AccessController coprocessor, by setting the following properties in _hbase-site.xml_. These properties take a list of classes.
 
-    <property>
-      <name>hadoop.security.group.mapping.ldap.bind.user</name>
-      <value>Administrator@example-ad.local</value>
-    </property>
+<Callout type="info">
+  If you use the AccessController along with the VisibilityController, the AccessController must
+  come first in the list, because with both components active, the VisibilityController will
+  delegate access control on its system tables to the AccessController. For an example of using
+  both together, see [Security Configuration Example](/docs/security/example).
+</Callout>
 
-    <property>
-      <name>hadoop.security.group.mapping.ldap.bind.password</name>
-      <value>****</value>
-    </property>
+```xml
+<property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.coprocessor.region.classes</name>
+  <value>
+    org.apache.hadoop.hbase.security.access.AccessController,
+    org.apache.hadoop.hbase.security.token.TokenProvider
+  </value>
+</property>
+<property>
+  <name>hbase.coprocessor.master.classes</name>
+  <value>org.apache.hadoop.hbase.security.access.AccessController</value>
+</property>
+<property>
+  <name>hbase.coprocessor.regionserver.classes</name>
+  <value>org.apache.hadoop.hbase.security.access.AccessController</value>
+</property>
+<property>
+  <name>hbase.security.exec.permission.checks</name>
+  <value>true</value>
+</property>
+```
 
-    <property>
-      <name>hadoop.security.group.mapping.ldap.base</name>
-      <value>dc=example-ad,dc=local</value>
-    </property>
+Optionally, you can enable transport security, by setting `hbase.rpc.protection` to
+`privacy`. This requires HBase 0.98.4 or newer.
 
-    <property>
-      <name>hadoop.security.group.mapping.ldap.search.filter.user</name>
-      <value>(&amp;(objectClass=user)(sAMAccountName={0}))</value>
-    </property>
+</Step>
 
-    <property>
-      <name>hadoop.security.group.mapping.ldap.search.filter.group</name>
-      <value>(objectClass=group)</value>
-    </property>
+<Step>
 
-    <property>
-      <name>hadoop.security.group.mapping.ldap.search.attr.member</name>
-      <value>member</value>
-    </property>
+Set up the Hadoop group mapper in the Hadoop namenode's _core-site.xml_. This is a Hadoop file, not an HBase file. Customize it to your site's needs. Following is an example.
 
-    <property>
-      <name>hadoop.security.group.mapping.ldap.search.attr.group.name</name>
-      <value>cn</value>
-    </property>
-    ```
+```xml
+<property>
+  <name>hadoop.security.group.mapping</name>
+  <value>org.apache.hadoop.security.LdapGroupsMapping</value>
+</property>
 
-4.  Optionally, enable the early-out evaluation strategy. Prior to HBase 0.98.0, if a user was not granted access to a column family, or at least a column qualifier, an AccessDeniedException would be thrown. HBase 0.98.0 removed this exception in order to allow cell-level exceptional grants. To restore the old behavior in HBase 0.98.0-0.98.6, set `hbase.security.access.early_out` to `true` in _hbase-site.xml_. In HBase 0.98.6, the default has been returned to `true`.
-5.  Distribute your configuration and restart your cluster for changes to take effect.
-6.  To test your configuration, log into HBase Shell as a given user and use the `whoami` command to report the groups your user is part of. In this example, the user is reported as being a member of the `services` group.
-    ```ruby
-    hbase> whoami
-    service (auth:KERBEROS)
-        groups: services
-    ```
+<property>
+  <name>hadoop.security.group.mapping.ldap.url</name>
+  <value>ldap://server</value>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.bind.user</name>
+  <value>Administrator@example-ad.local</value>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.bind.password</name>
+  <value>****</value>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.base</name>
+  <value>dc=example-ad,dc=local</value>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.filter.user</name>
+  <value>(&amp;(objectClass=user)(sAMAccountName={0}))</value>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.filter.group</name>
+  <value>(objectClass=group)</value>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.attr.member</name>
+  <value>member</value>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.attr.group.name</name>
+  <value>cn</value>
+</property>
+```
+
+</Step>
+
+<Step>
+
+Optionally, enable the early-out evaluation strategy. Prior to HBase 0.98.0, if a user was not granted access to a column family, or at least a column qualifier, an AccessDeniedException would be thrown. HBase 0.98.0 removed this exception in order to allow cell-level exceptional grants. To restore the old behavior in HBase 0.98.0-0.98.6, set `hbase.security.access.early_out` to `true` in _hbase-site.xml_. In HBase 0.98.6, the default has been returned to `true`.
+
+</Step>
+
+<Step>
+
+Distribute your configuration and restart your cluster for changes to take effect.
+
+</Step>
+
+<Step>
+
+To test your configuration, log into HBase Shell as a given user and use the `whoami` command to report the groups your user is part of. In this example, the user is reported as being a member of the `services` group.
+
+```ruby
+hbase> whoami
+service (auth:KERBEROS)
+    groups: services
+```
+
+</Step>
+
+</Steps>
 
 #### Administration
 
@@ -245,164 +278,134 @@ Neither the examples, nor the source files they are taken from, are part of the 
 
 </Callout>
 
-1.  User and Group Administration
-    Users and groups are maintained external to HBase, in your directory.
-2.  Granting Access To A Namespace, Table, Column Family, or Cell
-    There are a few different types of syntax for grant statements. The first, and most familiar, is as follows, with the table and column family being optional:
+<Steps>
 
-    ```sql
-    grant 'user', 'RWXCA', 'TABLE', 'CF', 'CQ'
-    ```
+<Step>
 
-    Groups and users are granted access in the same way, but groups are prefixed with an `@` symbol. In the same way, tables and namespaces are specified in the same way, but namespaces are prefixed with an `@` symbol.
+As a prerequisite, perform the steps in [Procedure: Basic Server-Side Configuration.](/docs/security/data-access#procedure-basic-server-side-configuration).
 
-    It is also possible to grant multiple permissions against the same resource in a single statement, as in this example. The first sub-clause maps users to ACLs and the second sub-clause specifies the resource.
+</Step>
 
-    <Callout type="info">
-      HBase Shell support for granting and revoking access at the cell level is for testing and
-      verification support, and should not be employed for production use because it won't apply the
-      permissions to cells that don't exist yet. The correct way to apply cell level permissions is
-      to do so in the application code when storing the values.
-    </Callout>
+<Step>
 
-    #### ACL Granularity and Evaluation Order [!toc]
+Install and configure the AccessController coprocessor, by setting the following properties in _hbase-site.xml_. These properties take a list of classes.
 
-    ACLs are evaluated from least granular to most granular, and when an ACL is reached that grants permission, evaluation stops. This means that cell ACLs do not override ACLs at less granularity.
+<Callout type="info">
+  If you use the AccessController along with the VisibilityController, the AccessController must
+  come first in the list, because with both components active, the VisibilityController will
+  delegate access control on its system tables to the AccessController. For an example of using
+  both together, see [Security Configuration Example](/docs/security/example).
+</Callout>
 
-    #### HBase Shell example:
-    - Global:
+```xml
+<property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.coprocessor.region.classes</name>
+  <value>
+    org.apache.hadoop.hbase.security.access.AccessController,
+    org.apache.hadoop.hbase.security.token.TokenProvider
+  </value>
+</property>
+<property>
+  <name>hbase.coprocessor.master.classes</name>
+  <value>org.apache.hadoop.hbase.security.access.AccessController</value>
+</property>
+<property>
+  <name>hbase.coprocessor.regionserver.classes</name>
+  <value>org.apache.hadoop.hbase.security.access.AccessController</value>
+</property>
+<property>
+  <name>hbase.security.exec.permission.checks</name>
+  <value>true</value>
+</property>
+```
 
-      ```ruby
-      hbase> grant '@admins', 'RWXCA'
-      ```
+Optionally, you can enable transport security, by setting `hbase.rpc.protection` to
+`privacy`. This requires HBase 0.98.4 or newer.
 
-    - Namespace:
+</Step>
 
-      ```ruby
-      hbase> grant 'service', 'RWXCA', '@test-NS'
-      ```
+<Step>
 
-    - Table:
+Set up the Hadoop group mapper in the Hadoop namenode's _core-site.xml_. This is a Hadoop file, not an HBase file. Customize it to your site's needs. Following is an example.
 
-      ```ruby
-      hbase> grant 'service', 'RWXCA', 'user'
-      ```
+```xml
+<property>
+  <name>hadoop.security.group.mapping</name>
+  <value>org.apache.hadoop.security.LdapGroupsMapping</value>
+</property>
 
-    - Column Family:
+<property>
+  <name>hadoop.security.group.mapping.ldap.url</name>
+  <value>ldap://server</value>
+</property>
 
-      ```ruby
-      hbase> grant '@developers', 'RW', 'user', 'i'
-      ```
+<property>
+  <name>hadoop.security.group.mapping.ldap.bind.user</name>
+  <value>Administrator@example-ad.local</value>
+</property>
 
-    - Column Qualifier:
+<property>
+  <name>hadoop.security.group.mapping.ldap.bind.password</name>
+  <value>****</value>
+</property>
 
-      ```ruby
-      hbase> grant 'service, 'RW', 'user', 'i', 'foo'
-      ```
+<property>
+  <name>hadoop.security.group.mapping.ldap.base</name>
+  <value>dc=example-ad,dc=local</value>
+</property>
 
-    - Cell:
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.filter.user</name>
+  <value>(&amp;(objectClass=user)(sAMAccountName={0}))</value>
+</property>
 
-      The syntax for granting cell ACLs uses the following syntax:
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.filter.group</name>
+  <value>(objectClass=group)</value>
+</property>
 
-      ```ruby
-      grant <table>, \
-        { '<user-or-group>' => \
-          '<permissions>', ... }, \
-        { <scanner-specification> }
-      ```
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.attr.member</name>
+  <value>member</value>
+</property>
 
-    - _\<user-or-group\>_ is the user or group name, prefixed with `@` in the case of a group.
-    - _\<permissions\>_ is a string containing any or all of "RWXCA", though only R and W are meaningful at cell scope.
-    - _\<scanner-specification\>_ is the scanner specification syntax and conventions used by the 'scan' shell command. For some examples of scanner specifications, issue the following HBase Shell command.
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.attr.group.name</name>
+  <value>cn</value>
+</property>
+```
 
-      ```ruby
-      hbase> help "scan"
-      ```
+</Step>
 
-      If you need to enable cell acl,the hfile.format.version option in hbase-site.xml should be greater than or equal to 3,and the hbase.security.access.early_out option should be set to false.This example grants read access to the 'testuser' user and read/write access to the 'developers' group, on cells in the 'pii' column which match the filter.
+<Step>
 
-      ```ruby
-      hbase> grant 'user', \
-        { '@developers' => 'RW', 'testuser' => 'R' }, \
-        { COLUMNS => 'pii', FILTER => "(PrefixFilter ('test'))" }
-      ```
+Optionally, enable the early-out evaluation strategy. Prior to HBase 0.98.0, if a user was not granted access to a column family, or at least a column qualifier, an AccessDeniedException would be thrown. HBase 0.98.0 removed this exception in order to allow cell-level exceptional grants. To restore the old behavior in HBase 0.98.0-0.98.6, set `hbase.security.access.early_out` to `true` in _hbase-site.xml_. In HBase 0.98.6, the default has been returned to `true`.
 
-      The shell will run a scanner with the given criteria, rewrite the found cells with new ACLs, and store them back to their exact coordinates.
+</Step>
 
-    #### API example:
+<Step>
 
-    The following example shows how to grant access at the table level.
+Distribute your configuration and restart your cluster for changes to take effect.
 
-    ```java
-    public static void grantOnTable(final HBaseTestingUtil util, final String user,
-        final TableName table, final byte[] family, final byte[] qualifier,
-        final Permission.Action... actions) throws Exception {
-      SecureTestUtil.updateACLs(util, new Callable<Void>() {
-        @Override
-        public Void call() throws Exception {
-          try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
-            connection.getAdmin().grant(new UserPermission(user, Permission.newBuilder(table)
-                .withFamily(family).withQualifier(qualifier).withActions(actions).build()),
-              false);
-          }
-          return null;
-        }
-      });
-    }
-    ```
+</Step>
 
-    To grant permissions at the cell level, you can use the `Mutation.setACL` method:
+<Step>
 
-    ```java
-    Mutation.setACL(String user, Permission perms)
-    Mutation.setACL(Map<String, Permission> perms)
-    ```
+To test your configuration, log into HBase Shell as a given user and use the `whoami` command to report the groups your user is part of. In this example, the user is reported as being a member of the `services` group.
 
-    Specifically, this example provides read permission to a user called `user1` on any cells contained in a particular Put operation:
+```ruby
+hbase> whoami
+service (auth:KERBEROS)
+    groups: services
+```
 
-    ```java
-    put.setACL(“user1”, new Permission(Permission.Action.READ))
-    ```
+</Step>
 
-3.  Revoking Access Control From a Namespace, Table, Column Family, or Cell
-
-    The `revoke` command and API are twins of the grant command and API, and the syntax is exactly the same. The only exception is that you cannot revoke permissions at the cell level. You can only revoke access that has previously been granted, and a `revoke` statement is not the same thing as explicit denial to a resource.
-
-    <Callout type="info">
-      HBase Shell support for granting and revoking access is for testing and verification support,
-      and should not be employed for production use because it won't apply the permissions to cells
-      that don't exist yet. The correct way to apply cell-level permissions is to do so in the
-      application code when storing the values.
-    </Callout>
-
-    #### Revoking Access To a Table example:
-
-    ```java
-    public static void revokeFromTable(final HBaseTestingUtil util, final String user,
-        final TableName table, final byte[] family, final byte[] qualifier,
-        final Permission.Action... actions) throws Exception {
-      SecureTestUtil.updateACLs(util, new Callable<Void>() {
-        @Override
-        public Void call() throws Exception {
-          try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
-            connection.getAdmin().revoke(new UserPermission(user, Permission.newBuilder(table)
-                .withFamily(family).withQualifier(qualifier).withActions(actions).build()));
-          }
-          return null;
-        }
-      });
-    }
-    ```
-
-4.  Showing a User's Effective Permissions
-
-    ```ruby
-        hbase> user_permission 'user'
-
-        hbase> user_permission '.*'
-
-        hbase> user_permission JAVA_REGEX
-    ```
+</Steps>
 
 #### API example:
 
@@ -465,37 +468,57 @@ Visibility labels can be used in conjunction with ACLs.
 
 ### Server-Side Configuration
 
-1.  As a prerequisite, perform the steps in [Procedure: Basic Server-Side Configuration.](/docs/security/data-access#procedure-basic-server-side-configuration).
+<Steps>
 
-2.  Install and configure the VisibilityController coprocessor by setting the following properties in _hbase-site.xml_. These properties take a list of class names.
+<Step>
 
-    ```xml
-    <property>
-      <name>hbase.security.authorization</name>
-      <value>true</value>
-    </property>
-    <property>
-      <name>hbase.coprocessor.region.classes</name>
-      <value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
-    </property>
-    <property>
-      <name>hbase.coprocessor.master.classes</name>
-      <value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
-    </property>
-    ```
+As a prerequisite, perform the steps in [Procedure: Basic Server-Side Configuration.](/docs/security/data-access#procedure-basic-server-side-configuration).
 
-    <Callout type="info">
-      If you use the AccessController and VisibilityController coprocessors together, the
-      AccessController must come first in the list, because with both components active, the
-      VisibilityController will delegate access control on its system tables to the
-      AccessController.
-    </Callout>
+</Step>
 
-3.  Adjust Configuration
+<Step>
 
-    By default, users can label cells with any label, including labels they are not associated with, which means that a user can Put data that he cannot read. For example, a user could label a cell with the (hypothetical) 'topsecret' label even if the user is not associated with that label. If you only want users to be able to label cells with labels they are associated with, set `hbase.security.visibility.mutations.checkauths` to `true`. In that case, the mutation will fail if it makes use of labels the user is not associated with.
+Install and configure the VisibilityController coprocessor by setting the following properties in _hbase-site.xml_. These properties take a list of class names.
 
-4.  Distribute your configuration and restart your cluster for changes to take effect.
+```xml
+<property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.coprocessor.region.classes</name>
+  <value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
+</property>
+<property>
+  <name>hbase.coprocessor.master.classes</name>
+  <value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
+</property>
+```
+
+<Callout type="info">
+  If you use the AccessController and VisibilityController coprocessors together, the
+  AccessController must come first in the list, because with both components active, the
+  VisibilityController will delegate access control on its system tables to the
+  AccessController.
+</Callout>
+
+</Step>
+
+<Step>
+
+Adjust Configuration
+
+By default, users can label cells with any label, including labels they are not associated with, which means that a user can Put data that he cannot read. For example, a user could label a cell with the (hypothetical) 'topsecret' label even if the user is not associated with that label. If you only want users to be able to label cells with labels they are associated with, set `hbase.security.visibility.mutations.checkauths` to `true`. In that case, the mutation will fail if it makes use of labels the user is not associated with.
+
+</Step>
+
+<Step>
+
+Distribute your configuration and restart your cluster for changes to take effect.
+
+</Step>
+
+</Steps>
 
 ### Administration
 
@@ -508,114 +531,130 @@ Neither these examples, nor the source file they were taken from, are part of th
 
 </Callout>
 
-1.  Define the List of Visibility Labels
+<Steps>
 
-    #### HBase Shell: [!toc]
+<Step>
 
-    ```ruby
-    hbase> add_labels [ 'admin', 'service', 'developer', 'test' ]
-    ```
+Define the List of Visibility Labels
 
-    #### Java API: [!toc]
+**HBase Shell:**
 
-    ```java
-    public static void addLabels() throws Exception {
-      PrivilegedExceptionAction<VisibilityLabelsResponse> action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-        public VisibilityLabelsResponse run() throws Exception {
-          String[] labels = { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE, COPYRIGHT, ACCENT,
-              UNICODE_VIS_TAG, UC1, UC2 };
-          try {
-            VisibilityClient.addLabels(conf, labels);
-          } catch (Throwable t) {
-            throw new IOException(t);
-          }
-          return null;
-        }
-      };
-      SUPERUSER.runAs(action);
+```ruby
+hbase> add_labels [ 'admin', 'service', 'developer', 'test' ]
+```
+
+**Java API:**
+
+```java
+public static void addLabels() throws Exception {
+  PrivilegedExceptionAction<VisibilityLabelsResponse> action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+    public VisibilityLabelsResponse run() throws Exception {
+      String[] labels = { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE, COPYRIGHT, ACCENT,
+          UNICODE_VIS_TAG, UC1, UC2 };
+      try {
+        VisibilityClient.addLabels(conf, labels);
+      } catch (Throwable t) {
+        throw new IOException(t);
+      }
+      return null;
     }
-    ```
+  };
+  SUPERUSER.runAs(action);
+}
+```
 
-2.  Associate Labels with Users
+</Step>
 
-    #### HBase Shell: [!toc]
+<Step>
 
-    ```ruby
-    hbase> set_auths 'service', [ 'service' ]
-    hbase> set_auths 'testuser', [ 'test' ]
-    hbase> set_auths 'qa', [ 'test', 'developer' ]
-    hbase> set_auths '@qagroup', [ 'test' ]
-    ```
+Associate Labels with Users
 
-    #### Java API: [!toc]
+**HBase Shell:**
 
-    ```java
-    public void testSetAndGetUserAuths() throws Throwable {
-      final String user = "user1";
-      PrivilegedExceptionAction<Void> action = new PrivilegedExceptionAction<Void>() {
-        public Void run() throws Exception {
-          String[] auths = { SECRET, CONFIDENTIAL };
-          try {
-            VisibilityClient.setAuths(conf, auths, user);
-          } catch (Throwable e) {
-          }
-          return null;
-        }
-        ...
-    ```
+```ruby
+hbase> set_auths 'service', [ 'service' ]
+hbase> set_auths 'testuser', [ 'test' ]
+hbase> set_auths 'qa', [ 'test', 'developer' ]
+hbase> set_auths '@qagroup', [ 'test' ]
+```
 
-3.  Clear Labels From Users
+**Java API:**
 
-    #### HBase Shell: [!toc]
-
-    ```ruby
-    hbase> clear_auths 'service', [ 'service' ]
-    hbase> clear_auths 'testuser', [ 'test' ]
-    hbase> clear_auths 'qa', [ 'test', 'developer' ]
-    hbase> clear_auths '@qagroup', [ 'test', 'developer' ]
-    ```
-
-    #### Java API: [!toc]
-
-    ```java
+```java
+public void testSetAndGetUserAuths() throws Throwable {
+  final String user = "user1";
+  PrivilegedExceptionAction<Void> action = new PrivilegedExceptionAction<Void>() {
+    public Void run() throws Exception {
+      String[] auths = { SECRET, CONFIDENTIAL };
+      try {
+        VisibilityClient.setAuths(conf, auths, user);
+      } catch (Throwable e) {
+      }
+      return null;
+    }
     ...
-    auths = new String[] { SECRET, PUBLIC, CONFIDENTIAL };
-    VisibilityLabelsResponse response = null;
-    try {
-      response = VisibilityClient.clearAuths(conf, auths, user);
-    } catch (Throwable e) {
-      fail("Should not have failed");
-      ...
-    }
-    ```
+```
 
-4.  Apply a Label or Expression to a Cell
+</Step>
 
-    The label is only applied when data is written. The label is associated with a given version of the cell.
+<Step>
 
-    #### HBase Shell: [!toc]
+Clear Labels From Users
 
-    ```ruby
-    hbase> set_visibility 'user', 'admin|service|developer', { COLUMNS => 'i' }
-    hbase> set_visibility 'user', 'admin|service', { COLUMNS => 'pii' }
-    hbase> set_visibility 'user', 'test', { COLUMNS => [ 'i', 'pii' ], FILTER => "(PrefixFilter ('test'))" }
-    ```
+**HBase Shell:**
 
-    <Callout type="info">
-      HBase Shell support for applying labels or permissions to cells is for testing and
-      verification support, and should not be employed for production use because it won't apply the
-      labels to cells that don't exist yet. The correct way to apply cell level labels is to do so
-      in the application code when storing the values.
-    </Callout>
+```ruby
+hbase> clear_auths 'service', [ 'service' ]
+hbase> clear_auths 'testuser', [ 'test' ]
+hbase> clear_auths 'qa', [ 'test', 'developer' ]
+hbase> clear_auths '@qagroup', [ 'test', 'developer' ]
+```
 
-    #### Java API example: [!toc]
+**Java API:**
 
-    ```java
-    static Table createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
-        throws Exception {
-      Configuration conf = HBaseConfiguration.create();
-      Connection connection = ConnectionFactory.createConnection(conf);
-      Table table = NULL;
+```java
+...
+auths = new String[] { SECRET, PUBLIC, CONFIDENTIAL };
+VisibilityLabelsResponse response = null;
+try {
+  response = VisibilityClient.clearAuths(conf, auths, user);
+} catch (Throwable e) {
+  fail("Should not have failed");
+  ...
+}
+```
+
+</Step>
+
+<Step>
+
+Apply a Label or Expression to a Cell
+
+The label is only applied when data is written. The label is associated with a given version of the cell.
+
+**HBase Shell:**
+
+```ruby
+hbase> set_visibility 'user', 'admin|service|developer', { COLUMNS => 'i' }
+hbase> set_visibility 'user', 'admin|service', { COLUMNS => 'pii' }
+hbase> set_visibility 'user', 'test', { COLUMNS => [ 'i', 'pii' ], FILTER => "(PrefixFilter ('test'))" }
+```
+
+<Callout type="info">
+  HBase Shell support for applying labels or permissions to cells is for testing and
+  verification support, and should not be employed for production use because it won't apply the
+  labels to cells that don't exist yet. The correct way to apply cell level labels is to do so
+  in the application code when storing the values.
+</Callout>
+
+**Java API example:**
+
+```java
+static Table createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
+    throws Exception {
+  Configuration conf = HBaseConfiguration.create();
+  Connection connection = ConnectionFactory.createConnection(conf);
+  Table table = NULL;
       try {
         table = TEST_UTIL.createTable(tableName, fam);
         int i = 1;
@@ -634,7 +673,11 @@ Neither these examples, nor the source file they were taken from, are part of th
         }
       }
     }
-    ```
+```
+
+</Step>
+
+</Steps>
 
 ### Reading Cells with Labels
 
@@ -724,86 +767,143 @@ In some cases (e.g. due to custom security policies), the operator of the HBase 
 
 This procedure assumes you are using the default Java keystore implementation. If you are using a custom implementation, check its documentation and adjust accordingly.
 
-1.  Create a secret key of appropriate length for AES encryption, using the `keytool` utility.
-    ```bash
-    $ keytool -keystore /path/to/hbase/conf/hbase.jks \
-      -storetype jceks -storepass **** \
-      -genseckey -keyalg AES -keysize 128 \
-      -alias <alias>
-    ```
-    Replace \*\*\*\* with the password for the keystore file and \<alias\> with the username of the HBase service account, or an arbitrary string. If you use an arbitrary string, you will need to configure HBase to use it, and that is covered below. Specify a keysize that is appropriate. Do not specify a separate password for the key, but press `Return` when prompted.
-2.  Set appropriate permissions on the keyfile and distribute it to all the HBase servers.
-    The previous command created a file called _hbase.jks_ in the HBase _conf/_ directory. Set the permissions and ownership on this file such that only the HBase service account user can read the file, and securely distribute the key to all HBase servers.
-3.  Configure the HBase daemons.
-    Set the following properties in _hbase-site.xml_ on the region servers, to configure HBase daemons to use a key provider backed by the KeyStore file or retrieving the cluster master key. In the example below, replace \*\*\*\* with the password.
-    ```xml
-    <property>
-      <name>hbase.crypto.keyprovider</name>
-      <value>org.apache.hadoop.hbase.io.crypto.KeyStoreKeyProvider</value>
-    </property>
-    <property>
-      <name>hbase.crypto.keyprovider.parameters</name>
-      <value>jceks:///path/to/hbase/conf/hbase.jks?password=****</value>
-    </property>
-    ```
-    By default, the HBase service account name will be used to resolve the cluster master key. However, you can store it with an arbitrary alias (in the `keytool` command). In that case, set the following property to the alias you used.
-    ```xml
-    <property>
-      <name>hbase.crypto.master.key.name</name>
-      <value>my-alias</value>
-    </property>
-    ```
-    You also need to be sure your HFiles use HFile v3, in order to use transparent encryption. This is the default configuration for HBase 1.0 onward. For previous versions, set the following property in your _hbase-site.xml_ file.
-    ```xml
-    <property>
-      <name>hfile.format.version</name>
-      <value>3</value>
-    </property>
-    ```
-    Optionally, you can use a different cipher provider, either a Java Cryptography Encryption (JCE) algorithm provider or a custom HBase cipher implementation.
-    - JCE:
-      - Install a signed JCE provider (supporting `AES/CTR/NoPadding` mode with 128 bit keys)
-      - Add it with highest preference to the JCE site configuration file _$JAVA_HOME/lib/security/java.security_.
-      - Update `hbase.crypto.algorithm.aes.provider` and `hbase.crypto.algorithm.rng.provider` options in _hbase-site.xml_.
-    - Custom HBase Cipher:
-      - Implement `org.apache.hadoop.hbase.io.crypto.CipherProvider`.
-      - Add the implementation to the server classpath.
-      - Update `hbase.crypto.cipherprovider` in _hbase-site.xml_.
-4.  Configure WAL encryption.
-    Configure WAL encryption in every RegionServer's _hbase-site.xml_, by setting the following properties. You can include these in the HMaster's _hbase-site.xml_ as well, but the HMaster does not have a WAL and will not use them.
-    ```xml
-    <property>
-      <name>hbase.regionserver.hlog.reader.impl</name>
-      <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader</value>
-    </property>
-    <property>
-      <name>hbase.regionserver.hlog.writer.impl</name>
-      <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter</value>
-    </property>
-    <property>
-      <name>hbase.regionserver.wal.encryption</name>
-      <value>true</value>
-    </property>
-    ```
-    <Callout type="info">
-      Starting from 2.6.0, the hbase.regionserver.hlog.reader.impl and
-      hbase.regionserver.hlog.writer.impl configurations are removed, you do not need to specify
-      them any more. Just set hbase.regionserver.wal.encryption to true is enough to enable WAL
-      encryption.
-    </Callout>
-5.  (Optional) Configure encryption key hash algorithm.
-    Since [HBASE-25181](https://issues.apache.org/jira/browse/HBASE-25181) it is possible to use custom encryption key hash algorithm instead of the default MD5 algorithm. This hash is needed to verify the secret key during decryption. The MD5 algorithm is considered weak, and can not be used in some (e.g. FIPS compliant) clusters.
-    The hash is set via the configuration option `hbase.crypto.key.hash.algorithm`. It should be set to a JDK `MessageDigest` algorithm like "MD5", "SHA-384" or "SHA-512". The default is "MD5" for backward compatibility. An example of this configuration parameter on a FIPS-compliant cluster:
-    ```xml
-    <property>
-      <name>hbase.crypto.key.hash.algorithm</name>
-      <value>SHA-384</value>
-    </property>
-    ```
-6.  Configure permissions on the _hbase-site.xml_ file.
-    Because the keystore password is stored in the hbase-site.xml, you need to ensure that only the HBase user can read the _hbase-site.xml_ file, using file ownership and permissions.
-7.  Restart your cluster.
-    Distribute the new configuration file to all nodes and restart your cluster.
+<Steps>
+
+<Step>
+
+Create a secret key of appropriate length for AES encryption, using the `keytool` utility.
+
+```bash
+$ keytool -keystore /path/to/hbase/conf/hbase.jks \
+  -storetype jceks -storepass **** \
+  -genseckey -keyalg AES -keysize 128 \
+  -alias <alias>
+```
+
+Replace \*\*\*\* with the password for the keystore file and \<alias\> with the username of the HBase service account, or an arbitrary string. If you use an arbitrary string, you will need to configure HBase to use it, and that is covered below. Specify a keysize that is appropriate. Do not specify a separate password for the key, but press `Return` when prompted.
+
+</Step>
+
+<Step>
+
+Set appropriate permissions on the keyfile and distribute it to all the HBase servers.
+
+The previous command created a file called _hbase.jks_ in the HBase _conf/_ directory. Set the permissions and ownership on this file such that only the HBase service account user can read the file, and securely distribute the key to all HBase servers.
+
+</Step>
+
+<Step>
+
+Configure the HBase daemons.
+
+Set the following properties in _hbase-site.xml_ on the region servers, to configure HBase daemons to use a key provider backed by the KeyStore file or retrieving the cluster master key. In the example below, replace \*\*\*\* with the password.
+
+```xml
+<property>
+  <name>hbase.crypto.keyprovider</name>
+  <value>org.apache.hadoop.hbase.io.crypto.KeyStoreKeyProvider</value>
+</property>
+<property>
+  <name>hbase.crypto.keyprovider.parameters</name>
+  <value>jceks:///path/to/hbase/conf/hbase.jks?password=****</value>
+</property>
+```
+
+By default, the HBase service account name will be used to resolve the cluster master key. However, you can store it with an arbitrary alias (in the `keytool` command). In that case, set the following property to the alias you used.
+
+```xml
+<property>
+  <name>hbase.crypto.master.key.name</name>
+  <value>my-alias</value>
+</property>
+```
+
+You also need to be sure your HFiles use HFile v3, in order to use transparent encryption. This is the default configuration for HBase 1.0 onward. For previous versions, set the following property in your _hbase-site.xml_ file.
+
+```xml
+<property>
+  <name>hfile.format.version</name>
+  <value>3</value>
+</property>
+```
+
+Optionally, you can use a different cipher provider, either a Java Cryptography Encryption (JCE) algorithm provider or a custom HBase cipher implementation.
+
+- JCE:
+  - Install a signed JCE provider (supporting `AES/CTR/NoPadding` mode with 128 bit keys)
+  - Add it with highest preference to the JCE site configuration file _$JAVA_HOME/lib/security/java.security_.
+  - Update `hbase.crypto.algorithm.aes.provider` and `hbase.crypto.algorithm.rng.provider` options in _hbase-site.xml_.
+- Custom HBase Cipher:
+  - Implement `org.apache.hadoop.hbase.io.crypto.CipherProvider`.
+  - Add the implementation to the server classpath.
+  - Update `hbase.crypto.cipherprovider` in _hbase-site.xml_.
+
+</Step>
+
+<Step>
+
+Configure WAL encryption.
+
+Configure WAL encryption in every RegionServer's _hbase-site.xml_, by setting the following properties. You can include these in the HMaster's _hbase-site.xml_ as well, but the HMaster does not have a WAL and will not use them.
+
+```xml
+<property>
+  <name>hbase.regionserver.hlog.reader.impl</name>
+  <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader</value>
+</property>
+<property>
+  <name>hbase.regionserver.hlog.writer.impl</name>
+  <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter</value>
+</property>
+<property>
+  <name>hbase.regionserver.wal.encryption</name>
+  <value>true</value>
+</property>
+```
+
+<Callout type="info">
+  Starting from 2.6.0, the hbase.regionserver.hlog.reader.impl and
+  hbase.regionserver.hlog.writer.impl configurations are removed, you do not need to specify
+  them any more. Just set hbase.regionserver.wal.encryption to true is enough to enable WAL
+  encryption.
+</Callout>
+
+</Step>
+
+<Step>
+
+(Optional) Configure encryption key hash algorithm.
+
+Since [HBASE-25181](https://issues.apache.org/jira/browse/HBASE-25181) it is possible to use custom encryption key hash algorithm instead of the default MD5 algorithm. This hash is needed to verify the secret key during decryption. The MD5 algorithm is considered weak, and can not be used in some (e.g. FIPS compliant) clusters.
+
+The hash is set via the configuration option `hbase.crypto.key.hash.algorithm`. It should be set to a JDK `MessageDigest` algorithm like "MD5", "SHA-384" or "SHA-512". The default is "MD5" for backward compatibility. An example of this configuration parameter on a FIPS-compliant cluster:
+
+```xml
+<property>
+  <name>hbase.crypto.key.hash.algorithm</name>
+  <value>SHA-384</value>
+</property>
+```
+
+</Step>
+
+<Step>
+
+Configure permissions on the _hbase-site.xml_ file.
+
+Because the keystore password is stored in the hbase-site.xml, you need to ensure that only the HBase user can read the _hbase-site.xml_ file, using file ownership and permissions.
+
+</Step>
+
+<Step>
+
+Restart your cluster.
+
+Distribute the new configuration file to all nodes and restart your cluster.
+
+</Step>
+
+</Steps>
 
 ### Administration
 

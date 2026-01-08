@@ -69,10 +69,8 @@ Additional configurations are required too:
 
 1.  `hbase.replication.source.fs.conf.provider`  
     This defines the class which loads the source cluster file system client configuration in the destination cluster. This should be configured for all the RS in the destination cluster. Default is `org.apache.hadoop.hbase.replication.regionserver.DefaultSourceFSConfigurationProvider`.
-
 2.  `hbase.replication.conf.dir`  
     This represents the base directory where the file system client configurations of the source cluster are copied to the destination cluster. This should be configured for all the RS in the destination cluster. Default is `$HBASE_CONF_DIR`.
-
 3.  `hbase.replication.cluster.id`  
     This configuration is required in the cluster where replication for bulk loaded data is enabled. A source cluster is uniquely identified by the destination cluster using this id. This should be configured for all the RS in the source cluster configuration file for all the RS.
 

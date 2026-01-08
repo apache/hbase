@@ -3,6 +3,8 @@ title: "Metrics & Monitoring"
 description: "HBase metrics system configuration, JMX monitoring, master and RegionServer metrics, and integration with monitoring tools."
 ---
 
+import { Step, Steps } from "fumadocs-ui/components/steps";
+
 ## HBase Metrics
 
 HBase emits metrics which adhere to the [Hadoop Metrics](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/Metrics.html) API. Starting with HBase 0.95[^1], HBase is configured to emit a default set of metrics with a default sampling period of every 10 seconds. You can use HBase metrics in conjunction with Ganglia. You can also filter which metrics are emitted and extend the metrics framework to capture custom metrics appropriate for your environment.
@@ -38,20 +40,71 @@ Rather than listing each metric which HBase emits by default, you can browse thr
 
 **Procedure: Access a JSON Output of Available Metrics**
 
-1.  After starting HBase, access the region server's web UI, at http://REGIONSERVER_HOSTNAME:16030 by default.
-2.  Click the **Metrics Dump** link near the top. The metrics for the region server are presented as a dump of the JMX bean in JSON format. This will dump out all metrics names and their values. To include metrics descriptions in the listing — this can be useful when you are exploring what is available — add a query string of `?description=true` so your URL becomes http://REGIONSERVER_HOSTNAME:16030/jmx?description=true. Not all beans and attributes have descriptions.
-3.  To view metrics for the Master, connect to the Master's web UI instead (defaults to http://localhost:16010) and click its **Metrics Dump** link. To include metrics descriptions in the listing — this can be useful when you are exploring what is available — add a query string of `?description=true` so your URL becomes http://REGIONSERVER_HOSTNAME:16010/jmx?description=true. Not all beans and attributes have descriptions.
+<Steps>
+
+<Step>
+
+After starting HBase, access the region server's web UI, at http://REGIONSERVER_HOSTNAME:16030 by default.
+
+</Step>
+
+<Step>
+
+Click the **Metrics Dump** link near the top. The metrics for the region server are presented as a dump of the JMX bean in JSON format. This will dump out all metrics names and their values. To include metrics descriptions in the listing — this can be useful when you are exploring what is available — add a query string of `?description=true` so your URL becomes http://REGIONSERVER_HOSTNAME:16030/jmx?description=true. Not all beans and attributes have descriptions.
+
+</Step>
+
+<Step>
+
+To view metrics for the Master, connect to the Master's web UI instead (defaults to http://localhost:16010) and click its **Metrics Dump** link. To include metrics descriptions in the listing — this can be useful when you are exploring what is available — add a query string of `?description=true` so your URL becomes http://REGIONSERVER_HOSTNAME:16010/jmx?description=true. Not all beans and attributes have descriptions.
+
+</Step>
+
+</Steps>
 
 You can use many different tools to view JMX content by browsing MBeans. This procedure uses `jvisualvm`, which is an application usually available in the JDK.
 
 **Procedure: Browse the JMX Output of Available Metrics**
 
-1.  Start HBase, if it is not already running.
-2.  Run the command `jvisualvm` command on a host with a GUI display. You can launch it from the command line or another method appropriate for your operating system.
-3.  Be sure the **VisualVM-MBeans** plugin is installed. Browse to **Tools → Plugins**. Click **Installed** and check whether the plugin is listed. If not, click **Available Plugins**, select it, and click Install. When finished, click Close.
-4.  To view details for a given HBase process, double-click the process in the **Local** sub-tree in the left-hand panel. A detailed view opens in the right-hand panel. Click the **MBeans** tab which appears as a tab in the top of the right-hand panel.
-5.  To access the HBase metrics, navigate to the appropriate sub-bean: .\* Master: .\* RegionServer:
-6.  The name of each metric and its current value is displayed in the **Attributes** tab. For a view which includes more details, including the description of each attribute, click the **Metadata** tab.
+<Steps>
+
+<Step>
+
+Start HBase, if it is not already running.
+
+</Step>
+
+<Step>
+
+Run the command `jvisualvm` command on a host with a GUI display. You can launch it from the command line or another method appropriate for your operating system.
+
+</Step>
+
+<Step>
+
+Be sure the **VisualVM-MBeans** plugin is installed. Browse to **Tools → Plugins**. Click **Installed** and check whether the plugin is listed. If not, click **Available Plugins**, select it, and click Install. When finished, click Close.
+
+</Step>
+
+<Step>
+
+To view details for a given HBase process, double-click the process in the **Local** sub-tree in the left-hand panel. A detailed view opens in the right-hand panel. Click the **MBeans** tab which appears as a tab in the top of the right-hand panel.
+
+</Step>
+
+<Step>
+
+To access the HBase metrics, navigate to the appropriate sub-bean: .\* Master: .\* RegionServer:
+
+</Step>
+
+<Step>
+
+The name of each metric and its current value is displayed in the **Attributes** tab. For a view which includes more details, including the description of each attribute, click the **Metadata** tab.
+
+</Step>
+
+</Steps>
 
 ### Units of Measure for Metrics
 

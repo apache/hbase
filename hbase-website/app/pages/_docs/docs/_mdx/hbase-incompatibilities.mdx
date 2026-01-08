@@ -205,7 +205,7 @@ Following abstract method has been removed:
 HBASE-18733: WALKey has been purged completely in HBase 2.0.
 Following are the changes to the WALKey:
 
-#### classWALKey
+#### classWALKey [!toc]
 
 | Change | Result |
 | ------ | ------ |
@@ -226,7 +226,7 @@ Following fields have been removed:
 Following are the changes to the WALEdit.class:
 hbase-server-1.0.0.jar, WALEdit.class package org.apache.hadoop.hbase.regionserver.wal
 
-#### WALEdit.getCompaction ( Cell kv ) [static]  :  WALProtos.CompactionDescriptor
+#### WALEdit.getCompaction ( Cell kv ) [static]  :  WALProtos.CompactionDescriptor [!toc]
 
 org/apache/hadoop/hbase/regionserver/wal/WALEdit.getCompaction:(Lorg/apache/hadoop/hbase/Cell;)Lorg/apache/hadoop/hbase/protobuf/generated/WALProtos$CompactionDescriptor;
 
@@ -234,7 +234,7 @@ org/apache/hadoop/hbase/regionserver/wal/WALEdit.getCompaction:(Lorg/apache/hado
 | ------ | ------ |
 | Return value type has been changed from org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor to org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor. | This method has been removed because the return type is part of the method signature. A client program may be interrupted by NoSuchMethodError exception. |
 
-#### WALEdit.getFlushDescriptor ( Cell cell ) [static]  :  WALProtos.FlushDescriptor
+#### WALEdit.getFlushDescriptor ( Cell cell ) [static]  :  WALProtos.FlushDescriptor [!toc]
 
 org/apache/hadoop/hbase/regionserver/wal/WALEdit.getFlushDescriptor:(Lorg/apache/hadoop/hbase/Cell;)Lorg/apache/hadoop/hbase/protobuf/generated/WALProtos$FlushDescriptor;
 
@@ -242,7 +242,7 @@ org/apache/hadoop/hbase/regionserver/wal/WALEdit.getFlushDescriptor:(Lorg/apache
 | ------ | ------ |
 | Return value type has been changed from org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor to org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor. | This method has been removed because the return type is part of the method signature. A client program may be interrupted by NoSuchMethodError exception. |
 
-#### WALEdit.getRegionEventDescriptor ( Cell cell ) [static]  :  WALProtos.RegionEventDescriptor
+#### WALEdit.getRegionEventDescriptor ( Cell cell ) [static]  :  WALProtos.RegionEventDescriptor [!toc]
 
 org/apache/hadoop/hbase/regionserver/wal/WALEdit.getRegionEventDescriptor:(Lorg/apache/hadoop/hbase/Cell;)Lorg/apache/hadoop/hbase/protobuf/generated/WALProtos$RegionEventDescriptor;
 
@@ -253,7 +253,7 @@ org/apache/hadoop/hbase/regionserver/wal/WALEdit.getRegionEventDescriptor:(Lorg/
 Following is the change to the WALKey.class:
 package org.apache.hadoop.hbase.wal
 
-#### WALKey.getBuilder ( WALCellCodec.ByteStringCompressor compressor )  :  WALProtos.WALKey.Builder
+#### WALKey.getBuilder ( WALCellCodec.ByteStringCompressor compressor )  :  WALProtos.WALKey.Builder [!toc]
 
 org/apache/hadoop/hbase/wal/WALKey.getBuilder:(Lorg/apache/hadoop/hbase/regionserver/wal/WALCellCodec$ByteStringCompressor;)Lorg/apache/hadoop/hbase/protobuf/generated/WALProtos$WALKey$Builder;
 
@@ -284,7 +284,7 @@ majorCompact(ByteBuffer)
 
 Following are the changes to the Admin interface:
 
-#### interface Admin
+#### interface Admin [!toc]
 
 | Change | Result |
 | ------ | ------ |
@@ -301,7 +301,7 @@ Following are the changes to the Admin interface:
 Following are the changes to the Admin.class:
 hbase-client-1.0.0.jar, Admin.class package org.apache.hadoop.hbase.client
 
-#### Admin.createTableAsync ( HTableDescriptor p1, byte[ ][ ] p2 ) [abstract]  :  void  1
+#### Admin.createTableAsync ( HTableDescriptor p1, byte[ ][ ] p2 ) [abstract]  :  void  1 [!toc]
 
 org/apache/hadoop/hbase/client/Admin.createTableAsync:(Lorg/apache/hadoop/hbase/HTableDescriptor;[[B)V
 
@@ -309,7 +309,7 @@ org/apache/hadoop/hbase/client/Admin.createTableAsync:(Lorg/apache/hadoop/hbase/
 | ------ | ------ |
 | Return value type has been changed from void to java.util.concurrent.Future\<java.lang.Void>. | This method has been removed because the return type is part of the method signature. A client program may be interrupted by NoSuchMethodError exception. |
 
-#### Admin.disableTableAsync ( TableName p1 ) [abstract]  :  void  1
+#### Admin.disableTableAsync ( TableName p1 ) [abstract]  :  void  1 [!toc]
 
 org/apache/hadoop/hbase/client/Admin.disableTableAsync:(Lorg/apache/hadoop/hbase/TableName;)V
 
@@ -317,7 +317,7 @@ org/apache/hadoop/hbase/client/Admin.disableTableAsync:(Lorg/apache/hadoop/hbase
 | ------ | ------ |
 | Return value type has been changed from void to java.util.concurrent.Future\<java.lang.Void>. | This method has been removed because the return type is part of the method signature. A client program may be interrupted by NoSuchMethodError exception. |
 
-#### Admin.enableTableAsync ( TableName p1 ) [abstract]  :  void
+#### Admin.enableTableAsync ( TableName p1 ) [abstract]  :  void [!toc]
 
 org/apache/hadoop/hbase/client/Admin.enableTableAsync:(Lorg/apache/hadoop/hbase/TableName;)V
 
@@ -325,7 +325,7 @@ org/apache/hadoop/hbase/client/Admin.enableTableAsync:(Lorg/apache/hadoop/hbase/
 | ------ | ------ |
 | Return value type has been changed from void to java.util.concurrent.Future\<java.lang.Void>. | This method has been removed because the return type is part of the method signature. A client program may be interrupted by NoSuchMethodError exception. |
 
-#### Admin.getCompactionState ( TableName p1 ) [abstract]  :  AdminProtos.GetRegionInfoResponse.CompactionState  1
+#### Admin.getCompactionState ( TableName p1 ) [abstract]  :  AdminProtos.GetRegionInfoResponse.CompactionState  1 [!toc]
 
 org/apache/hadoop/hbase/client/Admin.getCompactionState:(Lorg/apache/hadoop/hbase/TableName;)Lorg/apache/hadoop/hbase/protobuf/generated/AdminProtos$GetRegionInfoResponse$CompactionState;
 
@@ -333,7 +333,7 @@ org/apache/hadoop/hbase/client/Admin.getCompactionState:(Lorg/apache/hadoop/hbas
 | ------ | ------ |
 | Return value type has been changed from org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState to CompactionState. | This method has been removed because the return type is part of the method signature. A client program may be interrupted by NoSuchMethodError exception. |
 
-#### Admin.getCompactionStateForRegion ( byte[ ] p1 ) [abstract]  :  AdminProtos.GetRegionInfoResponse.CompactionState  1
+#### Admin.getCompactionStateForRegion ( byte[ ] p1 ) [abstract]  :  AdminProtos.GetRegionInfoResponse.CompactionState  1 [!toc]
 
 org/apache/hadoop/hbase/client/Admin.getCompactionStateForRegion:([B)Lorg/apache/hadoop/hbase/protobuf/generated/AdminProtos$GetRegionInfoResponse$CompactionState;
 
@@ -346,7 +346,7 @@ org/apache/hadoop/hbase/client/Admin.getCompactionStateForRegion:([B)Lorg/apache
 HTableDescriptor and HColumnDescriptor has become interfaces and you can create it through Builders. HCD has become CFD. It no longer implements writable interface.
 package org.apache.hadoop.hbase
 
-#### class HColumnDescriptor
+#### class HColumnDescriptor [!toc]
 
 | Change | Result |
 | ------ | ------ |
@@ -370,7 +370,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
 
 For META_TABLEDESC, the maker method had been deprecated already in HTD in 1.0.0.  OWNER_KEY is still in HTD.
 
-#### class HTableDescriptor
+#### class HTableDescriptor [!toc]
 
 | Change | Result |
 | ------ | ------ |
@@ -397,7 +397,7 @@ org/apache/hadoop/hbase/HTableDescriptor.getCoprocessors:()Ljava/util/List;
 
 * HBASE-12990 MetaScanner is removed and it is replaced by MetaTableAccessor.
 
-#### HTableWrapper changes:
+#### HTableWrapper changes: [!toc]
 
 hbase-server-1.0.0.jar, HTableWrapper.class package org.apache.hadoop.hbase.client
 
@@ -428,13 +428,13 @@ Following are the changes to the Table interface:
 * HBASE-13298- Clarify if Table.\{set|get}WriteBufferSize() is deprecated or not.
 * LockTimeoutException and OperationConflictException classes have been removed.
 
-#### class OperationConflictException
+#### class OperationConflictException [!toc]
 
 | Change | Result |
 | ------ | ------ |
 | This class has been removed. | A client program may be interrupted by NoClassDefFoundErrorexception. |
 
-#### class class LockTimeoutException
+#### class class LockTimeoutException [!toc]
 
 | Change | Result |
 | ------ | ------ |
@@ -445,7 +445,7 @@ Following are the changes to the Table interface:
 Following methods have been removed:
 package org.apache.hadoop.hbase.filter
 
-#### class Filter
+#### class Filter [!toc]
 
 | Change | Result |
 | ------ | ------ |
@@ -456,7 +456,7 @@ package org.apache.hadoop.hbase.filter
 *  HConnection is removed in HBase 2.0.
 *  RegionLoad and ServerLoad internally moved to shaded PB.
 
-#### class RegionLoad
+#### class RegionLoad [!toc]
 
 | Change | Result |
 | ------ | ------ |
@@ -465,7 +465,7 @@ package org.apache.hadoop.hbase.filter
 * HBASE-15783:AccessControlConstants#OP_ATTRIBUTE_ACL_STRATEGY_CELL_FIRST is not used any more.
 package org.apache.hadoop.hbase.security.access
 
-#### interface AccessControlConstants
+#### interface AccessControlConstants [!toc]
 
 | Change | Result |
 | ------ | ------ |
@@ -473,11 +473,11 @@ package org.apache.hadoop.hbase.security.access
 | Field OP_ATTRIBUTE_ACL_STRATEGY_CELL_FIRST of type byte[] has been removed from this interface. | A client program may be interrupted by NoSuchFieldError exception. |
 | Field OP_ATTRIBUTE_ACL_STRATEGY_DEFAULT of type byte[] has been removed from this interface. | A client program may be interrupted by NoSuchFieldError exception. |
 
-#### ServerLoad returns long instead of int 1
+#### ServerLoad returns long instead of int 1 [!toc]
 
 hbase-client-1.0.0.jar, ServerLoad.class package org.apache.hadoop.hbase
 
-#### ServerLoad.getNumberOfRequests ( )  :  int  1
+#### ServerLoad.getNumberOfRequests ( )  :  int  1 [!toc]
 
 org/apache/hadoop/hbase/ServerLoad.getNumberOfRequests:()I
 
@@ -485,7 +485,7 @@ org/apache/hadoop/hbase/ServerLoad.getNumberOfRequests:()I
 | ------ | ------ |
 | Return value type has been changed from int to long. | This method has been removed because the return type is part of the method signature. A client program may be interrupted by NoSuchMethodError exception. |
 
-#### ServerLoad.getReadRequestsCount ( )  :  int  1
+#### ServerLoad.getReadRequestsCount ( )  :  int  1 [!toc]
 
 org/apache/hadoop/hbase/ServerLoad.getReadRequestsCount:()I
 
@@ -493,7 +493,7 @@ org/apache/hadoop/hbase/ServerLoad.getReadRequestsCount:()I
 | ------ | ------ |
 | Return value type has been changed from int to long. | This method has been removed because the return type is part of the method signature. A client program may be interrupted by NoSuchMethodError exception. |
 
-#### ServerLoad.getTotalNumberOfRequests ( )  :  int  1
+#### ServerLoad.getTotalNumberOfRequests ( )  :  int  1 [!toc]
 
 org/apache/hadoop/hbase/ServerLoad.getTotalNumberOfRequests:()I
 
@@ -501,7 +501,7 @@ org/apache/hadoop/hbase/ServerLoad.getTotalNumberOfRequests:()I
 | ------ | ------ |
 | Return value type has been changed from int to long. | This method has been removed because the return type is part of the method signature. A client program may be interrupted by NoSuchMethodError exception. |
 
-#### ServerLoad.getWriteRequestsCount ( )  :  int  1
+#### ServerLoad.getWriteRequestsCount ( )  :  int  1 [!toc]
 
 org/apache/hadoop/hbase/ServerLoad.getWriteRequestsCount:()I
 
@@ -512,7 +512,7 @@ org/apache/hadoop/hbase/ServerLoad.getWriteRequestsCount:()I
 * HBASE-13636 Remove deprecation for HBASE-4072 (Reading of zoo.cfg)
 * HConstants are removed. HBASE-16040 Remove configuration "hbase.replication"
 
-#### class HConstants
+#### class HConstants [!toc]
 
 | Change | Result |
 | ------ | ------ |
@@ -525,7 +525,7 @@ org/apache/hadoop/hbase/ServerLoad.getWriteRequestsCount:()I
 
 * HBASE-18732: [compat 1-2] HBASE-14047 removed Cell methods without deprecation cycle.
 
-#### interface Cell  5
+#### interface Cell  5 [!toc]
 
 | Change | Result |
 | ------ | ------ |
@@ -539,7 +539,7 @@ org/apache/hadoop/hbase/ServerLoad.getWriteRequestsCount:()I
 
 ### Region scanner changes:
 
-#### interface RegionScanner
+#### interface RegionScanner [!toc]
 
 | Change | Result |
 | ------ | ------ |
@@ -547,7 +547,7 @@ org/apache/hadoop/hbase/ServerLoad.getWriteRequestsCount:()I
 
 ### StoreFile changes:
 
-#### class StoreFile
+#### class StoreFile [!toc]
 
 | Change | Result |
 | ------ | ------ |
@@ -562,7 +562,7 @@ HFile\*Format has been removed in HBase 2.0.
 HBASE-15843: Replace RegionState.getRegionInTransition() Map with a Set
 hbase-client-1.0.0.jar, ClusterStatus.class package org.apache.hadoop.hbase
 
-#### ClusterStatus.getRegionsInTransition ( )  :  Map\<String,RegionState>  1
+#### ClusterStatus.getRegionsInTransition ( )  :  Map\<String,RegionState>  1 [!toc]
 
 org/apache/hadoop/hbase/ClusterStatus.getRegionsInTransition:()Ljava/util/Map;
 
@@ -576,7 +576,7 @@ Other changes in ClusterStatus include removal of convert methods that were no l
 
 PBs have been deprecated in APIs in HBase 2.0.
 
-#### HBaseSnapshotException.getSnapshotDescription ( )  :  HBaseProtos.SnapshotDescription  1
+#### HBaseSnapshotException.getSnapshotDescription ( )  :  HBaseProtos.SnapshotDescription  1 [!toc]
 
 org/apache/hadoop/hbase/snapshot/HBaseSnapshotException.getSnapshotDescription:()Lorg/apache/hadoop/hbase/protobuf/generated/HBaseProtos$SnapshotDescription;
 
@@ -587,7 +587,7 @@ org/apache/hadoop/hbase/snapshot/HBaseSnapshotException.getSnapshotDescription:(
 * HBASE-15609: Remove PB references from Result, DoubleColumnInterpreter and any such public facing class for 2.0.
 hbase-client-1.0.0.jar, Result.class package org.apache.hadoop.hbase.client
 
-#### Result.getStats ( )  :  ClientProtos.RegionLoadStats  1
+#### Result.getStats ( )  :  ClientProtos.RegionLoadStats  1 [!toc]
 
 org/apache/hadoop/hbase/client/Result.getStats:()Lorg/apache/hadoop/hbase/protobuf/generated/ClientProtos$RegionLoadStats;
 
@@ -599,7 +599,7 @@ org/apache/hadoop/hbase/client/Result.getStats:()Lorg/apache/hadoop/hbase/protob
 
 hbase-rest-1.0.0.jar, Client.class package org.apache.hadoop.hbase.rest.client
 
-#### Client.getHttpClient ( )  :  HttpClient  1
+#### Client.getHttpClient ( )  :  HttpClient  1 [!toc]
 
 org/apache/hadoop/hbase/rest/client/Client.getHttpClient:()Lorg/apache/commons/httpclient/HttpClient
 
@@ -609,7 +609,7 @@ org/apache/hadoop/hbase/rest/client/Client.getHttpClient:()Lorg/apache/commons/h
 
 hbase-rest-1.0.0.jar, Response.class package org.apache.hadoop.hbase.rest.client
 
-#### Response.getHeaders ( )  :  Header[ ]  1
+#### Response.getHeaders ( )  :  Header[ ]  1 [!toc]
 
 org/apache/hadoop/hbase/rest/client/Response.getHeaders:()[Lorg/apache/commons/httpclient/Header;
 
@@ -621,7 +621,7 @@ org/apache/hadoop/hbase/rest/client/Response.getHeaders:()[Lorg/apache/commons/h
 
 hbase-server-1.0.0.jar, HFilePrettyPrinter.class package org.apache.hadoop.hbase.io.hfile
 
-#### HFilePrettyPrinter.processFile ( Path file )  :  void  1
+#### HFilePrettyPrinter.processFile ( Path file )  :  void  1 [!toc]
 
 org/apache/hadoop/hbase/io/hfile/HFilePrettyPrinter.processFile:(Lorg/apache/hadoop/fs/Path;)V
 
