@@ -38,9 +38,9 @@ Rather than listing each metric which HBase emits by default, you can browse thr
 
 **Procedure: Access a JSON Output of Available Metrics**
 
-1.  After starting HBase, access the region server’s web UI, at http://REGIONSERVER_HOSTNAME:16030 by default.
+1.  After starting HBase, access the region server's web UI, at http://REGIONSERVER_HOSTNAME:16030 by default.
 2.  Click the **Metrics Dump** link near the top. The metrics for the region server are presented as a dump of the JMX bean in JSON format. This will dump out all metrics names and their values. To include metrics descriptions in the listing — this can be useful when you are exploring what is available — add a query string of `?description=true` so your URL becomes http://REGIONSERVER_HOSTNAME:16030/jmx?description=true. Not all beans and attributes have descriptions.
-3.  To view metrics for the Master, connect to the Master’s web UI instead (defaults to http://localhost:16010) and click its **Metrics Dump** link. To include metrics descriptions in the listing — this can be useful when you are exploring what is available — add a query string of `?description=true` so your URL becomes http://REGIONSERVER_HOSTNAME:16010/jmx?description=true. Not all beans and attributes have descriptions.
+3.  To view metrics for the Master, connect to the Master's web UI instead (defaults to http://localhost:16010) and click its **Metrics Dump** link. To include metrics descriptions in the listing — this can be useful when you are exploring what is available — add a query string of `?description=true` so your URL becomes http://REGIONSERVER_HOSTNAME:16010/jmx?description=true. Not all beans and attributes have descriptions.
 
 You can use many different tools to view JMX content by browsing MBeans. This procedure uses `jvisualvm`, which is an application usually available in the JDK.
 
@@ -187,7 +187,7 @@ HBase meta table metrics collection feature is available in HBase 1.4+ but it is
 </Callout>
 
 **Where to find the metrics in JMX**  
-Each metric attribute name will start with the ‘MetaTable\_’ prefix. For all the metrics you will see five different JMX attributes: count, mean rate, 1 minute rate, 5 minute rate and 15 minute rate. You will find these metrics in JMX under the following MBean: `Hadoop → HBase → RegionServer → Coprocessor.Region.CP_org.apache.hadoop.hbase.coprocessor.MetaTableMetrics`.
+Each metric attribute name will start with the ‘MetaTable\_' prefix. For all the metrics you will see five different JMX attributes: count, mean rate, 1 minute rate, 5 minute rate and 15 minute rate. You will find these metrics in JMX under the following MBean: `Hadoop → HBase → RegionServer → Coprocessor.Region.CP_org.apache.hadoop.hbase.coprocessor.MetaTableMetrics`.
 
 **Examples: some Meta Table metrics you can see in your JMX dump**
 
@@ -218,9 +218,9 @@ To turn on this feature, you have to enable a custom coprocessor by adding the f
 <Callout type="info" title="How the top-N metrics are calculated?">
 The 'top-N' type of metrics will be counted using the Lossy Counting Algorithm (as defined in [Motwani, R; Manku, G.S (2002). "Approximate frequency counts over data streams"](http://www.vldb.org/conf/2002/S10P03.pdf)), which is designed to identify elements in a data stream whose frequency count exceed a user-given threshold. The frequency computed by this algorithm is not always accurate but has an error threshold that can be specified by the user as a configuration parameter. The run time space required by the algorithm is inversely proportional to the specified error threshold, hence larger the error parameter, the smaller the footprint and the less accurate are the metrics.
 
-You can specify the error rate of the algorithm as a floating-point value between 0 and 1 (exclusive), it’s default value is 0.02. Having the error rate set to `E` and having `N` as the total number of meta table operations, then (assuming the uniform distribution of the activity of low frequency elements) at most `7 / E` meters will be kept and each kept element will have a frequency higher than `E * N`.
+You can specify the error rate of the algorithm as a floating-point value between 0 and 1 (exclusive), it's default value is 0.02. Having the error rate set to `E` and having `N` as the total number of meta table operations, then (assuming the uniform distribution of the activity of low frequency elements) at most `7 / E` meters will be kept and each kept element will have a frequency higher than `E * N`.
 
-An example: Let’s assume we are interested in the HBase clients that are most active in accessing the meta table. When there was 1,000,000 operations on the meta table so far and the error rate parameter is set to 0.02, then we can assume that only at most 350 client IP address related counters will be present in JMX and each of these clients accessed the meta table at least 20,000 times.
+An example: Let's assume we are interested in the HBase clients that are most active in accessing the meta table. When there was 1,000,000 operations on the meta table so far and the error rate parameter is set to 0.02, then we can assume that only at most 350 client IP address related counters will be present in JMX and each of these clients accessed the meta table at least 20,000 times.
 
 ```xml
 <property>
@@ -235,7 +235,7 @@ An example: Let’s assume we are interested in the HBase clients that are most 
 
 ### Overview
 
-The following metrics are arguably the most important to monitor for each RegionServer for "macro monitoring", preferably with a system like [OpenTSDB](http://opentsdb.net/). If your cluster is having performance issues it’s likely that you’ll see something unusual with this group.
+The following metrics are arguably the most important to monitor for each RegionServer for "macro monitoring", preferably with a system like [OpenTSDB](http://opentsdb.net/). If your cluster is having performance issues it's likely that you'll see something unusual with this group.
 
 #### HBase [!toc]
 
@@ -280,7 +280,7 @@ The output is tagged with operation e.g. `(operationTooSlow)` if the call was a 
 2011-09-08 10:01:25,824 WARN org.apache.hadoop.ipc.HBaseServer: (operationTooSlow): {"tables":{"riley2":{"puts":[{"totalColumns":11,"families":{"actions":[{"timestamp":1315501284459,"qualifier":"0","vlen":9667580},{"timestamp":1315501284459,"qualifier":"1","vlen":10122412},{"timestamp":1315501284459,"qualifier":"2","vlen":11104617},{"timestamp":1315501284459,"qualifier":"3","vlen":13430635}]},"row":"cfcd208495d565ef66e7dff9f98764da:0"}],"families":["actions"]}},"processingtimems":956,"client":"10.47.34.63:33623","starttimems":1315501284456,"queuetimems":0,"totalPuts":1,"class":"HRegionServer","responsesize":0,"method":"multiPut"}
 ```
 
-Note that everything inside the "tables" structure is output produced by MultiPut’s fingerprint, while the rest of the information is RPC-specific, such as processing time and client IP/port. Other client operations follow the same pattern and the same general structure, with necessary differences due to the nature of the individual operations. In the case that the call is not a client operation, that detailed fingerprint information will be completely absent.
+Note that everything inside the "tables" structure is output produced by MultiPut's fingerprint, while the rest of the information is RPC-specific, such as processing time and client IP/port. Other client operations follow the same pattern and the same general structure, with necessary differences due to the nature of the individual operations. In the case that the call is not a client operation, that detailed fingerprint information will be completely absent.
 
 This particular example, for example, would indicate that the likely cause of slowness is simply a very large (on the order of 100MB) multiput, as we can tell by the "vlen," or value length, fields of each put in the multiPut.
 

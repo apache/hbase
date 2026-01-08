@@ -17,7 +17,7 @@ There is no special consideration upgrading to hbase-2.3.x from earlier versions
 
 ### Upgraded ZooKeeper Dependency Version
 
-Our dependency on Apache ZooKeeper has been upgraded to 3.5.7 ([HBASE-24132](https://issues.apache.org/jira/browse/HBASE-24132)), as 3.4.x is EOL. The newer 3.5.x client is compatible with the older 3.4.x server. However, if you’re using HBase in stand-alone mode and perform an in-place upgrade, there are some upgrade steps [documented by the ZooKeeper community](https://cwiki.apache.org/confluence/display/ZOOKEEPER/Upgrade+FAQ). This doesn’t impact a production deployment, but would impact a developer’s local environment.
+Our dependency on Apache ZooKeeper has been upgraded to 3.5.7 ([HBASE-24132](https://issues.apache.org/jira/browse/HBASE-24132)), as 3.4.x is EOL. The newer 3.5.x client is compatible with the older 3.4.x server. However, if you're using HBase in stand-alone mode and perform an in-place upgrade, there are some upgrade steps [documented by the ZooKeeper community](https://cwiki.apache.org/confluence/display/ZOOKEEPER/Upgrade+FAQ). This doesn't impact a production deployment, but would impact a developer's local environment.
 
 ### New In-Master Procedure Store
 
@@ -27,7 +27,7 @@ Notice that, after the migration, you should make sure to not start an active ma
 
 ## Upgrade from 2.0 or 2.1 to 2.2+
 
-HBase 2.2+ uses a new Procedure form assigning/unassigning/moving Regions. It does not process HBase 2.1 and 2.0’s Unassign/Assign Procedure types. Upgrade requires that we first drain the Master Procedure Store of old style Procedures before starting the new 2.2 Master. So you need to make sure that before you kill the old version (2.0 or 2.1) Master, there is no region in transition. And once the new version (2.2+) Master is up, you can rolling upgrade RegionServers one by one.
+HBase 2.2+ uses a new Procedure form assigning/unassigning/moving Regions. It does not process HBase 2.1 and 2.0's Unassign/Assign Procedure types. Upgrade requires that we first drain the Master Procedure Store of old style Procedures before starting the new 2.2 Master. So you need to make sure that before you kill the old version (2.0 or 2.1) Master, there is no region in transition. And once the new version (2.2+) Master is up, you can rolling upgrade RegionServers one by one.
 
 And there is a more safer way if you are running 2.1.1+ or 2.0.3+ cluster. It need four steps to upgrade Master.
 
@@ -48,7 +48,7 @@ In this section we will first call out significant changes compared to the prior
 
 ### Changes of Note!
 
-First we’ll cover deployment / operational changes that you might hit when upgrading to HBase 2.0+. After that we’ll call out changes for downstream applications. Please note that Coprocessors are covered in the operational section. Also note that this section is not meant to convey information about new features that may be of interest to you. For a complete summary of changes, please see the CHANGES.txt file in the source release artifact for the version you are planning to upgrade to.
+First we'll cover deployment / operational changes that you might hit when upgrading to HBase 2.0+. After that we'll call out changes for downstream applications. Please note that Coprocessors are covered in the operational section. Also note that this section is not meant to convey information about new features that may be of interest to you. For a complete summary of changes, please see the CHANGES.txt file in the source release artifact for the version you are planning to upgrade to.
 
 #### Update to basic prerequisite minimums in HBase 2.0+ [!toc]
 
@@ -72,14 +72,14 @@ To read about HBCK's replacement, see [Operations and Management](/docs/operatio
 The following configuration settings are no longer applicable or available. For details, please see the detailed release notes.
 
 - hbase.config.read.zookeeper.config (see [upgrade2.0.zkconfig](/docs/upgrading/paths#zookeeper-configs-no-longer-read-from-zoocfg-toc) for migration details)
-- hbase.zookeeper.useMulti (HBase now always uses ZK’s multi functionality)
+- hbase.zookeeper.useMulti (HBase now always uses ZK's multi functionality)
 - hbase.rpc.client.threads.max
 - hbase.rpc.client.nativetransport
 - hbase.fs.tmp.dir
 - hbase.bucketcache.combinedcache.enabled
 - hbase.bucketcache.ioengine no longer supports the 'heap' value.
 - hbase.bulkload.staging.dir
-- hbase.balancer.tablesOnMaster wasn’t removed, strictly speaking, but its meaning has fundamentally changed and users should not set it. See the section [upgrade2.0.regions.on.master](/docs/upgrading/paths#master-hosting-regions-feature-broken-and-unsupported-toc) for details.
+- hbase.balancer.tablesOnMaster wasn't removed, strictly speaking, but its meaning has fundamentally changed and users should not set it. See the section [upgrade2.0.regions.on.master](/docs/upgrading/paths#master-hosting-regions-feature-broken-and-unsupported-toc) for details.
 - hbase.master.distributed.log.replay See the section [upgrade2.0.distributed.log.replay](/docs/upgrading/paths#distributed-log-replay-feature-broken-and-removed-toc) for details
 - hbase.regionserver.disallow.writes.when.recovering See the section [upgrade2.0.distributed.log.replay](/docs/upgrading/paths#distributed-log-replay-feature-broken-and-removed-toc) for details
 - hbase.regionserver.wal.logreplay.batch.size See the section [upgrade2.0.distributed.log.replay](/docs/upgrading/paths#distributed-log-replay-feature-broken-and-removed-toc) for details
@@ -156,8 +156,8 @@ The following metrics have changed names:
 The following metrics have changed their meaning:
 
 - The metric 'blockCacheEvictionCount' published on a per-region server basis no longer includes blocks removed from the cache due to the invalidation of the hfiles they are from (e.g. via compaction).
-- The metric 'totalRequestCount' increments once per request; previously it incremented by the number of `Actions` carried in the request; e.g. if a request was a `multi` made of four Gets and two Puts, we’d increment 'totalRequestCount' by six; now we increment by one regardless. Expect to see lower values for this metric in hbase-2.0.0.
-- The 'readRequestCount' now counts reads that return a non-empty row where in older hbases, we’d increment 'readRequestCount' whether a Result or not. This change will flatten the profile of the read-requests graphs if requests for non-existent rows. A YCSB read-heavy workload can do this dependent on how the database was loaded.
+- The metric 'totalRequestCount' increments once per request; previously it incremented by the number of `Actions` carried in the request; e.g. if a request was a `multi` made of four Gets and two Puts, we'd increment 'totalRequestCount' by six; now we increment by one regardless. Expect to see lower values for this metric in hbase-2.0.0.
+- The 'readRequestCount' now counts reads that return a non-empty row where in older hbases, we'd increment 'readRequestCount' whether a Result or not. This change will flatten the profile of the read-requests graphs if requests for non-existent rows. A YCSB read-heavy workload can do this dependent on how the database was loaded.
 
 The following metrics have been removed:
 
@@ -184,7 +184,7 @@ The following permission related changes either altered semantics or defaults:
 - Permissions granted to a user now merge with existing permissions for that user, rather than over-writing them. (see [the release note on HBASE-17472](https://issues.apache.org/jira/browse/HBASE-17472) for details)
 - Region Server Group commands (added in 1.4.0) now require admin privileges.
 
-#### Most Admin APIs don’t work against an HBase 2.0+ cluster from pre-HBase 2.0 clients [!toc]
+#### Most Admin APIs don't work against an HBase 2.0+ cluster from pre-HBase 2.0 clients [!toc]
 
 A number of admin commands are known to not work when used from a pre-HBase 2.0 client. This includes an HBase Shell that has the library jars from pre-HBase 2.0. You will need to plan for an outage of use of admin APIs and commands until you can also update to the needed client version.
 
@@ -216,7 +216,7 @@ Previously, the Web UI included functionality on table status pages to merge or 
 
 #### Special upgrading for Replication users from pre-HBase 1.4 [!toc]
 
-User running versions of HBase prior to the 1.4.0 release that make use of replication should be sure to read the instructions in the section [Replication peer’s TableCFs config](/docs/upgrading/paths#replication-peers-tablecfs-config).
+User running versions of HBase prior to the 1.4.0 release that make use of replication should be sure to read the instructions in the section [Replication peer's TableCFs config](/docs/upgrading/paths#replication-peers-tablecfs-config).
 
 #### HBase shell changes [!toc]
 
@@ -255,7 +255,7 @@ A clean cluster shutdown should ensure there are no WAL files. If you are unsure
 
 #### Change in behavior for filters [!toc]
 
-The Filter ReturnCode NEXT_ROW has been redefined as skipping to next row in current family, not to next row in all family. it’s more reasonable, because ReturnCode is a concept in store level, not in region level.
+The Filter ReturnCode NEXT_ROW has been redefined as skipping to next row in current family, not to next row in all family. it's more reasonable, because ReturnCode is a concept in store level, not in region level.
 
 #### Downstream HBase 2.0+ users should use the shaded client [!toc]
 
@@ -265,7 +265,7 @@ Note that this artifact exposes some classes in the org.apache.hadoop package sp
 
 #### Downstream HBase 2.0+ users of MapReduce must switch to new artifact [!toc]
 
-Downstream users of HBase’s integration for Apache Hadoop MapReduce must switch to relying on the org.apache.hbase:hbase-shaded-mapreduce module for their runtime use. Historically, downstream users relied on either the org.apache.hbase:hbase-server or org.apache.hbase:hbase-shaded-server artifacts for these classes. Both uses are no longer supported and in the vast majority of cases will fail at runtime.
+Downstream users of HBase's integration for Apache Hadoop MapReduce must switch to relying on the org.apache.hbase:hbase-shaded-mapreduce module for their runtime use. Historically, downstream users relied on either the org.apache.hbase:hbase-server or org.apache.hbase:hbase-shaded-server artifacts for these classes. Both uses are no longer supported and in the vast majority of cases will fail at runtime.
 
 Note that this artifact exposes some classes in the org.apache.hadoop package space (e.g. o.a.h.configuration.Configuration) so that we can maintain source compatibility with our public API. Those classes are included so that they can be altered to use the same relocated third party dependencies as the rest of the HBase client code. In the event that you need to **also** use Hadoop in your code, you should ensure all Hadoop related jars precede the HBase client jar in your classpath.
 
@@ -275,11 +275,11 @@ A number of internal dependencies for HBase were updated or removed from the run
 
 #### Multiple breaking changes to source and binary compatibility for client API [!toc]
 
-The Java client API for HBase has a number of changes that break both source and binary compatibility for details see the Compatibility Check Report for the release you’ll be upgrading to.
+The Java client API for HBase has a number of changes that break both source and binary compatibility for details see the Compatibility Check Report for the release you'll be upgrading to.
 
 #### Tracing implementation changes [!toc]
 
-The backing implementation of HBase’s tracing features was updated from Apache HTrace 3 to HTrace 4, which includes several breaking changes. While HTrace 3 and 4 can coexist in the same runtime, they will not integrate with each other, leading to disjoint trace information.
+The backing implementation of HBase's tracing features was updated from Apache HTrace 3 to HTrace 4, which includes several breaking changes. While HTrace 3 and 4 can coexist in the same runtime, they will not integrate with each other, leading to disjoint trace information.
 
 The internal changes to HBase during this upgrade were sufficient for compilation, but it has not been confirmed that there are no regressions in tracing functionality. Please consider this feature experimental for the immediate future.
 
@@ -398,9 +398,9 @@ HBase release 1.7.0 introduced an incompatible table metadata serialization form
 
 Users upgrading from versions prior to HBase 1.4 should be aware that the estimates of heap usage by the memstore objects (KeyValue, object and array header sizes, etc) have been made more accurate for heap sizes up to 32G (using CompressedOops), resulting in them dropping by 10-50% in practice. This also results in less number of flushes and compactions due to "fatter" flushes. YMMV. As a result, the actual heap usage of the memstore before being flushed may increase by up to 100%. If configured memory limits for the region server had been tuned based on observed usage, this change could result in worse GC behavior or even OutOfMemory errors. Set the environment property (not hbase-site.xml) "hbase.memorylayout.use.unsafe" to false to disable.
 
-### Replication peer’s TableCFs config
+### Replication peer's TableCFs config
 
-Before 1.4, the table name can’t include namespace for replication peer’s TableCFs config. It was fixed by add TableCFs to ReplicationPeerConfig which was stored on Zookeeper. So when upgrade to 1.4, you have to update the original ReplicationPeerConfig data on Zookeeper firstly. There are four steps to upgrade when your cluster have a replication peer with TableCFs config.
+Before 1.4, the table name can't include namespace for replication peer's TableCFs config. It was fixed by add TableCFs to ReplicationPeerConfig which was stored on Zookeeper. So when upgrade to 1.4, you have to update the original ReplicationPeerConfig data on Zookeeper firstly. There are four steps to upgrade when your cluster have a replication peer with TableCFs config.
 
 - Disable the replication peer.
 - If master has permission to write replication peer znode, then rolling update master directly. If not, use TableCFsUpdater tool to update the replication peer's config.
@@ -412,7 +412,7 @@ Before 1.4, the table name can’t include namespace for replication peer’s Ta
 
 Notes:
 
-- Can’t use the old client(before 1.4) to change the replication peer’s config. Because the client will write config to Zookeeper directly, the old client will miss TableCFs config. And the old client write TableCFs config to the old tablecfs znode, it will not work for new version regionserver.
+- Can't use the old client(before 1.4) to change the replication peer's config. Because the client will write config to Zookeeper directly, the old client will miss TableCFs config. And the old client write TableCFs config to the old tablecfs znode, it will not work for new version regionserver.
 
 ### Raw scan now ignores TTL
 

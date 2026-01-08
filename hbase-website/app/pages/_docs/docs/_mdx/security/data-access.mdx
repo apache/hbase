@@ -47,7 +47,7 @@ Enable SASL and Kerberos authentication for RPC and ZooKeeper, as described in [
 
 ## Tags
 
-_Tags_ are a feature of HFile v3. A tag is a piece of metadata which is part of a cell, separate from the key, value, and version. Tags are an implementation detail which provides a foundation for other security-related features such as cell-level ACLs and visibility labels. Tags are stored in the HFiles themselves. It is possible that in the future, tags will be used to implement other HBase features. You don’t need to know a lot about tags in order to use the security features they enable.
+_Tags_ are a feature of HFile v3. A tag is a piece of metadata which is part of a cell, separate from the key, value, and version. Tags are an implementation detail which provides a foundation for other security-related features such as cell-level ACLs and visibility labels. Tags are stored in the HFiles themselves. It is possible that in the future, tags will be used to implement other HBase features. You don't need to know a lot about tags in order to use the security features they enable.
 
 ### Implementation Details
 
@@ -63,7 +63,7 @@ Coprocessors that run server-side on RegionServers can perform get and set opera
 
 ### How It Works
 
-ACLs in HBase are based upon a user’s membership in or exclusion from groups, and a given group’s permissions to access a given resource. ACLs are implemented as a coprocessor called AccessController.
+ACLs in HBase are based upon a user's membership in or exclusion from groups, and a given group's permissions to access a given resource. ACLs are implemented as a coprocessor called AccessController.
 
 HBase does not maintain a private group mapping, but relies on a **_Hadoop group mapper_**, which maps between entities in a directory such as LDAP or Active Directory, and HBase users. Any supported Hadoop group mapper will work. Users are then granted specific permissions (Read, Write, Execute, Create, Admin) against resources (global, namespaces, tables, cells, or endpoints).
 
@@ -105,7 +105,7 @@ The combination of access levels and scopes creates a matrix of possible access 
   In a production environment, it is likely that different users will have only one of Admin and Create permissions.
   <Callout type="warn">
     In the current implementation, a Global Admin with `Admin` permission can grant himself `Read`
-    and `Write` permissions on a table and gain access to that table’s data. For this reason, only
+    and `Write` permissions on a table and gain access to that table's data. For this reason, only
     grant `Global Admin` permissions to trusted user who actually need them. Also be aware that a
     `Global Admin` with `Create` permission can perform a `Put` operation on the ACL table,
     simulating a `grant` or `revoke` and circumventing the authorization check for `Global Admin`
@@ -176,7 +176,7 @@ Cell-level ACLs are implemented using tags (see [Tags](/docs/security/data-acces
     Optionally, you can enable transport security, by setting `hbase.rpc.protection` to
     `privacy`. This requires HBase 0.98.4 or newer.
 
-3.  Set up the Hadoop group mapper in the Hadoop namenode’s _core-site.xml_. This is a Hadoop file, not an HBase file. Customize it to your site’s needs. Following is an example.
+3.  Set up the Hadoop group mapper in the Hadoop namenode's _core-site.xml_. This is a Hadoop file, not an HBase file. Customize it to your site's needs. Following is an example.
 
     ```xml
     <property>
@@ -260,8 +260,8 @@ Neither the examples, nor the source files they are taken from, are part of the 
 
     <Callout type="info">
       HBase Shell support for granting and revoking access at the cell level is for testing and
-      verification support, and should not be employed for production use because it won’t apply the
-      permissions to cells that don’t exist yet. The correct way to apply cell level permissions is
+      verification support, and should not be employed for production use because it won't apply the
+      permissions to cells that don't exist yet. The correct way to apply cell level permissions is
       to do so in the application code when storing the values.
     </Callout>
 
@@ -370,8 +370,8 @@ Neither the examples, nor the source files they are taken from, are part of the 
 
     <Callout type="info">
       HBase Shell support for granting and revoking access is for testing and verification support,
-      and should not be employed for production use because it won’t apply the permissions to cells
-      that don’t exist yet. The correct way to apply cell-level permissions is to do so in the
+      and should not be employed for production use because it won't apply the permissions to cells
+      that don't exist yet. The correct way to apply cell-level permissions is to do so in the
       application code when storing the values.
     </Callout>
 
@@ -394,7 +394,7 @@ Neither the examples, nor the source files they are taken from, are part of the 
     }
     ```
 
-4.  Showing a User’s Effective Permissions
+4.  Showing a User's Effective Permissions
 
     ```ruby
         hbase> user_permission 'user'
@@ -427,7 +427,7 @@ public static void verifyAllowed(User user, AccessTestAction action, int count) 
 
 Visibility labels control can be used to only permit users or principals associated with a given label to read or access cells with that label. For instance, you might label a cell `top-secret`, and only grant access to that label to the `managers` group. Visibility labels are implemented using Tags, which are a feature of HFile v3, and allow you to store metadata on a per-cell basis. A label is a string, and labels can be combined into expressions by using logical operators (&, \|, or !), and using parentheses for grouping. HBase does not do any kind of validation of expressions beyond basic well-formedness. Visibility labels have no meaning on their own, and may be used to denote sensitivity level, privilege level, or any other arbitrary semantic meaning.
 
-If a user’s labels do not match a cell’s label or expression, the user is denied access to the cell.
+If a user's labels do not match a cell's label or expression, the user is denied access to the cell.
 
 In HBase 0.98.6 and newer, UTF-8 encoding is supported for visibility labels and expressions. When creating labels using the `addLabels(conf, labels)` method provided by the `org.apache.hadoop.hbase.security.visibility.VisibilityClient` class and passing labels in Authorizations via Scan or Get, labels can contain UTF-8 characters, as well as the logical operators normally used in visibility labels, with normal Java notations, without needing any escaping method. However, when you pass a CellVisibility expression via a Mutation, you must enclose the expression with the `CellVisibility.quote()` method if you use UTF-8 characters or logical operators. See `TestExpressionParser` and the source file _hbase-client/src/test/java/org/apache/hadoop/hbase/client/TestScan.java_.
 
@@ -435,9 +435,9 @@ A user adds visibility expressions to a cell during a Put operation. In the defa
 
 Visibility labels can also be specified during Delete operations. For details about visibility labels and Deletes, see [HBASE-10885](https://issues.apache.org/jira/browse/HBASE-10885).
 
-The user’s effective label set is built in the RPC context when a request is first received by the RegionServer. The way that users are associated with labels is pluggable. The default plugin passes through labels specified in Authorizations added to the Get or Scan and checks those against the calling user’s authenticated labels list. When the client passes labels for which the user is not authenticated, the default plugin drops them. You can pass a subset of user authenticated labels via the `Get#setAuthorizations(Authorizations(String,...))` and `Scan#setAuthorizations(Authorizations(String,...));` methods.
+The user's effective label set is built in the RPC context when a request is first received by the RegionServer. The way that users are associated with labels is pluggable. The default plugin passes through labels specified in Authorizations added to the Get or Scan and checks those against the calling user's authenticated labels list. When the client passes labels for which the user is not authenticated, the default plugin drops them. You can pass a subset of user authenticated labels via the `Get#setAuthorizations(Authorizations(String,...))` and `Scan#setAuthorizations(Authorizations(String,...));` methods.
 
-Groups can be granted visibility labels the same way as users. Groups are prefixed with an @ symbol. When checking visibility labels of a user, the server will include the visibility labels of the groups of which the user is a member, together with the user’s own labels. When the visibility labels are retrieved using API `VisibilityClient#getAuths` or Shell command `get_auths` for a user, we will return labels added specifically for that user alone, not the group level labels.
+Groups can be granted visibility labels the same way as users. Groups are prefixed with an @ symbol. When checking visibility labels of a user, the server will include the visibility labels of the groups of which the user is a member, together with the user's own labels. When the visibility labels are retrieved using API `VisibilityClient#getAuths` or Shell command `get_auths` for a user, we will return labels added specifically for that user alone, not the group level labels.
 
 Visibility label access checking is performed by the VisibilityController coprocessor. You can use interface `VisibilityLabelService` to provide a custom implementation and/or control the way that visibility labels are stored with cells. See the source file _hbase-server/src/test/java/org/apache/hadoop/hbase/security/visibility/TestVisibilityLabelsWithCustomVisLabService.java_ for one example.
 
@@ -718,7 +718,7 @@ It is also possible to encrypt the WAL. Even though WALs are transient, it is ne
 
 The "Transparent Encryption of Data At Rest" feature is enabled by default, meaning the users can define tables with column families where the HFiles and WAL files will be encrypted by HBase, assuming the feature is properly configured (see [Server-Side Configuration](/docs/security/data-access#server-side-configuration)).
 
-In some cases (e.g. due to custom security policies), the operator of the HBase cluster might wish to only rely on an encryption at rest mechanism outside of HBase (e.g. those offered by HDFS) and wants to ensure that HBase’s encryption at rest system is inactive. Since [HBASE-25181](https://issues.apache.org/jira/browse/HBASE-25181) it is possible to explicitly disable HBase’s own encryption by setting `hbase.crypto.enabled` to `false`. This configuration is `true` by default. If it is set to `false`, the users won’t be able to create any table (column family) with HFile and WAL file encryption and the related create table shell (or API) commands will fail if they try.
+In some cases (e.g. due to custom security policies), the operator of the HBase cluster might wish to only rely on an encryption at rest mechanism outside of HBase (e.g. those offered by HDFS) and wants to ensure that HBase's encryption at rest system is inactive. Since [HBASE-25181](https://issues.apache.org/jira/browse/HBASE-25181) it is possible to explicitly disable HBase's own encryption by setting `hbase.crypto.enabled` to `false`. This configuration is `true` by default. If it is set to `false`, the users won't be able to create any table (column family) with HFile and WAL file encryption and the related create table shell (or API) commands will fail if they try.
 
 ### Server-Side Configuration
 

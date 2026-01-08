@@ -933,7 +933,7 @@ Documentation about Thrift has moved to [Thrift API and Filter Language](/docs/t
 
 ## C/C++ Apache HBase Client
 
-FB’s Chip Turner wrote a pure C/C++ client. [Check it out](https://github.com/hinaria/native-cpp-hbase-client).
+FB's Chip Turner wrote a pure C/C++ client. [Check it out](https://github.com/hinaria/native-cpp-hbase-client).
 
 C++ client implementation. To see [HBASE-14850](https://issues.apache.org/jira/browse/HBASE-14850).
 
@@ -1073,7 +1073,7 @@ public class HBaseExample {
 
 ### Setting the Classpath
 
-To use Scala with HBase, your CLASSPATH must include HBase’s classpath as well as the Scala JARs required by your code. First, use the following command on a server running the HBase RegionServer process, to get HBase’s classpath.
+To use Scala with HBase, your CLASSPATH must include HBase's classpath as well as the Scala JARs required by your code. First, use the following command on a server running the HBase RegionServer process, to get HBase's classpath.
 
 ```bash
 $ ps aux |grep regionserver| awk -F 'java.library.path=' {'print $2'} | awk {'print $1'}
@@ -1137,7 +1137,7 @@ println(Bytes.toString(value))
 
 ### Setting the Classpath
 
-To use Jython with HBase, your CLASSPATH must include HBase’s classpath as well as the Jython JARs required by your code.
+To use Jython with HBase, your CLASSPATH must include HBase's classpath as well as the Jython JARs required by your code.
 
 Set the path to directory containing the `jython.jar` and each additional Jython-related JAR needed for your project. Then export HBASE_CLASSPATH pointing to the \$JYTHON_HOME env. variable.
 

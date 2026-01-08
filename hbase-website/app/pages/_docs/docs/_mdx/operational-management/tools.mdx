@@ -51,7 +51,7 @@ Some of the tools and utilities below are Java classes which are passed directly
 
 ## Canary
 
-The Canary tool can help users "canary-test" the HBase cluster status. The default "region mode" fetches a row from every column-family of every regions. In "regionserver mode", the Canary tool will fetch a row from a random region on each of the cluster’s RegionServers. In "zookeeper mode", the Canary will read the root znode on each member of the zookeeper ensemble.
+The Canary tool can help users "canary-test" the HBase cluster status. The default "region mode" fetches a row from every column-family of every regions. In "regionserver mode", the Canary tool will fetch a row from a random region on each of the cluster's RegionServers. In "zookeeper mode", the Canary will read the root znode on each member of the zookeeper ensemble.
 
 To see usage, pass the `-help` parameter (if you pass no parameters, the Canary tool starts executing in the default region "mode" fetching a row from every region in the cluster).
 
@@ -317,7 +317,7 @@ Count rows in an HBase table.
 Count cells in an HBase table.
 
 `replication.VerifyReplication`  
-Compare the data from tables in two different clusters. WARNING: It doesn’t work for incrementColumnValues’d cells since the timestamp is changed. Note that this command is in a different package than the others.
+Compare the data from tables in two different clusters. WARNING: It doesn't work for incrementColumnValues'd cells since the timestamp is changed. Note that this command is in a different package than the others.
 
 Each command except `RowCounter` and `CellCounter` accept a single `--help` argument to print usage instructions.
 
@@ -361,7 +361,7 @@ The `WALPrettyPrinter` is a tool with configurable options to print the contents
 ```
 
 <Callout type="info" title="WAL Printing in older versions of HBase">
-Prior to version 2.0, the `WALPrettyPrinter` was called the `HLogPrettyPrinter`, after an internal name for HBase’s write ahead log. In those versions, you can print the contents of a WAL using the same configuration as above, but with the 'hlog' command.
+Prior to version 2.0, the `WALPrettyPrinter` was called the `HLogPrettyPrinter`, after an internal name for HBase's write ahead log. In those versions, you can print the contents of a WAL using the same configuration as above, but with the 'hlog' command.
 
 ```bash
  $ ./bin/hbase hlog hdfs://example.org:9000/hbase/.logs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012
@@ -437,7 +437,7 @@ Starting from 3.0.0, we introduce a `peer.uri` option so the `peer.adr` option i
   copied.
 </Callout>
 
-See Jonathan Hsieh’s [Online HBase Backups with CopyTable](https://blog.cloudera.com/blog/2012/06/online-hbase-backups-with-copytable-2/) blog post for more on `CopyTable`.
+See Jonathan Hsieh's [Online HBase Backups with CopyTable](https://blog.cloudera.com/blog/2012/06/online-hbase-backups-with-copytable-2/) blog post for more on `CopyTable`.
 
 ## HashTable/SyncTable
 
@@ -554,7 +554,7 @@ Setting doDeletes to false modifies default behaviour to not delete target cells
 
 <Callout type="info" title="Set doDeletes to false on Two-Way Replication scenarios">
   On Two-Way Replication or other scenarios where both source and target clusters can have data
-  ingested, it’s advisable to always set doDeletes option to false, as any additional cell inserted
+  ingested, it's advisable to always set doDeletes option to false, as any additional cell inserted
   on SyncTable target cluster and not yet replicated to source would be deleted, and potentially
   lost permanently.
 </Callout>
@@ -744,7 +744,7 @@ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop j
 
 ### CompleteBulkLoad Warning
 
-Data generated via MapReduce is often created with file permissions that are not compatible with the running HBase process. Assuming you’re running HDFS with permissions enabled, those permissions will need to be updated before you run CompleteBulkLoad.
+Data generated via MapReduce is often created with file permissions that are not compatible with the running HBase process. Assuming you're running HDFS with permissions enabled, those permissions will need to be updated before you run CompleteBulkLoad.
 
 For more information about bulk-loading HFiles into HBase, see [arch.bulk.load](/docs/architecture/bulk-loading).
 
@@ -952,7 +952,7 @@ Options:
 
 The co-processor classes can be explicitly declared by `-class` option, or they can be obtained from HBase configuration by `-config` option. Table level co-processors can be also checked by `-table` option. The tool searches for co-processors on its classpath, but it can be extended by the `-jar` option. It is possible to test multiple classes with multiple `-class`, multiple tables with multiple `-table` options as well as adding multiple jars to the classpath with multiple `-jar` options.
 
-The tool can report errors and warnings. Errors mean that HBase won’t be able to load the coprocessor, because it is incompatible with the current version of HBase. Warnings mean that the co-processors can be loaded, but they won’t work as expected. If `-e` option is given, then the tool will also fail for warnings.
+The tool can report errors and warnings. Errors mean that HBase won't be able to load the coprocessor, because it is incompatible with the current version of HBase. Warnings mean that the co-processors can be loaded, but they won't work as expected. If `-e` option is given, then the tool will also fail for warnings.
 
 Please note that this tool cannot validate every aspect of jar files, it just does some static checks.
 
@@ -1018,7 +1018,7 @@ Caused by: java.lang.IllegalArgumentException: No enum constant org.apache.hadoo
 
 #### Fixing PREFIX_TREE errors
 
-It’s possible to get `PREFIX_TREE` errors after changing Data Block Encoding to a supported one. It can happen because there are some HFiles which still encoded with `PREFIX_TREE` or there are still some snapshots.
+It's possible to get `PREFIX_TREE` errors after changing Data Block Encoding to a supported one. It can happen because there are some HFiles which still encoded with `PREFIX_TREE` or there are still some snapshots.
 
 For fixing HFiles, please run a major compaction on the table (it was `default:t` according to the log message):
 
@@ -1026,7 +1026,7 @@ For fixing HFiles, please run a major compaction on the table (it was `default:t
 major_compact 't'
 ```
 
-HFiles can be referenced from snapshots, too. It’s the case when the HFile is located under `archive/data`. The first step is to determine which snapshot references that HFile (the name of the file was `29c641ae91c34fc3bee881f45436b6d1` according to the logs):
+HFiles can be referenced from snapshots, too. It's the case when the HFile is located under `archive/data`. The first step is to determine which snapshot references that HFile (the name of the file was `29c641ae91c34fc3bee881f45436b6d1` according to the logs):
 
 ```bash
 for snapshot in $(hbase snapshotinfo -list-snapshots 2> /dev/null | tail -n -1 | cut -f 1 -d \|);

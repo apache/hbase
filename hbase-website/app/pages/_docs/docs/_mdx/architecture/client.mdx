@@ -15,7 +15,7 @@ The API changed in HBase 1.0. For connection configuration information, see [Cli
 
 ### API as of HBase 1.0.0
 
-It’s been cleaned up and users are returned Interfaces to work against rather than particular types. In HBase 1.0, obtain a `Connection` object from `ConnectionFactory` and thereafter, get from it instances of `Table`, `Admin`, and `RegionLocator` on an as-need basis. When done, close the obtained instances. Finally, be sure to cleanup your `Connection` instance before exiting. `Connections` are heavyweight objects but thread-safe so you can create one for your application and keep the instance around. `Table`, `Admin` and `RegionLocator` instances are lightweight. Create as you go and then let go as soon as you are done by closing them. See the [Client Package Javadoc Description](https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/package-summary.html) for example usage of the new HBase 1.0 API.
+It's been cleaned up and users are returned Interfaces to work against rather than particular types. In HBase 1.0, obtain a `Connection` object from `ConnectionFactory` and thereafter, get from it instances of `Table`, `Admin`, and `RegionLocator` on an as-need basis. When done, close the obtained instances. Finally, be sure to cleanup your `Connection` instance before exiting. `Connections` are heavyweight objects but thread-safe so you can create one for your application and keep the instance around. `Table`, `Admin` and `RegionLocator` instances are lightweight. Create as you go and then let go as soon as you are done by closing them. See the [Client Package Javadoc Description](https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/package-summary.html) for example usage of the new HBase 1.0 API.
 
 ### API before HBase 1.0.0
 
@@ -94,7 +94,7 @@ Notice that `AsyncTable` interface is templatized. The template parameter specif
 
 ## Asynchronous Admin
 
-You can obtain an `AsyncConnection` from `ConnectionFactory`, and then get a `AsyncAdmin` instance from it to access HBase. Notice that there are two `getAdmin` methods to get a `AsyncAdmin` instance. One method has one extra thread pool parameter which is used to execute callbacks. It is designed for normal users. Another method doesn’t need a thread pool and all the callbacks are executed inside the framework thread so it is not allowed to do time consuming works in the callbacks. It is designed for advanced users.
+You can obtain an `AsyncConnection` from `ConnectionFactory`, and then get a `AsyncAdmin` instance from it to access HBase. Notice that there are two `getAdmin` methods to get a `AsyncAdmin` instance. One method has one extra thread pool parameter which is used to execute callbacks. It is designed for normal users. Another method doesn't need a thread pool and all the callbacks are executed inside the framework thread so it is not allowed to do time consuming works in the callbacks. It is designed for advanced users.
 
 The default `getAdmin` methods will return a `AsyncAdmin` instance which use default configs. If you want to customize some configs, you can use `getAdminBuilder` methods to get a `AsyncAdminBuilder` for creating `AsyncAdmin` instance. Users are free to only set the configs they care about to create a new `AsyncAdmin` instance.
 
@@ -110,7 +110,7 @@ Information on non-Java clients and custom protocols is covered in [Apache HBase
 
 ## Master Registry (new as of 2.3.0)
 
-Starting from 2.5.0, MasterRegistry is deprecated. It’s functionality is completely superseded by the RpcConnectionRegistry. Please see [Rpc Connection Registry (new as of 2.5.0)](/docs/architecture/client#rpc-connection-registry-new-as-of-250) for more details.
+Starting from 2.5.0, MasterRegistry is deprecated. It's functionality is completely superseded by the RpcConnectionRegistry. Please see [Rpc Connection Registry (new as of 2.5.0)](/docs/architecture/client#rpc-connection-registry-new-as-of-250) for more details.
 
 Client internally works with a _connection registry_ to fetch the metadata needed by connections. This connection registry implementation is responsible for fetching the following metadata.
 

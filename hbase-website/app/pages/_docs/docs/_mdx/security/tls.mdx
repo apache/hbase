@@ -7,11 +7,11 @@ import { Step, Steps } from "fumadocs-ui/components/steps";
 
 Since version `2.6.0` HBase supports TLS encryption in server-client and Master-RegionServer communication. [Transport Layer Security (TLS)](https://en.wikipedia.org/wiki/Transport_Layer_Security) is a standard cryptographic protocol designed to provide communications security over a computer network. HBase TLS implementation works exactly how secure websites are accessed via **https** prefix in a web browser: once established all communication on the channel will be securely hidden from malicious access.
 
-The encryption works at the transport level which means it’s independent of the configured authentication method. Secure client access mentioned in the previous section requires Kerberos to be configured and used in HBase authentication, while TLS can be configured with any other SASL mechanism or even with simple client access methods, effectively preventing attackers from eavesdropping the communication. No Kerberos KDC or other complicated infrastructure required.
+The encryption works at the transport level which means it's independent of the configured authentication method. Secure client access mentioned in the previous section requires Kerberos to be configured and used in HBase authentication, while TLS can be configured with any other SASL mechanism or even with simple client access methods, effectively preventing attackers from eavesdropping the communication. No Kerberos KDC or other complicated infrastructure required.
 
-HBase TLS is based on the Netty library therefore it only works with Netty client and server RPC implementations. Netty’s powerful SSL implementation is a great foundation for highly secure and performant communication providing the latest and greatest cryptographic solution at all times.
+HBase TLS is based on the Netty library therefore it only works with Netty client and server RPC implementations. Netty's powerful SSL implementation is a great foundation for highly secure and performant communication providing the latest and greatest cryptographic solution at all times.
 
-Since Region Servers effectively work as clients from Master’s perspective, TLS supports encrypted communication between cluster members too.
+Since Region Servers effectively work as clients from Master's perspective, TLS supports encrypted communication between cluster members too.
 
 <Callout type="info">
 From version 2.6.0 HBase supports the [Hadoop CredentialProvider API](https://hadoop.apache.org/docs/r3.3.4/hadoop-project-dist/hadoop-common/CredentialProviderAPI.html) to avoid storing sensitive information in HBase configuration files. The recommended way of storing keystore / truststore passwords is to use one of the supported credential providers e.g. the local jceks file provider. You can find more information about how to setup credential providers in the Hadoop documentation.
@@ -66,7 +66,7 @@ Use `hbase.rpc.tls.truststore.password` alias to retrieve trust store password f
   with the `hbase.rpc.tls.truststore.type` property.
 </Callout>
 
-However, specifying a trust store is not always required. Standard JDK implementations are shipped with a standard list of trusted certificates (the certificates of Certificate Authorities) and if your private key is provided by one of them, you don’t need to configure your clients to trust it. Similarly to an internet browser, you don’t need to set up the certificates of every single website you’re planning to visit. Later in this documentation we’ll walk through the steps of creating self-signed certificates which requires a trust store setup.
+However, specifying a trust store is not always required. Standard JDK implementations are shipped with a standard list of trusted certificates (the certificates of Certificate Authorities) and if your private key is provided by one of them, you don't need to configure your clients to trust it. Similarly to an internet browser, you don't need to set up the certificates of every single website you're planning to visit. Later in this documentation we'll walk through the steps of creating self-signed certificates which requires a trust store setup.
 
 You can check the list of public certificate authorities shipped with your JDK implementation:
 
@@ -78,19 +78,19 @@ Password is empty by default.
 
 ## Creating self-signed certificates
 
-While obtaining globally trusted certificates from Certificate Authorities is convenient, it’s perfectly valid to generate your own private/public keypairs and set them up specifically for the HBase cluster. Especially if you don’t want to enable public access to the cluster, paying money for a certificate doesn’t make sense.
+While obtaining globally trusted certificates from Certificate Authorities is convenient, it's perfectly valid to generate your own private/public keypairs and set them up specifically for the HBase cluster. Especially if you don't want to enable public access to the cluster, paying money for a certificate doesn't make sense.
 
 Follow the following steps to generate self-signed certificates.
 
 1. Create SSL key store JKS to store local credentials
 
-    Please note that the alias (-alias) and the distinguished name (-dname) must match the hostname of the machine that is associated with, otherwise hostname verification won’t work.
+    Please note that the alias (-alias) and the distinguished name (-dname) must match the hostname of the machine that is associated with, otherwise hostname verification won't work.
 
     ```bash
     keytool -genkeypair -alias $(hostname -f) -keyalg RSA -keysize 2048 -dname "cn=$(hostname -f)" -keypass password -keystore keystore.jks -storepass password
     ```
 
-    At the end of this operation you’ll have as many key store files as many servers you have in your cluster. Each cluster member will have its own key store.
+    At the end of this operation you'll have as many key store files as many servers you have in your cluster. Each cluster member will have its own key store.
 
 2. Extract the signed public key (certificate) from each key store
 
@@ -100,7 +100,7 @@ Follow the following steps to generate self-signed certificates.
 
 3. Create SSL trust store JKS containing certificates for the clients
 
-    The same truststore (storing all accepted certs) should be shared on participants of the cluster. You need to use different aliases to store multiple certificates in the same truststore. Name of the aliases doesn’t matter.
+    The same truststore (storing all accepted certs) should be shared on participants of the cluster. You need to use different aliases to store multiple certificates in the same truststore. Name of the aliases doesn't matter.
     ```bash
     keytool -importcert -alias [host1..3] -file [host1..3].cer -keystore truststore.jks -storepass password
     ```
@@ -277,7 +277,7 @@ List of enabled cipher suites in TLS protocol. Useful when you want to disable c
 
 ### Certificate Revocation Checking
 
-There’s a built-in mechanism in JDK’s TrustManager which automatically checks certificates for revocation. See [Managing Server Certificates](https://docs.oracle.com/cd/E19263-01/817-5215/ssl.html#wp19807). Disabled by default.
+There's a built-in mechanism in JDK's TrustManager which automatically checks certificates for revocation. See [Managing Server Certificates](https://docs.oracle.com/cd/E19263-01/817-5215/ssl.html#wp19807). Disabled by default.
 
 ```xml
 <property>

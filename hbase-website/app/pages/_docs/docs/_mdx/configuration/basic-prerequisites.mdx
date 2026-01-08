@@ -7,7 +7,7 @@ description: "This section lists required services and some required system conf
 
 HBase runs on the Java Virtual Machine, thus all HBase deployments require a JVM runtime.
 
-The following table summarizes the recommendations of the HBase community with respect to running on various Java versions. The ✅ symbol indicates a base level of testing and willingness to help diagnose and address issues you might run into; these are the expected deployment combinations. An entry of ⚠️ means that there may be challenges with this combination, and you should look for more information before deciding to pursue this as your deployment strategy. The ❌ means this combination does not work; either an older Java version is considered deprecated by the HBase community, or this combination is known to not work. For combinations of newer JDK with older HBase releases, it’s likely there are known compatibility issues that cannot be addressed under our compatibility guarantees, making the combination impossible. In some cases, specific guidance on limitations (e.g. whether compiling / unit tests work, specific operational issues, etc) are also noted. Assume any combination not listed here is considered ❌.
+The following table summarizes the recommendations of the HBase community with respect to running on various Java versions. The ✅ symbol indicates a base level of testing and willingness to help diagnose and address issues you might run into; these are the expected deployment combinations. An entry of ⚠️ means that there may be challenges with this combination, and you should look for more information before deciding to pursue this as your deployment strategy. The ❌ means this combination does not work; either an older Java version is considered deprecated by the HBase community, or this combination is known to not work. For combinations of newer JDK with older HBase releases, it's likely there are known compatibility issues that cannot be addressed under our compatibility guarantees, making the combination impossible. In some cases, specific guidance on limitations (e.g. whether compiling / unit tests work, specific operational issues, etc) are also noted. Assume any combination not listed here is considered ❌.
 
 <Callout type="warn">
   HBase recommends downstream users rely only on JDK releases that are marked as Long-Term Supported
@@ -80,7 +80,7 @@ For example, assuming that a schema had 3 ColumnFamilies per region with an aver
 
 Another related setting is the number of processes a user is allowed to run at once. In Linux and Unix, the number of processes is set using the `ulimit -u` command. This should not be confused with the `nproc` command, which controls the number of CPUs available to a given user. Under load, a `ulimit -u` that is too low can cause OutOfMemoryError exceptions.
 
-Configuring the maximum number of file descriptors and processes for the user who is running the HBase process is an operating system configuration, rather than an HBase configuration. It is also important to be sure that the settings are changed for the user that actually runs HBase. To see which user started HBase, and that user’s ulimit configuration, look at the first line of the HBase log for that instance.
+Configuring the maximum number of file descriptors and processes for the user who is running the HBase process is an operating system configuration, rather than an HBase configuration. It is also important to be sure that the settings are changed for the user that actually runs HBase. To see which user started HBase, and that user's ulimit configuration, look at the first line of the HBase log for that instance.
 
 #### Example: `ulimit` Settings on Ubuntu [!toc]
 
@@ -107,7 +107,7 @@ Running production systems on Windows machines is not recommended.
 
 The following table summarizes the versions of [Hadoop](https://hadoop.apache.org) supported with each version of HBase. Older versions not appearing in this table are considered unsupported and likely missing necessary features, while newer versions are untested but may be suitable.
 
-Based on the version of HBase, you should select the most appropriate version of Hadoop. You can use Apache Hadoop, or a vendor’s distribution of Hadoop. No distinction is made here. See [the Hadoop wiki](https://cwiki.apache.org/confluence/display/HADOOP2/Distributions+and+Commercial+Support) for information about vendors of Hadoop.
+Based on the version of HBase, you should select the most appropriate version of Hadoop. You can use Apache Hadoop, or a vendor's distribution of Hadoop. No distinction is made here. See [the Hadoop wiki](https://cwiki.apache.org/confluence/display/HADOOP2/Distributions+and+Commercial+Support) for information about vendors of Hadoop.
 
 <Callout type="tip">
 Comparing to Hadoop 1.x, Hadoop 2.x is faster and includes features, such as short-circuit reads (see [Leveraging local data](/docs/performance#leveraging-local-data)), which will help improve your HBase random read profile. Hadoop 2.x also includes important bug fixes that will improve your overall HBase experience. HBase does not support running with earlier versions of Hadoop. See the table below for requirements specific to different HBase versions.
@@ -239,13 +239,13 @@ Starting with HBase 2.5.2, HBase provides binary releases and Maven artifacts bu
 
 Each HBase release has a default Hadoop 3 version. This is used when the Hadoop 3 version is not specified during build, and for building the official binary releases and artifacts. Generally when a new minor version is released (i.e. 2.5.0) the default version is set to the latest supported Hadoop 3 version at the start of the release process.
 
-Up to HBase 2.5.10 and 2.6.1 even if HBase added support for newer Hadoop 3 releases in a patch release, the default Hadoop 3 version (and the one used in the official binary releases) was not updated. This simplified upgrading, but meant that HBase releases often included old unfixed CVEs both from Hadoop and Hadoop’s dependencies, even when newer Hadoop releases with fixes were available.
+Up to HBase 2.5.10 and 2.6.1 even if HBase added support for newer Hadoop 3 releases in a patch release, the default Hadoop 3 version (and the one used in the official binary releases) was not updated. This simplified upgrading, but meant that HBase releases often included old unfixed CVEs both from Hadoop and Hadoop's dependencies, even when newer Hadoop releases with fixes were available.
 
 Starting with HBase 2.5.11 and 2.6.2, the default Hadoop 3 version is always set to the latest supported Hadoop 3 version, and is also used for the `-hadoop3` binary releases and artifacts. This will drastically reduce the number of known CVEs shipped in the HBase binary releases, and make sure that all fixes and improvements in Hadoop are included.
 
 ### `dfs.datanode.max.transfer.threads`
 
-An HDFS DataNode has an upper bound on the number of files that it will serve at any one time. Before doing any loading, make sure you have configured Hadoop’s _conf/hdfs-site.xml_, setting the `dfs.datanode.max.transfer.threads` value to at least the following:
+An HDFS DataNode has an upper bound on the number of files that it will serve at any one time. Before doing any loading, make sure you have configured Hadoop's _conf/hdfs-site.xml_, setting the `dfs.datanode.max.transfer.threads` value to at least the following:
 
 ```xml
 <property>

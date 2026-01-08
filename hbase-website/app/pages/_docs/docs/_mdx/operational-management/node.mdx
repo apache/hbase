@@ -13,11 +13,11 @@ You can stop an individual RegionServer by running the following script in the H
 $ ./bin/hbase-daemon.sh stop regionserver
 ```
 
-The RegionServer will first close all regions and then shut itself down. On shutdown, the RegionServer’s ephemeral node in ZooKeeper will expire. The master will notice the RegionServer gone and will treat it as a 'crashed' server; it will reassign the nodes the RegionServer was carrying.
+The RegionServer will first close all regions and then shut itself down. On shutdown, the RegionServer's ephemeral node in ZooKeeper will expire. The master will notice the RegionServer gone and will treat it as a 'crashed' server; it will reassign the nodes the RegionServer was carrying.
 
 <Callout type="info" title="Disable the Load Balancer before Decommissioning a node">
   If the load balancer runs while a node is shutting down, then there could be contention between
-  the Load Balancer and the Master’s recovery of the just decommissioned RegionServer. Avoid any
+  the Load Balancer and the Master's recovery of the just decommissioned RegionServer. Avoid any
   problems by disabling the balancer first. See the "Load Balancer" info section below.
 </Callout>
 
@@ -31,7 +31,7 @@ The RegionServer will first close all regions and then shut itself down. On shut
   previous to hbase-2.0.
 </Callout>
 
-A downside to the above stop of a RegionServer is that regions could be offline for a good period of time. Regions are closed in order. If many regions on the server, the first region to close may not be back online until all regions close and after the master notices the RegionServer’s znode gone. A node can be asked to gradually shed its load and then shutdown itself using the _graceful_stop.sh_ script. Here is its usage:
+A downside to the above stop of a RegionServer is that regions could be offline for a good period of time. Regions are closed in order. If many regions on the server, the first region to close may not be back online until all regions close and after the master notices the RegionServer's znode gone. A node can be asked to gradually shed its load and then shutdown itself using the _graceful_stop.sh_ script. Here is its usage:
 
 ```
 $ ./bin/graceful_stop.sh
@@ -92,11 +92,11 @@ Without this facility, decommissioning multiple nodes may be non-optimal because
 
 #### Bad or Failing Disk
 
-It is good having [dfs.datanode.failed.volumes.tolerated](/docs/configuration/important#dfsdatanodefailedvolumestolerated) set if you have a decent number of disks per machine for the case where a disk plain dies. But usually disks do the "John Wayne" — i.e. take a while to go down spewing errors in *dmesg* — or for some reason, run much slower than their companions. In this case you want to decommission the disk. You have two options. You can [decommission the datanode](https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsDataNodeAdminGuide.html) or, less disruptive in that only the bad disks data will be rereplicated, can stop the datanode, unmount the bad volume (You can’t umount a volume while the datanode is using it), and then restart the datanode (presuming you have set dfs.datanode.failed.volumes.tolerated > 0). The regionserver will throw some errors in its logs as it recalibrates where to get its data from — it will likely roll its WAL log too — but in general but for some latency spikes, it should keep on chugging.
+It is good having [dfs.datanode.failed.volumes.tolerated](/docs/configuration/important#dfsdatanodefailedvolumestolerated) set if you have a decent number of disks per machine for the case where a disk plain dies. But usually disks do the "John Wayne" — i.e. take a while to go down spewing errors in *dmesg* — or for some reason, run much slower than their companions. In this case you want to decommission the disk. You have two options. You can [decommission the datanode](https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsDataNodeAdminGuide.html) or, less disruptive in that only the bad disks data will be rereplicated, can stop the datanode, unmount the bad volume (You can't umount a volume while the datanode is using it), and then restart the datanode (presuming you have set dfs.datanode.failed.volumes.tolerated > 0). The regionserver will throw some errors in its logs as it recalibrates where to get its data from — it will likely roll its WAL log too — but in general but for some latency spikes, it should keep on chugging.
 
 <Callout type="info" title="Short Circuit Reads">
   If you are doing short-circuit reads, you will have to move the regions off the regionserver
-  before you stop the datanode; when short-circuiting reading, though chmod’d so regionserver cannot
+  before you stop the datanode; when short-circuiting reading, though chmod'd so regionserver cannot
   have access, because it already has the files open, it will be able to keep reading the file
   blocks from the bad disk even though the datanode is down. Move the regions back after you restart
   the datanode.
@@ -171,8 +171,8 @@ Use the following guidelines if you want to create your own rolling restart scri
 
 ### Adding a New Node
 
-Adding a new regionserver in HBase is essentially free, you simply start it like this: `$ ./bin/hbase-daemon.sh start regionserver` and it will register itself with the master. Ideally you also started a DataNode on the same machine so that the RS can eventually start to have local files. If you rely on ssh to start your daemons, don’t forget to add the new hostname in _conf/regionservers_ on the master.
+Adding a new regionserver in HBase is essentially free, you simply start it like this: `$ ./bin/hbase-daemon.sh start regionserver` and it will register itself with the master. Ideally you also started a DataNode on the same machine so that the RS can eventually start to have local files. If you rely on ssh to start your daemons, don't forget to add the new hostname in _conf/regionservers_ on the master.
 
-At this point the region server isn’t serving data because no regions have moved to it yet. If the balancer is enabled, it will start moving regions to the new RS. On a small/medium cluster this can have a very adverse effect on latency as a lot of regions will be offline at the same time. It is thus recommended to disable the balancer the same way it’s done when decommissioning a node and move the regions manually (or even better, using a script that moves them one by one).
+At this point the region server isn't serving data because no regions have moved to it yet. If the balancer is enabled, it will start moving regions to the new RS. On a small/medium cluster this can have a very adverse effect on latency as a lot of regions will be offline at the same time. It is thus recommended to disable the balancer the same way it's done when decommissioning a node and move the regions manually (or even better, using a script that moves them one by one).
 
-The moved regions will all have 0% locality and won’t have any blocks in cache so the region server will have to use the network to serve requests. Apart from resulting in higher latency, it may also be able to use all of your network card’s capacity. For practical purposes, consider that a standard 1GigE NIC won’t be able to read much more than _100MB/s_. In this case, or if you are in a OLAP environment and require having locality, then it is recommended to major compact the moved regions.
+The moved regions will all have 0% locality and won't have any blocks in cache so the region server will have to use the network to serve requests. Apart from resulting in higher latency, it may also be able to use all of your network card's capacity. For practical purposes, consider that a standard 1GigE NIC won't be able to read much more than _100MB/s_. In this case, or if you are in a OLAP environment and require having locality, then it is recommended to major compact the moved regions.

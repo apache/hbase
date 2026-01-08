@@ -31,7 +31,7 @@ Periodically flushes in-memory writes in the MemStore to StoreFiles.
 
 ### LogRoller
 
-Periodically checks the RegionServer’s WAL.
+Periodically checks the RegionServer's WAL.
 
 ## Coprocessors
 
@@ -64,7 +64,7 @@ The LruBlockCache is an LRU cache that contains three levels of block priority t
 
 - Single access priority: The first time a block is loaded from HDFS it normally has this priority and it will be part of the first group to be considered during evictions. The advantage is that scanned blocks are more likely to get evicted than blocks that are getting more usage.
 - Multi access priority: If a block in the previous priority group is accessed again, it upgrades to this priority. It is thus part of the second group considered during evictions.
-- In-memory access priority: If the block’s family was configured to be "in-memory", it will be part of this priority disregarding the number of times it was accessed. Catalog tables are configured like this. This group is the last one considered during evictions.  
+- In-memory access priority: If the block's family was configured to be "in-memory", it will be part of this priority disregarding the number of times it was accessed. Catalog tables are configured like this. This group is the last one considered during evictions.  
   To mark a column family as in-memory, call
   ```java
   HColumnDescriptor.setInMemory(true);
@@ -77,7 +77,7 @@ The LruBlockCache is an LRU cache that contains three levels of block priority t
 
 ### LruBlockCache Usage
 
-Block caching is enabled by default for all the user tables which means that any read operation will load the LRU cache. This might be good for a large number of use cases, but further tunings are usually required in order to achieve better performance. An important concept is the [working set size](http://en.wikipedia.org/wiki/Working_set_size), or WSS, which is: "the amount of memory needed to compute the answer to a problem". For a website, this would be the data that’s needed to answer the queries over a short amount of time.
+Block caching is enabled by default for all the user tables which means that any read operation will load the LRU cache. This might be good for a large number of use cases, but further tunings are usually required in order to achieve better performance. An important concept is the [working set size](http://en.wikipedia.org/wiki/Working_set_size), or WSS, which is: "the amount of memory needed to compute the answer to a problem". For a website, this would be the data that's needed to answer the queries over a short amount of time.
 
 The way to calculate how much memory is available in HBase for caching is:
 
@@ -101,7 +101,7 @@ Your data is not the only resident of the block cache. Here are others that you 
   </Callout>
 
 - **HFiles Indexes**  
-  An _HFile_ is the file format that HBase uses to store data in HDFS. It contains a multi-layered index which allows HBase to seek the data without having to read the whole file. The size of those indexes is a factor of the block size (64KB by default), the size of your keys and the amount of data you are storing. For big data sets it’s not unusual to see numbers around 1GB per region server, although not all of it will be in cache because the LRU will evict indexes that aren’t used.
+  An _HFile_ is the file format that HBase uses to store data in HDFS. It contains a multi-layered index which allows HBase to seek the data without having to read the whole file. The size of those indexes is a factor of the block size (64KB by default), the size of your keys and the amount of data you are storing. For big data sets it's not unusual to see numbers around 1GB per region server, although not all of it will be in cache because the LRU will evict indexes that aren't used.
 
 - **Keys**  
    The values that are stored are only half the picture, since each value is stored along with its keys (row key, family qualifier, and timestamp). See [Try to minimize row and column sizes](/docs/regionserver-sizing#try-to-minimize-row-and-column-sizes).
@@ -111,11 +111,11 @@ Your data is not the only resident of the block cache. Here are others that you 
 
 Currently the recommended way to measure HFile indexes and bloom filters sizes is to look at the region server web UI and checkout the relevant metrics. For keys, sampling can be done by using the HFile command line tool and look for the average key size metric. Since HBase 0.98.3, you can view details on BlockCache stats and metrics in a special Block Cache section in the UI. As of HBase 2.4.14, you can estimate HFile indexes and bloom filters vs other DATA blocks using blockCacheCount and blockCacheDataBlockCount in JMX. The formula `(blockCacheCount - blockCacheDataBlockCount) * blockSize` will give you an estimate which can be useful when trying to enable the BucketCache. You should make sure the post-BucketCache config gives enough memory to the on-heap LRU cache to hold at least the same number of non-DATA blocks from pre-BucketCache. Once BucketCache is enabled, the L1 metrics like l1CacheSize, l1CacheCount, and l1CacheEvictionCount can help you further tune the size.
 
-It’s generally bad to use block caching when the WSS doesn’t fit in memory. This is the case when you have for example 40GB available across all your region servers' block caches but you need to process 1TB of data. One of the reasons is that the churn generated by the evictions will trigger more garbage collections unnecessarily. Here are two use cases:
+It's generally bad to use block caching when the WSS doesn't fit in memory. This is the case when you have for example 40GB available across all your region servers' block caches but you need to process 1TB of data. One of the reasons is that the churn generated by the evictions will trigger more garbage collections unnecessarily. Here are two use cases:
 
 - Fully random reading pattern: This is a case where you almost never access the same row twice within a short amount of time such that the chance of hitting a cached block is close to 0. Setting block caching on such a table is a waste of memory and CPU cycles, more so that it will generate more garbage to pick up by the JVM. For more information on monitoring GC, see [JVM Garbage Collection Logs](/docs/troubleshooting#jvm-garbage-collection-logs).
 
-- Mapping a table: In a typical MapReduce job that takes a table in input, every row will be read only once so there’s no need to put them into the block cache. The Scan object has the option of turning this off via the setCacheBlocks method (set it to false). You can still keep block caching turned on on this table if you need fast random read access. An example would be counting the number of rows in a table that serves live traffic, caching every block of that table would create massive churn and would surely evict data that’s currently in use.
+- Mapping a table: In a typical MapReduce job that takes a table in input, every row will be read only once so there's no need to put them into the block cache. The Scan object has the option of turning this off via the setCacheBlocks method (set it to false). You can still keep block caching turned on on this table if you need fast random read access. An example would be counting the number of rows in a table that serves live traffic, caching every block of that table would create massive churn and would surely evict data that's currently in use.
 
 #### Caching META blocks only (DATA blocks in fscache)
 
@@ -188,7 +188,7 @@ Setting `hbase.bucketcache.ioengine` and `hbase.bucketcache.size` \> 0 enables `
 
 3.  Restart or rolling restart your cluster, and check the logs for any issues.
 
-In the above, we set the BucketCache to be 4G. We configured the on-heap LruBlockCache have 20% (0.2) of the RegionServer’s heap size (0.2 \* 5G = 1G). In other words, you configure the L1 LruBlockCache as you would normally (as if there were no L2 cache present).
+In the above, we set the BucketCache to be 4G. We configured the on-heap LruBlockCache have 20% (0.2) of the RegionServer's heap size (0.2 \* 5G = 1G). In other words, you configure the L1 LruBlockCache as you would normally (as if there were no L2 cache present).
 
 [HBASE-10641](https://issues.apache.org/jira/browse/HBASE-10641) introduced the ability to configure multiple sizes for the buckets of the BucketCache, in HBase 0.98 and newer. To configurable multiple bucket sizes, configure the new property `hbase.bucketcache.bucket.sizes` to a comma-separated list of block sizes, ordered from smallest to largest, with no spaces. The goal is to optimize the bucket sizes based on your data access patterns. The following example configures buckets of size 4096 and 8192.
 
@@ -200,7 +200,7 @@ In the above, we set the BucketCache to be 4G. We configured the on-heap LruBloc
 ```
 
 <Callout type="info" title="Direct Memory Usage In HBase">
-The default maximum direct memory varies by JVM. Traditionally it is 64M or some relation to allocated heap size (-Xmx) or no limit at all (JDK7 apparently). HBase servers use direct memory, in particular short-circuit reading (See [Leveraging local data](/docs/performance#leveraging-local-data)), the hosted DFSClient will allocate direct memory buffers. How much the DFSClient uses is not easy to quantify; it is the number of open HFiles \* `hbase.dfs.client.read.shortcircuit.buffer.size` where `hbase.dfs.client.read.shortcircuit.buffer.size` is set to 128k in HBase — see *hbase-default.xml* default configurations. If you do off-heap block caching, you’ll be making use of direct memory. The RPCServer uses a ByteBuffer pool. From 2.0.0, these buffers are off-heap ByteBuffers. Starting your JVM, make sure the `-XX:MaxDirectMemorySize` setting in *conf/hbase-env.sh* considers off-heap BlockCache (`hbase.bucketcache.size`), DFSClient usage, RPC side ByteBufferPool max size. This has to be bit higher than sum of off heap BlockCache size and max ByteBufferPool size. Allocating an extra of 1-2 GB for the max direct memory size has worked in tests. Direct memory, which is part of the Java process heap, is separate from the object heap allocated by -Xmx. The value allocated by `MaxDirectMemorySize` must not exceed physical RAM, and is likely to be less than the total available RAM due to other memory requirements and system constraints.
+The default maximum direct memory varies by JVM. Traditionally it is 64M or some relation to allocated heap size (-Xmx) or no limit at all (JDK7 apparently). HBase servers use direct memory, in particular short-circuit reading (See [Leveraging local data](/docs/performance#leveraging-local-data)), the hosted DFSClient will allocate direct memory buffers. How much the DFSClient uses is not easy to quantify; it is the number of open HFiles \* `hbase.dfs.client.read.shortcircuit.buffer.size` where `hbase.dfs.client.read.shortcircuit.buffer.size` is set to 128k in HBase — see *hbase-default.xml* default configurations. If you do off-heap block caching, you'll be making use of direct memory. The RPCServer uses a ByteBuffer pool. From 2.0.0, these buffers are off-heap ByteBuffers. Starting your JVM, make sure the `-XX:MaxDirectMemorySize` setting in *conf/hbase-env.sh* considers off-heap BlockCache (`hbase.bucketcache.size`), DFSClient usage, RPC side ByteBufferPool max size. This has to be bit higher than sum of off heap BlockCache size and max ByteBufferPool size. Allocating an extra of 1-2 GB for the max direct memory size has worked in tests. Direct memory, which is part of the Java process heap, is separate from the object heap allocated by -Xmx. The value allocated by `MaxDirectMemorySize` must not exceed physical RAM, and is likely to be less than the total available RAM due to other memory requirements and system constraints.
 
 You can see how much memory — on-heap and off-heap/direct — a RegionServer is configured to use and how much it is using at any one time by looking at the _Server Metrics: Memory_ tab in the UI. It can also be gotten via JMX. In particular the direct memory currently used by the server can be found on the `java.nio.type=BufferPool,name=direct` bean. Terracotta has a [good write up](https://web.archive.org/web/20170907032911/http://terracotta.org/documentation/4.0/bigmemorygo/configuration/storage-options) on using off-heap memory in Java. It is for their product BigMemory but a lot of the issues noted apply in general to any attempt at going off-heap. Check it out.
 
@@ -217,7 +217,7 @@ In 1.0, it should be more straight-forward. Onheap LruBlockCache size is set as 
 
 [HBASE-28463](https://issues.apache.org/jira/browse/HBASE-28463) introduced time based priority for blocks in BucketCache. It allows for defining an age threshold at individual column families' configuration, whereby blocks older than this configured threshold would be targeted first for eviction.
 
-Blocks from column families that don’t define the age threshold wouldn’t be evaluated by the time based priority, and would only be evicted following the LRU eviction logic.
+Blocks from column families that don't define the age threshold wouldn't be evaluated by the time based priority, and would only be evicted following the LRU eviction logic.
 
 This feature is mostly useful for use cases where most recent data is more frequently accessed, and therefore should get higher priority in the cache. Configuring Time Based Priority with the "age" of most accessed data would then give a finer control over blocks allocation in the BucketCache than the built-in LRU eviction logic.
 
@@ -235,7 +235,7 @@ Finally, more intricate schemas may incorporate domain-specific logic for defini
 
 With Time Based Priority for BucketCache, blocks age is evaluated when deciding if a block should be cached (i.e. during reads, writes, compaction and prefetch), as well as during the cache freeSpace run (mass eviction), prior to executing the LRU logic.
 
-Because blocks don’t hold any specific meta information other than type, it’s necessary to group blocks of the same "age group" on separate files, using specialized compaction implementations (see more details in the configuration section below). The time range of all blocks in each file is then appended at the file meta info section, and is used for evaluating the age of blocks that should be considered in the Time Based Priority logic.
+Because blocks don't hold any specific meta information other than type, it's necessary to group blocks of the same "age group" on separate files, using specialized compaction implementations (see more details in the configuration section below). The time range of all blocks in each file is then appended at the file meta info section, and is used for evaluating the age of blocks that should be considered in the Time Based Priority logic.
 
 #### Configuring Time Based Priority for BucketCache
 
@@ -250,7 +250,7 @@ To enable it, the following configuration should be set on RegionServers' _hbase
 </property>
 ```
 
-Once enabled globally, it’s necessary to define the desired strategy-specific settings at the individual column family level.
+Once enabled globally, it's necessary to define the desired strategy-specific settings at the individual column family level.
 
 #### Using Cell timestamps for Time Based Priority
 
@@ -312,7 +312,7 @@ hbase(main):003:0> alter 'orders', {NAME => 'cf1',
 
 #### Using a Custom value provider for Time Based Priority
 
-It’s also possible to hook in domain-specific logic for defining the data age of each row to be used for comparing blocks priorities. The Custom Time Based Priority framework defines the `CustomTieredCompactor.TieringValueProvider` interface, which can be implemented to provide the specific date value to be used by compaction for grouping the blocks according to the threshold age.
+It's also possible to hook in domain-specific logic for defining the data age of each row to be used for comparing blocks priorities. The Custom Time Based Priority framework defines the `CustomTieredCompactor.TieringValueProvider` interface, which can be implemented to provide the specific date value to be used by compaction for grouping the blocks according to the threshold age.
 
 In the following example, the `RowKeyPortionTieringValueProvider` implements the `getTieringValue` method. This method parses the date from a segment of the row key value, specifically between positions 14 and 29, using the "yyyyMMddHHmmss" format. The parsed date is then returned as a long timestamp, which is then used by custom tiered compaction to group the blocks based on the defined hot age threshold:
 
@@ -412,23 +412,23 @@ Within HBASE-29168, the CacheAwareLoadBalancer implements region move throttling
 
 As write requests are handled by the region server, they accumulate in an in-memory storage system called the _memstore_. Once the memstore fills, its content are written to disk as additional store files. This event is called a _memstore flush_. As store files accumulate, the RegionServer will [compact](/docs/architecture/regions#compaction) them into fewer, larger files. After each flush or compaction finishes, the amount of data stored in the region has changed. The RegionServer consults the region split policy to determine if the region has grown too large or should be split for another policy-specific reason. A region split request is enqueued if the policy recommends it.
 
-Logically, the process of splitting a region is simple. We find a suitable point in the keyspace of the region where we should divide the region in half, then split the region’s data into two new regions at that point. The details of the process however are not simple. When a split happens, the newly created _daughter regions_ do not rewrite all the data into new files immediately. Instead, they create small files similar to symbolic link files, named [Reference files](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/Reference.html), which point to either the top or bottom part of the parent store file according to the split point. The reference file is used just like a regular data file, but only half of the records are considered. The region can only be split if there are no more references to the immutable data files of the parent region. Those reference files are cleaned gradually by compactions, so that the region will stop referring to its parents files, and can be split further.
+Logically, the process of splitting a region is simple. We find a suitable point in the keyspace of the region where we should divide the region in half, then split the region's data into two new regions at that point. The details of the process however are not simple. When a split happens, the newly created _daughter regions_ do not rewrite all the data into new files immediately. Instead, they create small files similar to symbolic link files, named [Reference files](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/Reference.html), which point to either the top or bottom part of the parent store file according to the split point. The reference file is used just like a regular data file, but only half of the records are considered. The region can only be split if there are no more references to the immutable data files of the parent region. Those reference files are cleaned gradually by compactions, so that the region will stop referring to its parents files, and can be split further.
 
 Although splitting the region is a local decision made by the RegionServer, the split process itself must coordinate with many actors. The RegionServer notifies the Master before and after the split, updates the `.META.` table so that clients can discover the new daughter regions, and rearranges the directory structure and data files in HDFS. Splitting is a multi-task process. To enable rollback in case of an error, the RegionServer keeps an in-memory journal about the execution state. The steps taken by the RegionServer to execute the split are illustrated in the "RegionServer Split Process" schema below. Each step is labeled with its step number. Actions from RegionServers or Master are shown in red, while actions from the clients are shown in green.
 
 ![Region Split Process](../../images/region_split_process.png)
 
-1.  The RegionServer decides locally to split the region, and prepares the split. **THE SPLIT TRANSACTION IS STARTED.** As a first step, the RegionServer acquires a shared read lock on the table to prevent schema modifications during the splitting process. Then it creates a znode in zookeeper under `/hbase/region-in-transition/region-name`, and sets the znode’s state to `SPLITTING`.
+1.  The RegionServer decides locally to split the region, and prepares the split. **THE SPLIT TRANSACTION IS STARTED.** As a first step, the RegionServer acquires a shared read lock on the table to prevent schema modifications during the splitting process. Then it creates a znode in zookeeper under `/hbase/region-in-transition/region-name`, and sets the znode's state to `SPLITTING`.
 2.  The Master learns about this znode, since it has a watcher for the parent `region-in-transition` znode.
-3.  The RegionServer creates a sub-directory named `.splits` under the parent’s `region` directory in HDFS.
+3.  The RegionServer creates a sub-directory named `.splits` under the parent's `region` directory in HDFS.
 4.  The RegionServer closes the parent region and marks the region as offline in its local data structures. **THE SPLITTING REGION IS NOW OFFLINE.** At this point, client requests coming to the parent region will throw `NotServingRegionException`. The client will retry with some backoff. The closing region is flushed.
-5.  The RegionServer creates region directories under the `.splits` directory, for daughter regions A and B, and creates necessary data structures. Then it splits the store files, in the sense that it creates two Reference files per store file in the parent region. Those reference files will point to the parent region’s files.
+5.  The RegionServer creates region directories under the `.splits` directory, for daughter regions A and B, and creates necessary data structures. Then it splits the store files, in the sense that it creates two Reference files per store file in the parent region. Those reference files will point to the parent region's files.
 6.  The RegionServer creates the actual region directory in HDFS, and moves the reference files for each daughter.
-7.  The RegionServer sends a `Put` request to the `.META.` table, to set the parent as offline in the `.META.` table and add information about daughter regions. At this point, there won’t be individual entries in `.META.` for the daughters. Clients will see that the parent region is split if they scan `.META.`, but won’t know about the daughters until they appear in `.META.`. Also, if this `Put` to `.META`. succeeds, the parent will be effectively split. If the RegionServer fails before this RPC succeeds, Master and the next Region Server opening the region will clean dirty state about the region split. After the `.META.` update, though, the region split will be rolled-forward by Master.
+7.  The RegionServer sends a `Put` request to the `.META.` table, to set the parent as offline in the `.META.` table and add information about daughter regions. At this point, there won't be individual entries in `.META.` for the daughters. Clients will see that the parent region is split if they scan `.META.`, but won't know about the daughters until they appear in `.META.`. Also, if this `Put` to `.META`. succeeds, the parent will be effectively split. If the RegionServer fails before this RPC succeeds, Master and the next Region Server opening the region will clean dirty state about the region split. After the `.META.` update, though, the region split will be rolled-forward by Master.
 8.  The RegionServer opens daughters A and B in parallel.
 9.  The RegionServer adds the daughters A and B to `.META.`, together with information that it hosts the regions. **THE SPLIT REGIONS (DAUGHTERS WITH REFERENCES TO PARENT) ARE NOW ONLINE.** After this point, clients can discover the new regions and issue requests to them. Clients cache the `.META.` entries locally, but when they make requests to the RegionServer or `.META.`, their caches will be invalidated, and they will learn about the new regions from `.META.`.
 10. The RegionServer updates znode `/hbase/region-in-transition/region-name` in ZooKeeper to state `SPLIT`, so that the master can learn about it. The balancer can freely re-assign the daughter regions to other region servers if necessary. **THE SPLIT TRANSACTION IS NOW FINISHED.**
-11. After the split, `.META.` and HDFS will still contain references to the parent region. Those references will be removed when compactions in daughter regions rewrite the data files. Garbage collection tasks in the master periodically check whether the daughter regions still refer to the parent region’s files. If not, the parent region will be removed.
+11. After the split, `.META.` and HDFS will still contain references to the parent region. Those references will be removed when compactions in daughter regions rewrite the data files. Garbage collection tasks in the master periodically check whether the daughter regions still refer to the parent region's files. If not, the parent region will be removed.
 
 ## Write Ahead Log (WAL)
 
@@ -554,9 +554,9 @@ If you set the `hbase.hlog.split.skip.errors` option to `true`, errors are treat
 - The problematic WAL log will be moved into the _.corrupt_ directory under the hbase `rootdir`,
 - Processing of the WAL will continue
 
-If the `hbase.hlog.split.skip.errors` option is set to `false`, the default, the exception will be propagated and the split will be logged as failed. See [HBASE-2958 When hbase.hlog.split.skip.errors is set to false, we fail the split but that’s it](https://issues.apache.org/jira/browse/HBASE-2958). We need to do more than just fail split if this flag is set.
+If the `hbase.hlog.split.skip.errors` option is set to `false`, the default, the exception will be propagated and the split will be logged as failed. See [HBASE-2958 When hbase.hlog.split.skip.errors is set to false, we fail the split but that's it](https://issues.apache.org/jira/browse/HBASE-2958). We need to do more than just fail split if this flag is set.
 
-#### How EOFExceptions are treated when splitting a crashed RegionServer’s WALs
+#### How EOFExceptions are treated when splitting a crashed RegionServer's WALs
 
 If an EOFException occurs while splitting logs, the split proceeds even when `hbase.hlog.split.skip.errors` is set to `false`. An EOFException while reading the last log in the set of files to split is likely, because the RegionServer was likely in the process of writing a record at the time of a crash. For background, see [HBASE-2643 Figure how to deal with eof splitting logs](https://issues.apache.org/jira/browse/HBASE-2643)
 
@@ -613,14 +613,14 @@ It is possible to set _durability_ on each Mutation or on a Table basis. Options
 
 - _SKIP_WAL_: Do not write Mutations to the WAL (See the next section, [Disabling the WAL](/docs/architecture/regionserver#disabling-the-wal)).
 - _ASYNC_WAL_: Write the WAL asynchronously; do not hold-up clients waiting on the sync of their write to the filesystem but return immediately. The edit becomes visible. Meanwhile, in the background, the Mutation will be flushed to the WAL at some time later. This option currently may lose data. See HBASE-16689.
-- _SYNC_WAL_: The **default**. Each edit is sync’d to HDFS before we return success to the client.
-- _FSYNC_WAL_: Each edit is fsync’d to HDFS and the filesystem before we return success to the client.
+- _SYNC_WAL_: The **default**. Each edit is sync'd to HDFS before we return success to the client.
+- _FSYNC_WAL_: Each edit is fsync'd to HDFS and the filesystem before we return success to the client.
 
 Do not confuse the _ASYNC_WAL_ option on a Mutation or Table with the _AsyncFSWAL_ writer; they are distinct options unfortunately closely named
 
 ### Custom WAL Directory
 
-HBASE-17437 added support for specifying a WAL directory outside the HBase root directory or even in a different FileSystem since 1.3.3/2.0+. Some FileSystems (such as Amazon S3) don’t support append or consistent writes, in such scenario WAL directory needs to be configured in a different FileSystem to avoid loss of writes.
+HBASE-17437 added support for specifying a WAL directory outside the HBase root directory or even in a different FileSystem since 1.3.3/2.0+. Some FileSystems (such as Amazon S3) don't support append or consistent writes, in such scenario WAL directory needs to be configured in a different FileSystem to avoid loss of writes.
 
 Following configurations are added to accomplish this:
 
@@ -641,7 +641,7 @@ Following configurations are added to accomplish this:
 
 It is possible to disable the WAL, to improve performance in certain specific situations. However, disabling the WAL puts your data at risk. The only situation where this is recommended is during a bulk load. This is because, in the event of a problem, the bulk load can be re-run with no risk of data loss.
 
-The WAL is disabled by calling the HBase client field `Mutation.writeToWAL(false)`. Use the `Mutation.setDurability(Durability.SKIP_WAL)` and Mutation.getDurability() methods to set and get the field’s value. There is no way to disable the WAL for only a specific table.
+The WAL is disabled by calling the HBase client field `Mutation.writeToWAL(false)`. Use the `Mutation.setDurability(Durability.SKIP_WAL)` and Mutation.getDurability() methods to set and get the field's value. There is no way to disable the WAL for only a specific table.
 
 <Callout type="warn">
   If you disable the WAL for anything other than bulk loads, your data is at risk.

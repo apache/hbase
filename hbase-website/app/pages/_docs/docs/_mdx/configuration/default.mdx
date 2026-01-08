@@ -32,7 +32,7 @@ Changes here will require a cluster restart for HBase to notice the change thoug
 
 ## Client configuration and dependencies connecting to an HBase cluster
 
-If you are running HBase in standalone mode, you don’t need to configure anything for your client to work provided that they are all on the same machine.
+If you are running HBase in standalone mode, you don't need to configure anything for your client to work provided that they are all on the same machine.
 
 Starting release 3.0.0, the default connection registry has been switched to a rpc based implementation. Refer to [Rpc Connection Registry (new as of 2.5.0)](/docs/architecture/client#rpc-connection-registry-new-as-of-250). Depending on your HBase version, following is the expected minimal client configuration.
 
@@ -101,7 +101,7 @@ For Java applications using Maven, including the hbase-shaded-client module is t
 
 The configuration used by a Java client is kept in an [HBaseConfiguration](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/HBaseConfiguration) instance.
 
-The factory method on HBaseConfiguration, `HBaseConfiguration.create();`, on invocation, will read in the content of the first *hbase-site.xml* found on the client’s `CLASSPATH`, if one is present (Invocation will also factor in any *hbase-default.xml* found; an *hbase-default.xml* ships inside the *hbase.X.X.X.jar*). It is also possible to specify configuration directly without having to read from a *hbase-site.xml*.
+The factory method on HBaseConfiguration, `HBaseConfiguration.create();`, on invocation, will read in the content of the first *hbase-site.xml* found on the client's `CLASSPATH`, if one is present (Invocation will also factor in any *hbase-default.xml* found; an *hbase-default.xml* ships inside the *hbase.X.X.X.jar*). It is also possible to specify configuration directly without having to read from a *hbase-site.xml*.
 
 For example, to set the ZooKeeper ensemble or bootstrap nodes for the cluster programmatically do as follows:
 

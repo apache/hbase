@@ -5,7 +5,7 @@ description: "HBase provides mechanisms to secure various components and aspects
 
 ## Using Secure HTTP (HTTPS) for the Web UI
 
-A default HBase install uses insecure HTTP connections for Web UIs for the master and region servers. To enable secure HTTP (HTTPS) connections instead, set `hbase.ssl.enabled` to `true` in _hbase-site.xml_(Please prepare SSL certificate and ssl configuration file in advance). This does not change the port used by the Web UI. To change the port for the web UI for a given HBase component, configure that port’s setting in hbase-site.xml. These settings are:
+A default HBase install uses insecure HTTP connections for Web UIs for the master and region servers. To enable secure HTTP (HTTPS) connections instead, set `hbase.ssl.enabled` to `true` in _hbase-site.xml_(Please prepare SSL certificate and ssl configuration file in advance). This does not change the port used by the Web UI. To change the port for the web UI for a given HBase component, configure that port's setting in hbase-site.xml. These settings are:
 
 - `hbase.master.info.port`
 - `hbase.regionserver.info.port`
@@ -19,7 +19,7 @@ javax.net.ssl.SSLException: Unrecognized SSL message, plaintext connection?
 
 This is because the same port is used for HTTP and HTTPS.
 
-HBase uses Jetty for the Web UI. Without modifying Jetty itself, it does not seem possible to configure Jetty to redirect one port to another on the same host. See Nick Dimiduk’s contribution on this [Stack Overflow](http://stackoverflow.com/questions/20611815/redirect-from-http-to-https-in-jetty) thread for more information. If you know how to fix this without opening a second port for HTTPS, patches are appreciated.
+HBase uses Jetty for the Web UI. Without modifying Jetty itself, it does not seem possible to configure Jetty to redirect one port to another on the same host. See Nick Dimiduk's contribution on this [Stack Overflow](http://stackoverflow.com/questions/20611815/redirect-from-http-to-https-in-jetty) thread for more information. If you know how to fix this without opening a second port for HTTPS, patches are appreciated.
 
 </Callout>
 
@@ -129,13 +129,13 @@ Unix groups membership define that `alice` is a member of the group `admins`. `b
 
 Given the above configuration, `alice` is allowed to access sensitive endpoints in the Web UI as she is a member of the `admins` group. `charlie` is also allowed to access sensitive endpoints because he is explicitly listed as an admin in the configuration. `bob` is not allowed to access sensitive endpoints because he is not a member of the `admins` group nor is listed as an explicit admin user via `hbase.security.authentication.spnego.admin.users`, but can still use any non-sensitive endpoints in the Web UI.
 
-If it doesn’t go without saying: non-authenticated users cannot access any part of the Web UI.
+If it doesn't go without saying: non-authenticated users cannot access any part of the Web UI.
 
 ## Using LDAP authentication with Web UIs
 
 LDAP authentication to HBase Web UIs can be enabled via configuring LDAP with the `hbase.security.authentication.ui` property in _hbase-site.xml_. The `hbase.http.filter.initializers` property also needs to have the `AuthenticationFilterInitializer` class.
 
-**IMPORTANT:** A LDAP server must be configured and running. When TLS is enabled for communication with LDAP server (either via ldaps scheme or ‘start TLS’ extension), configure the public certificate of the LDAP server in the local truststore. The LDAP authentication mechanism uses HTTP Basic authentication scheme to verify user specified credentials against a configured LDAP (or Active Directory) server. The authentication filter must be configured with the following init parameters:
+**IMPORTANT:** A LDAP server must be configured and running. When TLS is enabled for communication with LDAP server (either via ldaps scheme or ‘start TLS' extension), configure the public certificate of the LDAP server in the local truststore. The LDAP authentication mechanism uses HTTP Basic authentication scheme to verify user specified credentials against a configured LDAP (or Active Directory) server. The authentication filter must be configured with the following init parameters:
 
 ```xml
 <property>
@@ -173,7 +173,7 @@ A number of properties exist to configure LDAP authentication for the web server
 <property>
   <name>hadoop.http.authentication.ldap.enablestarttls</name>
   <value>false</value>
-  <description>A boolean value used to define if the LDAP server supports ‘StartTLS’ extension.</description>
+  <description>A boolean value used to define if the LDAP server supports ‘StartTLS' extension.</description>
 </property>
 <property>
   <name>hadoop.http.authentication.ldap.basedn</name>

@@ -21,7 +21,7 @@ The default timeout is 90 seconds (specified in milliseconds). This means that i
 
 To change this configuration, edit *hbase-site.xml*, copy the changed file across the cluster and restart.
 
-We set this value high to save our having to field questions up on the mailing lists asking why a RegionServer went down during a massive import. The usual cause is that their JVM is untuned and they are running into long GC pauses. Our thinking is that while users are getting familiar with HBase, we’d save them having to know all of its intricacies. Later when they’ve built some confidence, then they can play with configuration such as this.
+We set this value high to save our having to field questions up on the mailing lists asking why a RegionServer went down during a massive import. The usual cause is that their JVM is untuned and they are running into long GC pauses. Our thinking is that while users are getting familiar with HBase, we'd save them having to know all of its intricacies. Later when they've built some confidence, then they can play with configuration such as this.
 
 #### Number of ZooKeeper Instances
 
@@ -37,9 +37,9 @@ This is the "...number of volumes that are allowed to fail before a DataNode sto
 
 This setting defines the number of threads that are kept open to answer incoming requests to user tables. The rule of thumb is to keep this number low when the payload per request approaches the MB (big puts, scans using a large cache) and high when the payload is small (gets, small puts, ICVs, deletes). The total size of the queries in progress is limited by the setting `hbase.ipc.server.max.callqueue.size`.
 
-It is safe to set that number to the maximum number of incoming clients if their payload is small, the typical example being a cluster that serves a website since puts aren’t typically buffered and most of the operations are gets.
+It is safe to set that number to the maximum number of incoming clients if their payload is small, the typical example being a cluster that serves a website since puts aren't typically buffered and most of the operations are gets.
 
-The reason why it is dangerous to keep this setting high is that the aggregate size of all the puts that are currently happening in a region server may impose too much pressure on its memory, or even trigger an OutOfMemoryError. A RegionServer running on low memory will trigger its JVM’s garbage collector to run more frequently up to a point where GC pauses become noticeable (the reason being that all the memory used to keep all the requests' payloads cannot be trashed, no matter how hard the garbage collector tries). After some time, the overall cluster throughput is affected since every request that hits that RegionServer will take longer, which exacerbates the problem even more.
+The reason why it is dangerous to keep this setting high is that the aggregate size of all the puts that are currently happening in a region server may impose too much pressure on its memory, or even trigger an OutOfMemoryError. A RegionServer running on low memory will trigger its JVM's garbage collector to run more frequently up to a point where GC pauses become noticeable (the reason being that all the memory used to keep all the requests' payloads cannot be trashed, no matter how hard the garbage collector tries). After some time, the overall cluster throughput is affected since every request that hits that RegionServer will take longer, which exacerbates the problem even more.
 
 You can get a sense of whether you have too little or too many handlers by [rpc.logging](/docs/troubleshooting#enabling-rpc-level-logging) on an individual RegionServer then tailing its logs (Queued requests consume memory).
 
@@ -57,7 +57,7 @@ See [compression](/docs/compression) for more information.
 
 HBase uses [wal]/docs/architecture/regionserver#write-ahead-log-wal to recover the memstore data that has not been flushed to disk in case of an RS failure. These WAL files should be configured to be slightly smaller than HDFS block (by default a HDFS block is 64Mb and a WAL file is ~60Mb).
 
-HBase also has a limit on the number of WAL files, designed to ensure there’s never too much data that needs to be replayed during recovery. This limit needs to be set according to memstore configuration, so that all the necessary data would fit. It is recommended to allocate enough WAL files to store at least that much data (when all memstores are close to full). For example, with 16Gb RS heap, default memstore settings (0.4), and default WAL file size (~60Mb), 16Gb\*0.4/60, the starting point for WAL file count is ~109. However, as all memstores are not expected to be full all the time, less WAL files can be allocated.
+HBase also has a limit on the number of WAL files, designed to ensure there's never too much data that needs to be replayed during recovery. This limit needs to be set according to memstore configuration, so that all the necessary data would fit. It is recommended to allocate enough WAL files to store at least that much data (when all memstores are close to full). For example, with 16Gb RS heap, default memstore settings (0.4), and default WAL file size (~60Mb), 16Gb\*0.4/60, the starting point for WAL file count is ~109. However, as all memstores are not expected to be full all the time, less WAL files can be allocated.
 
 ### Managed Splitting
 
@@ -107,17 +107,17 @@ See [master.processes.loadbalancer](/docs/architecture/master#loadbalancer) for 
 
 ### Disabling Blockcache
 
-Do not turn off block cache (You’d do it by setting `hfile.block.cache.size` to zero). Currently, we do not do well if you do this because the RegionServer will spend all its time loading HFile indices over and over again. If your working set is such that block cache does you no good, at least size the block cache such that HFile indices will stay up in the cache (you can get a rough idea on the size you need by surveying RegionServer UIs; you’ll see index block size accounted near the top of the webpage).
+Do not turn off block cache (You'd do it by setting `hfile.block.cache.size` to zero). Currently, we do not do well if you do this because the RegionServer will spend all its time loading HFile indices over and over again. If your working set is such that block cache does you no good, at least size the block cache such that HFile indices will stay up in the cache (you can get a rough idea on the size you need by surveying RegionServer UIs; you'll see index block size accounted near the top of the webpage).
 
 ### Nagle's or the small package problem
 
-If a big 40ms or so occasional delay is seen in operations against HBase, try the [Nagle's](https://en.wikipedia.org/wiki/Nagle%27s_algorithm) setting. For example, see the user mailing list thread, [Inconsistent scan performance with caching set to 1](https://lists.apache.org/thread.html/3d7ceb41c04a955b1b1c80480cdba95208ca3e97bf6895a40e0c1bbb%401346186127%40%3Cuser.hbase.apache.org%3E) and the issue cited therein where setting `notcpdelay` improved scan speeds. You might also see the graphs on the tail of [HBASE-7008 Set scanner caching to a better default](https://issues.apache.org/jira/browse/HBASE-7008) where our Lars Hofhansl tries various data sizes w/ Nagle’s on and off measuring the effect.
+If a big 40ms or so occasional delay is seen in operations against HBase, try the [Nagle's](https://en.wikipedia.org/wiki/Nagle%27s_algorithm) setting. For example, see the user mailing list thread, [Inconsistent scan performance with caching set to 1](https://lists.apache.org/thread.html/3d7ceb41c04a955b1b1c80480cdba95208ca3e97bf6895a40e0c1bbb%401346186127%40%3Cuser.hbase.apache.org%3E) and the issue cited therein where setting `notcpdelay` improved scan speeds. You might also see the graphs on the tail of [HBASE-7008 Set scanner caching to a better default](https://issues.apache.org/jira/browse/HBASE-7008) where our Lars Hofhansl tries various data sizes w/ Nagle's on and off measuring the effect.
 
 ### Better Mean Time to Recover (MTTR)
 
 This section is about configurations that will make servers come back faster after a fail. See the Deveraj Das and Nicolas Liochon blog post [Introduction to HBase Mean Time to Recover (MTTR)](http://hortonworks.com/blog/introduction-to-hbase-mean-time-to-recover-mttr/) for a brief introduction.
 
-The issue [HBASE-8354 forces Namenode into loop with lease recovery requests](https://issues.apache.org/jira/browse/HBASE-8389) is messy but has a bunch of good discussion toward the end on low timeouts and how to cause faster recovery including citation of fixes added to HDFS. Read the Varun Sharma comments. The below suggested configurations are Varun’s suggestions distilled and tested. Make sure you are running on a late-version HDFS so you have the fixes he refers to and himself adds to HDFS that help HBase MTTR (e.g. HDFS-3703, HDFS-3712, and HDFS-4791 — Hadoop 2 for sure has them and late Hadoop 1 has some). Set the following in the RegionServer.
+The issue [HBASE-8354 forces Namenode into loop with lease recovery requests](https://issues.apache.org/jira/browse/HBASE-8389) is messy but has a bunch of good discussion toward the end on low timeouts and how to cause faster recovery including citation of fixes added to HDFS. Read the Varun Sharma comments. The below suggested configurations are Varun's suggestions distilled and tested. Make sure you are running on a late-version HDFS so you have the fixes he refers to and himself adds to HDFS that help HBase MTTR (e.g. HDFS-3703, HDFS-3712, and HDFS-4791 — Hadoop 2 for sure has them and late Hadoop 1 has some). Set the following in the RegionServer.
 
 ```xml
 <property>

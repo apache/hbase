@@ -131,7 +131,7 @@ At this point, the CMS sweep took 3.332 seconds, and heap went from about ~ 2.8 
 
 The key points here is to keep all these pauses low. CMS pauses are always low, but if your ParNew starts growing, you can see minor GC pauses approach 100ms, exceed 100ms and hit as high at 400ms.
 
-This can be due to the size of the ParNew, which should be relatively small. If your ParNew is very large after running HBase for a while, in one example a ParNew was about 150MB, then you might have to constrain the size of ParNew (The larger it is, the longer the collections take but if it’s too small, objects are promoted to old gen too quickly). In the below we constrain new gen size to 64m.
+This can be due to the size of the ParNew, which should be relatively small. If your ParNew is very large after running HBase for a while, in one example a ParNew was about 150MB, then you might have to constrain the size of ParNew (The larger it is, the longer the collections take but if it's too small, objects are promoted to old gen too quickly). In the below we constrain new gen size to 64m.
 
 Add the below line in *hbase-env.sh*:
 
@@ -289,9 +289,9 @@ In order, we see a:
 - Hadoop TaskTracker, manages the local Childs
 - Hadoop DataNode, serves blocks
 - HQuorumPeer, a ZooKeeper ensemble member
-- Jps, well... it’s the current process
-- ThriftServer, it’s a special one will be running only if thrift was started
-- jmx, this is a local process that’s part of our monitoring platform ( poorly named maybe). You probably don’t have that.
+- Jps, well... it's the current process
+- ThriftServer, it's a special one will be running only if thrift was started
+- jmx, this is a local process that's part of our monitoring platform ( poorly named maybe). You probably don't have that.
 
 You can then do stuff like checking out the full command line that started the process:
 
@@ -484,7 +484,7 @@ On your clients, edit *$HBASE_HOME/conf/log4j.properties* and change this: `log4
 
 This is a fairly frequent question on the Apache HBase dist-list. The scenario is that a client is typically inserting a lot of data into a relatively un-optimized HBase cluster. Compression can exacerbate the pauses, although it is not the source of the problem.
 
-See [Table Creation: Pre-Creating Regions](/docs/performance#table-creation-pre-creating-regions) on the pattern for pre-creating regions and confirm that the table isn’t starting with a single region.
+See [Table Creation: Pre-Creating Regions](/docs/performance#table-creation-pre-creating-regions) on the pattern for pre-creating regions and confirm that the table isn't starting with a single region.
 
 See [HBase Configurations](/docs/performance#hbase-configurations) for cluster configuration, particularly `hbase.hstore.blockingStoreFiles`, `hbase.hregion.memstore.block.multiplier`, `MAX_FILESIZE` (region size), and `MEMSTORE_FLUSHSIZE.`
 
@@ -559,7 +559,7 @@ Refer to [Master Registry (new as of 2.3.0)](/docs/architecture/client#masterreg
 
 ## MapReduce
 
-### You Think You’re On The Cluster, But You’re Actually Local
+### You Think You're On The Cluster, But You're Actually Local
 
 This following stacktrace happened using `ImportTsv`, but things like this can happen on any job with a mis-configuration.
 
@@ -659,9 +659,9 @@ See the [HDFS User Guide](https://hadoop.apache.org/docs/stable/hadoop-project-d
 
 #### Zero size WALs with data in them
 
-Problem: when getting a listing of all the files in a RegionServer’s *WALs* directory, one file has a size of 0 but it contains data.
+Problem: when getting a listing of all the files in a RegionServer's *WALs* directory, one file has a size of 0 but it contains data.
 
-Answer: It’s an HDFS quirk. A file that’s currently being written to will appear to have a size of 0 but once it’s closed it will show its true size
+Answer: It's an HDFS quirk. A file that's currently being written to will appear to have a size of 0 but once it's closed it will show its true size
 
 #### Use Cases
 
@@ -708,7 +708,7 @@ For more information on the RegionServers, see [RegionServer](/docs/architecture
 
 #### Master Starts, But RegionServers Do Not
 
-The Master believes the RegionServers have the IP of 127.0.0.1 - which is localhost and resolves to the master’s own localhost.
+The Master believes the RegionServers have the IP of 127.0.0.1 - which is localhost and resolves to the master's own localhost.
 
 The RegionServers are erroneously informing the Master that their IP addresses are 127.0.0.1.
 
@@ -746,7 +746,7 @@ java.lang.UnsatisfiedLinkError: no gplcompression in java.library.path
 
 #### RegionServer aborts due to lack of hsync for filesystem
 
-In order to provide data durability for writes to the cluster HBase relies on the ability to durably save state in a write ahead log. When using a version of Apache Hadoop Common’s filesystem API that supports checking on the availability of needed calls, HBase will proactively abort the cluster if it finds it can’t operate safely.
+In order to provide data durability for writes to the cluster HBase relies on the ability to durably save state in a write ahead log. When using a version of Apache Hadoop Common's filesystem API that supports checking on the availability of needed calls, HBase will proactively abort the cluster if it finds it can't operate safely.
 
 For RegionServer roles, the failure will show up in logs like this:
 
@@ -870,7 +870,7 @@ If you see warning messages like this...
 2009-02-24 10:01:36,472 WARN org.apache.hadoop.hbase.regionserver.HRegionServer: unable to report to master for xxx milliseconds - retrying
 ```
 
-... or see full GC compactions then you may be experiencing full GC’s.
+... or see full GC compactions then you may be experiencing full GC's.
 
 #### "No live nodes contain current block" and/or YouAreDeadException
 
@@ -899,10 +899,10 @@ java.io.IOException: Session Expired
 ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expired
 ```
 
-The JVM is doing a long running garbage collecting which is pausing every threads (aka "stop the world"). Since the RegionServer’s local ZooKeeper client cannot send heartbeats, the session times out. By design, we shut down any node that isn’t able to contact the ZooKeeper ensemble after getting a timeout so that it stops serving data that may already be assigned elsewhere.
+The JVM is doing a long running garbage collecting which is pausing every threads (aka "stop the world"). Since the RegionServer's local ZooKeeper client cannot send heartbeats, the session times out. By design, we shut down any node that isn't able to contact the ZooKeeper ensemble after getting a timeout so that it stops serving data that may already be assigned elsewhere.
 
-- Make sure you give plenty of RAM (in *hbase-env.sh*), the default of 1GB won’t be able to sustain long running imports.
-- Make sure you don’t swap, the JVM never behaves well under swapping.
+- Make sure you give plenty of RAM (in *hbase-env.sh*), the default of 1GB won't be able to sustain long running imports.
+- Make sure you don't swap, the JVM never behaves well under swapping.
 - Make sure you are not CPU starving the RegionServer thread. For example, if you are running a MapReduce job using 6 CPU-intensive tasks on a machine with 4 cores, you are probably starving the RegionServer enough to create longer garbage collection pauses.
 - Increase the ZooKeeper session timeout
 
@@ -937,7 +937,7 @@ We are not using the native versions of compression libraries. See [HBASE-1900 P
 
 #### Server handler X on 60020 caught: java.nio.channels.ClosedChannelException
 
-If you see this type of message it means that the region server was trying to read/send data from/to a client but it already went away. Typical causes for this are if the client was killed (you see a storm of messages like this when a MapReduce job is killed or fails) or if the client receives a SocketTimeoutException. It’s harmless, but you should consider digging in a bit more if you aren’t doing something to trigger them.
+If you see this type of message it means that the region server was trying to read/send data from/to a client but it already went away. Typical causes for this are if the client was killed (you see a storm of messages like this when a MapReduce job is killed or fails) or if the client receives a SocketTimeoutException. It's harmless, but you should consider digging in a bit more if you aren't doing something to trigger them.
 
 ### Snapshot Errors Due to Reverse DNS
 
@@ -975,7 +975,7 @@ If you have many regions on your cluster and you see an error like that reported
 
 #### Master fails to become active due to lack of hsync for filesystem
 
-HBase’s internal framework for cluster operations requires the ability to durably save state in a write ahead log. When using a version of Apache Hadoop Common’s filesystem API that supports checking on the availability of needed calls, HBase will proactively abort the cluster if it finds it can’t operate safely.
+HBase's internal framework for cluster operations requires the ability to durably save state in a write ahead log. When using a version of Apache Hadoop Common's filesystem API that supports checking on the availability of needed calls, HBase will proactively abort the cluster if it finds it can't operate safely.
 
 For Master roles, the failure will show up in logs like this:
 
@@ -1003,15 +1003,15 @@ If you are attempting to run in standalone mode and see this error, please walk 
 
 #### Could not find my address: xyz in list of ZooKeeper quorum servers
 
-A ZooKeeper server wasn’t able to start, throws that error. xyz is the name of your server.
+A ZooKeeper server wasn't able to start, throws that error. xyz is the name of your server.
 
-This is a name lookup problem. HBase tries to start a ZooKeeper server on some machine but that machine isn’t able to find itself in the `hbase.zookeeper.quorum` configuration.
+This is a name lookup problem. HBase tries to start a ZooKeeper server on some machine but that machine isn't able to find itself in the `hbase.zookeeper.quorum` configuration.
 
 Use the hostname presented in the error message instead of the value you used. If you have a DNS server, you can set `hbase.zookeeper.dns.interface` and `hbase.zookeeper.dns.nameserver` in *hbase-site.xml* to make sure it resolves to the correct FQDN.
 
 ### ZooKeeper, The Cluster Canary
 
-ZooKeeper is the cluster’s "canary in the mineshaft". It’ll be the first to notice issues if any so making sure its happy is the short-cut to a humming cluster.
+ZooKeeper is the cluster's "canary in the mineshaft". It'll be the first to notice issues if any so making sure its happy is the short-cut to a humming cluster.
 
 See the [ZooKeeper Operating Environment Troubleshooting](https://cwiki.apache.org/confluence/display/HADOOP2/ZooKeeper+Troubleshooting) page. It has suggestions and tools for checking disk and networking performance; i.e. the operating environment your ZooKeeper and HBase are running in.
 
@@ -1039,7 +1039,7 @@ Questions on HBase and Amazon EC2 come up frequently on the HBase dist-list.
 
 ### Remote Java Connection into EC2 Cluster Not Working
 
-See Andrew’s answer here, up on the user list: [Remote Java client connection into EC2 instance](https://lists.apache.org/thread.html/666bfa863bc2eb2ec7bbe5ecfbee345e0cbf1d58aaa6c1636dfcb527%401269010842%40%3Cuser.hbase.apache.org%3E).
+See Andrew's answer here, up on the user list: [Remote Java client connection into EC2 instance](https://lists.apache.org/thread.html/666bfa863bc2eb2ec7bbe5ecfbee345e0cbf1d58aaa6c1636dfcb527%401269010842%40%3Cuser.hbase.apache.org%3E).
 
 ## HBase and Hadoop version issues
 

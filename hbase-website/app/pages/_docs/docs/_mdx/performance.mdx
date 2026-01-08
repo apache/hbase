@@ -41,7 +41,7 @@ Multiple switches are a potential pitfall in the architecture. The most common c
 
 Mitigation of this issue is fairly simple and can be accomplished in multiple ways:
 
-- Use appropriate hardware for the scale of the cluster which you’re attempting to build.
+- Use appropriate hardware for the scale of the cluster which you're attempting to build.
 - Use larger single switch configurations i.e. single 48 port as opposed to 2x 24 port
 - Configure port trunking for uplinks to utilize multiple interfaces to increase cross switch bandwidth.
 
@@ -52,7 +52,7 @@ Multiple rack configurations carry the same potential issues as multiple switche
 - Poor switch capacity performance
 - Insufficient uplink to another rack
 
-If the switches in your rack have appropriate switching capacity to handle all the hosts at full speed, the next most likely issue will be caused by homing more of your cluster across racks. The easiest way to avoid issues when spanning multiple racks is to use port trunking to create a bonded uplink to other racks. The downside of this method however, is in the overhead of ports that could potentially be used. An example of this is, creating an 8Gbps port channel from rack A to rack B, using 8 of your 24 ports to communicate between racks gives you a poor ROI, using too few however can mean you’re not getting the most out of your cluster.
+If the switches in your rack have appropriate switching capacity to handle all the hosts at full speed, the next most likely issue will be caused by homing more of your cluster across racks. The easiest way to avoid issues when spanning multiple racks is to use port trunking to create a bonded uplink to other racks. The downside of this method however, is in the overhead of ports that could potentially be used. An example of this is, creating an 8Gbps port channel from rack A to rack B, using 8 of your 24 ports to communicate between racks gives you a poor ROI, using too few however can mean you're not getting the most out of your cluster.
 
 Using 10Gbe links between racks will greatly increase performance, and assuming your switches support a 10Gbe uplink or allow for an expansion card will allow you to save your ports for machines as opposed to uplinks.
 
@@ -70,7 +70,7 @@ The [CAP Theorem](http://en.wikipedia.org/wiki/CAP_theorem) states that a distri
 
 HBase favors consistency and partition tolerance, where a decision has to be made. Coda Hale explains why partition tolerance is so important, in [http://codahale.com/you-cant-sacrifice-partition-tolerance/](http://codahale.com/you-cant-sacrifice-partition-tolerance/).
 
-Robert Yokota used an automated testing framework called [Jepson](https://aphyr.com/tags/jepsen) to test HBase’s partition tolerance in the face of network partitions, using techniques modeled after Aphyr’s [Call Me Maybe](https://aphyr.com/posts/281-call-me-maybe-carly-rae-jepsen-and-the-perils-of-network-partitions) series. The results, available as a [blog post](https://rayokota.wordpress.com/2015/09/30/call-me-maybe-hbase/) and an [addendum](https://rayokota.wordpress.com/2015/09/30/call-me-maybe-hbase-addendum/), show that HBase performs correctly.
+Robert Yokota used an automated testing framework called [Jepson](https://aphyr.com/tags/jepsen) to test HBase's partition tolerance in the face of network partitions, using techniques modeled after Aphyr's [Call Me Maybe](https://aphyr.com/posts/281-call-me-maybe-carly-rae-jepsen-and-the-perils-of-network-partitions) series. The results, available as a [blog post](https://rayokota.wordpress.com/2015/09/30/call-me-maybe-hbase/) and an [addendum](https://rayokota.wordpress.com/2015/09/30/call-me-maybe-hbase-addendum/), show that HBase performs correctly.
 
 ## Java
 
@@ -80,9 +80,9 @@ Robert Yokota used an automated testing framework called [Jepson](https://aphyr.
 
 In his presentation, [Avoiding Full GCs with MemStore-Local Allocation Buffers](http://www.slideshare.net/cloudera/hbase-hug-presentation), Todd Lipcon describes two cases of stop-the-world garbage collections common in HBase, especially during loading; CMS failure modes and old generation heap fragmentation brought.
 
-To address the first, start the CMS earlier than default by adding `-XX:CMSInitiatingOccupancyFraction` and setting it down from defaults. Start at 60 or 70 percent (The lower you bring down the threshold, the more GCing is done, the more CPU used). To address the second fragmentation issue, Todd added an experimental facility, (MSLAB), that must be explicitly enabled in Apache HBase 0.90.x (It’s defaulted to be _on_ in Apache 0.92.x HBase). Set `hbase.hregion.memstore.mslab.enabled` to true in your `Configuration`. See the cited slides for background and detail. The latest JVMs do better regards fragmentation so make sure you are running a recent release. Read down in the message, [Identifying concurrent mode failures caused by fragmentation](http://osdir.com/ml/hotspot-gc-use/2011-11/msg00002.html). Be aware that when enabled, each MemStore instance will occupy at least an MSLAB instance of memory. If you have thousands of regions or lots of regions each with many column families, this allocation of MSLAB may be responsible for a good portion of your heap allocation and in an extreme case cause you to OOME. Disable MSLAB in this case, or lower the amount of memory it uses or float less regions per server.
+To address the first, start the CMS earlier than default by adding `-XX:CMSInitiatingOccupancyFraction` and setting it down from defaults. Start at 60 or 70 percent (The lower you bring down the threshold, the more GCing is done, the more CPU used). To address the second fragmentation issue, Todd added an experimental facility, (MSLAB), that must be explicitly enabled in Apache HBase 0.90.x (It's defaulted to be _on_ in Apache 0.92.x HBase). Set `hbase.hregion.memstore.mslab.enabled` to true in your `Configuration`. See the cited slides for background and detail. The latest JVMs do better regards fragmentation so make sure you are running a recent release. Read down in the message, [Identifying concurrent mode failures caused by fragmentation](http://osdir.com/ml/hotspot-gc-use/2011-11/msg00002.html). Be aware that when enabled, each MemStore instance will occupy at least an MSLAB instance of memory. If you have thousands of regions or lots of regions each with many column families, this allocation of MSLAB may be responsible for a good portion of your heap allocation and in an extreme case cause you to OOME. Disable MSLAB in this case, or lower the amount of memory it uses or float less regions per server.
 
-If you have a write-heavy workload, check out [HBASE-8163 MemStoreChunkPool: An improvement for JAVA GC when using MSLAB](https://issues.apache.org/jira/browse/HBASE-8163). It describes configurations to lower the amount of young GC during write-heavy loadings. If you do not have HBASE-8163 installed, and you are trying to improve your young GC times, one trick to consider — courtesy of our Liang Xie — is to set the GC config `-XX:PretenureSizeThreshold` in _hbase-env.sh_ to be just smaller than the size of `hbase.hregion.memstore.mslab.chunksize` so MSLAB allocations happen in the tenured space directly rather than first in the young gen. You’d do this because these MSLAB allocations are going to likely make it to the old gen anyways and rather than pay the price of a copies between s0 and s1 in eden space followed by the copy up from young to old gen after the MSLABs have achieved sufficient tenure, save a bit of YGC churn and allocate in the old gen directly.
+If you have a write-heavy workload, check out [HBASE-8163 MemStoreChunkPool: An improvement for JAVA GC when using MSLAB](https://issues.apache.org/jira/browse/HBASE-8163). It describes configurations to lower the amount of young GC during write-heavy loadings. If you do not have HBASE-8163 installed, and you are trying to improve your young GC times, one trick to consider — courtesy of our Liang Xie — is to set the GC config `-XX:PretenureSizeThreshold` in _hbase-env.sh_ to be just smaller than the size of `hbase.hregion.memstore.mslab.chunksize` so MSLAB allocations happen in the tenured space directly rather than first in the young gen. You'd do this because these MSLAB allocations are going to likely make it to the old gen anyways and rather than pay the price of a copies between s0 and s1 in eden space followed by the copy up from young to old gen after the MSLABs have achieved sufficient tenure, save a bit of YGC churn and allocate in the old gen directly.
 
 Other sources of long GCs can be the JVM itself logging. See [Eliminating Large JVM GC Pauses Caused by Background IO Traffic](https://engineering.linkedin.com/blog/2016/02/eliminating-large-jvm-gc-pauses-caused-by-background-io-traffic)
 
@@ -276,7 +276,7 @@ Production systems should use compression with their ColumnFamily definitions. S
 
 #### However...
 
-Compression deflates data _on disk_. When it’s in-memory (e.g., in the MemStore) or on the wire (e.g., transferring between RegionServer and Client) it’s inflated. So while using ColumnFamily compression is a best practice, but it’s not going to completely eliminate the impact of over-sized Keys, over-sized ColumnFamily names, or over-sized Column names.
+Compression deflates data _on disk_. When it's in-memory (e.g., in the MemStore) or on the wire (e.g., transferring between RegionServer and Client) it's inflated. So while using ColumnFamily compression is a best practice, but it's not going to completely eliminate the impact of over-sized Keys, over-sized ColumnFamily names, or over-sized Column names.
 
 See [Try to minimize row and column sizes](/docs/regionserver-sizing#try-to-minimize-row-and-column-sizes) on for schema design tips, and [KeyValue](/docs/architecture/regions#keyvalue) for more information on HBase stores data internally.
 
@@ -292,7 +292,7 @@ Result r = table.get(get);
 byte[] b = r.getValue(Bytes.toBytes("cf"), Bytes.toBytes("attr"));  // returns current version of value
 ```
 
-But especially when inside loops (and MapReduce jobs), converting the columnFamily and column-names to byte-arrays repeatedly is surprisingly expensive. It’s better to use constants for the byte-arrays, like this:
+But especially when inside loops (and MapReduce jobs), converting the columnFamily and column-names to byte-arrays repeatedly is surprisingly expensive. It's better to use constants for the byte-arrays, like this:
 
 ```java
 public static final byte[] CF = "cf".getBytes();
@@ -366,7 +366,7 @@ In addition to using the writeBuffer, grouping `Put`s by RegionServer can reduce
 
 ### MapReduce: Skip The Reducer
 
-When writing a lot of data to an HBase table from a MR job (e.g., with [TableOutputFormat](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/TableOutputFormat.html)), and specifically where Puts are being emitted from the Mapper, skip the Reducer step. When a Reducer step is used, all of the output (Puts) from the Mapper will get spooled to disk, then sorted/shuffled to other Reducers that will most likely be off-node. It’s far more efficient to just write directly to HBase.
+When writing a lot of data to an HBase table from a MR job (e.g., with [TableOutputFormat](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/TableOutputFormat.html)), and specifically where Puts are being emitted from the Mapper, skip the Reducer step. When a Reducer step is used, all of the output (Puts) from the Mapper will get spooled to disk, then sorted/shuffled to other Reducers that will most likely be off-node. It's far more efficient to just write directly to HBase.
 
 For summary jobs where HBase is used as a source and a sink, then writes will be coming from the Reducer step (e.g., summarize values then write out result). This is a different processing problem than from the above case.
 
@@ -374,7 +374,7 @@ For summary jobs where HBase is used as a source and a sink, then writes will be
 
 If all your data is being written to one region at a time, then re-read the section on processing timeseries data.
 
-Also, if you are pre-splitting regions and all your data is _still_ winding up in a single region even though your keys aren’t monotonically increasing, confirm that your keyspace actually works with the split strategy. There are a variety of reasons that regions may appear "well split" but won’t work with your data. As the HBase client communicates directly with the RegionServers, this can be obtained via [RegionLocator.getRegionLocation](<https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/RegionLocator.html#getRegionLocation(byte%5B%5D)>).
+Also, if you are pre-splitting regions and all your data is _still_ winding up in a single region even though your keys aren't monotonically increasing, confirm that your keyspace actually works with the split strategy. There are a variety of reasons that regions may appear "well split" but won't work with your data. As the HBase client communicates directly with the RegionServers, this can be obtained via [RegionLocator.getRegionLocation](<https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/RegionLocator.html#getRegionLocation(byte%5B%5D)>).
 
 See [Table Creation: Pre-Creating Regions](/docs/performance#table-creation-pre-creating-regions), as well as [HBase Configurations](/docs/performance#hbase-configurations)
 
@@ -384,7 +384,7 @@ The mailing list can help if you are having performance issues.
 
 ### Scan Caching
 
-If HBase is used as an input source for a MapReduce job, for example, make sure that the input [Scan](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html) instance to the MapReduce job has `setCaching` set to something greater than the default (which is 1). Using the default value means that the map-task will make call back to the region-server for every record processed. Setting this value to 500, for example, will transfer 500 rows at a time to the client to be processed. There is a cost/benefit to have the cache value be large because it costs more in memory for both client and RegionServer, so bigger isn’t always better.
+If HBase is used as an input source for a MapReduce job, for example, make sure that the input [Scan](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html) instance to the MapReduce job has `setCaching` set to something greater than the default (which is 1). Using the default value means that the map-task will make call back to the region-server for every record processed. Setting this value to 500, for example, will transfer 500 rows at a time to the client to be processed. There is a cost/benefit to have the cache value be large because it costs more in memory for both client and RegionServer, so bigger isn't always better.
 
 #### Scan Caching in MapReduce Jobs
 
@@ -415,7 +415,7 @@ For MapReduce jobs that use HBase tables as a source, if there a pattern where t
 
 ### Close ResultScanners
 
-This isn’t so much about improving performance but rather _avoiding_ performance problems. If you forget to close [ResultScanners](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ResultScanner.html) you can cause problems on the RegionServers. Always have ResultScanner processing enclosed in try/catch blocks.
+This isn't so much about improving performance but rather _avoiding_ performance problems. If you forget to close [ResultScanners](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ResultScanner.html) you can cause problems on the RegionServers. Always have ResultScanner processing enclosed in try/catch blocks.
 
 ```java
 Scan scan = new Scan();
@@ -490,7 +490,7 @@ Other concerns to keep in mind while running with hedged reads enabled include:
 
 (From Yu Li up in HBASE-17083)
 
-Because an HBase RegionServer is a HDFS client, you can enable hedged reads in HBase, by adding the following properties to the RegionServer’s hbase-site.xml and tuning the values to suit your environment.
+Because an HBase RegionServer is a HDFS client, you can enable hedged reads in HBase, by adding the following properties to the RegionServer's hbase-site.xml and tuning the values to suit your environment.
 
 **Configuration for Hedged Reads**
 
@@ -528,7 +528,7 @@ See also [Compaction](/docs/architecture/regions#compaction) and [Admin.majorCom
 
 ### Delete RPC Behavior
 
-Be aware that `Table.delete(Delete)` doesn’t use the writeBuffer. It will execute an RegionServer RPC with each invocation. For a large number of deletes, consider `Table.delete(List)`.
+Be aware that `Table.delete(Delete)` doesn't use the writeBuffer. It will execute an RegionServer RPC with each invocation. For a large number of deletes, consider `Table.delete(List)`.
 
 See [hbase.client.Delete](<https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#delete(org.apache.hadoop.hbase.client.Delete)>)
 
@@ -542,7 +542,7 @@ The original use-case for HDFS was batch processing. As such, there low-latency 
 
 ### Leveraging local data
 
-Since Hadoop 1.0.0 (also 0.22.1, 0.23.1, CDH3u3 and HDP 1.0) via [HDFS-2246](https://issues.apache.org/jira/browse/HDFS-2246), it is possible for the DFSClient to take a "short circuit" and read directly from the disk instead of going through the DataNode when the data is local. What this means for HBase is that the RegionServers can read directly off their machine’s disks instead of having to open a socket to talk to the DataNode, the former being generally much faster. See JD’s [Performance Talk](http://files.meetup.com/1350427/hug_ebay_jdcryans.pdf). Also see [HBase, mail \# dev - read short circuit](https://lists.apache.org/thread.html/ce2ce3a3bbd20806d0c017b2e7528e78a46ccb87c063831db051949d%401347548325%40%3Cdev.hbase.apache.org%3E) thread for more discussion around short circuit reads.
+Since Hadoop 1.0.0 (also 0.22.1, 0.23.1, CDH3u3 and HDP 1.0) via [HDFS-2246](https://issues.apache.org/jira/browse/HDFS-2246), it is possible for the DFSClient to take a "short circuit" and read directly from the disk instead of going through the DataNode when the data is local. What this means for HBase is that the RegionServers can read directly off their machine's disks instead of having to open a socket to talk to the DataNode, the former being generally much faster. See JD's [Performance Talk](http://files.meetup.com/1350427/hug_ebay_jdcryans.pdf). Also see [HBase, mail \# dev - read short circuit](https://lists.apache.org/thread.html/ce2ce3a3bbd20806d0c017b2e7528e78a46ccb87c063831db051949d%401347548325%40%3Cdev.hbase.apache.org%3E) thread for more discussion around short circuit reads.
 
 To enable "short circuit" reads, it will depend on your version of Hadoop. The original shortcircuit read patch was much improved upon in Hadoop 2 in [HDFS-347](https://issues.apache.org/jira/browse/HDFS-347). See [http://blog.cloudera.com/blog/2013/08/how-improved-short-circuit-local-reads-bring-better-performance-and-security-to-hadoop/](http://blog.cloudera.com/blog/2013/08/how-improved-short-circuit-local-reads-bring-better-performance-and-security-to-hadoop/) for details on the difference between the old and new implementations. See [Hadoop shortcircuit reads configuration page](http://archive.cloudera.com/cdh4/cdh/4/hadoop/hadoop-project-dist/hadoop-hdfs/ShortCircuitLocalReads.html) for how to enable the latter, better version of shortcircuit. For example, here is a minimal config. enabling short-circuit reads added to _hbase-site.xml_:
 
@@ -583,21 +583,21 @@ Services — at least the HBase RegionServers — will need to be restarted in o
 
 ### Performance Comparisons of HBase vs. HDFS
 
-A fairly common question on the dist-list is why HBase isn’t as performant as HDFS files in a batch context (e.g., as a MapReduce source or sink). The short answer is that HBase is doing a lot more than HDFS (e.g., reading the KeyValues, returning the most current row or specified timestamps, etc.), and as such HBase is 4-5 times slower than HDFS in this processing context. There is room for improvement and this gap will, over time, be reduced, but HDFS will always be faster in this use-case.
+A fairly common question on the dist-list is why HBase isn't as performant as HDFS files in a batch context (e.g., as a MapReduce source or sink). The short answer is that HBase is doing a lot more than HDFS (e.g., reading the KeyValues, returning the most current row or specified timestamps, etc.), and as such HBase is 4-5 times slower than HDFS in this processing context. There is room for improvement and this gap will, over time, be reduced, but HDFS will always be faster in this use-case.
 
 ## Amazon EC2
 
-Performance questions are common on Amazon EC2 environments because it is a shared environment. You will not see the same throughput as a dedicated server. In terms of running tests on EC2, run them several times for the same reason (i.e., it’s a shared environment and you don’t know what else is happening on the server).
+Performance questions are common on Amazon EC2 environments because it is a shared environment. You will not see the same throughput as a dedicated server. In terms of running tests on EC2, run them several times for the same reason (i.e., it's a shared environment and you don't know what else is happening on the server).
 
 If you are running on EC2 and post performance questions on the dist-list, please state this fact up-front that because EC2 issues are practically a separate class of performance issues.
 
 ## Collocating HBase and MapReduce
 
-It is often recommended to have different clusters for HBase and MapReduce. A better qualification of this is: don’t collocate an HBase that serves live requests with a heavy MR workload. OLTP and OLAP-optimized systems have conflicting requirements and one will lose to the other, usually the former. For example, short latency-sensitive disk reads will have to wait in line behind longer reads that are trying to squeeze out as much throughput as possible. MR jobs that write to HBase will also generate flushes and compactions, which will in turn invalidate blocks in the [Block Cache](/docs/architecture/regionserver#block-cache).
+It is often recommended to have different clusters for HBase and MapReduce. A better qualification of this is: don't collocate an HBase that serves live requests with a heavy MR workload. OLTP and OLAP-optimized systems have conflicting requirements and one will lose to the other, usually the former. For example, short latency-sensitive disk reads will have to wait in line behind longer reads that are trying to squeeze out as much throughput as possible. MR jobs that write to HBase will also generate flushes and compactions, which will in turn invalidate blocks in the [Block Cache](/docs/architecture/regionserver#block-cache).
 
-If you need to process the data from your live HBase cluster in MR, you can ship the deltas with [CopyTable](/docs/operational-management/tools#copytable) or use replication to get the new data in real time on the OLAP cluster. In the worst case, if you really need to collocate both, set MR to use less Map and Reduce slots than you’d normally configure, possibly just one.
+If you need to process the data from your live HBase cluster in MR, you can ship the deltas with [CopyTable](/docs/operational-management/tools#copytable) or use replication to get the new data in real time on the OLAP cluster. In the worst case, if you really need to collocate both, set MR to use less Map and Reduce slots than you'd normally configure, possibly just one.
 
-When HBase is used for OLAP operations, it’s preferable to set it up in a hardened way like configuring the ZooKeeper session timeout higher and giving more memory to the MemStores (the argument being that the Block Cache won’t be used much since the workloads are usually long scans).
+When HBase is used for OLAP operations, it's preferable to set it up in a hardened way like configuring the ZooKeeper session timeout higher and giving more memory to the MemStores (the argument being that the Block Cache won't be used much since the workloads are usually long scans).
 
 ## Case Studies
 

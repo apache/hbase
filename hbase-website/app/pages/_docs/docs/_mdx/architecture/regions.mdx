@@ -24,11 +24,11 @@ In general, HBase is designed to run with a small (20-200) number of relatively 
 
 Typically you want to keep your region count low on HBase for numerous reasons. Usually right around 100 regions per RegionServer has yielded the best results. Here are some of the reasons below for keeping region count low:
 
-1.  MSLAB (MemStore-local allocation buffer) requires 2MB per MemStore (that’s 2MB per family per region). 1000 regions that have 2 families each is 3.9GB of heap used, and it’s not even storing data yet. NB: the 2MB value is configurable.
+1.  MSLAB (MemStore-local allocation buffer) requires 2MB per MemStore (that's 2MB per family per region). 1000 regions that have 2 families each is 3.9GB of heap used, and it's not even storing data yet. NB: the 2MB value is configurable.
 
 2.  If you fill all the regions at somewhat the same rate, the global memory usage makes it that it forces tiny flushes when you have too many regions which in turn generates compactions. Rewriting the same data tens of times is the last thing you want. An example is filling 1000 regions (with one family) equally and let's consider a lower bound for global MemStore usage of 5GB (the region server would have a big heap). Once it reaches 5GB it will force flush the biggest region, at that point they should almost all have about 5MB of data so it would flush that amount. 5MB inserted later, it would flush another region that will now have a bit over 5MB of data, and so on. This is currently the main limiting factor for the number of regions; see [Number of regions per RS - upper bound](/docs/operational-management/region-and-capacity#number-of-regions-per-rs---upper-bound) for detailed formula.
 
-3.  The master as is is allergic to tons of regions, and will take a lot of time assigning them and moving them around in batches. The reason is that it’s heavy on ZK usage, and it’s not very async at the moment (could really be improved — and has been improved a bunch in 0.96 HBase).
+3.  The master as is is allergic to tons of regions, and will take a lot of time assigning them and moving them around in batches. The reason is that it's heavy on ZK usage, and it's not very async at the moment (could really be improved — and has been improved a bunch in 0.96 HBase).
 
 4.  In older versions of HBase (pre-HFile v2, 0.90 and previous), tons of regions on a few RS can cause the store file index to rise, increasing heap usage and potentially creating memory pressure or OOME on the RSs
 
@@ -129,7 +129,7 @@ Over time, Region-RegionServer locality is achieved via HDFS block replication. 
 
 Thus, HBase eventually achieves locality for a region after a flush or a compaction. In a RegionServer failover situation a RegionServer may be assigned regions with non-local StoreFiles (because none of the replicas are local), however as new data is written in the region, or the table is compacted and StoreFiles are re-written, they will become "local" to the RegionServer.
 
-For more information, see _Replica Placement: The First Baby Steps_ on this page: [HDFS Architecture](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html) and also Lars George’s blog on [HBase and HDFS locality](http://www.larsgeorge.com/2010/05/hbase-file-locality-in-hdfs.html).
+For more information, see _Replica Placement: The First Baby Steps_ on this page: [HDFS Architecture](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html) and also Lars George's blog on [HBase and HDFS locality](http://www.larsgeorge.com/2010/05/hbase-file-locality-in-hdfs.html).
 
 ## Region Splits
 
@@ -139,7 +139,7 @@ Splits run unaided on the RegionServer; i.e. the Master does not participate. Th
 
 ### Custom Split Policies
 
-You can override the default split policy using a custom [RegionSplitPolicy](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html) (HBase 0.94+). Typically a custom split policy should extend HBase’s default split policy: [IncreasingToUpperBoundRegionSplitPolicy](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/IncreasingToUpperBoundRegionSplitPolicy.html).
+You can override the default split policy using a custom [RegionSplitPolicy](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html) (HBase 0.94+). Typically a custom split policy should extend HBase's default split policy: [IncreasingToUpperBoundRegionSplitPolicy](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/IncreasingToUpperBoundRegionSplitPolicy.html).
 
 The policy can set globally through the HBase configuration or on a per-table basis.
 
@@ -197,7 +197,7 @@ See [Managed Splitting](/docs/configuration/important#managed-splitting) for a d
 
 ### Determining Split Points
 
-The goal of splitting your table manually is to improve the chances of balancing the load across the cluster in situations where good rowkey design alone won’t get you there. Keeping that in mind, the way you split your regions is very dependent upon the characteristics of your data. It may be that you already know the best way to split your table. If not, the way you split your table depends on what your keys are like.
+The goal of splitting your table manually is to improve the chances of balancing the load across the cluster in situations where good rowkey design alone won't get you there. Keeping that in mind, the way you split your regions is very dependent upon the characteristics of your data. It may be that you already know the best way to split your table. If not, the way you split your table depends on what your keys are like.
 
 **Alphanumeric Rowkeys**  
 If your rowkeys start with a letter or number, you can split your table at letter or number boundaries. For instance, the following command creates a table with regions that split at each vowel, so the first region has A-D, the second region has E-H, the third region has I-N, the fourth region has O-V, and the fifth region has U-Z.
@@ -216,7 +216,7 @@ $ hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME'
 $ hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', true
 ```
 
-It’s an asynchronous operation and call returns immediately without waiting merge completed. Passing `true` as the optional third parameter will force a merge. Normally only adjacent regions can be merged. The `force` parameter overrides this behaviour and is for expert use only.
+It's an asynchronous operation and call returns immediately without waiting merge completed. Passing `true` as the optional third parameter will force a merge. Normally only adjacent regions can be merged. The `force` parameter overrides this behaviour and is for expert use only.
 
 ## Store
 
@@ -232,8 +232,8 @@ A MemStore flush can be triggered under any of the conditions listed below. The 
 
 1.  When a MemStore reaches the size specified by `hbase.hregion.memstore.flush.size`, all MemStores that belong to its region will be flushed out to disk.
 2.  When the overall MemStore usage reaches the value specified by `hbase.regionserver.global.memstore.upperLimit`, MemStores from various regions will be flushed out to disk to reduce overall MemStore usage in a RegionServer.  
-    The flush order is based on the descending order of a region’s MemStore usage. Regions will have their MemStores flushed until the overall MemStore usage drops to or slightly below `hbase.regionserver.global.memstore.lowerLimit`.
-3.  When the number of WAL log entries in a given region server’s WAL reaches the value specified in `hbase.regionserver.max.logs`, MemStores from various regions will be flushed out to disk to reduce the number of logs in the WAL.  
+    The flush order is based on the descending order of a region's MemStore usage. Regions will have their MemStores flushed until the overall MemStore usage drops to or slightly below `hbase.regionserver.global.memstore.lowerLimit`.
+3.  When the number of WAL log entries in a given region server's WAL reaches the value specified in `hbase.regionserver.max.logs`, MemStores from various regions will be flushed out to disk to reduce the number of logs in the WAL.  
     The flush order is based on time. Regions with the oldest MemStores are flushed first until WAL count drops below `hbase.regionserver.max.logs`.
 
 ### Scans
@@ -250,7 +250,7 @@ StoreFiles are where your data lives.
 
 #### HFile Format
 
-The _HFile_ file format is based on the SSTable file described in the [BigTable \[2006](http://research.google.com/archive/bigtable.html)\] paper and on Hadoop’s [TFile](https://hadoop.apache.org/docs/current/api/org/apache/hadoop/io/file/tfile/TFile.html) (The unit test suite and the compression harness were taken directly from TFile). Schubert Zhang’s blog post on [HFile: A Block-Indexed File Format to Store Sorted Key-Value Pairs](http://cloudepr.blogspot.com/2009/09/hfile-block-indexed-file-format-to.html) makes for a thorough introduction to HBase’s HFile. Matteo Bertozzi has also put up a helpful description, [HBase I/O: HFile](http://th30z.blogspot.com/2011/02/hbase-io-hfile.html?spref=tw).
+The _HFile_ file format is based on the SSTable file described in the [BigTable \[2006](http://research.google.com/archive/bigtable.html)\] paper and on Hadoop's [TFile](https://hadoop.apache.org/docs/current/api/org/apache/hadoop/io/file/tfile/TFile.html) (The unit test suite and the compression harness were taken directly from TFile). Schubert Zhang's blog post on [HFile: A Block-Indexed File Format to Store Sorted Key-Value Pairs](http://cloudepr.blogspot.com/2009/09/hfile-block-indexed-file-format-to.html) makes for a thorough introduction to HBase's HFile. Matteo Bertozzi has also put up a helpful description, [HBase I/O: HFile](http://th30z.blogspot.com/2011/02/hbase-io-hfile.html?spref=tw).
 
 For more information, see the HFile source code. Also see [HBase file format with inline blocks (version 2)](/docs/hfile-format#hbase-file-format-with-inline-blocks-version-2) for information about the HFile v2 format that was included in 0.92.
 
@@ -391,7 +391,7 @@ Regardless of the compaction policy used, file selection is controlled by severa
 
 #### Being Stuck
 
-When the MemStore gets too large, it needs to flush its contents to a StoreFile. However, Stores are configured with a bound on the number StoreFiles, `hbase.hstore.blockingStoreFiles`, and if in excess, the MemStore flush must wait until the StoreFile count is reduced by one or more compactions. If the MemStore is too large and the number of StoreFiles is also too high, the algorithm is said to be "stuck". By default we’ll wait on compactions up to `hbase.hstore.blockingWaitTime` milliseconds. If this period expires, we’ll flush anyways even though we are in excess of the `hbase.hstore.blockingStoreFiles` count.
+When the MemStore gets too large, it needs to flush its contents to a StoreFile. However, Stores are configured with a bound on the number StoreFiles, `hbase.hstore.blockingStoreFiles`, and if in excess, the MemStore flush must wait until the StoreFile count is reduced by one or more compactions. If the MemStore is too large and the number of StoreFiles is also too high, the algorithm is said to be "stuck". By default we'll wait on compactions up to `hbase.hstore.blockingWaitTime` milliseconds. If this period expires, we'll flush anyways even though we are in excess of the `hbase.hstore.blockingStoreFiles` count.
 
 Upping the `hbase.hstore.blockingStoreFiles` count will allow flushes to happen but a Store with many StoreFiles in will likely have higher read latencies. Try to figure why Compactions are not keeping up. Is it a write spurt that is bringing about this situation or is a regular occurance and the cluster is under-provisioned for the volume of writes?
 
@@ -609,7 +609,7 @@ Date tiered compaction is a date-aware store file compaction strategy that is be
 
 Consider using Date Tiered Compaction for reads for limited time ranges, especially scans of recent data
 
-Don’t use it for
+Don't use it for
 
 - random gets without a limited time range
 - frequent deletes and updates
@@ -666,7 +666,7 @@ You can configure your date tiers by changing the settings for the following par
 | `hbase.hstore.compaction.date.tiered.base.window.millis`       | Base window size in milliseconds. Default at 6 hours.                                                                                                                         |
 | `hbase.hstore.compaction.date.tiered.windows.per.tier`         | Number of windows per tier. Default at 4.                                                                                                                                     |
 | `hbase.hstore.compaction.date.tiered.incoming.window.min`      | Minimal number of files to compact in the incoming window. Set it to expected number of files in the window to avoid wasteful compaction. Default at 6.                       |
-| `hbase.hstore.compaction.date.tiered.window.policy.class`      | The policy to select store files within the same time window. It doesn’t apply to the incoming window. Default at exploring compaction. This is to avoid wasteful compaction. |
+| `hbase.hstore.compaction.date.tiered.window.policy.class`      | The policy to select store files within the same time window. It doesn't apply to the incoming window. Default at exploring compaction. This is to avoid wasteful compaction. |
 
 **Compaction Throttler**  
 With tiered compaction all servers in the cluster will promote windows to higher tier at the same time, so using a compaction throttle is recommended: Set `hbase.regionserver.throughput.controller` to `org.apache.hadoop.hbase.regionserver.compactions.PressureAwareCompactionThroughputController`.
@@ -756,7 +756,7 @@ All the settings that apply to normal compactions (see [Parameters Used by Compa
 
 FIFO compaction policy selects only files which have all cells expired. The column family **MUST** have non-default TTL. Essentially, FIFO compactor only collects expired store files.
 
-Because we don’t do any real compaction, we do not use CPU and IO (disk and network) and evict hot data from a block cache. As a result, both RW throughput and latency can be improved.
+Because we don't do any real compaction, we do not use CPU and IO (disk and network) and evict hot data from a block cache. As a result, both RW throughput and latency can be improved.
 
 #### When To Use FIFO Compaction
 
@@ -794,4 +794,4 @@ From HBase Shell:
 create 'x',{NAME=>'y', TTL=>'30'}, {CONFIGURATION => {'hbase.hstore.defaultengine.compactionpolicy.class' => 'org.apache.hadoop.hbase.regionserver.compactions.FIFOCompactionPolicy', 'hbase.hstore.blockingStoreFiles' => 1000}}
 ```
 
-Although region splitting is still supported, for optimal performance it should be disabled, either by setting explicitly `DisabledRegionSplitPolicy` or by setting `ConstantSizeRegionSplitPolicy` and very large max region size. You will have to increase to a very large number store’s blocking file (`hbase.hstore.blockingStoreFiles`) as well. There is a sanity check on table/column family configuration in case of FIFO compaction and minimum value for number of blocking file is 1000.
+Although region splitting is still supported, for optimal performance it should be disabled, either by setting explicitly `DisabledRegionSplitPolicy` or by setting `ConstantSizeRegionSplitPolicy` and very large max region size. You will have to increase to a very large number store's blocking file (`hbase.hstore.blockingStoreFiles`) as well. There is a sanity check on table/column family configuration in case of FIFO compaction and minimum value for number of blocking file is 1000.

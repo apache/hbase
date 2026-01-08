@@ -3,7 +3,7 @@ title: "Secure Client Access to Apache HBase"
 description: "Configuring Kerberos-based secure authentication for HBase clients, including server and client setup procedures."
 ---
 
-Newer releases of Apache HBase (>= 0.92) support optional SASL authentication of clients. See also Matteo Bertozzi’s article on [Understanding User Authentication and Authorization in Apache HBase](https://blog.cloudera.com/blog/2012/09/understanding-user-authentication-and-authorization-in-apache-hbase/).
+Newer releases of Apache HBase (>= 0.92) support optional SASL authentication of clients. See also Matteo Bertozzi's article on [Understanding User Authentication and Authorization in Apache HBase](https://blog.cloudera.com/blog/2012/09/understanding-user-authentication-and-authorization-in-apache-hbase/).
 
 This describes how to set up Apache HBase and clients for connection to secure HBase resources.
 
@@ -71,7 +71,7 @@ Since 2.2.0, client can specify the following configurations in `hbase-site.xml`
 
 Then application can automatically do the login and credential renewal jobs without client interference.
 
-It’s optional feature, client, who upgrades to 2.2.0, can still keep their login and credential renewal logic already did in older version, as long as keeping `hbase.client.keytab.file` and `hbase.client.keytab.principal` are unset.
+It's optional feature, client, who upgrades to 2.2.0, can still keep their login and credential renewal logic already did in older version, as long as keeping `hbase.client.keytab.file` and `hbase.client.keytab.principal` are unset.
 
 Be advised that if the `hbase.security.authentication` in the client- and server-side site files do not match, the client will not be able to communicate with the cluster.
 
@@ -135,11 +135,11 @@ grant 'thrift_server', 'RWCA'
 
 For more information about ACLs, please see the [Access Control Labels (ACLs)](/docs/security/data-access#access-control-labels-acls) section
 
-The Thrift gateway will authenticate with HBase using the supplied credential. No authentication will be performed by the Thrift gateway itself. All client access via the Thrift gateway will use the Thrift gateway’s credential and have its privilege.
+The Thrift gateway will authenticate with HBase using the supplied credential. No authentication will be performed by the Thrift gateway itself. All client access via the Thrift gateway will use the Thrift gateway's credential and have its privilege.
 
 ## Configure the Thrift Gateway to Authenticate on Behalf of the Client
 
-[Client-side Configuration for Secure Operation - Thrift Gateway](/docs/security/client-access#client-side-configuration-for-secure-operation---thrift-gateway) describes how to authenticate a Thrift client to HBase using a fixed user. As an alternative, you can configure the Thrift gateway to authenticate to HBase on the client’s behalf, and to access HBase using a proxy user. This was implemented in [HBASE-11349](https://issues.apache.org/jira/browse/HBASE-11349) for Thrift 1, and [HBASE-11474](https://issues.apache.org/jira/browse/HBASE-11474) for Thrift 2.
+[Client-side Configuration for Secure Operation - Thrift Gateway](/docs/security/client-access#client-side-configuration-for-secure-operation---thrift-gateway) describes how to authenticate a Thrift client to HBase using a fixed user. As an alternative, you can configure the Thrift gateway to authenticate to HBase on the client's behalf, and to access HBase using a proxy user. This was implemented in [HBASE-11349](https://issues.apache.org/jira/browse/HBASE-11349) for Thrift 1, and [HBASE-11474](https://issues.apache.org/jira/browse/HBASE-11474) for Thrift 2.
 
 <Callout type="info">
   If you use framed transport, you cannot yet take advantage of this feature, because SASL does not
@@ -158,7 +158,7 @@ To enable it, do the following.
 
 ## Configure the Thrift Gateway to Use the `doAs` Feature
 
-[Configure the Thrift Gateway to Authenticate on Behalf of the Client](/docs/security/client-access#configure-the-thrift-gateway-to-authenticate-on-behalf-of-the-client) describes how to configure the Thrift gateway to authenticate to HBase on the client’s behalf, and to access HBase using a proxy user. The limitation of this approach is that after the client is initialized with a particular set of credentials, it cannot change these credentials during the session. The `doAs` feature provides a flexible way to impersonate multiple principals using the same client. This feature was implemented in [HBASE-12640](https://issues.apache.org/jira/browse/HBASE-12640) for Thrift 1, but is currently not available for Thrift 2.
+[Configure the Thrift Gateway to Authenticate on Behalf of the Client](/docs/security/client-access#configure-the-thrift-gateway-to-authenticate-on-behalf-of-the-client) describes how to configure the Thrift gateway to authenticate to HBase on the client's behalf, and to access HBase using a proxy user. The limitation of this approach is that after the client is initialized with a particular set of credentials, it cannot change these credentials during the session. The `doAs` feature provides a flexible way to impersonate multiple principals using the same client. This feature was implemented in [HBASE-12640](https://issues.apache.org/jira/browse/HBASE-12640) for Thrift 1, but is currently not available for Thrift 2.
 
 **To enable the `doAs` feature**, add the following to the _hbase-site.xml_ file for every Thrift gateway:
 
@@ -255,7 +255,7 @@ HBase REST gateway supports different 'hbase.rest.authentication.type': simple, 
 
 ## REST Gateway Impersonation Configuration
 
-By default, the REST gateway doesn’t support impersonation. It accesses the HBase on behalf of clients as the user configured as in the previous section. To the HBase server, all requests are from the REST gateway user. The actual users are unknown. You can turn on the impersonation support. With impersonation, the REST gateway user is a proxy user. The HBase server knows the actual/real user of each request. So it can apply proper authorizations.
+By default, the REST gateway doesn't support impersonation. It accesses the HBase on behalf of clients as the user configured as in the previous section. To the HBase server, all requests are from the REST gateway user. The actual users are unknown. You can turn on the impersonation support. With impersonation, the REST gateway user is a proxy user. The HBase server knows the actual/real user of each request. So it can apply proper authorizations.
 
 To turn on REST gateway impersonation, we need to configure HBase servers (masters and region servers) to allow proxy users; configure REST gateway to enable impersonation.
 

@@ -16,7 +16,7 @@ The documentation below is generated using the default hbase configuration file,
 
 **`hbase.rootdir`**  
 
-**Description:** The directory shared by region servers and into which HBase persists. The URL should be 'fully-qualified' to include the filesystem scheme. For example, to specify the HDFS directory '/hbase' where the HDFS instance’s namenode is running at namenode.example.org on port 9000, set this value to: hdfs://namenode.example.org:9000/hbase. By default, we write to whatever `$hbase.tmp.dir` is set to — usually /tmp —  so change this configuration or else all data will be lost on machine restart.
+**Description:** The directory shared by region servers and into which HBase persists. The URL should be 'fully-qualified' to include the filesystem scheme. For example, to specify the HDFS directory '/hbase' where the HDFS instance's namenode is running at namenode.example.org on port 9000, set this value to: hdfs://namenode.example.org:9000/hbase. By default, we write to whatever `$hbase.tmp.dir` is set to — usually /tmp —  so change this configuration or else all data will be lost on machine restart.
 
 
 **Default:** `$hbase.tmp.dir`/hbase`
@@ -64,7 +64,7 @@ The documentation below is generated using the default hbase configuration file,
 
 **`hbase.master.logcleaner.plugins`**  
 
-**Description:** A comma-separated list of BaseLogCleanerDelegate invoked by the LogsCleaner service. These WAL cleaners are called in order, so put the cleaner that prunes the most files in front. To implement your own BaseLogCleanerDelegate, just put it in HBase’s classpath and add the fully qualified class name here. Always add the above default log cleaners in the list.
+**Description:** A comma-separated list of BaseLogCleanerDelegate invoked by the LogsCleaner service. These WAL cleaners are called in order, so put the cleaner that prunes the most files in front. To implement your own BaseLogCleanerDelegate, just put it in HBase's classpath and add the fully qualified class name here. Always add the above default log cleaners in the list.
 
 
 **Default:** `org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner`
@@ -80,7 +80,7 @@ The documentation below is generated using the default hbase configuration file,
 
 **`hbase.master.hfilecleaner.plugins`**  
 
-**Description:** A comma-separated list of BaseHFileCleanerDelegate invoked by the HFileCleaner service. These HFiles cleaners are called in order, so put the cleaner that prunes the most files in front. To implement your own BaseHFileCleanerDelegate, just put it in HBase’s classpath and add the fully qualified class name here. Always add the above default log cleaners in the list as they will be overwritten in hbase-site.xml.
+**Description:** A comma-separated list of BaseHFileCleanerDelegate invoked by the HFileCleaner service. These HFiles cleaners are called in order, so put the cleaner that prunes the most files in front. To implement your own BaseHFileCleanerDelegate, just put it in HBase's classpath and add the fully qualified class name here. Always add the above default log cleaners in the list as they will be overwritten in hbase-site.xml.
 
 
 **Default:** `org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner`
@@ -272,7 +272,7 @@ BusyRegionSplitPolicy, SteppingSplitPolicy etc.
 
 **`zookeeper.session.timeout`**  
 
-**Description:** ZooKeeper session timeout in milliseconds. It is used in two different ways. First, this value is used in the ZK client that HBase uses to connect to the ensemble. It is also used by HBase when it starts a ZK server and it is passed as the 'maxSessionTimeout'. See [https://zookeeper.apache.org/doc/current/zookeeperProgrammers.html#ch_zkSessions](https://zookeeper.apache.org/doc/current/zookeeperProgrammers.html#ch_zkSessions). For example, if an HBase region server connects to a ZK ensemble that’s also managed by HBase, then the session timeout will be the one specified by this configuration. But, a region server that connects to an ensemble managed with a different configuration will be subjected that ensemble’s maxSessionTimeout. So, even though HBase might propose using 90 seconds, the ensemble can have a max timeout lower than this and it will take precedence. The current default maxSessionTimeout that ZK ships with is 40 seconds, which is lower than HBase’s.
+**Description:** ZooKeeper session timeout in milliseconds. It is used in two different ways. First, this value is used in the ZK client that HBase uses to connect to the ensemble. It is also used by HBase when it starts a ZK server and it is passed as the 'maxSessionTimeout'. See [https://zookeeper.apache.org/doc/current/zookeeperProgrammers.html#ch_zkSessions](https://zookeeper.apache.org/doc/current/zookeeperProgrammers.html#ch_zkSessions). For example, if an HBase region server connects to a ZK ensemble that's also managed by HBase, then the session timeout will be the one specified by this configuration. But, a region server that connects to an ensemble managed with a different configuration will be subjected that ensemble's maxSessionTimeout. So, even though HBase might propose using 90 seconds, the ensemble can have a max timeout lower than this and it will take precedence. The current default maxSessionTimeout that ZK ships with is 40 seconds, which is lower than HBase's.
 
 
 **Default:** `90000`
@@ -280,7 +280,7 @@ BusyRegionSplitPolicy, SteppingSplitPolicy etc.
 
 **`zookeeper.znode.parent`**  
 
-**Description:** Root ZNode for HBase in ZooKeeper. All of HBase’s ZooKeeper files that are configured with a relative path will go under this node. By default, all of HBase’s ZooKeeper file path are configured with a relative path, so they will all go under this directory unless changed.
+**Description:** Root ZNode for HBase in ZooKeeper. All of HBase's ZooKeeper files that are configured with a relative path will go under this node. By default, all of HBase's ZooKeeper file path are configured with a relative path, so they will all go under this directory unless changed.
 
 
 **Default:** `/hbase`
@@ -328,7 +328,7 @@ BusyRegionSplitPolicy, SteppingSplitPolicy etc.
 
 **`hbase.zookeeper.useMulti`**  
 
-**Description:** Instructs HBase to make use of ZooKeeper’s multi-update functionality. This allows certain ZooKeeper operations to complete more quickly and prevents some issues with rare Replication failure scenarios (see the release note of HBASE-2611 for an example). IMPORTANT: only set this to true if all ZooKeeper servers in the cluster are on version 3.4+ and will not be downgraded. ZooKeeper versions before 3.4 do not support multi-update and will not fail gracefully if multi-update is invoked (see ZOOKEEPER-1495).
+**Description:** Instructs HBase to make use of ZooKeeper's multi-update functionality. This allows certain ZooKeeper operations to complete more quickly and prevents some issues with rare Replication failure scenarios (see the release note of HBASE-2611 for an example). IMPORTANT: only set this to true if all ZooKeeper servers in the cluster are on version 3.4+ and will not be downgraded. ZooKeeper versions before 3.4 do not support multi-update and will not fail gracefully if multi-update is invoked (see ZOOKEEPER-1495).
 
 
 **Default:** `true`
@@ -336,7 +336,7 @@ BusyRegionSplitPolicy, SteppingSplitPolicy etc.
 
 **`hbase.zookeeper.property.initLimit`**  
 
-**Description:** Property from ZooKeeper’s config zoo.cfg. The number of ticks that the initial synchronization phase can take.
+**Description:** Property from ZooKeeper's config zoo.cfg. The number of ticks that the initial synchronization phase can take.
 
 
 **Default:** `10`
@@ -344,7 +344,7 @@ BusyRegionSplitPolicy, SteppingSplitPolicy etc.
 
 **`hbase.zookeeper.property.syncLimit`**  
 
-**Description:** Property from ZooKeeper’s config zoo.cfg. The number of ticks that can pass between sending a request and getting an acknowledgment.
+**Description:** Property from ZooKeeper's config zoo.cfg. The number of ticks that can pass between sending a request and getting an acknowledgment.
 
 
 **Default:** `5`
@@ -352,7 +352,7 @@ BusyRegionSplitPolicy, SteppingSplitPolicy etc.
 
 **`hbase.zookeeper.property.dataDir`**  
 
-**Description:** Property from ZooKeeper’s config zoo.cfg. The directory where the snapshot is stored.
+**Description:** Property from ZooKeeper's config zoo.cfg. The directory where the snapshot is stored.
 
 
 **Default:** `$hbase.tmp.dir`/zookeeper`
@@ -360,7 +360,7 @@ BusyRegionSplitPolicy, SteppingSplitPolicy etc.
 
 **`hbase.zookeeper.property.clientPort`**  
 
-**Description:** Property from ZooKeeper’s config zoo.cfg. The port at which the clients will connect.
+**Description:** Property from ZooKeeper's config zoo.cfg. The port at which the clients will connect.
 
 
 **Default:** `2181`
@@ -368,7 +368,7 @@ BusyRegionSplitPolicy, SteppingSplitPolicy etc.
 
 **`hbase.zookeeper.property.maxClientCnxns`**  
 
-**Description:** Property from ZooKeeper’s config zoo.cfg. Limit on number of concurrent connections (at the socket level) that a single client, identified by IP address, may make to a single member of the ZooKeeper ensemble. Set high to avoid zk connection issues running standalone and pseudo-distributed.
+**Description:** Property from ZooKeeper's config zoo.cfg. Limit on number of concurrent connections (at the socket level) that a single client, identified by IP address, may make to a single member of the ZooKeeper ensemble. Set high to avoid zk connection issues running standalone and pseudo-distributed.
 
 
 **Default:** `300`
@@ -392,7 +392,7 @@ BusyRegionSplitPolicy, SteppingSplitPolicy etc.
 
 **`hbase.client.retries.number`**  
 
-**Description:** Maximum retries. Used as maximum for all retryable operations such as the getting of a cell’s value, starting a row update, etc. Retry interval is a rough function based on hbase.client.pause. At first we retry at this interval but then with backoff, we pretty quickly reach retrying every ten seconds. See HConstants#RETRY_BACKOFF for how the backup ramps up. Change this setting and hbase.client.pause to suit your workload.
+**Description:** Maximum retries. Used as maximum for all retryable operations such as the getting of a cell's value, starting a row update, etc. Retry interval is a rough function based on hbase.client.pause. At first we retry at this interval but then with backoff, we pretty quickly reach retrying every ten seconds. See HConstants#RETRY_BACKOFF for how the backup ramps up. Change this setting and hbase.client.pause to suit your workload.
 
 
 **Default:** `35`
@@ -416,7 +416,7 @@ BusyRegionSplitPolicy, SteppingSplitPolicy etc.
 
 **`hbase.client.max.perregion.tasks`**  
 
-**Description:** The maximum number of concurrent connections the client will maintain to a single Region. That is, if there is already hbase.client.max.perregion.tasks writes in progress for this region, new puts won’t be sent to this region until some writes finish.
+**Description:** The maximum number of concurrent connections the client will maintain to a single Region. That is, if there is already hbase.client.max.perregion.tasks writes in progress for this region, new puts won't be sent to this region until some writes finish.
 
 
 **Default:** `1`
@@ -729,7 +729,7 @@ The time for which a region will block updates after reaching the StoreFile limi
 
 **`hbase.hstore.time.to.purge.deletes`**  
 
-**Description:** The amount of time to delay purging of delete markers with future timestamps. If unset, or set to 0, all delete markers, including those with future timestamps, are purged during the next major compaction. Otherwise, a delete marker is kept until the major compaction which occurs after the marker’s timestamp plus the value of this setting, in milliseconds.
+**Description:** The amount of time to delay purging of delete markers with future timestamps. If unset, or set to 0, all delete markers, including those with future timestamps, are purged during the next major compaction. Otherwise, a delete marker is kept until the major compaction which occurs after the marker's timestamp plus the value of this setting, in milliseconds.
 
 
 **Default:** `0`
@@ -790,7 +790,7 @@ The default thread pool size if parallel-seeking feature enabled.
 
 **`hfile.block.cache.size`**  
 
-**Description:** Percentage of maximum heap (-Xmx setting) to allocate to block cache used by a StoreFile. Default of 0.4 means allocate 40%. Set to 0 to disable but it’s not recommended; you need at least enough cache to hold the storefile indices.
+**Description:** Percentage of maximum heap (-Xmx setting) to allocate to block cache used by a StoreFile. Default of 0.4 means allocate 40%. Set to 0 to disable but it's not recommended; you need at least enough cache to hold the storefile indices.
 
 
 **Default:** `0.4`
@@ -982,7 +982,7 @@ The default thread pool size if parallel-seeking feature enabled.
 
 **`hbase.coprocessor.region.classes`**  
 
-**Description:** A comma-separated list of Coprocessors that are loaded by default on all tables. For any override coprocessor method, these classes will be called in order. After implementing your own Coprocessor, just put it in HBase’s classpath and add the fully qualified class name here. A coprocessor can also be loaded on demand by setting HTableDescriptor.
+**Description:** A comma-separated list of Coprocessors that are loaded by default on all tables. For any override coprocessor method, these classes will be called in order. After implementing your own Coprocessor, just put it in HBase's classpath and add the fully qualified class name here. A coprocessor can also be loaded on demand by setting HTableDescriptor.
 
 
 **Default:** `
@@ -1038,7 +1038,7 @@ The default thread pool size if parallel-seeking feature enabled.
 
 **`hbase.coprocessor.master.classes`**  
 
-**Description:** A comma-separated list of org.apache.hadoop.hbase.coprocessor.MasterObserver coprocessors that are loaded by default on the active HMaster process. For any implemented coprocessor methods, the listed classes will be called in order. After implementing your own MasterObserver, just put it in HBase’s classpath and add the fully qualified class name here.
+**Description:** A comma-separated list of org.apache.hadoop.hbase.coprocessor.MasterObserver coprocessors that are loaded by default on the active HMaster process. For any implemented coprocessor methods, the listed classes will be called in order. After implementing your own MasterObserver, just put it in HBase's classpath and add the fully qualified class name here.
 
 
 **Default:** `
@@ -1162,7 +1162,7 @@ RowTooBigException is thrown to client.
 
 **`hbase.server.compactchecker.interval.multiplier`**  
 
-**Description:** The number that determines how often we scan to see if compaction is necessary. Normally, compactions are done after some events (such as memstore flush), but if region didn’t receive a lot of writes for some time, or due to different compaction policies, it may be necessary to check it periodically. The interval between checks is hbase.server.compactchecker.interval.multiplier multiplied by hbase.server.thread.wakefrequency.
+**Description:** The number that determines how often we scan to see if compaction is necessary. Normally, compactions are done after some events (such as memstore flush), but if region didn't receive a lot of writes for some time, or due to different compaction policies, it may be necessary to check it periodically. The interval between checks is hbase.server.compactchecker.interval.multiplier multiplied by hbase.server.thread.wakefrequency.
 
 
 **Default:** `1000`
@@ -1363,7 +1363,7 @@ section of the HBase online manual.
 
 **`hbase.procedure.regionserver.classes`**  
 
-**Description:** A comma-separated list of org.apache.hadoop.hbase.procedure.RegionServerProcedureManager procedure managers that are loaded by default on the active HRegionServer process. The lifecycle methods (init/start/stop) will be called by the active HRegionServer process to perform the specific globally barriered procedure. After implementing your own RegionServerProcedureManager, just put it in HBase’s classpath and add the fully qualified class name here.
+**Description:** A comma-separated list of org.apache.hadoop.hbase.procedure.RegionServerProcedureManager procedure managers that are loaded by default on the active HRegionServer process. The lifecycle methods (init/start/stop) will be called by the active HRegionServer process to perform the specific globally barriered procedure. After implementing your own RegionServerProcedureManager, just put it in HBase's classpath and add the fully qualified class name here.
 
 
 **Default:** `
@@ -1371,7 +1371,7 @@ section of the HBase online manual.
 
 **`hbase.procedure.master.classes`**  
 
-**Description:** A comma-separated list of org.apache.hadoop.hbase.procedure.MasterProcedureManager procedure managers that are loaded by default on the active HMaster process. A procedure is identified by its signature and users can use the signature and an instant name to trigger an execution of a globally barriered procedure. After implementing your own MasterProcedureManager, just put it in HBase’s classpath and add the fully qualified class name here.
+**Description:** A comma-separated list of org.apache.hadoop.hbase.procedure.MasterProcedureManager procedure managers that are loaded by default on the active HMaster process. A procedure is identified by its signature and users can use the signature and an instant name to trigger an execution of a globally barriered procedure. After implementing your own MasterProcedureManager, just put it in HBase's classpath and add the fully qualified class name here.
 
 
 **Default:** `

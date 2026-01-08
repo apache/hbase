@@ -3,7 +3,7 @@ title: "Simple User Access to Apache HBase"
 description: "Setting up simple SASL authentication for HBase clients without Kerberos, using username/password-based access control."
 ---
 
-Newer releases of Apache HBase (>= 0.92) support optional SASL authentication of clients. See also Matteo Bertozzi’s article on [Understanding User Authentication and Authorization in Apache HBase](https://blog.cloudera.com/blog/2012/09/understanding-user-authentication-and-authorization-in-apache-hbase/).
+Newer releases of Apache HBase (>= 0.92) support optional SASL authentication of clients. See also Matteo Bertozzi's article on [Understanding User Authentication and Authorization in Apache HBase](https://blog.cloudera.com/blog/2012/09/understanding-user-authentication-and-authorization-in-apache-hbase/).
 
 This describes how to set up Apache HBase and clients for simple user access to HBase resources.
 
@@ -95,11 +95,11 @@ grant 'thrift_server', 'RWCA'
 
 For more information about ACLs, please see the [Access Control Labels (ACLs)](/docs/security/data-access#access-control-labels-acls) section
 
-The Thrift gateway will authenticate with HBase using the supplied credential. No authentication will be performed by the Thrift gateway itself. All client access via the Thrift gateway will use the Thrift gateway’s credential and have its privilege.
+The Thrift gateway will authenticate with HBase using the supplied credential. No authentication will be performed by the Thrift gateway itself. All client access via the Thrift gateway will use the Thrift gateway's credential and have its privilege.
 
 ### Client-side Configuration for Simple User Access Operation - REST Gateway
 
-The REST gateway will authenticate with HBase using the supplied credential. No authentication will be performed by the REST gateway itself. All client access via the REST gateway will use the REST gateway’s credential and have its privilege.
+The REST gateway will authenticate with HBase using the supplied credential. No authentication will be performed by the REST gateway itself. All client access via the REST gateway will use the REST gateway's credential and have its privilege.
 
 The REST gateway user will need access. For example, to give the REST API user, `rest_server`, administrative access, a command such as this one will suffice:
 

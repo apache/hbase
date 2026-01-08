@@ -112,7 +112,7 @@ Procedure Locks are not about concurrency! They are about giving a Procedure rea
 
 Locking is optional, up to the Procedure implementor but if an entity is being operated on by a Procedure, all transforms need to be done via Procedures using the same locking scheme else havoc.
 
-Two ProcedureExecutor Worker threads can actually end up both processing the same Procedure instance. If it happens, the threads are meant to be running different parts of the one Procedure — changes that do not stamp on each other (This gets awkward around the procedure frameworks notion of ‘suspend’. More on this below).
+Two ProcedureExecutor Worker threads can actually end up both processing the same Procedure instance. If it happens, the threads are meant to be running different parts of the one Procedure — changes that do not stamp on each other (This gets awkward around the procedure frameworks notion of ‘suspend'. More on this below).
 
 Locks optionally may be held for the life of a Procedure. For example, if moving a Region, you probably want to have exclusive access to the HBase Region until the Region completes (or fails). This is used in conjunction with \{@link #holdLock(Object)}. If \{@link #holdLock(Object)} returns true, the procedure executor will call acquireLock() once and thereafter not call \{@link #releaseLock(Object)} until the Procedure is done (Normally, it calls release/acquire around each invocation of \{@link #execute(Object)}.
 

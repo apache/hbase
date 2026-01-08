@@ -324,7 +324,7 @@ This example uses HBase Shell to keep a maximum of 5 versions of all columns in 
 You could also use [ColumnFamilyDescriptorBuilder](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ColumnFamilyDescriptorBuilder.html).
 
 ```bash
-hbase> alter 't1′, NAME => 'f1′, VERSIONS => 5
+hbase> alter 't1', NAME => 'f1', VERSIONS => 5
 ```
 
 #### Example: Modify the Minimum Number of Versions for a Column Family [!toc]
@@ -335,7 +335,7 @@ The following example sets the minimum number of versions on all columns in colu
 You could also use [ColumnFamilyDescriptorBuilder](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ColumnFamilyDescriptorBuilder.html).
 
 ```bash
-hbase> alter 't1′, NAME => 'f1′, MIN_VERSIONS => 2
+hbase> alter 't1', NAME => 'f1', MIN_VERSIONS => 2
 ```
 
 Starting with HBase 0.98.2, you can specify a global default for the maximum number of versions kept for all newly-created columns, by setting `hbase.column.max.version` in _hbase-site.xml_.
