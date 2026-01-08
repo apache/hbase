@@ -2105,8 +2105,8 @@ public class HRegionServer extends Thread
       throw new RegionServerRunningException(
         "Region server has already created directory at " + this.serverName.toString());
     }
-    // Always create wal directory as now we need this when master restarts to find out the live
-    // region servers.
+    // Create wal directory here and we will never create it again in other places. This is
+    // important to make sure that our fencing way takes effect. See HBASE-29797 for more details.
     if (!this.walFs.mkdirs(logDir)) {
       throw new IOException("Can not create wal directory " + logDir);
     }

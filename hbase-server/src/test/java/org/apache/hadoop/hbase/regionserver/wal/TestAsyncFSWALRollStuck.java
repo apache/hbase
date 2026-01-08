@@ -162,6 +162,7 @@ public class TestAsyncFSWALRollStuck {
       }
 
     };
+    UTIL.getTestFileSystem().mkdirs(new Path(rootDir, "log"));
     WAL = new AsyncFSWAL(UTIL.getTestFileSystem(), rootDir, "log", "oldlog", conf,
       Arrays.asList(listener), true, null, null, EVENT_LOOP_GROUP, CHANNEL_CLASS);
     WAL.init();

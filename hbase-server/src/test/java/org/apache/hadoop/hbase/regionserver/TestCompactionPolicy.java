@@ -99,6 +99,7 @@ public class TestCompactionPolicy {
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
 
+    fs.mkdirs(new Path(basedir, logName));
     hlog = new FSHLog(fs, basedir, logName, conf);
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
       MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
