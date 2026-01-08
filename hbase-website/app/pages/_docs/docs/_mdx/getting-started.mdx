@@ -7,13 +7,13 @@ import { Step, Steps } from "fumadocs-ui/components/steps";
 
 ## Quick Start - Standalone HBase
 
-This section describes the setup of a single-node standalone HBase. A _standalone_ instance has all HBase daemons — the Master, RegionServers, and ZooKeeper — running in a single JVM persisting to the local filesystem. It is our most basic deploy profile. We will show you how to create a table in HBase using the `hbase shell` CLI, insert rows into the table, perform put and scan operations against the table, enable or disable the table, and start and stop HBase.
+This section describes the setup of a single-node standalone HBase. A _standalone_ instance has all HBase daemons — the Master, RegionServers, and ZooKeeper — running in a single JVM persisting to the local filesystem. It is our most basic deploy profile. We will show you how to create a table in HBase using the `hbase shell` CLI, insert rows into the table, perform put and scan operations against the table, enable or disable the table, and start and stop HBase.
 
 Apart from downloading HBase, this procedure should take less than 10 minutes.
 
 ## JDK Version Requirements
 
-HBase requires that a JDK be installed. See [Java](/docs/configuration#java) for information about supported JDK versions.
+HBase requires that a JDK be installed. See [Java](/docs/configuration/basic-prerequisites#java) for information about supported JDK versions.
 
 ## Get Started with HBase
 
@@ -258,7 +258,7 @@ The above has shown you how to start and stop a standalone instance of HBase. In
 
 ## Pseudo-Distributed for Local Testing
 
-After working your way through [quickstart](#quick-start---standalone-hbase) standalone mode, you can re-configure HBase to run in pseudo-distributed mode. Pseudo-distributed mode means that HBase still runs completely on a single host, but each HBase daemon (HMaster, HRegionServer, and ZooKeeper) runs as a separate process: in standalone mode all daemons ran in one jvm process/instance. By default, unless you configure the `hbase.rootdir` property as described in [quickstart](#quick-start---standalone-hbase), your data is still stored in _/tmp/_. In this walk-through, we store your data in HDFS instead, assuming you have HDFS available. You can skip the HDFS configuration to continue storing your data in the local filesystem.
+After working your way through [quickstart](/docs/getting-started#quick-start---standalone-hbase) standalone mode, you can re-configure HBase to run in pseudo-distributed mode. Pseudo-distributed mode means that HBase still runs completely on a single host, but each HBase daemon (HMaster, HRegionServer, and ZooKeeper) runs as a separate process: in standalone mode all daemons ran in one jvm process/instance. By default, unless you configure the `hbase.rootdir` property as described in [quickstart](/docs/getting-started#quick-start---standalone-hbase), your data is still stored in _/tmp/_. In this walk-through, we store your data in HDFS instead, assuming you have HDFS available. You can skip the HDFS configuration to continue storing your data in the local filesystem.
 
 <Callout type="info">
   This procedure assumes that you have configured Hadoop and HDFS on your local system and/or a
@@ -274,7 +274,7 @@ After working your way through [quickstart](#quick-start---standalone-hbase) sta
 
 #### Stop HBase if it is running
 
-If you have just finished [quickstart](#quick-start---standalone-hbase) and HBase is still running, stop it. This procedure will create a totally new directory where HBase will store its data, so any databases you created before will be lost.
+If you have just finished [quickstart](/docs/getting-started#quick-start---standalone-hbase) and HBase is still running, stop it. This procedure will create a totally new directory where HBase will store its data, so any databases you created before will be lost.
 
 </Step>
 
@@ -286,8 +286,8 @@ Edit the _hbase-site.xml_ configuration. First, add the following property which
 
 ```xml
 <property>
-<name>hbase.cluster.distributed</name>
-<value>true</value>
+  <name>hbase.cluster.distributed</name>
+  <value>true</value>
 </property>
 ```
 
@@ -295,8 +295,8 @@ Next, add a configuration for `hbase.rootdir`, pointing to the address of your H
 
 ```xml
 <property>
-<name>hbase.rootdir</name>
-<value>hdfs://localhost:9000/hbase</value>
+  <name>hbase.rootdir</name>
+  <value>hdfs://localhost:9000/hbase</value>
 </property>
 ```
 
@@ -338,7 +338,7 @@ drwxr-xr-x   - hbase users          0 2014-06-25 21:49 /hbase/oldWALs
 
 #### Create a table and populate it with data
 
-You can use the HBase Shell to create a table, populate it with data, scan and get values from it, using the same procedure as in [shell exercises](/docs/shell_exercises).
+You can use the HBase Shell to create a table, populate it with data, scan and get values from it, using the same procedure as in [shell exercises](/docs/getting-started#procedure-use-hbase-for-the-first-time).
 
 </Step>
 
@@ -388,7 +388,7 @@ To stop a RegionServer manually, use the `local-regionservers.sh` command with t
 
 #### Stop HBase
 
-You can stop HBase the same way as in the [quickstart](#quick-start---standalone-hbase) procedure, using the _bin/stop-hbase.sh_ command.
+You can stop HBase the same way as in the [quickstart](/docs/getting-started#quick-start---standalone-hbase) procedure, using the _bin/stop-hbase.sh_ command.
 
 </Step>
 
@@ -408,7 +408,7 @@ This advanced quickstart adds two more nodes to your cluster. The architecture w
 
 Distributed Cluster Demo Architecture
 
-This quickstart assumes that each node is a virtual machine and that they are all on the same network. It builds upon the previous quickstart, [Pseudo-Distributed for Local Testing](#pseudo-distributed-for-local-testing), assuming that the system you configured in that procedure is now `node-a`. Stop HBase on `node-a` before continuing.
+This quickstart assumes that each node is a virtual machine and that they are all on the same network. It builds upon the previous quickstart, [Pseudo-Distributed for Local Testing](/docs/getting-started#pseudo-distributed-for-local-testing), assuming that the system you configured in that procedure is now `node-a`. Stop HBase on `node-a` before continuing.
 
 <Callout type="info">
   Be sure that all the nodes have full access to communicate, and that no firewall rules are in
@@ -615,11 +615,11 @@ $ jps
 ```
 
 <Callout type="info">
-  The `HQuorumPeer` process is a ZooKeeper instance which is controlled and started by HBase. If
-  you use ZooKeeper this way, it is limited to one instance per cluster node and is appropriate
-  for testing only. If ZooKeeper is run outside of HBase, the process is called `QuorumPeer`. For
-  more about ZooKeeper configuration, including using an external ZooKeeper instance with HBase,
-  see [zookeeper](/docs/zookeeper) section.
+  The `HQuorumPeer` process is a ZooKeeper instance which is controlled and started by HBase. If you
+  use ZooKeeper this way, it is limited to one instance per cluster node and is appropriate for
+  testing only. If ZooKeeper is run outside of HBase, the process is called `QuorumPeer`. For more
+  about ZooKeeper configuration, including using an external ZooKeeper instance with HBase, see
+  [zookeeper](/docs/zookeeper) section.
 </Callout>
 
 </Step>

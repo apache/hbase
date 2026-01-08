@@ -11,8 +11,8 @@ The Apache HBase project welcomes contributions to all aspects of the project, i
 
 In HBase, documentation includes the following areas, and probably some others:
 
-- The [HBase Reference Guide](https://hbase.apache.org/book.html) (this book)
-- The [HBase website](https://hbase.apache.org/)
+- The [HBase Reference Guide](/docs) (this book)
+- The [HBase website](/)
 - API documentation
 - Command-line utility output and help text
 - Web UI strings, explicit help text, context-sensitive strings, and others
@@ -20,7 +20,7 @@ In HBase, documentation includes the following areas, and probably some others:
 - Comments in source files, configuration files, and others
 - Localization of any of the above into target languages other than English
 
-No matter which area you want to help out with, the first step is almost always to download (typically by cloning the Git repository) and familiarize yourself with the HBase source code. For information on downloading and building the source, see [developer](#developer).
+No matter which area you want to help out with, the first step is almost always to download (typically by cloning the Git repository) and familiarize yourself with the HBase source code. For information on downloading and building the source, see [developer](/docs/building-and-developing).
 
 ## Contributing to Documentation or Other Strings
 
@@ -105,7 +105,7 @@ The source for the HBase website is in the HBase source, in the _src/site/_ dire
 
 The website's pages are written in an HTML-like XML dialect called xdoc, which has a reference guide at [https://maven.apache.org/archives/maven-1.x/plugins/xdoc/reference/xdocs.html](https://maven.apache.org/archives/maven-1.x/plugins/xdoc/reference/xdocs.html). You can edit these files in a plain-text editor, an IDE, or an XML editor such as XML Mind XML Editor (XXE) or Oxygen XML Author.
 
-To preview your changes, build the website using the `mvn clean site -DskipTests` command. The HTML output resides in the _target/site/_ directory. When you are satisfied with your changes, follow the procedure in [submit doc patch procedure](#submit_doc_patch_procedure) to submit your patch.
+To preview your changes, build the website using the `mvn clean site -DskipTests` command. The HTML output resides in the _target/site/_ directory. When you are satisfied with your changes, follow the procedure in [submit doc patch procedure](/docs/contributing-to-documentation#procedure-suggested-work-flow-for-submitting-patches) to submit your patch.
 
 ## Publishing the HBase Website and Documentation
 
@@ -158,7 +158,7 @@ The HBase Reference Guide is written in Asciidoc and built using [AsciiDoctor](h
 
 ## Auto-Generated Content
 
-Some parts of the HBase Reference Guide, most notably [config.files](#config.files), are generated automatically, so that this area of the documentation stays in sync with the code. This is done by means of an XSLT transform, which you can examine in the source at _src/main/xslt/configuration_to_asciidoc_chapter.xsl_. This transforms the _hbase-common/src/main/resources/hbase-default.xml_ file into an Asciidoc output which can be included in the Reference Guide.
+Some parts of the HBase Reference Guide, most notably [config.files](/docs/configuration/default#hbase-default-configuration), are generated automatically, so that this area of the documentation stays in sync with the code. This is done by means of an XSLT transform, which you can examine in the source at _src/main/xslt/configuration_to_asciidoc_chapter.xsl_. This transforms the _hbase-common/src/main/resources/hbase-default.xml_ file into an Asciidoc output which can be included in the Reference Guide.
 
 Sometimes, it is necessary to add configuration parameters or modify their descriptions. Make the modifications to the source file, and they will be included in the Reference Guide when it is rebuilt.
 
@@ -195,16 +195,18 @@ When in doubt, check to see how other files have been included.
 
 The following documentation issues come up often. Some of these are preferences, but others can create mysterious build errors or other problems.
 
-1.  *Isolate Changes for Easy Diff Review.*  
-Be careful with pretty-printing or re-formatting an entire XML file, even if the formatting has degraded over time. If you need to reformat a file, do that in a separate JIRA where you do not change any content. Be careful because some XML editors do a bulk-reformat when you open a new file, especially if you use GUI mode in the editor.
-2.  *Syntax Highlighting*  
-The HBase Reference Guide uses `coderay` for syntax highlighting. To enable syntax highlighting for a given code listing, use the following type of syntax:
+1.  *Isolate Changes for Easy Diff Review.*
 
-```text
-[source,xml]
-----
-<name>My Name</name>
-----
-```
+    Be careful with pretty-printing or re-formatting an entire XML file, even if the formatting has degraded over time. If you need to reformat a file, do that in a separate JIRA where you do not change any content. Be careful because some XML editors do a bulk-reformat when you open a new file, especially if you use GUI mode in the editor.
+2.  *Syntax Highlighting*
 
-Several syntax types are supported. The most interesting ones for the HBase Reference Guide are `java`, `xml`, `sql`, and `bash`.
+    The HBase Reference Guide uses `coderay` for syntax highlighting. To enable syntax highlighting for a given code listing, use the following type of syntax:
+
+    ```text
+    [source,xml]
+    ----
+    <name>My Name</name>
+    ----
+    ```
+
+    Several syntax types are supported. The most interesting ones for the HBase Reference Guide are `java`, `xml`, `sql`, and `bash`.

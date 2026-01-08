@@ -19,7 +19,7 @@ Watch out for swapping. Set `swappiness` to 0.
 
 ### CPU
 
-Make sure you have set up your Hadoop to use native, hardware checksumming. See [hadoop.native.lib]().
+Make sure you have set up your Hadoop to use native, hardware checksumming. See [hadoop.native.lib](/docs/compression#making-use-of-hadoop-native-libraries-in-hbase).
 
 ## Network
 
@@ -58,7 +58,7 @@ Using 10Gbe links between racks will greatly increase performance, and assuming 
 
 ### Network Interfaces
 
-Are all the network interfaces functioning correctly? Are you sure? See the Troubleshooting Case Study in [Case Study #1 (Performance Issue On A Single Node)](#casestudies.slownode).
+Are all the network interfaces functioning correctly? Are you sure? See the Troubleshooting Case Study in [Case Study #1 (Performance Issue On A Single Node)](/docs/case-studies#case-study-1-performance-issue-on-a-single-node).
 
 ### Network Consistency and Partition Tolerance
 
@@ -86,21 +86,21 @@ If you have a write-heavy workload, check out [HBASE-8163 MemStoreChunkPool: An 
 
 Other sources of long GCs can be the JVM itself logging. See [Eliminating Large JVM GC Pauses Caused by Background IO Traffic](https://engineering.linkedin.com/blog/2016/02/eliminating-large-jvm-gc-pauses-caused-by-background-io-traffic)
 
-For more information about GC logs, see [JVM Garbage Collection Logs](#trouble.log.gc).
+For more information about GC logs, see [JVM Garbage Collection Logs](/docs/troubleshooting#jvm-garbage-collection-logs).
 
-Consider also enabling the off-heap Block Cache. This has been shown to mitigate GC pause times. See [Block Cache](#block.cache)
+Consider also enabling the off-heap Block Cache. This has been shown to mitigate GC pause times. See [Block Cache](/docs/architecture/regionserver#block-cache)
 
 ## HBase Configurations
 
-See [Recommended Configurations](#recommended_configurations).
+See [Recommended Configurations](/docs/configuration/important#recommended-configurations).
 
 ### Improving the 99th Percentile
 
-Try [hedged_reads]().
+Try [hedged_reads](/docs/performance#hedged-reads).
 
 ### Managing Compactions
 
-For larger systems, managing [compactions and splits]() may be something you want to consider.
+For larger systems, managing [compactions and splits](/docs/configuration/important#managed-compactions) may be something you want to consider.
 
 ### `hbase.regionserver.handler.count`
 
@@ -190,23 +190,23 @@ For these values to take effect on a given RegionServer, the RegionServer must b
 
 ## ZooKeeper
 
-See [ZooKeeper](#zookeeper) for information on configuring ZooKeeper, and see the part about having a dedicated disk.
+See [ZooKeeper](/docs/zookeeper) for information on configuring ZooKeeper, and see the part about having a dedicated disk.
 
 ## Schema Design
 
 ### Number of Column Families
 
-See [On the number of column families](#number.of.cfs).
+See [On the number of column families](/docs/regionserver-sizing#on-the-number-of-column-families).
 
 ### Key and Attribute Lengths
 
-See [Try to minimize row and column sizes](#keysize). See also [However...](#perf.compression.however) for compression caveats.
+See [Try to minimize row and column sizes](/docs/regionserver-sizing#try-to-minimize-row-and-column-sizes). See also [However...](/docs/performance#however) for compression caveats.
 
 ### Table RegionSize
 
 The regionsize can be set on a per-table basis via `setMaxFileSize` on [TableDescriptorBuilder](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/TableDescriptorBuilder.html) in the event where certain tables require different regionsizes than the configured default regionsize.
 
-See [Determining region count and size](#ops.capacity.regions) for more information.
+See [Determining region count and size](/docs/operational-management/region-and-capacity#determining-region-count-and-size) for more information.
 
 ### Bloom Filters
 
@@ -220,7 +220,7 @@ HBase includes some tuning mechanisms for folding the Bloom filter to reduce the
 
 Bloom filters were introduced in [HBASE-1200](https://issues.apache.org/jira/browse/HBASE-1200). Since HBase 0.96, row-based Bloom filters are enabled by default. ([HBASE-8450](https://issues.apache.org/jira/browse/HBASE-8450))
 
-For more information on Bloom filters in relation to HBase, see [Bloom Filters](#blooms) for more information, or the following Quora discussion: [How are bloom filters used in HBase?](http://www.quora.com/How-are-bloom-filters-used-in-HBase).
+For more information on Bloom filters in relation to HBase, see [Bloom Filters](/docs/performance#bloom-filters) for more information, or the following Quora discussion: [How are bloom filters used in HBase?](http://www.quora.com/How-are-bloom-filters-used-in-HBase).
 
 #### When To Use Bloom Filters
 
@@ -236,7 +236,7 @@ Bloom filters need to be rebuilt upon deletion, so may not be appropriate in env
 
 #### Enabling Bloom Filters
 
-Bloom filters are enabled on a Column Family. You can do this by using the setBloomFilterType method of HColumnDescriptor or using the HBase API. Valid values are `NONE`, `ROW` (default), or `ROWCOL`. See [When To Use Bloom Filters](#bloom.filters.when) for more information on `ROW` versus `ROWCOL`. See also the API documentation for [ColumnFamilyDescriptorBuilder](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ColumnFamilyDescriptorBuilder.html).
+Bloom filters are enabled on a Column Family. You can do this by using the setBloomFilterType method of HColumnDescriptor or using the HBase API. Valid values are `NONE`, `ROW` (default), or `ROWCOL`. See [When To Use Bloom Filters](/docs/performance#when-to-use-bloom-filters) for more information on `ROW` versus `ROWCOL`. See also the API documentation for [ColumnFamilyDescriptorBuilder](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ColumnFamilyDescriptorBuilder.html).
 
 The following example creates a table and enables a ROWCOL Bloom filter on the `colfam1` column family.
 
@@ -262,23 +262,23 @@ You can configure the following settings in the _hbase-site.xml_.
 
 The blocksize can be configured for each ColumnFamily in a table, and defaults to 64k. Larger cell values require larger blocksizes. There is an inverse relationship between blocksize and the resulting StoreFile indexes (i.e., if the blocksize is doubled then the resulting indexes should be roughly halved).
 
-See [ColumnFamilyDescriptorBuilder](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ColumnFamilyDescriptorBuilder.html) and [Store](#store) for more information.
+See [ColumnFamilyDescriptorBuilder](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ColumnFamilyDescriptorBuilder.html) and [Store](/docs/architecture/regions#store) for more information.
 
 ### In-Memory ColumnFamilies
 
-ColumnFamilies can optionally be defined as in-memory. Data is still persisted to disk, just like any other ColumnFamily. In-memory blocks have the highest priority in the [Block Cache](#block.cache), but it is not a guarantee that the entire table will be in memory.
+ColumnFamilies can optionally be defined as in-memory. Data is still persisted to disk, just like any other ColumnFamily. In-memory blocks have the highest priority in the [Block Cache](/docs/architecture/regionserver#block-cache), but it is not a guarantee that the entire table will be in memory.
 
 See [ColumnFamilyDescriptorBuilder](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ColumnFamilyDescriptorBuilder.html) for more information.
 
 ### Compression
 
-Production systems should use compression with their ColumnFamily definitions. See [Compression and Data Block Encoding In HBase](#compression) for more information.
+Production systems should use compression with their ColumnFamily definitions. See [Compression and Data Block Encoding In HBase](/docs/compression) for more information.
 
 #### However...
 
 Compression deflates data _on disk_. When it’s in-memory (e.g., in the MemStore) or on the wire (e.g., transferring between RegionServer and Client) it’s inflated. So while using ColumnFamily compression is a best practice, but it’s not going to completely eliminate the impact of over-sized Keys, over-sized ColumnFamily names, or over-sized Column names.
 
-See [Try to minimize row and column sizes](#keysize) on for schema design tips, and [KeyValue](#keyvalue) for more information on HBase stores data internally.
+See [Try to minimize row and column sizes](/docs/regionserver-sizing#try-to-minimize-row-and-column-sizes) on for schema design tips, and [KeyValue](/docs/architecture/regions#keyvalue) for more information on HBase stores data internally.
 
 ## HBase General Patterns
 
@@ -307,7 +307,7 @@ byte[] b = r.getValue(CF, ATTR);  // returns current version of value
 
 ### Batch Loading
 
-Use the bulk load tool if you can. See [Bulk Loading](#arch.bulk.load). Otherwise, pay attention to the below.
+Use the bulk load tool if you can. See [Bulk Loading](/docs/architecture/bulk-loading). Otherwise, pay attention to the below.
 
 ### Table Creation: Pre-Creating Regions
 
@@ -342,7 +342,7 @@ hbase>create 't2','f1', { NUMREGIONS => 4 , SPLITALGO => 'UniformSplit' }
 create 't3','f1', { NUMREGIONS => 5, SPLITALGO => 'HexStringSplit' }
 ```
 
-See [Relationship Between RowKeys and Region Splits](#rowkey.regionsplits) for issues related to understanding your keyspace and pre-creating regions. See [manual region splitting decisions](#manual_region_splitting_decisions) for discussion on manually pre-splitting regions. See [Pre-splitting tables with the HBase Shell](#tricks.pre-split) for more details of using the HBase Shell to pre-split tables.
+See [Relationship Between RowKeys and Region Splits](/docs/regionserver-sizing#relationship-between-rowkeys-and-region-splits) for issues related to understanding your keyspace and pre-creating regions. See [manual region splitting decisions](/docs/architecture/regions#manual-region-splitting) for discussion on manually pre-splitting regions. See [Pre-splitting tables with the HBase Shell](/docs/shell#pre-splitting-tables-with-the-hbase-shell) for more details of using the HBase Shell to pre-split tables.
 
 ### Table Creation: Deferred Log Flush
 
@@ -358,7 +358,7 @@ A frequent request is to disable the WAL to increase performance of Puts. This i
   If you disable the WAL for anything other than bulk loads, your data is at risk.
 </Callout>
 
-In general, it is best to use WAL for Puts, and where loading throughput is a concern to use bulk loading techniques instead. For normal Puts, you are not likely to see a performance improvement which would outweigh the risk. To disable the WAL, see [Disabling the WAL](#wal.disable).
+In general, it is best to use WAL for Puts, and where loading throughput is a concern to use bulk loading techniques instead. For normal Puts, you are not likely to see a performance improvement which would outweigh the risk. To disable the WAL, see [Disabling the WAL](/docs/architecture/regionserver#disabling-the-wal).
 
 ### HBase Client: Group Puts by RegionServer
 
@@ -376,7 +376,7 @@ If all your data is being written to one region at a time, then re-read the sect
 
 Also, if you are pre-splitting regions and all your data is _still_ winding up in a single region even though your keys aren’t monotonically increasing, confirm that your keyspace actually works with the split strategy. There are a variety of reasons that regions may appear "well split" but won’t work with your data. As the HBase client communicates directly with the RegionServers, this can be obtained via [RegionLocator.getRegionLocation](<https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/RegionLocator.html#getRegionLocation(byte%5B%5D)>).
 
-See [Table Creation: Pre-Creating Regions](#precreate.regions), as well as [HBase Configurations](#perf.configurations)
+See [Table Creation: Pre-Creating Regions](/docs/performance#table-creation-pre-creating-regions), as well as [HBase Configurations](/docs/performance#hbase-configurations)
 
 ## Reading from HBase
 
@@ -411,7 +411,7 @@ table.getScanner(scan);
 
 ### MapReduce - Input Splits
 
-For MapReduce jobs that use HBase tables as a source, if there a pattern where the "slow" map tasks seem to have the same Input Split (i.e., the RegionServer serving the data), see the Troubleshooting Case Study in [Case Study #1 (Performance Issue On A Single Node)](#casestudies.slownode).
+For MapReduce jobs that use HBase tables as a source, if there a pattern where the "slow" map tasks seem to have the same Input Split (i.e., the RegionServer serving the data), see the Troubleshooting Case Study in [Case Study #1 (Performance Issue On A Single Node)](/docs/case-studies#case-study-1-performance-issue-on-a-single-node).
 
 ### Close ResultScanners
 
@@ -435,7 +435,7 @@ table.close();
 
 [Scan](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html) instances can be set to use the block cache in the RegionServer via the `setCacheBlocks` method. For input Scans to MapReduce jobs, this should be `false`. For frequently accessed rows, it is advisable to use the block cache.
 
-Cache more data by moving your Block Cache off-heap. See [Off-heap Block Cache](#offheap.blockcache)
+Cache more data by moving your Block Cache off-heap. See [Off-heap Block Cache](/docs/architecture/regionserver#off-heap-block-cache)
 
 ### Optimal Loading of Row Keys
 
@@ -445,7 +445,7 @@ When performing a table [scan](https://hbase.apache.org/devapidocs/org/apache/ha
 
 When performing a high number of concurrent reads, monitor the data spread of the target tables. If the target table(s) have too few regions then the reads could likely be served from too few nodes.
 
-See [Table Creation: Pre-Creating Regions](#precreate.regions), as well as [HBase Configurations](#perf.configurations)
+See [Table Creation: Pre-Creating Regions](/docs/performance#table-creation-pre-creating-regions), as well as [HBase Configurations](/docs/performance#hbase-configurations)
 
 ### Bloom Filters
 
@@ -453,7 +453,7 @@ Enabling Bloom Filters can save your having to go to disk and can help improve r
 
 [Bloom filters](http://en.wikipedia.org/wiki/Bloom_filter) were developed over in [HBase-1200 Add bloomfilters](https://issues.apache.org/jira/browse/HBASE-1200). For description of the development process — why static blooms rather than dynamic — and for an overview of the unique properties that pertain to blooms in HBase, as well as possible future directions, see the _Development Process_ section of the document [BloomFilters in HBase](https://issues.apache.org/jira/secure/attachment/12444007/Bloom_Filters_in_HBase.pdf) attached to [HBASE-1200](https://issues.apache.org/jira/browse/HBASE-1200). The bloom filters described here are actually version two of blooms in HBase. In versions up to 0.19.x, HBase had a dynamic bloom option based on work done by the [European Commission One-Lab Project 034819](http://www.onelab.org). The core of the HBase bloom work was later pulled up into Hadoop to implement org.apache.hadoop.io.BloomMapFile. Version 1 of HBase blooms never worked that well. Version 2 is a rewrite from scratch though again it starts with the one-lab work.
 
-See also [Bloom Filters](#schema.bloom).
+See also [Bloom Filters](/docs/performance#bloom-filters).
 
 #### Bloom StoreFile footprint
 
@@ -510,7 +510,7 @@ Because an HBase RegionServer is a HDFS client, you can enable hedged reads in H
 </property>
 ```
 
-Use the following metrics to tune the settings for hedged reads on your cluster. See [HBase Metrics](#hbase_metrics) for more information.
+Use the following metrics to tune the settings for hedged reads on your cluster. See [HBase Metrics](/docs/operational-management/metrics-and-monitoring) for more information.
 
 **Metrics for Hedged Reads**
 
@@ -522,9 +522,9 @@ Use the following metrics to tune the settings for hedged reads on your cluster.
 
 ### Using HBase Tables as Queues
 
-HBase tables are sometimes used as queues. In this case, special care must be taken to regularly perform major compactions on tables used in this manner. As is documented in [Data Model](#datamodel), marking rows as deleted creates additional StoreFiles which then need to be processed on reads. Tombstones only get cleaned up with major compactions.
+HBase tables are sometimes used as queues. In this case, special care must be taken to regularly perform major compactions on tables used in this manner. As is documented in [Data Model](/docs/datamodel), marking rows as deleted creates additional StoreFiles which then need to be processed on reads. Tombstones only get cleaned up with major compactions.
 
-See also [Compaction](#compaction) and [Admin.majorCompact](<https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact(org.apache.hadoop.hbase.TableName)>).
+See also [Compaction](/docs/architecture/regions#compaction) and [Admin.majorCompact](<https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact(org.apache.hadoop.hbase.TableName)>).
 
 ### Delete RPC Behavior
 
@@ -534,7 +534,7 @@ See [hbase.client.Delete](<https://hbase.apache.org/devapidocs/org/apache/hadoop
 
 ## HDFS
 
-Because HBase runs on [HDFS](#arch.hdfs) it is important to understand how it works and how it affects HBase.
+Because HBase runs on [HDFS](/docs/architecture/hdfs) it is important to understand how it works and how it affects HBase.
 
 ### Current Issues With Low-Latency Reads
 
@@ -593,12 +593,12 @@ If you are running on EC2 and post performance questions on the dist-list, pleas
 
 ## Collocating HBase and MapReduce
 
-It is often recommended to have different clusters for HBase and MapReduce. A better qualification of this is: don’t collocate an HBase that serves live requests with a heavy MR workload. OLTP and OLAP-optimized systems have conflicting requirements and one will lose to the other, usually the former. For example, short latency-sensitive disk reads will have to wait in line behind longer reads that are trying to squeeze out as much throughput as possible. MR jobs that write to HBase will also generate flushes and compactions, which will in turn invalidate blocks in the [Block Cache](#block.cache).
+It is often recommended to have different clusters for HBase and MapReduce. A better qualification of this is: don’t collocate an HBase that serves live requests with a heavy MR workload. OLTP and OLAP-optimized systems have conflicting requirements and one will lose to the other, usually the former. For example, short latency-sensitive disk reads will have to wait in line behind longer reads that are trying to squeeze out as much throughput as possible. MR jobs that write to HBase will also generate flushes and compactions, which will in turn invalidate blocks in the [Block Cache](/docs/architecture/regionserver#block-cache).
 
-If you need to process the data from your live HBase cluster in MR, you can ship the deltas with [CopyTable](#copy.table) or use replication to get the new data in real time on the OLAP cluster. In the worst case, if you really need to collocate both, set MR to use less Map and Reduce slots than you’d normally configure, possibly just one.
+If you need to process the data from your live HBase cluster in MR, you can ship the deltas with [CopyTable](/docs/operational-management/tools#copytable) or use replication to get the new data in real time on the OLAP cluster. In the worst case, if you really need to collocate both, set MR to use less Map and Reduce slots than you’d normally configure, possibly just one.
 
 When HBase is used for OLAP operations, it’s preferable to set it up in a hardened way like configuring the ZooKeeper session timeout higher and giving more memory to the MemStores (the argument being that the Block Cache won’t be used much since the workloads are usually long scans).
 
 ## Case Studies
 
-For Performance and Troubleshooting Case Studies, see [Apache HBase Case Studies](#casestudies).
+For Performance and Troubleshooting Case Studies, see [Apache HBase Case Studies](/docs/case-studies).

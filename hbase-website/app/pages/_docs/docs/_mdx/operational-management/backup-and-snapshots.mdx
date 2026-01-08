@@ -24,19 +24,19 @@ The backup of the hbase directory from HDFS is copied onto the 'real' hbase dire
 
 ### Live Cluster Backup - Replication
 
-This approach assumes that there is a second cluster. See the HBase page on [replication](https://hbase.apache.org/book.html#_cluster_replication) for more information.
+This approach assumes that there is a second cluster. See the HBase page on [replication](/docs/operational-management/cluster-replication) for more information.
 
 ### Live Cluster Backup - CopyTable
 
-The [copytable](#copy.table) utility could either be used to copy data from one table to another on the same cluster, or to copy data to another table on another cluster.
+The [copytable](/docs/operational-management/tools#copytable) utility could either be used to copy data from one table to another on the same cluster, or to copy data to another table on another cluster.
 
 Since the cluster is up, there is a risk that edits could be missed in the copy process.
 
 ### Live Cluster Backup - Export
 
-The [export](#export) approach dumps the content of a table to HDFS on the same cluster. To restore the data, the [import](#import) utility would be used.
+The [export](/docs/operational-management/tools#export) approach dumps the content of a table to HDFS on the same cluster. To restore the data, the [import](/docs/operational-management/tools#import) utility would be used.
 
-Since the cluster is up, there is a risk that edits could be missed in the export process. If you want to know more about HBase back-up and restore see the page on [Backup and Restore](http://hbase.apache.org/book.html#backuprestore).
+Since the cluster is up, there is a risk that edits could be missed in the export process. If you want to know more about HBase back-up and restore see the page on [Backup and Restore](/docs/backup-restore).
 
 ## HBase Snapshots
 
@@ -197,7 +197,7 @@ In case of partial data-loss due to misbehaving client, instead of a full restor
 
 ### Snapshots operations and ACLs
 
-If you are using security with the AccessController Coprocessor (See [hbase.accesscontrol.configuration](#hbase.accesscontrol.configuration)), only a global administrator can take, clone, or restore a snapshot, and these actions do not capture the ACL rights. This means that restoring a table preserves the ACL rights of the existing table, while cloning a table creates a new table that has no ACL rights until the administrator adds them.
+If you are using security with the AccessController Coprocessor (See [hbase.accesscontrol.configuration](/docs/security/data-access#access-control-labels-acls)), only a global administrator can take, clone, or restore a snapshot, and these actions do not capture the ACL rights. This means that restoring a table preserves the ACL rights of the existing table, while cloning a table creates a new table that has no ACL rights until the administrator adds them.
 
 ### Export to another cluster
 
@@ -223,7 +223,7 @@ You can store and retrieve snapshots from Amazon S3, using the following procedu
 
 <Callout type="info">
   You can also store snapshots in Microsoft Azure Blob Storage. See [Storing Snapshots in Microsoft
-  Azure Blob Storage](#snapshots_azure).
+  Azure Blob Storage](/docs/operational-management/backup-and-snapshots#storing-snapshots-in-microsoft-azure-blob-storage).
 </Callout>
 
 ### Prerequisites
@@ -266,22 +266,22 @@ $ hbase org.apache.hadoop.hbase.snapshot.SnapshotInfo \
 
 ## Storing Snapshots in Microsoft Azure Blob Storage
 
-You can store snapshots in Microsoft Azure Blog Storage using the same techniques as in [Storing Snapshots in an Amazon S3 Bucket](#snapshots_s3).
+You can store snapshots in Microsoft Azure Blog Storage using the same techniques as in [Storing Snapshots in an Amazon S3 Bucket](/docs/operational-management/backup-and-snapshots#storing-snapshots-in-an-amazon-s3-bucket).
 
 ### Prerequisites
 
 - You must be using HBase 1.2 or higher with Hadoop 2.7.1 or higher. No version of HBase supports Hadoop 2.7.0.
 - Your hosts must be configured to be aware of the Azure blob storage filesystem. See [https://hadoop.apache.org/docs/r2.7.1/hadoop-azure/index.html](https://hadoop.apache.org/docs/r2.7.1/hadoop-azure/index.html).
 
-After you meet the prerequisites, follow the instructions in [Storing Snapshots in an Amazon S3 Bucket](#snapshots_s3), replacingthe protocol specifier with `wasb://` or `wasbs://`.
+After you meet the prerequisites, follow the instructions in [Storing Snapshots in an Amazon S3 Bucket](/docs/operational-management/backup-and-snapshots#storing-snapshots-in-an-amazon-s3-bucket), replacingthe protocol specifier with `wasb://` or `wasbs://`.
 
 ## Storing Snapshots in Aliyun Object Storage Service
 
-You can store snapshots in Aliyun Object Storage Service(Aliyun OSS) using the same techniques as in [Storing Snapshots in an Amazon S3 Bucket](#snapshots_s3).
+You can store snapshots in Aliyun Object Storage Service(Aliyun OSS) using the same techniques as in [Storing Snapshots in an Amazon S3 Bucket](/docs/operational-management/backup-and-snapshots#storing-snapshots-in-an-amazon-s3-bucket).
 
 ### Prerequisites
 
 - You must be using HBase 1.2 or higher with Hadoop 2.9.1 or higher.
 - Your hosts must be configured to be aware of the Aliyun oss filesystem. See [https://hadoop.apache.org/docs/stable/hadoop-aliyun/tools/hadoop-aliyun/index.html](https://hadoop.apache.org/docs/stable/hadoop-aliyun/tools/hadoop-aliyun/index.html).
 
-After you meet the prerequisites, follow the instructions in [Storing Snapshots in an Amazon S3 Bucket](#snapshots_s3), replacing the protocol specifier with `oss://`.
+After you meet the prerequisites, follow the instructions in [Storing Snapshots in an Amazon S3 Bucket](/docs/operational-management/backup-and-snapshots#storing-snapshots-in-an-amazon-s3-bucket), replacing the protocol specifier with `oss://`.

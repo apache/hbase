@@ -2,7 +2,7 @@
 title: "HBase and Schema Design"
 ---
 
-A good introduction on the strength and weaknesses modelling on the various non-rdbms datastores is to be found in Ian Varley’s Master thesis, [No Relation: The Mixed Blessings of Non-Relational Databases](http://ianvarley.com/UT/MR/Varley_MastersReport_Full_2009-08-07.pdf). It is a little dated now but a good background read if you have a moment on how HBase schema modeling differs from how it is done in an RDBMS. Also, read [keyvalue](#keyvalue) for how HBase stores data internally, and the section on [schema.casestudies](#schema.casestudies).
+A good introduction on the strength and weaknesses modelling on the various non-rdbms datastores is to be found in Ian Varley’s Master thesis, [No Relation: The Mixed Blessings of Non-Relational Databases](http://ianvarley.com/UT/MR/Varley_MastersReport_Full_2009-08-07.pdf). It is a little dated now but a good background read if you have a moment on how HBase schema modeling differs from how it is done in an RDBMS. Also, read [keyvalue](/docs/architecture/regions#keyvalue) for how HBase stores data internally, and the section on [schema.casestudies](/docs/regionserver-sizing#schema-design-case-studies).
 
 The documentation on the Cloud Bigtable website, [Designing Your Schema](https://cloud.google.com/bigtable/docs/schema-design), is pertinent and nicely done and lessons learned there equally apply here in HBase land; just divide any quoted values by ~10 to get what works for HBase: e.g. where it says individual values can be ~10MBs in size, HBase can do similar — perhaps best to go smaller if you can — and where it says a maximum of 100 column families in Cloud Bigtable, think ~10 when modeling on HBase.
 
@@ -29,7 +29,7 @@ admin.modifyColumn(table, cf2);    // modifying existing ColumnFamily
 admin.enableTable(table);
 ```
 
-See [client dependencies](#client_dependencies) for more information about configuring client connections.
+See [client dependencies](/docs/configuration/default#client-configuration-and-dependencies-connecting-to-an-hbase-cluster) for more information about configuring client connections.
 
 <Callout type="info">
 Online schema changes are supported in the 0.92.x codebase, but the 0.90.x codebase requires the table to be disabled.
@@ -40,14 +40,14 @@ Online schema changes are supported in the 0.92.x codebase, but the 0.90.x codeb
 
 When changes are made to either Tables or ColumnFamilies (e.g. region size, block size), these changes take effect the next time there is a major compaction and the StoreFiles get re-written.
 
-See [store](#store) for more information on StoreFiles.
+See [store](/docs/architecture/regions#store) for more information on StoreFiles.
 
 ## Table Schema Rules Of Thumb
 
 There are many different data sets, with different access patterns and service-level expectations. Therefore, these rules of thumb are only an overview. Read the rest of this chapter to get more details after you have gone through this list.
 
 - Aim to have regions sized between 10 and 50 GB.
-- Aim to have cells no larger than 10 MB, or 50 MB if you use [mob](#hbase_mob). Otherwise, consider storing your cell data in HDFS and store a pointer to the data in HBase.
+- Aim to have cells no larger than 10 MB, or 50 MB if you use [mob](/docs/architecture/hbase-mob). Otherwise, consider storing your cell data in HDFS and store a pointer to the data in HBase.
 - A typical schema has between 1 and 3 column families per table. HBase tables should not be designed to mimic RDBMS tables.
 - Around 50-100 regions is a good number for a table with 1 or 2 column families. Remember that a region is a contiguous segment of a column family.
 - Keep your column family names as short as possible. The column family names are stored for every value (ignoring prefix encoding). They should not be self-documenting and descriptive like in a typical RDBMS.

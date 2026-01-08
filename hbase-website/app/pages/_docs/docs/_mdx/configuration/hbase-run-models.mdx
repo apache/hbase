@@ -2,11 +2,11 @@
 title: "HBase run modes: Standalone and Distributed"
 ---
 
-HBase has two run modes: [standalone](#standalone) and [distributed](#distributed). Out of the box, HBase runs in standalone mode. Whatever your mode, you will need to configure HBase by editing files in the HBase _conf_ directory. At a minimum, you must edit `conf/hbase-env.sh` to tell HBase which java to use. In this file you set HBase environment variables such as the heapsize and other options for the `JVM`, the preferred location for log files, etc. Set `JAVA_HOME` to point at the root of your java install.
+HBase has two run modes: [standalone](/docs/configuration/hbase-run-models#standalone-hbase) and [distributed](/docs/configuration/hbase-run-models#distributed). Out of the box, HBase runs in standalone mode. Whatever your mode, you will need to configure HBase by editing files in the HBase _conf_ directory. At a minimum, you must edit `conf/hbase-env.sh` to tell HBase which java to use. In this file you set HBase environment variables such as the heapsize and other options for the `JVM`, the preferred location for log files, etc. Set `JAVA_HOME` to point at the root of your java install.
 
 ## Standalone HBase
 
-This is the default mode. Standalone mode is what is described in the [quickstart](/docs/getting_started#quick-start---standalone-hbase) section. In standalone mode, HBase does not use HDFS — it uses the local filesystem instead — and it runs all HBase daemons and a local ZooKeeper all up in the same JVM. ZooKeeper binds to a well-known port so clients may talk to HBase.
+This is the default mode. Standalone mode is what is described in the [quickstart](/docs/getting-started#quick-start---standalone-hbase) section. In standalone mode, HBase does not use HDFS — it uses the local filesystem instead — and it runs all HBase daemons and a local ZooKeeper all up in the same JVM. ZooKeeper binds to a well-known port so clients may talk to HBase.
 
 ### Standalone HBase over HDFS
 
@@ -38,8 +38,8 @@ Pseudo-distributed mode can run against the local filesystem or it can run again
 ### Pseudo-distributed
 
 <Callout type="info">
-  A quickstart has been added to the [quickstart](/docs/getting_started#quick-start---standalone-hbase) chapter. See
-  [quickstart-pseudo](/docs/getting_started#pseudo-distributed-for-local-testing). Some of the information that was originally in this section has been moved there.
+  A quickstart has been added to the [quickstart](/docs/getting-started#quick-start---standalone-hbase) chapter. See
+  [quickstart-pseudo](/docs/getting-started#pseudo-distributed-for-local-testing). Some of the information that was originally in this section has been moved there.
 </Callout>
 
 A pseudo-distributed mode is simply a fully-distributed mode run on a single host. Use this HBase configuration for testing and prototyping purposes only. Do not use this configuration for production or for performance evaluation.
@@ -50,7 +50,7 @@ By default, HBase runs in stand-alone mode. Both stand-alone mode and pseudo-dis
 
 Just as in pseudo-distributed mode, a fully distributed configuration requires that you set the `hbase.cluster.distributed` property to `true`. Typically, the `hbase.rootdir` is configured to point to a highly-available HDFS filesystem.
 
-In addition, the cluster is configured so that multiple cluster nodes enlist as RegionServers, ZooKeeper QuorumPeers, and backup HMaster servers. These configuration basics are all demonstrated in [quickstart-fully-distributed](/docs/getting_started#fully-distributed-for-production).
+In addition, the cluster is configured so that multiple cluster nodes enlist as RegionServers, ZooKeeper QuorumPeers, and backup HMaster servers. These configuration basics are all demonstrated in [quickstart-fully-distributed](/docs/getting-started#fully-distributed-for-production).
 
 ### Distributed RegionServers
 
@@ -62,7 +62,7 @@ See the [ZooKeeper](/docs/zookeeper) section for ZooKeeper setup instructions fo
 
 ### Example: Distributed HBase Cluster
 
-This is a bare-bones _conf/hbase-site.xml_ for a distributed HBase cluster. A cluster that is used for real-world work would contain more custom configuration parameters. Most HBase configuration directives have default values, which are used unless the value is overridden in the _hbase-site.xml_. See "[Configuration Files](/docs/config)" for more information.
+This is a bare-bones _conf/hbase-site.xml_ for a distributed HBase cluster. A cluster that is used for real-world work would contain more custom configuration parameters. Most HBase configuration directives have default values, which are used unless the value is overridden in the _hbase-site.xml_. See "[Configuration Files](/docs/configuration/default)" for more information.
 
 ```xml
 <configuration>
@@ -98,7 +98,7 @@ node-c.example.com
 
 ### Distributed HBase Quickstart
 
-See [quickstart-fully-distributed](/docs/getting_started#fully-distributed-for-production) for a walk-through of a simple three-node cluster configuration with multiple ZooKeeper, backup HMaster, and RegionServer instances.
+See [quickstart-fully-distributed](/docs/getting-started#fully-distributed-for-production) for a walk-through of a simple three-node cluster configuration with multiple ZooKeeper, backup HMaster, and RegionServer instances.
 
 ### Procedure: HDFS Client Configuration
 

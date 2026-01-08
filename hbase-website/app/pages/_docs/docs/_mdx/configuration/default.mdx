@@ -4,7 +4,7 @@ title: "Default Configuration"
 
 ## *hbase-site.xml* and *hbase-default.xml*
 
-Just as in Hadoop where you add site-specific HDFS configuration to the *hdfs-site.xml* file, for HBase, site specific customizations go into the file *conf/hbase-site.xml*. For the list of configurable properties, see [hbase default configurations](#hbase_default_configurations) below or view the raw *hbase-default.xml* source file in the HBase source code at *src/main/resources*.
+Just as in Hadoop where you add site-specific HDFS configuration to the *hdfs-site.xml* file, for HBase, site specific customizations go into the file *conf/hbase-site.xml*. For the list of configurable properties, see [hbase default configurations](/docs/configuration/default#hbase-default-configuration) below or view the raw *hbase-default.xml* source file in the HBase source code at *src/main/resources*.
 
 Not all configuration options make it out to *hbase-default.xml*. Some configurations would only appear in source code; the only way to identify these changes are through code review.
 
@@ -33,7 +33,7 @@ Changes here will require a cluster restart for HBase to notice the change thoug
 
 If you are running HBase in standalone mode, you don’t need to configure anything for your client to work provided that they are all on the same machine.
 
-Starting release 3.0.0, the default connection registry has been switched to a rpc based implementation. Refer to [Rpc Connection Registry (new as of 2.5.0)](#). Depending on your HBase version, following is the expected minimal client configuration.
+Starting release 3.0.0, the default connection registry has been switched to a rpc based implementation. Refer to [Rpc Connection Registry (new as of 2.5.0)](/docs/architecture/client#rpc-connection-registry-new-as-of-250). Depending on your HBase version, following is the expected minimal client configuration.
 
 ### Up until 2.x.y releases
 
@@ -116,15 +116,10 @@ config.set("hbase.client.bootstrap.servers", "localhost:1234"); // Starting 3.0.
 HBase provides a wide variety of timeout settings to limit the execution time of various remote operations.
 
 - hbase.rpc.timeout
-
 - hbase.rpc.read.timeout
-
 - hbase.rpc.write.timeout
-
 - hbase.client.operation.timeout
-
 - hbase.client.meta.operation.timeout
-
 - hbase.client.scanner.timeout.period
 
 The `hbase.rpc.timeout` property limits how long a single RPC call can run before timing out. To fine tune read or write related RPC timeouts set `hbase.rpc.read.timeout` and `hbase.rpc.write.timeout` configuration properties. In the absence of these properties `hbase.rpc.timeout` will be used.

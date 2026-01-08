@@ -5,13 +5,13 @@ title: "Tests"
 Developers, at a minimum, should familiarize themselves with the unit test detail; unit tests in HBase have a character not usually seen in other projects.
 
 This information is about unit tests for HBase itself.
-For developing unit tests for your HBase applications, see [Unit Testing HBase Applications](#unit.tests).
+For developing unit tests for your HBase applications, see [Unit Testing HBase Applications](/docs/unit-testing).
 
 ## Apache HBase Modules
 
 As of 0.96, Apache HBase is split into multiple modules.
 This creates "interesting" rules for how and where tests are written.
-If you are writing code for `hbase-server`, see [Unit Tests](#hbase.unittests) for how to write your tests.
+If you are writing code for `hbase-server`, see [Unit Tests](/docs/building-and-developing/tests#unit-tests) for how to write your tests.
 These tests can spin up a minicluster and will need to be categorized.
 For any other module, for example `hbase-common`, the tests must be strict unit tests and just test the class under test - no use of the HBaseTestingUtility or minicluster is allowed (or even possible given the dependency tree).
 
@@ -22,7 +22,7 @@ Starting from 3.0.0, HBaseTestingUtility is renamed to HBaseTestingUtil and mark
 The HBase shell and its tests are predominantly written in jruby.
 
 In order to make these tests run as a part of the standard build, there are a few JUnit test classes that take care of loading the jruby implemented tests and running them.
-The tests were split into separate classes to accomodate class level timeouts (see [Unit Tests](#hbase.unittests) for specifics).
+The tests were split into separate classes to accomodate class level timeouts (see [Unit Tests](/docs/building-and-developing/tests#unit-tests) for specifics).
 You can run all of these tests from the top level with:
 
 ```bash
@@ -82,7 +82,7 @@ For example, to skip the tests in `hbase-server` and `hbase-common`, you would r
 mvn clean test -PskipServerTests -PskipCommonTests
 ```
 
-Also, keep in mind that if you are running tests in the `hbase-server` module you will need to apply the maven profiles discussed in [Running tests](#hbase.unittests.cmds) to get the tests to run properly.
+Also, keep in mind that if you are running tests in the `hbase-server` module you will need to apply the maven profiles discussed in [Running tests](/docs/building-and-developing/tests#running-tests) to get the tests to run properly.
 
 ## Unit Tests
 
@@ -128,7 +128,7 @@ type `$ mvn test`.
 In other words, these three categorizations are for HBase unit tests.
 The `integration` category is not for unit tests, but for integration tests.
 These are normally run when you invoke `$ mvn verify`.
-Integration tests are described in [Integration Tests](#integration.tests).
+Integration tests are described in [Integration Tests](/docs/building-and-developing/tests#integration-tests-1).
 
 Keep reading to figure which annotation of the set `small`, `medium`, and `large`
 to put on your new HBase test case.
@@ -160,7 +160,7 @@ to run longer.
 
 #### Integration Tests:
 _Integration_ tests are system level tests.
-See [Integration Tests](#integration.tests) for more info.
+See [Integration Tests](/docs/building-and-developing/tests#integration-tests-1) for more info.
 If you invoke `$ mvn test` on integration tests, there is no timeout for the test.
 
 ## Running tests
@@ -189,7 +189,7 @@ user settings by running `ulimit -a`.
 
 Running `mvn test` will execute all small tests in a single JVM (no fork) and then medium tests in a
 forked, separate JVM for each test instance (For definition of 'small' test and so on, see
-[Unit Tests](#hbase.unittests)). Medium tests are NOT executed if there is an error in a
+[Unit Tests](/docs/building-and-developing/tests#unit-tests)). Medium tests are NOT executed if there is an error in a
 small test. Large tests are NOT executed.
 
 ### Running all tests
@@ -340,7 +340,7 @@ ConnectionCount=1 (was 1)
 
 - All tests must be categorized, if not they could be skipped.
 - All tests should be written to be as fast as possible.
-- See [Unit Tests](#hbase.unittests) for test case categories and corresponding timeouts.
+- See [Unit Tests](/docs/building-and-developing/tests#unit-tests) for test case categories and corresponding timeouts.
   This should ensure a good parallelization for people using it, and ease the analysis when the test fails.
 
 ### Sleeps in tests

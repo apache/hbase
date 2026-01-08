@@ -46,7 +46,7 @@ Some commands take arguments. Pass no args or -h for usage.
 
 ```
 
-Some of the tools and utilities below are Java classes which are passed directly to the _bin/hbase_ command, as referred to in the last line of the usage instructions. Others, such as `hbase shell` ([The Apache HBase Shell](#shell)), `hbase upgrade` ([Upgrading](#upgrading)), and `hbase thrift` ([Thrift API and Filter Language](#thrift)), are documented elsewhere in this guide.
+Some of the tools and utilities below are Java classes which are passed directly to the _bin/hbase_ command, as referred to in the last line of the usage instructions. Others, such as `hbase shell` ([The Apache HBase Shell](/docs/shell)), `hbase upgrade` ([Upgrading](/docs/upgrading)), and `hbase thrift` ([Thrift API and Filter Language](/docs/thrift-filter-language)), are documented elsewhere in this guide.
 
 ## Canary
 
@@ -278,7 +278,7 @@ SPLITALGORITHM is the java class name of a class implementing
                           systems.
 ```
 
-For additional detail, see [Manual Region Splitting](#manual_region_splitting_decisions).
+For additional detail, see [Manual Region Splitting](/docs/architecture/regions#manual-region-splitting).
 
 ## Health Checker
 
@@ -324,11 +324,11 @@ Each command except `RowCounter` and `CellCounter` accept a single `--help` argu
 
 The `hbck` tool that shipped with hbase-1.x has been made read-only in hbase-2.x. It is not able to repair hbase-2.x clusters as hbase internals have changed. Nor should its assessments in read-only mode be trusted as it does not understand hbase-2.x operation.
 
-A new tool, [HBase ](#HBCK2), described in the next section, replaces `hbck`.
+A new tool, [HBase `HBCK2`](/docs/operational-management/tools#hbase-hbck2), described in the next section, replaces `hbck`.
 
 ## HBase `HBCK2`
 
-`HBCK2` is the successor to [HBase ](#hbck), the hbase-1.x fix tool (A.K.A `hbck1`). Use it in place of `hbck1` making repairs against hbase-2.x installs.
+`HBCK2` is the successor to [HBase `HBCK`](/docs/operational-management/tools#hbase-hbck), the hbase-1.x fix tool (A.K.A `hbck1`). Use it in place of `hbck1` making repairs against hbase-2.x installs.
 
 `HBCK2` does not ship as part of hbase. It can be found as a subproject of the companion [hbase-operator-tools](https://github.com/apache/hbase-operator-tools) repository at [Apache HBase HBCK2 Tool](https://github.com/apache/hbase-operator-tools/tree/master/hbase-hbck2). `HBCK2` was moved out of hbase so it could evolve at a cadence apart from that of hbase core.
 
@@ -345,11 +345,11 @@ This will generate `HBCK2` usage describing commands and options.
 
 ## HFile Tool
 
-See [HFile Tool](#hfile_tool).
+See [HFile Tool](/docs/architecture/regions#hfile-tool).
 
 ## WAL Tools
 
-For bulk replaying WAL files or _recovered.edits_ files, see [WALPlayer](#walplayer). For reading/verifying individual files, read on.
+For bulk replaying WAL files or _recovered.edits_ files, see [WALPlayer](/docs/operational-management/tools#walplayer). For reading/verifying individual files, read on.
 
 ### WALPrettyPrinter
 
@@ -370,7 +370,7 @@ Prior to version 2.0, the `WALPrettyPrinter` was called the `HLogPrettyPrinter`,
 
 ## Compression Tool
 
-See [compression.test](#compression.test).
+See [compression.test](/docs/compression#compressiontest).
 
 ## CopyTable
 
@@ -652,7 +652,7 @@ To generate StoreFiles for bulk-loading:
 $ bin/hbase org.apache.hadoop.hbase.mapreduce.ImportTsv -Dimporttsv.columns=a,b,c -Dimporttsv.bulk.output=hdfs://storefile-outputdir <tablename> <hdfs-data-inputdir>
 ```
 
-These generated StoreFiles can be loaded into HBase via [completebulkload](#completebulkload).
+These generated StoreFiles can be loaded into HBase via [completebulkload](/docs/operational-management/tools#completebulkload).
 
 ### ImportTsv Options
 
@@ -719,11 +719,11 @@ If you have preparing a lot of data for bulk loading, make sure the target HBase
 
 ### See Also
 
-For more information about bulk-loading HFiles into HBase, see [arch.bulk.load](#arch.bulk.load)
+For more information about bulk-loading HFiles into HBase, see [arch.bulk.load](/docs/architecture/bulk-loading)
 
 ## CompleteBulkLoad
 
-The `completebulkload` utility will move generated StoreFiles into an HBase table. This utility is often used in conjunction with output from [importtsv](#importtsv).
+The `completebulkload` utility will move generated StoreFiles into an HBase table. This utility is often used in conjunction with output from [importtsv](/docs/operational-management/tools#importtsv).
 
 There are two ways to invoke this utility, with explicit classname and via the driver:
 
@@ -745,7 +745,7 @@ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop j
 
 Data generated via MapReduce is often created with file permissions that are not compatible with the running HBase process. Assuming you’re running HDFS with permissions enabled, those permissions will need to be updated before you run CompleteBulkLoad.
 
-For more information about bulk-loading HFiles into HBase, see [arch.bulk.load](#arch.bulk.load).
+For more information about bulk-loading HFiles into HBase, see [arch.bulk.load](/docs/architecture/bulk-loading).
 
 ## WALPlayer
 
@@ -759,7 +759,7 @@ Finally, you can use WALPlayer to replay the content of a Regions `recovered.edi
 
 <Callout type="info" title="WALPrettyPrinter">
   To read or verify single WAL files or *recovered.edits* files, since they share the WAL format,
-  see [WAL Tools](#_wal_tools).
+  see [WAL Tools](/docs/operational-management/tools#wal-tools).
 </Callout>
 
 Invoke via:
@@ -876,7 +876,7 @@ Examples:
 
 As shown by usage options above, **CompactionTool** can run as a standalone client or a mapreduce job. When running as mapreduce job, each family dir is handled as an input split, and is processed by a separate map task.
 
-The **compactionOnce** parameter controls how many compaction cycles will be performed until **CompactionTool** program decides to finish its work. If omitted, it will assume it should keep running compactions on each specified family as determined by the given compaction policy configured. For more info on compaction policy, see [compaction](#compaction).
+The **compactionOnce** parameter controls how many compaction cycles will be performed until **CompactionTool** program decides to finish its work. If omitted, it will assume it should keep running compactions on each specified family as determined by the given compaction policy configured. For more info on compaction policy, see [compaction](/docs/architecture/regions#compaction).
 
 If a major compaction is desired, **major** flag can be specified. If omitted, **CompactionTool** will assume minor compaction is wanted by default.
 
@@ -892,7 +892,7 @@ MapReduce mode offers the ability to process each family dir in parallel, as a s
 
 
 <Callout type="info" title="MajorCompaction completely disabled on RegionServers due performance impacts">
-**Major compactions** can be a costly operation (see [compaction](#compaction)), and can indeed impact performance on RegionServers, leading operators to completely disable it for critical low latency application. **CompactionTool** could be used as an alternative in such scenarios, although, additional custom application logic would need to be implemented, such as deciding scheduling and selection of tables/regions/families target for a given compaction run.
+**Major compactions** can be a costly operation (see [compaction](/docs/architecture/regions#compaction)), and can indeed impact performance on RegionServers, leading operators to completely disable it for critical low latency application. **CompactionTool** could be used as an alternative in such scenarios, although, additional custom application logic would need to be implemented, such as deciding scheduling and selection of tables/regions/families target for a given compaction run.
 </Callout>
 
 
@@ -971,7 +971,7 @@ It validates every table level co-processors where the table name matches to `.*
 
 ### DataBlockEncoding validation
 
-HBase 2.0 removed `PREFIX_TREE` Data Block Encoding from column families. For further information please check [_prefix-tree_ encoding removed](#upgrade2.0.prefix-tree.removed). To verify that none of the column families are using incompatible Data Block Encodings in the cluster run the following command.
+HBase 2.0 removed `PREFIX_TREE` Data Block Encoding from column families. For further information please check [_prefix-tree_ encoding removed](/docs/upgrading/paths#prefix-tree-encoding-removed-toc). To verify that none of the column families are using incompatible Data Block Encodings in the cluster run the following command.
 
 ```bash
 $ bin/hbase pre-upgrade validate-dbe

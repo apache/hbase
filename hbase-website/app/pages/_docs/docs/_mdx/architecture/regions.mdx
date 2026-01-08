@@ -4,7 +4,7 @@ title: "Regions"
 
 Regions are the basic element of availability and distribution for tables, and are comprised of a Store per Column Family. The hierarchy of objects is as follows:
 
-```java
+```
 Table                    (HBase table)
     Region               (Regions for the table)
         Store            (Store per ColumnFamily for each Region for the table)
@@ -13,7 +13,7 @@ Table                    (HBase table)
                 Block    (Blocks within a StoreFile within a Store for each Region for the table)
 ```
 
-For a description of what HBase files look like when written to HDFS, see [Browsing HDFS for HBase Objects](#trouble-namenode-hbase-objects).
+For a description of what HBase files look like when written to HDFS, see [Browsing HDFS for HBase Objects](/docs/troubleshooting#browsing-hdfs-for-hbase-objects).
 
 ## Considerations for Number of Regions
 
@@ -25,7 +25,7 @@ Typically you want to keep your region count low on HBase for numerous reasons. 
 
 1.  MSLAB (MemStore-local allocation buffer) requires 2MB per MemStore (that’s 2MB per family per region). 1000 regions that have 2 families each is 3.9GB of heap used, and it’s not even storing data yet. NB: the 2MB value is configurable.
 
-2.  If you fill all the regions at somewhat the same rate, the global memory usage makes it that it forces tiny flushes when you have too many regions which in turn generates compactions. Rewriting the same data tens of times is the last thing you want. An example is filling 1000 regions (with one family) equally and let's consider a lower bound for global MemStore usage of 5GB (the region server would have a big heap). Once it reaches 5GB it will force flush the biggest region, at that point they should almost all have about 5MB of data so it would flush that amount. 5MB inserted later, it would flush another region that will now have a bit over 5MB of data, and so on. This is currently the main limiting factor for the number of regions; see [Number of regions per RS - upper bound](#ops-capacity-regions-count) for detailed formula.
+2.  If you fill all the regions at somewhat the same rate, the global memory usage makes it that it forces tiny flushes when you have too many regions which in turn generates compactions. Rewriting the same data tens of times is the last thing you want. An example is filling 1000 regions (with one family) equally and let's consider a lower bound for global MemStore usage of 5GB (the region server would have a big heap). Once it reaches 5GB it will force flush the biggest region, at that point they should almost all have about 5MB of data so it would flush that amount. 5MB inserted later, it would flush another region that will now have a bit over 5MB of data, and so on. This is currently the main limiting factor for the number of regions; see [Number of regions per RS - upper bound](/docs/operational-management/region-and-capacity#number-of-regions-per-rs---upper-bound) for detailed formula.
 
 3.  The master as is is allergic to tons of regions, and will take a lot of time assigning them and moving them around in batches. The reason is that it’s heavy on ZK usage, and it’s not very async at the moment (could really be improved — and has been improved a bunch in 0.96 HBase).
 
@@ -33,7 +33,7 @@ Typically you want to keep your region count low on HBase for numerous reasons. 
 
 Another issue is the effect of the number of regions on MapReduce jobs; it is typical to have one mapper per HBase region. Thus, hosting only 5 regions per RS may not be enough to get sufficient number of tasks for a MapReduce job, while 1000 regions will generate far too many tasks.
 
-See [Determining region count and size](#ops-capacity-regions) for configuration guidelines.
+See [Determining region count and size](/docs/operational-management/region-and-capacity#determining-region-count-and-size) for configuration guidelines.
 
 ## Region-RegionServer Assignment
 
@@ -44,13 +44,9 @@ This section describes how Regions are assigned to RegionServers.
 When HBase starts regions are assigned as follows (short version):
 
 1.  The Master invokes the `AssignmentManager` upon startup.
-
 2.  The `AssignmentManager` looks at the existing region assignments in `hbase:meta`.
-
 3.  If the region assignment is still valid (i.e., if the RegionServer is still online) then the assignment is kept.
-
 4.  If the assignment is invalid, then the `LoadBalancerFactory` is invoked to assign the region. The load balancer (`StochasticLoadBalancer` by default in HBase 1.0) assign the region to a RegionServer.
-
 5.  `hbase:meta` is updated with the RegionServer assignment (if needed) and the RegionServer start codes (start time of the RegionServer process) upon region opening by the RegionServer.
 
 ### Failover
@@ -58,22 +54,17 @@ When HBase starts regions are assigned as follows (short version):
 When a RegionServer fails:
 
 1.  The regions immediately become unavailable because the RegionServer is down.
-
 2.  The Master will detect that the RegionServer has failed.
-
 3.  The region assignments will be considered invalid and will be re-assigned just like the startup sequence.
-
 4.  In-flight queries are re-tried, and not lost.
-
 5.  Operations are switched to a new RegionServer within the following amount of time:
-
     ```text
     ZooKeeper session timeout + split time + assignment/replay time
     ```
 
 ### Region Load Balancing
 
-Regions can be periodically moved by the [LoadBalancer](#master.processes.loadbalancer).
+Regions can be periodically moved by the [LoadBalancer](/docs/architecture/master#loadbalancer).
 
 ### Region State Transition
 
@@ -143,11 +134,11 @@ For more information, see _Replica Placement: The First Baby Steps_ on this page
 
 Regions split when they reach a configured threshold. Below we treat the topic in short. For a longer exposition, see [Apache HBase Region Splitting and Merging](http://hortonworks.com/blog/apache-hbase-region-splitting-and-merging/) by our Enis Soztutar.
 
-Splits run unaided on the RegionServer; i.e. the Master does not participate. The RegionServer splits a region, offlines the split region and then adds the daughter regions to `hbase:meta`, opens daughters on the parent's hosting RegionServer and then reports the split to the Master. See [Managed Splitting](#disable-splitting) for how to manually manage splits (and for why you might do this).
+Splits run unaided on the RegionServer; i.e. the Master does not participate. The RegionServer splits a region, offlines the split region and then adds the daughter regions to `hbase:meta`, opens daughters on the parent's hosting RegionServer and then reports the split to the Master. See [Managed Splitting](/docs/configuration/important#managed-splitting) for how to manually manage splits (and for why you might do this).
 
 ### Custom Split Policies
 
-You can override the default split policy using a custom [RegionSplitPolicy](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html)(HBase 0.94+). Typically a custom split policy should extend HBase’s default split policy: [IncreasingToUpperBoundRegionSplitPolicy](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/IncreasingToUpperBoundRegionSplitPolicy.html).
+You can override the default split policy using a custom [RegionSplitPolicy](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html) (HBase 0.94+). Typically a custom split policy should extend HBase’s default split policy: [IncreasingToUpperBoundRegionSplitPolicy](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/IncreasingToUpperBoundRegionSplitPolicy.html).
 
 The policy can set globally through the HBase configuration or on a per-table basis.
 
@@ -171,7 +162,7 @@ admin.createTable(tableDesc);
 
 #### Configuring the Split Policy On a Table Using HBase Shell
 
-```java
+```ruby
 hbase> create 'test', {METADATA => {'SPLIT_POLICY' => 'org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy'}},{NAME => 'cf1'}
 ```
 
@@ -192,12 +183,12 @@ It is possible to manually split your table, either at table creation (pre-split
 
 **Reasons to Manually Split Your Table:**
 
-- Your data is sorted by timeseries or another similar algorithm that sorts new data at the end of the table. This means that the Region Server holding the last region is always under load, and the other Region Servers are idle, or mostly idle. See also [Monotonically Increasing Row Keys/Timeseries Data](#timeseries).
-- You have developed an unexpected hotspot in one region of your table. For instance, an application which tracks web searches might be inundated by a lot of searches for a celebrity in the event of news about that celebrity. See [perf.one.region](#perf.one.region) for more discussion about this particular scenario.
+- Your data is sorted by timeseries or another similar algorithm that sorts new data at the end of the table. This means that the Region Server holding the last region is always under load, and the other Region Servers are idle, or mostly idle. See also [Monotonically Increasing Row Keys/Timeseries Data](/docs/regionserver-sizing#monotonically-increasing-row-keystimeseries-data).
+- You have developed an unexpected hotspot in one region of your table. For instance, an application which tracks web searches might be inundated by a lot of searches for a celebrity in the event of news about that celebrity. See [perf.one.region](/docs/performance#anti-pattern-one-hot-region) for more discussion about this particular scenario.
 - After a big increase in the number of RegionServers in your cluster, to get the load spread out quickly.
 - Before a bulk-load which is likely to cause unusual and uneven load across regions.
 
-See [Managed Splitting](#disable-splitting) for a discussion about the dangers and possible benefits of managing splitting completely manually.
+See [Managed Splitting](/docs/configuration/important#managed-splitting) for a discussion about the dangers and possible benefits of managing splitting completely manually.
 
 <Callout type="info">
   The `DisabledRegionSplitPolicy` policy blocks manual region splitting.
@@ -219,7 +210,7 @@ Both Master and RegionServer participate in the event of online region merges. C
 
 An example of region merges in the HBase shell
 
-```
+```ruby
 $ hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME'
 $ hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', true
 ```
@@ -260,7 +251,7 @@ StoreFiles are where your data lives.
 
 The _HFile_ file format is based on the SSTable file described in the [BigTable \[2006](http://research.google.com/archive/bigtable.html)\] paper and on Hadoop’s [TFile](https://hadoop.apache.org/docs/current/api/org/apache/hadoop/io/file/tfile/TFile.html) (The unit test suite and the compression harness were taken directly from TFile). Schubert Zhang’s blog post on [HFile: A Block-Indexed File Format to Store Sorted Key-Value Pairs](http://cloudepr.blogspot.com/2009/09/hfile-block-indexed-file-format-to.html) makes for a thorough introduction to HBase’s HFile. Matteo Bertozzi has also put up a helpful description, [HBase I/O: HFile](http://th30z.blogspot.com/2011/02/hbase-io-hfile.html?spref=tw).
 
-For more information, see the HFile source code. Also see [HBase file format with inline blocks (version 2)](#hfilev2) for information about the HFile v2 format that was included in 0.92.
+For more information, see the HFile source code. Also see [HBase file format with inline blocks (version 2)](/docs/hfile-format#hbase-file-format-with-inline-blocks-version-2) for information about the HFile v2 format that was included in 0.92.
 
 #### HFile Tool
 
@@ -286,7 +277,7 @@ If you leave off the option -v to see just a summary on the HFile. See usage for
 
 #### StoreFile Directory Structure on HDFS
 
-For more information of what StoreFiles look like on HDFS with respect to the directory structure, see [Browsing HDFS for HBase Objects](#trouble-namenode-hbase-objects).
+For more information of what StoreFiles look like on HDFS with respect to the directory structure, see [Browsing HDFS for HBase Objects](/docs/troubleshooting#browsing-hdfs-for-hbase-objects).
 
 ### Blocks
 
@@ -362,9 +353,9 @@ When the MemStore reaches a given size (`hbase.hregion.memstore.flush.size`), it
 
 Compactions fall into two categories: minor and major. Minor and major compactions differ in the following ways.
 
-_Minor compactions_ usually select a small number of small, adjacent StoreFiles and rewrite them as a single StoreFile. Minor compactions do not drop (filter out) deletes or expired versions, because of potential side effects. See [Compaction and Deletions](#compaction-and-deletes) and [Compaction and Versions](#compaction-and-versions) for information on how deletes and versions are handled in relation to compactions. The end result of a minor compaction is fewer, larger StoreFiles for a given Store.
+_Minor compactions_ usually select a small number of small, adjacent StoreFiles and rewrite them as a single StoreFile. Minor compactions do not drop (filter out) deletes or expired versions, because of potential side effects. See [Compaction and Deletions](/docs/architecture/regions#compaction-and-deletions) and [Compaction and Versions](/docs/architecture/regions#compaction-and-versions) for information on how deletes and versions are handled in relation to compactions. The end result of a minor compaction is fewer, larger StoreFiles for a given Store.
 
-The end result of a _major compaction_ is a single StoreFile per Store. Major compactions also process delete markers and max versions. See [Compaction and Deletions](#compaction-and-deletes) and [Compaction and Versions](#compaction-and-versions) for information on how deletes and versions are handled in relation to compactions.
+The end result of a _major compaction_ is a single StoreFile per Store. Major compactions also process delete markers and max versions. See [Compaction and Deletions](/docs/architecture/regions#compaction-and-deletions) and [Compaction and Versions](/docs/architecture/regions#compaction-and-versions) for information on how deletes and versions are handled in relation to compactions.
 
 #### Compaction and Deletions
 
@@ -377,13 +368,13 @@ When you create a Column Family, you can specify the maximum number of versions 
 <Callout type="info">
   In some situations, older versions can be inadvertently resurrected if a newer version is
   explicitly deleted. See [Major compactions change query
-  results](#major-compactions-change-query-results) for a more in-depth explanation. This situation
+  results](/docs/datamodel#major-compactions-change-query-results) for a more in-depth explanation. This situation
   is only possible before the compaction finishes.
 </Callout>
 
-In theory, major compactions improve performance. However, on a highly loaded system, major compactions can require an inappropriate number of resources and adversely affect performance. In a default configuration, major compactions are scheduled automatically to run once in a 7-day period. This is sometimes inappropriate for systems in production. You can manage major compactions manually. See [Managed Compactions](#managed-compactions).
+In theory, major compactions improve performance. However, on a highly loaded system, major compactions can require an inappropriate number of resources and adversely affect performance. In a default configuration, major compactions are scheduled automatically to run once in a 7-day period. This is sometimes inappropriate for systems in production. You can manage major compactions manually. See [Managed Compactions](/docs/configuration/important#managed-compactions).
 
-Compactions do not perform region merges. See [Merge](#ops-regionmgt-merge) for more information on region merging.
+Compactions do not perform region merges. See [Merge](/docs/operational-management/region-and-capacity#merge) for more information on region merging.
 
 #### Compaction Switch
 
@@ -409,7 +400,7 @@ The ExploringCompactionPolicy algorithm considers each possible set of adjacent 
 
 One situation where the ExploringCompactionPolicy works especially well is when you are bulk-loading data and the bulk loads create larger StoreFiles than the StoreFiles which are holding data older than the bulk-loaded data. This can "trick" HBase into choosing to perform a major compaction each time a compaction is needed, and cause a lot of extra overhead. With the ExploringCompactionPolicy, major compactions happen much less frequently because minor compactions are more efficient.
 
-In general, ExploringCompactionPolicy is the right choice for most situations, and thus is the default compaction policy. You can also use ExploringCompactionPolicy along with [Experimental: Stripe Compactions](#ops.stripe).
+In general, ExploringCompactionPolicy is the right choice for most situations, and thus is the default compaction policy. You can also use ExploringCompactionPolicy along with [Experimental: Stripe Compactions](/docs/architecture/regions#experimental-stripe-compactions).
 
 The logic of this policy can be examined in hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/compactions/ExploringCompactionPolicy.java. The following is a walk-through of the logic of the ExploringCompactionPolicy.
 
@@ -420,16 +411,16 @@ The logic of this policy can be examined in hbase-server/src/main/java/org/apach
     - StoreFiles that were created by a bulk-load operation which explicitly excluded compaction. You may decide to exclude StoreFiles resulting from bulk loads, from compaction. To do this, specify the `hbase.mapreduce.hfileoutputformat.compaction.exclude` parameter during the bulk load operation.
 4.  Iterate through the list from step 1, and make a list of all potential sets of StoreFiles to compact together. A potential set is a grouping of `hbase.hstore.compaction.min` contiguous StoreFiles in the list. For each set, perform some sanity-checking and figure out whether this is the best compaction that could be done:
     - If the number of StoreFiles in this set (not the size of the StoreFiles) is fewer than `hbase.hstore.compaction.min` or more than `hbase.hstore.compaction.max`, take it out of consideration.
-    - Compare the size of this set of StoreFiles with the size of the smallest possible compaction that has been found in the list so far. If the size of this set of StoreFiles represents the smallest compaction that could be done, store it to be used as a fall-back if the algorithm is "stuck" and no StoreFiles would otherwise be chosen. See [Being Stuck](#compaction.being.stuck).
+    - Compare the size of this set of StoreFiles with the size of the smallest possible compaction that has been found in the list so far. If the size of this set of StoreFiles represents the smallest compaction that could be done, store it to be used as a fall-back if the algorithm is "stuck" and no StoreFiles would otherwise be chosen. See [Being Stuck](/docs/architecture/regions#being-stuck).
     - Do size-based sanity checks against each StoreFile in this set of StoreFiles.
       - If the size of this StoreFile is larger than `hbase.hstore.compaction.max.size`, take it out of consideration.
       - If the size is greater than or equal to `hbase.hstore.compaction.min.size`, sanity-check it against the file-based ratio to see whether it is too large to be considered.
-      <br/>
+      
       The sanity-checking is successful if:
       - There is only one StoreFile in this set, or
       - For each StoreFile, its size multiplied by `hbase.hstore.compaction.ratio` (or `hbase.hstore.compaction.ratio.offpeak` if off-peak hours are configured and it is during off-peak hours) is less than the sum of the sizes of the other HFiles in the set.
 5.  If this set of StoreFiles is still in consideration, compare it to the previously-selected best compaction. If it is better, replace the previously-selected best compaction with this one.
-6.  When the entire list of potential compactions has been processed, perform the best compaction that was found. If no StoreFiles were selected for compaction, but there are multiple StoreFiles, assume the algorithm is stuck (see [Being Stuck](#compaction.being.stuck)) and if so, perform the smallest compaction that was found in step 3.
+6.  When the entire list of potential compactions has been processed, perform the best compaction that was found. If no StoreFiles were selected for compaction, but there are multiple StoreFiles, assume the algorithm is stuck (see [Being Stuck](/docs/architecture/regions#being-stuck)) and if so, perform the smallest compaction that was found in step 3.
 
 #### RatioBasedCompactionPolicy Algorithm
 
@@ -438,7 +429,7 @@ The RatioBasedCompactionPolicy was the only compaction policy prior to HBase 0.9
 The following section walks you through the algorithm used to select StoreFiles for compaction in the RatioBasedCompactionPolicy.
 
 1.  The first phase is to create a list of all candidates for compaction. A list is created of all StoreFiles not already in the compaction queue, and all StoreFiles newer than the newest file that is currently being compacted. This list of StoreFiles is ordered by the sequence ID. The sequence ID is generated when a Put is appended to the write-ahead log (WAL), and is stored in the metadata of the HFile.
-2.  Check to see if the algorithm is stuck (see [Being Stuck](#compaction.being.stuck), and if so, a major compaction is forced. This is a key area where [The ExploringCompactionPolicy Algorithm](#exploringcompaction.policy) is often a better choice than the RatioBasedCompactionPolicy.
+2.  Check to see if the algorithm is stuck (see [Being Stuck](/docs/architecture/regions#being-stuck), and if so, a major compaction is forced. This is a key area where [The ExploringCompactionPolicy Algorithm](/docs/architecture/regions#the-exploringcompactionpolicy-algorithm) is often a better choice than the RatioBasedCompactionPolicy.
 3.  If the compaction was user-requested, try to perform the type of compaction that was requested. Note that a major compaction may not be possible if all HFiles are not available for compaction or if too many StoreFiles exist (more than `hbase.hstore.compaction.max`).
 4.  Some StoreFiles are automatically excluded from consideration. These include:
     - StoreFiles that are larger than `hbase.hstore.compaction.max.size`
@@ -447,14 +438,14 @@ The following section walks you through the algorithm used to select StoreFiles 
 6.  If the list contains fewer than `hbase.hstore.compaction.min` StoreFiles to compact, a minor compaction is aborted. Note that a major compaction can be performed on a single HFile. Its function is to remove deletes and expired versions, and reset locality on the StoreFile.
 7.  The value of the `hbase.hstore.compaction.ratio` parameter is multiplied by the sum of StoreFiles smaller than a given file, to determine whether that StoreFile is selected for compaction during a minor compaction. For instance, if hbase.hstore.compaction.ratio is 1.2, FileX is 5MB, FileY is 2MB, and FileZ is 3MB:
     ```
-    5 <= 1.2 x (2 + 3)    or    5 <= 6
+    5 <= 1.2 x (2 + 3)            or            5 <= 6
     ```
     In this scenario, FileX is eligible for minor compaction. If FileX were 7MB, it would not be eligible for minor compaction. This ratio favors smaller StoreFile. You can configure a different ratio for use in off-peak hours, using the parameter `hbase.hstore.compaction.ratio.offpeak`, if you also configure `hbase.offpeak.start.hour` and `hbase.offpeak.end.hour`.
 8.  If the last major compaction was too long ago and there is more than one StoreFile to be compacted, a major compaction is run, even if it would otherwise have been minor. By default, the maximum time between major compactions is 7 days, plus or minus a 4.8 hour period, and determined randomly within those parameters. Prior to HBase 0.96, the major compaction period was 24 hours. See `hbase.hregion.majorcompaction` in the table below to tune or disable time-based major compactions.
 
 #### Parameters Used by Compaction Algorithm
 
-This table contains the main configuration parameters for compaction. This list is not exhaustive. To tune these parameters from the defaults, edit the _hbase-default.xml_ file. For a full list of all configuration parameters available, see [config.files](#config.files)
+This table contains the main configuration parameters for compaction. This list is not exhaustive. To tune these parameters from the defaults, edit the _hbase-default.xml_ file. For a full list of all configuration parameters available, see [config.files](/docs/configuration/default#hbase-default-configuration)
 
 - `hbase.hstore.compaction.min`  
    The minimum number of StoreFiles which must be eligible for compaction before compaction can run. The goal of tuning `hbase.hstore.compaction.min` is to avoid ending up with too many tiny StoreFiles to compact. Setting this value to 2 would cause a minor compaction each time you have two StoreFiles in a Store, and this is probably not appropriate. If you set this value too high, all the other values will need to be adjusted accordingly. For most cases, the default value is appropriate. In previous versions of HBase, the parameter `hbase.hstore.compaction.min` was called `hbase.hstore.compactionThreshold`.  
@@ -476,7 +467,7 @@ This table contains the main configuration parameters for compaction. This list 
    For minor compaction, this ratio is used to determine whether a given StoreFile which is larger than `hbase.hstore.compaction.min.size` is eligible for compaction. Its effect is to limit compaction of large StoreFile. The value of `hbase.hstore.compaction.ratio` is expressed as a floating-point decimal.
   - A large ratio, such as 10, will produce a single giant StoreFile. Conversely, a value of .25, will produce behavior similar to the BigTable compaction algorithm, producing four StoreFiles.
 
-  - A moderate value of between 1.0 and 1.4 is recommended. When tuning this value, you are balancing write costs with read costs. Raising the value (to something like 1.4) will have more write costs, because you will compact larger StoreFiles. However, during reads, HBase will need to seek through fewer StoreFiles to accomplish the read. Consider this approach if you cannot take advantage of [Bloom Filters](#blooms).
+  - A moderate value of between 1.0 and 1.4 is recommended. When tuning this value, you are balancing write costs with read costs. Raising the value (to something like 1.4) will have more write costs, because you will compact larger StoreFiles. However, during reads, HBase will need to seek through fewer StoreFiles to accomplish the read. Consider this approach if you cannot take advantage of [Bloom Filters](/docs/performance#bloom-filters).
 
   - Alternatively, you can lower this value to something like 1.0 to reduce the background cost of writes, and use to limit the number of StoreFiles touched during reads. For most cases, the default value is appropriate.
 
@@ -511,8 +502,8 @@ This table contains the main configuration parameters for compaction. This list 
 <Callout type="info" title="Legacy Information">
   This section has been preserved for historical reasons and refers to the way compaction worked
   prior to HBase 0.96.x. You can still use this behavior if you enable [RatioBasedCompactionPolicy
-  Algorithm](#compaction.ratiobasedcompactionpolicy.algorithm). For information on the way that
-  compactions work in HBase 0.96.x and later, see [Compaction](#compaction).
+  Algorithm](/docs/architecture/regions#ratiobasedcompactionpolicy-algorithm). For information on the way that
+  compactions work in HBase 0.96.x and later, see [Compaction](/docs/architecture/regions#compaction).
 </Callout>
 
 To understand the core algorithm for StoreFile selection, there is some ASCII-art in the Store source code that will serve as useful reference.
@@ -606,7 +597,7 @@ Why?
 
 <Callout type="info" title="Impact of Key Configuration Options">
   This information is now included in the configuration parameter table in [Parameters Used by
-  Compaction Algorithm](#compaction.parameters).
+  Compaction Algorithm](/docs/architecture/regions#parameters-used-by-compaction-algorithm).
 </Callout>
 
 #### Date Tiered Compaction
@@ -639,19 +630,19 @@ You also need to set `hbase.hstore.compaction.max` to the same value as `hbase.h
 
 1.  Run one of following commands in the HBase shell. Replace the table name `orders_table` with the name of your table.
 
-    ```sql
+    ```ruby
     alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine', 'hbase.hstore.blockingStoreFiles' => '60', 'hbase.hstore.compaction.min'=>'2', 'hbase.hstore.compaction.max'=>'60'}
     alter 'orders_table', {NAME => 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine', 'hbase.hstore.blockingStoreFiles' => '60', 'hbase.hstore.compaction.min'=>'2', 'hbase.hstore.compaction.max'=>'60'}}
     create 'orders_table', 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine', 'hbase.hstore.blockingStoreFiles' => '60', 'hbase.hstore.compaction.min'=>'2', 'hbase.hstore.compaction.max'=>'60'}
     ```
 
-2.  Configure other options if needed. See [Configuring Date Tiered Compaction](#ops.date.tiered.config) for more information.
+2.  Configure other options if needed. See [Configuring Date Tiered Compaction](/docs/architecture/regions#configuring-date-tiered-compaction) for more information.
 
 **Procedure: Disable Date Tiered Compaction**
 
 1.  Set the `hbase.hstore.engine.class` option to either nil or `org.apache.hadoop.hbase.regionserver.DefaultStoreEngine`. Either option has the same effect. Make sure you set the other options you changed to the original settings too.
 
-    ```sql
+    ```ruby
     alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DefaultStoreEngine', 'hbase.hstore.blockingStoreFiles' => '12', 'hbase.hstore.compaction.min'=>'6', 'hbase.hstore.compaction.max'=>'12'}
     ```
 
@@ -661,7 +652,7 @@ When you change the store engine either way, a major compaction will likely be p
 
 Each of the settings for date tiered compaction should be configured at the table or column family level. If you use HBase shell, the general command pattern is as follows:
 
-```sql
+```ruby
 alter 'orders_table', CONFIGURATION => {'key' => 'value', ..., 'key' => 'value'}}
 ```
 
@@ -690,7 +681,7 @@ Stripe compactions is an experimental feature added in HBase 0.98 which aims to 
 
 Stripe compactions change the HFile layout, creating sub-regions within regions. These sub-regions are easier to compact, and should result in fewer major compactions. This approach alleviates some of the challenges of larger regions.
 
-Stripe compaction is fully compatible with [Compaction](#compaction) and works in conjunction with either the ExploringCompactionPolicy or RatioBasedCompactionPolicy. It can be enabled for existing tables, and the table will continue to operate normally if it is disabled later.
+Stripe compaction is fully compatible with [Compaction](/docs/architecture/regions#compaction) and works in conjunction with either the ExploringCompactionPolicy or RatioBasedCompactionPolicy. It can be enabled for existing tables, and the table will continue to operate normally if it is disabled later.
 
 #### When To Use Stripe Compactions
 
@@ -710,13 +701,13 @@ You can enable stripe compaction for a table or a column family, by setting its 
 
 1.  Run one of following commands in the HBase shell. Replace the table name `orders_table` with the name of your table.
 
-    ```sql
+    ```ruby
     alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}
     alter 'orders_table', {NAME => 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}}
     create 'orders_table', 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}
     ```
 
-2.  Configure other options if needed. See [Configuring Stripe Compaction](#ops.stripe.config) for more information.
+2.  Configure other options if needed. See [Configuring Stripe Compaction](/docs/architecture/regions#configuring-stripe-compaction) for more information.
 
 3.  Enable the table.
 
@@ -724,7 +715,7 @@ You can enable stripe compaction for a table or a column family, by setting its 
 
 1.  Set the `hbase.hstore.engine.class` option to either nil or `org.apache.hadoop.hbase.regionserver.DefaultStoreEngine`. Either option has the same effect.
 
-    ```sql
+    ```ruby
     alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DefaultStoreEngine'}
     ```
 
@@ -736,7 +727,7 @@ When you enable a large table after changing the store engine either way, a majo
 
 Each of the settings for stripe compaction should be configured at the table or column family level. If you use HBase shell, the general command pattern is as follows:
 
-```sql
+```ruby
 alter 'orders_table', CONFIGURATION => {'key' => 'value', ..., 'key' => 'value'}}
 ```
 
@@ -758,7 +749,7 @@ By default, the flush creates several files from one MemStore, according to exis
 In this type of situation, you can set `hbase.store.stripe.compaction.flushToL0` to `true`. This will cause a MemStore flush to create a single file instead. When at least `hbase.store.stripe.compaction.minFilesL0` such files (by default, 4) accumulate, they will be compacted into striped files.
 
 **Normal Compaction Configuration and Stripe Compaction**  
-All the settings that apply to normal compactions (see [Parameters Used by Compaction Algorithm](#compaction.parameters)) apply to stripe compactions. The exceptions are the minimum and maximum number of files, which are set to higher values by default because the files in stripes are smaller. To control these for stripe compactions, use `hbase.store.stripe.compaction.minFiles` and `hbase.store.stripe.compaction.maxFiles`, rather than `hbase.hstore.compaction.min` and `hbase.hstore.compaction.max`.
+All the settings that apply to normal compactions (see [Parameters Used by Compaction Algorithm](/docs/architecture/regions#parameters-used-by-compaction-algorithm)) apply to stripe compactions. The exceptions are the minimum and maximum number of files, which are set to higher values by default because the files in stripes are smaller. To control these for stripe compactions, use `hbase.store.stripe.compaction.minFiles` and `hbase.store.stripe.compaction.maxFiles`, rather than `hbase.hstore.compaction.min` and `hbase.hstore.compaction.max`.
 
 #### FIFO Compaction
 
@@ -771,13 +762,11 @@ Because we don’t do any real compaction, we do not use CPU and IO (disk and ne
 Consider using FIFO Compaction when your use case is
 
 - Very high volume raw data which has low TTL and which is the source of another data (after additional processing).
-
 - Data which can be kept entirely in a a block cache (RAM/SSD). No need for compaction of a raw data at all.
 
 Do not use FIFO compaction when
 
 - Table/ColumnFamily has MIN_VERSION \> 0
-
 - Table/ColumnFamily has TTL = FOREVER (HColumnDescriptor.DEFAULT_TTL)
 
 #### Enabling FIFO Compaction

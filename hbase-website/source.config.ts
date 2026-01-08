@@ -18,6 +18,8 @@
 
 import { defineConfig, defineDocs } from "fumadocs-mdx/config";
 import remarkGfm from "remark-gfm";
+import rehypeKatex from "rehype-katex";
+import remarkMath from "remark-math";
 
 export const docs = defineDocs({
   dir: "app/pages/_docs/docs/_mdx",
@@ -31,6 +33,7 @@ export const docs = defineDocs({
 
 export default defineConfig({
   mdxOptions: {
-    remarkPlugins: (v) => [remarkGfm, ...v]
+    remarkPlugins: (v) => [remarkMath, remarkGfm, ...v],
+    rehypePlugins: (v) => [rehypeKatex, ...v]
   }
 });

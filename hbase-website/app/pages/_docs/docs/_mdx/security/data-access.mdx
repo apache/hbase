@@ -2,12 +2,12 @@
 title: "Securing Access To Your Data"
 ---
 
+import { Step, Steps } from "fumadocs-ui/components/steps";
+
 After you have configured secure authentication between HBase client and server processes and gateways, you need to consider the security of your data itself. HBase provides several strategies for securing your data:
 
 - Role-based Access Control (RBAC) controls which users or groups can read and write to a given HBase resource or execute a coprocessor endpoint, using the familiar paradigm of roles.
-
-- Visibility Labels which allow you to label cells and control access to labelled cells, to further restrict who can read or write to certain subsets of your data. Visibility labels are stored as tags. See [hbase.tags](#hbase.tags) for more information.
-
+- Visibility Labels which allow you to label cells and control access to labelled cells, to further restrict who can read or write to certain subsets of your data. Visibility labels are stored as tags. See [hbase.tags](/docs/security/data-access#tags) for more information.
 - Transparent encryption of data at rest on the underlying filesystem, both in HFiles and in the WAL. This protects your data at rest from an attacker who has access to the underlying filesystem, without the need to change the implementation of the client. It can also protect against data leakage from improperly disposed disks, which can be important for legal and regulatory compliance.
 
 Server-side configuration, administration, and implementation details of each of these features are discussed below, along with any performance trade-offs. An example security configuration is given at the end, to show these features all used together, as they might be in a real-world scenario.
@@ -27,7 +27,9 @@ Server-side configuration, administration, and implementation details of each of
 
 #### Procedure: Basic Server-Side Configuration
 
-1. Enable HFile v3, by setting `hfile.format.version` to 3 in _hbase-site.xml_. This is the default for HBase 1.0 and newer.
+<Steps>
+<Step>
+Enable HFile v3, by setting `hfile.format.version` to 3 in _hbase-site.xml_. This is the default for HBase 1.0 and newer.
 
 ```xml
 <property>
@@ -36,7 +38,11 @@ Server-side configuration, administration, and implementation details of each of
 </property>
 ```
 
-2. Enable SASL and Kerberos authentication for RPC and ZooKeeper, as described in [security.prerequisites](#security.prerequisites) and [ZooKeeper](/docs/zookeeper).
+</Step>
+<Step>
+Enable SASL and Kerberos authentication for RPC and ZooKeeper, as described in [security.prerequisites](/docs/security/client-access#prerequisites) and [ZooKeeper](/docs/zookeeper).
+</Step>
+</Steps>
 
 ## Tags
 
@@ -46,7 +52,7 @@ _Tags_ are a feature of HFile v3. A tag is a piece of metadata which is part of 
 
 Every cell can have zero or more tags. Every tag has a type and the actual tag byte array.
 
-Just as row keys, column families, qualifiers and values can be encoded (see [data.block.encoding.types](#data.block.encoding.types)), tags can also be encoded as well. You can enable or disable tag encoding at the level of the column family, and it is enabled by default. Use the `HColumnDescriptor#setCompressionTags(boolean compressTags)` method to manage encoding settings on a column family. You also need to enable the DataBlockEncoder for the column family, for encoding of tags to take effect.
+Just as row keys, column families, qualifiers and values can be encoded (see [data.block.encoding.types](/docs/compression#data-block-encoding-types)), tags can also be encoded as well. You can enable or disable tag encoding at the level of the column family, and it is enabled by default. Use the `HColumnDescriptor#setCompressionTags(boolean compressTags)` method to manage encoding settings on a column family. You also need to enable the DataBlockEncoder for the column family, for encoding of tags to take effect.
 
 You can enable compression of each tag in the WAL, if WAL compression is also enabled, by setting the value of `hbase.regionserver.wal.tags.enablecompression` to `true` in _hbase-site.xml_. Tag compression uses dictionary encoding.
 
@@ -120,24 +126,25 @@ The combination of access levels and scopes creates a matrix of possible access 
 
 #### ACL Matrix [!toc]
 
-For more details on how ACLs map to specific HBase operations and tasks, see [appendix acl matrix](#appendix_acl_matrix).
+For more details on how ACLs map to specific HBase operations and tasks, see [appendix acl matrix](/docs/acl-matrix).
 
 #### Implementation Details
 
-Cell-level ACLs are implemented using tags (see [Tags](#hbase.tags)). In order to use cell-level ACLs, you must be using HFile v3 and HBase 0.98 or newer.
+Cell-level ACLs are implemented using tags (see [Tags](/docs/security/data-access#tags)). In order to use cell-level ACLs, you must be using HFile v3 and HBase 0.98 or newer.
 
 1.  Files created by HBase are owned by the operating system user running the HBase process. To interact with HBase files, you should use the API or bulk load facility.
 2.  HBase does not model "roles" internally in HBase. Instead, group names can be granted permissions. This allows external modeling of roles via group membership. Groups are created and manipulated externally to HBase, via the Hadoop group mapping service.
 
 #### Server-Side Configuration
 
-1.  As a prerequisite, perform the steps in [Procedure: Basic Server-Side Configuration.](#security.data.basic.server.side).
+1.  As a prerequisite, perform the steps in [Procedure: Basic Server-Side Configuration.](/docs/security/data-access#procedure-basic-server-side-configuration).
 2.  Install and configure the AccessController coprocessor, by setting the following properties in _hbase-site.xml_. These properties take a list of classes.
+
     <Callout type="info">
       If you use the AccessController along with the VisibilityController, the AccessController must
       come first in the list, because with both components active, the VisibilityController will
       delegate access control on its system tables to the AccessController. For an example of using
-      both together, see [Security Configuration Example](#security.example.config).
+      both together, see [Security Configuration Example](/docs/security/example).
     </Callout>
     ```xml
     <property>
@@ -163,8 +170,11 @@ Cell-level ACLs are implemented using tags (see [Tags](#hbase.tags)). In order t
       <name>hbase.security.exec.permission.checks</name>
       <value>true</value>
     </property>
-    ``` Optionally, you can enable transport security, by setting `hbase.rpc.protection` to
+    ```
+
+    Optionally, you can enable transport security, by setting `hbase.rpc.protection` to
     `privacy`. This requires HBase 0.98.4 or newer.
+
 3.  Set up the Hadoop group mapper in the Hadoop namenode’s _core-site.xml_. This is a Hadoop file, not an HBase file. Customize it to your site’s needs. Following is an example.
 
     ```xml
@@ -217,10 +227,10 @@ Cell-level ACLs are implemented using tags (see [Tags](#hbase.tags)). In order t
 4.  Optionally, enable the early-out evaluation strategy. Prior to HBase 0.98.0, if a user was not granted access to a column family, or at least a column qualifier, an AccessDeniedException would be thrown. HBase 0.98.0 removed this exception in order to allow cell-level exceptional grants. To restore the old behavior in HBase 0.98.0-0.98.6, set `hbase.security.access.early_out` to `true` in _hbase-site.xml_. In HBase 0.98.6, the default has been returned to `true`.
 5.  Distribute your configuration and restart your cluster for changes to take effect.
 6.  To test your configuration, log into HBase Shell as a given user and use the `whoami` command to report the groups your user is part of. In this example, the user is reported as being a member of the `services` group.
-    ```text
-        hbase> whoami
-        service (auth:KERBEROS)
-            groups: services
+    ```ruby
+    hbase> whoami
+    service (auth:KERBEROS)
+        groups: services
     ```
 
 #### Administration
@@ -261,31 +271,31 @@ Neither the examples, nor the source files they are taken from, are part of the 
     #### HBase Shell example:
     - Global:
 
-      ```text
+      ```ruby
       hbase> grant '@admins', 'RWXCA'
       ```
 
     - Namespace:
 
-      ```text
+      ```ruby
       hbase> grant 'service', 'RWXCA', '@test-NS'
       ```
 
     - Table:
 
-      ```text
+      ```ruby
       hbase> grant 'service', 'RWXCA', 'user'
       ```
 
     - Column Family:
 
-      ```text
+      ```ruby
       hbase> grant '@developers', 'RW', 'user', 'i'
       ```
 
     - Column Qualifier:
 
-      ```text
+      ```ruby
       hbase> grant 'service, 'RW', 'user', 'i', 'foo'
       ```
 
@@ -293,7 +303,7 @@ Neither the examples, nor the source files they are taken from, are part of the 
 
       The syntax for granting cell ACLs uses the following syntax:
 
-      ```text
+      ```ruby
       grant <table>, \
         { '<user-or-group>' => \
           '<permissions>', ... }, \
@@ -304,13 +314,13 @@ Neither the examples, nor the source files they are taken from, are part of the 
     - _\<permissions\>_ is a string containing any or all of "RWXCA", though only R and W are meaningful at cell scope.
     - _\<scanner-specification\>_ is the scanner specification syntax and conventions used by the 'scan' shell command. For some examples of scanner specifications, issue the following HBase Shell command.
 
-      ```text
+      ```ruby
       hbase> help "scan"
       ```
 
       If you need to enable cell acl,the hfile.format.version option in hbase-site.xml should be greater than or equal to 3,and the hbase.security.access.early_out option should be set to false.This example grants read access to the 'testuser' user and read/write access to the 'developers' group, on cells in the 'pii' column which match the filter.
 
-      ```text
+      ```ruby
       hbase> grant 'user', \
         { '@developers' => 'RW', 'testuser' => 'R' }, \
         { COLUMNS => 'pii', FILTER => "(PrefixFilter ('test'))" }
@@ -385,7 +395,7 @@ Neither the examples, nor the source files they are taken from, are part of the 
 
 4.  Showing a User’s Effective Permissions
 
-    ```text
+    ```ruby
         hbase> user_permission 'user'
 
         hbase> user_permission '.*'
@@ -444,58 +454,17 @@ Visibility labels can be used in conjunction with ACLs.
 
 <Callout type="info">Visibility labels are not currently applied for superusers.</Callout>
 
-<table>
-  <caption>Examples of Visibility Expressions</caption>
-  <colgroup>
-    <col style={{ width: "50%" }} />
-    <col style={{ width: "50%" }} />
-  </colgroup>
-  <thead>
-    <tr>
-      <th style={{ textAlign: "left" }}>Expression</th>
-      <th style={{ textAlign: "left" }}>Interpretation</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td style={{ textAlign: "left" }}>
-        <pre>
-          <code> fulltime</code>
-        </pre>
-      </td>
-      <td style={{ textAlign: "left" }}>
-        <p>Allow access to users associated with the fulltime label.</p>
-      </td>
-    </tr>
-    <tr>
-      <td style={{ textAlign: "left" }}>
-        <pre>
-          <code> !public</code>
-        </pre>
-      </td>
-      <td style={{ textAlign: "left" }}>
-        <p>Allow access to users not associated with the public label.</p>
-      </td>
-    </tr>
-    <tr>
-      <td style={{ textAlign: "left" }}>
-        <pre>
-          <code> ( secret | topsecret ) &amp; !probationary</code>
-        </pre>
-      </td>
-      <td style={{ textAlign: "left" }}>
-        <p>
-          Allow access to users associated with either the secret or topsecret label and not
-          associated with the probationary label.
-        </p>
-      </td>
-    </tr>
-  </tbody>
-</table>
+### Examples of Visibility Expressions
+
+| Expression | Interpretation |
+| ---------- | -------------- |
+| `fulltime` | Allow access to users associated with the fulltime label. |
+| `!public` | Allow access to users not associated with the public label. |
+| `( secret \| topsecret ) & !probationary` | Allow access to users associated with either the secret or topsecret label and not associated with the probationary label. |
 
 ### Server-Side Configuration
 
-1.  As a prerequisite, perform the steps in [Procedure: Basic Server-Side Configuration.](#security.data.basic.server.side).
+1.  As a prerequisite, perform the steps in [Procedure: Basic Server-Side Configuration.](/docs/security/data-access#procedure-basic-server-side-configuration).
 
 2.  Install and configure the VisibilityController coprocessor by setting the following properties in _hbase-site.xml_. These properties take a list of class names.
 
@@ -542,7 +511,7 @@ Neither these examples, nor the source file they were taken from, are part of th
 
     #### HBase Shell: [!toc]
 
-    ```text
+    ```ruby
     hbase> add_labels [ 'admin', 'service', 'developer', 'test' ]
     ```
 
@@ -570,7 +539,7 @@ Neither these examples, nor the source file they were taken from, are part of th
 
     #### HBase Shell: [!toc]
 
-    ```text
+    ```ruby
     hbase> set_auths 'service', [ 'service' ]
     hbase> set_auths 'testuser', [ 'test' ]
     hbase> set_auths 'qa', [ 'test', 'developer' ]
@@ -596,16 +565,16 @@ Neither these examples, nor the source file they were taken from, are part of th
 
 3.  Clear Labels From Users
 
-    **HBase Shell:**
+    #### HBase Shell: [!toc]
 
-    ```text
+    ```ruby
     hbase> clear_auths 'service', [ 'service' ]
     hbase> clear_auths 'testuser', [ 'test' ]
     hbase> clear_auths 'qa', [ 'test', 'developer' ]
     hbase> clear_auths '@qagroup', [ 'test', 'developer' ]
     ```
 
-    **Java API:**
+    #### Java API: [!toc]
 
     ```java
     ...
@@ -625,7 +594,7 @@ Neither these examples, nor the source file they were taken from, are part of th
 
     #### HBase Shell: [!toc]
 
-    ```text
+    ```ruby
     hbase> set_visibility 'user', 'admin|service|developer', { COLUMNS => 'i' }
     hbase> set_visibility 'user', 'admin|service', { COLUMNS => 'pii' }
     hbase> set_visibility 'user', 'test', { COLUMNS => [ 'i', 'pii' ], FILTER => "(PrefixFilter ('test'))" }
@@ -674,7 +643,7 @@ You can specify a different authorization during the Scan or Get, by passing the
 
 #### HBase Shell: [!toc]
 
-```text
+```ruby
 hbase> get_auths 'myUser'
 hbase> scan 'table1', AUTHORIZATIONS => ['private']
 ```
@@ -713,7 +682,7 @@ Interpreting the labels authenticated for a given get/scan request is a pluggabl
 
 You can specify a custom plugin or plugins by using the property `hbase.regionserver.scan.visibility.label.generator.class`. The output for the first `ScanLabelGenerator` will be the input for the next one, until the end of the list.
 
-The default implementation, which was implemented in [HBASE-12466](https://issues.apache.org/jira/browse/HBASE-12466), loads two plugins, `FeedUserAuthScanLabelGenerator` and `DefinedSetFilterScanLabelGenerator`. See [Reading Cells with Labels](#reading_cells_with_labels).
+The default implementation, which was implemented in [HBASE-12466](https://issues.apache.org/jira/browse/HBASE-12466), loads two plugins, `FeedUserAuthScanLabelGenerator` and `DefinedSetFilterScanLabelGenerator`. See [Reading Cells with Labels](/docs/security/data-access#reading-cells-with-labels).
 
 ### Replicating Visibility Tags as Strings
 
@@ -746,7 +715,7 @@ It is also possible to encrypt the WAL. Even though WALs are transient, it is ne
 
 ### Enable or disable the feature.
 
-The "Transparent Encryption of Data At Rest" feature is enabled by default, meaning the users can define tables with column families where the HFiles and WAL files will be encrypted by HBase, assuming the feature is properly configured (see [Server-Side Configuration](#hbase.encryption.server.configuration)).
+The "Transparent Encryption of Data At Rest" feature is enabled by default, meaning the users can define tables with column families where the HFiles and WAL files will be encrypted by HBase, assuming the feature is properly configured (see [Server-Side Configuration](/docs/security/data-access#server-side-configuration)).
 
 In some cases (e.g. due to custom security policies), the operator of the HBase cluster might wish to only rely on an encryption at rest mechanism outside of HBase (e.g. those offered by HDFS) and wants to ensure that HBase’s encryption at rest system is inactive. Since [HBASE-25181](https://issues.apache.org/jira/browse/HBASE-25181) it is possible to explicitly disable HBase’s own encryption by setting `hbase.crypto.enabled` to `false`. This configuration is `true` by default. If it is set to `false`, the users won’t be able to create any table (column family) with HFile and WAL file encryption and the related create table shell (or API) commands will fail if they try.
 

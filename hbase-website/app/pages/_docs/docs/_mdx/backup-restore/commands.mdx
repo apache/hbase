@@ -3,9 +3,9 @@ title: "Backup and Restore commands"
 ---
 
 This covers the command-line utilities that administrators would run to create, restore, and merge backups. Tools to
-inspect details on specific backup sessions is covered in the next section, [Administration of Backup Images](#br-administration).
+inspect details on specific backup sessions is covered in the next section, [Administration of Backup Images](/docs/backup-restore/administration).
 
-Run the command `hbase backup help \<command\>` to access the online help that provides basic information about a command
+Run the command `hbase backup help <command>` to access the online help that provides basic information about a command
 and its options. The below information is captured in this help message for each command.
 
 ### Creating a Backup Image
@@ -47,12 +47,12 @@ _hdfs:_, _webhdfs:_, _s3a:_ or other compatible Hadoop File System implementatio
 
 **_-t \<table_name\[,table_name\]\>_**  
 A comma-separated list of tables to back up. If no tables are specified, all tables are backed up. No regular-expression or
-wildcard support is present; all table names must be explicitly listed. See [Backup Sets](#br-using-backup-sets) for more
+wildcard support is present; all table names must be explicitly listed. See [Backup Sets](/docs/backup-restore/commands#using-backup-sets) for more
 information about peforming operations on collections of tables. Mutually exclusive with the _-s_ option; one of these
 named options are required.
 
 **_-s \<backup_set_name\>_**  
-Identify tables to backup based on a backup set. See [Using Backup Sets](#brusingbackupsets) for the purpose and usage
+Identify tables to backup based on a backup set. See [Using Backup Sets](/docs/backup-restore/commands#using-backup-sets) for the purpose and usage
 of backup sets. Mutually exclusive with the _-t_ option.
 
 **_-w \<number_workers\>_**  
@@ -103,12 +103,12 @@ The backup ID that uniquely identifies the backup image to be restored.
 #### Named Command-Line Arguments
 
 **_-t \<table_name\[,table_name\]\>_**  
-A comma-separated list of tables to restore. See [Backup Sets](#br-using-backup-sets) for more
+A comma-separated list of tables to restore. See [Backup Sets](/docs/backup-restore/commands#using-backup-sets) for more
 information about peforming operations on collections of tables. Mutually exclusive with the _-s_ option; one of these
 named options are required.
 
 **_-s \<backup_set_name\>_**  
-Identify tables to backup based on a backup set. See [Using Backup Sets](#br-using-backup-sets) for the purpose and usage
+Identify tables to backup based on a backup set. See [Using Backup Sets](/docs/backup-restore/commands#using-backup-sets) for the purpose and usage
 of backup sets. Mutually exclusive with the _-t_ option.
 
 **_-q \<name\>_**  

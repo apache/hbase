@@ -32,7 +32,7 @@ to `org.apache.hadoop.hbase.backup.BackupHFileCleaner` or append it to the curre
 
 **_hbase.backup.system.ttl_**: The time-to-live in seconds of data in the `hbase:backup` tables (default: forever). This property
 is only relevant prior to the creation of the `hbase:backup` table. Use the `alter` command in the HBase shell to modify the TTL
-when this table already exists. See the [below section](#br-filesystem-growth-warning) for more details on the impact of this
+when this table already exists. See the [below section](/docs/backup-restore/additional-topics#a-warning-on-file-system-growth) for more details on the impact of this
 configuration property.
 
 **_hbase.backup.attempts.max_**: The number of attempts to perform when taking hbase table snapshots (default: 10).
@@ -138,7 +138,7 @@ backup cluster must restore the _green_set_ dataset to the point in time closest
     IDs on the console:
 
     ```bash
-    `hdfs dfs -ls -t /prodhbasebackups/backups`
+    hdfs dfs -ls -t /prodhbasebackups/backups
     ```
 
 * The admin scans the list to see which backup was created at a date and time closest to the recovery objective. To do this, the
@@ -255,7 +255,7 @@ Like we did for full backups, we have to understand the incremental backup proce
 * Identify new write-ahead logs since the last full or incremental backup: negligible. Apriori knowledge from the backup system table(s).
 * Read, filter, and write "minimized" HFiles equivalent to the WALs: dominated by the speed of writing data. Relative to write speed of HDFS.
 * Read bulk load records from the backup system table, form the paths for bulk-loaded HFiles, and copy them to the backup destination.
-* DistCp the HFiles to the destination: [see above](#br-export-snapshot-cost).
+* DistCp the HFiles to the destination: [see above](/docs/backup-restore/additional-topics#full-backups).
 
 For the second step, the dominating cost of this operation would be the re-writing the data (under the assumption that a majority of the
 data in the WAL is preserved). In this case, we can assume an aggregate write speed of 30MB/s per node. Continuing our 16-node cluster example,
@@ -264,45 +264,37 @@ DistCp MapReduce job would likely dominate the actual time taken to copy the dat
 
 ## Limitations of the Backup and Restore Utility
 
-**Serial backup operations**
-
+**Serial backup operations**  
 Backup operations cannot be run concurrently. An operation includes actions like create, delete, restore, and merge. Only one active backup session is supported. [HBASE-16391](https://issues.apache.org/jira/browse/HBASE-16391)
 will introduce multiple-backup sessions support.
 
-**No means to cancel backups**
-
+**No means to cancel backups**  
 Both backup and restore operations cannot be canceled. ([HBASE-15997](https://issues.apache.org/jira/browse/HBASE-15997), [HBASE-15998](https://issues.apache.org/jira/browse/HBASE-15998)).
 The workaround to cancel a backup would be to kill the client-side backup command (`control-C`), ensure all relevant MapReduce jobs have exited, and then
 run the `hbase backup repair` command to ensure the system backup metadata is consistent.
 
-**Backups can only be saved to a single location**
-
+**Backups can only be saved to a single location**  
 Copying backup information to multiple locations is an exercise left to the user. [HBASE-15476](https://issues.apache.org/jira/browse/HBASE-15476) will
 introduce the ability to specify multiple-backup destinations intrinsically.
 
-**HBase superuser access is required**
-
+**HBase superuser access is required**  
 Only an HBase superuser (e.g. hbase) is allowed to perform backup/restore, can pose a problem for shared HBase installations. Current mitigations would require
 coordination with system administrators to build and deploy a backup and restore strategy ([HBASE-14138](https://issues.apache.org/jira/browse/HBASE-14138)).
 
-**Backup restoration is an online operation**
-
+**Backup restoration is an online operation**  
 To perform a restore from a backup, it requires that the HBase cluster is online as a caveat of the current implementation ([HBASE-16573](https://issues.apache.org/jira/browse/HBASE-16573)).
 
-**Some operations may fail and require re-run**
-
+**Some operations may fail and require re-run**  
 The HBase backup feature is primarily client driven. While there is the standard HBase retry logic built into the HBase Connection, persistent errors in executing operations
 may propagate back to the client (e.g. snapshot failure due to region splits). The backup implementation should be moved from client-side into the ProcedureV2 framework
 in the future which would provide additional robustness around transient/retryable failures. The `hbase backup repair` command is meant to correct states which the system
 cannot automatically detect and recover from.
 
-**Avoidance of declaration of public API**
-
+**Avoidance of declaration of public API**  
 While the Java API to interact with this feature exists and its implementation is separated from an interface, insufficient rigor has been applied to determine if
 it is exactly what we intend to ship to users. As such, it is marked as for a `Private` audience with the expectation that, as users begin to try the feature, there
 will be modifications that would necessitate breaking compatibility ([HBASE-17517](https://issues.apache.org/jira/browse/HBASE-17517)).
 
-**Lack of global metrics for backup and restore**
-
+**Lack of global metrics for backup and restore**  
 Individual backup and restore operations contain metrics about the amount of work the operation included, but there is no centralized location (e.g. the Master UI)
 which present information for consumption ([HBASE-16565](https://issues.apache.org/jira/browse/HBASE-16565)).

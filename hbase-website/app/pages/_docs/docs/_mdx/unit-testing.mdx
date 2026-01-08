@@ -4,7 +4,7 @@ description: "This chapter discusses unit testing your HBase application using J
 ---
 
 Much of the information comes from [a community blog post about testing HBase applications](http://blog.cloudera.com/blog/2013/09/how-to-test-hbase-applications-using-popular-tools/).
-For information on unit tests for HBase itself, see [hbase.tests](#hbase-tests).
+For information on unit tests for HBase itself, see [hbase.tests](/docs/building-and-developing/tests).
 
 Starting from HBase 2.5.0, HBaseTestingUtility is deprecated and should only be used when writing UTs inside HBase.
 End users should use org.apache.hadoop.hbase.testing.TestingHBaseCluster instead.
@@ -79,7 +79,7 @@ You can read more about Mockito at its project site, https://code.google.com/p/m
 You can use Mockito to do unit testing on smaller units.
 For instance, you can mock a `org.apache.hadoop.hbase.Server` instance or a `org.apache.hadoop.hbase.master.MasterServices` interface reference rather than a full-blown `org.apache.hadoop.hbase.master.HMaster`.
 
-This example builds upon the example code in [unit.tests](#unit-tests), to test the `insertRecord` method.
+This example builds upon the example code in [unit.tests](/docs/unit-testing), to test the `insertRecord` method.
 
 First, add a dependency for Mockito to your Maven POM file.
 
@@ -241,7 +241,7 @@ Check the versions to be sure they are appropriate.
 </dependencies>
 ```
 
-This code represents an integration test for the MyDAO insert shown in [unit.tests](#unit-tests).
+This code represents an integration test for the MyDAO insert shown in [unit.tests](/docs/unit-testing).
 
 ```java
 public class MyHBaseIntegrationTest {

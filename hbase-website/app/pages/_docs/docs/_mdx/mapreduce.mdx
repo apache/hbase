@@ -11,7 +11,7 @@ MapReduce version 2 (MR2)is now part of [YARN](https://hadoop.apache.org/docs/r2
 This chapter discusses specific configuration steps you need to take to use MapReduce on data within HBase.
 In addition, it discusses other interactions and issues between HBase and MapReduce jobs.
 
-<Callout type="info" title="`mapred` and `mapreduce`">
+<Callout type="info" title="mapred and mapreduce">
 There are two mapreduce packages in HBase as in MapReduce itself: _org.apache.hadoop.hbase.mapred_ and _org.apache.hadoop.hbase.mapreduce_.
 The former does old-style API and the latter the new mode.
 The latter has more facility though you can usually find an equivalent in the older package.
@@ -115,31 +115,31 @@ The symptom is an exception similar to the following:
 
 ```text
 Exception in thread "main" java.lang.IllegalAccessError: class
-com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass
-com.google.protobuf.LiteralByteString
-at java.lang.ClassLoader.defineClass1(Native Method)
-at java.lang.ClassLoader.defineClass(ClassLoader.java:792)
-at java.security.SecureClassLoader.defineClass(SecureClassLoader.java:142)
-at java.net.URLClassLoader.defineClass(URLClassLoader.java:449)
-at java.net.URLClassLoader.access$100(URLClassLoader.java:71)
-at java.net.URLClassLoader$1.run(URLClassLoader.java:361)
-at java.net.URLClassLoader$1.run(URLClassLoader.java:355)
-at java.security.AccessController.doPrivileged(Native Method)
-at java.net.URLClassLoader.findClass(URLClassLoader.java:354)
-at java.lang.ClassLoader.loadClass(ClassLoader.java:424)
-at java.lang.ClassLoader.loadClass(ClassLoader.java:357)
-at
-org.apache.hadoop.hbase.protobuf.ProtobufUtil.toScan(ProtobufUtil.java:818)
-at
-org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.convertScanToString(TableMapReduceUtil.java:433)
-at
-org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.initTableMapperJob(TableMapReduceUtil.java:186)
-at
-org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.initTableMapperJob(TableMapReduceUtil.java:147)
-at
-org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.initTableMapperJob(TableMapReduceUtil.java:270)
-at
-org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.initTableMapperJob(TableMapReduceUtil.java:100)
+    com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass
+    com.google.protobuf.LiteralByteString
+    at java.lang.ClassLoader.defineClass1(Native Method)
+    at java.lang.ClassLoader.defineClass(ClassLoader.java:792)
+    at java.security.SecureClassLoader.defineClass(SecureClassLoader.java:142)
+    at java.net.URLClassLoader.defineClass(URLClassLoader.java:449)
+    at java.net.URLClassLoader.access$100(URLClassLoader.java:71)
+    at java.net.URLClassLoader$1.run(URLClassLoader.java:361)
+    at java.net.URLClassLoader$1.run(URLClassLoader.java:355)
+    at java.security.AccessController.doPrivileged(Native Method)
+    at java.net.URLClassLoader.findClass(URLClassLoader.java:354)
+    at java.lang.ClassLoader.loadClass(ClassLoader.java:424)
+    at java.lang.ClassLoader.loadClass(ClassLoader.java:357)
+    at
+    org.apache.hadoop.hbase.protobuf.ProtobufUtil.toScan(ProtobufUtil.java:818)
+    at
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.convertScanToString(TableMapReduceUtil.java:433)
+    at
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.initTableMapperJob(TableMapReduceUtil.java:186)
+    at
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.initTableMapperJob(TableMapReduceUtil.java:147)
+    at
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.initTableMapperJob(TableMapReduceUtil.java:270)
+    at
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.initTableMapperJob(TableMapReduceUtil.java:100)
 ...
 ```
 
@@ -148,7 +148,7 @@ This is caused by an optimization introduced in [HBASE-9867](https://issues.apac
 This affects both jobs using the `-libjars` option and "fat jar," those which package their runtime dependencies in a nested `lib` folder.
 
 In order to satisfy the new classloader requirements, `hbase-protocol.jar` must be included in Hadoop's classpath.
-See [HBase, MapReduce, and the CLASSPATH](#hbase-mapreduce-and-the-classpath) for current recommendations for resolving classpath errors.
+See [HBase, MapReduce, and the CLASSPATH](/docs/mapreduce#hbase-mapreduce-and-the-classpath) for current recommendations for resolving classpath errors.
 The following is included for historical purposes.
 
 This can be resolved system-wide by including a reference to the `hbase-protocol.jar` in Hadoop's lib directory, via a symlink or by copying the jar into the new location.
@@ -239,7 +239,7 @@ Otherwise use the default partitioner.
 ## Writing HFiles Directly During Bulk Import
 
 If you are importing into a new table, you can bypass the HBase API and write your content directly to the filesystem, formatted into HBase data files (HFiles). Your import will run faster, perhaps an order of magnitude faster.
-For more on how this mechanism works, see [Bulk Load](/docs/architecture#bulk-load).
+For more on how this mechanism works, see [Bulk Load](/docs/architecture/bulk-loading).
 
 ## RowCounter Example
 
@@ -254,7 +254,7 @@ This will invoke the HBase MapReduce Driver class.
 Select `rowcounter` from the choice of jobs offered.
 This will print rowcounter usage advice to standard output.
 Specify the tablename, column to count, and output directory.
-If you have classpath errors, see [HBase, MapReduce, and the CLASSPATH](#hbase-mapreduce-and-the-classpath).
+If you have classpath errors, see [HBase, MapReduce, and the CLASSPATH](/docs/mapreduce#hbase-mapreduce-and-the-classpath).
 
 ## Map-Task Splitting
 
@@ -308,7 +308,7 @@ if (!b) {
 public static class MyMapper extends TableMapper<Text, Text> {
 
   public void map(ImmutableBytesWritable row, Result value, Context context) throws InterruptedException, IOException {
-// process data for the row from the Result instance.
+    // process data for the row from the Result instance.
    }
 }
 ```
@@ -343,7 +343,7 @@ job.setNumReduceTasks(0);
 
 boolean b = job.waitForCompletion(true);
 if (!b) {
-throw new IOException("error with job!");
+  throw new IOException("error with job!");
 }
 ```
 
@@ -357,17 +357,17 @@ Note: this is what the CopyTable utility does.
 public static class MyMapper extends TableMapper<ImmutableBytesWritable, Put>  {
 
   public void map(ImmutableBytesWritable row, Result value, Context context) throws IOException, InterruptedException {
-// this example is just copying the data from the source table...
-  context.write(row, resultToPut(row,value));
-}
+    // this example is just copying the data from the source table...
+      context.write(row, resultToPut(row,value));
+    }
 
-private static Put resultToPut(ImmutableBytesWritable key, Result result) throws IOException {
-  Put put = new Put(key.get());
-  for (Cell cell : result.listCells()) {
-    put.add(cell);
-  }
-  return put;
-}
+    private static Put resultToPut(ImmutableBytesWritable key, Result result) throws IOException {
+      Put put = new Put(key.get());
+      for (Cell cell : result.listCells()) {
+        put.add(cell);
+      }
+      return put;
+    }
 }
 ```
 
@@ -425,9 +425,9 @@ public static class MyMapper extends TableMapper<Text, IntWritable>  {
   private Text text = new Text();
 
   public void map(ImmutableBytesWritable row, Result value, Context context) throws IOException, InterruptedException {
-String val = new String(value.getValue(CF, ATTR1));
-text.set(val);     // we can only emit Writables...
-context.write(text, ONE);
+    String val = new String(value.getValue(CF, ATTR1));
+    text.set(val);     // we can only emit Writables...
+    context.write(text, ONE);
   }
 }
 ```
@@ -440,14 +440,14 @@ public static class MyTableReducer extends TableReducer<Text, IntWritable, Immut
   public static final byte[] COUNT = "count".getBytes();
 
   public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
-int i = 0;
-for (IntWritable val : values) {
-  i += val.get();
-}
-Put put = new Put(Bytes.toBytes(key.toString()));
-put.add(CF, COUNT, Bytes.toBytes(i));
+    int i = 0;
+    for (IntWritable val : values) {
+      i += val.get();
+    }
+    Put put = new Put(Bytes.toBytes(key.toString()));
+    put.add(CF, COUNT, Bytes.toBytes(i));
 
-context.write(null, put);
+    context.write(null, put);
   }
 }
 ```
@@ -492,11 +492,11 @@ As for the Reducer, it is a "generic" Reducer instead of extending TableMapper a
 public static class MyReducer extends Reducer<Text, IntWritable, Text, IntWritable>  {
 
   public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
-int i = 0;
-for (IntWritable val : values) {
-  i += val.get();
-}
-context.write(key, new IntWritable(i));
+    int i = 0;
+    for (IntWritable val : values) {
+      i += val.get();
+    }
+    context.write(key, new IntWritable(i));
   }
 }
 ```
@@ -529,16 +529,16 @@ public static class MyRdbmsReducer extends Reducer<Text, IntWritable, Text, IntW
   private Connection c = null;
 
   public void setup(Context context) {
-// create DB connection...
+    // create DB connection...
   }
 
   public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
-// do summarization
-// in this example the keys are Text, but this is just an example
+    // do summarization
+    // in this example the keys are Text, but this is just an example
   }
 
   public void cleanup(Context context) {
-// close db connection
+    // close db connection
   }
 
 }
@@ -555,14 +555,14 @@ public class MyMapper extends TableMapper<Text, LongWritable> {
   private Table myOtherTable;
 
   public void setup(Context context) {
-// In here create a Connection to the cluster and save it or use the Connection
-// from the existing table
-myOtherTable = connection.getTable("myOtherTable");
+    // In here create a Connection to the cluster and save it or use the Connection
+    // from the existing table
+    myOtherTable = connection.getTable("myOtherTable");
   }
 
   public void map(ImmutableBytesWritable row, Result value, Context context) throws IOException, InterruptedException {
-// process Result...
-// use 'myOtherTable' for lookups
+    // process Result...
+    // use 'myOtherTable' for lookups
   }
 ```
 
@@ -572,4 +572,4 @@ It is generally advisable to turn off speculative execution for MapReduce jobs t
 This can either be done on a per-Job basis through properties, or on the entire cluster.
 Especially for longer running jobs, speculative execution will create duplicate map-tasks which will double-write your data to HBase; this is probably not what you want.
 
-See [Speculative Execution](/docs/configuration#speculative-execution) for more information.
+See [Speculative Execution](/docs/configuration/important#speculative-execution) for more information.

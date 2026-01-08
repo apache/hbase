@@ -4,16 +4,16 @@ title: "Running Multiple Workloads On a Single Cluster"
 
 HBase provides the following mechanisms for managing the performance of a cluster handling multiple workloads:
 
-- [Quotas](#quota)
-- [Request Queues](#request_queues)
-- [Multiple-Typed Queues](#multiple-typed-queues)
+- [Quotas](/docs/operational-management/running-multiple_workloads-on-a-single-cluster#quotas)
+- [Request Queues](/docs/operational-management/running-multiple_workloads-on-a-single-cluster#request-queues)
+- [Multiple-Typed Queues](/docs/operational-management/running-multiple_workloads-on-a-single-cluster#multiple-typed-queues)
 
 ## Quotas
 
 HBASE-11598 introduces RPC quotas, which allow you to throttle requests based on the following limits:
 
-1.  [The number or size of requests(read, write, or read+write) in a given timeframe](#request-quotas)
-2.  [The number of tables allowed in a namespace](#namespace_quotas)
+1.  [The number or size of requests(read, write, or read+write) in a given timeframe](/docs/operational-management/running-multiple_workloads-on-a-single-cluster#setting-request-quotas)
+2.  [The number of tables allowed in a namespace](/docs/operational-management/running-multiple_workloads-on-a-single-cluster#setting-namespace-quotas)
 
 These limits can be enforced for a specified user, table, or namespace.
 

@@ -5,7 +5,7 @@ description: "Comprehensive guide to compression algorithms and data block encod
 
 <Callout type="info">
 Codecs mentioned in this section are for encoding and decoding data blocks or row keys.
-For information about replication codecs, see [cluster.replication.preserving.tags](#clusterreplicationpreservingtags).
+For information about replication codecs, see [cluster.replication.preserving.tags](/docs/operational-management/cluster-replication#life-of-a-wal-edit).
 </Callout>
 
 HBase supports several different compression algorithms which can be enabled on a ColumnFamily.
@@ -22,17 +22,17 @@ Some codecs take advantage of capabilities built into Java, such as GZip compres
 Others rely on native libraries. Native libraries may be available via codec dependencies installed into
 HBase's library directory, or, if you are utilizing Hadoop codecs, as part of Hadoop. Hadoop codecs
 typically have a native code component so follow instructions for installing Hadoop native binary
-support at [Making use of Hadoop Native Libraries in HBase](#hadoopnativelib).
+support at [Making use of Hadoop Native Libraries in HBase](/docs/compression#making-use-of-hadoop-native-libraries-in-hbase).
 
 This section discusses common codecs that are used and tested with HBase.
 
 No matter what codec you use, be sure to test that it is installed correctly and is available on all nodes in your cluster.
 Extra operational steps may be necessary to be sure that codecs are available on newly-deployed nodes.
-You can use the [compression.test](#compressiontest) utility to check that a given codec is correctly installed.
+You can use the [compression.test](/docs/compression#compressiontest) utility to check that a given codec is correctly installed.
 
-To configure HBase to use a compressor, see [compressor.install](#compressorinstall).
-To enable a compressor for a ColumnFamily, see [changing.compression](#changingcompression).
-To enable data block encoding for a ColumnFamily, see [data.block.encoding.enable](#datablockencodingenable).
+To configure HBase to use a compressor, see [compressor.install](/docs/compression#compressor-configuration-installation-and-use).
+To enable a compressor for a ColumnFamily, see [changing.compression](/docs/compression#enable-compression-on-a-columnfamily).
+To enable data block encoding for a ColumnFamily, see [data.block.encoding.enable](/docs/compression#enable-data-block-encoding).
 
 ## Block Compressors
 
@@ -381,7 +381,7 @@ If `hbase.master.check.compression` is enabled, libraries for all desired compre
 HBase uses Java's built-in GZip support unless the native Hadoop libraries are available on the CLASSPATH.
 The recommended way to add libraries to the CLASSPATH is to set the environment variable `HBASE_LIBRARY_PATH` for the user running HBase.
 If native libraries are not available and Java's GZIP is used, `Got brand-new compressor` reports will be present in the logs.
-See [brand.new.compressor](#brandnewcompressor)).
+See [brand.new.compressor](/docs/troubleshooting#logs-flooded-with-2011-01-10-124048407-info-orgapachehadoopiocompresscodecpool-gotbrand-new-compressor-messages)).
 
 #### Install Hadoop Native LZO Support
 
@@ -391,7 +391,7 @@ See the [Hadoop-LZO at Twitter](https://github.com/twitter/hadoop-lzo/blob/maste
 If you depend upon LZO compression, consider using the pure Java and ASL licensed
 AirCompressor LZO codec option instead of the Hadoop native default, or configure your
 RegionServers to fail to start if native LZO support is not available.
-See [hbase.regionserver.codecs](#hbaseregionservercodecs).
+See [hbase.regionserver.codecs](/docs/compression#enforce-compression-settings-on-a-regionserver).
 
 #### Configure Hadoop Native LZ4 Support
 
@@ -402,7 +402,7 @@ pure Java option for use where native support is not available.
 
 That said, if you prefer the Hadoop option, make sure the hadoop shared library
 (libhadoop.so) is accessible when you start HBase.
-After configuring your platform (see [hadoop.native.lib](#hadoopnativelib)), you can
+After configuring your platform (see [hadoop.native.lib](/docs/compression#making-use-of-hadoop-native-libraries-in-hbase)), you can
 make a symbolic link from HBase to the native Hadoop libraries. This assumes the two
 software installs are colocated. For example, if my 'platform' is Linux-amd64-64:
 
@@ -437,9 +437,9 @@ Make note of the location of the Hadoop library, or copy it to the same location
 
 <Callout type="info">
 The Snappy and Hadoop libraries need to be available on each node of your cluster.
-See [compression.test](#compressiontest) to find out how to test that this is the case.
+See [compression.test](/docs/compression#compressiontest) to find out how to test that this is the case.
 
-See [hbase.regionserver.codecs](#hbaseregionservercodecs) to configure your RegionServers to fail to start if a given compressor is not available.
+See [hbase.regionserver.codecs](/docs/compression#enforce-compression-settings-on-a-regionserver) to configure your RegionServers to fail to start if a given compressor is not available.
 </Callout>
 
 Each of these library locations need to be added to the environment variable `HBASE_LIBRARY_PATH` for the operating system user that runs HBase.

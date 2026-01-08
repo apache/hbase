@@ -32,15 +32,12 @@ In case a read is performed with `Consistency.TIMELINE`, then the read RPC will 
 In terms of semantics, TIMELINE consistency as implemented by HBase differs from pure eventual consistency in these respects:
 
 - Single homed and ordered updates: Region replication or not, on the write side, there is still only 1 defined replica (primary) which can accept writes. This replica is responsible for ordering the edits and preventing conflicts. This guarantees that two different writes are not committed at the same time by different replicas and the data diverges. With this, there is no need to do read-repair or last-timestamp-wins kind of conflict resolution.
-
 - The secondaries also apply the edits in the order that the primary committed them. This way the secondaries will contain a snapshot of the primaries data at any point in time. This is similar to RDBMS replications and even HBase’s own multi-datacenter replication, however in a single cluster.
-
 - On the read side, the client can detect whether the read is coming from up-to-date data or is stale data. Also, the client can issue reads with different consistency requirements on a per-operation basis to ensure its own semantic guarantees.
-
 - The client can still observe edits out-of-order, and can go back in time, if it observes reads from one secondary replica first, then another secondary replica. There is no stickiness to region replicas or a transaction-id based guarantee. If required, this can be implemented later though.
 
 **Timeline Consistency**
-![Timeline Consistency](../images/timeline_consistency.png)
+![Timeline Consistency](../../images/timeline_consistency.png)
 
 To better understand the TIMELINE semantics, let’s look at the above diagram. Let’s say that there are two clients, and the first one writes x=1 at first, then x=2 and x=3 later. As above, all writes are handled by the primary region replica. The writes are saved in the write ahead log (WAL), and replicated to the other replicas asynchronously. In the above diagram, notice that replica_id=1 received 2 updates, and its data shows that x=2, while the replica_id=2 only received a single update, and its data shows that x=1.
 
@@ -91,13 +88,13 @@ Before 3.0.0, this feature works as a replication endpoint, the performance and 
 
 if you want to disable this feature, you need to do two actions in the following order: \* Set configuration property `hbase.region.replica.replication.enabled` to false in `hbase-site.xml` (see Configuration section below) \* Disable the replication peer named `region_replica_replication` in the cluster using hbase shell or `Admin` class:
 
-```
-        hbase> disable_peer 'region_replica_replication'
+```ruby
+hbase> disable_peer 'region_replica_replication'
 ```
 
 In 3.0.0, this feature is re-implemented to decouple with the general replication framework. Now we do not need to create a special replication peer. And during rolling upgrading, we will remove this replication peer automatically if it is present. See [HBASE-26233](https://issues.apache.org/jira/browse/HBASE-26233) and the design doc in our git repo for more details.
 
-Async WAL Replication and the `hbase:meta` table is a little more involved and gets its own section below; see [Region replication for META table’s region](#async.wal.replication.meta)
+Async WAL Replication and the `hbase:meta` table is a little more involved and gets its own section below; see [Region replication for META table’s region](/docs/architecture/timeline-consistent-reads#region-replication-for-meta-tables-region)
 
 ## Store File TTL
 
@@ -247,7 +244,7 @@ There is another per-table property `REGION_MEMSTORE_REPLICATION`.All tables hav
 
 ### Shell
 
-```java
+```ruby
 create 't1', 'f1', {REGION_REPLICATION => 2}
 
 describe 't1'

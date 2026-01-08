@@ -4,11 +4,6 @@ title: "Cluster Replication"
 
 ## Cluster Replication
 
-<Callout type="info">
-  This information was previously available at [Cluster
-  Replication](https://hbase.apache.org/0.94/replication.html).
-</Callout>
-
 HBase provides a cluster replication mechanism which allows you to keep one cluster’s state synchronized with that of another cluster, using the write-ahead log (WAL) of the source cluster to propagate the changes. Some use cases for cluster replication include:
 
 - Backup and disaster recovery
@@ -27,7 +22,7 @@ HBase provides a cluster replication mechanism which allows you to keep one clus
   you want to do recovery through replication, you could loss some data. To address this problem, we
   have introduced a new feature called synchronous replication. As the mechanism is a bit different
   so we use a separated section to describe it. Please see [Synchronous
-  Replication](#syncreplication).
+  Replication](/docs/sync-replication).
 </Callout>
 
 <Callout type="info">
@@ -53,7 +48,7 @@ How your application builds on top of the HBase API matters when replication is 
 
 The combination of these two properties (at-least-once delivery and the lack of message ordering) means that some destination clusters may end up in a different state if your application makes use of operations that are not idempotent, e.g. Increments.
 
-To solve the problem, HBase now supports serial replication, which sends edits to destination cluster as the order of requests from client. See [Serial Replication](#_serial_replication).
+To solve the problem, HBase now supports serial replication, which sends edits to destination cluster as the order of requests from client. See [Serial Replication](/docs/operational-management/cluster-replication#serial-replication).
 </Callout>
 
 
@@ -91,7 +86,7 @@ LOG.info("Replicating "+clusterId + " -> " + peerClusterId);
 ```
 
 #### Serial Replication Configuration
-See [Serial Replication](#_serial_replication)
+See [Serial Replication](/docs/operational-management/cluster-replication#serial-replication)
 
 #### Cluster Management Commands  
 **add_peer `<ID>` `<CLUSTER_KEY>`**  
@@ -236,10 +231,10 @@ And in HBASE-27110, we have implemented a file system based replication peer sto
 And in HBASE-27109, we have changed the replication queue storage from zookeeper based to hbase table based. See the below `Replication Queue State` in hbase:replication table section for more details.
 
 **Replication State in ZooKeeper**  
-By default, the state is contained in the base node _/hbase/replication_. Usually this nodes contains two child nodes, the peers znode is for storing replication peer state, and the rs znodes is for storing replication queue state. And if you choose the file system based replication peer storage, you will not see the peers znode. And starting from 3.0.0, we have moved the replication queue state to [hbase:replication](#hbase:replication) table, so you will not see the rs znode.
+By default, the state is contained in the base node _/hbase/replication_. Usually this nodes contains two child nodes, the peers znode is for storing replication peer state, and the rs znodes is for storing replication queue state. And if you choose the file system based replication peer storage, you will not see the peers znode. And starting from 3.0.0, we have moved the replication queue state to `hbase:replication` table (see below), so you will not see the rs znode.
 
 **The `Peers` Znode**  
-The `peers` znode is stored in _/hbase/replication/peers_ by default. It consists of a list of all peer replication clusters, along with the status of each of them. The value of each peer is its cluster key, which is provided in the HBase Shell. The cluster key contains a list of ZooKeeper nodes in the cluster’s quorum, the client port for the ZooKeeper quorum, and the base znode for HBase in HDFS on that cluster. Starting from 3.0.0, you can also specify connection URI as a cluster key. See [Connection URI](#client.connectionuri) for more details about connection URI.
+The `peers` znode is stored in _/hbase/replication/peers_ by default. It consists of a list of all peer replication clusters, along with the status of each of them. The value of each peer is its cluster key, which is provided in the HBase Shell. The cluster key contains a list of ZooKeeper nodes in the cluster’s quorum, the client port for the ZooKeeper quorum, and the base znode for HBase in HDFS on that cluster. Starting from 3.0.0, you can also specify connection URI as a cluster key. See [Connection URI](/docs/architecture/client#connection-uri) for more details about connection URI.
 
 **The `RS` Znode**  
 The `rs` znode contains a list of WAL logs which need to be replicated. This list is divided into a set of queues organized by region server and the peer cluster the region server is shipping the logs to. The rs znode has one child znode for each region server in the cluster. The child znode name is the region server’s hostname, client port, and start code. This list includes both live and dead region servers.
@@ -258,7 +253,7 @@ A ZooKeeper watcher is placed on the `$zookeeper.znode.parent/rs` node of the sl
 
 #### Keeping Track of Logs(based on ZooKeeper)
 
-Each master cluster region server has its own znode in the replication znodes hierarchy. It contains one znode per peer cluster (if 5 slave clusters, 5 znodes are created), and each of these contain a queue of WALs to process. Each of these queues will track the WALs created by that region server, but they can differ in size. For example, if one slave cluster becomes unavailable for some time, the WALs should not be deleted, so they need to stay in the queue while the others are processed. See [rs.failover.details](#rs.failover.details) for an example.
+Each master cluster region server has its own znode in the replication znodes hierarchy. It contains one znode per peer cluster (if 5 slave clusters, 5 znodes are created), and each of these contain a queue of WALs to process. Each of these queues will track the WALs created by that region server, but they can differ in size. For example, if one slave cluster becomes unavailable for some time, the WALs should not be deleted, so they need to stay in the queue while the others are processed. See [rs.failover.details](/docs/operational-management/cluster-replication#region-server-failover) for an example.
 
 When a source is instantiated, it contains the current WAL that the region server is writing to. During log rolling, the new file is added to the queue of each slave cluster’s znode just before it is made available. This ensures that all the sources are aware that a new log exists before the region server is able to append edits into it, but this operations is now more expensive. The queue items are discarded when the replication thread cannot read more entries from a file (because it reached the end of the last block) and there are other files in the queue. This means that if a source is up to date and replicates from the log that the region server writes to, reading up to the "end" of the current file will not delete the item in the queue.
 

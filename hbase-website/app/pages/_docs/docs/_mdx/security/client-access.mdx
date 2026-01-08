@@ -18,7 +18,7 @@ You need to have a working Kerberos KDC.
 
 ## Server-side Configuration for Secure Operation
 
-First, refer to [security.prerequisites](#security.prerequisites) and ensure that your underlying HDFS configuration is secure.
+First, refer to [security.prerequisites](/docs/security/client-access#prerequisites) and ensure that your underlying HDFS configuration is secure.
 
 Add the following to the `hbase-site.xml` file on every server machine in the cluster:
 
@@ -41,7 +41,7 @@ A full shutdown and restart of HBase service is required when deploying these co
 
 ## Client-side Configuration for Secure Operation
 
-First, refer to [Prerequisites](#security.prerequisites) and ensure that your underlying HDFS configuration is secure.
+First, refer to [Prerequisites](/docs/security/client-access#prerequisites) and ensure that your underlying HDFS configuration is secure.
 
 Add the following to the `hbase-site.xml` file on every client:
 
@@ -132,13 +132,13 @@ In order to use the Thrift API principal to interact with HBase, it is also nece
 grant 'thrift_server', 'RWCA'
 ```
 
-For more information about ACLs, please see the [Access Control Labels (ACLs)](#hbase.accesscontrol.configuration) section
+For more information about ACLs, please see the [Access Control Labels (ACLs)](/docs/security/data-access#access-control-labels-acls) section
 
 The Thrift gateway will authenticate with HBase using the supplied credential. No authentication will be performed by the Thrift gateway itself. All client access via the Thrift gateway will use the Thrift gateway’s credential and have its privilege.
 
 ## Configure the Thrift Gateway to Authenticate on Behalf of the Client
 
-[Client-side Configuration for Secure Operation - Thrift Gateway](#security.client.thrift) describes how to authenticate a Thrift client to HBase using a fixed user. As an alternative, you can configure the Thrift gateway to authenticate to HBase on the client’s behalf, and to access HBase using a proxy user. This was implemented in [HBASE-11349](https://issues.apache.org/jira/browse/HBASE-11349) for Thrift 1, and [HBASE-11474](https://issues.apache.org/jira/browse/HBASE-11474) for Thrift 2.
+[Client-side Configuration for Secure Operation - Thrift Gateway](/docs/security/client-access#client-side-configuration-for-secure-operation---thrift-gateway) describes how to authenticate a Thrift client to HBase using a fixed user. As an alternative, you can configure the Thrift gateway to authenticate to HBase on the client’s behalf, and to access HBase using a proxy user. This was implemented in [HBASE-11349](https://issues.apache.org/jira/browse/HBASE-11349) for Thrift 1, and [HBASE-11474](https://issues.apache.org/jira/browse/HBASE-11474) for Thrift 2.
 
 <Callout type="info">
   If you use framed transport, you cannot yet take advantage of this feature, because SASL does not
@@ -147,8 +147,8 @@ The Thrift gateway will authenticate with HBase using the supplied credential. N
 
 To enable it, do the following.
 
-1.  Be sure Thrift is running in secure mode, by following the procedure described in [Client-side Configuration for Secure Operation - Thrift Gateway](#security.client.thrift).
-2.  Be sure that HBase is configured to allow proxy users, as described in [REST Gateway Impersonation Configuration](#security.rest.gateway).
+1.  Be sure Thrift is running in secure mode, by following the procedure described in [Client-side Configuration for Secure Operation - Thrift Gateway](/docs/security/client-access#client-side-configuration-for-secure-operation---thrift-gateway).
+2.  Be sure that HBase is configured to allow proxy users, as described in [REST Gateway Impersonation Configuration](/docs/security/client-access#rest-gateway-impersonation-configuration).
 3.  In _hbase-site.xml_ for each cluster node running a Thrift gateway, set the property `hbase.thrift.security.qop` to one of the following three values:
     - `privacy` - authentication, integrity, and confidentiality checking.
     - `integrity` - authentication and integrity checking
@@ -157,7 +157,7 @@ To enable it, do the following.
 
 ## Configure the Thrift Gateway to Use the `doAs` Feature
 
-[Configure the Thrift Gateway to Authenticate on Behalf of the Client](#security.gateway.thrift) describes how to configure the Thrift gateway to authenticate to HBase on the client’s behalf, and to access HBase using a proxy user. The limitation of this approach is that after the client is initialized with a particular set of credentials, it cannot change these credentials during the session. The `doAs` feature provides a flexible way to impersonate multiple principals using the same client. This feature was implemented in [HBASE-12640](https://issues.apache.org/jira/browse/HBASE-12640) for Thrift 1, but is currently not available for Thrift 2.
+[Configure the Thrift Gateway to Authenticate on Behalf of the Client](/docs/security/client-access#configure-the-thrift-gateway-to-authenticate-on-behalf-of-the-client) describes how to configure the Thrift gateway to authenticate to HBase on the client’s behalf, and to access HBase using a proxy user. The limitation of this approach is that after the client is initialized with a particular set of credentials, it cannot change these credentials during the session. The `doAs` feature provides a flexible way to impersonate multiple principals using the same client. This feature was implemented in [HBASE-12640](https://issues.apache.org/jira/browse/HBASE-12640) for Thrift 1, but is currently not available for Thrift 2.
 
 **To enable the `doAs` feature**, add the following to the _hbase-site.xml_ file for every Thrift gateway:
 
@@ -216,7 +216,7 @@ In order to use the REST API principal to interact with HBase, it is also necess
 grant 'rest_server', 'RWCA'
 ```
 
-For more information about ACLs, please see the [Access Control Labels (ACLs)](#hbase.accesscontrol.configuration) section
+For more information about ACLs, please see the [Access Control Labels (ACLs)](/docs/security/data-access#access-control-labels-acls) section
 
 HBase REST gateway supports [SPNEGO HTTP authentication](https://hadoop.apache.org/docs/stable/hadoop-auth/index.html) for client access to the gateway. To enable REST gateway Kerberos authentication for client access, add the following to the `hbase-site.xml` file for every REST gateway.
 

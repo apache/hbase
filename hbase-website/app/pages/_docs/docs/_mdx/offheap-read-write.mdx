@@ -15,7 +15,7 @@ amount of work the GC has to do.
 
 ![Offheap Overview](../images/offheap-overview.png)
 
-For redress for the single mention of onheap in the read-section of the diagram above see [Read block from HDFS to offheap directly](#regionserver-read-hdfs-block-offheap).
+For redress for the single mention of onheap in the read-section of the diagram above see [Read block from HDFS to offheap directly](/docs/offheap-read-write#read-block-from-hdfs-to-offheap-directly).
 
 ## Offheap read-path
 
@@ -27,19 +27,19 @@ This feature is available since HBase 2.0.0. Refer to below blogs for more detai
 [Offheaping the Read Path in Apache HBase: Part 1 of 2](https://blogs.apache.org/hbase/entry/offheaping_the_read_path_in)
 and [Offheap Read-Path in Production - The Alibaba story](https://blogs.apache.org/hbase/entry/offheap-read-path-in-production)
 
-For an end-to-end off-heaped read-path, all you have to do is enable an off-heap backed [Off-heap Block Cache](#offheap-blockcache)(BC).
-To do this, configure _hbase.bucketcache.ioengine_ to be _offheap_ in _hbase-site.xml_ (See [BucketCache Deploy Modes](#bc-deploy-modes) to learn
+For an end-to-end off-heaped read-path, all you have to do is enable an off-heap backed [Off-heap Block Cache](/docs/architecture/regionserver#off-heap-block-cache)(BC).
+To do this, configure _hbase.bucketcache.ioengine_ to be _offheap_ in _hbase-site.xml_ (See [BucketCache Deploy Modes](/docs/architecture/regionserver#bucketcache-deploy-modes) to learn
 more about _hbase.bucketcache.ioengine_ options). Also specify the total capacity of the BC using `hbase.bucketcache.size`.
-Please remember to adjust value of 'HBASE_OFFHEAPSIZE' in _hbase-env.sh_ (See [BucketCache Example Configuration](#bc-example) for help sizing and an example
+Please remember to adjust value of 'HBASE_OFFHEAPSIZE' in _hbase-env.sh_ (See [BucketCache Example Configuration](/docs/architecture/regionserver#bucketcache-example-configuration) for help sizing and an example
 enabling). This configuration is for specifying the maximum possible off-heap memory allocation for the RegionServer java
 process. This should be bigger than the off-heap BC size to accommodate usage by other features making use of off-heap memory
-such as Server RPC buffer pool and short-circuit reads (See discussion in [BucketCache Example Configuration](#bc-example)).
+such as Server RPC buffer pool and short-circuit reads (See discussion in [BucketCache Example Configuration](/docs/architecture/regionserver#bucketcache-example-configuration)).
 
 Please keep in mind that there is no default for `hbase.bucketcache.ioengine` which means the `BlockCache` is OFF by default
-(See [Direct Memory Usage In HBase](#direct-memory)). 
+(See the "Direct Memory Usage In HBase" info section in [BucketCache Example Configuration](/docs/architecture/regionserver#bucketcache-example-configuration)). 
 
 This is all you need to do to enable off-heap read path. Most buffers in HBase are already off-heap. With BC off-heap,
-the read pipeline will copy data between HDFS and the server socket — caveat [hbase.ipc.server.reservoir.initial.max](#hbase-ipc-server-reservoir-initial-max) —
+the read pipeline will copy data between HDFS and the server socket — caveat hbase.ipc.server.reservoir.initial.max —
 sending results back to the client.
 
 ### Tuning the RPC buffer pool
@@ -56,7 +56,7 @@ make a result cell block. This can impact the GC on a highly read loaded server.
 The config keys which start with prefix `hbase.ipc.server.reservoir` are deprecated in hbase-3.x (the
 internal pool implementation changed). If you are still in hbase-2.2.x or older, then just use the old config
 keys. Otherwise if in hbase-3.x or hbase-2.3.x+, please use the new config keys
-(See [deprecated and new configs in HBase3.x](#regionserver-read-hdfs-block-offheap))
+(See [deprecated and new configs in HBase3.x](/docs/offheap-read-write#read-block-from-hdfs-to-offheap-directly))
 </Callout>
 
 Next thing to tune is the ByteBuffer pool on the RPC server side. The user can tune this pool with respect to how
@@ -119,8 +119,8 @@ For more details about the design and performance improvement, please see the
 
 Here we will share some best practice about the performance tuning but first we introduce new (hbase-3.x/hbase-2.3.x) configuration names
 that go with the new internal pool implementation (`ByteBuffAllocator` vs the old `ByteBufferPool`), some of which mimic now deprecated
-hbase-2.2.x configurations discussed above in the [Tuning the RPC buffer pool](#regionserver-offheap-rpc-bb-tuning). Much of the advice here overlaps that given above
-in the [Tuning the RPC buffer pool](#regionserver-offheap-rpc-bb-tuning) since the implementations have similar configurations.
+hbase-2.2.x configurations discussed above in the [Tuning the RPC buffer pool](/docs/offheap-read-write#tuning-the-rpc-buffer-pool). Much of the advice here overlaps that given above
+in the [Tuning the RPC buffer pool](/docs/offheap-read-write#tuning-the-rpc-buffer-pool) since the implementations have similar configurations.
 
 1. `hbase.server.allocator.pool.enabled` is for whether the RegionServer will use the pooled offheap ByteBuffer allocator. Default
 value is true. In hbase-2.x, the deprecated `hbase.ipc.server.reservoir.enabled` did similar and is mapped to this config
@@ -130,7 +130,7 @@ request will be allocated from onheap directly because it would be wasteful allo
 ByteBuffers. The default minimum is `hbase.server.allocator.buffer.size/6`.
 3. `hbase.server.allocator.max.buffer.count`: The `ByteBuffAllocator`, the new pool/reservoir implementation,  has fixed-size
 ByteBuffers. This config is for how many buffers to pool. Its default value is 2MB * 2 * hbase.regionserver.handler.count / 65KB
-(similar to the discussion above in [Tuning the RPC buffer pool](#regionserver-offheap-rpc-bb-tuning)). If the default `hbase.regionserver.handler.count` is 30, then the default will be 1890.
+(similar to the discussion above in [Tuning the RPC buffer pool](/docs/offheap-read-write#tuning-the-rpc-buffer-pool)). If the default `hbase.regionserver.handler.count` is 30, then the default will be 1890.
 4. `hbase.server.allocator.buffer.size`: The byte size of each ByteBuffer. The default value is 66560 (65KB), here we choose 65KB instead of 64KB
 because of [HBASE-22532](https://issues.apache.org/jira/browse/HBASE-22532).
 
@@ -170,7 +170,7 @@ whereas if it's a single ByteBuffer we can speed the checksum by calling the had
 
 Please also see: [HBASE-22483](https://issues.apache.org/jira/browse/HBASE-22483)
 
-Don't forget to up your _HBASE_OFFHEAPSIZE_ accordingly. See [hbase.offheapsize](#hbase-offheapsize)
+Don't forget to up your _HBASE_OFFHEAPSIZE_ accordingly.
 
 ## Offheap write-path
 
@@ -181,7 +181,7 @@ Write off-heaping makes use of the MSLAB pool. It creates MSLAB chunks as Direct
 
 `hbase.regionserver.offheap.global.memstore.size` is the configuration key which controls the amount of off-heap data. Its value is the number of megabytes
 of off-heap memory that should be used by MSLAB (e.g. `25` would result in 25MB of off-heap). Be sure to increase _HBASE_OFFHEAPSIZE_ which will set the JVM's
-MaxDirectMemorySize property (see [hbase.offheapsize](#hbase-offheapsize) for more on _HBASE_OFFHEAPSIZE_). The default value of
+MaxDirectMemorySize property (see [Tuning the RPC buffer pool](/docs/offheap-read-write#tuning-the-rpc-buffer-pool) for more on _HBASE_OFFHEAPSIZE_). The default value of
 `hbase.regionserver.offheap.global.memstore.size` is 0 which means MSLAB uses onheap, not offheap, chunks by default.
 
 `hbase.hregion.memstore.mslab.chunksize` controls the size of each off-heap chunk. Default is `2097152` (2MB).

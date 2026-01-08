@@ -72,30 +72,30 @@ See the design doc in [HBASE-18659](https://issues.apache.org/jira/browse/HBASE-
 
 - Firstly, make sure that HDFS ACLs are enabled and umask is set to 027
 
-```
-dfs.namenode.acls.enabled = true
-fs.permissions.umask-mode = 027
-```
+  ```
+  dfs.namenode.acls.enabled = true
+  fs.permissions.umask-mode = 027
+  ```
 
 - Add master coprocessor, please make sure the SnapshotScannerHDFSAclController is configured after AccessController
 
-```
-hbase.coprocessor.master.classes = "org.apache.hadoop.hbase.security.access.AccessController
-,org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclController"
-```
+  ```
+  hbase.coprocessor.master.classes = "org.apache.hadoop.hbase.security.access.AccessController
+  ,org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclController"
+  ```
 
 - Enable this feature
 
-```
-hbase.acl.sync.to.hdfs.enable=true
-```
+  ```
+  hbase.acl.sync.to.hdfs.enable=true
+  ```
 
 - Modify table scheme to enable this feature for a specified table, this config is
   false by default for every table, this means the HBase granted ACLs will not be synced to HDFS
 
-```
-alter 't1', CONFIGURATION => {'hbase.acl.sync.to.hdfs.enable' => 'true'}
-```
+  ```ruby
+  alter 't1', CONFIGURATION => {'hbase.acl.sync.to.hdfs.enable' => 'true'}
+  ```
 
 ### Limitation
 

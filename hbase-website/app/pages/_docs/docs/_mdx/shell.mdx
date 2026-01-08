@@ -15,7 +15,7 @@ $ ./bin/hbase shell
 Type `help` and then `<RETURN>` to see a listing of shell commands and options.
 Browse at least the paragraphs at the end of the help output for the gist of how variables and command arguments are entered into the HBase shell; in particular note how table names, rows, and columns, etc., must be quoted.
 
-See [shell exercises](#shell-exercises) for example basic shell operation.
+See [shell exercises](/docs/getting-started#procedure-use-hbase-for-the-first-time) for example basic shell operation.
 
 Here is a nicely formatted listing of [all shell commands](http://learnhbase.wordpress.com/2013/03/02/hbase-shell-commands/) by Rajeshbabu Chintaguntla.
 
@@ -48,7 +48,7 @@ Spawning HBase Shell commands in this way is slow, so keep that in mind when you
 
 ### Passing Commands to the HBase Shell
 
-You can pass commands to the HBase Shell in non-interactive mode (see [hbase.shell.noninteractive](#hbaseshellnoninteractive)) using the `echo` command and the `|` (pipe) operator.
+You can pass commands to the HBase Shell in non-interactive mode (see [hbase.shell.noninteractive](/docs/shell#hbase-shell-in-os-scripts)) using the `echo` command and the `|` (pipe) operator.
 Be sure to escape characters in the HBase commands which would otherwise be interpreted by the shell.
 Some debug-level output has been truncated from the example below.
 
@@ -91,9 +91,9 @@ echo "describe 'test'" | ./hbase shell -n > /dev/null 2>&1
 status=$?
 echo "The status was " $status
 if ($status == 0); then
-echo "The command succeeded"
+  echo "The command succeeded"
 else
-echo "The command may have failed."
+  echo "The command may have failed."
 fi
 return $status
 ```
@@ -113,7 +113,7 @@ You can enter HBase Shell commands into a text file, one command per line, and p
 
 ### Example Command File
 
-```
+```ruby
 create 'test', 'cf'
 list 'test'
 put 'test', 'row1', 'cf:a', 'value1'
@@ -204,7 +204,7 @@ The table reference can be used to perform data read write operations such as pu
 
 For example, previously you would always specify a table name:
 
-```
+```ruby
 hbase(main):000:0> create 't', 'f'
 0 row(s) in 1.0970 seconds
 hbase(main):001:0> put 't', 'rold', 'f', 'v'
@@ -234,7 +234,7 @@ hbase(main):006:0>
 
 Now you can assign the table to a variable and use the results in jruby shell code.
 
-```
+```ruby
 hbase(main):007 > t = create 't', 'f'
 0 row(s) in 1.0970 seconds
 
@@ -260,7 +260,7 @@ hbase(main):039:0> t.drop
 
 If the table has already been created, you can assign a Table to a variable by using the get_table method:
 
-```
+```ruby
 hbase(main):011 > create 't','f'
 0 row(s) in 1.2500 seconds
 
@@ -282,7 +282,7 @@ The list functionality has also been extended so that it returns a list of table
 You can then use jruby to script table operations based on these names.
 The list_snapshots command also acts similarly.
 
-```
+```ruby
 hbase(main):016 > tables = list('t.*')
 TABLE
 t
@@ -321,7 +321,7 @@ See the `ruby` documentation of _.irbrc_ to learn about other possible configura
 
 To convert the date '08/08/16 20:56:29' from an hbase log into a timestamp, do:
 
-```
+```ruby
 hbase(main):021:0> import java.text.SimpleDateFormat
 hbase(main):022:0> import java.text.ParsePosition
 hbase(main):023:0> SimpleDateFormat.new("yy/MM/dd HH:mm:ss").parse("08/08/16 20:56:29", ParsePosition.new(0)).getTime() => 1218920189000
@@ -329,7 +329,7 @@ hbase(main):023:0> SimpleDateFormat.new("yy/MM/dd HH:mm:ss").parse("08/08/16 20:
 
 To go the other direction:
 
-```
+```ruby
 hbase(main):021:0> import java.util.Date
 hbase(main):022:0> Date.new(1218920189000).toString() => "Sat Aug 16 20:56:29 UTC 2008"
 ```
@@ -338,14 +338,14 @@ To output in a format that is exactly like that of the HBase log format will tak
 
 ### Query Shell Configuration
 
-```
+```ruby
 hbase(main):001:0> @shell.hbase.configuration.get("hbase.rpc.timeout")
 => "60000"
 ```
 
 To set a config in the shell:
 
-```
+```ruby
 hbase(main):005:0> @shell.hbase.configuration.setInt("hbase.rpc.timeout", 61010)
 hbase(main):006:0> @shell.hbase.configuration.get("hbase.rpc.timeout")
 => "61010"
@@ -361,7 +361,7 @@ The split points will define `n+1` regions where `n` is the number of split poin
 The next region will contain keys from the first split point up to, but not including the next split point key.
 This will continue for all split points up to the last. The last region will be defined from the last split point up to the maximum possible key.
 
-```
+```ruby
 hbase>create 't1','f',SPLITS => ['10','20','30']
 ```
 
@@ -369,14 +369,14 @@ In the above example, the table 't1' will be created with column family 'f', pre
 
 You can pass the split points in a file using following variation. In this example, the splits are read from a file corresponding to the local path on the local filesystem. Each line in the file specifies a split point key.
 
-```
+```ruby
 hbase>create 't14','f',SPLITS_FILE=>'splits.txt'
 ```
 
 The other options are to automatically compute splits based on a desired number of regions and a splitting algorithm.
 HBase supplies algorithms for splitting the key range based on uniform splits or based on hexadecimal keys, but you can provide your own splitting algorithm to subdivide the key range.
 
-```
+```ruby
 # create table with four regions based on random bytes keys
 hbase>create 't2','f1', { NUMREGIONS => 4 , SPLITALGO => 'UniformSplit' }
 
@@ -386,7 +386,7 @@ hbase>create 't3','f1', { NUMREGIONS => 5, SPLITALGO => 'HexStringSplit' }
 
 As the HBase Shell is effectively a Ruby environment, you can use simple Ruby scripts to compute splits algorithmically.
 
-```
+```ruby
 # generate splits for long (Ruby fixnum) key range from start to end key
 hbase(main):070:0> def gen_splits(start_key,end_key,num_regions)
 hbase(main):071:1>   results=[]
@@ -435,7 +435,7 @@ $ ./bin/hbase shell -d
 Count command returns the number of rows in a table.
 It's quite fast when configured with the right CACHE
 
-```
+```ruby
 hbase> count '<tablename>', CACHE => 1000
 ```
 

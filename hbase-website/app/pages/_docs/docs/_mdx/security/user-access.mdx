@@ -10,7 +10,7 @@ This describes how to set up Apache HBase and clients for simple user access to 
 
 The following section shows how to set up simple user access. Simple user access is not a secure method of operating HBase. This method is used to prevent users from making mistakes. It can be used to mimic the Access Control using on a development system without having to set up Kerberos.
 
-This method is not used to prevent malicious or hacking attempts. To make HBase secure against these types of attacks, you must configure HBase for secure operation. Refer to the section [Secure Client Access to Apache HBase](#hbase.secure.configuration) and complete all of the steps described there.
+This method is not used to prevent malicious or hacking attempts. To make HBase secure against these types of attacks, you must configure HBase for secure operation. Refer to the section [Secure Client Access to Apache HBase](/docs/security/client-access) and complete all of the steps described there.
 
 ## Prerequisites
 
@@ -92,7 +92,7 @@ The Thrift gateway user will need access. For example, to give the Thrift API us
 grant 'thrift_server', 'RWCA'
 ```
 
-For more information about ACLs, please see the [Access Control Labels (ACLs)](#hbase.accesscontrol.configuration) section
+For more information about ACLs, please see the [Access Control Labels (ACLs)](/docs/security/data-access#access-control-labels-acls) section
 
 The Thrift gateway will authenticate with HBase using the supplied credential. No authentication will be performed by the Thrift gateway itself. All client access via the Thrift gateway will use the Thrift gateway’s credential and have its privilege.
 
@@ -106,6 +106,6 @@ The REST gateway user will need access. For example, to give the REST API user, 
 grant 'rest_server', 'RWCA'
 ```
 
-For more information about ACLs, please see the [Access Control Labels (ACLs)](#hbase.accesscontrol.configuration) section
+For more information about ACLs, please see the [Access Control Labels (ACLs)](/docs/security/data-access#access-control-labels-acls) section
 
 It should be possible for clients to authenticate with the HBase cluster through the REST gateway in a pass-through manner via SPNEGO HTTP authentication. This is future work.

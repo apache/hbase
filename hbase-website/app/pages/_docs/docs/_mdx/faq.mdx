@@ -7,19 +7,19 @@ description: "Frequently asked questions about Apache HBase."
 
 #### When should I use HBase?
 
-See [Overview](#arch-overview) in the Architecture chapter.
+See [Overview](/docs/architecture/overview) in the Architecture chapter.
 
 #### Does HBase support SQL?
 
-Not really. SQL-ish support for HBase via [Hive](https://hive.apache.org/) is in development, however Hive is based on MapReduce which is not generally suitable for low-latency requests. See the [Data Model](#datamodel) section for examples on the HBase client.
+Not really. SQL-ish support for HBase via [Hive](https://hive.apache.org/) is in development, however Hive is based on MapReduce which is not generally suitable for low-latency requests. See the [Data Model](/docs/datamodel) section for examples on the HBase client.
 
 #### How can I find examples of NoSQL/HBase?
 
-See the link to the BigTable paper in [Other Information About HBase](#other-info), as well as the other papers.
+See the link to the BigTable paper in [Other Information About HBase](/docs/other-info), as well as the other papers.
 
 #### What is the history of HBase?
 
-See [HBase History](#hbase-history).
+See [HBase History](/docs/hbase-history).
 
 #### Why are the cells above 10MB not recommended for HBase?
 
@@ -65,75 +65,75 @@ In HBase 0.96, the project moved to a modular structure. Adjust your project's d
 
 #### How does HBase handle Region-RegionServer assignment and locality?
 
-See [Regions](#regions-arch).
+See [Regions](/docs/architecture/regions).
 
 ## Configuration
 
 #### How can I get started with my first cluster?
 
-See [Quick Start - Standalone HBase](#quickstart).
+See [Quick Start - Standalone HBase](/docs/getting-started#quick-start---standalone-hbase).
 
 #### Where can I learn about the rest of the configuration options?
 
-See [Apache HBase Configuration](#configuration).
+See [Apache HBase Configuration](/docs/configuration).
 
 ## Schema Design / Data Access
 
 #### How should I design my schema in HBase?
 
-See [Data Model](#datamodel) and [HBase and Schema Design](#schema).
+See [Data Model](/docs/datamodel) and [HBase and Schema Design](/docs/schema-design).
 
 #### How can I store (fill in the blank) in HBase?
 
-See [Supported Datatypes](#supported-datatypes).
+See [Supported Datatypes](/docs/regionserver-sizing#supported-datatypes).
 
 #### How can I handle secondary indexes in HBase?
 
-See [Secondary Indexes and Alternate Query Paths](#secondary-indexes).
+See [Secondary Indexes and Alternate Query Paths](/docs/regionserver-sizing#secondary-indexes-and-alternate-query-paths).
 
 #### Can I change a table's rowkeys?
 
-This is a very common question. You can't. See [Immutability of Rowkeys](#changing-rowkeys).
+This is a very common question. You can't. See [Immutability of Rowkeys](/docs/regionserver-sizing#immutability-of-rowkeys).
 
 #### What APIs does HBase support?
 
-See [Data Model](#datamodel), [Client](#architecture-client), and [Apache HBase External APIs](#external_apis).
+See [Data Model](/docs/datamodel), [Client](/docs/architecture/client), and [Apache HBase External APIs](/docs/external-apis).
 
 ## MapReduce
 
 #### How can I use MapReduce with HBase?
 
-See [HBase and MapReduce](#mapreduce).
+See [HBase and MapReduce](/docs/mapreduce).
 
 ## Performance and Troubleshooting
 
 #### How can I improve HBase cluster performance?
 
-See [Apache HBase Performance Tuning](#performance).
+See [Apache HBase Performance Tuning](/docs/performance).
 
 #### How can I troubleshoot my HBase cluster?
 
-See [Troubleshooting and Debugging Apache HBase](#trouble).
+See [Troubleshooting and Debugging Apache HBase](/docs/troubleshooting).
 
 ## Amazon EC2
 
 #### I am running HBase on Amazon EC2 and...
 
-EC2 issues are a special case. See [Amazon EC2](#trouble-ec2) and [Amazon EC2](#perf-ec2).
+EC2 issues are a special case. See [Amazon EC2](/docs/troubleshooting#amazon-ec2) and [Amazon EC2](/docs/performance#amazon-ec2).
 
 ## Operations
 
 #### How do I manage my HBase cluster?
 
-See [Apache HBase Operational Management](#ops_mgt).
+See [Apache HBase Operational Management](/docs/operational-management).
 
 #### How do I back up my HBase cluster?
 
-See [HBase Backup](#ops-backup).
+See [HBase Backup](/docs/operational-management/backup-and-snapshots#hbase-backup).
 
 ## HBase in Action
 
 #### Where can I find interesting videos and presentations on HBase?
 
-See [Other Information About HBase](#other-info).
+See [Other Information About HBase](/docs/other-info).
 

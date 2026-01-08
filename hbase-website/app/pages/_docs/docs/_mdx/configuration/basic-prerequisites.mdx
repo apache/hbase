@@ -52,7 +52,7 @@ For JDK11/JDK17 support in Hadoop, which may also affect HBase, please refer to 
 ### Operating System Utilities
 
 #### ssh
-HBase uses the Secure Shell (ssh) command and utilities extensively to communicate between cluster nodes. Each server in the cluster must be running `ssh` so that the Hadoop and HBase daemons can be managed. You must be able to connect to all nodes via SSH, including the local node, from the Master as well as any backup Master, using a shared key rather than a password. You can see the basic methodology for such a set-up in Linux or Unix systems in the [Getting Started](/docs/getting_started#procedure-configure-passwordless-ssh-access) chapter. If your cluster nodes use OS X, see the section, [SSH: Setting up Remote Desktop and Enabling Self-Login](<https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=120730246#RunningHadoopOnOSX10.564-bit(Single-NodeCluster)-SSH:SettingupRemoteDesktopandEnablingSelf-Login>) on the Hadoop wiki.
+HBase uses the Secure Shell (ssh) command and utilities extensively to communicate between cluster nodes. Each server in the cluster must be running `ssh` so that the Hadoop and HBase daemons can be managed. You must be able to connect to all nodes via SSH, including the local node, from the Master as well as any backup Master, using a shared key rather than a password. You can see the basic methodology for such a set-up in Linux or Unix systems at "[Procedure: Configure Passwordless SSH Access](/docs/getting-started#procedure-configure-passwordless-ssh-access)" chapter. If your cluster nodes use OS X, see the section, [SSH: Setting up Remote Desktop and Enabling Self-Login](<https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=120730246#RunningHadoopOnOSX10.564-bit(Single-NodeCluster)-SSH:SettingupRemoteDesktopandEnablingSelf-Login>) on the Hadoop wiki.
 
 #### DNS  
 HBase uses the local hostname to self-report its IP address.
@@ -61,7 +61,7 @@ HBase uses the local hostname to self-report its IP address.
 The clocks on cluster nodes should be synchronized. A small amount of variation is acceptable, but larger amounts of skew can cause erratic and unexpected behavior. Time synchronization is one of the first things to check if you see unexplained problems in your cluster. It is recommended that you run a Network Time Protocol (NTP) service, or another time-synchronization mechanism on your cluster and that all nodes look to the same service for time synchronization. See the [Basic NTP Configuration](http://www.tldp.org/LDP/sag/html/basic-ntp-config.html) at _The Linux Documentation Project (TLDP)_ to set up NTP.
 
 #### Limits on Number of Files and Processes (ulimit)  
-Apache HBase is a database. It requires the ability to open a large number of files at once. Many Linux distributions limit the number of files a single user is allowed to open to `1024` (or `256` on older versions of OS X). You can check this limit on your servers by running the command `ulimit -n` when logged in as the user which runs HBase. See [the Troubleshooting section](/docs/troubleshooting#trouble-rs-runtime-filehandles) for some of the problems you may experience if the limit is too low. You may also notice errors such as the following:
+Apache HBase is a database. It requires the ability to open a large number of files at once. Many Linux distributions limit the number of files a single user is allowed to open to `1024` (or `256` on older versions of OS X). You can check this limit on your servers by running the command `ulimit -n` when logged in as the user which runs HBase. See [the Troubleshooting section](/docs/troubleshooting#javaioioexceptiontoo-many-open-files) for some of the problems you may experience if the limit is too low. You may also notice errors such as the following:
 
 ```text
 2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Exception increateBlockOutputStream java.io.EOFException
@@ -82,7 +82,7 @@ Another related setting is the number of processes a user is allowed to run at o
 
 Configuring the maximum number of file descriptors and processes for the user who is running the HBase process is an operating system configuration, rather than an HBase configuration. It is also important to be sure that the settings are changed for the user that actually runs HBase. To see which user started HBase, and that user’s ulimit configuration, look at the first line of the HBase log for that instance.
 
-**Example: `ulimit` Settings on Ubuntu**
+#### Example: `ulimit` Settings on Ubuntu [!toc]
 
 To configure ulimit settings on Ubuntu, edit _/etc/security/limits.conf_, which is a space-delimited file with four columns. Refer to the man page for _limits.conf_ for details about the format of this file. In the following example, the first line sets both soft and hard limits for the number of open files (nofile) to 32768 for the operating system user with the username hadoop. The second line sets the number of processes to 32000 for the same user.
 
@@ -110,7 +110,7 @@ The following table summarizes the versions of [Hadoop](https://hadoop.apache.or
 Based on the version of HBase, you should select the most appropriate version of Hadoop. You can use Apache Hadoop, or a vendor’s distribution of Hadoop. No distinction is made here. See [the Hadoop wiki](https://cwiki.apache.org/confluence/display/HADOOP2/Distributions+and+Commercial+Support) for information about vendors of Hadoop.
 
 <Callout type="tip">
-Comparing to Hadoop 1.x, Hadoop 2.x is faster and includes features, such as short-circuit reads (see [Performance](/docs/performance#perf-hdfs-configs-localread)), which will help improve your HBase random read profile. Hadoop 2.x also includes important bug fixes that will improve your overall HBase experience. HBase does not support running with earlier versions of Hadoop. See the table below for requirements specific to different HBase versions.
+Comparing to Hadoop 1.x, Hadoop 2.x is faster and includes features, such as short-circuit reads (see [Leveraging local data](/docs/performance#leveraging-local-data)), which will help improve your HBase random read profile. Hadoop 2.x also includes important bug fixes that will improve your overall HBase experience. HBase does not support running with earlier versions of Hadoop. See the table below for requirements specific to different HBase versions.
 
 Today, Hadoop 3.x is recommended as the last Hadoop 2.x release 2.10.2 was released years ago, and there is no release for Hadoop 2.x for a very long time, although the Hadoop community does not officially EOL Hadoop 2.x yet.
 </Callout>
@@ -264,7 +264,7 @@ Not having this configuration in place makes for strange-looking failures. One m
           contain current block. Will get new block locations from namenode and retry...
 ```
 
-See also [Case Studies](/docs/case_studies#casestudiesmaxtransferthreads) and note that this property was previously known as `dfs.datanode.max.xcievers` (e.g. [Hadoop HDFS: Deceived by Xciever](http://ccgtech.blogspot.com/2010/02/hadoop-hdfs-deceived-by-xciever.html)).
+See also [Case Studies](/docs/case-studies#case-study-4-maxtransferthreads-config) and note that this property was previously known as `dfs.datanode.max.xcievers` (e.g. [Hadoop HDFS: Deceived by Xciever](http://ccgtech.blogspot.com/2010/02/hadoop-hdfs-deceived-by-xciever.html)).
 
 ## ZooKeeper Requirements
 

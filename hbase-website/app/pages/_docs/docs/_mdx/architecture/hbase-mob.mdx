@@ -2,6 +2,8 @@
 title: "Storing Medium-sized Objects (MOB)"
 ---
 
+import { Step, Steps } from "fumadocs-ui/components/steps";
+
 Data comes in many sizes, and saving all of your data in HBase, including binary
 data such as images and documents, is ideal. While HBase can technically handle
 binary objects with cells that are larger than 100 KB in size, HBase's normal
@@ -9,12 +11,12 @@ read and write paths are optimized for values smaller than 100KB in size. When
 HBase deals with large numbers of objects over this threshold, referred to here
 as medium objects, or MOBs, performance is degraded due to write amplification
 caused by splits and compactions. When using MOBs, ideally your objects will be between
-100KB and 10MB (see the [faq](#faq)). HBase 2 added special internal handling of MOBs
+100KB and 10MB (see the [faq](/docs/faq)). HBase 2 added special internal handling of MOBs
 to maintain performance, consistency, and low operational overhead. MOB support is
 provided by the work done in [HBASE-11339](https://issues.apache.org/jira/browse/HBASE-11339).
-To take advantage of MOB, you need to use [HFile version 3](#hfilev3). Optionally,
+To take advantage of MOB, you need to use [HFile version 3](/docs/hfile-format#hbase-file-format-with-security-enhancements-version-3). Optionally,
 configure the MOB file reader's cache settings for each RegionServer (see
-[Configure the MOB Cache](#mob-cache-configure)), then configure specific columns to hold MOB data.
+[Configure the MOB Cache](/docs/architecture/hbase-mob#configuring-the-mob-cache)), then configure specific columns to hold MOB data.
 Client code does not need to change to take advantage of HBase MOB support. The
 feature is transparent to the client.
 
@@ -218,17 +220,17 @@ through MOB compaction it will evaluate the size of the MOB file that currently 
 value and skip rewriting the value if that file is over threshold.
 
 The bound of write amplification in this mode can be approximated as
-"Write Amplification" = log_K(M/S) where **K** is the number of files in compaction
+"Write Amplification" = $\log_{K}\!\left(\frac{M}{S}\right)$ where **K** is the number of files in compaction
 selection, **M** is the configurable threshold for MOB files size, and **S** is the minmum size of
 memstore flushes that create MOB files in the first place. For example given 5 files picked up per
 compaction, a threshold of 1 GB, and a flush size of 10MB the write amplification will be
-log_5((1GB)/(10MB)) = log_5(100) = 2.86.
+$\log\\_{5}\!\left(\frac{1\,\text{GB}}{10\,\text{MB}}\right) = \log\\_{5}(100) \approx 2.86$.
 
 If we are using an underlying filesystem with a limitation on the number of files, such as HDFS,
 and we know our expected data set size we can choose our maximum file size in order to approach
 this limit but stay within it in order to minimize write amplification. For example, if we expect to
 store a petabyte and we have a conservative limitation of a million files in our HDFS instance, then
-(1PB)/(1M) = 1GB gives us a target limitation of a gigabyte per MOB file.
+$\frac{1\,\text{PB}}{1\,\text{M}} = 1\,\text{GB}$ gives us a target limitation of a gigabyte per MOB file.
 
 To opt-in to this compaction mode you must set `hbase.mob.compaction.type` to `optimized`. The
 default MOB size threshold in this mode is set to 1GB. It can be changed by setting
@@ -258,8 +260,8 @@ needs in its metadata.
   When using the write amplification optimized compaction mode you need to watch for the maximum
   time to compact a single region. If it nears an hour you should read through the troubleshooting
   section below [Adjusting the MOB cleaner’s tolerance for new
-  hfiles](#mob-troubleshoot-cleaner-toonew). Failure to make the adjustments discussed there could
-  lead to dataloss.
+  hfiles](/docs/architecture/hbase-mob#adjusting-the-mob-cleaners-tolerance-for-new-hfiles). Failure
+  to make the adjustments discussed there could lead to dataloss.
 </Callout>
 
 ### Configuring the MOB Cache
@@ -361,7 +363,7 @@ positive integer number of milliseconds.
 While working on troubleshooting failures in the MOB system you can retrieve some of the internal
 information through the HBase shell by specifying special attributes on a scan.
 
-```bash
+```ruby
 hbase(main):112:0> scan 'some_table', \{STARTROW => '00012-example-row-key', LIMIT => 1,
 hbase(main):113:1*     CACHE_BLOCKS => false, ATTRIBUTES => \{ 'hbase.mob.scan.raw' => '1',
 hbase(main):114:2*     'hbase.mob.scan.ref.only' => '1' \} \}
@@ -376,7 +378,7 @@ characters.
 
 Let's look at a specific example:
 
-```bash
+```ruby
 hbase(main):112:0> scan 'some_table', \{STARTROW => '00012-example-row-key', LIMIT => 1,
 hbase(main):113:1*     CACHE_BLOCKS => false, ATTRIBUTES => \{ 'hbase.mob.scan.raw' => '1',
 hbase(main):114:2*     'hbase.mob.scan.ref.only' => '1' \} \}
@@ -422,48 +424,88 @@ reloaded.
 
 #### Procedure: Stop MOB maintenance, change MOB threshold, rewrite data via compaction
 
-1. Ensure the MOB compaction chore in the Master is off by setting
-   `hbase.mob.compaction.chore.period` to `0`. Applying this configuration change will require a
-   rolling restart of HBase Masters. That will require at least one fail-over of the active master,
-   which may cause retries for clients doing HBase administrative operations.
-2. Ensure no MOB compactions are issued for the table via the HBase shell for the duration of this
-   migration.
-3. Use the HBase shell to change the MOB size threshold for the column family you are migrating to a
-   value that is larger than the largest cell present in the column family. E.g. given a table named
-   'some_table' and a column family named 'foo' we can pick one gigabyte as an arbitrary "bigger than
-   what we store" value:
-   ```bash
-    hbase(main):011:0> alter 'some_table', \{NAME => 'foo', MOB_THRESHOLD => '1000000000'\}
-    Updating all regions with the new schema...
-    9/25 regions updated.
-    25/25 regions updated.
-    Done.
-    0 row(s) in 3.4940 seconds
-   ```
-   Note that if you are still ingesting data you must ensure this threshold is larger than any cell value you might write; MAX_INT would be a safe choice.
-4. Perform a major compaction on the table. Specifically you are performing a "normal" compaction and
-   not a MOB compaction.
-   ```bash
-   hbase(main):012:0> major_compact 'some_table'
-   0 row(s) in 0.2600 seconds
-   ```
-5. Monitor for the end of the major compaction. Since compaction is handled asynchronously you'll
-   need to use the shell to first see the compaction start and then see it end.  
-    HBase should first say that a "MAJOR" compaction is happening.
-   ```bash
-   hbase(main):015:0> @hbase.admin(@formatter).instance_eval do
-   hbase(main):016:1*   p @admin.get_compaction_state('some_table').to_string
-   hbase(main):017:2* end
-   "MAJOR"
-   ```
-   When the compaction has finished the result should print out "NONE".
-   ```bash
-   hbase(main):015:0> @hbase.admin(@formatter).instance_eval do
-   hbase(main):016:1*   p @admin.get_compaction_state('some_table').to_string
-   hbase(main):017:2* end
-   "NONE"
-   ```
-6. Run the _mobrefs_ utility to ensure there are no MOB cells. Specifically, the tool will launch a
+<Steps>
+
+<Step>
+
+Ensure the MOB compaction chore in the Master is off by setting
+`hbase.mob.compaction.chore.period` to `0`. Applying this configuration change will require a
+rolling restart of HBase Masters. That will require at least one fail-over of the active master,
+which may cause retries for clients doing HBase administrative operations.
+
+</Step>
+
+<Step>
+
+Ensure no MOB compactions are issued for the table via the HBase shell for the duration of this
+migration.
+
+</Step>
+
+<Step>
+
+##### Change the MOB size threshold
+
+Use the HBase shell to change the MOB size threshold for the column family you are migrating to a
+value that is larger than the largest cell present in the column family. E.g. given a table named
+'some_table' and a column family named 'foo' we can pick one gigabyte as an arbitrary "bigger than
+what we store" value:
+
+```ruby
+ hbase(main):011:0> alter 'some_table', \{NAME => 'foo', MOB_THRESHOLD => '1000000000'\}
+ Updating all regions with the new schema...
+ 9/25 regions updated.
+ 25/25 regions updated.
+ Done.
+ 0 row(s) in 3.4940 seconds
+```
+
+Note that if you are still ingesting data you must ensure this threshold is larger than any cell value you might write; MAX_INT would be a safe choice.
+
+</Step>
+
+<Step>
+
+##### Perform a major compaction on the table
+
+Specifically you are performing a "normal" compaction and not a MOB compaction.
+
+```ruby
+hbase(main):012:0> major_compact 'some_table'
+0 row(s) in 0.2600 seconds
+```
+
+</Step>
+
+<Step>
+
+##### Monitor for the end of the major compaction
+
+Since compaction is handled asynchronously you'll need to use the shell to first see the compaction start and then see it end.
+
+HBase should first say that a "MAJOR" compaction is happening.
+
+```ruby
+hbase(main):015:0> @hbase.admin(@formatter).instance_eval do
+hbase(main):016:1*   p @admin.get_compaction_state('some_table').to_string
+hbase(main):017:2* end
+"MAJOR"
+```
+
+When the compaction has finished the result should print out "NONE".
+
+```ruby
+hbase(main):015:0> @hbase.admin(@formatter).instance_eval do
+hbase(main):016:1*   p @admin.get_compaction_state('some_table').to_string
+hbase(main):017:2* end
+"NONE"
+```
+
+</Step>
+
+<Step>
+
+Run the _mobrefs_ utility to ensure there are no MOB cells. Specifically, the tool will launch a
    Hadoop MapReduce job that will show a job counter of 0 input records when we've successfully
    rewritten all of the data.
    ```bash
@@ -524,25 +566,53 @@ reloaded.
    19/12/10 11:45:00 INFO mapreduce.MobRefReporter: Finished creating report for 'some_table', family='foo'
    ```
    If this happens you should verify that MOB compactions are disabled, verify that you have picked a sufficiently large MOB threshold, and redo the major compaction step.
-7. When the _mobrefs_ report shows that no more data is stored in the MOB system then you can safely alter the column family configuration so that the MOB feature is disabled.
-   ```bash
-   hbase(main):017:0> alter 'some_table', \{NAME => 'foo', IS_MOB => 'false'\}
-   Updating all regions with the new schema...
-   8/25 regions updated.
-   25/25 regions updated.
-   Done.
-   0 row(s) in 2.9370 seconds
-   ```
-8. After the column family no longer shows the MOB feature enabled, it is safe to start MOB maintenance chores again. You can allow the default to be used for `hbase.mob.compaction.chore.period` by removing it from your configuration files or restore it to whatever custom value you had prior to starting this process.
-9. Once the MOB feature is disabled for the column family there will be no internal HBase process
-   looking for data in the MOB storage area specific to this column family. There will still be data
-   present there from prior to the compaction process that rewrote the values into HBase's data area.
-   You can check for this residual data directly in HDFS as an HBase superuser.
-   ```bash
-   $ hdfs dfs -count /hbase/mobdir/data/default/some_table
-              4           54         9063269081 /hbase/mobdir/data/default/some_table
-   ```
-   This data is spurious and may be reclaimed. You should sideline it, verify your application's view of the table, and then delete it.
+
+</Step>
+
+<Step>
+
+##### Disable the MOB feature for the column family
+
+When the _mobrefs_ report shows that no more data is stored in the MOB system then you can safely alter the column family configuration so that the MOB feature is disabled.
+
+```ruby
+hbase(main):017:0> alter 'some_table', \{NAME => 'foo', IS_MOB => 'false'\}
+Updating all regions with the new schema...
+8/25 regions updated.
+25/25 regions updated.
+Done.
+0 row(s) in 2.9370 seconds
+```
+
+The MOB feature will be disabled on a column family only after altering the column family and performing a major compaction. Before performing the major compaction after altering the column family, the MOB cells will still be present in the MOB storage.
+
+</Step>
+
+<Step>
+
+After the column family no longer shows the MOB feature enabled, it is safe to start MOB maintenance chores again. You can allow the default to be used for `hbase.mob.compaction.chore.period` by removing it from your configuration files or restore it to whatever custom value you had prior to starting this process.
+
+</Step>
+
+<Step>
+
+##### Clean up residual MOB data
+
+Once the MOB feature is disabled for the column family there will be no internal HBase process
+looking for data in the MOB storage area specific to this column family. There will still be data
+present there from prior to the compaction process that rewrote the values into HBase's data area.
+You can check for this residual data directly in HDFS as an HBase superuser.
+
+```bash
+$ hdfs dfs -count /hbase/mobdir/data/default/some_table
+           4           54         9063269081 /hbase/mobdir/data/default/some_table
+```
+
+This data is spurious and may be reclaimed. You should sideline it, verify your application's view of the table, and then delete it.
+
+</Step>
+
+</Steps>
 
 ### Data values over than the MOB threshold show up stored in non-MOB hfiles
 
@@ -591,7 +661,7 @@ of the following changes:
   MOB hfiles. Instead it will issue a warning and do a compaction of the table. For example using
   the HBase shell as follows will result in a warning in the Master logs followed by a major
   compaction of the 'example' table in its entirety or for the 'big' column respectively.
-  ```bash
+  ```ruby
   hbase> major_compact 'example', nil, 'MOB'
   hbase> major_compact 'example', 'big', 'MOB'
   ```

@@ -5,7 +5,7 @@ description: "Below we list some important configurations. We’ve divided this 
 
 ## Required Configurations
 
-Review the [os](#os) and [hadoop](#hadoop) sections.
+Review the [os](/docs/configuration/basic-prerequisites#operating-system-utilities) and [hadoop](/docs/configuration/basic-prerequisites#hadoop) sections.
 
 ### Big Cluster Configurations
 
@@ -17,7 +17,7 @@ If you have a cluster with a lot of regions, it is possible that a Regionserver 
 
 #### `zookeeper.session.timeout`
 
-The default timeout is 90 seconds (specified in milliseconds). This means that if a server crashes, it will be 90 seconds before the Master notices the crash and starts recovery. You might need to tune the timeout down to a minute or even less so the Master notices failures sooner. Before changing this value, be sure you have your JVM garbage collection configuration under control, otherwise, a long garbage collection that lasts beyond the ZooKeeper session timeout will take out your RegionServer. (You might be fine with this — you probably want recovery to start on the server if a RegionServer has been in GC for a long period of time).
+The default timeout is 90 seconds (specified in milliseconds). This means that if a server crashes, it will be 90 seconds before the Master notices the crash and starts recovery. You might need to tune the timeout down to a minute or even less so the Master notices failures sooner. Before changing this value, be sure you have your JVM garbage collection configuration under control, otherwise, a long garbage collection that lasts beyond the ZooKeeper session timeout will take out your RegionServer. (You might be fine with this — you probably want recovery to start on the server if a RegionServer has been in GC for a long period of time).
 
 To change this configuration, edit *hbase-site.xml*, copy the changed file across the cluster and restart.
 
@@ -25,7 +25,7 @@ We set this value high to save our having to field questions up on the mailing l
 
 #### Number of ZooKeeper Instances
 
-See [zookeeper](#zookeeper).
+See [zookeeper](/docs/zookeeper).
 
 ### HDFS Configurations
 
@@ -41,27 +41,27 @@ It is safe to set that number to the maximum number of incoming clients if their
 
 The reason why it is dangerous to keep this setting high is that the aggregate size of all the puts that are currently happening in a region server may impose too much pressure on its memory, or even trigger an OutOfMemoryError. A RegionServer running on low memory will trigger its JVM’s garbage collector to run more frequently up to a point where GC pauses become noticeable (the reason being that all the memory used to keep all the requests' payloads cannot be trashed, no matter how hard the garbage collector tries). After some time, the overall cluster throughput is affected since every request that hits that RegionServer will take longer, which exacerbates the problem even more.
 
-You can get a sense of whether you have too little or too many handlers by [rpc.logging](#rpc.logging) on an individual RegionServer then tailing its logs (Queued requests consume memory).
+You can get a sense of whether you have too little or too many handlers by [rpc.logging](/docs/troubleshooting#enabling-rpc-level-logging) on an individual RegionServer then tailing its logs (Queued requests consume memory).
 
 ### Configuration for large memory machines
 
-HBase ships with a reasonable, conservative configuration that will work on nearly all machine types that people might want to test with. If you have larger machines — HBase has 8G and larger heap — you might find the following configuration options helpful. TODO.
+HBase ships with a reasonable, conservative configuration that will work on nearly all machine types that people might want to test with. If you have larger machines — HBase has 8G and larger heap — you might find the following configuration options helpful. TODO.
 
 ### Compression
 
 You should consider enabling ColumnFamily compression. There are several options that are near-frictionless and in most all cases boost performance by reducing the size of StoreFiles and thus reducing I/O.
 
-See [compression](#compression) for more information.
+See [compression](/docs/compression) for more information.
 
 ### Configuring the size and number of WAL files
 
-HBase uses [wal](#wal) to recover the memstore data that has not been flushed to disk in case of an RS failure. These WAL files should be configured to be slightly smaller than HDFS block (by default a HDFS block is 64Mb and a WAL file is ~60Mb).
+HBase uses [wal]/docs/architecture/regionserver#write-ahead-log-wal to recover the memstore data that has not been flushed to disk in case of an RS failure. These WAL files should be configured to be slightly smaller than HDFS block (by default a HDFS block is 64Mb and a WAL file is ~60Mb).
 
 HBase also has a limit on the number of WAL files, designed to ensure there’s never too much data that needs to be replayed during recovery. This limit needs to be set according to memstore configuration, so that all the necessary data would fit. It is recommended to allocate enough WAL files to store at least that much data (when all memstores are close to full). For example, with 16Gb RS heap, default memstore settings (0.4), and default WAL file size (~60Mb), 16Gb\*0.4/60, the starting point for WAL file count is ~109. However, as all memstores are not expected to be full all the time, less WAL files can be allocated.
 
 ### Managed Splitting
 
-HBase generally handles splitting of your regions based upon the settings in your *hbase-default.xml* and *hbase-site.xml* configuration files. Important settings include `hbase.regionserver.region.split.policy`, `hbase.hregion.max.filesize`, `hbase.regionserver.regionSplitLimit`. A simplistic view of splitting is that when a region grows to `hbase.hregion.max.filesize`, it is split. For most usage patterns, you should use automatic splitting. See [manual region splitting decisions](#manual_region_splitting_decisions) for more information about manual region splitting.
+HBase generally handles splitting of your regions based upon the settings in your *hbase-default.xml* and *hbase-site.xml* configuration files. Important settings include `hbase.regionserver.region.split.policy`, `hbase.hregion.max.filesize`, `hbase.regionserver.regionSplitLimit`. A simplistic view of splitting is that when a region grows to `hbase.hregion.max.filesize`, it is split. For most usage patterns, you should use automatic splitting. See [manual region splitting decisions](/docs/architecture/regions#manual-region-splitting) for more information about manual region splitting.
 
 Instead of allowing HBase to split your regions automatically, you can choose to manage the splitting yourself. Manually managing splits works if you know your keyspace well, otherwise let HBase figure where to split for you. Manual splitting can mitigate region creation and movement under load. It also makes it so region boundaries are known and invariant (if you disable region splitting). If you use manual splits, it is easier doing staggered, time-based major compactions to spread out your network IO load.
 
@@ -84,14 +84,14 @@ If the regions are split into too many large regions, you can increase the major
 
 By default, major compactions are scheduled to run once in a 7-day period.
 
-If you need to control exactly when and how often major compaction runs, you can disable managed major compactions. See the entry for `hbase.hregion.majorcompaction` in the [compaction.parameters](#compaction.parameters) table for details.
+If you need to control exactly when and how often major compaction runs, you can disable managed major compactions. See the entry for `hbase.hregion.majorcompaction` in the [compaction.parameters](/docs/architecture/regions#parameters-used-by-compaction-algorithm) table for details.
 
 <Callout type="warn">
 Major compactions are absolutely necessary for StoreFile clean-up. Do not disable them altogether. You can run major compactions manually via the HBase shell or via the [Admin API](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact(org.apache.hadoop.hbase.TableName)).
 </Callout>
 
 
-For more information about compactions and the compaction file selection process, see [compaction](#compaction)
+For more information about compactions and the compaction file selection process, see [compaction](/docs/architecture/regions#compaction)
 
 ### Speculative Execution
 
@@ -103,21 +103,21 @@ Speculative Execution of MapReduce tasks is on by default, and for HBase cluster
 
 The balancer is a periodic operation which is run on the master to redistribute regions on the cluster. It is configured via `hbase.balancer.period` and defaults to 300000 (5 minutes).
 
-See [master.processes.loadbalancer](#master.processes.loadbalancer) for more information on the LoadBalancer.
+See [master.processes.loadbalancer](/docs/architecture/master#loadbalancer) for more information on the LoadBalancer.
 
 ### Disabling Blockcache
 
 Do not turn off block cache (You’d do it by setting `hfile.block.cache.size` to zero). Currently, we do not do well if you do this because the RegionServer will spend all its time loading HFile indices over and over again. If your working set is such that block cache does you no good, at least size the block cache such that HFile indices will stay up in the cache (you can get a rough idea on the size you need by surveying RegionServer UIs; you’ll see index block size accounted near the top of the webpage).
 
-### [Nagle’s](https://en.wikipedia.org/wiki/Nagle%27s_algorithm) or the small package problem
+### Nagle's or the small package problem
 
-If a big 40ms or so occasional delay is seen in operations against HBase, try the Nagles' setting. For example, see the user mailing list thread, [Inconsistent scan performance with caching set to 1](https://lists.apache.org/thread.html/3d7ceb41c04a955b1b1c80480cdba95208ca3e97bf6895a40e0c1bbb%401346186127%40%3Cuser.hbase.apache.org%3E) and the issue cited therein where setting `notcpdelay` improved scan speeds. You might also see the graphs on the tail of [HBASE-7008 Set scanner caching to a better default](https://issues.apache.org/jira/browse/HBASE-7008) where our Lars Hofhansl tries various data sizes w/ Nagle’s on and off measuring the effect.
+If a big 40ms or so occasional delay is seen in operations against HBase, try the [Nagle's](https://en.wikipedia.org/wiki/Nagle%27s_algorithm) setting. For example, see the user mailing list thread, [Inconsistent scan performance with caching set to 1](https://lists.apache.org/thread.html/3d7ceb41c04a955b1b1c80480cdba95208ca3e97bf6895a40e0c1bbb%401346186127%40%3Cuser.hbase.apache.org%3E) and the issue cited therein where setting `notcpdelay` improved scan speeds. You might also see the graphs on the tail of [HBASE-7008 Set scanner caching to a better default](https://issues.apache.org/jira/browse/HBASE-7008) where our Lars Hofhansl tries various data sizes w/ Nagle’s on and off measuring the effect.
 
 ### Better Mean Time to Recover (MTTR)
 
 This section is about configurations that will make servers come back faster after a fail. See the Deveraj Das and Nicolas Liochon blog post [Introduction to HBase Mean Time to Recover (MTTR)](http://hortonworks.com/blog/introduction-to-hbase-mean-time-to-recover-mttr/) for a brief introduction.
 
-The issue [HBASE-8354 forces Namenode into loop with lease recovery requests](https://issues.apache.org/jira/browse/HBASE-8389) is messy but has a bunch of good discussion toward the end on low timeouts and how to cause faster recovery including citation of fixes added to HDFS. Read the Varun Sharma comments. The below suggested configurations are Varun’s suggestions distilled and tested. Make sure you are running on a late-version HDFS so you have the fixes he refers to and himself adds to HDFS that help HBase MTTR (e.g. HDFS-3703, HDFS-3712, and HDFS-4791 — Hadoop 2 for sure has them and late Hadoop 1 has some). Set the following in the RegionServer.
+The issue [HBASE-8354 forces Namenode into loop with lease recovery requests](https://issues.apache.org/jira/browse/HBASE-8389) is messy but has a bunch of good discussion toward the end on low timeouts and how to cause faster recovery including citation of fixes added to HDFS. Read the Varun Sharma comments. The below suggested configurations are Varun’s suggestions distilled and tested. Make sure you are running on a late-version HDFS so you have the fixes he refers to and himself adds to HDFS that help HBase MTTR (e.g. HDFS-3703, HDFS-3712, and HDFS-4791 — Hadoop 2 for sure has them and late Hadoop 1 has some). Set the following in the RegionServer.
 
 ```xml
 <property>
@@ -210,8 +210,8 @@ By default the password authentication and SSL communication is disabled. To ena
 
 ```bash
 export HBASE_JMX_BASE="-Dcom.sun.management.jmxremote.authenticate=true                  \
-                   -Dcom.sun.management.jmxremote.password.file=your_password_file   \
-                   -Dcom.sun.management.jmxremote.access.file=your_access_file"
+                       -Dcom.sun.management.jmxremote.password.file=your_password_file   \
+                       -Dcom.sun.management.jmxremote.access.file=your_access_file"
 
 export HBASE_MASTER_OPTS="$HBASE_MASTER_OPTS $HBASE_JMX_BASE "
 export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS $HBASE_JMX_BASE "
@@ -236,11 +236,11 @@ And then update *hbase-env.sh* like below:
 
 ```bash
 export HBASE_JMX_BASE="-Dcom.sun.management.jmxremote.ssl=true                         \
-                   -Djavax.net.ssl.keyStore=/home/tianq/myKeyStore                 \
-                   -Djavax.net.ssl.keyStorePassword=your_password_in_step_1        \
-                   -Dcom.sun.management.jmxremote.authenticate=true                \
-                   -Dcom.sun.management.jmxremote.password.file=your_password file \
-                   -Dcom.sun.management.jmxremote.access.file=your_access_file"
+                       -Djavax.net.ssl.keyStore=/home/tianq/myKeyStore                 \
+                       -Djavax.net.ssl.keyStorePassword=your_password_in_step_1        \
+                       -Dcom.sun.management.jmxremote.authenticate=true                \
+                       -Dcom.sun.management.jmxremote.password.file=your_password file \
+                       -Dcom.sun.management.jmxremote.access.file=your_access_file"
 
 export HBASE_MASTER_OPTS="$HBASE_MASTER_OPTS $HBASE_JMX_BASE "
 export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS $HBASE_JMX_BASE "

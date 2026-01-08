@@ -4,7 +4,7 @@ title: "Synchronous Replication"
 
 ## Background
 
-The current [Cluster Replication](#replication) in HBase in asynchronous. So if the master cluster crashes, the slave cluster may not have the
+The current [Cluster Replication](/docs/operational-management/cluster-replication) in HBase in asynchronous. So if the master cluster crashes, the slave cluster may not have the
 newest data. If users want strong consistency then they can not switch to the slave cluster.
 
 ## Design
@@ -15,7 +15,7 @@ Please see the design doc on [HBASE-19064](https://issues.apache.org/jira/browse
 
 ### Case.1 Setup two synchronous replication clusters
 
-* Add a synchronous peer in both source cluster and peer cluster.
+- Add a synchronous peer in both source cluster and peer cluster.
 
 For source cluster:
 
@@ -30,22 +30,21 @@ hbase> add_peer  '1', CLUSTER_KEY => 'lg-hadoop-tst-st01.bj:10010,lg-hadoop-tst-
 ```
 
 <Callout type="info">
-For synchronous replication, the current implementation require that we have the same peer id for both source
-and peer cluster. Another thing that need attention is: the peer does not support cluster-level, namespace-level, or
-cf-level replication, only support table-level replication now.
+  For synchronous replication, the current implementation require that we have the same peer id for
+  both source and peer cluster. Another thing that need attention is: the peer does not support
+  cluster-level, namespace-level, or cf-level replication, only support table-level replication now.
 </Callout>
 
-* Transit the peer cluster to be STANDBY state
+- Transit the peer cluster to be STANDBY state
 
-```ruby
-hbase> transit_peer_sync_replication_state '1', 'STANDBY'
-```
+  ```ruby
+  hbase> transit_peer_sync_replication_state '1', 'STANDBY'
+  ```
 
-* Transit the source cluster to be ACTIVE state
-
-```ruby
-hbase> transit_peer_sync_replication_state '1', 'ACTIVE'
-```
+- Transit the source cluster to be ACTIVE state
+  ```ruby
+  hbase> transit_peer_sync_replication_state '1', 'ACTIVE'
+  ```
 
 Now, the synchronous replication has been set up successfully. the HBase client can only request to source cluster, if
 request to peer cluster, the peer cluster which is STANDBY state now will reject the read/write requests.
@@ -92,4 +91,3 @@ After that, we can promote the DOWNGRADE_ACTIVE cluster to ACTIVE now, to ensure
 ```ruby
 hbase> transit_peer_sync_replication_state '1', 'ACTIVE'
 ```
-

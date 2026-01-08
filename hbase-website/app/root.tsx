@@ -27,6 +27,7 @@ import {
 
 import type { Route } from "./+types/root";
 import appStyles from "./app.css?url";
+import "katex/dist/katex.css";
 import { ThemeProvider } from "./lib/theme-provider";
 
 export const links: Route.LinksFunction = () => [

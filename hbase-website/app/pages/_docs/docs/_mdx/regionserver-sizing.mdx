@@ -80,29 +80,29 @@ See [https://communities.intel.com/community/itpeernetwork/datastack/blog/2013/1
 
 In the HBase chapter of Tom White's book [Hadoop: The Definitive Guide](http://oreilly.com/catalog/9780596521981) (O'Reilly) there is a an optimization note on watching out for a phenomenon where an import process walks in lock-step with all clients in concert pounding one of the table's regions (and thus, a single node), then moving onto the next region, etc. With monotonically increasing row-keys (i.e., using a timestamp), this will happen. See this comic by IKai Lan on why monotonically increasing row keys are problematic in BigTable-like datastores: [monotonically increasing values are bad](http://ikaisays.com/2011/01/25/app-engine-datastore-tip-monotonically-increasing-values-are-bad/). The pile-up on a single region brought on by monotonically increasing keys can be mitigated by randomizing the input records to not be in sorted order, but in general it's best to avoid using a timestamp or a sequence (e.g. 1, 2, 3) as the row-key.
 
-If you do need to upload time series data into HBase, you should study [OpenTSDB](http://opentsdb.net/) as a successful example. It has a page describing the [schema](http://opentsdb.net/schema.html) it uses in HBase. The key format in OpenTSDB is effectively \[metric_type\]\[event_timestamp\], which would appear at first glance to contradict the previous advice about not using a timestamp as the key. However, the difference is that the timestamp is not in the _lead_ position of the key, and the design assumption is that there are dozens or hundreds (or more) of different metric types. Thus, even with a continual stream of input data with a mix of metric types, the Puts are distributed across various points of regions in the table.
+If you do need to upload time series data into HBase, you should study [OpenTSDB](http://opentsdb.net/) as a successful example. It has a page describing the [schema](http://opentsdb.net/schema.html) it uses in HBase. The key format in OpenTSDB is effectively [metric_type][event_timestamp], which would appear at first glance to contradict the previous advice about not using a timestamp as the key. However, the difference is that the timestamp is not in the _lead_ position of the key, and the design assumption is that there are dozens or hundreds (or more) of different metric types. Thus, even with a continual stream of input data with a mix of metric types, the Puts are distributed across various points of regions in the table.
 
-See [schema.casestudies](#schema.casestudies) for some rowkey design examples.
+See [schema.casestudies](/docs/regionserver-sizing#schema-design-case-studies) for some rowkey design examples.
 
 ### Try to minimize row and column sizes
 
-In HBase, values are always freighted with their coordinates; as a cell value passes through the system, it'll be accompanied by its row, column name, and timestamp - always. If your rows and column names are large, especially compared to the size of the cell value, then you may run up against some interesting scenarios. One such is the case described by Marc Limotte at the tail of [HBASE-3551](https://issues.apache.org/jira/browse/HBASE-3551?page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel&focusedCommentId=13005272#comment-13005272) (recommended!). Therein, the indices that are kept on HBase storefiles (see [HFile Format](/docs/appendix_hfile_format)) to facilitate random access may end up occupying large chunks of the HBase allotted RAM because the cell value coordinates are large. Mark in the above cited comment suggests upping the block size so entries in the store file index happen at a larger interval or modify the table schema so it makes for smaller rows and column names. Compression will also make for larger indices. See the thread [a question storefileIndexSize](https://lists.apache.org/thread.html/b158eae5d8888d3530be378298bca90c17f80982fdcdfa01d0844c3d%401306240189%40%3Cuser.hbase.apache.org%3E) up on the user mailing list.
+In HBase, values are always freighted with their coordinates; as a cell value passes through the system, it'll be accompanied by its row, column name, and timestamp - always. If your rows and column names are large, especially compared to the size of the cell value, then you may run up against some interesting scenarios. One such is the case described by Marc Limotte at the tail of [HBASE-3551](https://issues.apache.org/jira/browse/HBASE-3551?page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel&focusedCommentId=13005272#comment-13005272) (recommended!). Therein, the indices that are kept on HBase storefiles (see [HFile Format](/docs/hfile-format)) to facilitate random access may end up occupying large chunks of the HBase allotted RAM because the cell value coordinates are large. Mark in the above cited comment suggests upping the block size so entries in the store file index happen at a larger interval or modify the table schema so it makes for smaller rows and column names. Compression will also make for larger indices. See the thread [a question storefileIndexSize](https://lists.apache.org/thread.html/b158eae5d8888d3530be378298bca90c17f80982fdcdfa01d0844c3d%401306240189%40%3Cuser.hbase.apache.org%3E) up on the user mailing list.
 
 Most of the time small inefficiencies don't matter all that much. Unfortunately, this is a case where they do. Whatever patterns are selected for ColumnFamilies, attributes, and rowkeys they could be repeated several billion times in your data.
 
-See [keyvalue](#keyvalue) for more information on HBase stores data internally to see why this is important.
+See [keyvalue](/docs/architecture/regions#keyvalue) for more information on HBase stores data internally to see why this is important.
 
 #### Column Families
 
 Try to keep the ColumnFamily names as small as possible, preferably one character (e.g. "d" for data/default).
 
-See [KeyValue](/docs/datamodel#keyvalue) for more information on how HBase stores data internally.
+See [KeyValue](/docs/architecture/regions#keyvalue) for more information on how HBase stores data internally.
 
 #### Attributes
 
 Although verbose attribute names (e.g., "myVeryImportantAttribute") are easier to read, prefer shorter attribute names (e.g., "via") to store in HBase.
 
-See [keyvalue](#keyvalue) for more information on HBase stores data internally to see why this is important.
+See [keyvalue](/docs/architecture/regions#keyvalue) for more information on HBase stores data internally to see why this is important.
 
 #### Rowkey Length
 
@@ -160,11 +160,11 @@ The shell makes a best effort to print a string, and it this case it decided to 
   for more information.
 </Callout>
 
-A common problem in database processing is quickly finding the most recent version of a value. A technique using reverse timestamps as a part of the key can help greatly with a special case of this problem. Also found in the HBase chapter of Tom White's book Hadoop: The Definitive Guide (O'Reilly), the technique involves appending (`Long.MAX_VALUE - timestamp`) to the end of any key, e.g. \[key\]\[reverse_timestamp\].
+A common problem in database processing is quickly finding the most recent version of a value. A technique using reverse timestamps as a part of the key can help greatly with a special case of this problem. Also found in the HBase chapter of Tom White's book Hadoop: The Definitive Guide (O'Reilly), the technique involves appending (`Long.MAX_VALUE - timestamp`) to the end of any key, e.g. [key][reverse_timestamp].
 
-The most recent value for \[key\] in a table can be found by performing a Scan for \[key\] and obtaining the first record. Since HBase keys are in sorted order, this key sorts before any older row-keys for \[key\] and thus is first.
+The most recent value for [key] in a table can be found by performing a Scan for [key] and obtaining the first record. Since HBase keys are in sorted order, this key sorts before any older row-keys for [key] and thus is first.
 
-This technique would be used instead of using [Number of Versions](#schema.versions) where the intent is to hold onto all versions "forever" (or a very long time) and at the same time quickly obtain access to any other version by using the same Scan technique.
+This technique would be used instead of using [Number of Versions](/docs/regionserver-sizing#number-of-versions) where the intent is to hold onto all versions "forever" (or a very long time) and at the same time quickly obtain access to any other version by using the same Scan technique.
 
 ### Rowkeys and ColumnFamilies
 
@@ -192,7 +192,7 @@ If you pre-split your table, it is _critical_ to understand how your rowkey will
 
 (note: the lead byte is listed to the right as a comment.) Given that the first split is a '0' and the last split is an 'f', everything is great, right? Not so fast.
 
-The problem is that all the data is going to pile up in the first 2 regions and the last region thus creating a "lumpy" (and possibly "hot") region problem. To understand why, refer to an [ASCII Table](http://www.asciitable.com). '0' is byte 48, and 'f' is byte 102, but there is a huge gap in byte values (bytes 58 to 96) that will _never appear in this keyspace_ because the only values are \[0-9\] and \[a-f\]. Thus, the middle regions will never be used. To make pre-splitting work with this example keyspace, a custom definition of splits (i.e., and not relying on the built-in split method) is required.
+The problem is that all the data is going to pile up in the first 2 regions and the last region thus creating a "lumpy" (and possibly "hot") region problem. To understand why, refer to an [ASCII Table](http://www.asciitable.com). '0' is byte 48, and 'f' is byte 102, but there is a huge gap in byte values (bytes 58 to 96) that will _never appear in this keyspace_ because the only values are [0-9] and [a-f]. Thus, the middle regions will never be used. To make pre-splitting work with this example keyspace, a custom definition of splits (i.e., and not relying on the built-in split method) is required.
 
 Lesson \#1: Pre-splitting tables is generally a best practice, but you need to pre-split them in such a way that all the regions are accessible in the keyspace. While this example demonstrated the problem with a hex-key keyspace, the same problem can happen with _any_ keyspace. Know your data.
 
@@ -255,7 +255,7 @@ Synchronization on counters are done on the RegionServer, not in the client.
 
 ## Joins
 
-If you have multiple tables, don't forget to factor in the potential for [Joins](#) into the schema design.
+If you have multiple tables, don't forget to factor in the potential for [Joins](/docs/datamodel#joins) into the schema design.
 
 ## Time To Live (TTL)
 
@@ -407,27 +407,27 @@ Additionally, see the David Butler response in this dist-list thread [HBase, mai
 
 ### Filter Query
 
-Depending on the case, it may be appropriate to use [Client Request Filters](#). In this case, no secondary index is created. However, don't try a full-scan on a large table like this from an application (i.e., single-threaded client).
+Depending on the case, it may be appropriate to use [Client Request Filters](/docs/architecture/client-request-filters). In this case, no secondary index is created. However, don't try a full-scan on a large table like this from an application (i.e., single-threaded client).
 
 ### Periodic-Update Secondary Index
 
 A secondary index could be created in another table which is periodically updated via a MapReduce job. The job could be executed intra-day, but depending on load-strategy it could still potentially be out of sync with the main data table.
 
-See [mapreduce.example.readwrite](#mapreduce.example.readwrite) for more information.
+See [mapreduce.example.readwrite](/docs/mapreduce#hbase-mapreduce-read-example) for more information.
 
 ### Dual-Write Secondary Index
 
-Another strategy is to build the secondary index while publishing data to the cluster (e.g., write to data table, write to index table). If this is approach is taken after a data table already exists, then bootstrapping will be needed for the secondary index with a MapReduce job (see [secondary.indexes.periodic](#secondary.indexes.periodic)).
+Another strategy is to build the secondary index while publishing data to the cluster (e.g., write to data table, write to index table). If this is approach is taken after a data table already exists, then bootstrapping will be needed for the secondary index with a MapReduce job (see [secondary.indexes.periodic](/docs/regionserver-sizing#periodic-update-secondary-index)).
 
 ### Summary Tables
 
 Where time-ranges are very wide (e.g., year-long report) and where the data is voluminous, summary tables are a common approach. These would be generated with MapReduce jobs into another table.
 
-See [mapreduce.example.summary](#mapreduce.example.summary) for more information.
+See [mapreduce.example.summary](/docs/mapreduce#hbase-mapreduce-summary-to-hbase-example) for more information.
 
 ### Coprocessor Secondary Index
 
-Coprocessors act like RDBMS triggers. These were added in 0.92. For more information, see [coprocessors](#cp)
+Coprocessors act like RDBMS triggers. These were added in 0.92. For more information, see [coprocessors](/docs/cp)
 
 ## Constraints
 
@@ -437,7 +437,7 @@ HBase currently supports 'constraints' in traditional (SQL) database parlance. T
 
 The following will describe some typical data ingestion use-cases with HBase, and how the rowkey design and construction can be approached. Note: this is just an illustration of potential approaches, not an exhaustive list. Know your data, and know your processing requirements.
 
-It is highly recommended that you read the rest of the [HBase and Schema Design](#schema) first, before reading these case studies.
+It is highly recommended that you read the rest of the [HBase and Schema Design](/docs/schema-design) first, before reading these case studies.
 
 The following case studies are described:
 
@@ -460,7 +460,7 @@ We can store them in an HBase table called LOG_DATA, but what will the rowkey be
 
 #### Timestamp In The Rowkey Lead Position
 
-The rowkey `[timestamp][hostname][log-event]` suffers from the monotonically increasing rowkey problem described in [Monotonically Increasing Row Keys/Timeseries Data](#timeseries).
+The rowkey `[timestamp][hostname][log-event]` suffers from the monotonically increasing rowkey problem described in [Monotonically Increasing Row Keys/Timeseries Data](/docs/regionserver-sizing#monotonically-increasing-row-keystimeseries-data).
 
 There is another pattern frequently mentioned in the dist-lists about "bucketing" timestamps, by performing a mod operation on the timestamp. If time-oriented scans are important, this could be a useful approach. Attention must be paid to the number of buckets, because this will require the same number of scans to return results.
 
@@ -559,7 +559,7 @@ The Order record type would include things like:
 - Customer number
 - Order number
 - Sales date
-- A series of nested objects for shipping locations and line-items (see [Order Object Design](#schema.casestudies.custorder.obj) for details)
+- A series of nested objects for shipping locations and line-items (see [Order Object Design](/docs/regionserver-sizing#order-object-design) for details)
 
 Assuming that the combination of customer number and sales order uniquely identify an order, these two attributes will compose the rowkey, and specifically a composite key such as:
 
@@ -616,7 +616,7 @@ there are multiple options on storing this data.
 
 With this approach, there would be separate tables for ORDER, SHIPPING_LOCATION, and LINE_ITEM.
 
-The ORDER table's rowkey was described above: [schema.casestudies.custorder](#schema.casestudies.custorder)
+The ORDER table's rowkey was described above: [schema.casestudies.custorder](/docs/regionserver-sizing#case-study---customerorder)
 
 The SHIPPING_LOCATION's composite rowkey would be something like this:
 
@@ -641,7 +641,7 @@ granted, this is what an RDBMS would do under the covers anyway, but since there
 
 With this approach, there would exist a single table ORDER that would contain
 
-The Order rowkey was described above: [schema.casestudies.custorder](#schema.casestudies.custorder)
+The Order rowkey was described above: [schema.casestudies.custorder](/docs/regionserver-sizing#case-study---customerorder)
 
 - `[order-rowkey]`
 - `[ORDER record type]`
@@ -684,7 +684,7 @@ The pros of this approach include a less complex object hierarchy, but one of th
 
 #### Object BLOB
 
-With this approach, the entire Order object graph is treated, in one way or another, as a BLOB. For example, the ORDER table's rowkey was described above: [schema.casestudies.custorder](#schema.casestudies.custorder), and a single column called "order" would contain an object that could be deserialized that contained a container Order, ShippingLocations, and LineItems.
+With this approach, the entire Order object graph is treated, in one way or another, as a BLOB. For example, the ORDER table's rowkey was described above: [schema.casestudies.custorder](/docs/regionserver-sizing#case-study---customerorder), and a single column called "order" would contain an object that could be deserialized that contained a container Order, ShippingLocations, and LineItems.
 
 There are many options here: JSON, XML, Java Serialization, Avro, Hadoop Writables, etc. All of them are variants of the same approach: encode the object graph to a byte-array. Care should be taken with this approach to ensure backward compatibility in case the object model changes such that older persisted structures can still be read back out of HBase.
 
@@ -766,7 +766,7 @@ And, your access pattern is along the lines of: "for user X, list the next 30 va
 
 The tl;dr version is that you should probably go with one row per user+value, and not build a complicated intra-row pagination scheme on your own unless you're really sure it is needed.
 
-Your two options mirror a common question people have when designing HBase schemas: should I go "tall" or "wide"? Your first schema is "tall": each row represents one value for one user, and so there are many rows in the table for each user; the row key is user + valueid, and there would be (presumably) a single column qualifier that means "the value". This is great if you want to scan over rows in sorted order by row key (thus my question above, about whether these ids are sorted correctly). You can start a scan at any user+valueid, read the next 30, and be done. What you're giving up is the ability to have transactional guarantees around all the rows for one user, but it doesn't sound like you need that. Doing it this way is generally recommended (see here [https://hbase.apache.org/book.html#schema.smackdown](https://hbase.apache.org/book.html#schema.smackdown)).
+Your two options mirror a common question people have when designing HBase schemas: should I go "tall" or "wide"? Your first schema is "tall": each row represents one value for one user, and so there are many rows in the table for each user; the row key is user + valueid, and there would be (presumably) a single column qualifier that means "the value". This is great if you want to scan over rows in sorted order by row key (thus my question above, about whether these ids are sorted correctly). You can start a scan at any user+valueid, read the next 30, and be done. What you're giving up is the ability to have transactional guarantees around all the rows for one user, but it doesn't sound like you need that. Doing it this way is generally recommended (see [here](/docs/regionserver-sizing#case-study---tallwidemiddle-schema-design-smackdown)).
 
 Your second option is "wide": you store a bunch of values in one row, using different qualifiers (where the qualifier is the valueid). The simple way to do that would be to just store ALL values for one user in a single row. I'm guessing you jumped to the "paginated" version because you're assuming that storing millions of columns in a single row would be bad for performance, which may or may not be true; as long as you're not trying to do too much in a single request, or do things like scanning over and returning all of the cells in the row, it shouldn't be fundamentally worse. The client has methods that allow you to get specific slices of columns.
 
@@ -785,11 +785,11 @@ A manually paginated version has lots more complexities, as you note, like havin
   - A value between `0` and `1` allocates the number of queues proportionally to the number of handlers. For instance, a value of `.5` shares one queue between each two handlers.
 - Use `hbase.ipc.server.callqueue.read.ratio` (`hbase.ipc.server.callqueue.read.share` in 0.98) to split the call queues into read and write queues:
   - `0.5` means there will be the same number of read and write queues
-  - `\< 0.5` for more write than read
+  - `< 0.5` for more write than read
   - `> 0.5` for more read than write
 - Set `hbase.ipc.server.callqueue.scan.ratio` (HBase 1.0+) to split read call queues into small-read and long-read queues:
   - 0.5 means that there will be the same number of short-read and long-read queues
-  - `\< 0.5` for more short-read
+  - `< 0.5` for more short-read
   - `> 0.5` for more long-read
 
 ### Disable Nagle for RPC
@@ -808,7 +808,7 @@ Disable Nagle's algorithm. Delayed ACKs can add up to ~200ms to RPC round trip t
 Detect regionserver failure as fast as reasonable. Set the following parameters:
 
 - In `hbase-site.xml`, set `zookeeper.session.timeout` to 30 seconds or less to bound failure detection (20-30 seconds is a good start).
-  - Note: Zookeeper clients negotiate a session timeout with the server during client init. Server enforces this timeout to be in the range \[`minSessionTimeout`, `maxSessionTimeout`\] and both these timeouts (measured in milliseconds) are configurable in Zookeeper service configuration. If not configured, these default to 2 \* `tickTime` and 20 \* `tickTime` respectively (`tickTime` is the basic time unit used by ZooKeeper, as measured in milliseconds. It is used to regulate heartbeats, timeouts etc.). Refer to Zookeeper documentation for additional details.
+  - Note: Zookeeper clients negotiate a session timeout with the server during client init. Server enforces this timeout to be in the range [`minSessionTimeout`, `maxSessionTimeout`] and both these timeouts (measured in milliseconds) are configurable in Zookeeper service configuration. If not configured, these default to 2 \* `tickTime` and 20 \* `tickTime` respectively (`tickTime` is the basic time unit used by ZooKeeper, as measured in milliseconds. It is used to regulate heartbeats, timeouts etc.). Refer to Zookeeper documentation for additional details.
 - Detect and avoid unhealthy or failed HDFS DataNodes: in `hdfs-site.xml` and `hbase-site.xml`, set the following parameters:
   - `dfs.namenode.avoid.read.stale.datanode = true`
   - `dfs.namenode.avoid.write.stale.datanode = true`
@@ -842,7 +842,7 @@ For more on short-circuit reads, see Colin's old blog on rollout, [How Improved 
 - Use the CMS collector: `-XX:+UseConcMarkSweepGC`
 - Keep eden space as small as possible to minimize average collection time. Example:
   ```text
-    -XX:CMSInitiatingOccupancyFraction=70
+  -XX:CMSInitiatingOccupancyFraction=70
   ```
 - Optimize for low collection latency rather than throughput: `-Xmn512m`
 - Collect eden in parallel: `-XX:+UseParNewGC`
@@ -854,8 +854,8 @@ For more on short-circuit reads, see Colin's old blog on rollout, [How Improved 
 
 - Turn transparent huge pages (THP) off:
   ```bash
-    echo never > /sys/kernel/mm/transparent_hugepage/enabled
-    echo never > /sys/kernel/mm/transparent_hugepage/defrag
+  echo never > /sys/kernel/mm/transparent_hugepage/enabled
+  echo never > /sys/kernel/mm/transparent_hugepage/defrag
   ```
 - Set `vm.swappiness = 0`
 - Set `vm.min_free_kbytes` to at least 1GB (8GB on larger memory systems)
@@ -868,7 +868,7 @@ For more on short-circuit reads, see Colin's old blog on rollout, [How Improved 
 - In `hbase-site.xml` on the client side, set the following parameters:
   - Set `hbase.client.pause = 1000`
   - Set `hbase.client.retries.number = 3`
-  - If you want to ride over splits and region moves, increase `hbase.client.retries.number` substantially (\>= 20)
+  - If you want to ride over splits and region moves, increase `hbase.client.retries.number` substantially (>= 20)
   - Set the RecoverableZookeeper retry count: `zookeeper.recovery.retry = 1` (no retry)
 - In `hbase-site.xml` on the server side, set the Zookeeper session timeout for detecting server failures: `zookeeper.session.timeout` ⇐ 30 seconds (20-30 is good).
 
@@ -884,4 +884,4 @@ For more on short-circuit reads, see Colin's old blog on rollout, [How Improved 
 
 ### More Information
 
-See the Performance section [perf.schema](#perf.schema) for more information about operational and performance schema design options, such as Bloom Filters, Table-configured regionsizes, compression, and blocksizes.
+See the Performance section [perf.schema](/docs/case-studies#schema-design) for more information about operational and performance schema design options, such as Bloom Filters, Table-configured regionsizes, compression, and blocksizes.

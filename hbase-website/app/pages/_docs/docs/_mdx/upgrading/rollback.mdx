@@ -1,9 +1,10 @@
 ---
 title: "Rollback"
-description: "Sometimes things don't go as planned when attempting an upgrade. This section explains how to perform a _rollback_ to an earlier HBase release. Note that this should only be needed between Major and some Minor releases. You should always be able to _downgrade_ between HBase Patch releases within the same Minor version. These instructions may require you to take steps before you start the upgrade process, so be sure to read through this section beforehand."
 ---
 
 import { Step, Steps } from "fumadocs-ui/components/steps";
+
+Sometimes things don't go as planned when attempting an upgrade. This section explains how to perform a _rollback_ to an earlier HBase release. Note that this should only be needed between Major and some Minor releases. You should always be able to _downgrade_ between HBase Patch releases within the same Minor version. These instructions may require you to take steps before you start the upgrade process, so be sure to read through this section beforehand.
 
 ## Caveats
 
@@ -67,7 +68,7 @@ Start HBase
 
 <Step>
 
-Verify HBase contents—use the HBase shell to list tables and scan some known values.
+Verify HBase contents — use the HBase shell to list tables and scan some known values.
 
 </Step>
 
@@ -110,9 +111,7 @@ Change the installed version of HBase to the previous version
 
 <Step>
 
-#### Clean out ZooKeeper information related to HBase
-
-WARNING: This step will permanently destroy all replication peers. Please see the section on HBase Replication under Caveats for more information.
+Clean out ZooKeeper information related to HBase. WARNING: This step will permanently destroy all replication peers. Please see the section on HBase Replication under Caveats for more information.
 
 **Clean HBase information out of ZooKeeper:**
 
@@ -166,8 +165,6 @@ Stop the HBase cluster
 
 <Step>
 
-#### Copy the HBase data directory to a backup location
-
 Copy the HBase data directory to a backup location using the [distcp command](https://hadoop.apache.org/docs/current/hadoop-distcp/DistCp.html) as the HDFS super user (shown below on a security enabled cluster)
 
 **Using distcp to backup the HBase data directory:**
@@ -211,9 +208,7 @@ Change the installed version of HBase to the previous version
 
 <Step>
 
-#### Restore the HBase data directory from prior to the upgrade
-
-Restore the HBase data directory from prior to the upgrade as the HDFS super user (shown below on a security enabled cluster). If you backed up your data on another HDFS cluster instead of locally, you will need to use the distcp command to copy it back to the current HDFS cluster.
+Restore the HBase data directory from prior to the upgrade. Restore the HBase data directory from prior to the upgrade as the HDFS super user (shown below on a security enabled cluster). If you backed up your data on another HDFS cluster instead of locally, you will need to use the distcp command to copy it back to the current HDFS cluster.
 
 **Restore the HBase data directory:**
 
@@ -227,9 +222,7 @@ Restore the HBase data directory from prior to the upgrade as the HDFS super use
 
 <Step>
 
-#### Clean out ZooKeeper information related to HBase
-
-WARNING: This step will permanently destroy all replication peers. Please see the section on HBase Replication under Caveats for more information.
+Clean out ZooKeeper information related to HBase. WARNING: This step will permanently destroy all replication peers. Please see the section on HBase Replication under Caveats for more information.
 
 **Clean HBase information out of ZooKeeper:**
 

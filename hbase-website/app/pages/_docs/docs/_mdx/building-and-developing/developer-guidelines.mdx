@@ -15,7 +15,7 @@ are defined:
 
 Fix version of X.Y.Z => fixed in all releases X.Y.Z' (where Z' = Z).  
 Fix version of X.Y.0 => fixed in all releases X.Y'.\* (where Y' = Y).  
-Fix version of X.0.0 => fixed in all releases X'.\*.\* (where X' = X).  
+Fix version of X.0.0 => fixed in all releases X'.\*.\* (where X' = X).
 
 By this policy, fix version of 1.3.0 implies 1.4.0, but 1.3.2 does not imply 1.4.0 as we could not
 tell purely from the numbers which release came first.
@@ -49,7 +49,9 @@ Packages without an `@InterfaceAudience` label are considered private.
 Mark your new packages if publicly accessible.
 
 <Callout type="info" title="Excluding Non-Public Interfaces from API Documentation">
-Only interfaces classified `@InterfaceAudience.Public` should be included in API documentation (Javadoc). Committers must add new package excludes `ExcludePackageNames` section of the _pom.xml_ for new packages which do not contain public classes.
+  Only interfaces classified `@InterfaceAudience.Public` should be included in API documentation
+  (Javadoc). Committers must add new package excludes `ExcludePackageNames` section of the _pom.xml_
+  for new packages which do not contain public classes.
 </Callout>
 
 #### @InterfaceStability
@@ -76,7 +78,7 @@ Please adhere to the following guidelines so that your patches can be reviewed m
 These guidelines have been developed based upon common feedback on patches from new contributors.
 
 See the [Code Conventions for the Java Programming Language](http://www.oracle.com/technetwork/java/index-135089.html) for more information on coding conventions in Java.
-See [Eclipse Code Formatting](#eclipse.code.formatting) to setup Eclipse to check for some of
+See [Eclipse Code Formatting](/docs/developer#code-formatting) to setup Eclipse to check for some of
 these guidelines automatically.
 
 #### Space Invaders
@@ -304,7 +306,7 @@ reading the [On Contributing Patches](https://commons.apache.org/patches.html) p
 [Apache Commons Project](https://commons.apache.org/).
 It provides a nice overview that applies equally to the Apache HBase Project.
 
-Make sure you review [Code Formatting Conventions](#common.patch.feedback) for code style. If your patch
+Make sure you review [Code Formatting Conventions](/docs/building-and-developing/developer-guidelines#code-formatting-conventions) for code style. If your patch
 was generated incorrectly or your code does not adhere to the code formatting guidelines, you may
 be asked to redo some work.
 
@@ -342,7 +344,7 @@ injecting appropriate failures.
 If you are creating a new unit test class, notice how other unit test classes have
 classification/sizing annotations before class name and a static methods for setup/teardown of
 testing environment. Be sure to include annotations in any new unit test files.
-See [Tests](#hbase.tests) for more information on tests.
+See [Tests](/docs/building-and-developing/tests) for more information on tests.
 
 ### Integration Tests
 
@@ -396,7 +398,9 @@ tool bar. Clicking on it while you are on an HBase GitHub PR page redirects you 
 jira item.
 
 ```js
-location.href='https://issues.apache.org/jira/browse/'+document.getElementsByClassName("js-issue-title")[0].innerHTML.match(/HBASE-\d+/)[0];
+location.href =
+  "https://issues.apache.org/jira/browse/" +
+  document.getElementsByClassName("js-issue-title")[0].innerHTML.match(/HBASE-\d+/)[0];
 ```
 
 ### Guide for HBase Committers
@@ -417,14 +421,14 @@ encouraged (and may be even more important to the health of HBase as a project a
 community). A non-exhaustive list of potential contributions (in no particular
 order):
 
-- [Update the documentation](#appendix_contributing_to_documentation) for new
+- [Update the documentation](/docs/contributing-to-documentation) for new
   changes, best practices, recipes, and other improvements.
 - Keep the website up to date.
 - Perform testing and report the results. For instance, scale testing and
   testing non-standard configurations is always appreciated.
 - Maintain the shared Jenkins testing environment and other testing
   infrastructure.
-- [Vote on release candidates](#hbase.rc.voting) after performing validation, even if non-binding.
+- [Vote on release candidates](/docs/building-and-developing/voting) after performing validation, even if non-binding.
   A non-binding vote is a vote by a non-committer.
 - Provide input for discussion threads on the link:/mail-lists.html[mailing lists] (which usually have
   `[DISCUSS]` in the subject line).
@@ -486,7 +490,7 @@ then wait for a `+1` response from another committer before committing.
 #### Reject
 
 Patches which do not adhere to the guidelines in
-[HowToContribute](https://hbase.apache.org/book.html#developer) and to the
+[HowToContribute](/docs/developer) and to the
 [code review checklist](https://cwiki.apache.org/confluence/display/HADOOP2/CodeReviewChecklist)
 should be rejected. Committers should always be polite to contributors and try
 to instruct and encourage them to contribute better patches. If a committer
@@ -498,10 +502,9 @@ new patch should be attached by the committer for further review.
 Committers commit patches to the Apache HBase GIT repository.
 
 <Callout type="warn" title="Before you commit!!!!">
-Make sure your local configuration is correct, especially your identity and email.
-Examine the output of the `$ git config --list` command and be sure it is correct.
-See [Set Up Git](https://help.github.com/articles/set-up-git) if you need
-pointers.
+  Make sure your local configuration is correct, especially your identity and email. Examine the
+  output of the `$ git config --list` command and be sure it is correct. See [Set Up
+  Git](https://help.github.com/articles/set-up-git) if you need pointers.
 </Callout>
 
 When you commit a patch:
@@ -520,97 +523,96 @@ When you commit a patch:
    branch (such as master), and push the changes to the remote branch using
    a command such as `git push <remote-server> <remote-branch>`.
 
-<Callout type="warning">
-If you do not have all remote changes, the push will fail. If the push fails for any reason, fix
-the problem or ask for help. Do not do a `git push --force`.
-</Callout>
+   <Callout type="warning">
+     If you do not have all remote changes, the push will fail. If the push fails for any reason,
+     fix the problem or ask for help. Do not do a `git push --force`.
+   </Callout>
 
-Before you can commit a patch, you need to determine how the patch was created.
-The instructions and preferences around the way to create patches have changed,
-and there will be a transition period.
+   Before you can commit a patch, you need to determine how the patch was created.
+   The instructions and preferences around the way to create patches have changed,
+   and there will be a transition period.
 
-**Determine How a Patch Was Created**
+   **Determine How a Patch Was Created**
+   - If the first few lines of the patch look like the headers of an email, with a From, Date, and
+     Subject, it was created using `git format-patch`. This is the preferred way, because you can
+     reuse the submitter's commit message. If the commit message is not appropriate, you can still use
+     the commit, then run `git commit --amend` and reword as appropriate.
+   - If the first line of the patch looks similar to the following, it was created using +git diff+ without `--no-prefix`.
+     This is acceptable too.
+     Notice the `a` and `b` in front of the file names.
+     This is the indication that the patch was not created with `--no-prefix`.
 
-- If the first few lines of the patch look like the headers of an email, with a From, Date, and
-  Subject, it was created using `git format-patch`. This is the preferred way, because you can
-  reuse the submitter's commit message. If the commit message is not appropriate, you can still use
-  the commit, then run `git commit --amend` and reword as appropriate.
-- If the first line of the patch looks similar to the following, it was created using +git diff+ without `--no-prefix`.
-  This is acceptable too.
-  Notice the `a` and `b` in front of the file names.
-  This is the indication that the patch was not created with `--no-prefix`.
+     ```diff
+     diff --git a/src/main/asciidoc/_chapters/developer.adoc b/src/main/asciidoc/_chapters/developer.adoc
+     ```
 
-  ```diff
-  diff --git a/src/main/asciidoc/_chapters/developer.adoc b/src/main/asciidoc/_chapters/developer.adoc
-  ```
+   - If the first line of the patch looks similar to the following (without the `a` and `b`), the
+     patch was created with `git diff --no-prefix` and you need to add `-p0` to the `git apply` command
+     below.
 
-- If the first line of the patch looks similar to the following (without the `a` and `b`), the
-  patch was created with `git diff --no-prefix` and you need to add `-p0` to the `git apply` command
-  below.
+     ```diff
+     diff --git src/main/asciidoc/_chapters/developer.adoc src/main/asciidoc/_chapters/developer.adoc
+     ```
 
-  ```diff
-  diff --git src/main/asciidoc/_chapters/developer.adoc src/main/asciidoc/_chapters/developer.adoc
-  ```
+   **Example of committing a Patch**
 
-**Example of committing a Patch**
+   One thing you will notice with these examples is that there are a lot of
+   `git pull` commands. The only command that actually writes anything to the
+   remote repository is `git push`, and you need to make absolutely sure you have
+   the correct versions of everything and don't have any conflicts before pushing.
+   The extra `git pull` commands are usually redundant, but better safe than sorry.
 
-One thing you will notice with these examples is that there are a lot of
-`git pull` commands. The only command that actually writes anything to the
-remote repository is `git push`, and you need to make absolutely sure you have
-the correct versions of everything and don't have any conflicts before pushing.
-The extra `git pull` commands are usually redundant, but better safe than sorry.
+   The first example shows how to apply a patch that was generated with +git
+   format-patch+ and apply it to the `master` and `branch-1` branches.
 
-The first example shows how to apply a patch that was generated with +git
-format-patch+ and apply it to the `master` and `branch-1` branches.
+   The directive to use `git format-patch` rather than `git diff`, and not to use
+   `--no-prefix`, is a new one. See the second example for how to apply a patch
+   created with `git diff`, and educate the person who created the patch.
 
-The directive to use `git format-patch` rather than `git diff`, and not to use
-`--no-prefix`, is a new one. See the second example for how to apply a patch
-created with `git diff`, and educate the person who created the patch.
+   ```bash
+   $ git checkout -b HBASE-XXXX
+   $ git am ~/Downloads/HBASE-XXXX-v2.patch --signoff  # If you are committing someone else's patch.
+   $ git checkout master
+   $ git pull --rebase
+   $ git cherry-pick <sha-from-commit>
+   # Resolve conflicts if necessary or ask the submitter to do it
+   $ git pull --rebase          # Better safe than sorry
+   $ git push origin master
 
-```bash
-$ git checkout -b HBASE-XXXX
-$ git am ~/Downloads/HBASE-XXXX-v2.patch --signoff  # If you are committing someone else's patch.
-$ git checkout master
-$ git pull --rebase
-$ git cherry-pick <sha-from-commit>
-# Resolve conflicts if necessary or ask the submitter to do it
-$ git pull --rebase          # Better safe than sorry
-$ git push origin master
+   # Backport to branch-1
+   $ git checkout branch-1
+   $ git pull --rebase
+   $ git cherry-pick <sha-from-commit>
+   # Resolve conflicts if necessary
+   $ git pull --rebase          # Better safe than sorry
+   $ git push origin branch-1
+   $ git branch -D HBASE-XXXX
+   ```
 
-# Backport to branch-1
-$ git checkout branch-1
-$ git pull --rebase
-$ git cherry-pick <sha-from-commit>
-# Resolve conflicts if necessary
-$ git pull --rebase          # Better safe than sorry
-$ git push origin branch-1
-$ git branch -D HBASE-XXXX
-```
+   This example shows how to commit a patch that was created using `git diff`
+   without `--no-prefix`. If the patch was created with `--no-prefix`, add `-p0` to
+   the `git apply` command.
 
-This example shows how to commit a patch that was created using `git diff`
-without `--no-prefix`. If the patch was created with `--no-prefix`, add `-p0` to
-the `git apply` command.
+   ```bash
+   $ git apply ~/Downloads/HBASE-XXXX-v2.patch
+   $ git commit -m "HBASE-XXXX Really Good Code Fix (Joe Schmo)" --author=<contributor> -a  # This and next command is needed for patches created with 'git diff'
+   $ git commit --amend --signoff
+   $ git checkout master
+   $ git pull --rebase
+   $ git cherry-pick <sha-from-commit>
+   # Resolve conflicts if necessary or ask the submitter to do it
+   $ git pull --rebase          # Better safe than sorry
+   $ git push origin master
 
-```bash
-$ git apply ~/Downloads/HBASE-XXXX-v2.patch
-$ git commit -m "HBASE-XXXX Really Good Code Fix (Joe Schmo)" --author=<contributor> -a  # This and next command is needed for patches created with 'git diff'
-$ git commit --amend --signoff
-$ git checkout master
-$ git pull --rebase
-$ git cherry-pick <sha-from-commit>
-# Resolve conflicts if necessary or ask the submitter to do it
-$ git pull --rebase          # Better safe than sorry
-$ git push origin master
-
-# Backport to branch-1
-$ git checkout branch-1
-$ git pull --rebase
-$ git cherry-pick <sha-from-commit>
-# Resolve conflicts if necessary or ask the submitter to do it
-$ git pull --rebase           # Better safe than sorry
-$ git push origin branch-1
-$ git branch -D HBASE-XXXX
-```
+   # Backport to branch-1
+   $ git checkout branch-1
+   $ git pull --rebase
+   $ git cherry-pick <sha-from-commit>
+   # Resolve conflicts if necessary or ask the submitter to do it
+   $ git pull --rebase           # Better safe than sorry
+   $ git push origin branch-1
+   $ git branch -D HBASE-XXXX
+   ```
 
 3. Resolve the issue as fixed, thanking the contributor.
    Always set the "Fix Version" at this point, but only set a single fix version
@@ -659,11 +661,11 @@ Here is the example from the GitHub page, using 2 Co-authors:
 $ git commit -m "Refactor usability tests.
 >
 >
-Co-authored-by: name \<name@example.com\>
-Co-authored-by: another-name \<another-name@example.com\>"
+Co-authored-by: name <name@example.com>
+Co-authored-by: another-name <another-name@example.com>"
 ```
 
-Note: `Amending-Author: Author \<committer@apache\>` was used prior to this
+Note: `Amending-Author: Author <committer@apache>` was used prior to this
 [DISCUSSION](https://lists.apache.org/thread.html/f00b5f9b65570e777dbb31c37d7b0ffc55c5fc567aefdb456608a042@%3Cdev.hbase.apache.org%3E).
 
 **Close related GitHub PRs**
@@ -693,7 +695,7 @@ Avoid merge commits, as they create problems in the git history.
 
 **Committing Documentation**
 
-See [appendix contributing to documentation](#appendix_contributing_to_documentation).
+See [appendix contributing to documentation](/docs/contributing-to-documentation).
 
 **How to re-trigger github Pull Request checks/re-build**
 

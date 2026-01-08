@@ -10,7 +10,7 @@ the command `mvn -version`.
 ### JDK Version Requirements
 
 HBase has Java version compiler requirements that vary by release branch. At compilation time,
-HBase has the same version requirements as it does for runtime. See [Java](#java) for a complete
+HBase has the same version requirements as it does for runtime. See [Java](/docs/configuration/basic-prerequisites#java) for a complete
 support matrix of Java version by HBase version.
 
 ### Maven Build Commands
@@ -31,7 +31,7 @@ Or, to clean up before compiling:
 mvn clean package -DskipTests
 ```
 
-With Eclipse set up as explained above in [Eclipse](#eclipse), you can also use the **Build** command in Eclipse.
+With Eclipse set up as explained above in [Eclipse](/docs/developer#eclipse), you can also use the **Build** command in Eclipse.
 To create the full installable HBase package takes a little bit more work, so read on.
 
 #### Compile
@@ -83,13 +83,13 @@ mvn install:install-file -DgroupId=com.google.protobuf -DartifactId=protoc -Dver
 
 ### Running all or individual Unit Tests
 
-See the [Running tests](#hbase.unittests.cmds) section in [Unit Tests](#hbase.unittests)
+See the [Running tests](/docs/building-and-developing/tests#running-tests) section in [Unit Tests](/docs/building-and-developing/tests#unit-tests)
 
 ### Building against various Hadoop versions
 
 HBase supports building against Apache Hadoop versions: 2.y and 3.y (early release artifacts).
 Exactly which version of Hadoop is used by default varies by release branch. See the section
-[Hadoop](#hadoop) for the complete breakdown of supported Hadoop version by HBase release.
+[Hadoop](/docs/configuration/basic-prerequisites#hadoop) for the complete breakdown of supported Hadoop version by HBase release.
 
 The mechanism for selecting a Hadoop version at build time is identical across all releases. Which
 version of Hadoop is default varies. We manage Hadoop major version selection by way of Maven
@@ -152,7 +152,7 @@ JDK11, and the artifacts used when running HBase on JDK11 must be compiled again
 Furthermore, the JDK11 profile requires a minimum Hadoop version of 3.2.0. This value is specified
 by the JDK11 profile, but it can be overridden using the `hadoop-three.version` property as normal.
 For details on Hadoop profile activation by HBase branch, see
-[Building against various Hadoop versions](#maven.build.hadoop). See [Java](#java) for a complete
+[Building against various Hadoop versions](/docs/building-and-developing/building#building-against-various-hadoop-versions). See [Java](/docs/configuration/basic-prerequisites#java) for a complete
 support matrix of Java version by HBase version.
 
 #### Example 1: Building HBase 2.3 or 2.4 with JDK11
@@ -176,7 +176,7 @@ JAVA_HOME=/usr/lib/jvm/java-11 mvn ...
 
 ### Building and testing in an IDE with JDK11 and Hadoop3
 
-Continuing the discussion from the [earlier section](#maven.build.jdk11_hadoop3), building and
+Continuing the discussion from the [earlier section](/docs/building-and-developing/building#building-with-jdk11-and-hadoop3), building and
 testing with JDK11 and Hadoop3 within an IDE may require additional configuration. Specifically,
 make sure the JVM version used by the IDE is a JDK11, the active JDK Maven profile is for JDK11,
 and the Maven profile for JDK8 is NOT active. Likewise, ensure the Hadoop3 Maven profile is active
@@ -234,7 +234,7 @@ mvn compile -Pcompile-thrift -Dthrift.path=/opt/local/bin/thrift
 
 ### Build a Tarball
 
-You can build a tarball without going through the release process described in [Releasing Apache HBase](#releasing), by running the following command:
+You can build a tarball without going through the release process described in [Releasing Apache HBase](/docs/building-and-developing/releasing), by running the following command:
 
 ```bash
 mvn -DskipTests clean install && mvn -DskipTests package assembly:single

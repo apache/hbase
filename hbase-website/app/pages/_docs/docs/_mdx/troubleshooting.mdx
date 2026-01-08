@@ -9,23 +9,23 @@ Always start with the master log (TODO: Which lines?). Normally it's just printi
 
 An error rarely comes alone in Apache HBase, usually when something gets screwed up what will follow may be hundreds of exceptions and stack traces coming from all over the place. The best way to approach this type of problem is to walk the log up to where it all began, for example one trick with RegionServers is that they will print some metrics when aborting so grepping for *Dump* should get you around the start of the problem.
 
-RegionServer suicides are 'normal', as this is what they do when something goes wrong. For example, if ulimit and max transfer threads (the two most important initial settings, see [[ulimit]](#ulimit) and [`dfs.datanode.max.transfer.threads`](#dfs.datanode.max.transfer.threads)) aren't changed, it will make it impossible at some point for DataNodes to create new threads that from the HBase point of view is seen as if HDFS was gone. Think about what would happen if your MySQL database was suddenly unable to access files on your local file system, well it's the same with HBase and HDFS. Another very common reason to see RegionServers committing seppuku is when they enter prolonged garbage collection pauses that last longer than the default ZooKeeper session timeout. For more information on GC pauses, see the [3 part blog post](https://blog.cloudera.com/blog/2011/02/avoiding-full-gcs-in-hbase-with-memstore-local-allocation-buffers-part-1/) by Todd Lipcon and [Long GC pauses](#gcpause) above.
+RegionServer suicides are 'normal', as this is what they do when something goes wrong. For example, if ulimit and max transfer threads (the two most important initial settings, see [[ulimit]](/docs/configuration/basic-prerequisites#limits-on-number-of-files-and-processes-ulimit) and [`dfs.datanode.max.transfer.threads`](/docs/configuration/basic-prerequisites#dfsdatanodemaxtransferthreads)) aren't changed, it will make it impossible at some point for DataNodes to create new threads that from the HBase point of view is seen as if HDFS was gone. Think about what would happen if your MySQL database was suddenly unable to access files on your local file system, well it's the same with HBase and HDFS. Another very common reason to see RegionServers committing seppuku is when they enter prolonged garbage collection pauses that last longer than the default ZooKeeper session timeout. For more information on GC pauses, see the [3 part blog post](https://blog.cloudera.com/blog/2011/02/avoiding-full-gcs-in-hbase-with-memstore-local-allocation-buffers-part-1/) by Todd Lipcon and [Long GC pauses](/docs/performance#long-gc-pauses) above.
 
 ## Logs
 
 The key process logs are as follows... (replace `<user>` with the user that started the service, and `<hostname>` for the machine name)
 
-NameNode: *$HADOOP_HOME/logs/hadoop-`<user>`-namenode-`<hostname>`.log*
+NameNode: *$HADOOP_HOME/logs/hadoop-\<user>-namenode-\<hostname>.log*
 
-DataNode: *$HADOOP_HOME/logs/hadoop-`<user>`-datanode-`<hostname>`.log*
+DataNode: *$HADOOP_HOME/logs/hadoop-\<user>-datanode-\<hostname>.log*
 
-JobTracker: *$HADOOP_HOME/logs/hadoop-`<user>`-jobtracker-`<hostname>`.log*
+JobTracker: *$HADOOP_HOME/logs/hadoop-\<user>-jobtracker-\<hostname>.log*
 
-TaskTracker: *$HADOOP_HOME/logs/hadoop-`<user>`-tasktracker-`<hostname>`.log*
+TaskTracker: *$HADOOP_HOME/logs/hadoop-\<user>-tasktracker-\<hostname>.log*
 
-HMaster: *$HBASE_HOME/logs/hbase-`<user>`-master-`<hostname>`.log*
+HMaster: *$HBASE_HOME/logs/hbase-\<user>-master-\<hostname>.log*
 
-RegionServer: *$HBASE_HOME/logs/hbase-`<user>`-regionserver-`<hostname>`.log*
+RegionServer: *$HBASE_HOME/logs/hbase-\<user>-regionserver-\<hostname>.log*
 
 ZooKeeper: *TODO*
 
@@ -154,7 +154,7 @@ Similarly, to enable GC logging for client processes, uncomment one of the below
 # If <FILE-PATH> is not replaced, the log file(.gc) would be generated in the HBASE_LOG_DIR .
 ```
 
-For more information on GC pauses, see the [3 part blog post](https://blog.cloudera.com/blog/2011/02/avoiding-full-gcs-in-hbase-with-memstore-local-allocation-buffers-part-1/) by Todd Lipcon and [Long GC pauses](#gcpause) above.
+For more information on GC pauses, see the [3 part blog post](https://blog.cloudera.com/blog/2011/02/avoiding-full-gcs-in-hbase-with-memstore-local-allocation-buffers-part-1/) by Todd Lipcon and [Long GC pauses](/docs/performance#long-gc-pauses) above.
 
 ## Resources
 
@@ -192,7 +192,7 @@ RegionServers starts a web-interface on port 16030 by default.
 
 The RegionServer web UI lists online regions and their start/end keys, as well as point-in-time RegionServer metrics (requests, regions, storeFileIndexSize, compactionQueueSize, etc.).
 
-See [HBase Metrics](#hbase_metrics) for more information in metric definitions.
+See [HBase Metrics](/docs/operational-management/metrics-and-monitoring) for more information in metric definitions.
 
 #### zkcli
 
@@ -456,23 +456,23 @@ clusterssh+top, it's like a poor man's monitoring system and it can be quite use
 
 ## Client
 
-For more information on the HBase client, see [client](#architecture.client).
+For more information on the HBase client, see [client](/docs/architecture/client).
 
 ### ScannerTimeoutException or UnknownScannerException
 
 This is thrown if the time between RPC calls from the client to RegionServer exceeds the scan timeout. For example, if `Scan.setCaching` is set to 500, then there will be an RPC call to fetch the next batch of rows every 500 `.next()` calls on the ResultScanner because data is being transferred in blocks of 500 rows to the client. Reducing the setCaching value may be an option, but setting this value too low makes for inefficient processing on numbers of rows.
 
-See [Scan Caching](#perf.hbase.client.caching).
+See [Scan Caching](/docs/performance#scan-caching).
 
 ### Performance Differences in Thrift and Java APIs
 
-Poor performance, or even `ScannerTimeoutExceptions`, can occur if `Scan.setCaching` is too high, as discussed in [ScannerTimeoutException or UnknownScannerException](#trouble.client.scantimeout). If the Thrift client uses the wrong caching settings for a given workload, performance can suffer compared to the Java API. To set caching for a given scan in the Thrift client, use the `scannerGetList(scannerId, numRows)` method, where `numRows` is an integer representing the number of rows to cache. In one case, it was found that reducing the cache for Thrift scans from 1000 to 100 increased performance to near parity with the Java API given the same queries.
+Poor performance, or even `ScannerTimeoutExceptions`, can occur if `Scan.setCaching` is too high, as discussed in [ScannerTimeoutException or UnknownScannerException](/docs/troubleshooting#scannertimeoutexception-or-unknownscannerexception). If the Thrift client uses the wrong caching settings for a given workload, performance can suffer compared to the Java API. To set caching for a given scan in the Thrift client, use the `scannerGetList(scannerId, numRows)` method, where `numRows` is an integer representing the number of rows to cache. In one case, it was found that reducing the cache for Thrift scans from 1000 to 100 increased performance to near parity with the Java API given the same queries.
 
 See also Jesse Andersen's [blog post](http://blog.cloudera.com/blog/2014/04/how-to-use-the-hbase-thrift-interface-part-3-using-scans/) about using Scans with Thrift.
 
 ### `LeaseException` when calling `Scanner.next`
 
-In some situations clients that fetch data from a RegionServer get a LeaseException instead of the usual [ScannerTimeoutException or UnknownScannerException](#trouble.client.scantimeout). Usually the source of the exception is `org.apache.hadoop.hbase.regionserver.Leases.removeLease(Leases.java:230)` (line number may vary). It tends to happen in the context of a slow/freezing `RegionServer#next` call. It can be prevented by having `hbase.rpc.timeout` > `hbase.client.scanner.timeout.period`. Harsh J investigated the issue as part of the mailing list thread [HBase, mail \# user - Lease does not exist exceptions](https://mail-archives.apache.org/mod_mbox/hbase-user/201209.mbox/%3CCAOcnVr3R-LqtKhFsk8Bhrm-YW2i9O6J6Fhjz2h7q6_sxvwd2yw%40mail.gmail.com%3E)
+In some situations clients that fetch data from a RegionServer get a LeaseException instead of the usual [ScannerTimeoutException or UnknownScannerException](/docs/troubleshooting#scannertimeoutexception-or-unknownscannerexception). Usually the source of the exception is `org.apache.hadoop.hbase.regionserver.Leases.removeLease(Leases.java:230)` (line number may vary). It tends to happen in the context of a slow/freezing `RegionServer#next` call. It can be prevented by having `hbase.rpc.timeout` > `hbase.client.scanner.timeout.period`. Harsh J investigated the issue as part of the mailing list thread [HBase, mail \# user - Lease does not exist exceptions](https://mail-archives.apache.org/mod_mbox/hbase-user/201209.mbox/%3CCAOcnVr3R-LqtKhFsk8Bhrm-YW2i9O6J6Fhjz2h7q6_sxvwd2yw%40mail.gmail.com%3E)
 
 ### Shell or client application throws lots of scary exceptions during normal operation
 
@@ -484,9 +484,9 @@ On your clients, edit *$HBASE_HOME/conf/log4j.properties* and change this: `log4
 
 This is a fairly frequent question on the Apache HBase dist-list. The scenario is that a client is typically inserting a lot of data into a relatively un-optimized HBase cluster. Compression can exacerbate the pauses, although it is not the source of the problem.
 
-See [Table Creation: Pre-Creating Regions](#precreate.regions) on the pattern for pre-creating regions and confirm that the table isn’t starting with a single region.
+See [Table Creation: Pre-Creating Regions](/docs/performance#table-creation-pre-creating-regions) on the pattern for pre-creating regions and confirm that the table isn’t starting with a single region.
 
-See [HBase Configurations](#perf.configurations) for cluster configuration, particularly `hbase.hstore.blockingStoreFiles`, `hbase.hregion.memstore.block.multiplier`, `MAX_FILESIZE` (region size), and `MEMSTORE_FLUSHSIZE.`
+See [HBase Configurations](/docs/performance#hbase-configurations) for cluster configuration, particularly `hbase.hstore.blockingStoreFiles`, `hbase.hregion.memstore.block.multiplier`, `MAX_FILESIZE` (region size), and `MEMSTORE_FLUSHSIZE.`
 
 A slightly longer explanation of why pauses can happen is as follows: Puts are sometimes blocked on the MemStores which are blocked by the flusher thread which is blocked because there are too many files to compact because the compactor is given too many small files to compact and has to compact the same data repeatedly. This situation can occur even with minor compactions. Compounding this situation, Apache HBase doesn't compress data in memory. Thus, the 64MB that lives in the MemStore could become a 6MB file after compression - which results in a smaller StoreFile. The upside is that more data is packed into the same region, but performance is achieved by being able to write larger files - which is why HBase waits until the flushsize before writing a new StoreFile. And smaller StoreFiles become targets for compaction. Without compression the files are much bigger and don't need as much compaction, however this is at the expense of I/O.
 
@@ -528,7 +528,7 @@ Errors like this...
 
 ...are either due to ZooKeeper being down, or unreachable due to network issues.
 
-The utility [zkcli](#trouble.tools.builtin.zkcli) may help investigate ZooKeeper issues.
+The utility [zkcli](/docs/troubleshooting#zkcli) may help investigate ZooKeeper issues.
 
 ### Client running out of memory though heap size seems to be stable (but the off-heap/direct heap keeps growing)
 
@@ -555,7 +555,7 @@ You may also need to download the [unlimited strength JCE policy files](http://w
 - For connectivity issues, usually an exception like "MasterRegistryFetchException: Exception making rpc to masters..." is logged in the client logs. The logging includes the list of master end points that were attempted by the client. The bottom part of the stack trace should include the underlying reason. If you suspect connectivity issues (ConnectionRefused?), make sure the master end points are accessible from client.
 - If there is a suspicion of higher load on the masters due to hedging of RPCs, it can be controlled by either reducing the hedging fan out (via *hbase.rpc.hedged.fanout*) or by restricting the set of masters that clients can access for the master registry purposes (via *hbase.masters*).
 
-Refer to [Master Registry (new as of 2.3.0)](#client.masterregistry) and [Client configuration and dependencies connecting to an HBase cluster](#client_dependencies) for more details.
+Refer to [Master Registry (new as of 2.3.0)](/docs/architecture/client#masterregistry-rpc-hedging) and [Client configuration and dependencies connecting to an HBase cluster](/docs/configuration/default#client-configuration-and-dependencies-connecting-to-an-hbase-cluster) for more details.
 
 ## MapReduce
 
@@ -596,7 +596,7 @@ To solve this problem, you should run your MR job with your `HADOOP_CLASSPATH` s
 HADOOP_CLASSPATH=`hbase classpath` hadoop jar $HBASE_HOME/hbase-mapreduce-VERSION.jar rowcounter usertable
 ```
 
-See [HBase, MapReduce, and the CLASSPATH](#hbase.mapreduce.classpath) for more information on HBase MapReduce jobs and classpaths.
+See [HBase, MapReduce, and the CLASSPATH](/docs/mapreduce#hbase-mapreduce-and-the-classpath) for more information on HBase MapReduce jobs and classpaths.
 
 ### Launching a job, you get java.lang.IllegalAccessError: com/google/protobuf/HBaseZeroCopyByteString or class com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass com.google.protobuf.LiteralByteString
 
@@ -604,7 +604,7 @@ See [HBASE-10304 Running an hbase job jar: IllegalAccessError: class com.google.
 
 ## NameNode
 
-For more information on the NameNode, see [HDFS](#arch.hdfs).
+For more information on the NameNode, see [HDFS](/docs/architecture/hdfs).
 
 ### HDFS Utilization of Tables and Regions
 
@@ -675,7 +675,7 @@ If you see an unexpected spike in filesystem usage by HBase, two possible culpri
 When you create a snapshot, HBase retains everything it needs to recreate the table's state at that time of the snapshot. This includes deleted cells or expired versions. For this reason, your snapshot usage pattern should be well-planned, and you should prune snapshots that you no longer need. Snapshots are stored in `/hbase/.hbase-snapshot`, and archives needed to restore snapshots are stored in `/hbase/archive/<tablename>/<region>/<column_family>/`.
 
 <Callout type="warn">
-**Do not** manage snapshots or archives manually via HDFS. HBase provides APIs and HBase Shell commands for managing them. For more information, see [ops.snapshots](#ops.snapshots).
+**Do not** manage snapshots or archives manually via HDFS. HBase provides APIs and HBase Shell commands for managing them. For more information, see [ops.snapshots](/docs/operational-management/backup-and-snapshots#hbase-snapshots).
 </Callout>
 
 **WAL**  
@@ -690,7 +690,7 @@ If you use replication and `/hbase/oldWALs/` is using more space than you expect
 
 If you are seeing periodic network spikes you might want to check the `compactionQueues` to see if major compactions are happening.
 
-See [Managed Compactions](#managed.compactions) for more information on managing compactions.
+See [Managed Compactions](/docs/configuration/important#managed-compactions) for more information on managing compactions.
 
 ### Loopback IP
 
@@ -698,11 +698,11 @@ HBase expects the loopback IP Address to be 127.0.0.1.
 
 ### Network Interfaces
 
-Are all the network interfaces functioning correctly? Are you sure? See the Troubleshooting Case Study in [Case Studies](#trouble.casestudy).
+Are all the network interfaces functioning correctly? Are you sure? See the Troubleshooting Case Study in [Case Studies](/docs/troubleshooting#case-studies).
 
 ## RegionServer
 
-For more information on the RegionServers, see [RegionServer](#regionserver.arch).
+For more information on the RegionServers, see [RegionServer](/docs/architecture/regionserver).
 
 ### Startup Errors
 
@@ -742,7 +742,7 @@ java.lang.UnsatisfiedLinkError: no gplcompression in java.library.path
         at java.lang.System.loadLibrary(System.java:1028)
 ```
 
-... then there is a path issue with the compression libraries. See the Configuration section on [LZO compression configuration]().
+... then there is a path issue with the compression libraries. See the Configuration section on [LZO compression configuration](/docs/compression#configure-hbase-for-compressors).
 
 #### RegionServer aborts due to lack of hsync for filesystem
 
@@ -778,7 +778,7 @@ Caused by: org.apache.hadoop.hbase.util.CommonFSUtils$StreamLacksCapabilityExcep
         ... 15 more
 ```
 
-If you are attempting to run in standalone mode and see this error, please walk back through the section [Quick Start - Standalone HBase](#quickstart) and ensure you have included **all** the given configuration settings.
+If you are attempting to run in standalone mode and see this error, please walk back through the section [Quick Start - Standalone HBase](/docs/getting-started#quick-start---standalone-hbase) and ensure you have included **all** the given configuration settings.
 
 #### RegionServer aborts due to can not initialize access to HDFS
 
@@ -847,13 +847,14 @@ Disk-related IOException in BlockReceiver constructor. Cause is java.io.IOExcept
         at java.io.File.createNewFile(File.java:883)
 ```
 
-... see the Getting Started section on [ulimit and nproc configuration]().
+... see the Getting Started section on [ulimit and nproc configuration](/docs/configuration/basic-prerequisites#example-ulimit-settings-on-ubuntu-toc).
 
 #### xceiverCount 258 exceeds the limit of concurrent xcievers 256
 
 This typically shows up in the DataNode logs.
 
-See the Getting Started section on [xceivers configuration]().
+TODO: add link.
+See the Getting Started section on xceivers configuration.
 
 #### System instability, and the presence of "java.lang.OutOfMemoryError: unable to createnew native thread in exceptions" HDFS DataNode logs or that of any system daemon
 
@@ -922,7 +923,7 @@ Be aware that setting a higher timeout means that the regions served by a failed
 
 If this is happening during an upload which only happens once (like initially loading all your data into HBase), consider bulk loading.
 
-See [ZooKeeper, The Cluster Canary](#trouble.zookeeper.general) for other general information about ZooKeeper troubleshooting.
+See [ZooKeeper, The Cluster Canary](/docs/troubleshooting#zookeeper-the-cluster-canary) for other general information about ZooKeeper troubleshooting.
 
 #### NotServingRegionException
 
@@ -958,7 +959,7 @@ to use. Was=myhost-1234, Now=ip-10-55-88-99.ec2.internal
 
 ## Master
 
-For more information on the Master, see [master](#architecture.master).
+For more information on the Master, see [master](/docs/architecture/master).
 
 ### Startup Errors
 
@@ -992,7 +993,7 @@ java.lang.IllegalStateException: The procedure WAL relies on the ability to hsyn
         at java.lang.Thread.run(Thread.java:745)
 ```
 
-If you are attempting to run in standalone mode and see this error, please walk back through the section [Quick Start - Standalone HBase](#quickstart) and ensure you have included **all** the given configuration settings.
+If you are attempting to run in standalone mode and see this error, please walk back through the section [Quick Start - Standalone HBase](/docs/getting-started#quick-start---standalone-hbase) and ensure you have included **all** the given configuration settings.
 
 ### Shutdown Errors
 
@@ -1014,7 +1015,7 @@ ZooKeeper is the cluster’s "canary in the mineshaft". It’ll be the first to 
 
 See the [ZooKeeper Operating Environment Troubleshooting](https://cwiki.apache.org/confluence/display/HADOOP2/ZooKeeper+Troubleshooting) page. It has suggestions and tools for checking disk and networking performance; i.e. the operating environment your ZooKeeper and HBase are running in.
 
-Additionally, the utility [zkcli](#trouble.tools.builtin.zkcli) may help investigate ZooKeeper issues.
+Additionally, the utility [zkcli](/docs/troubleshooting#zkcli) may help investigate ZooKeeper issues.
 
 ## Amazon EC2
 
@@ -1044,7 +1045,7 @@ See Andrew’s answer here, up on the user list: [Remote Java client connection 
 
 ### ...cannot communicate with client version...
 
-If you see something like the following in your logs ... 2012-09-24 10:20:52,168 FATAL org.apache.hadoop.hbase.master.HMaster: Unhandled exception. Starting shutdown. org.apache.hadoop.ipc.RemoteException: Server IPC version 7 cannot communicate with client version 4 ... ...are you trying to talk to an Hadoop 2.0.x from an HBase that has an Hadoop 1.0.x client? Use the HBase built against Hadoop 2.0 or rebuild your HBase passing the -Dhadoop.profile=2.0 attribute to Maven (See [Building against various Hadoop versions](#maven.build.hadoop) for more).
+If you see something like the following in your logs ... 2012-09-24 10:20:52,168 FATAL org.apache.hadoop.hbase.master.HMaster: Unhandled exception. Starting shutdown. org.apache.hadoop.ipc.RemoteException: Server IPC version 7 cannot communicate with client version 4 ... ...are you trying to talk to an Hadoop 2.0.x from an HBase that has an Hadoop 1.0.x client? Use the HBase built against Hadoop 2.0 or rebuild your HBase passing the -Dhadoop.profile=2.0 attribute to Maven (See [Building against various Hadoop versions](/docs/building-and-developing/building#building-against-various-hadoop-versions) for more).
 
 ## HBase and HDFS
 
@@ -1141,7 +1142,7 @@ at org.apache.hadoop.hbase.HBaseTestingUtility.startMiniCluster
 
 ## Case Studies
 
-For Performance and Troubleshooting Case Studies, see [Apache HBase Case Studies](#casestudies).
+For Performance and Troubleshooting Case Studies, see [Apache HBase Case Studies](/docs/case-studies).
 
 ## Cryptographic Features
 

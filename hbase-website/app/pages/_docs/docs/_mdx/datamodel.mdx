@@ -5,11 +5,11 @@ description: "In HBase, data is stored in tables, which have rows and columns. T
 
 ## HBase Data Model Terminology
 
-### Table
+#### Table [!toc]
 
 An HBase table consists of multiple rows.
 
-### Row
+#### Row [!toc]
 
 A row in HBase consists of a row key and one or more columns with values associated with them.
 Rows are sorted alphabetically by the row key as they are stored.
@@ -18,27 +18,27 @@ The goal is to store data in such a way that related rows are near each other.
 A common row key pattern is a website domain.
 If your row keys are domains, you should probably store them in reverse (org.apache.www, org.apache.mail, org.apache.jira). This way, all of the Apache domains are near each other in the table, rather than being spread out based on the first letter of the subdomain.
 
-### Column
+#### Column [!toc]
 
 A column in HBase consists of a column family and a column qualifier, which are delimited by a `:` (colon) character.
 
-### Column Family
+#### Column Family [!toc]
 
 Column families physically colocate a set of columns and their values, often for performance reasons.
 Each column family has a set of storage properties, such as whether its values should be cached in memory, how its data is compressed or its row keys are encoded, and others.
 Each row in a table has the same column families, though a given row might not store anything in a given column family.
 
-### Column Qualifier
+#### Column Qualifier [!toc]
 
 A column qualifier is added to a column family to provide the index for a given piece of data.
 Given a column family `content`, a column qualifier might be `content:html`, and another might be `content:pdf`.
 Though column families are fixed at table creation, column qualifiers are mutable and may differ greatly between rows.
 
-### Cell
+#### Cell [!toc]
 
 A cell is a combination of row, column family, and column qualifier, and contains a value and a timestamp, which represents the value's version.
 
-### Timestamp
+#### Timestamp [!toc]
 
 A timestamp is written alongside each value, and is the identifier for a given version of a value.
 By default, the timestamp represents the time on the RegionServer when the data was written, but you can specify a different timestamp value when you put data into the cell.
@@ -64,7 +64,7 @@ The `people` column family represents people associated with the site.
   The colon character (`:`) delimits the column family from the column family _qualifier_.
 </Callout>
 
-### Table `webtable`
+#### Table `webtable` [!toc]
 
 | Row Key           | Time Stamp | ColumnFamily `contents`       | ColumnFamily `anchor`         | ColumnFamily `people`      |
 | ----------------- | ---------- | ----------------------------- | ----------------------------- | -------------------------- |
@@ -83,25 +83,25 @@ This is only a mock-up for illustrative purposes and may not be strictly accurat
 ```json
 {
   "com.cnn.www": {
-contents: {
-  t6: contents:html: "\<html\>..."
-  t5: contents:html: "\<html\>..."
-  t3: contents:html: "\<html\>..."
-}
-anchor: {
-  t9: anchor:cnnsi.com = "CNN"
-  t8: anchor:my.look.ca = "CNN.com"
-}
-people: {}
+    contents: {
+      t6: contents:html: "<html>..."
+      t5: contents:html: "<html>..."
+      t3: contents:html: "<html>..."
+    }
+    anchor: {
+      t9: anchor:cnnsi.com = "CNN"
+      t8: anchor:my.look.ca = "CNN.com"
+    }
+    people: {}
   }
   "com.example.www": {
-contents: {
-  t5: contents:html: "\<html\>..."
-}
-anchor: {}
-people: {
-  t5: people:author: "John Doe"
-}
+    contents: {
+      t5: contents:html: "<html>..."
+    }
+    anchor: {}
+    people: {
+      t5: people:author: "John Doe"
+    }
   }
 }
 ```
@@ -111,14 +111,14 @@ people: {
 Although at a conceptual level tables may be viewed as a sparse set of rows, they are physically stored by column family.
 A new column qualifier (column_family:column_qualifier) can be added to an existing column family at any time.
 
-### ColumnFamily `anchor`
+#### ColumnFamily `anchor` [!toc]
 
 | Row Key       | Time Stamp | Column Family `anchor`          |
 | ------------- | ---------- | ------------------------------- |
 | "com.cnn.www" | t9         | `anchor:cnnsi.com = "CNN"`      |
 | "com.cnn.www" | t8         | `anchor:my.look.ca = "CNN.com"` |
 
-### ColumnFamily `contents`
+#### ColumnFamily `contents` [!toc]
 
 | Row Key       | Time Stamp | ColumnFamily `contents:`      |
 | ------------- | ---------- | ----------------------------- |
@@ -133,7 +133,7 @@ However, if no timestamp is supplied, the most recent value for a particular col
 Given multiple versions, the most recent is also the first one found, since timestamps are stored in descending order.
 Thus a request for the values of all columns in the row `com.cnn.www` if no timestamp is specified would be: the value of `contents:html` from timestamp `t6`, the value of `anchor:cnnsi.com` from timestamp `t9`, the value of `anchor:my.look.ca` from timestamp `t8`.
 
-For more information about the internals of how Apache HBase stores data, see [regions.arch](#regions-arch).
+For more information about the internals of how Apache HBase stores data, see [regions.arch](/docs/architecture/regions).
 
 ## Namespace
 
@@ -271,7 +271,7 @@ scan.setStartStopRowForPrefixScan(Bytes.toBytes("row"));
 ResultScanner rs = table.getScanner(scan);
 try {
   for (Result r = rs.next(); r != null; r = rs.next()) {
-// process result...
+    // process result...
   }
 } finally {
   rs.close();  // always close the ResultScanner!
@@ -283,12 +283,12 @@ Note that generally the easiest way to specify a specific stop point for a scan 
 ### Delete
 
 [Delete](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Delete.html) removes a row from a table.
-Deletes are executed via [Table.delete](<https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#delete(org.apache.hadoop.hbase.client.Delete)>).
+Deletes are executed via [Table.delete](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#delete(org.apache.hadoop.hbase.client.Delete)).
 
 HBase does not modify data in place, and so deletes are handled by creating new markers called _tombstones_.
 These tombstones, along with the dead values, are cleaned up on major compactions.
 
-See [version.delete](#delete) for more information on deleting versions of columns, and see [compaction](#compaction) for more information on compactions.
+See [version.delete](/docs/datamodel#delete-toc) for more information on deleting versions of columns, and see [compaction](/docs/architecture/regions#compaction) for more information on compactions.
 
 ## Versions
 
@@ -318,7 +318,7 @@ This section is basically a synopsis of this article by Bruno Dumon.
 The maximum number of versions to store for a given column is part of the column schema and is specified at table creation, or via an `alter` command, via `HColumnDescriptor.DEFAULT_VERSIONS`.
 Prior to HBase 0.96, the default number of versions kept was `3`, but in 0.96 and newer has been changed to `1`.
 
-#### Modify the Maximum Number of Versions for a Column Family
+#### Example: Modify the Maximum Number of Versions for a Column Family [!toc]
 
 This example uses HBase Shell to keep a maximum of 5 versions of all columns in column family `f1`.
 You could also use [ColumnFamilyDescriptorBuilder](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ColumnFamilyDescriptorBuilder.html).
@@ -327,7 +327,7 @@ You could also use [ColumnFamilyDescriptorBuilder](https://hbase.apache.org/deva
 hbase> alter 't1′, NAME => 'f1′, VERSIONS => 5
 ```
 
-#### Modify the Minimum Number of Versions for a Column Family
+#### Example: Modify the Minimum Number of Versions for a Column Family [!toc]
 
 You can also specify the minimum number of versions to store per column family.
 By default, this is set to 0, which means the feature is disabled.
@@ -339,7 +339,7 @@ hbase> alter 't1′, NAME => 'f1′, MIN_VERSIONS => 2
 ```
 
 Starting with HBase 0.98.2, you can specify a global default for the maximum number of versions kept for all newly-created columns, by setting `hbase.column.max.version` in _hbase-site.xml_.
-See [hbase.column.max.version](#hbase-column-max-version).
+See [hbase.column.max.version](#todo).
 
 ### Versions and HBase Operations
 
@@ -393,7 +393,7 @@ This means you could assign a time in the past or the future, or use the long va
 
 To overwrite an existing value, do a put at exactly the same row, column, and version as that of the cell you want to overwrite.
 
-##### Implicit Version Example
+#### Implicit Version Example [!toc]
 
 The following Put will be implicitly versioned by HBase with the current time.
 
@@ -406,7 +406,7 @@ put.add(CF, ATTR, Bytes.toBytes( data));
 table.put(put);
 ```
 
-##### Explicit Version Example
+#### Explicit Version Example
 
 The following Put has the version timestamp explicitly set.
 
@@ -424,7 +424,7 @@ Caution: the version timestamp is used internally by HBase for things like time-
 It's usually best to avoid setting this timestamp yourself.
 Prefer using a separate timestamp attribute of the row, or have the timestamp as a part of the row key, or both.
 
-##### Cell Version Example
+#### Cell Version Example [!toc]
 
 The following Put uses a method getCellBuilder() to get a CellBuilder instance
 that already has relevant Type and Row set.
@@ -442,7 +442,7 @@ put.add(put.getCellBuilder().setQualifier(ATTR)
 table.put(put);
 ```
 
-#### Delete
+#### Delete [!toc]
 
 There are three different types of internal delete markers.
 See Lars Hofhansl's blog for discussion of his attempt adding another, [Scanning in HBase: Prefix Delete Marker](http://hadoop-hbase.blogspot.com/2012/01/scanning-in-hbase.html).
@@ -464,9 +464,9 @@ If the version you specified when deleting a row is larger than the version of a
 
 For an informative discussion on how deletes and versioning interact, see the thread [Put w/timestamp -> Deleteall -> Put w/ timestamp fails](https://lists.apache.org/thread/g6s0fkx74hbmc0pplnf5r3gq5xn4vkyt) up on the user mailing list.
 
-Also see [keyvalue](#keyvalue) for more information on the internal KeyValue format.
+Also see [keyvalue](/docs/architecture/regions#keyvalue) for more information on the internal KeyValue format.
 
-Delete markers are purged during the next major compaction of the store, unless the `KEEP_DELETED_CELLS` option is set in the column family (See [Keeping Deleted Cells](#cf-keep-deleted)).
+Delete markers are purged during the next major compaction of the store, unless the `KEEP_DELETED_CELLS` option is set in the column family (See [Keeping Deleted Cells](/docs/regionserver-sizing#keeping-deleted-cells)).
 To keep the deletes for a configurable amount of time, you can set the delete TTL via the `hbase.hstore.time.to.purge.deletes` property in _hbase-site.xml_.
 If `hbase.hstore.time.to.purge.deletes` is not set, or set to 0, all delete markers, including those with timestamps in the future, are purged during the next major compaction.
 Otherwise, a delete marker with a timestamp in the future is kept until the major compaction which occurs after the time represented by the marker's timestamp plus the value of `hbase.hstore.time.to.purge.deletes`, in milliseconds.
@@ -483,7 +483,7 @@ In `hbase-2.0.0`, the operator can specify an alternate version and
 delete treatment by setting the column descriptor property
 `NEW_VERSION_BEHAVIOR` to true (To set a property on a column family
 descriptor, you must first disable the table and then alter the
-column family descriptor; see [Keeping Deleted Cells](#cf-keep-deleted) for an example
+column family descriptor; see [Keeping Deleted Cells](/docs/regionserver-sizing#keeping-deleted-cells) for an example
 of editing an attribute on a column family descriptor).
 
 The 'new version behavior', undoes the limitations listed below
@@ -509,7 +509,7 @@ the order in which Mutations arrive is a factor.
 ### Current Limitations
 
 The below limitations are addressed in hbase-2.0.0. See
-the section above, [Optional New Version and Delete behavior in HBase-2.0.0](#optional-new-version-and-delete-behavior-in-hbase-200).
+the section above, [Optional New Version and Delete behavior in HBase-2.0.0](/docs/datamodel#optional-new-version-and-delete-behavior-in-hbase-200).
 
 #### Deletes mask Puts
 
@@ -543,7 +543,7 @@ There is no store of column metadata outside of the internal KeyValue instances 
 Thus, while HBase can support not only a wide number of columns per row, but a heterogeneous set of columns between rows as well, it is your responsibility to keep track of the column names.
 
 The only way to get a complete set of columns that exist for a ColumnFamily is to process all the rows.
-For more information about how HBase stores data internally, see [keyvalue](#keyvalue).
+For more information about how HBase stores data internally, see [keyvalue](/docs/architecture/regions#keyvalue).
 
 ## Joins
 
@@ -555,5 +555,5 @@ hash-joins). So which is the best approach? It depends on what you are trying to
 
 ## ACID
 
-See [ACID Semantics](/acid-semantics.html).
+See [ACID Semantics](/acid-semantics).
 Lars Hofhansl has also written a note on [ACID in HBase](http://hadoop-hbase.blogspot.com/2012/03/acid-in-hbase.html).

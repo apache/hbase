@@ -2,7 +2,7 @@
 title: "Master"
 ---
 
-`HMaster` is the implementation of the Master Server. The Master server is responsible for monitoring all RegionServer instances in the cluster, and is the interface for all metadata changes. In a distributed cluster, the Master typically runs on the [NameNode](#arch.hdfs.nn). J Mohamed Zahoor goes into some more detail on the Master Architecture in this blog posting, [HBase HMaster Architecture](https://web.archive.org/web/20191211053128/http://blog.zahoor.in/2012/08/hbase-hmaster-architecture/).
+`HMaster` is the implementation of the Master Server. The Master server is responsible for monitoring all RegionServer instances in the cluster, and is the interface for all metadata changes. In a distributed cluster, the Master typically runs on the [NameNode](/docs/architecture/hdfs#namenode). J Mohamed Zahoor goes into some more detail on the Master Architecture in this blog posting, [HBase HMaster Architecture](https://web.archive.org/web/20191211053128/http://blog.zahoor.in/2012/08/hbase-hmaster-architecture/).
 
 ## Startup Behavior
 
@@ -14,11 +14,11 @@ A common dist-list question involves what happens to an HBase cluster when the M
 
 ### Up until releases 2.x.y
 
-Because the HBase client talks directly to the RegionServers, the cluster can still function in a "steady state". Additionally, per [Catalog Tables](#arch.catalog), `hbase:meta` exists as an HBase table and is not resident in the Master. However, the Master controls critical functions such as RegionServer failover and completing region splits. So while the cluster can still run for a short time without the Master, the Master should be restarted as soon as possible.
+Because the HBase client talks directly to the RegionServers, the cluster can still function in a "steady state". Additionally, per [Catalog Tables](/docs/architecture/catalog-tables), `hbase:meta` exists as an HBase table and is not resident in the Master. However, the Master controls critical functions such as RegionServer failover and completing region splits. So while the cluster can still run for a short time without the Master, the Master should be restarted as soon as possible.
 
 ### Staring release 3.0.0
 
-As mentioned in section [Master Registry (new as of 2.3.0)](#client.masterregistry), the default connection registry for clients is now based on master rpc end points. Hence the requirements for masters' uptime are even tighter starting this release.
+As mentioned in section [Master Registry (new as of 2.3.0)](/docs/architecture/client#masterregistry-rpc-hedging), the default connection registry for clients is now based on master rpc end points. Hence the requirements for masters' uptime are even tighter starting this release.
 
 - At least one active or stand by master is needed for a connection set up, unlike before when all the clients needed was a ZooKeeper ensemble.
 - Master is now in critical path for read/write operations. For example, if the meta region bounces off to a different region server, clients need master to fetch the new locations. Earlier this was done by fetching this information directly from ZooKeeper.
@@ -40,17 +40,17 @@ The Master runs several background threads:
 
 ### LoadBalancer
 
-Periodically, and when there are no regions in transition, a load balancer will run and move regions around to balance the cluster's load. See [Balancer](#master-processes-loadbalancer) for configuring this property.
+Periodically, and when there are no regions in transition, a load balancer will run and move regions around to balance the cluster's load. See [Balancer](/docs/configuration/important#balancer) for configuring this property.
 
-See [Region-RegionServer Assignment](#regions.arch.assignment) for more information on region assignment.
+See [Region-RegionServer Assignment](/docs/architecture/regions#region-regionserver-assignment) for more information on region assignment.
 
 ### CatalogJanitor
 
-Periodically checks and cleans up the `hbase:meta` table. See [hbase:meta](#arch.catalog.meta) for more information on the meta table.
+Periodically checks and cleans up the `hbase:meta` table. See [hbase:meta](/docs/architecture/catalog-tables#hbasemeta) for more information on the meta table.
 
 ## MasterProcWAL
 
-_MasterProcWAL is replaced in hbase-2.3.0 by an alternate Procedure Store implementation; see [in-master-procedure-store-region](#in-master-procedure-store-region). This section pertains to hbase-2.0.0 through hbase-2.2.x_
+_MasterProcWAL is replaced in hbase-2.3.0 by an alternate Procedure Store implementation; see [in-master-procedure-store-region](/docs/upgrading/paths#new-in-master-procedure-store). This section pertains to hbase-2.0.0 through hbase-2.2.x_
 
 HMaster records administrative operations and their running states, such as the handling of a crashed server, table creation, and other DDLs, into a Procedure Store. The Procedure Store WALs are stored under the MasterProcWALs directory. The Master WALs are not like RegionServer WALs. Keeping up the Master WAL allows us to run a state machine that is resilient across Master failures. For example, if a HMaster was in the middle of creating a table encounters an issue and fails, the next active HMaster can take up where the previous left off and carry the operation to completion. Since hbase-2.0.0, a new AssignmentManager (A.K.A AMv2) was introduced and the HMaster handles region assignment operations, server crash processing, balancing, etc., all via AMv2 persisting all state and transitions into MasterProcWALs rather than up into ZooKeeper, as we do in hbase-1.x.
 

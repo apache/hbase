@@ -17,7 +17,7 @@ The RegionServer will first close all regions and then shut itself down. On shut
 <Callout type="info" title="Disable the Load Balancer before Decommissioning a node">
   If the load balancer runs while a node is shutting down, then there could be contention between
   the Load Balancer and the Master’s recovery of the just decommissioned RegionServer. Avoid any
-  problems by disabling the balancer first. See [lb](#lb) below.
+  problems by disabling the balancer first. See the "Load Balancer" info section below.
 </Callout>
 
 <Callout type="info" title="Kill Node Tool">
@@ -91,7 +91,7 @@ Without this facility, decommissioning multiple nodes may be non-optimal because
 
 #### Bad or Failing Disk
 
-It is good having [dfs.datanode.failed.volumes.tolerated](#dfs.datanode.failed.volumes.tolerated) set if you have a decent number of disks per machine for the case where a disk plain dies. But usually disks do the "John Wayne" — i.e. take a while to go down spewing errors in *dmesg* — or for some reason, run much slower than their companions. In this case you want to decommission the disk. You have two options. You can [decommission the datanode](https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsDataNodeAdminGuide.html) or, less disruptive in that only the bad disks data will be rereplicated, can stop the datanode, unmount the bad volume (You can’t umount a volume while the datanode is using it), and then restart the datanode (presuming you have set dfs.datanode.failed.volumes.tolerated > 0). The regionserver will throw some errors in its logs as it recalibrates where to get its data from — it will likely roll its WAL log too — but in general but for some latency spikes, it should keep on chugging.
+It is good having [dfs.datanode.failed.volumes.tolerated](/docs/configuration/important#dfsdatanodefailedvolumestolerated) set if you have a decent number of disks per machine for the case where a disk plain dies. But usually disks do the "John Wayne" — i.e. take a while to go down spewing errors in *dmesg* — or for some reason, run much slower than their companions. In this case you want to decommission the disk. You have two options. You can [decommission the datanode](https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsDataNodeAdminGuide.html) or, less disruptive in that only the bad disks data will be rereplicated, can stop the datanode, unmount the bad volume (You can’t umount a volume while the datanode is using it), and then restart the datanode (presuming you have set dfs.datanode.failed.volumes.tolerated > 0). The regionserver will throw some errors in its logs as it recalibrates where to get its data from — it will likely roll its WAL log too — but in general but for some latency spikes, it should keep on chugging.
 
 <Callout type="info" title="Short Circuit Reads">
   If you are doing short-circuit reads, you will have to move the regions off the regionserver
@@ -132,7 +132,7 @@ To limit the rolling restart to using only a specific number of threads, use the
 
 #### Manual Rolling Restart
 
-To retain more control over the process, you may wish to manually do a rolling restart across your cluster. This uses the `graceful-stop.sh` command [decommission](#decommission). In this method, you can restart each RegionServer individually and then move its old regions back into place, retaining locality. If you also need to restart the Master, you need to do it separately, and restart the Master before restarting the RegionServers using this method. The following is an example of such a command. You may need to tailor it to your environment. This script does a rolling restart of RegionServers only. It disables the load balancer before moving the regions.
+To retain more control over the process, you may wish to manually do a rolling restart across your cluster. This uses the `graceful-stop.sh` command [decommission](/docs/operational-management/node#node-decommission). In this method, you can restart each RegionServer individually and then move its old regions back into place, retaining locality. If you also need to restart the Master, you need to do it separately, and restart the Master before restarting the RegionServers using this method. The following is an example of such a command. You may need to tailor it to your environment. This script does a rolling restart of RegionServers only. It disables the load balancer before moving the regions.
 
 ```bash
 $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --reload --debug $i; done &> /tmp/log.txt &;

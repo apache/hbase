@@ -2,15 +2,15 @@
 title: "Client"
 ---
 
-The HBase client finds the RegionServers that are serving the particular row range of interest. It does this by querying the `hbase:meta` table. See [hbase:meta](#arch.catalog.meta) for details. After locating the required region(s), the client contacts the RegionServer serving that region, rather than going through the master, and issues the read or write request. This information is cached in the client so that subsequent requests need not go through the lookup process. Should a region be reassigned either by the master load balancer or because a RegionServer has died, the client will requery the catalog tables to determine the new location of the user region.
+The HBase client finds the RegionServers that are serving the particular row range of interest. It does this by querying the `hbase:meta` table. See [hbase:meta](/docs/architecture/catalog-tables#hbasemeta) for details. After locating the required region(s), the client contacts the RegionServer serving that region, rather than going through the master, and issues the read or write request. This information is cached in the client so that subsequent requests need not go through the lookup process. Should a region be reassigned either by the master load balancer or because a RegionServer has died, the client will requery the catalog tables to determine the new location of the user region.
 
-See [Runtime Impact](#master.runtime) for more information about the impact of the Master on HBase Client communication.
+See [Runtime Impact](/docs/architecture/master#runtime-impact) for more information about the impact of the Master on HBase Client communication.
 
 Administrative functions are done via an instance of [Admin](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Admin.html)
 
 ## Cluster Connections
 
-The API changed in HBase 1.0. For connection configuration information, see [Client configuration and dependencies connecting to an HBase cluster](/docs/configuration#client-configuration-and-dependencies-connecting-to-an-hbase-cluster).
+The API changed in HBase 1.0. For connection configuration information, see [Client configuration and dependencies connecting to an HBase cluster](/docs/configuration/default#client-configuration-and-dependencies-connecting-to-an-hbase-cluster).
 
 ### API as of HBase 1.0.0
 
@@ -47,7 +47,7 @@ For applications which require high-end multithreaded access (e.g., web-servers 
 // Create a connection to the cluster.
 Configuration conf = HBaseConfiguration.create();
 try (Connection connection = ConnectionFactory.createConnection(conf);
- Table table = connection.getTable(TableName.valueOf(tablename))) {
+     Table table = connection.getTable(TableName.valueOf(tablename))) {
   // use table as needed, the table returned is lightweight
 }
 ```
@@ -67,7 +67,7 @@ In HBase 1.0 and later, [HTable](https://hbase.apache.org/1.4/devapidocs/org/apa
 
 In HBase 2.0 and later, [HTable](https://hbase.apache.org/2.6/devapidocs/org/apache/hadoop/hbase/client/HTable.html) does not use BufferedMutator to execute the `Put` operation. Refer to [HBASE-18500](https://issues.apache.org/jira/browse/HBASE-18500) for more information.
 
-For additional information on write durability, review the [ACID semantics](/acid-semantics.html) page.
+For additional information on write durability, review the [ACID semantics](/acid-semantics) page.
 
 For fine-grained control of batching of `Put`s or `Delete`s, see the [batch](<https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#batch(java.util.List,java.lang.Object%5B%5D)>) methods on Table.
 
@@ -105,11 +105,11 @@ For region name, we only accept `byte[]` as the parameter type and it may be a f
 
 ## External Clients
 
-Information on non-Java clients and custom protocols is covered in [Apache HBase External APIs](/docs/external_apis)
+Information on non-Java clients and custom protocols is covered in [Apache HBase External APIs](/docs/external-apis)
 
 ## Master Registry (new as of 2.3.0)
 
-Starting from 2.5.0, MasterRegistry is deprecated. It’s functionality is completely superseded by the RpcConnectionRegistry. Please see [Rpc Connection Registry (new as of 2.5.0)](#client.rpcconnectionregistry) for more details.
+Starting from 2.5.0, MasterRegistry is deprecated. It’s functionality is completely superseded by the RpcConnectionRegistry. Please see [Rpc Connection Registry (new as of 2.5.0)](/docs/architecture/client#rpc-connection-registry-new-as-of-250) for more details.
 
 Client internally works with a _connection registry_ to fetch the metadata needed by connections. This connection registry implementation is responsible for fetching the following metadata.
 
@@ -125,7 +125,7 @@ This information is needed as a part of various client operations like connectio
 
 This means:
 
-- At least a single active or stand by master is needed for cluster connection setup. Refer to [Runtime Impact](#master.runtime) for more details.
+- At least a single active or stand by master is needed for cluster connection setup. Refer to [Runtime Impact](/docs/architecture/master#runtime-impact) for more details.
 - Master can be in a critical path of read/write operations, especially if the client metadata cache is empty or stale.
 - There is higher connection load on the masters that before since the clients talk directly to HMasters instead of ZooKeeper ensemble\`
 
@@ -164,7 +164,7 @@ For more implementation details, please refer to the [design doc](https://github
 
 ## Rpc Connection Registry (new as of 2.5.0)
 
-As said in the [Master Registry (new as of 2.3.0)](#client.masterregistry) section, there are some disadvantages and limitations for MasterRegistry, especially that it puts master in the critical path of read/write operations. In order to address these problems, we introduced a more generic RpcConnectionRegistry.
+As said in the [Master Registry (new as of 2.3.0)](/docs/architecture/client#masterregistry-rpc-hedging) section, there are some disadvantages and limitations for MasterRegistry, especially that it puts master in the critical path of read/write operations. In order to address these problems, we introduced a more generic RpcConnectionRegistry.
 
 It is also rpc based, like MasterRegistry, with several differences
 
@@ -226,7 +226,7 @@ Starting from 2.7.0, we add the support for specifying the connection informatio
 ```java
 URI uri = new URI("hbase+rpc://server1:16020,server2:16020,server3:16020");
 try (Connection conn = ConnectionFactory.createConnection(uri)) {
-  // ...
+  ...
 }
 ```
 

@@ -291,7 +291,7 @@ Next, deploy HBase to the Apache Maven repository. Add the
 apache-release`profile when running the`mvn deploy` command.
 This profile comes from the Apache parent pom referenced by our pom files.
 It does signing of your artifacts published to Maven, as long as the
-_settings.xml_ is configured correctly, as described in [Example ~/.m2/settings.xml File](#maven.settings.xml).
+_settings.xml_ is configured correctly, as described in [Example ~/.m2/settings.xml File](/docs/building-and-developing/releasing#example-m2settingsxml-file).
 This step depends on the local repository having been populate
 by the just-previous bin tarball build.
 
@@ -387,7 +387,7 @@ Announce the release candidate on the mailing list and call a vote.
 
 ### Publishing a SNAPSHOT to maven
 
-Make sure your _settings.xml_ is set up properly (see [Example ~/.m2/settings.xml File](#maven.settings.xml)).
+Make sure your _settings.xml_ is set up properly (see [Example ~/.m2/settings.xml File](/docs/building-and-developing/releasing#example-m2settingsxml-file)).
 Make sure the hbase version includes `-SNAPSHOT` as a suffix.
 Following is an example of publishing SNAPSHOTS of a release that had an hbase version of 0.96.0 in its poms.
 
@@ -396,6 +396,6 @@ $ mvn clean install -DskipTests  javadoc:aggregate site assembly:single -Preleas
 $ mvn -DskipTests  deploy -Papache-release
 ```
 
-The _make_rc.sh_ script mentioned above (see [Making a Release Candidate](#maven.release)) can help you publish `SNAPSHOTS`.
+The _make_rc.sh_ script mentioned above (see [Making a Release Candidate](/docs/building-and-developing/releasing#making-a-release-candidate)) can help you publish `SNAPSHOTS`.
 Make sure your `hbase.version` has a `-SNAPSHOT` suffix before running the script.
 It will put a snapshot up into the apache snapshot repository for you.

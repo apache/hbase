@@ -76,7 +76,7 @@ before passing the request on to its final destination (or even changing the des
 [RegionObserver](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html),
 [CoprocessorService](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/CoprocessorService.html) - to name a few.
 2. Load the coprocessor, either statically (from the configuration) or dynamically,
-using HBase Shell. For more details see [Loading Coprocessors](#cploading).
+using HBase Shell. For more details see [Loading Coprocessors](/docs/cp#loading-coprocessors).
 3. Call the coprocessor from your client-side code. HBase handles the coprocessor
 transparently.
 
@@ -133,12 +133,12 @@ A WalObserver allows you to observe events related to writes to the Write-Ahead
 Log (WAL). See
 [WALObserver](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/WALObserver.html).
 
-[Examples](#cpexample) provides working examples of observer coprocessors.
+[Examples](/docs/cp#examples) provides working examples of observer coprocessors.
 
 ### Endpoint Coprocessor
 
 Endpoint processors allow you to perform computation at the location of the data.
-See [Coprocessor Analogy](#cpanalogies). An example is the need to calculate a running
+See [Coprocessor Analogy](/docs/cp#coprocessor-analogies). An example is the need to calculate a running
 average or summation for an entire table which spans hundreds of regions.
 
 In contrast to observer coprocessors, where your code is run transparently, endpoint
@@ -177,7 +177,7 @@ In HBase 2.x, we made use of a shaded version of protobuf 3.x, but kept the
 protobuf for coprocessors on 2.5.0. In HBase 3.0.0, we removed all dependencies on
 non-shaded protobuf so you need to reimplement your coprocessor to make use of the
 shaded protobuf version provided in hbase-thirdparty. Please see
-the [protobuf](#protobuf) section for more details.
+the [protobuf](/docs/protobuf) section for more details.
 
 Coprocessor Endpoints should make no use of HBase internals and
 only avail of public APIs; ideally a CPEP should depend on Interfaces
@@ -191,7 +191,7 @@ protobuf protoc tool which knows nothing of how HBase works —
 they should be consided `@InterfaceAudience.Private` so are liable to
 change.
 
-[Examples](#cpexample) provides working examples of endpoint coprocessors.
+[Examples](/docs/cp#examples) provides working examples of endpoint coprocessors.
 
 ## Loading Coprocessors
 
@@ -326,7 +326,7 @@ to load a coprocessor on the `users` table.
 
 ```java
 TableName tableName = TableName.valueOf("users");
-String path = "hdfs://NAMENODE:PORT/user/HADOOP_USER/coprocessor.jar";
+String path = "hdfs://<namenode>:<port>/user/<hadoop-user>/coprocessor.jar";
 Configuration conf = HBaseConfiguration.create();
 Connection connection = ConnectionFactory.createConnection(conf);
 Admin admin = connection.getAdmin();
@@ -350,7 +350,7 @@ an easier way to load a coprocessor dynamically.
 
 ```java
 TableName tableName = TableName.valueOf("users");
-Path path = new Path("hdfs://NAMENODE:PORT/user/HADOOP_USER/coprocessor.jar");
+Path path = new Path("hdfs://<namenode>:<port>/user/<hadoop-user>/coprocessor.jar");
 Configuration conf = HBaseConfiguration.create();
 Connection connection = ConnectionFactory.createConnection(conf);
 Admin admin = connection.getAdmin();
@@ -399,7 +399,7 @@ attached to the table.
 
 ```java
 TableName tableName = TableName.valueOf("users");
-String path = "hdfs://NAMENODE:PORT/user/HADOOP_USER/coprocessor.jar";
+String path = "hdfs://<namenode>:<port>/user/<hadoop-user>/coprocessor.jar";
 Configuration conf = HBaseConfiguration.create();
 Connection connection = ConnectionFactory.createConnection(conf);
 Admin admin = connection.getAdmin();
@@ -694,7 +694,7 @@ logging.
 
 **Coprocessor Configuration**  
 If you do not want to load coprocessors from the HBase Shell, you can add their configuration
-properties to `hbase-site.xml`. In [Using HBase Shell](#loadcoprocessorinshell), two arguments are
+properties to `hbase-site.xml`. In [Using HBase Shell](/docs/cp#using-hbase-shell), two arguments are
 set: `arg1=1,arg2=2`. These could have been added to `hbase-site.xml` as follows:
 
 ```xml

@@ -241,13 +241,13 @@ Note: this feature was introduced in HBase 0.98
 
 ### Motivation
 
-Version 3 of HFile makes changes needed to ease management of encryption at rest and cell-level metadata (which in turn is needed for cell-level ACLs and cell-level visibility labels). For more information see [hbase.encryption.server](#hbase-encryption-server), [hbase.tags](#hbase-tags), [hbase.accesscontrol.configuration](#hbase-accesscontrol-configuration), and [hbase.visibility.labels](#hbase-visibility-labels).
+Version 3 of HFile makes changes needed to ease management of encryption at rest and cell-level metadata (which in turn is needed for cell-level ACLs and cell-level visibility labels). For more information see [hbase.encryption.server](/docs/security/data-access#transparent-encryption-of-data-at-rest), [hbase.tags](/docs/security/data-access#tags), [hbase.accesscontrol.configuration](/docs/hbase-incompatibilities#interface-accesscontrolconstants), and [hbase.visibility.labels](/docs/security/data-access#visibility-labels).
 
 ### Overview
 
 The version of HBase introducing the above features reads HFiles in versions 1, 2, and 3 but only writes version 3 HFiles.
 Version 3 HFiles are structured the same as version 2 HFiles.
-For more information see [hfilev2.overview](#overview-of-version-2).
+For more information see [hfilev2.overview](/docs/hfile-format#overview-of-version-2).
 
 ### File Info Block in Version 3
 
@@ -265,11 +265,11 @@ When writing a Version 3 HFile, HBase will always include `MAX_TAGS_LEN` when fl
 
 When compacting extant files, the default writer will omit `MAX_TAGS_LEN` if all of the files selected do not themselves contain any cells with tags.
 
-See [compaction](#compaction) for details on the compaction file selection algorithm.
+See [compaction](/docs/architecture/regions#compaction) for details on the compaction file selection algorithm.
 
 ### Data Blocks in Version 3
 
-Within an HFile, HBase cells are stored in data blocks as a sequence of KeyValues (see [hfilev1.overview](#overview-of-version-1), or [Lars George's
+Within an HFile, HBase cells are stored in data blocks as a sequence of KeyValues (see [hfilev1.overview](/docs/hfile-format#overview-of-version-1), or [Lars George's
 excellent introduction to HBase Storage](http://www.larsgeorge.com/2009/10/hbase-architecture-101-storage.html)). In version 3, these KeyValue optionally will include a set of 0 or more tags:
 
 |  | Version 1 & 2,  Version 3 without MAX_TAGS_LEN | Version 3 with MAX_TAGS_LEN |
@@ -292,5 +292,5 @@ It also implies that prior to writing a data block you must know if the file's i
 The fixed file trailers written with HFile version 3 are always serialized with protocol buffers.
 Additionally, it adds an optional field to the version 2 protocol buffer named encryption_key.
 If HBase is configured to encrypt HFiles this field will store a data encryption key for this particular HFile, encrypted with the current cluster master key using AES.
-For more information see [hbase.encryption.server](#hbase-encryption-server).
+For more information see [hbase.encryption.server](/docs/security/data-access#transparent-encryption-of-data-at-rest).
 
