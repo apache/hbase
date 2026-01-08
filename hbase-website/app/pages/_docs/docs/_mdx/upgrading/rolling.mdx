@@ -1,5 +1,6 @@
 ---
 title: "Rolling Upgrades"
+description: "How to perform rolling upgrades across HBase versions that are binary or wire compatible without cluster downtime."
 ---
 
 A rolling upgrade is the process by which you update the servers in your cluster a server at a time. You can rolling upgrade across HBase versions if they are binary or wire compatible. See the "Rolling Upgrade Between Versions that are Binary/Wire Compatible" section below for more on what this means. Coarsely, a rolling upgrade is a graceful stop each server, update the software, and then restart. You do this for each server in the cluster. Usually you upgrade the Master first and then the RegionServers. See [Rolling Restart](/docs/operational-management/node#rolling-restart) for tools that can help use the rolling upgrade process.
