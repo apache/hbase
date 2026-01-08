@@ -21,6 +21,6 @@ import { createFromSource } from "fumadocs-core/search/server";
 
 const server = createFromSource(source);
 
-export async function loader({ request }: { request: Request }) {
-  return server.GET(request);
+export async function loader() {
+  return server.staticGET();
 }

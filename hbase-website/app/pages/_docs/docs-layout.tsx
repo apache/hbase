@@ -18,10 +18,15 @@
 
 import { RootProvider } from "fumadocs-ui/provider/react-router";
 import { Outlet } from "react-router";
+import SearchDialog from "@/components/docs-search";
 
 export default function DocsLayout() {
   return (
-    <RootProvider>
+    <RootProvider
+      search={{
+        SearchDialog
+      }}
+    >
       <Outlet />
     </RootProvider>
   );
