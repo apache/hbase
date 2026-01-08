@@ -35,5 +35,5 @@ requests-oauthlib==1.3.0
 requests-toolbelt==0.9.1
 six==1.14.0
 smmap2==2.0.5
-urllib3==2.6.0
+urllib3==2.6.3
 wcwidth==0.1.8
