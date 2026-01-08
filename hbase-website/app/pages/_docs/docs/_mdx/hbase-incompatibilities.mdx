@@ -335,7 +335,7 @@ org/apache/hadoop/hbase/client/Admin.getCompactionState:(Lorg/apache/hadoop/hbas
 
 #### Admin.getCompactionStateForRegion ( byte[ ] p1 ) [abstract]  :  AdminProtos.GetRegionInfoResponse.CompactionState  1
 
-org/apache/hadoop/hbase/client/Admin.getCompactionStateForRegion:(\[B)Lorg/apache/hadoop/hbase/protobuf/generated/AdminProtos$GetRegionInfoResponse$CompactionState;
+org/apache/hadoop/hbase/client/Admin.getCompactionStateForRegion:([B)Lorg/apache/hadoop/hbase/protobuf/generated/AdminProtos$GetRegionInfoResponse$CompactionState;
 
 | Change | Result |
 | ------ | ------ |
@@ -380,7 +380,7 @@ For META_TABLEDESC, the maker method had been deprecated already in HTD in 1.0.0
 hbase-client-1.0.0.jar, HTableDescriptor.class package org.apache.hadoop.hbase
 
 **HTableDescriptor.getColumnFamilies ( )  :  HColumnDescriptor[ ]**  
-org/apache/hadoop/hbase/HTableDescriptor.getColumnFamilies:()[\Lorg/apache/hadoop/hbase/HColumnDescriptor;
+org/apache/hadoop/hbase/HTableDescriptor.getColumnFamilies:()[Lorg/apache/hadoop/hbase/HColumnDescriptor;
 
 **class HColumnDescriptor**
 
@@ -611,7 +611,7 @@ hbase-rest-1.0.0.jar, Response.class package org.apache.hadoop.hbase.rest.client
 
 #### Response.getHeaders ( )  :  Header[ ]  1
 
-org/apache/hadoop/hbase/rest/client/Response.getHeaders:()[\Lorg/apache/commons/httpclient/Header;
+org/apache/hadoop/hbase/rest/client/Response.getHeaders:()[Lorg/apache/commons/httpclient/Header;
 
 | Change | Result |
 | ------ | ------ |
@@ -639,24 +639,24 @@ AccessControlClient.getUserPermissions ( Configuration conf, String tableRegex )
 org/apache/hadoop/hbase/security/access/AccessControlClient.getUserPermissions:(Lorg/apache/hadoop/conf/Configuration;Ljava/lang/String;)Ljava/util/List;
 
 * AccessControlClient.grant ( Configuration conf, String namespace, String userName, Permission.Action... actions )[static]  :  void **DEPRECATED**
-org/apache/hadoop/hbase/security/access/AccessControlClient.grant:(Lorg/apache/hadoop/conf/Configuration;Ljava/lang/String;Ljava/lang/String;[\Lorg/apache/hadoop/hbase/security/access/Permission$Action;)V
+org/apache/hadoop/hbase/security/access/AccessControlClient.grant:(Lorg/apache/hadoop/conf/Configuration;Ljava/lang/String;Ljava/lang/String;[Lorg/apache/hadoop/hbase/security/access/Permission$Action;)V
 
 * AccessControlClient.grant ( Configuration conf, String userName, Permission.Action... actions ) [static]  :  void **DEPRECATED**
-org/apache/hadoop/hbase/security/access/AccessControlClient.grant:(Lorg/apache/hadoop/conf/Configuration;Ljava/lang/String;[\Lorg/apache/hadoop/hbase/security/access/Permission$Action;)V
+org/apache/hadoop/hbase/security/access/AccessControlClient.grant:(Lorg/apache/hadoop/conf/Configuration;Ljava/lang/String;[Lorg/apache/hadoop/hbase/security/access/Permission$Action;)V
 
 * AccessControlClient.grant ( Configuration conf, TableName tableName, String userName, byte[ ] family, byte[ ] qual,Permission.Action... actions ) [static]  :  void **DEPRECATED**
-org/apache/hadoop/hbase/security/access/AccessControlClient.grant:(Lorg/apache/hadoop/conf/Configuration;Lorg/apache/hadoop/hbase/TableName;Ljava/lang/String;\[B\[B[\Lorg/apache/hadoop/hbase/security/access/Permission$Action;)V
+org/apache/hadoop/hbase/security/access/AccessControlClient.grant:(Lorg/apache/hadoop/conf/Configuration;Lorg/apache/hadoop/hbase/TableName;Ljava/lang/String;[B[B[Lorg/apache/hadoop/hbase/security/access/Permission$Action;)V
 
 * AccessControlClient.isAccessControllerRunning ( Configuration conf ) [static]  :  boolean **DEPRECATED**
 org/apache/hadoop/hbase/security/access/AccessControlClient.isAccessControllerRunning:(Lorg/apache/hadoop/conf/Configuration;)Z
 
 * AccessControlClient.revoke ( Configuration conf, String namespace, String userName, Permission.Action... actions )[static]  :  void **DEPRECATED**
-org/apache/hadoop/hbase/security/access/AccessControlClient.revoke:(Lorg/apache/hadoop/conf/Configuration;Ljava/lang/String;Ljava/lang/String;[\Lorg/apache/hadoop/hbase/security/access/Permission$Action;)V
+org/apache/hadoop/hbase/security/access/AccessControlClient.revoke:(Lorg/apache/hadoop/conf/Configuration;Ljava/lang/String;Ljava/lang/String;[Lorg/apache/hadoop/hbase/security/access/Permission$Action;)V
 
 * AccessControlClient.revoke ( Configuration conf, String userName, Permission.Action... actions ) [static]  :  void **DEPRECATED**
-org/apache/hadoop/hbase/security/access/AccessControlClient.revoke:(Lorg/apache/hadoop/conf/Configuration;Ljava/lang/String;[\Lorg/apache/hadoop/hbase/security/access/Permission$Action;)V
+org/apache/hadoop/hbase/security/access/AccessControlClient.revoke:(Lorg/apache/hadoop/conf/Configuration;Ljava/lang/String;[Lorg/apache/hadoop/hbase/security/access/Permission$Action;)V
 
 * AccessControlClient.revoke ( Configuration conf, TableName tableName, String username, byte[ ] family, byte[ ] qualifier,Permission.Action... actions ) [static]  :  void **DEPRECATED**
-org/apache/hadoop/hbase/security/access/AccessControlClient.revoke:(Lorg/apache/hadoop/conf/Configuration;Lorg/apache/hadoop/hbase/TableName;Ljava/lang/String;\[B\[B[\Lorg/apache/hadoop/hbase/security/access/Permission$Action;)V
+org/apache/hadoop/hbase/security/access/AccessControlClient.revoke:(Lorg/apache/hadoop/conf/Configuration;Lorg/apache/hadoop/hbase/TableName;Ljava/lang/String;[B[B[Lorg/apache/hadoop/hbase/security/access/Permission$Action;)V
 * HBASE-18731: [compat 1-2] Mark protected methods of QuotaSettings that touch Protobuf internals as IA.Private
 
