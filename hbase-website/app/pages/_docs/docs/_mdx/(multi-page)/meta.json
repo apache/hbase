@@ -1,5 +1,7 @@
 {
-  "title": "Apache HBase Documentation",
+  "title": "Multi-Page Documentation",
+  "description": "Multiple page documentation",
+  "root": true,
   "pages": [
     "---Getting Started---",
     "index",
@@ -62,4 +64,3 @@
     "hbase-incompatibilities"
   ]
 }
-
