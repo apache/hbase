@@ -3,8 +3,6 @@ title: "Metrics & Monitoring"
 description: "HBase metrics system configuration, JMX monitoring, master and RegionServer metrics, and integration with monitoring tools."
 ---
 
-import { Step, Steps } from "fumadocs-ui/components/steps";
-
 ## HBase Metrics
 
 HBase emits metrics which adhere to the [Hadoop Metrics](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/Metrics.html) API. Starting with HBase 0.95[^1], HBase is configured to emit a default set of metrics with a default sampling period of every 10 seconds. You can use HBase metrics in conjunction with Ganglia. You can also filter which metrics are emitted and extend the metrics framework to capture custom metrics appropriate for your environment.
@@ -569,16 +567,16 @@ scan 'hbase:slowlog', { TIMERANGE => [1589621394000, 1589637999999] }
 Starting with HBase 0.98, the HBase Web UI includes the ability to monitor and report on the performance of the block cache. To view the block cache reports, see the Block Cache section of the region server UI. Following are a few examples of the reporting capabilities.
 
 **_Basic Info shows the cache implementation._**
-![bc basic](../../images/bc_basic.png)
+![bc basic](../../../images/bc_basic.png)
 
 **_Config shows all cache configuration options._**
-![bc config](../../images/bc_config.png)
+![bc config](../../../images/bc_config.png)
 
 **_Stats shows statistics about the performance of the cache._**
-![bc stats](../../images/bc_stats.png)
+![bc stats](../../../images/bc_stats.png)
 
 **_L1 and L2 show information about the L1 and L2 caches._**
-![bc l1](../../images/bc_l1.png)
+![bc l1](../../../images/bc_l1.png)
 
 This is not an exhaustive list of all the screens and reports available. Have a look in the Web UI.
 
@@ -593,14 +591,14 @@ Starting with HBase 0.95, Snapshot usage information on individual snapshots was
 The format of Archived Storefile Size is NNN(MMM). NNN is the total Storefile size in Archive, MMM is the total Storefile size in Archive that is specific to the snapshot (not shared with other snapshots and tables).
 
 **_Master Snapshot Overview_**
-![master-snapshot](../../images/master-snapshot.png)
+![master-snapshot](../../../images/master-snapshot.png)
 
 **_Snapshot Storefile Stats Example 1_**
-![1 snapshot](../../images/1-snapshot.png)
+![1 snapshot](../../../images/1-snapshot.png)
 
 **_Snapshot Storefile Stats Example 2_**
-![2 snapshot](../../images/2-snapshots.png)
+![2 snapshot](../../../images/2-snapshots.png)
 
 **_Empty Snapshot Storfile Stats Example_**
-![empty snapshots](../../images/empty-snapshots.png)
+![empty snapshots](../../../images/empty-snapshots.png)
 

@@ -3,8 +3,6 @@ title: "Regions"
 description: "Understanding HBase regions, stores, memstore, write-ahead log (WAL), compaction, splits, and region management strategies."
 ---
 
-import { Step, Steps } from "fumadocs-ui/components/steps";
-
 Regions are the basic element of availability and distribution for tables, and are comprised of a Store per Column Family. The hierarchy of objects is as follows:
 
 ```
@@ -86,7 +84,7 @@ HBase maintains a state for each region and persists the state in `hbase:meta`. 
 - `MERGED`: the RegionServer notified the master that this region has been merged
 - `MERGING_NEW`: this region is being created by a merge of two regions
 
-![Region states](../../images/region_states.png)
+![Region states](../../../images/region_states.png)
 
 **Graph Legend:**
 

@@ -3,8 +3,6 @@ title: "RegionServer"
 description: "HBase RegionServer implementation, interfaces, read/write paths, block cache, memstore management, and performance tuning."
 ---
 
-import { Step, Steps } from "fumadocs-ui/components/steps";
-
 `HRegionServer` is the RegionServer implementation. It is responsible for serving and managing regions. In a distributed cluster, a RegionServer runs on a [DataNode](/docs/architecture/hdfs#datanode).
 
 ## Interface
@@ -416,7 +414,7 @@ Logically, the process of splitting a region is simple. We find a suitable point
 
 Although splitting the region is a local decision made by the RegionServer, the split process itself must coordinate with many actors. The RegionServer notifies the Master before and after the split, updates the `.META.` table so that clients can discover the new daughter regions, and rearranges the directory structure and data files in HDFS. Splitting is a multi-task process. To enable rollback in case of an error, the RegionServer keeps an in-memory journal about the execution state. The steps taken by the RegionServer to execute the split are illustrated in the "RegionServer Split Process" schema below. Each step is labeled with its step number. Actions from RegionServers or Master are shown in red, while actions from the clients are shown in green.
 
-![Region Split Process](../../images/region_split_process.png)
+![Region Split Process](../../../images/region_split_process.png)
 
 1.  The RegionServer decides locally to split the region, and prepares the split. **THE SPLIT TRANSACTION IS STARTED.** As a first step, the RegionServer acquires a shared read lock on the table to prevent schema modifications during the splitting process. Then it creates a znode in zookeeper under `/hbase/region-in-transition/region-name`, and sets the znode's state to `SPLITTING`.
 2.  The Master learns about this znode, since it has a watcher for the parent `region-in-transition` znode.
@@ -596,7 +594,7 @@ Currently, splitting WAL processes are coordinated by zookeeper. Each region ser
 
 During ServerCrashProcedure, SplitWALManager will create one SplitWALProcedure for each WAL file which should be split. Then each SplitWALProcedure will spawn a SplitWalRemoteProcedure to send the request to region server. SplitWALProcedure is a StateMachineProcedure and here is the state transfer diagram.
 
-![WAL splitting](../../images/WAL_splitting.png)
+![WAL splitting](../../../images/WAL_splitting.png)
 
 #### Implementation on Region Server side [!toc]
 

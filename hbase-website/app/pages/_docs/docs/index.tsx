@@ -34,6 +34,16 @@ import { getGithubLastEdit } from "fumadocs-core/content/github";
 import { useEffect, useState } from "react";
 import { getPageTreePeers } from "fumadocs-core/page-tree";
 import { Card, Cards } from "fumadocs-ui/components/card";
+import { Step, Steps } from "fumadocs-ui/components/steps";
+import { Link } from "@/components/link";
+
+// Extend default MDX components to include Steps globally
+// Note: We'll override the 'a' component in the renderer to handle route-specific logic
+const baseMdxComponents = {
+  ...defaultMdxComponents,
+  Step,
+  Steps
+};
 
 export function baseOptions(): BaseLayoutProps {
   return {
@@ -55,6 +65,10 @@ const renderer = toClientRenderer(
   docs.doc,
   ({ toc, default: Mdx, frontmatter }, { tree }: { tree: PageTree.Root }) => {
     const route = useParams()["*"];
+
+    // Filter TOC: only H1 (depth: 1) for single-page, all headings for other pages
+    const isSinglePage = route?.startsWith("single-page");
+    const filteredToc = isSinglePage ? toc.filter((item: any) => item.depth === 1) : toc;
 
     const grouppedRoutes = [
       "configuration",
@@ -83,14 +97,41 @@ const renderer = toClientRenderer(
       });
     }, [route]);
 
+    // Custom link component that transforms /docs/ links to anchors on single-page
+    const CustomLink = ({ href, children, ...rest }: any) => {
+      let transformedHref = href;
+
+      // Transform internal /docs/ links to single-page anchors when on single-page route
+      if (isSinglePage && href?.startsWith("/docs/") && !href.startsWith("/docs/single-page")) {
+        // Convert /docs/configuration/basic-prerequisites to /docs/single-page#basic-prerequisites
+        // Extract the last segment as the anchor
+        const segments = href.replace("/docs/", "").split("/");
+        const anchor = segments[segments.length - 1];
+        transformedHref = `/docs/single-page#${anchor}`;
+      }
+
+      // Use default Link component for all links (external links are handled by Link component)
+      return (
+        <Link to={transformedHref ?? "#"} {...rest}>
+          {children}
+        </Link>
+      );
+    };
+
+    // Merge custom link component with base components
+    const mdxComponents = {
+      ...baseMdxComponents,
+      a: CustomLink
+    };
+
     return (
-      <FumaDocsPage toc={toc} tableOfContent={{ style: "clerk" }}>
+      <FumaDocsPage toc={filteredToc} tableOfContent={{ style: "clerk" }}>
         <title>{frontmatter.title}</title>
         <meta name="description" content={frontmatter.description} />
         <FumaDocsTitle>{frontmatter.title}</FumaDocsTitle>
         <FumaDocsDescription>{frontmatter.description}</FumaDocsDescription>
         <FumaDocsBody>
-          <Mdx components={{ ...defaultMdxComponents }} />
+          <Mdx components={mdxComponents} />
         </FumaDocsBody>
 
         {route && (

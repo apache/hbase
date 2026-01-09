@@ -3,8 +3,6 @@ title: "Storing Medium-sized Objects (MOB)"
 description: "Optimized storage and handling of medium-sized objects (100KB-10MB) in HBase using the MOB feature for improved performance."
 ---
 
-import { Step, Steps } from "fumadocs-ui/components/steps";
-
 Data comes in many sizes, and saving all of your data in HBase, including binary
 data such as images and documents, is ideal. While HBase can technically handle
 binary objects with cells that are larger than 100 KB in size, HBase's normal

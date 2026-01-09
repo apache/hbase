@@ -38,7 +38,7 @@ In terms of semantics, TIMELINE consistency as implemented by HBase differs from
 - The client can still observe edits out-of-order, and can go back in time, if it observes reads from one secondary replica first, then another secondary replica. There is no stickiness to region replicas or a transaction-id based guarantee. If required, this can be implemented later though.
 
 **Timeline Consistency**
-![Timeline Consistency](../../images/timeline_consistency.png)
+![Timeline Consistency](../../../images/timeline_consistency.png)
 
 To better understand the TIMELINE semantics, let's look at the above diagram. Let's say that there are two clients, and the first one writes x=1 at first, then x=2 and x=3 later. As above, all writes are handled by the primary region replica. The writes are saved in the write ahead log (WAL), and replicated to the other replicas asynchronously. In the above diagram, notice that replica_id=1 received 2 updates, and its data shows that x=2, while the replica_id=2 only received a single update, and its data shows that x=1.
 

@@ -14,7 +14,7 @@ We'll try to read the block cache first and if a cache misses, we'll go to the H
 workflow from reading blocks to sending cells to client does its best to avoid on-heap memory allocations reducing the
 amount of work the GC has to do.
 
-![Offheap Overview](../images/offheap-overview.png)
+![Offheap Overview](../../images/offheap-overview.png)
 
 For redress for the single mention of onheap in the read-section of the diagram above see [Read block from HDFS to offheap directly](/docs/offheap-read-write#read-block-from-hdfs-to-offheap-directly).
 
@@ -152,7 +152,7 @@ be better to increase the `hbase.server.allocator.max.buffer.count`.
 
 The RegionServer web UI has statistics on ByteBuffAllocator:
 
-![ByteBuff Allocator Stats](../images/bytebuff-allocator-stats.png)
+![ByteBuff Allocator Stats](../../images/bytebuff-allocator-stats.png)
 
 If the following condition is met, you may need to increase your max buffer.count:
 

@@ -3,8 +3,6 @@ title: "Rollback"
 description: "How to rollback an HBase upgrade to restore the cluster to a previous version, including backup procedures and data recovery steps."
 ---
 
-import { Step, Steps } from "fumadocs-ui/components/steps";
-
 Sometimes things don't go as planned when attempting an upgrade. This section explains how to perform a _rollback_ to an earlier HBase release. Note that this should only be needed between Major and some Minor releases. You should always be able to _downgrade_ between HBase Patch releases within the same Minor version. These instructions may require you to take steps before you start the upgrade process, so be sure to read through this section beforehand.
 
 ## Caveats

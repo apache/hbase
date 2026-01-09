@@ -3,8 +3,6 @@ title: "Transport Level Security (TLS) in HBase RPC communication"
 description: "Configuring TLS encryption for secure HBase client-server and Master-RegionServer communication without downtime."
 ---
 
-import { Step, Steps } from "fumadocs-ui/components/steps";
-
 Since version `2.6.0` HBase supports TLS encryption in server-client and Master-RegionServer communication. [Transport Layer Security (TLS)](https://en.wikipedia.org/wiki/Transport_Layer_Security) is a standard cryptographic protocol designed to provide communications security over a computer network. HBase TLS implementation works exactly how secure websites are accessed via **https** prefix in a web browser: once established all communication on the channel will be securely hidden from malicious access.
 
 The encryption works at the transport level which means it's independent of the configured authentication method. Secure client access mentioned in the previous section requires Kerberos to be configured and used in HBase authentication, while TLS can be configured with any other SASL mechanism or even with simple client access methods, effectively preventing attackers from eavesdropping the communication. No Kerberos KDC or other complicated infrastructure required.
