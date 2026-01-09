@@ -177,6 +177,10 @@ public class TestReadOnlyControllerRegionObserver {
 
   }
 
+  private void mockOperationForMetaTable() {
+    when(regionInfo.getTable()).thenReturn(TableName.META_TABLE_NAME);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPreFlushV1ReadOnlyException() throws IOException {
     readOnlyController.onConfigurationChange(readOnlyConf);
@@ -185,6 +189,18 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreFlushV1NoException() throws IOException {
+    readOnlyController.preFlush(c, flushLifeCycleTracker);
+  }
+
+  @Test
+  public void testPreFlushV1ReadOnlyMetaNoException() throws IOException {
+    readOnlyController.onConfigurationChange(readOnlyConf);
+    mockOperationForMetaTable();
+    readOnlyController.preFlush(c, flushLifeCycleTracker);
+  }
+
+  @Test
+  public void testPreFlushV1MetaNoException() throws IOException {
     readOnlyController.preFlush(c, flushLifeCycleTracker);
   }
 
@@ -199,6 +215,18 @@ public class TestReadOnlyControllerRegionObserver {
     readOnlyController.preFlush(c, store, scanner, flushLifeCycleTracker);
   }
 
+  @Test
+  public void testPreFlushV2ReadOnlyMetaNoException() throws IOException {
+    readOnlyController.onConfigurationChange(readOnlyConf);
+    mockOperationForMetaTable();
+    readOnlyController.preFlush(c, store, scanner, flushLifeCycleTracker);
+  }
+
+  @Test
+  public void testPreFlushV2MetaNoException() throws IOException {
+    readOnlyController.preFlush(c, store, scanner, flushLifeCycleTracker);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPreFlushScannerOpenReadOnlyException() throws IOException {
     readOnlyController.onConfigurationChange(readOnlyConf);
@@ -207,6 +235,18 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreFlushScannerOpenNoException() throws IOException {
+    readOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
+  }
+
+  @Test
+  public void testPreFlushScannerOpenReadOnlyMetaNoException() throws IOException {
+    readOnlyController.onConfigurationChange(readOnlyConf);
+    mockOperationForMetaTable();
+    readOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
+  }
+
+  @Test
+  public void testPreFlushScannerOpenMetaNoException() throws IOException {
     readOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
   }
 
@@ -254,6 +294,18 @@ public class TestReadOnlyControllerRegionObserver {
     readOnlyController.preCompactSelection(c, store, candidates, compactionLifeCycleTracker);
   }
 
+  @Test
+  public void testPreCompactSelectionReadOnlyMetaNoException() throws IOException {
+    readOnlyController.onConfigurationChange(readOnlyConf);
+    mockOperationForMetaTable();
+    readOnlyController.preCompactSelection(c, store, candidates, compactionLifeCycleTracker);
+  }
+
+  @Test
+  public void testPreCompactSelectionMetaNoException() throws IOException {
+    readOnlyController.preCompactSelection(c, store, candidates, compactionLifeCycleTracker);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCompactScannerOpenReadOnlyException() throws IOException {
     readOnlyController.onConfigurationChange(readOnlyConf);
@@ -263,6 +315,20 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreCompactScannerOpenNoException() throws IOException {
+    readOnlyController.preCompactScannerOpen(c, store, scanType, options,
+      compactionLifeCycleTracker, compactionRequest);
+  }
+
+  @Test
+  public void testPreCompactScannerOpenReadOnlyMetaNoException() throws IOException {
+    readOnlyController.onConfigurationChange(readOnlyConf);
+    mockOperationForMetaTable();
+    readOnlyController.preCompactScannerOpen(c, store, scanType, options,
+      compactionLifeCycleTracker, compactionRequest);
+  }
+
+  @Test
+  public void testPreCompactScannerOpenMetaNoException() throws IOException {
     readOnlyController.preCompactScannerOpen(c, store, scanType, options,
       compactionLifeCycleTracker, compactionRequest);
   }
@@ -280,6 +346,20 @@ public class TestReadOnlyControllerRegionObserver {
       compactionRequest);
   }
 
+  @Test
+  public void testPreCompactReadOnlyMetaNoException() throws IOException {
+    readOnlyController.onConfigurationChange(readOnlyConf);
+    mockOperationForMetaTable();
+    readOnlyController.preCompact(c, store, scanner, scanType, compactionLifeCycleTracker,
+      compactionRequest);
+  }
+
+  @Test
+  public void testPreCompactMetaNoException() throws IOException {
+    readOnlyController.preCompact(c, store, scanner, scanType, compactionLifeCycleTracker,
+      compactionRequest);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPrePutV1ReadOnlyException() throws IOException {
     readOnlyController.onConfigurationChange(readOnlyConf);
@@ -288,6 +368,18 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPrePutV1NoException() throws IOException {
+    readOnlyController.prePut(c, put, edit);
+  }
+
+  @Test
+  public void testPrePutV1ReadOnlyMetaNoException() throws IOException {
+    readOnlyController.onConfigurationChange(readOnlyConf);
+    mockOperationForMetaTable();
+    readOnlyController.prePut(c, put, edit);
+  }
+
+  @Test
+  public void testPrePutV1MetaNoException() throws IOException {
     readOnlyController.prePut(c, put, edit);
   }
 
@@ -302,6 +394,18 @@ public class TestReadOnlyControllerRegionObserver {
     readOnlyController.prePut(c, put, edit, durability);
   }
 
+  @Test
+  public void testPrePutV2ReadOnlyMetaNoException() throws IOException {
+    readOnlyController.onConfigurationChange(readOnlyConf);
+    mockOperationForMetaTable();
+    readOnlyController.prePut(c, put, edit, durability);
+  }
+
+  @Test
+  public void testPrePutV2MetaNoException() throws IOException {
+    readOnlyController.prePut(c, put, edit, durability);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPreDeleteV1ReadOnlyException() throws IOException {
     readOnlyController.onConfigurationChange(readOnlyConf);
@@ -310,6 +414,18 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreDeleteV1NoException() throws IOException {
+    readOnlyController.preDelete(c, delete, edit);
+  }
+
+  @Test
+  public void testPreDeleteV1ReadOnlyMetaNoException() throws IOException {
+    readOnlyController.onConfigurationChange(readOnlyConf);
+    mockOperationForMetaTable();
+    readOnlyController.preDelete(c, delete, edit);
+  }
+
+  @Test
+  public void testPreDeleteV1MetaNoException() throws IOException {
     readOnlyController.preDelete(c, delete, edit);
   }
 
@@ -325,7 +441,37 @@ public class TestReadOnlyControllerRegionObserver {
   }
 
   @Test
+  public void testPreDeleteV2ReadOnlyMetaNoException() throws IOException {
+    readOnlyController.onConfigurationChange(readOnlyConf);
+    mockOperationForMetaTable();
+    readOnlyController.preDelete(c, delete, edit, durability);
+  }
+
+  @Test
+  public void testPreDeleteV2MetaNoException() throws IOException {
+    readOnlyController.preDelete(c, delete, edit, durability);
+  }
+
+  @Test(expected = DoNotRetryIOException.class)
+  public void testPreBatchMutateReadOnlyException() throws IOException {
+    readOnlyController.onConfigurationChange(readOnlyConf);
+    readOnlyController.preBatchMutate(c, miniBatchOp);
+  }
+
+  @Test
   public void testPreBatchMutateNoException() throws IOException {
+    readOnlyController.preBatchMutate(c, miniBatchOp);
+  }
+
+  @Test
+  public void testPreBatchMutateReadOnlyMetaNoException() throws IOException {
+    readOnlyController.onConfigurationChange(readOnlyConf);
+    mockOperationForMetaTable();
+    readOnlyController.preBatchMutate(c, miniBatchOp);
+  }
+
+  @Test
+  public void testPreBatchMutateMetaNoException() throws IOException {
     readOnlyController.preBatchMutate(c, miniBatchOp);
   }
 
@@ -340,6 +486,18 @@ public class TestReadOnlyControllerRegionObserver {
     readOnlyController.preCheckAndPut(c, row, family, qualifier, op, comparator, put, result);
   }
 
+  @Test
+  public void testPreCheckAndPutV1ReadOnlyMetaNoException() throws IOException {
+    readOnlyController.onConfigurationChange(readOnlyConf);
+    mockOperationForMetaTable();
+    readOnlyController.preCheckAndPut(c, row, family, qualifier, op, comparator, put, result);
+  }
+
+  @Test
+  public void testPreCheckAndPutV1MetaNoException() throws IOException {
+    readOnlyController.preCheckAndPut(c, row, family, qualifier, op, comparator, put, result);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndPutV2ReadOnlyException() throws IOException {
     readOnlyController.onConfigurationChange(readOnlyConf);
@@ -348,6 +506,18 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreCheckAndPutV2NoException() throws IOException {
+    readOnlyController.preCheckAndPut(c, row, filter, put, result);
+  }
+
+  @Test
+  public void testPreCheckAndPutV2ReadOnlyMetaNoException() throws IOException {
+    readOnlyController.onConfigurationChange(readOnlyConf);
+    mockOperationForMetaTable();
+    readOnlyController.preCheckAndPut(c, row, filter, put, result);
+  }
+
+  @Test
+  public void testPreCheckAndPutV2MetaNoException() throws IOException {
     readOnlyController.preCheckAndPut(c, row, filter, put, result);
   }
 
@@ -364,6 +534,20 @@ public class TestReadOnlyControllerRegionObserver {
       result);
   }
 
+  @Test
+  public void testPreCheckAndPutAfterRowLockV1ReadOnlyMetaNoException() throws IOException {
+    readOnlyController.onConfigurationChange(readOnlyConf);
+    mockOperationForMetaTable();
+    readOnlyController.preCheckAndPutAfterRowLock(c, row, family, qualifier, op, comparator, put,
+      result);
+  }
+
+  @Test
+  public void testPreCheckAndPutAfterRowLockV1MetaNoException() throws IOException {
+    readOnlyController.preCheckAndPutAfterRowLock(c, row, family, qualifier, op, comparator, put,
+      result);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndPutAfterRowLockV2ReadOnlyException() throws IOException {
     readOnlyController.onConfigurationChange(readOnlyConf);
@@ -372,6 +556,18 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreCheckAndPutAfterRowLockV2NoException() throws IOException {
+    readOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
+  }
+
+  @Test
+  public void testPreCheckAndPutAfterRowLockV2ReadOnlyMetaNoException() throws IOException {
+    readOnlyController.onConfigurationChange(readOnlyConf);
+    mockOperationForMetaTable();
+    readOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
+  }
+
+  @Test
+  public void testPreCheckAndPutAfterRowLockV2MetaNoException() throws IOException {
     readOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
   }
 
@@ -386,6 +582,18 @@ public class TestReadOnlyControllerRegionObserver {
     readOnlyController.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete, result);
   }
 
+  @Test
+  public void testPreCheckAndDeleteV1ReadOnlyMetaNoException() throws IOException {
+    readOnlyController.onConfigurationChange(readOnlyConf);
+    mockOperationForMetaTable();
+    readOnlyController.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete, result);
+  }
+
+  @Test
+  public void testPreCheckAndDeleteV1MetaNoException() throws IOException {
+    readOnlyController.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete, result);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndDeleteV2ReadOnlyException() throws IOException {
     readOnlyController.onConfigurationChange(readOnlyConf);
@@ -394,6 +602,18 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreCheckAndDeleteV2NoException() throws IOException {
+    readOnlyController.preCheckAndDelete(c, row, filter, delete, result);
+  }
+
+  @Test
+  public void testPreCheckAndDeleteV2ReadOnlyMetaNoException() throws IOException {
+    readOnlyController.onConfigurationChange(readOnlyConf);
+    mockOperationForMetaTable();
+    readOnlyController.preCheckAndDelete(c, row, filter, delete, result);
+  }
+
+  @Test
+  public void testPreCheckAndDeleteV2MetaNoException() throws IOException {
     readOnlyController.preCheckAndDelete(c, row, filter, delete, result);
   }
 
@@ -410,6 +630,20 @@ public class TestReadOnlyControllerRegionObserver {
       delete, result);
   }
 
+  @Test
+  public void testPreCheckAndDeleteAfterRowLockV1ReadOnlyMetaNoException() throws IOException {
+    readOnlyController.onConfigurationChange(readOnlyConf);
+    mockOperationForMetaTable();
+    readOnlyController.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op, comparator,
+      delete, result);
+  }
+
+  @Test
+  public void testPreCheckAndDeleteAfterRowLockV1MetaNoException() throws IOException {
+    readOnlyController.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op, comparator,
+      delete, result);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndDeleteAfterRowLockV2ReadOnlyException() throws IOException {
     readOnlyController.onConfigurationChange(readOnlyConf);
@@ -421,10 +655,16 @@ public class TestReadOnlyControllerRegionObserver {
     readOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreBatchMutateReadOnlyException() throws IOException {
+  @Test
+  public void testPreCheckAndDeleteAfterRowLockV2ReadOnlyMetaNoException() throws IOException {
     readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preBatchMutate(c, miniBatchOp);
+    mockOperationForMetaTable();
+    readOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
+  }
+
+  @Test
+  public void testPreCheckAndDeleteAfterRowLockV2MetaNoException() throws IOException {
+    readOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
   }
 
   @Test(expected = DoNotRetryIOException.class)
@@ -556,6 +796,18 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreWALAppendNoException() throws IOException {
+    readOnlyController.preWALAppend(ctx, key, edit);
+  }
+
+  @Test
+  public void testPreWALAppendReadOnlyMetaNoException() throws IOException {
+    readOnlyController.onConfigurationChange(readOnlyConf);
+    when(key.getTableName()).thenReturn(TableName.META_TABLE_NAME);
+    readOnlyController.preWALAppend(ctx, key, edit);
+  }
+
+  @Test
+  public void testPreWALAppendMetaNoException() throws IOException {
     readOnlyController.preWALAppend(ctx, key, edit);
   }
 }
