@@ -304,9 +304,9 @@ function personality_file_tests
      [[ ${filename} =~ src/main/xslt ]]; then
     yetus_debug "Skipping builtin yetus checks for ${filename}. refguide test should pick it up."
   else
-    # If we change our asciidoc, rebuild mvnsite
+    # If we change our asciidoc or our site rebuild mvnsite
     if [[ ${BUILDTOOL} = maven ]]; then
-      if [[ ${filename} =~ src/site || ${filename} =~ src/main/asciidoc ]]; then
+      if [[ ${filename} =~ src/site || ${filename} =~ src/main/asciidoc || ${filename} =~ hbase-website ]]; then
         yetus_debug "tests/mvnsite: ${filename}"
         add_test mvnsite
       fi
