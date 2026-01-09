@@ -38,7 +38,12 @@ import { Card, Cards } from "fumadocs-ui/components/card";
 export function baseOptions(): BaseLayoutProps {
   return {
     nav: {
-      title: "Apache HBase"
+      title: (
+        <div className="flex items-center gap-2">
+          <img src="/favicon.ico" alt="HBase favicon" width={16} height={16} />
+          <p>Apache HBase</p>
+        </div>
+      )
     },
     githubUrl: "https://github.com/apache/hbase/"
   };
