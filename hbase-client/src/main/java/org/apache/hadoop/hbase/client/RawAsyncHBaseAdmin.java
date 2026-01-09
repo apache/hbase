@@ -2998,10 +2998,16 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         .call(),
       (response, error) -> {
         if (error != null) {
-          LOG.warn("failed to get the procedure result procId={}", procId,
-            ConnectionUtils.translateException(error));
-          retryTimer.newTimeout(t -> getProcedureResult(procId, future, retries + 1),
-            ConnectionUtils.getPauseTime(pauseNs, retries), TimeUnit.NANOSECONDS);
+          Throwable exc = ConnectionUtils.translateException(error);
+          if (exc instanceof DoNotRetryIOException) {
+            // stop retrying on DNRIOE
+            future.completeExceptionally(exc);
+          } else {
+            LOG.warn("failed to get the procedure result procId={}", procId, exc);
+            retryTimer.newTimeout(t -> getProcedureResult(procId, future, retries + 1),
+              ConnectionUtils.getPauseTime(pauseNs, retries), TimeUnit.NANOSECONDS);
+
+          }
           return;
         }
         if (response.getState() == GetProcedureResultResponse.State.RUNNING) {
