@@ -177,7 +177,13 @@ public class TestBlockEvictionOnRegionMovement {
 
   @After
   public void tearDown() throws Exception {
-    TEST_UTIL.shutdownMiniCluster();
+    try {
+      TEST_UTIL.shutdownMiniCluster();
+    } catch (NullPointerException e) {
+      // shutdown clears the FilePathStringPool. Since it's a singleton, the second RS shutting down
+      // might try to persist bucket cache after string pool is cleared and NPE is thrown. This
+      // won't happen in real clusters, since there will be only one BucketCache instance per JVM.
+    }
     TEST_UTIL.cleanupDataTestDirOnTestFS(String.valueOf(testDir));
     if (zkCluster != null) {
       zkCluster.shutdown();

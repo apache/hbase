@@ -163,10 +163,6 @@ public class TestCustomCellDataTieringManager {
     key = new BlockCacheKey(hStoreFiles.get(1).getPath(), 0, true, BlockType.DATA);
     testDataTieringMethodWithKeyNoException(methodCallerWithKey, key, false);
 
-    // Test with valid key with no HFile Path
-    key = new BlockCacheKey(hStoreFiles.get(0).getPath().getName(), 0);
-    testDataTieringMethodWithKeyExpectingException(methodCallerWithKey, key,
-      new DataTieringException("BlockCacheKey Doesn't Contain HFile Path"));
   }
 
   @Test
@@ -191,13 +187,14 @@ public class TestCustomCellDataTieringManager {
     Path basePath = hStoreFiles.get(0).getPath().getParent().getParent().getParent();
     hFilePath = new Path(basePath, "incorrectRegion/cf1/filename");
     testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("HRegion corresponding to " + hFilePath + " doesn't exist"));
+      new DataTieringException("HRegion corresponding to incorrectRegion doesn't exist"));
 
     // Test with a non-existing HStore path
     basePath = hStoreFiles.get(0).getPath().getParent().getParent();
     hFilePath = new Path(basePath, "incorrectCf/filename");
     testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("HStore corresponding to " + hFilePath + " doesn't exist"));
+      new DataTieringException(
+        "HStore corresponding to " + basePath.getName() + "/incorrectCf doesn't exist"));
   }
 
   @Test
@@ -212,25 +209,6 @@ public class TestCustomCellDataTieringManager {
     // Test with another valid key
     key = new BlockCacheKey(hStoreFiles.get(3).getPath(), 0, true, BlockType.DATA);
     testDataTieringMethodWithKeyNoException(methodCallerWithKey, key, false);
-  }
-
-  @Test
-  public void testHotDataWithPath() throws IOException {
-    initializeTestEnvironment();
-    DataTieringMethodCallerWithPath methodCallerWithPath = DataTieringManager::isHotData;
-
-    // Test with valid path
-    Path hFilePath = hStoreFiles.get(2).getPath();
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, true);
-
-    // Test with another valid path
-    hFilePath = hStoreFiles.get(3).getPath();
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, false);
-
-    // Test with a filename where corresponding HStoreFile in not present
-    hFilePath = new Path(hStoreFiles.get(0).getPath().getParent(), "incorrectFileName");
-    testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("Store file corresponding to " + hFilePath + " doesn't exist"));
   }
 
   @Test
@@ -265,14 +243,16 @@ public class TestCustomCellDataTieringManager {
     }
 
     // Verify hStoreFile3 is identified as cold data
-    DataTieringMethodCallerWithPath methodCallerWithPath = DataTieringManager::isHotData;
+    DataTieringMethodCallerWithKey methodCallerWithKey = DataTieringManager::isHotData;
     Path hFilePath = hStoreFiles.get(3).getPath();
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, false);
+    testDataTieringMethodWithKeyNoException(methodCallerWithKey,
+      new BlockCacheKey(hFilePath, 0, true, BlockType.DATA), false);
 
     // Verify all the other files in hStoreFiles are hot data
     for (int i = 0; i < hStoreFiles.size() - 1; i++) {
       hFilePath = hStoreFiles.get(i).getPath();
-      testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, true);
+      testDataTieringMethodWithKeyNoException(methodCallerWithKey,
+        new BlockCacheKey(hFilePath, 0, true, BlockType.DATA), true);
     }
 
     try {
