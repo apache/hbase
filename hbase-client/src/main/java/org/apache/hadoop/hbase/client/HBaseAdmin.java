@@ -421,7 +421,7 @@ public class HBaseAdmin implements Admin {
     throws IOException {
     List<byte[]> regionNames =
       regions.stream().map(RegionInfo::getRegionName).collect(Collectors.toList());
-    ;
+
     ReopenTableRegionsResponse response = executeCallable(
       new MasterCallable<ReopenTableRegionsResponse>(getConnection(), getRpcControllerFactory()) {
         long nonceGroup = ng.getNonceGroup();
