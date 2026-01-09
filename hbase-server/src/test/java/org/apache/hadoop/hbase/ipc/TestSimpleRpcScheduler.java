@@ -696,7 +696,6 @@ public class TestSimpleRpcScheduler {
     int maxQueueLength = 0;
     PriorityFunction priority = mock(PriorityFunction.class);
     Configuration conf = HBaseConfiguration.create();
-    conf.setInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH, 0);
     Abortable abortable = mock(Abortable.class);
     FastPathBalancedQueueRpcExecutor executor =
       Mockito.spy(new FastPathBalancedQueueRpcExecutor(name, handlerCount, callQueueType,
