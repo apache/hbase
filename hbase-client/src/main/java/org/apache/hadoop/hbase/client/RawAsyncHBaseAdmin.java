@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.CacheEvictionStatsAggregator;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -2809,10 +2810,16 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         .call(),
       (response, error) -> {
         if (error != null) {
-          LOG.warn("failed to get the procedure result procId={}", procId,
-            ConnectionUtils.translateException(error));
-          retryTimer.newTimeout(t -> getProcedureResult(procId, future, retries + 1),
-            ConnectionUtils.getPauseTime(pauseNs, retries), TimeUnit.NANOSECONDS);
+          Throwable exc = ConnectionUtils.translateException(error);
+          if (exc instanceof DoNotRetryIOException) {
+            // stop retrying on DNRIOE
+            future.completeExceptionally(exc);
+          } else {
+            LOG.warn("failed to get the procedure result procId={}", procId, exc);
+            retryTimer.newTimeout(t -> getProcedureResult(procId, future, retries + 1),
+              ConnectionUtils.getPauseTime(pauseNs, retries), TimeUnit.NANOSECONDS);
+
+          }
           return;
         }
         if (response.getState() == GetProcedureResultResponse.State.RUNNING) {
