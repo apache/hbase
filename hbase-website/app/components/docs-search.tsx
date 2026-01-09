@@ -17,7 +17,7 @@
 //
 
 import {
-  SearchDialog,
+  SearchDialog as FumaDocsSearchDialog,
   SearchDialogClose,
   SearchDialogContent,
   SearchDialogHeader,
@@ -121,7 +121,7 @@ function reRankResults(results: any[], searchTerm: string) {
   return scored.map(({ _score, ...item }) => item);
 }
 
-export default function DefaultSearchDialog(props: SharedProps) {
+export function SearchDialog(props: SharedProps) {
   const { locale } = useI18n();
 
   const { search, setSearch, query } = useDocsSearch({
@@ -140,7 +140,12 @@ export default function DefaultSearchDialog(props: SharedProps) {
   }, [query.data, search]);
 
   return (
-    <SearchDialog search={search} onSearchChange={setSearch} isLoading={query.isLoading} {...props}>
+    <FumaDocsSearchDialog
+      search={search}
+      onSearchChange={setSearch}
+      isLoading={query.isLoading}
+      {...props}
+    >
       <SearchDialogOverlay />
       <SearchDialogContent>
         <SearchDialogHeader>
@@ -150,6 +155,6 @@ export default function DefaultSearchDialog(props: SharedProps) {
         </SearchDialogHeader>
         <SearchDialogList items={reRankedResults !== "empty" ? reRankedResults : null} />
       </SearchDialogContent>
-    </SearchDialog>
+    </FumaDocsSearchDialog>
   );
 }

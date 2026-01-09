@@ -50,6 +50,19 @@ const renderer = toClientRenderer(
   docs.doc,
   ({ toc, default: Mdx, frontmatter }, { tree }: { tree: PageTree.Root }) => {
     const route = useParams()["*"];
+
+    const grouppedRoutes = [
+      "configuration",
+      "upgrading",
+      "security",
+      "architecture",
+      "backup-restore",
+      "operational-management",
+      "building-and-developing"
+    ];
+    const trimmedRoute = route?.endsWith("/") ? route?.slice(0, -1) : route;
+    const isGrouppedRoute = !!trimmedRoute && grouppedRoutes.includes(trimmedRoute);
+
     const [lastModifiedTime, setLastModifiedTime] = useState<Date | undefined>(undefined);
 
     useEffect(() => {
@@ -76,28 +89,34 @@ const renderer = toClientRenderer(
         </FumaDocsBody>
 
         {route && (
-          <div>
-            {/* links for /configuration */}
-            {route.startsWith("configuration") && (
-              <Cards>
-                {getPageTreePeers(tree, "/docs/configuration").map((peer) => (
-                  <Card key={peer.url} title={peer.name} href={peer.url}>
-                    {peer.description}
-                  </Card>
-                ))}
-              </Cards>
+          <div className="mt-10 flex flex-col gap-10">
+            {/* table of content for groupped routes */}
+            {isGrouppedRoute && (
+              <div className="flex flex-col gap-4">
+                <p>In this section:</p>
+                <Cards>
+                  {getPageTreePeers(tree, `/docs/${trimmedRoute}`).map((peer) => (
+                    <Card key={peer.url} title={peer.name} href={peer.url}>
+                      {peer.description}
+                    </Card>
+                  ))}
+                </Cards>
+              </div>
             )}
 
-            <a
-              href={`https://github.com/apache/hbase/hbase-website/app/pages/_docs/docs/_mdx/${route}.mdx`}
-              rel="noreferrer noopener"
-              target="_blank"
-              className="text-fd-secondary-foreground bg-fd-secondary hover:text-fd-accent-foreground hover:bg-fd-accent w-fit rounded-xl border p-2 text-sm font-medium transition-colors"
-            >
-              Edit on GitHub
-            </a>
+            {/* TODO: check this link */}
+            <div className="flex items-end gap-3">
+              <a
+                href={`https://github.com/apache/hbase/hbase-website/app/pages/_docs/docs/_mdx/${route}.mdx`}
+                rel="noreferrer noopener"
+                target="_blank"
+                className="text-fd-secondary-foreground bg-fd-secondary hover:text-fd-accent-foreground hover:bg-fd-accent w-fit rounded-xl border p-2 text-sm font-medium transition-colors"
+              >
+                Edit on GitHub
+              </a>
 
-            {lastModifiedTime && <PageLastUpdate date={lastModifiedTime} />}
+              {lastModifiedTime && <PageLastUpdate date={lastModifiedTime} />}
+            </div>
           </div>
         )}
       </FumaDocsPage>
