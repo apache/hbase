@@ -22,12 +22,14 @@ import java.security.KeyException;
 import java.util.List;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * KeymetaAdmin is an interface for administrative functions related to managed keys. It handles the
  * following methods:
  */
 @InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface KeymetaAdmin {
   /**
    * Enables key management for the specified custodian and namespace.

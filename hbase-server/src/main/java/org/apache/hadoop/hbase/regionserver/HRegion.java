@@ -7690,7 +7690,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     try {
       return createInstance(conf, ctorArgTypes, ctorArgs);
-    } catch (Throwable e) {
+    } catch (IllegalStateException e) {
       // Try the old signature for the sake of test code.
       return createInstance(conf, ctorArgTypes.subList(0, ctorArgTypes.size() - 1),
         ctorArgs.subList(0, ctorArgs.size() - 1));
@@ -8009,6 +8009,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     HRegion r = newHRegion(regionFs.getTableDir(), other.getWAL(), regionFs.getFileSystem(),
       other.baseConf, other.getRegionInfo(), other.getTableDescriptor(), null, null);
     return r.openHRegion(reporter);
+  }
+
+  public static Region openHRegion(final Region other, final CancelableProgressable reporter)
+    throws IOException {
+    return openHRegion((HRegion) other, reporter);
   }
 
   /**

@@ -18,12 +18,14 @@
 package org.apache.hadoop.hbase.io.crypto;
 
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * STUB IMPLEMENTATION - Feature not yet complete. This class represents encryption key data. Full
  * implementation will be in HBASE-29368 feature PR.
  */
 @InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class ManagedKeyData {
   /**
    * Special value to indicate global key space.

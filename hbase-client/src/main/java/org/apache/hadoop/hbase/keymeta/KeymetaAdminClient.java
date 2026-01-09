@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * STUB IMPLEMENTATION - Feature not yet complete. This class will be fully implemented in
  * HBASE-29368 feature PR.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public class KeymetaAdminClient implements KeymetaAdmin {
 
   public KeymetaAdminClient(Connection conn) throws IOException {
