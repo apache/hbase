@@ -37,12 +37,9 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class RowKeyDateTieringValueProvider implements CustomTieredCompactor.TieringValueProvider {
   private static final Logger LOG = LoggerFactory.getLogger(RowKeyDateTieringValueProvider.class);
-  public static final String TIERING_KEY_DATE_PATTERN =
-    "hbase.hstore.datatiering.tieringvalueprovider.regexpattern";
-  public static final String TIERING_KEY_DATE_FORMAT =
-    "hbase.hstore.datatiering.tieringvalueprovider.dateformat";
-  public static final String TIERING_KEY_DATE_GROUP =
-    "hbase.hstore.datatiering.tieringvalueprovider.regexextractgroup";
+  public static final String TIERING_KEY_DATE_PATTERN = "TIERING_KEY_DATE_PATTERN";
+  public static final String TIERING_KEY_DATE_FORMAT = "TIERING_KEY_DATE_FORMAT";
+  public static final String TIERING_KEY_DATE_GROUP = "TIERING_KEY_DATE_GROUP";
   private Pattern rowKeyPattern;
   private SimpleDateFormat dateFormat;
   private Integer rowKeyRegexExtractGroup;
