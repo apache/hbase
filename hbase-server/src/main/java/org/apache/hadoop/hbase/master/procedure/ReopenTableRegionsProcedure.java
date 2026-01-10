@@ -42,8 +42,10 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ReopenTableRegionsState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ReopenTableRegionsStateData;
@@ -89,7 +91,7 @@ public class ReopenTableRegionsProcedure
   /**
    * Create a new ReopenTableRegionsProcedure respecting the throttling configuration for the table.
    * First check the table descriptor, then fall back to the global configuration. Only used in
-   * ModifyTableProcedure and in  HMaster#reopenRegionsThrottled.
+   * ModifyTableProcedure and in HMaster#reopenRegionsThrottled.
    */
   public static ReopenTableRegionsProcedure throttled(final Configuration conf,
     final TableDescriptor desc) {
