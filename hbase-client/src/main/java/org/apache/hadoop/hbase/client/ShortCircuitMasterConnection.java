@@ -339,6 +339,12 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
   }
 
   @Override
+  public MasterProtos.ReopenTableRegionsResponse reopenTableRegions(RpcController controller,
+    MasterProtos.ReopenTableRegionsRequest request) throws ServiceException {
+    return stub.reopenTableRegions(controller, request);
+  }
+
+  @Override
   public ModifyNamespaceResponse modifyNamespace(RpcController controller,
     ModifyNamespaceRequest request) throws ServiceException {
     return stub.modifyNamespace(controller, request);
