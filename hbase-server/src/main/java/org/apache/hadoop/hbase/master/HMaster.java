@@ -4172,6 +4172,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
         @Override
         protected void run() throws IOException {
+
           submitProcedure(new ReopenTableRegionsProcedure(tableName, regionNames));
         }
 
@@ -4182,6 +4183,54 @@ public class HMaster extends HRegionServer implements MasterServices {
 
       });
 
+  }
+
+  /**
+   * Reopen regions provided in the argument. Applies throttling to the procedure to avoid
+   * overwhelming the system. This is used by the reopenTableRegions methods in the Admin API via
+   * HMaster.
+   * @param tableName   The current table name
+   * @param regionNames The region names of the regions to reopen
+   * @param nonceGroup  Identifier for the source of the request, a client or process
+   * @param nonce       A unique identifier for this operation from the client or process identified
+   *                    by <code>nonceGroup</code> (the source must ensure each operation gets a
+   *                    unique id).
+   * @return procedure Id
+   * @throws IOException if reopening region fails while running procedure
+   */
+  long reopenRegionsThrottled(final TableName tableName, final List<byte[]> regionNames,
+    final long nonceGroup, final long nonce) throws IOException {
+
+    checkInitialized();
+
+    if (!tableStateManager.isTablePresent(tableName)) {
+      throw new TableNotFoundException(tableName);
+    }
+
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          ReopenTableRegionsProcedure proc;
+          if (regionNames.isEmpty()) {
+            proc = ReopenTableRegionsProcedure.throttled(getConfiguration(),
+              getTableDescriptors().get(tableName));
+          } else {
+            proc = ReopenTableRegionsProcedure.throttled(getConfiguration(),
+              getTableDescriptors().get(tableName), regionNames);
+          }
+
+          LOG.info("{} throttled reopening {} regions for table {}", getClientIdAuditPrefix(),
+            regionNames.isEmpty() ? "all" : regionNames.size(), tableName);
+
+          submitProcedure(proc);
+        }
+
+        @Override
+        protected String getDescription() {
+          return "Throttled ReopenTableRegionsProcedure for " + tableName;
+        }
+      });
   }
 
   @Override

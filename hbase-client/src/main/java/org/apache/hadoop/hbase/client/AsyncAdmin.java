@@ -209,6 +209,24 @@ public interface AsyncAdmin {
   CompletableFuture<Void> modifyTable(TableDescriptor desc, boolean reopenRegions);
 
   /**
+   * Reopen all regions of a table. This is useful after calling
+   * {@link #modifyTable(TableDescriptor, boolean)} with reopenRegions=false to gradually roll out
+   * table descriptor changes to regions. Regions are reopened in-place (no move).
+   * @param tableName table whose regions to reopen
+   * @return CompletableFuture that completes when all regions have been reopened
+   */
+  CompletableFuture<Void> reopenTableRegions(TableName tableName);
+
+  /**
+   * Reopen specific regions of a table. Useful for canary testing table descriptor changes on a
+   * subset of regions before rolling out to the entire table.
+   * @param tableName table whose regions to reopen
+   * @param regions   specific regions to reopen
+   * @return CompletableFuture that completes when specified regions have been reopened
+   */
+  CompletableFuture<Void> reopenTableRegions(TableName tableName, List<RegionInfo> regions);
+
+  /**
    * Change the store file tracker of the given table.
    * @param tableName the table you want to change
    * @param dstSFT    the destination store file tracker

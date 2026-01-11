@@ -210,6 +210,17 @@ message ModifyTableResponse {
   optional uint64 proc_id = 1;
 }
 
+message ReopenTableRegionsRequest {
+  required TableName table_name = 1;
+  repeated bytes region_names = 2;  // empty = all regions
+  optional uint64 nonce_group = 3 [default = 0];
+  optional uint64 nonce = 4 [default = 0];
+}
+
+message ReopenTableRegionsResponse {
+  optional uint64 proc_id = 1;
+}
+
 message FlushTableRequest {
   required TableName table_name = 1;
   repeated bytes column_family = 2;
@@ -899,6 +910,13 @@ service MasterService {
   /** Modify a table's metadata */
   rpc ModifyTable(ModifyTableRequest)
     returns(ModifyTableResponse);
+
+  /**
+   * Reopen regions of a table. Regions are reopened in-place without moving.
+   * Useful for rolling out table descriptor changes after modifyTable(reopenRegions=false).
+   */
+  rpc ReopenTableRegions(ReopenTableRegionsRequest)
+    returns(ReopenTableRegionsResponse);
 
   /** Flush a table's memstore */
   rpc FlushTable(FlushTableRequest)

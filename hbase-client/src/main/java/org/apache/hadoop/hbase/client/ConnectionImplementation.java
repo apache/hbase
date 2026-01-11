@@ -2063,6 +2063,12 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       }
 
       @Override
+      public MasterProtos.ReopenTableRegionsResponse reopenTableRegions(RpcController controller,
+        MasterProtos.ReopenTableRegionsRequest request) throws ServiceException {
+        return stub.reopenTableRegions(controller, request);
+      }
+
+      @Override
       public ModifyTableStoreFileTrackerResponse modifyTableStoreFileTracker(
         RpcController controller, ModifyTableStoreFileTrackerRequest request)
         throws ServiceException {
