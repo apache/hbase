@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.asyncfs;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -28,7 +28,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -37,13 +36,10 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,12 +61,9 @@ import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
  * in this test class we use the default value for timeout which is 60 seconds and it is enough for
  * this test.
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestFanOutOneBlockAsyncDFSOutputHang extends AsyncFSTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFanOutOneBlockAsyncDFSOutputHang.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestFanOutOneBlockAsyncDFSOutputHang.class);
@@ -85,10 +78,7 @@ public class TestFanOutOneBlockAsyncDFSOutputHang extends AsyncFSTestBase {
 
   private static FanOutOneBlockAsyncDFSOutput OUT;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     startMiniDFSCluster(2);
     FS = CLUSTER.getFileSystem();
@@ -101,7 +91,7 @@ public class TestFanOutOneBlockAsyncDFSOutputHang extends AsyncFSTestBase {
       FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, MONITOR, true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if (OUT != null) {
       OUT.recoverAndClose(null);

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.asyncfs;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Optional;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -35,11 +34,10 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.DummyDFSOutputStream;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
@@ -54,19 +52,16 @@ import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
  * <p>
  * See HBASE-28955 for more details.
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestLeaseRenewal extends AsyncFSTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLeaseRenewal.class);
 
   private static DistributedFileSystem FS;
   private static EventLoopGroup EVENT_LOOP_GROUP;
   private static Class<? extends Channel> CHANNEL_CLASS;
   private static StreamSlowMonitor MONITOR;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     startMiniDFSCluster(3);
     FS = CLUSTER.getFileSystem();
@@ -75,7 +70,7 @@ public class TestLeaseRenewal extends AsyncFSTestBase {
     MONITOR = StreamSlowMonitor.create(UTIL.getConfiguration(), "testMonitor");
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if (EVENT_LOOP_GROUP != null) {
       EVENT_LOOP_GROUP.shutdownGracefully().get();
