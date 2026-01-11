@@ -57,8 +57,9 @@ public class TestRpcExecutor {
     // Pass -1 to use default maxQueueLength calculation
     int defaultMaxQueueLength = -1;
 
-    BalancedQueueRpcExecutor executor = new BalancedQueueRpcExecutor(testInfo.getDisplayName(),
-      handlerCount, defaultMaxQueueLength, qosFunction, conf, null);
+    BalancedQueueRpcExecutor executor =
+      new BalancedQueueRpcExecutor(testInfo.getTestMethod().get().getName(), handlerCount,
+        defaultMaxQueueLength, qosFunction, conf, null);
 
     List<BlockingQueue<CallRunner>> queues = executor.getQueues();
     int expectedQueueSize = Math.round(handlerCount * DEFAULT_CALL_QUEUE_HANDLER_FACTOR);
@@ -87,11 +88,11 @@ public class TestRpcExecutor {
     conf.setFloat(CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, callQueueHandlerFactor);
     PriorityFunction qosFunction = mock(PriorityFunction.class);
     int handlerCount = 100;
-
-    // Test Case 1: Configured soft limit < DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT
     int maxQueueLength = 150;
-    BalancedQueueRpcExecutor executor = new BalancedQueueRpcExecutor(
-      testInfo.getDisplayName() + "1", handlerCount, maxQueueLength, qosFunction, conf, null);
+
+    BalancedQueueRpcExecutor executor =
+      new BalancedQueueRpcExecutor(testInfo.getTestMethod().get().getName() + "1", handlerCount,
+        maxQueueLength, qosFunction, conf, null);
 
     Assertions.assertEquals(maxQueueLength, executor.currentQueueLimit,
       "Configured soft limit is not applied.");
