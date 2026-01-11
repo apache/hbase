@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.io.hfile.InvalidHFileException;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -227,6 +229,10 @@ public class StoreFileInfo implements Configurable {
       this.conf.getBoolean(STORE_FILE_READER_NO_READAHEAD, DEFAULT_STORE_FILE_READER_NO_READAHEAD);
   }
 
+  public HFileLink getLink() {
+    return link;
+  }
+
   @Override
   public Configuration getConf() {
     return conf;
@@ -290,7 +296,8 @@ public class StoreFileInfo implements Configurable {
     return reader;
   }
 
-  ReaderContext createReaderContext(boolean doDropBehind, long readahead, ReaderType type)
+  ReaderContext createReaderContext(boolean doDropBehind, long readahead, ReaderType type,
+    String keyNamespace, SystemKeyCache systemKeyCache, ManagedKeyDataCache managedKeyDataCache)
     throws IOException {
     FSDataInputStreamWrapper in;
     FileStatus status;
@@ -319,7 +326,8 @@ public class StoreFileInfo implements Configurable {
     long length = status.getLen();
     ReaderContextBuilder contextBuilder =
       new ReaderContextBuilder().withInputStreamWrapper(in).withFileSize(length)
-        .withPrimaryReplicaReader(this.primaryReplica).withReaderType(type).withFileSystem(fs);
+        .withPrimaryReplicaReader(this.primaryReplica).withReaderType(type).withFileSystem(fs)
+        .withSystemKeyCache(systemKeyCache).withManagedKeyDataCache(managedKeyDataCache);
     if (this.reference != null) {
       contextBuilder.withFilePath(this.getPath());
     } else {
@@ -733,7 +741,7 @@ public class StoreFileInfo implements Configurable {
     }
   }
 
-  FileSystem getFileSystem() {
+  public FileSystem getFileSystem() {
     return this.fs;
   }
 

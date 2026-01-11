@@ -38,6 +38,10 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.quotas.RegionServerRpcQuotaManager;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
@@ -257,6 +261,21 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
+  public SystemKeyCache getSystemKeyCache() {
+    return null;
+  }
+
+  @Override
+  public ManagedKeyDataCache getManagedKeyDataCache() {
+    return null;
+  }
+
+  @Override
+  public KeymetaAdmin getKeymetaAdmin() {
+    return null;
+  }
+
+  @Override
   public void updateRegionFavoredNodesMapping(String encodedRegionName,
     List<HBaseProtos.ServerName> favoredNodes) {
   }
@@ -385,5 +404,10 @@ public class MockRegionServerServices implements RegionServerServices {
   @Override
   public RegionReplicationBufferManager getRegionReplicationBufferManager() {
     return null;
+  }
+
+  @Override
+  public KeyManagementService getKeyManagementService() {
+    return this;
   }
 }
