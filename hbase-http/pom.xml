@@ -265,13 +265,13 @@
             <configuration>
               <attachToTest>false</attachToTest>
               <properties>
-                <copyright-end-year>${build.year}</copyright-end-year>
-                <debug-print-included-work-info>${license.debug.print.included}</debug-print-included-work-info>
-                <bundled-dependencies>${license.bundles.dependencies}</bundled-dependencies>
-                <bundled-jquery>${license.bundles.jquery}</bundled-jquery>
-                <bundled-vega>${license.bundles.vega}</bundled-vega>
-                <bundled-logo>${license.bundles.logo}</bundled-logo>
-                <bundled-bootstrap>${license.bundles.bootstrap}</bundled-bootstrap>
+                <copyright_end_year>${build.year}</copyright_end_year>
+                <debug_print_included_work_info>${license.debug.print.included}</debug_print_included_work_info>
+                <bundled_dependencies>${license.bundles.dependencies}</bundled_dependencies>
+                <bundled_jquery>${license.bundles.jquery}</bundled_jquery>
+                <bundled_vega>${license.bundles.vega}</bundled_vega>
+                <bundled_logo>${license.bundles.logo}</bundled_logo>
+                <bundled_hbase-bootstrap>${license.bundles.bootstrap}</bundled_hbase-bootstrap>
               </properties>
               <resourceBundles>
                 <resourceBundle>${project.groupId}:hbase-resource-bundle:${project.version}</resourceBundle>
