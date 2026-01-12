@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.replication.ReplicationUtils.getAdaptiveTi
 import static org.apache.hadoop.hbase.replication.ReplicationUtils.sleepForRetries;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -74,6 +75,10 @@ public class ReplicationSourceShipper extends Thread {
   private final int DEFAULT_TIMEOUT = 20000;
   private final int getEntriesTimeout;
   private final int shipEditsTimeout;
+  private long stagedWalSize = 0L;
+  private long lastStagedFlushTs = EnvironmentEdgeManager.currentTime();
+  private WALEntryBatch lastShippedBatch;
+  private final List<Entry> entriesForCleanUpHFileRefs = new ArrayList<>();
 
   public ReplicationSourceShipper(Configuration conf, String walGroupId, ReplicationSource source,
     ReplicationSourceWALReader walReader) {
@@ -98,6 +103,10 @@ public class ReplicationSourceShipper extends Thread {
     LOG.info("Running ReplicationSourceShipper Thread for wal group: {}", this.walGroupId);
     // Loop until we close down
     while (isActive()) {
+      // check if flush needed for WAL backup, this is need for timeout based flush
+      if (shouldPersistLogPosition()) {
+        persistLogPosition();
+      }
       // Sleep until replication is enabled again
       if (!source.isPeerEnabled()) {
         // The peer enabled check is in memory, not expensive, so do not need to increase the
@@ -155,7 +164,8 @@ public class ReplicationSourceShipper extends Thread {
     List<Entry> entries = entryBatch.getWalEntries();
     int sleepMultiplier = 0;
     if (entries.isEmpty()) {
-      updateLogPosition(entryBatch);
+      lastShippedBatch = entryBatch;
+      persistLogPosition();
       return;
     }
     int currentSize = (int) entryBatch.getHeapSize();
@@ -190,13 +200,13 @@ public class ReplicationSourceShipper extends Thread {
         } else {
           sleepMultiplier = Math.max(sleepMultiplier - 1, 0);
         }
-        // Clean up hfile references
-        for (Entry entry : entries) {
-          cleanUpHFileRefs(entry.getEdit());
-          LOG.trace("shipped entry {}: ", entry);
+
+        stagedWalSize += currentSize;
+        entriesForCleanUpHFileRefs.addAll(entries);
+        lastShippedBatch = entryBatch;
+        if (shouldPersistLogPosition()) {
+          persistLogPosition();
         }
-        // Log and clean up WAL logs
-        updateLogPosition(entryBatch);
 
         // offsets totalBufferUsed by deducting shipped batchSize (excludes bulk load size)
         // this sizeExcludeBulkLoad has to use same calculation that when calling
@@ -227,6 +237,41 @@ public class ReplicationSourceShipper extends Thread {
         }
       }
     }
+  }
+
+  private boolean shouldPersistLogPosition() {
+    if (stagedWalSize == 0 || lastShippedBatch == null) {
+      return false;
+    }
+    return (stagedWalSize >= source.getReplicationEndpoint().getMaxBufferSize())
+      || (EnvironmentEdgeManager.currentTime() - lastStagedFlushTs
+          >= source.getReplicationEndpoint().maxFlushInterval());
+  }
+
+  private void persistLogPosition() {
+    if (lastShippedBatch == null) {
+      return;
+    }
+    if (stagedWalSize > 0) {
+      source.getReplicationEndpoint().beforePersistingReplicationOffset();
+    }
+    stagedWalSize = 0;
+    lastStagedFlushTs = EnvironmentEdgeManager.currentTime();
+
+    // Clean up hfile references
+    for (Entry entry : entriesForCleanUpHFileRefs) {
+      try {
+        cleanUpHFileRefs(entry.getEdit());
+      } catch (IOException e) {
+        LOG.warn("{} threw unknown exception:",
+          source.getReplicationEndpoint().getClass().getName(), e);
+      }
+      LOG.trace("shipped entry {}: ", entry);
+    }
+    entriesForCleanUpHFileRefs.clear();
+
+    // Log and clean up WAL logs
+    updateLogPosition(lastShippedBatch);
   }
 
   private void cleanUpHFileRefs(WALEdit edit) throws IOException {
