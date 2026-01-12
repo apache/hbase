@@ -11,7 +11,7 @@ As we will be discussing changes to the HFile format, it is useful to give a sho
 
 An HFile in version 1 format is structured as follows:
 
-![HFile V1 Format](../../images/hfile.png)
+![HFile V1 Format](/docs-images/hfile.png)
 
 ### Block index format in version 1
 
@@ -59,7 +59,7 @@ In version 2, we seek once to read the trailer and seek again to read everything
 The version of HBase introducing the above features reads both version 1 and 2 HFiles, but only writes version 2 HFiles.
 A version 2 HFile is structured as follows:
 
-![HFile Version 2 Structure](../../images/hfilev2.png)
+![HFile Version 2 Structure](/docs-images/hfilev2.png)
 
 ### Unified version 2 block format
 

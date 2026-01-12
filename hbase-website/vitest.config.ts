@@ -20,18 +20,22 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { resolve } from "path";
+import mdx from "fumadocs-mdx/vite";
+import * as MdxConfig from "./source.config";
 
 export default defineConfig({
-  plugins: [react(), tsconfigPaths()],
+  plugins: [mdx(MdxConfig), react(), tsconfigPaths()],
   test: {
     globals: true,
     environment: "happy-dom",
     setupFiles: ["./tests/setup.ts"],
     css: true,
-    pool: "forks"
+    pool: "threads",
+    exclude: ["**/node_modules/**", "**/dist/**"]
   },
   resolve: {
     alias: {
+      "@/.source": resolve(__dirname, ".source"),
       "@": resolve(__dirname, "app")
     }
   }

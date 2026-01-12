@@ -67,7 +67,7 @@ Previously, terms such as **master-master**, **master-slave**, and **cyclical** 
 Multiple levels of replication may be chained together to suit your organization's needs. The following diagram shows a hypothetical scenario. Use the arrows to follow the data paths.
 
 **_Example of a Complex Cluster Replication Configuration_**
-![hbase replication diagram](../../../images/hbase_replication_diagram.jpg)
+![hbase replication diagram](/docs-images/hbase_replication_diagram.jpg)
 
 HBase replication borrows many concepts from the **statement-based replication** design used by MySQL. Instead of SQL statements, entire WALEdits (consisting of multiple cell inserts coming from Put and Delete operations on the clients) are replicated in order to maintain atomicity.
 
@@ -190,7 +190,7 @@ $ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` "${HADOOP_HOME}/bin/hadoo
 ### Detailed Information About Cluster Replication
 
 **_Replication Architecture Overview_**
-![replication overview](../../../images/replication_overview.png)
+![replication overview](/docs-images/replication_overview.png)
 
 #### Life of a WAL Edit
 
