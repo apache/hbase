@@ -8,10 +8,10 @@ description: "Maven build commands, JDK requirements, Hadoop version selection, 
 HBase is compiled using Maven. You must use at least Maven 3.0.4. To check your Maven version, run
 the command `mvn -version`.
 
-### JDK Version Requirements
+### JDK Version Requirements [#building-basic-compile-jdk-version-requirements]
 
 HBase has Java version compiler requirements that vary by release branch. At compilation time,
-HBase has the same version requirements as it does for runtime. See [Java](/docs/configuration/basic-prerequisites#java) for a complete
+HBase has the same version requirements as it does for runtime. See [Java](/docs/configuration/basic-prerequisites#configuration-basic-prerequisites-java) for a complete
 support matrix of Java version by HBase version.
 
 ### Maven Build Commands
@@ -84,7 +84,7 @@ mvn install:install-file -DgroupId=com.google.protobuf -DartifactId=protoc -Dver
 
 ### Running all or individual Unit Tests
 
-See the [Running tests](/docs/building-and-developing/tests#running-tests) section in [Unit Tests](/docs/building-and-developing/tests#unit-tests)
+See the [Running tests](/docs/building-and-developing/tests#running-tests) section in [Unit Tests](/docs/building-and-developing/tests#building-and-developing-unit-tests)
 
 ### Building against various Hadoop versions
 
@@ -153,7 +153,7 @@ JDK11, and the artifacts used when running HBase on JDK11 must be compiled again
 Furthermore, the JDK11 profile requires a minimum Hadoop version of 3.2.0. This value is specified
 by the JDK11 profile, but it can be overridden using the `hadoop-three.version` property as normal.
 For details on Hadoop profile activation by HBase branch, see
-[Building against various Hadoop versions](/docs/building-and-developing/building#building-against-various-hadoop-versions). See [Java](/docs/configuration/basic-prerequisites#java) for a complete
+[Building against various Hadoop versions](/docs/building-and-developing/building#building-against-various-hadoop-versions). See [Java](/docs/configuration/basic-prerequisites#configuration-basic-prerequisites-java) for a complete
 support matrix of Java version by HBase version.
 
 #### Example 1: Building HBase 2.3 or 2.4 with JDK11

@@ -3,7 +3,7 @@ title: "Store File Tracking"
 description: "This feature introduces an abstraction layer to track store files still used/needed by store engines, allowing for plugging different approaches of identifying store files required by the given store."
 ---
 
-## Overview
+## Overview [#store-file-tracking-overview]
 
 Historically, HBase internals have relied on creating hfiles on temporary directories first, renaming
 those files to the actual store directory at operation commit time. That's a simple and convenient
@@ -50,7 +50,7 @@ A special implementation to be used when swapping between Store File Tracking im
 pre-existing tables that already contain data, and therefore, files being tracked under an specific
 logic.
 
-## Usage
+## Usage [#store-file-tracking-usage]
 
 For fresh deployments that don't yet contain any user data, **FILE** implementation can be just set as
 value for **hbase.store.file-tracker.impl** property in global **hbase-site.xml** configuration, prior

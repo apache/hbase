@@ -284,7 +284,7 @@ An example: Let's assume we are interested in the HBase clients that are most ac
 
 ## HBase Monitoring
 
-### Overview
+### Overview [#hbase-monitoring-overview]
 
 The following metrics are arguably the most important to monitor for each RegionServer for "macro monitoring", preferably with a system like [OpenTSDB](http://opentsdb.net/). If your cluster is having performance issues it's likely that you'll see something unusual with this group.
 
@@ -305,7 +305,7 @@ The following metrics are arguably the most important to monitor for each Region
 
 The HBase slow query log consists of parseable JSON structures describing the properties of those client operations (Gets, Puts, Deletes, etc.) that either took too long to run, or produced too much output. The thresholds for "too long to run" and "too much output" are configurable, as described below. The output is produced inline in the main region server logs so that it is easy to discover further details from context with other logged events. It is also prepended with identifying tags `(responseTooSlow)`, `(responseTooLarge)`, `(operationTooSlow)`, and `(operationTooLarge)` in order to enable easy filtering with grep, in case the user desires to see only slow queries.
 
-#### Configuration
+#### Configuration [#operational-management-metrics-and-monitoring-overview-configuration]
 
 There are four configuration knobs that can be used to adjust the thresholds for when queries are logged. Two of these knobs control the size and time thresholds for all queries. Because Scans can often be larger and slower than other types of queries, there are two additional knobs which can control size and time thresholds for Scans specifically.
 
@@ -314,7 +314,7 @@ There are four configuration knobs that can be used to adjust the thresholds for
 - `hbase.ipc.warn.response.time.scan` Maximum number of milliseconds that a Scan can be run without being logged. Defaults to the `hbase.ipc.warn.response.time` value. Can be set to -1 to disable logging by time.
 - `hbase.ipc.warn.response.size.scan` Maximum byte size of response that a Scan can return without being logged. Defaults to the `hbase.ipc.warn.response.size` value. Can be set to -1 to disable logging by size.
 
-#### Metrics
+#### Metrics [#operational-management-hbase-monitoring-slow-query-log-metrics]
 
 The slow query log exposes to metrics to JMX.
 
@@ -325,7 +325,7 @@ The slow query log exposes to metrics to JMX.
 
 The output is tagged with operation e.g. `(operationTooSlow)` if the call was a client operation, such as a Put, Get, or Delete, which we expose detailed fingerprint information for. If not, it is tagged `(responseTooSlow)` and still produces parseable JSON output, but with less verbose information solely regarding its duration and size in the RPC itself. `TooLarge` is substituted for `TooSlow` if the response size triggered the logging, with `TooLarge` appearing even in the case that both size and duration triggered logging.
 
-#### Example
+#### Example [#operational-management-hbase-monitoring-slow-query-log-example]
 
 ```text
 2011-09-08 10:01:25,824 WARN org.apache.hadoop.ipc.HBaseServer: (operationTooSlow): {"tables":{"riley2":{"puts":[{"totalColumns":11,"families":{"actions":[{"timestamp":1315501284459,"qualifier":"0","vlen":9667580},{"timestamp":1315501284459,"qualifier":"1","vlen":10122412},{"timestamp":1315501284459,"qualifier":"2","vlen":11104617},{"timestamp":1315501284459,"qualifier":"3","vlen":13430635}]},"row":"cfcd208495d565ef66e7dff9f98764da:0"}],"families":["actions"]}},"processingtimems":956,"client":"10.47.34.63:33623","starttimems":1315501284456,"queuetimems":0,"totalPuts":1,"class":"HRegionServer","responsesize":0,"method":"multiPut"}

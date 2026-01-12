@@ -254,9 +254,9 @@ One supported datatype that deserves special mention are "counters" (i.e., the a
 
 Synchronization on counters are done on the RegionServer, not in the client.
 
-## Joins
+## Joins [#regionserver-sizing-joins]
 
-If you have multiple tables, don't forget to factor in the potential for [Joins](/docs/datamodel#joins) into the schema design.
+If you have multiple tables, don't forget to factor in the potential for [Joins](/docs/datamodel#datamodel-joins) into the schema design.
 
 ## Time To Live (TTL)
 
@@ -430,7 +430,7 @@ See [mapreduce.example.summary](/docs/mapreduce#hbase-mapreduce-summary-to-hbase
 
 Coprocessors act like RDBMS triggers. These were added in 0.92. For more information, see [coprocessors](/docs/cp)
 
-## Constraints
+## Constraints [#regionserver-sizing-constraints]
 
 HBase currently supports 'constraints' in traditional (SQL) database parlance. The advised usage for Constraints is in enforcing business rules for attributes in the table (e.g. make sure values are in the range 1-10). Constraints could also be used to enforce referential integrity, but this is strongly discouraged as it will dramatically decrease the write throughput of the tables where integrity checking is enabled. Extensive documentation on using Constraints can be found at [Constraint](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/constraint/Constraint.html) since version 0.94.
 
@@ -885,4 +885,4 @@ For more on short-circuit reads, see Colin's old blog on rollout, [How Improved 
 
 ### More Information
 
-See the Performance section [perf.schema](/docs/case-studies#schema-design) for more information about operational and performance schema design options, such as Bloom Filters, Table-configured regionsizes, compression, and blocksizes.
+See the Performance section [perf.schema](/docs/case-studies#case-studies-schema-design) for more information about operational and performance schema design options, such as Bloom Filters, Table-configured regionsizes, compression, and blocksizes.

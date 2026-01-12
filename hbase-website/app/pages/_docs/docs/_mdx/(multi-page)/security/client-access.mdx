@@ -7,7 +7,7 @@ Newer releases of Apache HBase (>= 0.92) support optional SASL authentication of
 
 This describes how to set up Apache HBase and clients for connection to secure HBase resources.
 
-## Prerequisites
+## Prerequisites [#security-client-access-prerequisites]
 
 #### Hadoop Authentication Configuration [!toc]
 
@@ -19,7 +19,7 @@ You need to have a working Kerberos KDC.
 
 ## Server-side Configuration for Secure Operation
 
-First, refer to [security.prerequisites](/docs/security/client-access#prerequisites) and ensure that your underlying HDFS configuration is secure.
+First, refer to [security.prerequisites](/docs/security/client-access#security-client-access-prerequisites) and ensure that your underlying HDFS configuration is secure.
 
 Add the following to the `hbase-site.xml` file on every server machine in the cluster:
 
@@ -42,7 +42,7 @@ A full shutdown and restart of HBase service is required when deploying these co
 
 ## Client-side Configuration for Secure Operation
 
-First, refer to [Prerequisites](/docs/security/client-access#prerequisites) and ensure that your underlying HDFS configuration is secure.
+First, refer to [Prerequisites](/docs/security/client-access#security-client-access-prerequisites) and ensure that your underlying HDFS configuration is secure.
 
 Add the following to the `hbase-site.xml` file on every client:
 

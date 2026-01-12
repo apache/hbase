@@ -133,7 +133,7 @@ A WalObserver allows you to observe events related to writes to the Write-Ahead
 Log (WAL). See
 [WALObserver](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/WALObserver.html).
 
-[Examples](/docs/cp#examples) provides working examples of observer coprocessors.
+[Examples](/docs/cp#cp-examples) provides working examples of observer coprocessors.
 
 ### Endpoint Coprocessor
 
@@ -191,7 +191,7 @@ protobuf protoc tool which knows nothing of how HBase works —
 they should be consided `@InterfaceAudience.Private` so are liable to
 change.
 
-[Examples](/docs/cp#examples) provides working examples of endpoint coprocessors.
+[Examples](/docs/cp#cp-examples) provides working examples of endpoint coprocessors.
 
 ## Loading Coprocessors
 
@@ -416,7 +416,7 @@ admin.modifyTable(tableName, hTableDescriptor);
 In HBase 0.96 and newer, you can instead use the `removeCoprocessor()` method of the
 `HTableDescriptor` class.
 
-## Examples
+## Examples [#cp-examples]
 
 HBase ships examples for Observer Coprocessor.
 

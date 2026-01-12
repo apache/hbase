@@ -233,7 +233,7 @@ A MemStore flush can be triggered under any of the conditions listed below. The 
 3.  When the number of WAL log entries in a given region server's WAL reaches the value specified in `hbase.regionserver.max.logs`, MemStores from various regions will be flushed out to disk to reduce the number of logs in the WAL.  
     The flush order is based on time. Regions with the oldest MemStores are flushed first until WAL count drops below `hbase.regionserver.max.logs`.
 
-### Scans
+### Scans [#architecture-regions-store-scans]
 
 - When a client issues a scan against a table, HBase generates `RegionScanner` objects, one per region, to serve the scan request.
 - The `RegionScanner` object contains a list of `StoreScanner` objects, one per column family.
@@ -251,7 +251,7 @@ The _HFile_ file format is based on the SSTable file described in the [BigTable 
 
 For more information, see the HFile source code. Also see [HBase file format with inline blocks (version 2)](/docs/hfile-format#hbase-file-format-with-inline-blocks-version-2) for information about the HFile v2 format that was included in 0.92.
 
-#### HFile Tool
+#### HFile Tool [#architecture-regions-store-hfile-tool]
 
 To view a textualized version of HFile content, you can use the `hbase hfile` tool. Type the following to see usage:
 
@@ -308,7 +308,7 @@ The Key is further decomposed as:
 
 KeyValue instances are _not_ split across blocks. For example, if there is an 8 MB KeyValue, even if the block-size is 64kb this KeyValue will be read in as a coherent block. For more information, see the KeyValue source code.
 
-#### Example
+#### Example [#architecture-regions-store-keyvalue-example]
 
 To emphasize the points above, examine what happens with two Puts for two different columns for the same row:
 
@@ -443,7 +443,7 @@ The following section walks you through the algorithm used to select StoreFiles 
 
 #### Parameters Used by Compaction Algorithm
 
-This table contains the main configuration parameters for compaction. This list is not exhaustive. To tune these parameters from the defaults, edit the _hbase-default.xml_ file. For a full list of all configuration parameters available, see [config.files](/docs/configuration/default#hbase-default-configuration)
+This table contains the main configuration parameters for compaction. This list is not exhaustive. To tune these parameters from the defaults, edit the _hbase-default.xml_ file. For a full list of all configuration parameters available, see [config.files](/docs/configuration/default#configuration-default-hbase-default-configuration)
 
 - `hbase.hstore.compaction.min`  
    The minimum number of StoreFiles which must be eligible for compaction before compaction can run. The goal of tuning `hbase.hstore.compaction.min` is to avoid ending up with too many tiny StoreFiles to compact. Setting this value to 2 would cause a minor compaction each time you have two StoreFiles in a Store, and this is probably not appropriate. If you set this value too high, all the other values will need to be adjusted accordingly. For most cases, the default value is appropriate. In previous versions of HBase, the parameter `hbase.hstore.compaction.min` was called `hbase.hstore.compactionThreshold`.  

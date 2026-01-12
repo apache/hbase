@@ -21,7 +21,7 @@ Watch out for swapping. Set `swappiness` to 0.
 
 Make sure you have set up your Hadoop to use native, hardware checksumming. See [hadoop.native.lib](/docs/compression#making-use-of-hadoop-native-libraries-in-hbase).
 
-## Network
+## Network [#performance-network]
 
 Perhaps the most important factor in avoiding network issues degrading Hadoop and HBase performance is the switching hardware that is used, decisions made early in the scope of the project can cause major problems when you double or triple the size of your cluster (or more).
 
@@ -56,7 +56,7 @@ If the switches in your rack have appropriate switching capacity to handle all t
 
 Using 10Gbe links between racks will greatly increase performance, and assuming your switches support a 10Gbe uplink or allow for an expansion card will allow you to save your ports for machines as opposed to uplinks.
 
-### Network Interfaces
+### Network Interfaces [#performance-network-interfaces]
 
 Are all the network interfaces functioning correctly? Are you sure? See the Troubleshooting Case Study in [Case Study #1 (Performance Issue On A Single Node)](/docs/case-studies#case-study-1-performance-issue-on-a-single-node).
 
@@ -72,7 +72,7 @@ HBase favors consistency and partition tolerance, where a decision has to be mad
 
 Robert Yokota used an automated testing framework called [Jepson](https://aphyr.com/tags/jepsen) to test HBase's partition tolerance in the face of network partitions, using techniques modeled after Aphyr's [Call Me Maybe](https://aphyr.com/posts/281-call-me-maybe-carly-rae-jepsen-and-the-perils-of-network-partitions) series. The results, available as a [blog post](https://rayokota.wordpress.com/2015/09/30/call-me-maybe-hbase/) and an [addendum](https://rayokota.wordpress.com/2015/09/30/call-me-maybe-hbase-addendum/), show that HBase performs correctly.
 
-## Java
+## Java [#performance-java]
 
 ### The Garbage Collector and Apache HBase
 
@@ -88,7 +88,7 @@ Other sources of long GCs can be the JVM itself logging. See [Eliminating Large 
 
 For more information about GC logs, see [JVM Garbage Collection Logs](/docs/troubleshooting#jvm-garbage-collection-logs).
 
-Consider also enabling the off-heap Block Cache. This has been shown to mitigate GC pause times. See [Block Cache](/docs/architecture/regionserver#block-cache)
+Consider also enabling the off-heap Block Cache. This has been shown to mitigate GC pause times. See [Block Cache](/docs/architecture/regionserver#architecture-regionserver-block-cache)
 
 ## HBase Configurations
 
@@ -102,7 +102,7 @@ Try [hedged_reads](/docs/performance#hedged-reads).
 
 For larger systems, managing [compactions and splits](/docs/configuration/important#managed-compactions) may be something you want to consider.
 
-### `hbase.regionserver.handler.count`
+### `hbase.regionserver.handler.count` [#performance-hbaseregionserverhandlercount]
 
 See [hbase.regionserver.handler.count](#hbase.regionserver.handler.count).
 
@@ -188,11 +188,11 @@ You can use the new option `hbase.ipc.server.callqueue.handler.factor` to progra
 
 For these values to take effect on a given RegionServer, the RegionServer must be restarted. These parameters are intended for testing purposes and should be used carefully.
 
-## ZooKeeper
+## ZooKeeper [#performance-zookeeper]
 
 See [ZooKeeper](/docs/zookeeper) for information on configuring ZooKeeper, and see the part about having a dedicated disk.
 
-## Schema Design
+## Schema Design [#performance-schema-design]
 
 ### Number of Column Families
 
@@ -266,11 +266,11 @@ See [ColumnFamilyDescriptorBuilder](https://hbase.apache.org/devapidocs/org/apac
 
 ### In-Memory ColumnFamilies
 
-ColumnFamilies can optionally be defined as in-memory. Data is still persisted to disk, just like any other ColumnFamily. In-memory blocks have the highest priority in the [Block Cache](/docs/architecture/regionserver#block-cache), but it is not a guarantee that the entire table will be in memory.
+ColumnFamilies can optionally be defined as in-memory. Data is still persisted to disk, just like any other ColumnFamily. In-memory blocks have the highest priority in the [Block Cache](/docs/architecture/regionserver#architecture-regionserver-block-cache), but it is not a guarantee that the entire table will be in memory.
 
 See [ColumnFamilyDescriptorBuilder](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ColumnFamilyDescriptorBuilder.html) for more information.
 
-### Compression
+### Compression [#performance-schema-design-compression]
 
 Production systems should use compression with their ColumnFamily definitions. See [Compression and Data Block Encoding In HBase](/docs/compression) for more information.
 
@@ -431,7 +431,7 @@ try {
 table.close();
 ```
 
-### Block Cache
+### Block Cache [#performance-reading-from-hbase-block-cache]
 
 [Scan](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html) instances can be set to use the block cache in the RegionServer via the `setCacheBlocks` method. For input Scans to MapReduce jobs, this should be `false`. For frequently accessed rows, it is advisable to use the block cache.
 
@@ -585,7 +585,7 @@ Services — at least the HBase RegionServers — will need to be restarted in o
 
 A fairly common question on the dist-list is why HBase isn't as performant as HDFS files in a batch context (e.g., as a MapReduce source or sink). The short answer is that HBase is doing a lot more than HDFS (e.g., reading the KeyValues, returning the most current row or specified timestamps, etc.), and as such HBase is 4-5 times slower than HDFS in this processing context. There is room for improvement and this gap will, over time, be reduced, but HDFS will always be faster in this use-case.
 
-## Amazon EC2
+## Amazon EC2 [#performance-amazon-ec2]
 
 Performance questions are common on Amazon EC2 environments because it is a shared environment. You will not see the same throughput as a dedicated server. In terms of running tests on EC2, run them several times for the same reason (i.e., it's a shared environment and you don't know what else is happening on the server).
 
@@ -593,12 +593,12 @@ If you are running on EC2 and post performance questions on the dist-list, pleas
 
 ## Collocating HBase and MapReduce
 
-It is often recommended to have different clusters for HBase and MapReduce. A better qualification of this is: don't collocate an HBase that serves live requests with a heavy MR workload. OLTP and OLAP-optimized systems have conflicting requirements and one will lose to the other, usually the former. For example, short latency-sensitive disk reads will have to wait in line behind longer reads that are trying to squeeze out as much throughput as possible. MR jobs that write to HBase will also generate flushes and compactions, which will in turn invalidate blocks in the [Block Cache](/docs/architecture/regionserver#block-cache).
+It is often recommended to have different clusters for HBase and MapReduce. A better qualification of this is: don't collocate an HBase that serves live requests with a heavy MR workload. OLTP and OLAP-optimized systems have conflicting requirements and one will lose to the other, usually the former. For example, short latency-sensitive disk reads will have to wait in line behind longer reads that are trying to squeeze out as much throughput as possible. MR jobs that write to HBase will also generate flushes and compactions, which will in turn invalidate blocks in the [Block Cache](/docs/architecture/regionserver#architecture-regionserver-block-cache).
 
 If you need to process the data from your live HBase cluster in MR, you can ship the deltas with [CopyTable](/docs/operational-management/tools#copytable) or use replication to get the new data in real time on the OLAP cluster. In the worst case, if you really need to collocate both, set MR to use less Map and Reduce slots than you'd normally configure, possibly just one.
 
 When HBase is used for OLAP operations, it's preferable to set it up in a hardened way like configuring the ZooKeeper session timeout higher and giving more memory to the MemStores (the argument being that the Block Cache won't be used much since the workloads are usually long scans).
 
-## Case Studies
+## Case Studies [#performance-case-studies]
 
 For Performance and Troubleshooting Case Studies, see [Apache HBase Case Studies](/docs/case-studies).

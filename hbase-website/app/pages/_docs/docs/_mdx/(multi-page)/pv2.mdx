@@ -51,7 +51,7 @@ It is easy to confuse the state that the Procedure itself is keeping with that o
 
 Rollback is called when the procedure or one of the sub-procedures has failed. The rollback step is supposed to cleanup the resources created during the execute() step. In case of failure and restart, rollback() may be called multiple times, so again the code must be idempotent.
 
-### Metrics
+### Metrics [#pv2-procedures-metrics]
 
 There are hooks for collecting metrics on submit of the procedure and on finish.
 

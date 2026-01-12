@@ -156,7 +156,7 @@ The HBase Reference Guide is written in Asciidoc and built using [AsciiDoctor](h
 
 ## Auto-Generated Content
 
-Some parts of the HBase Reference Guide, most notably [config.files](/docs/configuration/default#hbase-default-configuration), are generated automatically, so that this area of the documentation stays in sync with the code. This is done by means of an XSLT transform, which you can examine in the source at _src/main/xslt/configuration_to_asciidoc_chapter.xsl_. This transforms the _hbase-common/src/main/resources/hbase-default.xml_ file into an Asciidoc output which can be included in the Reference Guide.
+Some parts of the HBase Reference Guide, most notably [config.files](/docs/configuration/default#configuration-default-hbase-default-configuration), are generated automatically, so that this area of the documentation stays in sync with the code. This is done by means of an XSLT transform, which you can examine in the source at _src/main/xslt/configuration_to_asciidoc_chapter.xsl_. This transforms the _hbase-common/src/main/resources/hbase-default.xml_ file into an Asciidoc output which can be included in the Reference Guide.
 
 Sometimes, it is necessary to add configuration parameters or modify their descriptions. Make the modifications to the source file, and they will be included in the Reference Guide when it is rebuilt.
 

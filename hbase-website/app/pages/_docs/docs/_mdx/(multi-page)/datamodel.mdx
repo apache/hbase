@@ -153,7 +153,7 @@ Namespace membership is determined during table creation by specifying a fully-q
 <table namespace>:<table qualifier>
 ```
 
-#### Examples
+#### Examples [#datamodel-namespace-management-examples]
 
 ```bash
 #Create a namespace
@@ -182,7 +182,7 @@ There are two predefined special namespaces:
 - hbase - system namespace, used to contain HBase internal tables
 - default - tables with no explicit specified namespace will automatically fall into this namespace
 
-#### Examples
+#### Examples #datamodel-predefined-namespaces-examples
 
 ```bash
 #namespace=foo and table qualifier=bar
@@ -251,7 +251,7 @@ Gets are executed via [Table.get](<https://hbase.apache.org/devapidocs/org/apach
 
 [Put](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Put.html) either adds new rows to a table (if the key is new) or can update existing rows (if the key already exists). Puts are executed via [Table.put](<https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#put(org.apache.hadoop.hbase.client.Put)>) (non-writeBuffer) or [Table.batch](<https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#batch(java.util.List,java.lang.Object%5B%5D)>) (non-writeBuffer)
 
-### Scans
+### Scans [#data-model-operations-scans]
 
 [Scan](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html) allow iteration over multiple rows for specified attributes.
 
@@ -545,7 +545,7 @@ Thus, while HBase can support not only a wide number of columns per row, but a h
 The only way to get a complete set of columns that exist for a ColumnFamily is to process all the rows.
 For more information about how HBase stores data internally, see [keyvalue](/docs/architecture/regions#keyvalue).
 
-## Joins
+## Joins [#datamodel-joins]
 
 Whether HBase supports joins is a common question on the dist-list, and there is a simple answer: it doesn't, at not least in the way that RDBMS' support them (e.g., with equi-joins or outer-joins in SQL). As has been illustrated in this chapter, the read data model operations in HBase are Get and Scan.
 

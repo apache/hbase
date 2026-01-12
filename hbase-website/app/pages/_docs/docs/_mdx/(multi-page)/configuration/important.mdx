@@ -33,7 +33,7 @@ See [zookeeper](/docs/zookeeper).
 
 This is the "...number of volumes that are allowed to fail before a DataNode stops offering service. By default, any volume failure will cause a datanode to shutdown" from the *hdfs-default.xml* description. You might want to set this to about half the amount of your available disks.
 
-#### `hbase.regionserver.handler.count`
+#### `hbase.regionserver.handler.count` [#configuration-important-hbaseregionserverhandlercount]
 
 This setting defines the number of threads that are kept open to answer incoming requests to user tables. The rule of thumb is to keep this number low when the payload per request approaches the MB (big puts, scans using a large cache) and high when the payload is small (gets, small puts, ICVs, deletes). The total size of the queries in progress is limited by the setting `hbase.ipc.server.max.callqueue.size`.
 
@@ -47,7 +47,7 @@ You can get a sense of whether you have too little or too many handlers by [rpc.
 
 HBase ships with a reasonable, conservative configuration that will work on nearly all machine types that people might want to test with. If you have larger machines — HBase has 8G and larger heap — you might find the following configuration options helpful. TODO.
 
-### Compression
+### Compression [#configuration-important-recommended-configurations-compression]
 
 You should consider enabling ColumnFamily compression. There are several options that are near-frictionless and in most all cases boost performance by reducing the size of StoreFiles and thus reducing I/O.
 
@@ -93,7 +93,7 @@ Major compactions are absolutely necessary for StoreFile clean-up. Do not disabl
 
 For more information about compactions and the compaction file selection process, see [compaction](/docs/architecture/regions#compaction)
 
-### Speculative Execution
+### Speculative Execution [#configuration-important-recommended-configurations-speculative-execution]
 
 Speculative Execution of MapReduce tasks is on by default, and for HBase clusters it is generally advised to turn off Speculative Execution at a system-level unless you need it for a specific case, where it can be configured per-job. Set the properties `mapreduce.map.speculative` and `mapreduce.reduce.speculative` to false.
 

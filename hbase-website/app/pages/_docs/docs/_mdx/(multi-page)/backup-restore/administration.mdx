@@ -21,16 +21,16 @@ For example, run the following command as hbase superuser to view the progress o
 $ hbase backup progress <backup_id>
 ```
 
-#### Positional Command-Line Arguments
+#### Positional Command-Line Arguments [#backup-restore-administation-managing-backup-progress-positional-command-line-arguments]
 
 **_backup_id_**  
 Specifies the backup that you want to monitor by seeing the progress information. The backupId is case-sensitive.
 
-#### Named Command-Line Arguments
+#### Named Command-Line Arguments [#backup-restore-administation-manging-backup-progress-named-command-line-arguments]
 
 None.
 
-#### Example usage
+#### Example usage [#backup-restore-administation-manging-backup-progress-example-usage]
 
 ```bash
 hbase backup progress backupId_1467823988425
@@ -45,12 +45,12 @@ in the backup, status, and start and end time. Specify the number of backup sess
 $ hbase backup history <backup_id>
 ```
 
-#### Positional Command-Line Arguments
+#### Positional Command-Line Arguments [#backup-restore-administation-managing-backup-history-positional-command-line-arguments]
 
 **_backup_id_**  
 Specifies the backup that you want to monitor by seeing the progress information. The backupId is case-sensitive.
 
-#### Named Command-Line Arguments
+#### Named Command-Line Arguments [#backup-restore-administation-managing-backup-history-named-command-line-arguments]
 
 **_-n \<num_records\>_**  
 (Optional) The maximum number of backup records (Default: 10).
@@ -64,7 +64,7 @@ The name of the backup set to obtain history for. Mutually exclusive with the _-
 **_-t \<table_name\>_**  
 The name of table to obtain history for. Mutually exclusive with the _-s_ option.
 
-#### Example usage
+#### Example usage [#backup-restore-administation-managing-backup-history-example-usage]
 
 ```bash
 $ hbase backup history
@@ -80,16 +80,16 @@ This command can be used to obtain information about a specific backup image.
 $ hbase backup describe <backup_id>
 ```
 
-#### Positional Command-Line Arguments
+#### Positional Command-Line Arguments [#backup-restore-administation-describing-a-backup-image-command-line-arguments]
 
 **_backup_id_**
 The ID of the backup image to describe.
 
-#### Named Command-Line Arguments
+#### Named Command-Line Arguments [#backup-restore-administation-describing-a-backup-image-named-command-line-arguments]
 
 None.
 
-#### Example usage
+#### Example usage [#backup-restore-administation-describing-a-backup-image-example-usage]
 
 ```bash
 $ hbase backup describe backupId_1467823988425
@@ -106,7 +106,7 @@ $ hbase backup delete -l <backup_id1,backup_id2,...>
 $ hbase backup delete -k <days>
 ```
 
-#### Named Command-Line Arguments
+#### Named Command-Line Arguments [#backup-restore-administation-deleting-backup-images-named-command-line-arguments]
 
 **_-l \<backup_id1,backup_id2,...\>_**  
 Comma-separated list of backup IDs to delete.
@@ -118,7 +118,7 @@ Deletes all backup images completed more than the specified number of days ago.
 These options are **mutually exclusive**. Only one of `-l` or `-k` may be used at a time.
 </Callout>
 
-#### Example Usage
+#### Example Usage [#backup-restore-administation-deleting-backup-images-example-usage]
 
 Delete specific backup images by ID:
 
@@ -156,15 +156,15 @@ automatically recover on its own.
 $ hbase backup repair
 ```
 
-#### Positional Command-Line Arguments
+#### Positional Command-Line Arguments [#backup-restore-administation-backup-repair-command-positional-command-line-arguments]
 
 None.
 
-### Named Command-Line Arguments
+#### Named Command-Line Arguments [#backup-restore-administation-backup-repair-command-named-command-line-arguments]
 
 None.
 
-#### Example usage
+#### Example usage [#backup-restore-administation-backup-repair-command-example-usage]
 
 ```bash
 $ hbase backup repair

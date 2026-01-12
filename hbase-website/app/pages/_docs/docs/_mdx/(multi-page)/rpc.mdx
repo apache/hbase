@@ -40,7 +40,7 @@ For more detail on the protobufs involved, see the
 
 Client initiates connection.
 
-#### Client
+#### Client [#rpc-connection-setup-client]
 
 On connection setup, client sends a preamble followed by a connection header.
 
@@ -136,9 +136,9 @@ Server can do the codec or it cannot.
 If new version of a codec with say, tighter encoding, then give it a new class name.
 Codecs will live on the server for all time so old clients can connect.
 
-## Notes
+## Notes [#rpc-notes]
 
-### Constraints
+### Constraints [#rpc-constraints]
 
 In some part, current wire-format — i.e.
 all requests and responses preceded by a length — has been dictated by current server non-async architecture.
@@ -173,7 +173,7 @@ This will cause the client to connect to the server with no codec specified.
 If a server sees no codec, it will return all responses in pure protobuf.
 Running pure protobuf all the time will be slower than running with cellblocks.
 
-#### Compression
+#### Compression [#rpc-notes-rpc-configurations-compression]
 
 Uses hadoop's compression codecs.
 To enable compressing of passed CellBlocks, set `hbase.client.rpc.compressor` to the name of the Compressor to use.

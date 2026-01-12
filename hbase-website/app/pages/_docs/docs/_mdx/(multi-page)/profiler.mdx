@@ -3,13 +3,13 @@ title: "Profiler Servlet"
 description: "Integrated, on-demand profiling via the Async Profiler project."
 ---
 
-## Background
+## Background [#profiler-background]
 
 [HBASE-21926](https://issues.apache.org/jira/browse/HBASE-21926) introduced a new servlet that
 supports integrated, on-demand profiling via the
 [Async Profiler](https://github.com/jvm-profiling-tools/async-profiler) project.
 
-## Prerequisites
+## Prerequisites [#profiler-prerequisites]
 
 Go to the [Async Profiler Home Page](https://github.com/jvm-profiling-tools/async-profiler), download
 a release appropriate for your platform, and install on every cluster host. If running a Linux
@@ -21,7 +21,7 @@ Set `ASYNC_PROFILER_HOME` in the environment (put it in hbase-env.sh) to the roo
 async-profiler install location, or pass it on the HBase daemon's command line as a system property
 as `-Dasync.profiler.home=/path/to/async-profiler`.
 
-## Usage
+## Usage [#profiler-usage]
 
 Once the prerequisites are satisfied, access to async-profiler is available by way of the HBase UI
 or direct interaction with the infoserver.
@@ -74,11 +74,11 @@ Output formats:
 
 The 'duration' parameter specifies how long to collect trace data before generating output, specified in seconds. The default is 10 seconds.
 
-## UI
+## UI [#profiler-ui]
 
 In the UI, there is a new entry 'Profiler' in the top menu that will run the default action, which is to profile the CPU usage of the local process for thirty seconds and then produce FlameGraph SVG output.
 
-## Notes
+## Notes [#profiler-notes]
 
 The query parameter `pid` can be used to specify the process id of a specific process to be profiled. If this parameter is missing the local process in which the infoserver is embedded will be profiled. Profile targets that are not JVMs might work but is not specifically supported. There are security implications. Access to the infoserver should be appropriately restricted.
 

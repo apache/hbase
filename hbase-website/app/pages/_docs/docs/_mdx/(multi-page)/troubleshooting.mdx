@@ -33,13 +33,13 @@ ZooKeeper: *TODO*
 
 For stand-alone deployments the logs are obviously going to be on a single machine, however this is a development configuration only. Production deployments need to run on a cluster.
 
-### NameNode
+### NameNode [#troubleshooting-logs-namenode]
 
 The NameNode log is on the NameNode server. The HBase Master is typically run on the NameNode server, and well as ZooKeeper.
 
 For smaller clusters the JobTracker/ResourceManager is typically run on the NameNode server as well.
 
-### DataNode
+### DataNode [#troubleshooting-log-locations-datanode]
 
 Each DataNode server will have a DataNode log for HDFS, as well as a RegionServer log for HBase.
 
@@ -156,13 +156,13 @@ Similarly, to enable GC logging for client processes, uncomment one of the below
 
 For more information on GC pauses, see the [3 part blog post](https://blog.cloudera.com/blog/2011/02/avoiding-full-gcs-in-hbase-with-memstore-local-allocation-buffers-part-1/) by Todd Lipcon and [Long GC pauses](/docs/performance#long-gc-pauses) above.
 
-## Resources
+## Resources [#troubleshooting-resources]
 
-### Mailing Lists
+### Mailing Lists [#troubleshooting-resources-mailing-lists]
 
 Ask a question on the [Apache HBase mailing lists](https://hbase.apache.org/mailing-lists.html). The 'dev' mailing list is aimed at the community of developers actually building Apache HBase and for features currently under development, and 'user' is generally used for questions on released versions of Apache HBase. Before going to the mailing list, make sure your question has not already been answered by searching the mailing list archives first. For those who prefer to communicate in Chinese, they can use the 'user-zh' mailing list instead of the 'user' list. Take some time crafting your question. See [Getting Answers](http://www.mikeash.com/getting_answers.html) for ideas on crafting good questions. A quality question that includes all context and exhibits evidence the author has tried to find answers in the manual and out on lists is more likely to get a prompt response.
 
-### Slack
+### Slack [#troubleshooting-resources-slack]
 
 \#hbase on [https://the-asf.slack.com/](https://the-asf.slack.com/)
 
@@ -172,11 +172,11 @@ Ask a question on the [Apache HBase mailing lists](https://hbase.apache.org/mail
 
 \#hbase on irc.freenode.net
 
-### JIRA
+### JIRA [#troubleshooting-resources-jira]
 
 [JIRA](https://issues.apache.org/jira/browse/HBASE) is also really helpful when looking for Hadoop/HBase-specific issues.
 
-## Tools
+## Tools [#troubleshooting-tools]
 
 ### Builtin Tools
 
@@ -454,7 +454,7 @@ It's a good practice to build dashboards with all the important graphs per machi
 
 clusterssh+top, it's like a poor man's monitoring system and it can be quite useful when you have only a few machines as it's very easy to setup. Starting clusterssh will give you one terminal per machine and another terminal in which whatever you type will be retyped in every window. This means that you can type `top` once and it will start it for all of your machines at the same time giving you full view of the current state of your cluster. You can also tail all the logs at the same time, edit files, etc.
 
-## Client
+## Client [#troubleshooting-client]
 
 For more information on the HBase client, see [client](/docs/architecture/client).
 
@@ -557,7 +557,7 @@ You may also need to download the [unlimited strength JCE policy files](http://w
 
 Refer to [Master Registry (new as of 2.3.0)](/docs/architecture/client#masterregistry-rpc-hedging) and [Client configuration and dependencies connecting to an HBase cluster](/docs/configuration/default#client-configuration-and-dependencies-connecting-to-an-hbase-cluster) for more details.
 
-## MapReduce
+## MapReduce [#troubleshooting-mapreduce]
 
 ### You Think You're On The Cluster, But You're Actually Local [!toc]
 
@@ -602,7 +602,7 @@ See [HBase, MapReduce, and the CLASSPATH](/docs/mapreduce#hbase-mapreduce-and-th
 
 See [HBASE-10304 Running an hbase job jar: IllegalAccessError: class com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass com.google.protobuf.LiteralByteString](https://issues.apache.org/jira/browse/HBASE-10304) and [HBASE-11118 non environment variable solution for "IllegalAccessError: class com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass com.google.protobuf.LiteralByteString"](https://issues.apache.org/jira/browse/HBASE-11118). The issue can also show up when trying to run spark jobs. See [HBASE-10877 HBase non-retriable exception list should be expanded](https://issues.apache.org/jira/browse/HBASE-10877).
 
-## NameNode
+## NameNode [#troubleshooting-namenode]
 
 For more information on the NameNode, see [HDFS](/docs/architecture/hdfs).
 
@@ -684,7 +684,7 @@ If you use replication and `/hbase/oldWALs/` is using more space than you expect
 
 **Do not** manage WALs manually via HDFS.
 
-## Network
+## Network [#troubleshooting-network]
 
 ### Network Spikes
 
@@ -696,9 +696,9 @@ See [Managed Compactions](/docs/configuration/important#managed-compactions) for
 
 HBase expects the loopback IP Address to be 127.0.0.1.
 
-### Network Interfaces
+### Network Interfaces [#troubleshooting-network-interfaces]
 
-Are all the network interfaces functioning correctly? Are you sure? See the Troubleshooting Case Study in [Case Studies](/docs/troubleshooting#case-studies).
+Are all the network interfaces functioning correctly? Are you sure? See the Troubleshooting Case Study in [Case Studies](/docs/troubleshooting#troubleshooting-case-studies).
 
 ## RegionServer
 
@@ -997,7 +997,7 @@ If you are attempting to run in standalone mode and see this error, please walk 
 
 ### Shutdown Errors
 
-## ZooKeeper
+## ZooKeeper [#troubleshooting-zookeeper]
 
 ### Startup Errors
 
@@ -1017,7 +1017,7 @@ See the [ZooKeeper Operating Environment Troubleshooting](https://cwiki.apache.o
 
 Additionally, the utility [zkcli](/docs/troubleshooting#zkcli) may help investigate ZooKeeper issues.
 
-## Amazon EC2
+## Amazon EC2 [#troubleshooting-amazon-ec2]
 
 ### ZooKeeper does not seem to work on Amazon EC2
 
@@ -1140,7 +1140,7 @@ at org.apache.hadoop.hbase.HBaseTestingUtility.startMiniCluster
 
 ... then try issuing the command umask 022 before launching tests. This is a workaround for [HDFS-2556](https://issues.apache.org/jira/browse/HDFS-2556)
 
-## Case Studies
+## Case Studies [#troubleshooting-case-studies]
 
 For Performance and Troubleshooting Case Studies, see [Apache HBase Case Studies](/docs/case-studies).
 

@@ -3,7 +3,7 @@ title: "Synchronous Replication"
 description: "Setting up synchronous replication between HBase clusters for strong consistency and automatic failover capabilities."
 ---
 
-## Background
+## Background [#sync-replication-background]
 
 The current [Cluster Replication](/docs/operational-management/cluster-replication) in HBase in asynchronous. So if the master cluster crashes, the slave cluster may not have the
 newest data. If users want strong consistency then they can not switch to the slave cluster.

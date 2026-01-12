@@ -3,7 +3,7 @@ title: "Bulk Data Generator Tool"
 description: "This is a random data generator tool for HBase tables leveraging Hbase bulk load. It can create pre-splited HBase table and the generated data is uniformly distributed to all the regions of the table."
 ---
 
-## Usage
+## Usage [#bulk-data-generator-tool-usage]
 
 ```bash
 usage: hbase org.apache.hadoop.hbase.util.bulkdatagenerator.BulkDataGeneratorTool <OPTIONS> [-D<property=value>]*
@@ -26,7 +26,7 @@ hbase org.apache.hadoop.hbase.util.bulkdatagenerator.BulkDataGeneratorTool -t TE
 hbase org.apache.hadoop.hbase.util.bulkdatagenerator.BulkDataGeneratorTool -t TEST_TABLE -mc 10 -r 100 -sc 10 -Dmapreduce.map.memory.mb=8192
 ```
 
-## Overview
+## Overview [#bulk-data-generator-tool-overview]
 
 ### Table Schema
 

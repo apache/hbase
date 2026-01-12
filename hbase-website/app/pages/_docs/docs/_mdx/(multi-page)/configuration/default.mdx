@@ -5,18 +5,18 @@ description: "HBase default configuration properties and how to customize them v
 
 ## *hbase-site.xml* and *hbase-default.xml*
 
-Just as in Hadoop where you add site-specific HDFS configuration to the *hdfs-site.xml* file, for HBase, site specific customizations go into the file *conf/hbase-site.xml*. For the list of configurable properties, see [hbase default configurations](/docs/configuration/default#hbase-default-configuration) below or view the raw *hbase-default.xml* source file in the HBase source code at *src/main/resources*.
+Just as in Hadoop where you add site-specific HDFS configuration to the *hdfs-site.xml* file, for HBase, site specific customizations go into the file *conf/hbase-site.xml*. For the list of configurable properties, see [hbase default configurations](/docs/configuration/default#configuration-default-hbase-default-configuration) below or view the raw *hbase-default.xml* source file in the HBase source code at *src/main/resources*.
 
 Not all configuration options make it out to *hbase-default.xml*. Some configurations would only appear in source code; the only way to identify these changes are through code review.
 
 Currently, changes here will require a cluster restart for HBase to notice the change.
 
-## HBase Default configuration
+## HBase Default configuration [#configuration-default-hbase-default-configuration]
 
 TODO:
 The documentation below is generated using the default hbase configuration file, hbase-default.xml, as source.
 
-## *hbase-env.sh*
+## hbase-env.sh [#configuration-default-hbase-env-sh]
 
 Set HBase environment variables in this file. Examples include options to pass the JVM on start of an HBase daemon such as heap size and garbage collector configs. You can also set configurations for HBase configuration, log directories, niceness, ssh options, where to locate process pid files, etc. Open the file at *conf/hbase-env.sh* and peruse its content. Each option is fairly well documented. Add your own environment variables here if you want them read by HBase daemons on startup.
 

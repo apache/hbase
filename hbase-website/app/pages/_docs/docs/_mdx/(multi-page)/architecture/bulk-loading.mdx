@@ -3,7 +3,7 @@ title: "Bulk Loading"
 description: "Efficient methods for loading large datasets into HBase using MapReduce to generate HFiles and directly load them into the cluster."
 ---
 
-## Overview
+## Overview [#bulk-loading-overview]
 
 HBase includes several methods of loading data into tables. The most straightforward method is to either use the `TableOutputFormat` class from a MapReduce job, or use the normal client APIs; however, these are not always the most efficient methods.
 
@@ -33,7 +33,7 @@ $ hadoop jar hbase-mapreduce-VERSION.jar completebulkload [-c /path/to/hbase/con
 
 The `-c config-file` option can be used to specify a file containing the appropriate hbase parameters (e.g., hbase-site.xml) if not supplied already on the CLASSPATH (In addition, the CLASSPATH must contain the directory that has the zookeeper configuration file if zookeeper is NOT managed by HBase).
 
-## See Also
+## See Also [#bulk-loading-see-also]
 
 For more information about the referenced utilities, see [ImportTsv](/docs/operational-management/tools#importtsv) and [CompleteBulkLoad](/docs/operational-management/tools#completebulkload).
 
@@ -51,7 +51,7 @@ Should an HBase cluster lose account of regions or files during an outage or err
 
 Before you begin the 'adoption', ensure the `hbase:meta` table is in a healthy state. Run the `CatalogJanitor` by executing the `catalogjanitor_run` command on the HBase shell. When finished, check the `HBCK Report` page on the Master UI. Work on fixing any inconsistencies, holes, or overlaps found before proceeding. The `hbase:meta` table is the authority on where all data is to be found and must be consistent for the `completebulkload` tool to work properly.
 
-The `completebulkload` tool takes a directory and a `tablename`. The directory has subdirectories named for column families of the targeted `tablename`. In these subdirectories are `hfiles` to load. Given this structure, you can pass errant region directories (and the table name to which the region directory belongs) and the tool will bring the data files back into the fold by moving them under the approprate serving directory. If stray files, then you will need to mock up this structure before invoking the `completebulkload` tool; you may have to look at the file content using the [HFile Tool](/docs/operational-management/tools#hfile-tool) to see what the column family to use is. When the tool completes its run, you will notice that the source errant directory has had its storefiles moved/removed. It is now desiccated since its data has been drained, and the pointed-to directory can be safely removed. It may still have `.regioninfo` files and other subdirectories but they are of no relevance now (There may be content still under the _recovered_edits_ directory; a TODO is tooling to replay the content of _recovered_edits_ if needed; see [Add RecoveredEditsPlayer](https://issues.apache.org/jira/browse/HBASE-22976)). If you pass `completebulkload` a directory without store files, it will run and note the directory is storefile-free. Just remove such 'empty' directories.
+The `completebulkload` tool takes a directory and a `tablename`. The directory has subdirectories named for column families of the targeted `tablename`. In these subdirectories are `hfiles` to load. Given this structure, you can pass errant region directories (and the table name to which the region directory belongs) and the tool will bring the data files back into the fold by moving them under the approprate serving directory. If stray files, then you will need to mock up this structure before invoking the `completebulkload` tool; you may have to look at the file content using the [HFile Tool](/docs/operational-management/tools#operational-management-tools-hfile-tool) to see what the column family to use is. When the tool completes its run, you will notice that the source errant directory has had its storefiles moved/removed. It is now desiccated since its data has been drained, and the pointed-to directory can be safely removed. It may still have `.regioninfo` files and other subdirectories but they are of no relevance now (There may be content still under the _recovered_edits_ directory; a TODO is tooling to replay the content of _recovered_edits_ if needed; see [Add RecoveredEditsPlayer](https://issues.apache.org/jira/browse/HBASE-22976)). If you pass `completebulkload` a directory without store files, it will run and note the directory is storefile-free. Just remove such 'empty' directories.
 
 For example, presuming a directory at the top level in HDFS named `eb3352fb5c9c9a05feeb2caba101e1cc` has data we need to re-add to the HBase `TestTable`:
 

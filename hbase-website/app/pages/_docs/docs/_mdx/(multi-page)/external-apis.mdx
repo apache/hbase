@@ -419,7 +419,7 @@ The following are the scan parameters:
 - `maxversions` - To limit the number of versions of each column to be returned.
 - `batchsize` - To limit the maximum number of values returned for each call to next().
 - `limit` - The number of rows to return in the scan operation.
-- `cacheblocks` - Whether to use the [Block Cache](/docs/performance#block-cache) in the RegionServer. By default `true`.
+- `cacheblocks` - Whether to use the [Block Cache](/docs/architecture/regionserver#performance-reading-from-hbase-block-cache) in the RegionServer. By default `true`.
 - `reversed` - When set to `true`, reverse scan will be executed. By default `false`.
 - `filter` - Allows to specify a filter for the scan as an `application/x-www-form-urlencoded` MIME format string.
 - `filter_b64` - On versions which include the [HBASE-28518](https://issues.apache.org/jira/browse/HBASE-28518) patch, `filter_b64` allows to specify a [URL-safe base64](https://datatracker.ietf.org/doc/html/rfc4648#section-5) encoded filter for the scan. When both `filter` and `filter_b64` are specified, only `filter_b64` is considered.

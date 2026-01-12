@@ -13,7 +13,7 @@ For additional information, see [HBase Backup Options](https://web.archive.org/w
 
 Some environments can tolerate a periodic full shutdown of their HBase cluster, for example if it is being used a back-end analytic capacity and not serving front-end web-pages. The benefits are that the NameNode/Master are RegionServers are down, so there is no chance of missing any in-flight changes to either StoreFiles or metadata. The obvious con is that the cluster is down. The steps include:
 
-#### Stop HBase
+#### Stop HBase [#operational-management-backup-and-snapshots-stop-hbase]
 
 #### Distcp
 
@@ -45,7 +45,7 @@ HBase Snapshots allow you to take a copy of a table (both contents and metadata)
 
 Prior to version 0.94.6, the only way to backup or to clone a table is to use CopyTable/ExportTable, or to copy all the hfiles in HDFS after disabling the table. The disadvantages of these methods are that you can degrade region server performance (Copy/Export Table) or you need to disable the table, that means no reads or writes; and this is usually unacceptable.
 
-### Configuration
+### Configuration [#operational-management-backup-and-snapshots-configuration]
 
 To turn on the snapshot support just set the `hbase.snapshot.enabled` property to true. (Snapshots are enabled by default in 0.95+ and off by default in 0.94.6+)
 
@@ -227,7 +227,7 @@ You can store and retrieve snapshots from Amazon S3, using the following procedu
   Azure Blob Storage](/docs/operational-management/backup-and-snapshots#storing-snapshots-in-microsoft-azure-blob-storage).
 </Callout>
 
-### Prerequisites
+### Prerequisites [#operational-management-backup-and-snapshots-stroing-in-s3-prerequisites]
 
 - You must be using HBase 1.0 or higher and Hadoop 2.6.1 or higher, which is the first configuration that uses the Amazon AWS SDK.
 - You must use the `s3a://` protocol to connect to Amazon S3. The older `s3n://` and `s3://` protocols have various limitations and do not use the Amazon AWS SDK.
@@ -269,7 +269,7 @@ $ hbase org.apache.hadoop.hbase.snapshot.SnapshotInfo \
 
 You can store snapshots in Microsoft Azure Blog Storage using the same techniques as in [Storing Snapshots in an Amazon S3 Bucket](/docs/operational-management/backup-and-snapshots#storing-snapshots-in-an-amazon-s3-bucket).
 
-### Prerequisites
+### Prerequisites [#operational-management-backup-and-snapshots-stroing-in-azure-prerequisites]
 
 - You must be using HBase 1.2 or higher with Hadoop 2.7.1 or higher. No version of HBase supports Hadoop 2.7.0.
 - Your hosts must be configured to be aware of the Azure blob storage filesystem. See [https://hadoop.apache.org/docs/r2.7.1/hadoop-azure/index.html](https://hadoop.apache.org/docs/r2.7.1/hadoop-azure/index.html).
@@ -280,7 +280,7 @@ After you meet the prerequisites, follow the instructions in [Storing Snapshots 
 
 You can store snapshots in Aliyun Object Storage Service(Aliyun OSS) using the same techniques as in [Storing Snapshots in an Amazon S3 Bucket](/docs/operational-management/backup-and-snapshots#storing-snapshots-in-an-amazon-s3-bucket).
 
-### Prerequisites
+### Prerequisites [#operational-management-backup-and-snapshots-stroing-in-aliyun-prerequisites]
 
 - You must be using HBase 1.2 or higher with Hadoop 2.9.1 or higher.
 - Your hosts must be configured to be aware of the Aliyun oss filesystem. See [https://hadoop.apache.org/docs/stable/hadoop-aliyun/tools/hadoop-aliyun/index.html](https://hadoop.apache.org/docs/stable/hadoop-aliyun/tools/hadoop-aliyun/index.html).

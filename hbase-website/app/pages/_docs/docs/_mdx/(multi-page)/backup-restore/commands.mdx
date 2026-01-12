@@ -34,7 +34,7 @@ Record the backup ID that appears at the end of a successful backup. In case the
 dataset with a restore operation, having the backup ID readily available can save time.
 </Callout>
 
-#### Positional Command-Line Arguments
+#### Positional Command-Line Arguments [#backup-restore-commands-creating-a-backup-image-positional-command-line-arguments]
 
 **_type_**  
 The type of backup to execute: _full_ or _incremental_. As a reminder, an _incremental_ backup requires a _full_ backup to
@@ -44,7 +44,7 @@ already exist.
 The _backup_path_ argument specifies the full filesystem URI of where to store the backup image. Valid prefixes are
 _hdfs:_, _webhdfs:_, _s3a:_ or other compatible Hadoop File System implementations.
 
-#### Named Command-Line Arguments
+#### Named Command-Line Arguments [#backup-restore-commands-creating-a-backup-image-named-command-line-arguments]
 
 **_-t \<table_name\[,table_name\]\>_**  
 A comma-separated list of tables to back up. If no tables are specified, all tables are backed up. No regular-expression or
@@ -74,7 +74,7 @@ are different, we should use -i option to skip checksum-checks.
 (Optional) Allows specification of the name of a YARN queue which the MapReduce job to create the backup should be executed in. This option
 is useful to prevent backup tasks from stealing resources away from other MapReduce jobs of high importance.
 
-#### Example usage
+#### Example usage [#backup-restore-commands-creating-a-backup-image-example-usage]
 
 ```bash
 $ hbase backup create full hdfs://host5:9000/data/backup -t SALES2,SALES3 -w 3
@@ -92,7 +92,7 @@ redistributed the RegionServers for the operation to complete successfully.
 hbase restore <backup_path> <backup_id>
 ```
 
-#### Positional Command-Line Arguments
+#### Positional Command-Line Arguments [#backup-restore-commands-restoring-a-backup-image-positional-command-line-arguments]
 
 **_backup_path_**  
 The _backup_path_ argument specifies the full filesystem URI of where to store the backup image. Valid prefixes are
@@ -101,7 +101,7 @@ _hdfs:_, _webhdfs:_, _s3a:_ or other compatible Hadoop File System implementatio
 **_backup_id_**  
 The backup ID that uniquely identifies the backup image to be restored.
 
-#### Named Command-Line Arguments
+#### Named Command-Line Arguments [#backup-restore-commands-restoring-a-backup-image-named-command-line-arguments]
 
 **_-t \<table_name\[,table_name\]\>_**  
 A comma-separated list of tables to restore. See [Backup Sets](/docs/backup-restore/commands#using-backup-sets) for more
@@ -153,16 +153,16 @@ into a daily incremental backup image, or daily incremental backups into a weekl
 $ hbase backup merge <backup_ids>
 ```
 
-#### Positional Command-Line Arguments
+#### Positional Command-Line Arguments [#backup-restore-commands-merging-incremental-backup-images-positional-command-line-arguments]
 
 **_backup_ids_**  
 A comma-separated list of incremental backup image IDs that are to be combined into a single image.
 
-#### Named Command-Line Arguments
+#### Named Command-Line Arguments [#backup-restore-commands-merging-incremental-backup-images-named-command-line-arguments]
 
 None.
 
-#### Example usage
+#### Example usage [#backup-restore-commands-merging-incremental-backup-images-example-usage]
 
 ```bash
 $ hbase backup merge backupId_1467823988425,backupId_1467827588425
@@ -224,7 +224,7 @@ a valid value for the _backup_set_name_ value.
 **_delete_**  
 Deletes a backup set. Enter the value for the _backup_set_name_ option directly after the `hbase backup set delete` command.
 
-#### Positional Command-Line Arguments
+#### Positional Command-Line Arguments [#backup-restore-commands-using-backup-sets-positional-command-line-arguments]
 
 **_backup_set_name_**  
 Use to assign or invoke a backup set name. The backup set name must contain only printable characters and cannot have any spaces.

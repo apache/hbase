@@ -39,7 +39,7 @@ Enable HFile v3, by setting `hfile.format.version` to 3 in _hbase-site.xml_. Thi
 
 </Step>
 <Step>
-Enable SASL and Kerberos authentication for RPC and ZooKeeper, as described in [security.prerequisites](/docs/security/client-access#prerequisites) and [ZooKeeper](/docs/zookeeper).
+Enable SASL and Kerberos authentication for RPC and ZooKeeper, as described in [security.prerequisites](/docs/security/client-access#security-client-access-prerequisites) and [ZooKeeper](/docs/zookeeper).
 </Step>
 </Steps>
 
@@ -134,7 +134,7 @@ Cell-level ACLs are implemented using tags (see [Tags](/docs/security/data-acces
 1.  Files created by HBase are owned by the operating system user running the HBase process. To interact with HBase files, you should use the API or bulk load facility.
 2.  HBase does not model "roles" internally in HBase. Instead, group names can be granted permissions. This allows external modeling of roles via group membership. Groups are created and manipulated externally to HBase, via the Hadoop group mapping service.
 
-#### Server-Side Configuration
+#### Server-Side Configuration [#security-data-access-acl-server-side-configuration]
 
 <Steps>
 
@@ -464,7 +464,7 @@ Visibility labels can be used in conjunction with ACLs.
 | `!public` | Allow access to users not associated with the public label. |
 | `( secret \| topsecret ) & !probationary` | Allow access to users associated with either the secret or topsecret label and not associated with the probationary label. |
 
-### Server-Side Configuration
+### Server-Side Configuration [#security-data-access-visibility-labels-server-side-configuration]
 
 <Steps>
 
@@ -757,11 +757,11 @@ It is also possible to encrypt the WAL. Even though WALs are transient, it is ne
 
 ### Enable or disable the feature.
 
-The "Transparent Encryption of Data At Rest" feature is enabled by default, meaning the users can define tables with column families where the HFiles and WAL files will be encrypted by HBase, assuming the feature is properly configured (see [Server-Side Configuration](/docs/security/data-access#server-side-configuration)).
+The "Transparent Encryption of Data At Rest" feature is enabled by default, meaning the users can define tables with column families where the HFiles and WAL files will be encrypted by HBase, assuming the feature is properly configured (see [Server-Side Configuration](/docs/security/data-access#security-data-access-transparent-encryption-of-data-at-test-server-side-configuration)).
 
 In some cases (e.g. due to custom security policies), the operator of the HBase cluster might wish to only rely on an encryption at rest mechanism outside of HBase (e.g. those offered by HDFS) and wants to ensure that HBase's encryption at rest system is inactive. Since [HBASE-25181](https://issues.apache.org/jira/browse/HBASE-25181) it is possible to explicitly disable HBase's own encryption by setting `hbase.crypto.enabled` to `false`. This configuration is `true` by default. If it is set to `false`, the users won't be able to create any table (column family) with HFile and WAL file encryption and the related create table shell (or API) commands will fail if they try.
 
-### Server-Side Configuration
+### Server-Side Configuration [#security-data-access-transparent-encryption-of-data-at-test-server-side-configuration]
 
 This procedure assumes you are using the default Java keystore implementation. If you are using a custom implementation, check its documentation and adjust accordingly.
 

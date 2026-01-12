@@ -566,10 +566,10 @@ public class MyMapper extends TableMapper<Text, LongWritable> {
   }
 ```
 
-## Speculative Execution
+## Speculative Execution [#mapreduce-speculative-execution]
 
 It is generally advisable to turn off speculative execution for MapReduce jobs that use HBase as a source.
 This can either be done on a per-Job basis through properties, or on the entire cluster.
 Especially for longer running jobs, speculative execution will create duplicate map-tasks which will double-write your data to HBase; this is probably not what you want.
 
-See [Speculative Execution](/docs/configuration/important#speculative-execution) for more information.
+See [Speculative Execution](/docs/configuration/important#configuration-important-recommended-configurations-speculative-execution) for more information.

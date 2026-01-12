@@ -3,16 +3,16 @@ title: "RegionServer"
 description: "HBase RegionServer implementation, interfaces, read/write paths, block cache, memstore management, and performance tuning."
 ---
 
-`HRegionServer` is the RegionServer implementation. It is responsible for serving and managing regions. In a distributed cluster, a RegionServer runs on a [DataNode](/docs/architecture/hdfs#datanode).
+`HRegionServer` is the RegionServer implementation. It is responsible for serving and managing regions. In a distributed cluster, a RegionServer runs on a [DataNode](/docs/architecture/hdfs#hdfs-datanode).
 
-## Interface
+## Interface [#architecture-regionserver-interface]
 
 The methods exposed by `HRegionRegionInterface` contain both data-oriented and region-maintenance methods:
 
 - Data (get, put, delete, next, etc.)
 - Region (splitRegion, compactRegion, etc.) For example, when the `Admin` method `majorCompact` is invoked on a table, the client is actually iterating through all regions for the specified table and requesting a major compaction directly to each region.
 
-## Processes
+## Processes [#architecture-regionserver-processes]
 
 The RegionServer runs a variety of background threads:
 
@@ -36,7 +36,7 @@ Periodically checks the RegionServer's WAL.
 
 Coprocessors were added in 0.92. There is a thorough [Blog Overview of CoProcessors](https://blogs.apache.org/hbase/entry/coprocessor_introduction) posted. Documentation will eventually move to this reference guide, but the blog is the most current information available at this time.
 
-## Block Cache
+## Block Cache [#architecture-regionserver-block-cache]
 
 HBase provides two different BlockCache implementations to cache data read from HDFS: the default on-heap `LruBlockCache` and the `BucketCache`, which is (usually) off-heap. This section discusses benefits and drawbacks of each implementation, how to choose the appropriate option, and configuration options for each.
 
@@ -600,7 +600,7 @@ During ServerCrashProcedure, SplitWALManager will create one SplitWALProcedure f
 
 Region Server will receive a SplitWALCallable and execute it, which is much more straightforward than before. It will return null if success and return exception if there is any error.
 
-#### Performance [!toc]
+#### Performance [!toc] [#architecture-regionserver-wal-splitting-based-on-procedurev2-performance]
 
 According to tests on a cluster which has 5 regionserver and 1 master. procedureV2 coordinated WAL splitting has a better performance than ZK coordinated WAL splitting no master when restarting the whole cluster or one region server crashing.
 

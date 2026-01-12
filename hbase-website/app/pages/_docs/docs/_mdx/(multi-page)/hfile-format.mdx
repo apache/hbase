@@ -243,7 +243,7 @@ Note: this feature was introduced in HBase 0.98
 
 Version 3 of HFile makes changes needed to ease management of encryption at rest and cell-level metadata (which in turn is needed for cell-level ACLs and cell-level visibility labels). For more information see [hbase.encryption.server](/docs/security/data-access#transparent-encryption-of-data-at-rest), [hbase.tags](/docs/security/data-access#tags), [hbase.accesscontrol.configuration](/docs/hbase-incompatibilities#interface-accesscontrolconstants), and [hbase.visibility.labels](/docs/security/data-access#visibility-labels).
 
-### Overview
+### Overview [#hfile-format-with-inline-blocks-v2-overview]
 
 The version of HBase introducing the above features reads HFiles in versions 1, 2, and 3 but only writes version 3 HFiles.
 Version 3 HFiles are structured the same as version 2 HFiles.

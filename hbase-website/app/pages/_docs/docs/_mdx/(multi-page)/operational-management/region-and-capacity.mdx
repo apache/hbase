@@ -48,7 +48,7 @@ Aside from the disk space necessary to store the data, one RS may not be able to
 
 Number of nodes can also be driven by required throughput for reads and/or writes. The throughput one can get per node depends a lot on data (esp. key/value sizes) and request patterns, as well as node and system configuration. Planning should be done for peak load if it is likely that the load would be the main driver of the increase of the node count. PerformanceEvaluation and [ycsb](/docs/ycsb) tools can be used to test single node or a test cluster.
 
-For write, usually 5-15Mb/s per RS can be expected, since every region server has only one active WAL. There's no good estimate for reads, as it depends vastly on data, requests, and cache hit rate. [perf.casestudy](/docs/performance#case-studies) might be helpful.
+For write, usually 5-15Mb/s per RS can be expected, since every region server has only one active WAL. There's no good estimate for reads, as it depends vastly on data, requests, and cache hit rate. [perf.casestudy](/docs/performance#performance-case-studies) might be helpful.
 
 #### JVM GC limitations
 

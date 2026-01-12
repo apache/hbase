@@ -3,7 +3,7 @@ title: "RegionServer Off-Heap Read/Write Path"
 description: "Using off-heap memory for HBase read and write paths to reduce GC pressure and improve P99/P999 RPC latencies."
 ---
 
-## Overview
+## Overview [#offheap-read-write-overview]
 
 To help reduce P99/P999 RPC latencies, HBase 2.x has made the read and write path use a pool of offheap buffers. Cells are
 allocated in offheap memory outside of the purview of the JVM garbage collector with attendent reduction in GC pressure.

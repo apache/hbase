@@ -3,11 +3,11 @@ title: "Tracing"
 description: "HBase used to depend on the HTrace project for tracing. After the Apache HTrace project moved to the Attic/retired, we decided to move to OpenTelemetry in HBASE-22120."
 ---
 
-## Overview
+## Overview [#tracing-overview]
 
 The basic support for tracing has been done, where we added tracing for async client, rpc, region read/write/scan operation, and WAL. We use opentelemetry-api to implement the tracing support manually by code, as our code base is way too complicated to be instrumented through a java agent. But notice that you still need to attach the opentelemetry java agent to enable tracing. Please see the official site for [OpenTelemetry](https://opentelemetry.io/) and the documentation for [opentelemetry-java-instrumentation](https://github.com/open-telemetry/opentelemetry-java-instrumentation) for more details on how to properly configure opentelemetry instrumentation.
 
-## Usage
+## Usage [#tracing-usage]
 
 ### Enable Tracing
 

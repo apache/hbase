@@ -70,6 +70,39 @@ const renderer = toClientRenderer(
     const isSinglePage = route?.startsWith("single-page");
     const filteredToc = isSinglePage ? toc.filter((item: any) => item.depth === 1) : toc;
 
+    // Handle hash navigation for single-page after content loads
+    useEffect(() => {
+      if (!isSinglePage) return;
+
+      const hash = window.location.hash;
+      if (!hash) return;
+
+      const targetId = hash.substring(1);
+
+      // Use MutationObserver to wait for the element to exist
+      const observer = new MutationObserver(() => {
+        const element = document.getElementById(targetId);
+        if (element) {
+          observer.disconnect();
+          element.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      });
+
+      // Check if element already exists
+      const element = document.getElementById(targetId);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        // Watch for DOM changes until element appears
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+      }
+
+      return () => observer.disconnect();
+    }, [isSinglePage]);
+
     const grouppedRoutes = [
       "configuration",
       "upgrading",

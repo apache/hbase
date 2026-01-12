@@ -3,7 +3,7 @@ title: "Master"
 description: "HBase Master server responsibilities including RegionServer monitoring, metadata operations, load balancing, and failover behavior."
 ---
 
-`HMaster` is the implementation of the Master Server. The Master server is responsible for monitoring all RegionServer instances in the cluster, and is the interface for all metadata changes. In a distributed cluster, the Master typically runs on the [NameNode](/docs/architecture/hdfs#namenode). J Mohamed Zahoor goes into some more detail on the Master Architecture in this blog posting, [HBase HMaster Architecture](https://web.archive.org/web/20191211053128/http://blog.zahoor.in/2012/08/hbase-hmaster-architecture/).
+`HMaster` is the implementation of the Master Server. The Master server is responsible for monitoring all RegionServer instances in the cluster, and is the interface for all metadata changes. In a distributed cluster, the Master typically runs on the [NameNode](/docs/architecture/hdfs#hdfs-namenode). J Mohamed Zahoor goes into some more detail on the Master Architecture in this blog posting, [HBase HMaster Architecture](https://web.archive.org/web/20191211053128/http://blog.zahoor.in/2012/08/hbase-hmaster-architecture/).
 
 ## Startup Behavior
 
@@ -27,7 +27,7 @@ As mentioned in section [Master Registry (new as of 2.3.0)](/docs/architecture/c
 
 Overall, the master uptime requirements, when this feature is enabled, are even higher for the client operations to go through.
 
-## Interface
+## Interface [#architecture-master-interface]
 
 The methods exposed by `HMasterInterface` are primarily metadata-oriented methods:
 
@@ -35,7 +35,7 @@ The methods exposed by `HMasterInterface` are primarily metadata-oriented method
 - ColumnFamily (addColumn, modifyColumn, removeColumn)
 - Region (move, assign, unassign) For example, when the `Admin` method `disableTable` is invoked, it is serviced by the Master server.
 
-## Processes
+## Processes [#architecture-master-processes]
 
 The Master runs several background threads:
 
