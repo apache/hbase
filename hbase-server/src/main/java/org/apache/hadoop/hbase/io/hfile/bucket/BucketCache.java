@@ -2511,7 +2511,7 @@ public class BucketCache implements BlockCache, HeapSize {
       try {
         Thread.sleep(100);
       } catch (InterruptedException e) {
-        LOG.warn("Interrupted while waint for cache initialization", e);
+        LOG.warn("Interrupted while waiting for cache initialization", e);
         Thread.currentThread().interrupt();
         break;
       }
