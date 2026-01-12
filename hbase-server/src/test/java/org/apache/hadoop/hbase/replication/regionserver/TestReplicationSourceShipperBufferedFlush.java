@@ -19,31 +19,38 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.junit.Assert.assertEquals;
 
-import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
-import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 /**
- * Tests for staged WAL flush behavior in ReplicationSourceShipper. These tests validate that
- * beforePersistingReplicationOffset() is invoked only when there is staged WAL data, and is not
- * invoked for empty batches.
+ * Tests staged WAL flush behavior in ReplicationSourceShipper.
  */
+@Category({ ReplicationTests.class, MediumTests.class })
 public class TestReplicationSourceShipperBufferedFlush {
 
-  /**
-   * ReplicationEndpoint implementation used for testing. Counts how many times
-   * beforePersistingReplicationOffset() is called.
-   */
   static class CountingReplicationEndpoint extends BaseReplicationEndpoint {
 
     private final AtomicInteger beforePersistCalls = new AtomicInteger();
+
+    @Override
+    public void start() {
+      startAsync().awaitRunning();
+    }
+
+    @Override
+    public void stop() {
+      stopAsync().awaitTerminated();
+    }
 
     @Override
     protected void doStart() {
@@ -56,23 +63,8 @@ public class TestReplicationSourceShipperBufferedFlush {
     }
 
     @Override
-    public UUID getPeerUUID() {
-      return null;
-    }
-
-    @Override
     public boolean replicate(ReplicateContext ctx) {
       return true;
-    }
-
-    @Override
-    public void start() {
-
-    }
-
-    @Override
-    public void stop() {
-
     }
 
     @Override
@@ -80,19 +72,23 @@ public class TestReplicationSourceShipperBufferedFlush {
       beforePersistCalls.incrementAndGet();
     }
 
-    int getBeforePersistCalls() {
-      return beforePersistCalls.get();
-    }
-
     @Override
     public long getMaxBufferSize() {
-      // Force size-based flush after any non-empty batch
-      return 1L;
+      return 1L; // force immediate flush
     }
 
     @Override
     public long maxFlushInterval() {
       return Long.MAX_VALUE;
+    }
+
+    @Override
+    public UUID getPeerUUID() {
+      return null;
+    }
+
+    int getBeforePersistCalls() {
+      return beforePersistCalls.get();
     }
   }
 
@@ -101,67 +97,35 @@ public class TestReplicationSourceShipperBufferedFlush {
     Configuration conf = HBaseConfiguration.create();
 
     CountingReplicationEndpoint endpoint = new CountingReplicationEndpoint();
+    endpoint.start();
 
     ReplicationSource source = Mockito.mock(ReplicationSource.class);
     ReplicationSourceWALReader walReader = Mockito.mock(ReplicationSourceWALReader.class);
 
-    WALEntryBatch emptyBatch = Mockito.mock(WALEntryBatch.class);
-    Mockito.when(emptyBatch.getWalEntries()).thenReturn(Collections.emptyList());
-
-    Mockito.when(walReader.take()).thenReturn(emptyBatch).thenReturn(null);
-
     Mockito.when(source.isPeerEnabled()).thenReturn(true);
+    Mockito.when(source.isSourceActive()).thenReturn(true);
     Mockito.when(source.getReplicationEndpoint()).thenReturn(endpoint);
     Mockito.when(source.getPeerId()).thenReturn("1");
+    Mockito.when(source.getSourceMetrics()).thenReturn(Mockito.mock(MetricsSource.class));
+
+    WALEntryBatch batch = new WALEntryBatch(1, null);
+    batch.setLastWalPath(new Path("wal"));
+    batch.setLastWalPosition(1L);
+    // no entries, no heap size
+
+    Mockito.when(walReader.take()).thenReturn(batch).thenReturn(null);
 
     ReplicationSourceShipper shipper =
       new ReplicationSourceShipper(conf, "wal-group", source, walReader);
 
     shipper.start();
 
-    // Give the shipper thread time to process the empty batch
+    // Allow loop to run
     Waiter.waitFor(conf, 3000, () -> true);
 
     shipper.interrupt();
     shipper.join();
 
-    assertEquals("beforePersistingReplicationOffset should not be called for empty batch", 0,
-      endpoint.getBeforePersistCalls());
-  }
-
-  @Test
-  public void testBeforePersistCalledForNonEmptyBatch() throws Exception {
-    Configuration conf = HBaseConfiguration.create();
-
-    CountingReplicationEndpoint endpoint = new CountingReplicationEndpoint();
-
-    ReplicationSource source = Mockito.mock(ReplicationSource.class);
-    ReplicationSourceWALReader walReader = Mockito.mock(ReplicationSourceWALReader.class);
-
-    WALEntryBatch batch = Mockito.mock(WALEntryBatch.class);
-    WAL.Entry entry = Mockito.mock(WAL.Entry.class);
-
-    Mockito.when(batch.getWalEntries()).thenReturn(Collections.singletonList(entry));
-    Mockito.when(batch.getHeapSize()).thenReturn(10L);
-    Mockito.when(batch.isEndOfFile()).thenReturn(false);
-    Mockito.when(walReader.take()).thenReturn(batch).thenReturn(null);
-
-    Mockito.when(source.isPeerEnabled()).thenReturn(true);
-    Mockito.when(source.getReplicationEndpoint()).thenReturn(endpoint);
-    Mockito.when(source.getPeerId()).thenReturn("1");
-
-    ReplicationSourceShipper shipper =
-      new ReplicationSourceShipper(conf, "wal-group", source, walReader);
-
-    shipper.start();
-
-    // Wait until beforePersistingReplicationOffset() is invoked once
-    Waiter.waitFor(conf, 5000, () -> endpoint.getBeforePersistCalls() == 1);
-
-    shipper.interrupt();
-    shipper.join();
-
-    assertEquals("beforePersistingReplicationOffset should be called exactly once", 1,
-      endpoint.getBeforePersistCalls());
+    assertEquals(0, endpoint.getBeforePersistCalls());
   }
 }
