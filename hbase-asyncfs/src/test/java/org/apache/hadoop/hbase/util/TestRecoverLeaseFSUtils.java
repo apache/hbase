@@ -81,19 +81,12 @@ public class TestRecoverLeaseFSUtils {
   private interface FakeLeaseRecoverable {
 
     boolean recoverLease(Path p) throws IOException;
-
-    boolean isFileClosed(Path p) throws IOException;
   }
 
   private static abstract class RecoverableFileSystem extends FileSystem
     implements FakeLeaseRecoverable {
     @Override
     public boolean recoverLease(Path p) throws IOException {
-      return true;
-    }
-
-    @Override
-    public boolean isFileClosed(Path p) throws IOException {
       return true;
     }
   }

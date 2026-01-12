@@ -38,15 +38,17 @@ import org.junit.jupiter.params.provider.Arguments;
  * <p>
  * When you want to use this provider, annotation the test class with
  * {@link HBaseParameterizedTestTemplate}, and provide a static method named "parameters" for
- * providing the arguments. All the test method should be marked with
- * {@link org.junit.jupiter.api.TestTemplate}, not {@link org.junit.jupiter.api.Test} or
- * {@link org.junit.jupiter.params.ParameterizedTest}
+ * providing the arguments. The method must have no parameter, and return a Stream&lt;Arguments&gt;.
+ * All the test method should be marked with {@link org.junit.jupiter.api.TestTemplate}, not
+ * {@link org.junit.jupiter.api.Test} or {@link org.junit.jupiter.params.ParameterizedTest}.
  * @see HBaseParameterizedTestTemplate
  * @see HBaseParameterizedInvocationContext
  * @see HBaseParameterizedParameterResolver
  */
 @InterfaceAudience.Private
 public class HBaseParameterizedTemplateProvider implements TestTemplateInvocationContextProvider {
+
+  private static final String PARAMETERS_METHOD_NAME = "parameters";
 
   @Override
   public boolean supportsTestTemplate(ExtensionContext context) {
@@ -61,14 +63,18 @@ public class HBaseParameterizedTemplateProvider implements TestTemplateInvocatio
     // get parameters
     Method method;
     try {
-      method = testClass.getDeclaredMethod("parameters");
+      method = testClass.getDeclaredMethod(PARAMETERS_METHOD_NAME);
     } catch (NoSuchMethodException e) {
       throw new ExtensionConfigurationException(
-        "Test class must declare static parameters() method");
+        "Test class must declare static " + PARAMETERS_METHOD_NAME + " method");
     }
 
     if (!Modifier.isStatic(method.getModifiers())) {
-      throw new ExtensionConfigurationException("parameters() must be static");
+      throw new ExtensionConfigurationException(PARAMETERS_METHOD_NAME + " method must be static");
+    }
+    if (method.getParameterCount() > 0) {
+      throw new ExtensionConfigurationException(
+        PARAMETERS_METHOD_NAME + " method must not have any parameters");
     }
 
     Stream<Arguments> args;
