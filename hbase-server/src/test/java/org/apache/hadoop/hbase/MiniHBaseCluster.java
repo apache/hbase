@@ -24,7 +24,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -45,7 +44,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 
 /**
  * This class creates a single process HBase cluster. each server. The master uses the 'default'
@@ -122,7 +120,7 @@ public class MiniHBaseCluster extends HBaseCluster {
    * only, not All filesystems as the FileSystem system exit hook does.
    */
   public static class MiniHBaseClusterRegionServer extends HRegionServer {
-    private Thread shutdownThread = null;
+
     private User user = null;
     /**
      * List of RegionServers killed so far. ServerName also comprises startCode of a server, so any
@@ -137,20 +135,6 @@ public class MiniHBaseCluster extends HBaseCluster {
       this.user = User.getCurrent();
     }
 
-    /*
-     * @param currentfs We return this if we did not make a new one.
-     * @param uniqueName Same name used to help identify the created fs.
-     * @return A new fs instance if we are up on DistributeFileSystem.
-     */
-
-    @Override
-    protected void handleReportForDutyResponse(final RegionServerStartupResponse c)
-      throws IOException {
-      super.handleReportForDutyResponse(c);
-      // Run this thread to shutdown our filesystem on way out.
-      this.shutdownThread = new SingleFileSystemShutdownThread(getFileSystem());
-    }
-
     @Override
     public void run() {
       try {
@@ -163,12 +147,6 @@ public class MiniHBaseCluster extends HBaseCluster {
         });
       } catch (Throwable t) {
         LOG.error("Exception in run", t);
-      } finally {
-        // Run this on the way out.
-        if (this.shutdownThread != null) {
-          this.shutdownThread.start();
-          Threads.shutdown(this.shutdownThread, 30000);
-        }
       }
     }
 
@@ -195,29 +173,6 @@ public class MiniHBaseCluster extends HBaseCluster {
 
     private void abortRegionServer(String reason, Throwable cause) {
       super.abort(reason, cause);
-    }
-  }
-
-  /**
-   * Alternate shutdown hook. Just shuts down the passed fs, not all as default filesystem hook
-   * does.
-   */
-  static class SingleFileSystemShutdownThread extends Thread {
-    private final FileSystem fs;
-
-    SingleFileSystemShutdownThread(final FileSystem fs) {
-      super("Shutdown of " + fs);
-      this.fs = fs;
-    }
-
-    @Override
-    public void run() {
-      try {
-        LOG.info("Hook closing fs=" + this.fs);
-        this.fs.close();
-      } catch (IOException e) {
-        LOG.warn("Running hook", e);
-      }
     }
   }
 
