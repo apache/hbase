@@ -94,7 +94,7 @@ public class TestMasterRepairMode {
     Connection conn = TEST_UTIL.getConnection();
     assertTrue(conn.getAdmin().isMasterInMaintenanceMode());
 
-    try (Table table = conn.getTable(MetaTableName.getInstance());
+    try (Table table = conn.getTable(connection.getMetaTableName());
       ResultScanner scanner = table.getScanner(new Scan())) {
       assertNotNull("Could not read meta.", scanner.next());
     }
@@ -121,7 +121,7 @@ public class TestMasterRepairMode {
     Connection conn = TEST_UTIL.getConnection();
     assertTrue(conn.getAdmin().isMasterInMaintenanceMode());
 
-    try (Table table = conn.getTable(MetaTableName.getInstance());
+    try (Table table = conn.getTable(connection.getMetaTableName());
       ResultScanner scanner = table.getScanner(HConstants.TABLE_FAMILY);
       Stream<Result> results = StreamSupport.stream(scanner.spliterator(), false)) {
       assertTrue("Did not find user table records while reading hbase:meta",

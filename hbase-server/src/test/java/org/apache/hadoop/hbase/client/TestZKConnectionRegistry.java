@@ -64,7 +64,7 @@ public class TestZKConnectionRegistry {
   @BeforeClass
   public static void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(3);
-    HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), MetaTableName.getInstance(), 3);
+    HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), connection.getMetaTableName(), 3);
     REGISTRY = new ZKConnectionRegistry(TEST_UTIL.getConfiguration(), null);
   }
 
@@ -89,7 +89,7 @@ public class TestZKConnectionRegistry {
     IntStream.range(0, 3).forEach(i -> {
       HRegionLocation loc = locs.getRegionLocation(i);
       assertNotNull("Replica " + i + " doesn't have location", loc);
-      assertEquals(MetaTableName.getInstance(), loc.getRegion().getTable());
+      assertEquals(connection.getMetaTableName(), loc.getRegion().getTable());
       assertEquals(i, loc.getRegion().getReplicaId());
     });
   }

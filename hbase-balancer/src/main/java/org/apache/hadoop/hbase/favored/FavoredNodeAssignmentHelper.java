@@ -131,7 +131,7 @@ public class FavoredNodeAssignmentHelper {
         puts.add(put);
       }
     }
-    try (Table table = connection.getTable(MetaTableName.getInstance())) {
+    try (Table table = connection.getTable(connection.getMetaTableName())) {
       table.put(puts);
     }
     LOG.info("Added " + puts.size() + " region favored nodes in META");

@@ -262,7 +262,7 @@ public class TestHBCKSCP extends TestSCPBase {
   private static class PrimaryNotMetaRegionSelector extends RegionSelector {
     @Override
     boolean regionFilter(final RegionInfo info) {
-      return !Objects.equals(MetaTableName.getInstance(), info.getTable())
+      return !Objects.equals(connection.getMetaTableName(), info.getTable())
         && Objects.equals(RegionInfo.DEFAULT_REPLICA_ID, info.getReplicaId());
     }
 
@@ -278,7 +278,7 @@ public class TestHBCKSCP extends TestSCPBase {
   private static class ReplicaNonMetaRegionSelector extends RegionSelector {
     @Override
     boolean regionFilter(RegionInfo info) {
-      return !Objects.equals(MetaTableName.getInstance(), info.getTable())
+      return !Objects.equals(connection.getMetaTableName(), info.getTable())
         && !Objects.equals(RegionInfo.DEFAULT_REPLICA_ID, info.getReplicaId());
     }
 

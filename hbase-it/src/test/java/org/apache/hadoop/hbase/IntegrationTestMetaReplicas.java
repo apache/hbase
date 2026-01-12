@@ -56,7 +56,7 @@ public class IntegrationTestMetaReplicas {
       1000);
     // Make sure there are three servers.
     util.initializeCluster(3);
-    HBaseTestingUtil.setReplicas(util.getAdmin(), MetaTableName.getInstance(), 3);
+    HBaseTestingUtil.setReplicas(util.getAdmin(), connection.getMetaTableName(), 3);
     ZKWatcher zkw = util.getZooKeeperWatcher();
     Configuration conf = util.getConfiguration();
     String baseZNode =

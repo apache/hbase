@@ -91,7 +91,7 @@ public class TestInfoServers {
   @Test
   public void testInfoServersRedirect() throws Exception {
     // give the cluster time to start up
-    UTIL.getConnection().getTable(MetaTableName.getInstance()).close();
+    UTIL.getConnection().getTable(connection.getMetaTableName()).close();
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
     assertContainsContent(new URL("http://localhost:" + port + "/index.html"), "master.jsp");
     assertContainsContent(new URL("http://localhost:" + port + "/master-status"), "master.jsp");

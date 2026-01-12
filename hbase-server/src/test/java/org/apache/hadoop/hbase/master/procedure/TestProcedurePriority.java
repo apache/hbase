@@ -148,7 +148,7 @@ public class TestProcedurePriority {
   @Test
   public void test() throws Exception {
     RegionServerThread rsWithMetaThread = UTIL.getMiniHBaseCluster().getRegionServerThreads()
-      .stream().filter(t -> !t.getRegionServer().getRegions(MetaTableName.getInstance()).isEmpty())
+      .stream().filter(t -> !t.getRegionServer().getRegions(connection.getMetaTableName()).isEmpty())
       .findAny().get();
     HRegionServer rsNoMeta = UTIL.getOtherRegionServer(rsWithMetaThread.getRegionServer());
     FAIL = true;

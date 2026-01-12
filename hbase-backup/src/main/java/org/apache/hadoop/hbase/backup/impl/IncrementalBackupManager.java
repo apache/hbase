@@ -170,7 +170,7 @@ public class IncrementalBackupManager extends BackupManager {
         LOG.debug("currentLogFile: " + log.getPath().toString());
         if (AbstractFSWALProvider.isMetaFile(log.getPath())) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Skip {} log file: {}", MetaTableName.getInstance(), log.getPath().getName());
+            LOG.debug("Skip {} log file: {}", conn.getMetaTableName(), log.getPath().getName());
           }
           continue;
         }

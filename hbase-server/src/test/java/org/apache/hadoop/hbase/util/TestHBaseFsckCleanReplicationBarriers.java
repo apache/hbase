@@ -199,7 +199,7 @@ public class TestHBaseFsckCleanReplicationBarriers {
       put.addColumn(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER,
         put.getTimestamp() - barriers.length + i, Bytes.toBytes(barriers[i]));
     }
-    try (Table table = UTIL.getConnection().getTable(MetaTableName.getInstance())) {
+    try (Table table = UTIL.getConnection().getTable(connection.getMetaTableName())) {
       table.put(put);
     }
   }

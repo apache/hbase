@@ -65,7 +65,7 @@ public class MigrateNamespaceTableProcedure
     try (Table nsTable = conn.getTable(TableName.NAMESPACE_TABLE_NAME);
       ResultScanner scanner = nsTable.getScanner(
         new Scan().addFamily(TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES).readAllVersions());
-      BufferedMutator mutator = conn.getBufferedMutator(MetaTableName.getInstance())) {
+      BufferedMutator mutator = conn.getBufferedMutator(env.getMasterServices().getConnection().getMetaTableName())) {
       for (Result result;;) {
         result = scanner.next();
         if (result == null) {
@@ -89,7 +89,7 @@ public class MigrateNamespaceTableProcedure
       switch (state) {
         case MIGRATE_NAMESPACE_TABLE_ADD_FAMILY:
           TableDescriptor metaTableDesc =
-            env.getMasterServices().getTableDescriptors().get(MetaTableName.getInstance());
+            env.getMasterServices().getTableDescriptors().get(env.getMasterServices().getConnection().getMetaTableName());
           if (!metaTableDesc.hasColumnFamily(HConstants.NAMESPACE_FAMILY)) {
             TableDescriptor newMetaTableDesc = TableDescriptorBuilder.newBuilder(metaTableDesc)
               .setColumnFamily(

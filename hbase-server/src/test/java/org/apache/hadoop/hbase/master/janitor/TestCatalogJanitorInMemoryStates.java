@@ -183,7 +183,7 @@ public class TestCatalogJanitorInMemoryStates {
     long start = EnvironmentEdgeManager.currentTime();
     PairOfSameType<RegionInfo> pair = null;
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-      Table metaTable = conn.getTable(MetaTableName.getInstance())) {
+      Table metaTable = conn.getTable(connection.getMetaTableName())) {
       Result result = null;
       RegionInfo region = null;
       while ((EnvironmentEdgeManager.currentTime() - start) < 60000) {

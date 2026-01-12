@@ -57,7 +57,7 @@
         <td align="center"><%= frags.get(tableName.getNameAsString()) != null ? frags.get(tableName.getNameAsString()) + "%" : "n/a" %></td>
       <% } %>
     <% String description = "";
-        if (tableName.equals(TableName.META_TABLE_NAME)){
+        if (tableName.equals(master.getConnection().getMetaTableName())){
             description = "The hbase:meta table holds references to all User Table regions.";
         } else if (tableName.equals(CanaryTool.DEFAULT_WRITE_TABLE_NAME)){
             description = "The hbase:canary table is used to sniff the write availability of"

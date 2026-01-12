@@ -95,7 +95,7 @@ public class TestOpenRegionProcedureBackoff {
     Configuration conf = UTIL.getConfiguration();
     conf.setClass(HConstants.MASTER_IMPL, HMasterForTest.class, HMaster.class);
     UTIL.startMiniCluster(1);
-    UTIL.waitTableAvailable(MetaTableName.getInstance());
+    UTIL.waitTableAvailable(connection.getMetaTableName());
   }
 
   @AfterClass

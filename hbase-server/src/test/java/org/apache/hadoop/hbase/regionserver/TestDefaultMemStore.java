@@ -1003,7 +1003,7 @@ public class TestDefaultMemStore {
     TableDescriptors tds = new FSTableDescriptors(conf);
     FSTableDescriptors.tryUpdateMetaTableDescriptor(conf);
     HRegion meta = HRegion.createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, testDir, conf,
-      tds.get(MetaTableName.getInstance()),
+      tds.get(connection.getMetaTableName()),
       wFactory.getWAL(RegionInfoBuilder.FIRST_META_REGIONINFO));
     // parameterized tests add [#] suffix get rid of [ and ].
     TableDescriptor desc = TableDescriptorBuilder

@@ -48,7 +48,7 @@ public final class RegionReplicaTestHelper {
     throws IOException {
     Configuration conf = util.getConfiguration();
     int regionReplicaCount =
-      util.getAdmin().getDescriptor(MetaTableName.getInstance()).getRegionReplication();
+      util.getAdmin().getDescriptor(connection.getMetaTableName()).getRegionReplication();
     Waiter.waitFor(conf, conf.getLong("hbase.client.sync.wait.timeout.msec", 60000), 200, true,
       new ExplainingPredicate<IOException>() {
         @Override

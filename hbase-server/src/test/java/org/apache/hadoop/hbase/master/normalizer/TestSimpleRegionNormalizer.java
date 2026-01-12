@@ -105,7 +105,7 @@ public class TestSimpleRegionNormalizer {
 
   @Test
   public void testNoNormalizationForMetaTable() {
-    TableName testTable = MetaTableName.getInstance();
+    TableName testTable = connection.getMetaTableName();
     TableDescriptor testMetaTd = TableDescriptorBuilder.newBuilder(testTable).build();
     List<RegionInfo> RegionInfo = new ArrayList<>();
     Map<byte[], Integer> regionSizes = new HashMap<>();

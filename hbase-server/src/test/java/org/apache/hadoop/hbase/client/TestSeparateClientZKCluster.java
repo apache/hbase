@@ -281,13 +281,13 @@ public class TestSeparateClientZKCluster {
   public void testChangeMetaReplicaCount() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     try (RegionLocator locator =
-      TEST_UTIL.getConnection().getRegionLocator(MetaTableName.getInstance())) {
+      TEST_UTIL.getConnection().getRegionLocator(connection.getMetaTableName())) {
       assertEquals(1, locator.getAllRegionLocations().size());
-      HBaseTestingUtil.setReplicas(admin, MetaTableName.getInstance(), 3);
+      HBaseTestingUtil.setReplicas(admin, connection.getMetaTableName(), 3);
       TEST_UTIL.waitFor(30000, () -> locator.getAllRegionLocations().size() == 3);
-      HBaseTestingUtil.setReplicas(admin, MetaTableName.getInstance(), 2);
+      HBaseTestingUtil.setReplicas(admin, connection.getMetaTableName(), 2);
       TEST_UTIL.waitFor(30000, () -> locator.getAllRegionLocations().size() == 2);
-      HBaseTestingUtil.setReplicas(admin, MetaTableName.getInstance(), 1);
+      HBaseTestingUtil.setReplicas(admin, connection.getMetaTableName(), 1);
       TEST_UTIL.waitFor(30000, () -> locator.getAllRegionLocations().size() == 1);
     }
   }

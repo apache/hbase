@@ -197,7 +197,7 @@ public class TestReplicationSource {
       assertTrue(wef.filter(e) == e);
       // Test system WAL edit.
       e = new WAL.Entry(
-        new WALKeyImpl(HConstants.EMPTY_BYTE_ARRAY, MetaTableName.getInstance(), -1, -1, uuid), we);
+        new WALKeyImpl(HConstants.EMPTY_BYTE_ARRAY, connection.getMetaTableName(), -1, -1, uuid), we);
       assertNull(wef.filter(e));
     } finally {
       rs.terminate("Done");

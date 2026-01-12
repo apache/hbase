@@ -72,7 +72,7 @@ public class TestRpcConnectionRegistry {
     UTIL.getConfiguration().setLong(RpcConnectionRegistry.MIN_SECS_BETWEEN_REFRESHES, 0);
     UTIL.getConfiguration().setLong(BootstrapNodeManager.REQUEST_MASTER_MIN_INTERVAL_SECS, 1);
     UTIL.startMiniCluster(3);
-    HBaseTestingUtil.setReplicas(UTIL.getAdmin(), MetaTableName.getInstance(), 3);
+    HBaseTestingUtil.setReplicas(UTIL.getAdmin(), connection.getMetaTableName(), 3);
   }
 
   @AfterClass

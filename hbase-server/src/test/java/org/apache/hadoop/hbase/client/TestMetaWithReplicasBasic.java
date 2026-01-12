@@ -54,7 +54,7 @@ public class TestMetaWithReplicasBasic extends MetaWithReplicasTestBase {
   @Test
   public void testMetaHTDReplicaCount() throws Exception {
     assertEquals(3,
-      TEST_UTIL.getAdmin().getDescriptor(MetaTableName.getInstance()).getRegionReplication());
+      TEST_UTIL.getAdmin().getDescriptor(connection.getMetaTableName()).getRegionReplication());
   }
 
   @Test

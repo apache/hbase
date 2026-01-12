@@ -262,7 +262,7 @@ public class TestReplicaWithCluster {
 
     HTU.startMiniCluster(NB_SERVERS);
     // Enable meta replica at server side
-    HBaseTestingUtil.setReplicas(HTU.getAdmin(), MetaTableName.getInstance(), 2);
+    HBaseTestingUtil.setReplicas(HTU.getAdmin(), connection.getMetaTableName(), 2);
 
     HTU.getHBaseCluster().startMaster();
   }

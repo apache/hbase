@@ -196,8 +196,8 @@
   Table table = master.getConnection().getTable(TableName.valueOf(fqtn));
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
   boolean readOnly = !InfoServer.canUserModifyUI(request, getServletContext(), conf);
-  int numMetaReplicas =
-    master.getTableDescriptors().get(MetaTableName.getInstance()).getRegionReplication();
+  int numMetaReplicas = master.getTableDescriptors()
+    .get(master.getConnection().getMetaTableName()).getRegionReplication();
   Map<String, Integer> frags = null;
   if (showFragmentation) {
       frags = FSUtils.getTableFragmentation(master);
@@ -318,7 +318,7 @@
 
 <div class="row">
 <% //Meta table.
-  if(fqtn.equals(MetaTableName.getInstance().getNameAsString())) { %>
+  if(fqtn.equals(master.getConnection().getMetaTableName().getNameAsString())) { %>
   <section>
     <h2>Table Regions</h2>
     <div class="tabbable">
@@ -654,7 +654,7 @@
   </div>
   <div class="col-md-8">
     <form action="/table.jsp" method="get" class="row g-1 justify-content-end align-items-center" style="margin: 20px 0">
-      <input type="hidden" name="name" value="<%= MetaTableName.getInstance() %>" />
+      <input type="hidden" name="name" value="<%= master.getConnection().getMetaTableName() %>" />
       <div class="col-sm-auto">
         <label for="scan-limit" class="form-label">Scan Limit</label>
       </div>

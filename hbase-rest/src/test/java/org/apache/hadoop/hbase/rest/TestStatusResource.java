@@ -56,7 +56,7 @@ public class TestStatusResource {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestStatusResource.class);
 
-  private static final byte[] META_REGION_NAME = Bytes.toBytes(MetaTableName.getInstance() + ",,1");
+  private static final byte[] META_REGION_NAME = Bytes.toBytes(connection.getMetaTableName() + ",,1");
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();

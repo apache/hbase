@@ -122,7 +122,7 @@ public class TestRegionStateStore {
     put.addColumn(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER,
       Bytes.toBytes("BAD_STATE"));
 
-    try (Table table = UTIL.getConnection().getTable(MetaTableName.getInstance())) {
+    try (Table table = UTIL.getConnection().getTable(connection.getMetaTableName())) {
       table.put(put);
     }
 

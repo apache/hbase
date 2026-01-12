@@ -136,7 +136,7 @@ public class TestShutdownWhileWALBroken {
     RegionServerThread rst1 = UTIL.getMiniHBaseCluster().getRegionServerThreads().get(1);
     HRegionServer liveRS;
     RegionServerThread toKillRSThread;
-    if (rst1.getRegionServer().getRegions(MetaTableName.getInstance()).isEmpty()) {
+    if (rst1.getRegionServer().getRegions(connection.getMetaTableName()).isEmpty()) {
       liveRS = rst0.getRegionServer();
       toKillRSThread = rst1;
     } else {

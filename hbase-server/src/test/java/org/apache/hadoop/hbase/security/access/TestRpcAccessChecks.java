@@ -237,7 +237,7 @@ public class TestRpcAccessChecks {
   public void testExecProcedure() throws Exception {
     verifyAdminCheckForAction((admin) -> {
       // Using existing table instead of creating a new one.
-      admin.execProcedure("flush-table-proc", MetaTableName.getInstance().getNameAsString(),
+      admin.execProcedure("flush-table-proc", connection.getMetaTableName().getNameAsString(),
         new HashMap<>());
     });
   }
@@ -261,7 +261,7 @@ public class TestRpcAccessChecks {
     verifyAdminCheckForAction((admin) -> {
       // Using existing table instead of creating a new one.
       admin.execProcedureWithReturn("flush-table-proc",
-        MetaTableName.getInstance().getNameAsString(), new HashMap<>());
+        connection.getMetaTableName().getNameAsString(), new HashMap<>());
     });
   }
 

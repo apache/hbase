@@ -217,7 +217,7 @@ class AsyncRegionLocator {
       new TableSpanBuilder(conn).setName("AsyncRegionLocator.clearCache").setTableName(tableName);
     TraceUtil.trace(() -> {
       LOG.debug("Clear meta cache for {}", tableName);
-      if (tableName.equals(MetaTableName.getInstance())) {
+      if (tableName.equals(conn.getMetaTableName())) {
         metaRegionLocator.clearCache();
       } else {
         nonMetaRegionLocator.clearCache(tableName);

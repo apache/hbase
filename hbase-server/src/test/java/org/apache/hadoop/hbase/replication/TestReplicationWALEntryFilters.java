@@ -73,7 +73,7 @@ public class TestReplicationWALEntryFilters {
     // meta
     WALKeyImpl key1 =
       new WALKeyImpl(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
-        MetaTableName.getInstance(), EnvironmentEdgeManager.currentTime());
+        connection.getMetaTableName(), EnvironmentEdgeManager.currentTime());
     Entry metaEntry = new Entry(key1, null);
 
     assertNull(filter.filter(metaEntry));

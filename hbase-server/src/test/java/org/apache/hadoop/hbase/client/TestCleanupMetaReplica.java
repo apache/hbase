@@ -48,7 +48,7 @@ public class TestCleanupMetaReplica extends MetaWithReplicasTestBase {
     ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
     List<String> metaReplicaZnodes = zkw.getMetaReplicaNodes();
     assertEquals(3, metaReplicaZnodes.size());
-    HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), MetaTableName.getInstance(), 1);
+    HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), connection.getMetaTableName(), 1);
     metaReplicaZnodes = zkw.getMetaReplicaNodes();
     assertEquals(1, metaReplicaZnodes.size());
   }

@@ -396,7 +396,7 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
     List<Delete> deletes = new ArrayList<>();
     try (
       Table metaTable =
-        env.getMasterServices().getConnection().getTable(MetaTableName.getInstance());
+        env.getMasterServices().getConnection().getTable(env.getMasterServices().getConnection().getMetaTableName());
       ResultScanner scanner = metaTable.getScanner(tableScan)) {
       for (;;) {
         Result result = scanner.next();
@@ -407,7 +407,7 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
       }
       if (!deletes.isEmpty()) {
         LOG.warn("Deleting some vestigial " + deletes.size() + " rows of " + tableName + " from "
-          + MetaTableName.getInstance());
+          + env.getMasterServices().getConnection().getMetaTableName());
         metaTable.delete(deletes);
       }
     }

@@ -93,7 +93,7 @@ public class TestEnableTable {
     }
     // Now I have a nice table, mangle it by removing the HConstants.REGIONINFO_QUALIFIER_STR
     // content from a few of the rows.
-    try (Table metaTable = TEST_UTIL.getConnection().getTable(MetaTableName.getInstance())) {
+    try (Table metaTable = TEST_UTIL.getConnection().getTable(connection.getMetaTableName())) {
       try (ResultScanner scanner = metaTable.getScanner(
         MetaTableAccessor.getScanForTableName(TEST_UTIL.getConfiguration(), tableName))) {
         for (Result result : scanner) {

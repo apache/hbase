@@ -49,7 +49,7 @@ public class TestMultiActionMetricsFromClient {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.getHBaseCluster().waitForActiveAndReadyMaster();
-    TEST_UTIL.waitUntilAllRegionsAssigned(MetaTableName.getInstance());
+    TEST_UTIL.waitUntilAllRegionsAssigned(connection.getMetaTableName());
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
   }
 

@@ -85,13 +85,13 @@ public class TestAdmin2 extends TestAdminBase {
   public void testCreateBadTables() throws IOException {
     String msg = null;
     try {
-      ADMIN.createTable(TableDescriptorBuilder.newBuilder(MetaTableName.getInstance()).build());
+      ADMIN.createTable(TableDescriptorBuilder.newBuilder(connection.getMetaTableName()).build());
     } catch (TableExistsException e) {
       msg = e.toString();
     }
     assertTrue("Unexcepted exception message " + msg,
       msg != null && msg.startsWith(TableExistsException.class.getName())
-        && msg.contains(MetaTableName.getInstance().getNameAsString()));
+        && msg.contains(connection.getMetaTableName().getNameAsString()));
 
     // Now try and do concurrent creation with a bunch of threads.
     TableDescriptor tableDescriptor =
@@ -457,7 +457,7 @@ public class TestAdmin2 extends TestAdminBase {
   private HRegionServer startAndWriteData(TableName tableName, byte[] value)
     throws IOException, InterruptedException {
     // When the hbase:meta table can be opened, the region servers are running
-    TEST_UTIL.getConnection().getTable(MetaTableName.getInstance()).close();
+    TEST_UTIL.getConnection().getTable(connection.getMetaTableName()).close();
 
     // Create the test table and open it
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
@@ -487,7 +487,7 @@ public class TestAdmin2 extends TestAdminBase {
   @Test
   public void testDisableCatalogTable() throws Exception {
     try {
-      ADMIN.disableTable(MetaTableName.getInstance());
+      ADMIN.disableTable(connection.getMetaTableName());
       fail("Expected to throw ConstraintException");
     } catch (ConstraintException e) {
     }

@@ -87,7 +87,7 @@ public class TestRegionMoverWithRSGroupEnable {
     // Remove rs contains hbase:meta, otherwise test looks unstable and buggy in test env.
     ServerName rsContainMeta = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
       .map(t -> t.getRegionServer())
-      .filter(rs -> rs.getRegions(MetaTableName.getInstance()).size() > 0).findFirst().get()
+      .filter(rs -> rs.getRegions(connection.getMetaTableName()).size() > 0).findFirst().get()
       .getServerName();
     LOG.info("{} contains hbase:meta", rsContainMeta);
     List<ServerName> modifiable = new ArrayList<>(allServers);

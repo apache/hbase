@@ -73,12 +73,12 @@ public class TestReadAndWriteRegionInfoFile {
     FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(FS, ROOT_DIR);
     FSTableDescriptors.tryUpdateAndGetMetaTableDescriptor(CONF, FS, ROOT_DIR);
     HRegion r = HBaseTestingUtil.createRegionAndWAL(ri, ROOT_DIR, CONF,
-      fsTableDescriptors.get(MetaTableName.getInstance()));
+      fsTableDescriptors.get(connection.getMetaTableName()));
     // Get modtime on the file.
     long modtime = getModTime(r);
     HBaseTestingUtil.closeRegionAndWAL(r);
     Thread.sleep(1001);
-    r = HRegion.openHRegion(ROOT_DIR, ri, fsTableDescriptors.get(MetaTableName.getInstance()), null,
+    r = HRegion.openHRegion(ROOT_DIR, ri, fsTableDescriptors.get(connection.getMetaTableName()), null,
       CONF);
     // Ensure the file is not written for a second time.
     long modtime2 = getModTime(r);

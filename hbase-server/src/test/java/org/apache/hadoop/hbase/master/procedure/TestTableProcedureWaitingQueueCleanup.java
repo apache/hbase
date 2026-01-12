@@ -123,7 +123,7 @@ public class TestTableProcedureWaitingQueueCleanup {
 
     @Override
     public TableName getTableName() {
-      return MetaTableName.getInstance();
+      return connection.getMetaTableName();
     }
 
     @Override

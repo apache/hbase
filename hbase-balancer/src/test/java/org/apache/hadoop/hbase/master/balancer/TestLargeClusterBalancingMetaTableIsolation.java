@@ -71,7 +71,7 @@ public class TestLargeClusterBalancingMetaTableIsolation {
     // Create regions
     List<RegionInfo> allRegions = new ArrayList<>();
     for (int i = 0; i < NUM_REGIONS; i++) {
-      TableName tableName = i < 3 ? MetaTableName.getInstance() : NON_META_TABLE_NAME;
+      TableName tableName = i < 3 ? connection.getMetaTableName() : NON_META_TABLE_NAME;
       byte[] startKey = new byte[1];
       startKey[0] = (byte) i;
       byte[] endKey = new byte[1];
@@ -99,7 +99,7 @@ public class TestLargeClusterBalancingMetaTableIsolation {
   }
 
   private boolean isMetaTableIsolated(BalancerClusterState cluster) {
-    return isTableIsolated(cluster, MetaTableName.getInstance(), "Meta");
+    return isTableIsolated(cluster, connection.getMetaTableName(), "Meta");
   }
 
 }

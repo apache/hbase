@@ -308,7 +308,7 @@ public class TestMasterOperationsForRegionReplicas {
       ADMIN.disableTable(tableName);
       // now delete one replica info from all the rows
       // this is to make the meta appear to be only partially updated
-      Table metaTable = ADMIN.getConnection().getTable(MetaTableName.getInstance());
+      Table metaTable = ADMIN.getConnection().getTable(connection.getMetaTableName());
       for (byte[] row : tableRows) {
         Delete deleteOneReplicaLocation = new Delete(row);
         deleteOneReplicaLocation.addColumns(HConstants.CATALOG_FAMILY,

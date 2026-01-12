@@ -244,7 +244,7 @@ public class TestMaster {
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(Bytes.toBytes("cf"))).build();
     Table table = TEST_UTIL.createTable(tableDescriptor, null);
     // flush META region
-    TEST_UTIL.flush(MetaTableName.getInstance());
+    TEST_UTIL.flush(connection.getMetaTableName());
     // wait for regionserver report
     Threads.sleep(msgInterval * 2);
     // record flush seqid before cluster shutdown

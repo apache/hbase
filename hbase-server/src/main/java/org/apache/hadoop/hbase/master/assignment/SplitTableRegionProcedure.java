@@ -907,7 +907,7 @@ public class SplitTableRegionProcedure
         LOG.error(
           "pid={} row key of mutation from coprocessor not parsable as region name. "
             + "Mutations from coprocessor should only be for {} table.",
-          getProcId(), MetaTableName.getInstance());
+          getProcId(), env.getMasterServices().getConnection().getMetaTableName());
         throw e;
       }
     }

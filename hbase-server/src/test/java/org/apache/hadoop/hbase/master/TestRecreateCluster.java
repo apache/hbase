@@ -127,7 +127,7 @@ public class TestRecreateCluster {
 
   private void restartHBaseCluster(boolean cleanUpWALs, boolean cleanUpZnodes) throws Exception {
     // flush cache so that everything is on disk
-    TEST_UTIL.getMiniHBaseCluster().flushcache(MetaTableName.getInstance());
+    TEST_UTIL.getMiniHBaseCluster().flushcache(connection.getMetaTableName());
     TEST_UTIL.getMiniHBaseCluster().flushcache();
 
     List<ServerName> oldServers =
@@ -178,7 +178,7 @@ public class TestRecreateCluster {
     put.addColumn(Bytes.toBytes("f"), Bytes.toBytes("c"), Bytes.toBytes("v"));
     table.put(put);
 
-    ensureTableNotColocatedWithSystemTable(tableName, MetaTableName.getInstance());
+    ensureTableNotColocatedWithSystemTable(tableName, connection.getMetaTableName());
   }
 
   private void ensureTableNotColocatedWithSystemTable(TableName userTable, TableName systemTable)

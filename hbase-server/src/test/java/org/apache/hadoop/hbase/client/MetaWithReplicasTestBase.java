@@ -58,7 +58,7 @@ public class MetaWithReplicasTestBase {
       .numAlwaysStandByMasters(1).numMasters(1).numRegionServers(REGIONSERVERS_COUNT).build();
     TEST_UTIL.startMiniCluster(option);
     Admin admin = TEST_UTIL.getAdmin();
-    HBaseTestingUtil.setReplicas(admin, MetaTableName.getInstance(), 3);
+    HBaseTestingUtil.setReplicas(admin, connection.getMetaTableName(), 3);
     AssignmentManager am = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager();
     Set<ServerName> sns = new HashSet<ServerName>();
     ServerName hbaseMetaServerName = am.getRegionStates()

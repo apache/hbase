@@ -50,7 +50,7 @@ public class TestShutdownOfMetaReplicaHolder extends MetaWithReplicasTestBase {
     // checks that the when the server holding meta replica is shut down, the meta replica
     // can be recovered
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-      RegionLocator locator = conn.getRegionLocator(MetaTableName.getInstance())) {
+      RegionLocator locator = conn.getRegionLocator(connection.getMetaTableName())) {
       HRegionLocation hrl = locator.getRegionLocations(HConstants.EMPTY_START_ROW, true).get(1);
       ServerName oldServer = hrl.getServerName();
       TEST_UTIL.getHBaseClusterInterface().killRegionServer(oldServer);

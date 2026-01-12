@@ -140,7 +140,7 @@ class ReportMakingVisitor implements ClientMetaTableAccessor.CloseableVisitor {
         "INCONSISTENCY: Row name is not equal to serialized info:regioninfo content; "
           + "row={} {}; See if RegionInfo is referenced in another {} row? Delete?",
         Bytes.toStringBinary(metaTableRow.getRow()), ri.getRegionNameAsString(),
-        MetaTableName.getInstance());
+        services.getConnection().getMetaTableName());
       return null;
     }
     // Skip split parent region

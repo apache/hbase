@@ -69,7 +69,7 @@ public class TestRSGroupsCPHookCalled extends TestRSGroupsBase {
 
   @Test
   public void testGetRSGroupInfoOfTableCPHookCalled() throws Exception {
-    ADMIN.getRSGroup(MetaTableName.getInstance());
+    ADMIN.getRSGroup(connection.getMetaTableName());
     assertTrue(OBSERVER.preGetRSGroupInfoOfTableCalled);
     assertTrue(OBSERVER.postGetRSGroupInfoOfTableCalled);
   }

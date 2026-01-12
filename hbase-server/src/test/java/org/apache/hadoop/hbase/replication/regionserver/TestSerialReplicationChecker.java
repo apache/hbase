@@ -163,7 +163,7 @@ public class TestSerialReplicationChecker {
       put.addColumn(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER,
         put.getTimestamp() - barriers.length + i, Bytes.toBytes(barriers[i]));
     }
-    try (Table table = UTIL.getConnection().getTable(MetaTableName.getInstance())) {
+    try (Table table = UTIL.getConnection().getTable(connection.getMetaTableName())) {
       table.put(put);
     }
   }
@@ -172,7 +172,7 @@ public class TestSerialReplicationChecker {
     Put put = new Put(region.getRegionName(), EnvironmentEdgeManager.currentTime());
     put.addColumn(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER,
       Bytes.toBytes(state.name()));
-    try (Table table = UTIL.getConnection().getTable(MetaTableName.getInstance())) {
+    try (Table table = UTIL.getConnection().getTable(connection.getMetaTableName())) {
       table.put(put);
     }
   }
@@ -189,7 +189,7 @@ public class TestSerialReplicationChecker {
     put.addColumn(HConstants.REPLICATION_BARRIER_FAMILY,
       ReplicationBarrierFamilyFormat.REPLICATION_PARENT_QUALIFIER,
       ReplicationBarrierFamilyFormat.getParentsBytes(parents));
-    try (Table table = UTIL.getConnection().getTable(MetaTableName.getInstance())) {
+    try (Table table = UTIL.getConnection().getTable(connection.getMetaTableName())) {
       table.put(put);
     }
   }

@@ -58,7 +58,7 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
   @Test
   public void testDisableCatalogTable() throws Exception {
     try {
-      this.admin.disableTable(MetaTableName.getInstance()).join();
+      this.admin.disableTable(connection.getMetaTableName()).join();
       fail("Expected to throw ConstraintException");
     } catch (Exception e) {
     }

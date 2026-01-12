@@ -65,7 +65,7 @@ public class TestAdmin extends TestAdminBase {
   @Test
   public void testListTableDescriptors() throws IOException {
     TableDescriptor metaTableDescriptor =
-      TEST_UTIL.getAdmin().getDescriptor(MetaTableName.getInstance());
+      TEST_UTIL.getAdmin().getDescriptor(connection.getMetaTableName());
     List<TableDescriptor> tableDescriptors = TEST_UTIL.getAdmin().listTableDescriptors(true);
     assertTrue(tableDescriptors.contains(metaTableDescriptor));
     tableDescriptors = TEST_UTIL.getAdmin().listTableDescriptors(false);

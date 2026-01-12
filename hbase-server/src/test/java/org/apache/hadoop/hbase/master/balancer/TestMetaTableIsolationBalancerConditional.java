@@ -94,7 +94,7 @@ public class TestMetaTableIsolationBalancerConditional {
       BalancerConditionalsTestUtil.generateSplits(2 * NUM_SERVERS));
 
     Set<TableName> tablesToBeSeparated =
-      ImmutableSet.<TableName> builder().add(MetaTableName.getInstance())
+      ImmutableSet.<TableName> builder().add(connection.getMetaTableName())
         .add(QuotaUtil.QUOTA_TABLE_NAME).add(productTableName).build();
 
     // Pause the balancer
@@ -149,7 +149,7 @@ public class TestMetaTableIsolationBalancerConditional {
     TableName productTableName, boolean shouldBeBalanced) {
     // Validate that the region assignments
     ServerName metaServer =
-      tableToServers.get(MetaTableName.getInstance()).stream().findFirst().orElseThrow();
+      tableToServers.get(connection.getMetaTableName()).stream().findFirst().orElseThrow();
     ServerName quotaServer =
       tableToServers.get(QuotaUtil.QUOTA_TABLE_NAME).stream().findFirst().orElseThrow();
     Set<ServerName> productServers = tableToServers.get(productTableName);

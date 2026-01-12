@@ -142,7 +142,7 @@ public class TestRegionInfoBuilder {
   @Test
   public void testContainsRangeForMetaTable() {
     TableDescriptor tableDesc =
-      TableDescriptorBuilder.newBuilder(MetaTableName.getInstance()).build();
+      TableDescriptorBuilder.newBuilder(connection.getMetaTableName()).build();
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableDesc.getTableName()).build();
     byte[] startRow = HConstants.EMPTY_START_ROW;
     byte[] row1 = Bytes.toBytes("a,a,0");

@@ -238,7 +238,7 @@ class AsyncNonMetaRegionLocator {
             CatalogReplicaLoadBalanceSimpleSelector.class.getName());
 
         this.metaReplicaSelector = CatalogReplicaLoadBalanceSelectorFactory
-          .createSelector(replicaSelectorClass, MetaTableName.getInstance(), conn, () -> {
+          .createSelector(replicaSelectorClass, conn.getMetaTableName(), conn, () -> {
             int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
             try {
               RegionLocations metaLocations = conn.registry.getMetaRegionLocations()
@@ -246,7 +246,7 @@ class AsyncNonMetaRegionLocator {
               numOfReplicas = metaLocations.size();
             } catch (Exception e) {
               LOG.error("Failed to get table {}'s region replication, ",
-                MetaTableName.getInstance(), e);
+                conn.getMetaTableName(), e);
             }
             return numOfReplicas;
           });
@@ -428,7 +428,7 @@ class AsyncNonMetaRegionLocator {
         // do nothing
     }
 
-    conn.getTable(MetaTableName.getInstance()).scan(scan, new AdvancedScanResultConsumer() {
+    conn.getTable(conn.getMetaTableName()).scan(scan, new AdvancedScanResultConsumer() {
 
       private boolean completeNormally = false;
 

@@ -98,12 +98,12 @@ public class TestRegionServerNoMaster {
     // cache meta location, so we will not go to master to lookup meta region location
     for (JVMClusterUtil.RegionServerThread t : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
       try (RegionLocator locator =
-        t.getRegionServer().getConnection().getRegionLocator(MetaTableName.getInstance())) {
+        t.getRegionServer().getConnection().getRegionLocator(connection.getMetaTableName())) {
         locator.getAllRegionLocations();
       }
     }
     try (
-      RegionLocator locator = HTU.getConnection().getRegionLocator(MetaTableName.getInstance())) {
+      RegionLocator locator = HTU.getConnection().getRegionLocator(connection.getMetaTableName())) {
       locator.getAllRegionLocations();
     }
     // Stop master

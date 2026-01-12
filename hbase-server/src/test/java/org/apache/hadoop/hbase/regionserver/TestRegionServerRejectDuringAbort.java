@@ -136,7 +136,7 @@ public class TestRegionServerRejectDuringAbort {
       .getRegionServerThreads()) {
       HRegionServer regionServer = regionServerThread.getRegionServer();
       if (
-        regionServer.getRegions(MetaTableName.getInstance()).isEmpty()
+        regionServer.getRegions(connection.getMetaTableName()).isEmpty()
           && !regionServer.getRegions(TABLE_NAME).isEmpty()
       ) {
         serverWithoutMeta = regionServer;

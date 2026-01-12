@@ -1929,7 +1929,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
           tableName = ProtobufUtil.toTableName(ri.getTableName());
         }
       }
-      if (!MetaTableName.getInstance().equals(tableName)) {
+      if (!server.getConnection().getMetaTableName().equals(tableName)) {
         throw new ServiceException(ie);
       }
       // We are assigning meta, wait a little for regionserver to finish initialization.

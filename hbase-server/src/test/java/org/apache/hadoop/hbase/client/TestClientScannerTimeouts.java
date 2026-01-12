@@ -454,7 +454,7 @@ public class TestClientScannerTimeouts {
       } else {
         ScanResponse scanRes = super.scan(controller, request);
         String regionName = Bytes.toString(request.getRegion().getValue().toByteArray());
-        if (!regionName.contains(MetaTableName.getInstance().getNameAsString())) {
+        if (!regionName.contains(connection.getMetaTableName().getNameAsString())) {
           tableScannerId = scanRes.getScannerId();
           if (sleepOnOpen) {
             try {

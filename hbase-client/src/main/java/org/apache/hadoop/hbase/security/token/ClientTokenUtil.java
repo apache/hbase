@@ -73,7 +73,7 @@ public final class ClientTokenUtil {
       future.completeExceptionally(ProtobufUtil.handleRemoteException(injectedException));
       return future;
     }
-    AsyncTable<?> table = conn.getTable(MetaTableName.getInstance());
+    AsyncTable<?> table = conn.getTable(conn.getMetaTableName());
     table.<AuthenticationProtos.AuthenticationService.Interface,
       AuthenticationProtos.GetAuthenticationTokenResponse> coprocessorService(
         AuthenticationProtos.AuthenticationService::newStub,
@@ -102,7 +102,7 @@ public final class ClientTokenUtil {
     try {
       injectFault();
 
-      meta = conn.getTable(MetaTableName.getInstance());
+      meta = conn.getTable(conn.getMetaTableName());
       CoprocessorRpcChannel rpcChannel = meta.coprocessorService(HConstants.EMPTY_START_ROW);
       AuthenticationProtos.AuthenticationService.BlockingInterface service =
         AuthenticationProtos.AuthenticationService.newBlockingStub(rpcChannel);

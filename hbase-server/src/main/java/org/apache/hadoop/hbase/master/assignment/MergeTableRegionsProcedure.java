@@ -722,7 +722,7 @@ public class MergeTableRegionsProcedure
         LOG.error(
           "Row key of mutation from coprocessor is not parsable as region name. "
             + "Mutations from coprocessor should only be for {} table.",
-          MetaTableName.getInstance(), e);
+          env.getMasterServices().getConnection().getMetaTableName(), e);
         throw e;
       }
     }

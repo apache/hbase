@@ -196,7 +196,7 @@ public class TestAsyncAdminRpcPriority {
   // that we pass the correct priority
   @Test
   public void testCreateMetaTable() {
-    conn.getAdmin().createTable(TableDescriptorBuilder.newBuilder(MetaTableName.getInstance())
+    conn.getAdmin().createTable(TableDescriptorBuilder.newBuilder(connection.getMetaTableName())
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build()).join();
     verify(masterStub, times(1)).createTable(assertPriority(SYSTEMTABLE_QOS),
       any(CreateTableRequest.class), any());

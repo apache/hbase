@@ -60,7 +60,7 @@ public class TestTableDescriptorBuilder {
   @Test(expected = IOException.class)
   public void testAddCoprocessorTwice() throws IOException {
     String cpName = "a.b.c.d";
-    TableDescriptorBuilder.newBuilder(MetaTableName.getInstance()).setCoprocessor(cpName)
+    TableDescriptorBuilder.newBuilder(connection.getMetaTableName()).setCoprocessor(cpName)
       .setCoprocessor(cpName).build();
   }
 
@@ -68,7 +68,7 @@ public class TestTableDescriptorBuilder {
   public void testPb() throws DeserializationException, IOException {
     final int v = 123;
     TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(MetaTableName.getInstance()).setMaxFileSize(v)
+      TableDescriptorBuilder.newBuilder(connection.getMetaTableName()).setMaxFileSize(v)
         .setDurability(Durability.ASYNC_WAL).setReadOnly(true).setRegionReplication(2).build();
 
     byte[] bytes = TableDescriptorBuilder.toByteArray(htd);

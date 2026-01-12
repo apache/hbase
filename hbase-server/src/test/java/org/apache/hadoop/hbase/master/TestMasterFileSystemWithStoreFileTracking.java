@@ -64,7 +64,7 @@ public class TestMasterFileSystemWithStoreFileTracking {
 
   @Test
   public void tesMetaDescriptorHasSFTConfig() throws Exception {
-    TableDescriptor descriptor = UTIL.getAdmin().getDescriptor(MetaTableName.getInstance());
+    TableDescriptor descriptor = UTIL.getAdmin().getDescriptor(connection.getMetaTableName());
     assertEquals(FILE.name(), descriptor.getValue(TRACKER_IMPL));
   }
 }

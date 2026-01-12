@@ -148,7 +148,7 @@ public class TestRegionReplicas {
     openRegion(HTU, getRS(), hriSecondary);
     Table meta = null;
     try {
-      meta = HTU.getConnection().getTable(MetaTableName.getInstance());
+      meta = HTU.getConnection().getTable(connection.getMetaTableName());
       TestMetaTableAccessor.assertMetaLocation(meta, hriPrimary.getRegionName(),
         getRS().getServerName(), -1, 1, false);
     } finally {

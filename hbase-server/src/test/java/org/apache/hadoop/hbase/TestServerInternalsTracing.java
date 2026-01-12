@@ -77,7 +77,7 @@ public class TestServerInternalsTracing {
     @Override
     protected void before() throws Throwable {
       final HBaseTestingUtil testingUtil = testingUtilSupplier.get();
-      testingUtil.waitTableAvailable(MetaTableName.getInstance());
+      testingUtil.waitTableAvailable(connection.getMetaTableName());
     }
   }
 

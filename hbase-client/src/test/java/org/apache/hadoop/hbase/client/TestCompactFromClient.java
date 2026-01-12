@@ -94,7 +94,7 @@ public class TestCompactFromClient {
       mockedMeta.when(() -> ClientMetaTableAccessor.getTableHRegionLocations(any(AsyncTable.class),
         any(TableName.class))).thenReturn(nullLocationsFuture);
       AsyncTable<AdvancedScanResultConsumer> metaTable = mock(AsyncTable.class);
-      when(connection.getTable(MetaTableName.getInstance())).thenReturn(metaTable);
+      when(connection.getTable(connection.getMetaTableName())).thenReturn(metaTable);
 
       HashedWheelTimer hashedWheelTimer = mock(HashedWheelTimer.class);
       AsyncAdminBuilderBase asyncAdminBuilderBase = mock(AsyncAdminBuilderBase.class);

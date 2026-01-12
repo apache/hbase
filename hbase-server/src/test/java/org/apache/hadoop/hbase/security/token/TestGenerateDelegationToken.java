@@ -97,7 +97,7 @@ public class TestGenerateDelegationToken extends SecureTestCluster {
   private void testToken() throws Exception {
     try (AsyncConnection conn =
       ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
-      AsyncTable<?> table = conn.getTable(MetaTableName.getInstance());
+      AsyncTable<?> table = conn.getTable(conn.getMetaTableName());
       WhoAmIResponse response =
         table.<AuthenticationService.Interface, WhoAmIResponse> coprocessorService(
           AuthenticationService::newStub,
