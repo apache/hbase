@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
+import java.util.Map;
 import java.util.Optional;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -35,14 +36,14 @@ public class ObserverContextImpl<E extends CoprocessorEnvironment> implements Ob
    * Is this operation bypassable?
    */
   private final boolean bypassable;
-  private final User caller;
+  private final ObserverRpcCallContext rpcCallContext;
 
-  public ObserverContextImpl(User caller) {
-    this(caller, false);
+  public ObserverContextImpl(ObserverRpcCallContext rpcCallContext) {
+    this(rpcCallContext, false);
   }
 
-  public ObserverContextImpl(User caller, boolean bypassable) {
-    this.caller = caller;
+  public ObserverContextImpl(ObserverRpcCallContext rpcCallContext, boolean bypassable) {
+    this.rpcCallContext = rpcCallContext;
     this.bypassable = bypassable;
   }
 
@@ -83,8 +84,8 @@ public class ObserverContextImpl<E extends CoprocessorEnvironment> implements Ob
   }
 
   @Override
-  public Optional<User> getCaller() {
-    return Optional.ofNullable(caller);
+  public Optional<ObserverRpcCallContext> getRpcCallContext() {
+    return Optional.ofNullable(rpcCallContext);
   }
 
   /**
@@ -98,8 +99,13 @@ public class ObserverContextImpl<E extends CoprocessorEnvironment> implements Ob
   @Deprecated
   // TODO: Remove this method, ObserverContext should not depend on RpcServer
   public static <E extends CoprocessorEnvironment> ObserverContext<E> createAndPrepare(E env) {
-    ObserverContextImpl<E> ctx = new ObserverContextImpl<>(RpcServer.getRequestUser().orElse(null));
+    Optional<User> user = RpcServer.getRequestUser();
+    ObserverRpcCallContext rpcCallContext =
+      user.map(value -> new ObserverRpcCallContextImpl(value, Map.of())).orElse(null);
+
+    ObserverContextImpl<E> ctx = new ObserverContextImpl<>(rpcCallContext);
     ctx.prepare(env);
+
     return ctx;
   }
 }

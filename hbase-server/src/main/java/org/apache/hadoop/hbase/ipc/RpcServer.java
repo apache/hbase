@@ -800,6 +800,16 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
   }
 
   /**
+   * Returns the RPC connection attributes for the current RPC request. These attributes are sent by
+   * the client when initiating a new connection to the HBase server. The attributes are sent in
+   * {@code ConnectionHeader.attribute} protobuf message.
+   * @return the attribute map. It will be empty if the method is called outside of an RPC context.
+   */
+  public static Map<String, byte[]> getConnectionAttributes() {
+    return getCurrentCall().map(RpcCall::getConnectionAttributes).orElse(Map.of());
+  }
+
+  /**
    * The number of open RPC conections
    * @return the number of open rpc connections
    */
