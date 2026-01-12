@@ -15,28 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.io.asyncfs;
+package org.apache.hadoop.hbase;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+/**
+ * The annotation for running JUnit4 like parameterized tests with JUnit5.
+ * @see HBaseParameterizedTestTemplate
+ */
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@ExtendWith(HBaseParameterizedTemplateProvider.class)
+@InterfaceAudience.Private
+public @interface HBaseParameterizedTestTemplate {
 
-@Tag(MiscTests.TAG)
-@Tag(SmallTests.TAG)
-public class TestSendBufSizePredictor {
-
-  @Test
-  public void test() {
-    SendBufSizePredictor p = new SendBufSizePredictor();
-    assertEquals(8 * 1024, p.guess(5 * 1024));
-    assertEquals(8 * 1024, p.guess(5 * 1024));
-    assertEquals(16 * 1024, p.guess(10 * 1024));
-    // it wont reduce directly to 4KB
-    assertEquals(8 * 1024, p.guess(4 * 1024));
-    // This time it will reduece
-    assertEquals(4 * 1024, p.guess(4 * 1024));
-  }
+  String name() default "[{index}]";
 }
