@@ -260,7 +260,6 @@ export function DocsPage({ loaderData }: { loaderData: DocsLoaderData }) {
   return (
     <DocsLayout
       {...layoutOptions}
-      sidebar={{ className: "w-auto" }}
       tree={tree as PageTree.Root}
       searchToggle={{ enabled: !isSinglePage }}
     >
