@@ -1,6 +1,6 @@
 {
   "title": "Single-Page Documentation",
-  "description": "single page documentation",
+  "description": "Single page documentation",
   "root": true,
   "pages": [
     "index"

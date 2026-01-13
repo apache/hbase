@@ -40,7 +40,7 @@ export function getMDXComponents(overrides?: MDXComponents): MDXComponents {
     h3: (props) => (
       <h3 className="mt-8 mb-1 scroll-mt-28 text-xl font-semibold tracking-tight" {...props} />
     ),
-    p: (props) => <p className="mb-4 text-base leading-7" {...props} />,
+    p: (props) => <p className="mb-4 text-base leading-7 wrap-anywhere" {...props} />,
     ol: (props) => <ol className="mb-4 ml-6 list-decimal space-y-2" {...props} />,
     ul: (props) => <ul className="mb-4 ml-6 list-disc space-y-2" {...props} />,
     li: (props) => <li className="leading-7" {...props} />,

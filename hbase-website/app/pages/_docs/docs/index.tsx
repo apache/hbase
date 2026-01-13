@@ -36,11 +36,13 @@ import { getPageTreePeers } from "fumadocs-core/page-tree";
 import { Card, Cards } from "fumadocs-ui/components/card";
 import { Step, Steps } from "fumadocs-ui/components/steps";
 import { Link } from "@/components/link";
+import type { MDXComponents } from "mdx/types";
 
 // Extend default MDX components to include Steps globally
 // Note: We'll override the 'a' component in the renderer to handle route-specific logic
-const baseMdxComponents = {
+const baseMdxComponents: MDXComponents = {
   ...defaultMdxComponents,
+  p: (props) => <p className="wrap-anywhere" {...props} />,
   Step,
   Steps
 };
@@ -206,8 +208,62 @@ const renderer = toClientRenderer(
 export function DocsPage({ loaderData }: { loaderData: DocsLoaderData }) {
   const { tree, path } = loaderData;
   const Content = renderer[path];
+
+  // Check if we're on single-page route
+  const isSinglePage = path.includes("single-page");
+
+  const layoutOptions = isSinglePage
+    ? {
+        ...baseOptions(),
+        sidebar: {
+          banner: (
+            <div className="px-4 py-2">
+              <p className="text-fd-muted-foreground text-center text-xs leading-relaxed">
+                You're viewing a single-page documentation. All content is merged into one
+                continuous page. You can switch to a multi-page version by using the dropdown above.
+              </p>
+            </div>
+          )
+        }
+      }
+    : baseOptions();
+
+  useEffect(() => {
+    if (!isSinglePage) return;
+
+    const links = document.querySelectorAll<HTMLAnchorElement>("#nd-sidebar a");
+
+    for (const a of links) {
+      if (
+        a.textContent?.trim().includes("Single-Page Documentation") ||
+        a.getAttribute("href") === "/docs/single-page"
+      ) {
+        // Hide instead of remove - React can still clean it up properly
+        a.style.display = "none";
+      }
+    }
+
+    // Cleanup: restore visibility when unmounting
+    return () => {
+      const links = document.querySelectorAll<HTMLAnchorElement>("#nd-sidebar a");
+      for (const a of links) {
+        if (
+          a.textContent?.trim().includes("Single-Page Documentation") ||
+          a.getAttribute("href") === "/docs/single-page"
+        ) {
+          a.style.display = ""; // Restore original display
+        }
+      }
+    };
+  }, [isSinglePage]);
+
   return (
-    <DocsLayout {...baseOptions()} tree={tree as PageTree.Root}>
+    <DocsLayout
+      {...layoutOptions}
+      sidebar={{ className: "w-auto" }}
+      tree={tree as PageTree.Root}
+      searchToggle={{ enabled: !isSinglePage }}
+    >
       <Content tree={tree as PageTree.Root} />
     </DocsLayout>
   );
