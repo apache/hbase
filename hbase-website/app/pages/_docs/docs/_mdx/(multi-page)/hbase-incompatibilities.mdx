@@ -136,7 +136,7 @@ org/apache/hadoop/hbase/regionserver/RegionCoprocessorHost.postAppend:(Lorg/apac
 | Return value type has been changed from void to org.apache.hadoop.hbase.client.Result. | This method has been removed because the return type is part of the method signature. A client program may be interrupted by NoSuchMethodError exception. |
 
 **RegionCoprocessorHost.preStoreFileReaderOpen ( FileSystem fs, Path p,   FSDataInputStreamWrapper in, long size,CacheConfig cacheConf, Reference r )  :  StoreFile.Reader**  
-org/apache/hadoop/hbase/regionserver/RegionCoprocessorHost.preStoreFileReaderOpen:(Lorg/apache/hadoop/fs/FileSystem;Lorg/apache/hadoop/fs/Path;Lorg/apache/hadoop/hbase/io/FSDataInputStreamWrapper;JLorg/apache/hadoop/hbase/io/hfile/CacheConfig;Lorg/apache/hadoop/hbase/io/Reference;)Lorg/apache/hadoop/hbase/regionserver/StoreFile$Reader;
+org/apache/hadoop/hbase/regionserver/RegionCoprocessorHost.preStoreFileReaderOpen:(Lorg/apache/hadoop/fs/FileSystem;Lorg/apache/hadoop/fs/Path;Lorg/apache/hadoop/hbase/io/FSDataInputStreamWrapper;JLorg/apache/hadoop/hbase/io/hfile/CacheConfig;Lorg/apache/hadoop/hbase/io/Reference;)Lorg/apache/hadoop/hbase/regionserver/StoreFile\$Reader;
 
 | Change | Result |
 | ------ | ------ |
@@ -228,7 +228,7 @@ hbase-server-1.0.0.jar, WALEdit.class package org.apache.hadoop.hbase.regionserv
 
 #### WALEdit.getCompaction ( Cell kv ) [static]  :  WALProtos.CompactionDescriptor [!toc]
 
-org/apache/hadoop/hbase/regionserver/wal/WALEdit.getCompaction:(Lorg/apache/hadoop/hbase/Cell;)Lorg/apache/hadoop/hbase/protobuf/generated/WALProtos$CompactionDescriptor;
+org/apache/hadoop/hbase/regionserver/wal/WALEdit.getCompaction:(Lorg/apache/hadoop/hbase/Cell;)Lorg/apache/hadoop/hbase/protobuf/generated/WALProtos\$CompactionDescriptor;
 
 | Change | Result |
 | ------ | ------ |
@@ -236,7 +236,7 @@ org/apache/hadoop/hbase/regionserver/wal/WALEdit.getCompaction:(Lorg/apache/hado
 
 #### WALEdit.getFlushDescriptor ( Cell cell ) [static]  :  WALProtos.FlushDescriptor [!toc]
 
-org/apache/hadoop/hbase/regionserver/wal/WALEdit.getFlushDescriptor:(Lorg/apache/hadoop/hbase/Cell;)Lorg/apache/hadoop/hbase/protobuf/generated/WALProtos$FlushDescriptor;
+org/apache/hadoop/hbase/regionserver/wal/WALEdit.getFlushDescriptor:(Lorg/apache/hadoop/hbase/Cell;)Lorg/apache/hadoop/hbase/protobuf/generated/WALProtos\$FlushDescriptor;
 
 | Change | Result |
 | ------ | ------ |
@@ -244,7 +244,7 @@ org/apache/hadoop/hbase/regionserver/wal/WALEdit.getFlushDescriptor:(Lorg/apache
 
 #### WALEdit.getRegionEventDescriptor ( Cell cell ) [static]  :  WALProtos.RegionEventDescriptor [!toc]
 
-org/apache/hadoop/hbase/regionserver/wal/WALEdit.getRegionEventDescriptor:(Lorg/apache/hadoop/hbase/Cell;)Lorg/apache/hadoop/hbase/protobuf/generated/WALProtos$RegionEventDescriptor;
+org/apache/hadoop/hbase/regionserver/wal/WALEdit.getRegionEventDescriptor:(Lorg/apache/hadoop/hbase/Cell;)Lorg/apache/hadoop/hbase/protobuf/generated/WALProtos\$RegionEventDescriptor;
 
 | Change | Result |
 | ------ | ------ |
@@ -255,7 +255,7 @@ package org.apache.hadoop.hbase.wal
 
 #### WALKey.getBuilder ( WALCellCodec.ByteStringCompressor compressor )  :  WALProtos.WALKey.Builder [!toc]
 
-org/apache/hadoop/hbase/wal/WALKey.getBuilder:(Lorg/apache/hadoop/hbase/regionserver/wal/WALCellCodec$ByteStringCompressor;)Lorg/apache/hadoop/hbase/protobuf/generated/WALProtos$WALKey$Builder;
+org/apache/hadoop/hbase/wal/WALKey.getBuilder:(Lorg/apache/hadoop/hbase/regionserver/wal/WALCellCodec\$ByteStringCompressor;)Lorg/apache/hadoop/hbase/protobuf/generated/WALProtos\$WALKey\$Builder;
 
 | Change | Result |
 | ------ | ------ |
@@ -327,7 +327,7 @@ org/apache/hadoop/hbase/client/Admin.enableTableAsync:(Lorg/apache/hadoop/hbase/
 
 #### Admin.getCompactionState ( TableName p1 ) [abstract]  :  AdminProtos.GetRegionInfoResponse.CompactionState  1 [!toc]
 
-org/apache/hadoop/hbase/client/Admin.getCompactionState:(Lorg/apache/hadoop/hbase/TableName;)Lorg/apache/hadoop/hbase/protobuf/generated/AdminProtos$GetRegionInfoResponse$CompactionState;
+org/apache/hadoop/hbase/client/Admin.getCompactionState:(Lorg/apache/hadoop/hbase/TableName;)Lorg/apache/hadoop/hbase/protobuf/generated/AdminProtos\$GetRegionInfoResponse\$CompactionState;
 
 | Change | Result |
 | ------ | ------ |
@@ -335,7 +335,7 @@ org/apache/hadoop/hbase/client/Admin.getCompactionState:(Lorg/apache/hadoop/hbas
 
 #### Admin.getCompactionStateForRegion ( byte[ ] p1 ) [abstract]  :  AdminProtos.GetRegionInfoResponse.CompactionState  1 [!toc]
 
-org/apache/hadoop/hbase/client/Admin.getCompactionStateForRegion:([B)Lorg/apache/hadoop/hbase/protobuf/generated/AdminProtos$GetRegionInfoResponse$CompactionState;
+org/apache/hadoop/hbase/client/Admin.getCompactionStateForRegion:([B)Lorg/apache/hadoop/hbase/protobuf/generated/AdminProtos\$GetRegionInfoResponse\$CompactionState;
 
 | Change | Result |
 | ------ | ------ |
@@ -403,7 +403,7 @@ hbase-server-1.0.0.jar, HTableWrapper.class package org.apache.hadoop.hbase.clie
 
 **HTableWrapper.createWrapper ( List\<HTableInterface> openTables, TableName tableName, CoprocessorHost.Environment env, ExecutorService pool ) [static]  :  HTableInterface  1**
 
-org/apache/hadoop/hbase/client/HTableWrapper.createWrapper:(Ljava/util/List;Lorg/apache/hadoop/hbase/TableName;Lorg/apache/hadoop/hbase/coprocessor/CoprocessorHost$Environment;Ljava/util/concurrent/ExecutorService;)Lorg/apache/hadoop/hbase/client/HTableInterface;
+org/apache/hadoop/hbase/client/HTableWrapper.createWrapper:(Ljava/util/List;Lorg/apache/hadoop/hbase/TableName;Lorg/apache/hadoop/hbase/coprocessor/CoprocessorHost\$Environment;Ljava/util/concurrent/ExecutorService;)Lorg/apache/hadoop/hbase/client/HTableInterface;
 
 | Change | Result |
 | ------ | ------ |
@@ -578,7 +578,7 @@ PBs have been deprecated in APIs in HBase 2.0.
 
 #### HBaseSnapshotException.getSnapshotDescription ( )  :  HBaseProtos.SnapshotDescription  1 [!toc]
 
-org/apache/hadoop/hbase/snapshot/HBaseSnapshotException.getSnapshotDescription:()Lorg/apache/hadoop/hbase/protobuf/generated/HBaseProtos$SnapshotDescription;
+org/apache/hadoop/hbase/snapshot/HBaseSnapshotException.getSnapshotDescription:()Lorg/apache/hadoop/hbase/protobuf/generated/HBaseProtos\$SnapshotDescription;
 
 | Change | Result |
 | ------ | ------ |
@@ -589,7 +589,7 @@ hbase-client-1.0.0.jar, Result.class package org.apache.hadoop.hbase.client
 
 #### Result.getStats ( )  :  ClientProtos.RegionLoadStats  1 [!toc]
 
-org/apache/hadoop/hbase/client/Result.getStats:()Lorg/apache/hadoop/hbase/protobuf/generated/ClientProtos$RegionLoadStats;
+org/apache/hadoop/hbase/client/Result.getStats:()Lorg/apache/hadoop/hbase/protobuf/generated/ClientProtos\$RegionLoadStats;
 
 | Change | Result |
 | ------ | ------ |
@@ -639,24 +639,24 @@ AccessControlClient.getUserPermissions ( Configuration conf, String tableRegex )
 org/apache/hadoop/hbase/security/access/AccessControlClient.getUserPermissions:(Lorg/apache/hadoop/conf/Configuration;Ljava/lang/String;)Ljava/util/List;
 
 * AccessControlClient.grant ( Configuration conf, String namespace, String userName, Permission.Action... actions )[static]  :  void **DEPRECATED**
-org/apache/hadoop/hbase/security/access/AccessControlClient.grant:(Lorg/apache/hadoop/conf/Configuration;Ljava/lang/String;Ljava/lang/String;[Lorg/apache/hadoop/hbase/security/access/Permission$Action;)V
+org/apache/hadoop/hbase/security/access/AccessControlClient.grant:(Lorg/apache/hadoop/conf/Configuration;Ljava/lang/String;Ljava/lang/String;[Lorg/apache/hadoop/hbase/security/access/Permission\$Action;)V
 
 * AccessControlClient.grant ( Configuration conf, String userName, Permission.Action... actions ) [static]  :  void **DEPRECATED**
-org/apache/hadoop/hbase/security/access/AccessControlClient.grant:(Lorg/apache/hadoop/conf/Configuration;Ljava/lang/String;[Lorg/apache/hadoop/hbase/security/access/Permission$Action;)V
+org/apache/hadoop/hbase/security/access/AccessControlClient.grant:(Lorg/apache/hadoop/conf/Configuration;Ljava/lang/String;[Lorg/apache/hadoop/hbase/security/access/Permission\$Action;)V
 
 * AccessControlClient.grant ( Configuration conf, TableName tableName, String userName, byte[ ] family, byte[ ] qual,Permission.Action... actions ) [static]  :  void **DEPRECATED**
-org/apache/hadoop/hbase/security/access/AccessControlClient.grant:(Lorg/apache/hadoop/conf/Configuration;Lorg/apache/hadoop/hbase/TableName;Ljava/lang/String;[B[B[Lorg/apache/hadoop/hbase/security/access/Permission$Action;)V
+org/apache/hadoop/hbase/security/access/AccessControlClient.grant:(Lorg/apache/hadoop/conf/Configuration;Lorg/apache/hadoop/hbase/TableName;Ljava/lang/String;[B[B[Lorg/apache/hadoop/hbase/security/access/Permission\$Action;)V
 
 * AccessControlClient.isAccessControllerRunning ( Configuration conf ) [static]  :  boolean **DEPRECATED**
 org/apache/hadoop/hbase/security/access/AccessControlClient.isAccessControllerRunning:(Lorg/apache/hadoop/conf/Configuration;)Z
 
 * AccessControlClient.revoke ( Configuration conf, String namespace, String userName, Permission.Action... actions )[static]  :  void **DEPRECATED**
-org/apache/hadoop/hbase/security/access/AccessControlClient.revoke:(Lorg/apache/hadoop/conf/Configuration;Ljava/lang/String;Ljava/lang/String;[Lorg/apache/hadoop/hbase/security/access/Permission$Action;)V
+org/apache/hadoop/hbase/security/access/AccessControlClient.revoke:(Lorg/apache/hadoop/conf/Configuration;Ljava/lang/String;Ljava/lang/String;[Lorg/apache/hadoop/hbase/security/access/Permission\$Action;)V
 
 * AccessControlClient.revoke ( Configuration conf, String userName, Permission.Action... actions ) [static]  :  void **DEPRECATED**
-org/apache/hadoop/hbase/security/access/AccessControlClient.revoke:(Lorg/apache/hadoop/conf/Configuration;Ljava/lang/String;[Lorg/apache/hadoop/hbase/security/access/Permission$Action;)V
+org/apache/hadoop/hbase/security/access/AccessControlClient.revoke:(Lorg/apache/hadoop/conf/Configuration;Ljava/lang/String;[Lorg/apache/hadoop/hbase/security/access/Permission\$Action;)V
 
 * AccessControlClient.revoke ( Configuration conf, TableName tableName, String username, byte[ ] family, byte[ ] qualifier,Permission.Action... actions ) [static]  :  void **DEPRECATED**
-org/apache/hadoop/hbase/security/access/AccessControlClient.revoke:(Lorg/apache/hadoop/conf/Configuration;Lorg/apache/hadoop/hbase/TableName;Ljava/lang/String;[B[B[Lorg/apache/hadoop/hbase/security/access/Permission$Action;)V
+org/apache/hadoop/hbase/security/access/AccessControlClient.revoke:(Lorg/apache/hadoop/conf/Configuration;Lorg/apache/hadoop/hbase/TableName;Ljava/lang/String;[B[B[Lorg/apache/hadoop/hbase/security/access/Permission\$Action;)V
 * HBASE-18731: [compat 1-2] Mark protected methods of QuotaSettings that touch Protobuf internals as IA.Private
 
