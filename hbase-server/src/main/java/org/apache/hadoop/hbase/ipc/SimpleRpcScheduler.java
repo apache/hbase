@@ -67,13 +67,15 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     Abortable server, int highPriorityLevel) {
     int bulkLoadHandlerCount = conf.getInt(HConstants.REGION_SERVER_BULKLOAD_HANDLER_COUNT,
       HConstants.DEFAULT_REGION_SERVER_BULKLOAD_HANDLER_COUNT);
-    int maxQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH, -1);
-    int maxPriorityQueueLength =
-      conf.getInt(RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH, -1);
+    int maxQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH,
+      RpcExecutor.UNDEFINED_MAX_CALLQUEUE_LENGTH);
+    int maxPriorityQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH,
+      RpcExecutor.UNDEFINED_MAX_CALLQUEUE_LENGTH);
     int maxReplicationQueueLength =
-      conf.getInt(RpcScheduler.IPC_SERVER_REPLICATION_MAX_CALLQUEUE_LENGTH, -1);
-    int maxBulkLoadQueueLength =
-      conf.getInt(RpcScheduler.IPC_SERVER_BULKLOAD_MAX_CALLQUEUE_LENGTH, -1);
+      conf.getInt(RpcScheduler.IPC_SERVER_REPLICATION_MAX_CALLQUEUE_LENGTH,
+        RpcExecutor.UNDEFINED_MAX_CALLQUEUE_LENGTH);
+    int maxBulkLoadQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_BULKLOAD_MAX_CALLQUEUE_LENGTH,
+      RpcExecutor.UNDEFINED_MAX_CALLQUEUE_LENGTH);
 
     this.priority = priority;
     this.highPriorityLevel = highPriorityLevel;
