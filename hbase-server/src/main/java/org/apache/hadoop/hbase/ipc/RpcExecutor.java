@@ -58,6 +58,7 @@ public abstract class RpcExecutor {
 
   protected static final int DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT = 250;
   protected static final float DEFAULT_CALL_QUEUE_HANDLER_FACTOR = 0.1f;
+  protected static final int UNDEFINED_MAX_CALLQUEUE_LENGTH = -1;
   public static final String CALL_QUEUE_HANDLER_FACTOR_CONF_KEY =
     "hbase.ipc.server.callqueue.handler.factor";
 
@@ -156,7 +157,7 @@ public abstract class RpcExecutor {
 
     // If soft limit of queue is not provided, then calculate using
     // DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER
-    if (maxQueueLength == -1) {
+    if (maxQueueLength == UNDEFINED_MAX_CALLQUEUE_LENGTH) {
       int handlerCountPerQueue = this.handlerCount / this.numCallQueues;
       maxQueueLength = handlerCountPerQueue * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER;
     }
@@ -230,12 +231,16 @@ public abstract class RpcExecutor {
       .collect(Collectors.groupingBy(Pair::getFirst, Collectors.summingLong(Pair::getSecond)));
   }
 
-  // IMPORTANT: Call this method only ONCE per executor instance.
+  // This method can only be called ONCE per executor instance.
   // Before calling: queueInitArgs[0] contains the soft limit (desired queue capacity)
-  // After calling: queueInitArgs[0] is set to hard limit (max(soft limit,
-  // DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT)) and currentQueueLimit stores the original soft limit.
+  // After calling: queueInitArgs[0] is set to hard limit and currentQueueLimit stores the original
+  // soft limit.
   // Multiple calls would incorrectly use the hard limit as the soft limit.
+  // As all the queues has same initArgs and queueClass, there should be no need to call this again.
   protected void initializeQueues(final int numQueues) {
+    if (!queues.isEmpty()) {
+      throw new RuntimeException("Queues are already initialized");
+    }
     if (queueInitArgs.length > 0) {
       currentQueueLimit = (int) queueInitArgs[0];
       queueInitArgs[0] = Math.max((int) queueInitArgs[0], DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT);

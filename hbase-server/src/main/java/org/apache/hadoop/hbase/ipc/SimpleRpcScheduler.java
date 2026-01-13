@@ -63,11 +63,13 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   public SimpleRpcScheduler(Configuration conf, int handlerCount, int priorityHandlerCount,
     int replicationHandlerCount, int metaTransitionHandler, PriorityFunction priority,
     Abortable server, int highPriorityLevel) {
-    int maxQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH, -1);
-    int maxPriorityQueueLength =
-      conf.getInt(RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH, -1);
+    int maxQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH,
+      RpcExecutor.UNDEFINED_MAX_CALLQUEUE_LENGTH);
+    int maxPriorityQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH,
+      RpcExecutor.UNDEFINED_MAX_CALLQUEUE_LENGTH);
     int maxReplicationQueueLength =
-      conf.getInt(RpcScheduler.IPC_SERVER_REPLICATION_MAX_CALLQUEUE_LENGTH, -1);
+      conf.getInt(RpcScheduler.IPC_SERVER_REPLICATION_MAX_CALLQUEUE_LENGTH,
+        RpcExecutor.UNDEFINED_MAX_CALLQUEUE_LENGTH);
 
     this.priority = priority;
     this.highPriorityLevel = highPriorityLevel;
