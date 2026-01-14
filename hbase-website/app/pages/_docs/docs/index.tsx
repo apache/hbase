@@ -120,6 +120,7 @@ const renderer = toClientRenderer(
       "building-and-developing"
     ];
     const trimmedRoute = route?.endsWith("/") ? route?.slice(0, -1) : route;
+    const mdxFileRoute = `${isSinglePage ? "" : `${trimmedRoute === "" ? "preface" : trimmedRoute}.mdx`}`;
     const isGrouppedRoute = !!trimmedRoute && grouppedRoutes.includes(trimmedRoute);
 
     const [lastModifiedTime, setLastModifiedTime] = useState<Date | undefined>(undefined);
@@ -129,13 +130,13 @@ const renderer = toClientRenderer(
         owner: "apache",
         repo: "hbase",
         // file path in Git
-        path: `${baseGithubPath}${isSinglePage ? "" : `${route}.mdx`}`
+        path: `${baseGithubPath}${mdxFileRoute}`
       }).then((value) => {
         if (value) {
           setLastModifiedTime(value);
         }
       });
-    }, [isSinglePage, route]);
+    }, [isSinglePage, mdxFileRoute]);
 
     // Custom link component that transforms /docs/ links to anchors on single-page
     const CustomLink = ({ href, children, ...rest }: any) => {
@@ -174,7 +175,7 @@ const renderer = toClientRenderer(
           <Mdx components={mdxComponents} />
         </FumaDocsBody>
 
-        {route && (
+        {route !== undefined && (
           <div className="mt-10 flex flex-col gap-10">
             {/* table of content for groupped routes */}
             {isGrouppedRoute && (
@@ -192,7 +193,7 @@ const renderer = toClientRenderer(
 
             <div className="flex items-end gap-3">
               <a
-                href={`https://github.com/apache/hbase/${baseGithubPath}${isSinglePage ? "" : `${trimmedRoute}.mdx`}`}
+                href={`https://github.com/apache/hbase/${baseGithubPath}${mdxFileRoute}`}
                 rel="noreferrer noopener"
                 target="_blank"
                 className="text-fd-secondary-foreground bg-fd-secondary hover:text-fd-accent-foreground hover:bg-fd-accent w-fit rounded-xl border p-2 text-sm font-medium transition-colors"
