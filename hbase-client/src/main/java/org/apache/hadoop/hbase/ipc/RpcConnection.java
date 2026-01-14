@@ -119,9 +119,9 @@ abstract class RpcConnection {
   private String lastSucceededServerPrincipal;
 
   protected RpcConnection(Configuration conf, HashedWheelTimer timeoutTimer, ConnectionId remoteId,
-    String clusterId, boolean isSecurityEnabled, Codec codec, CompressionCodec compressor,
-    CellBlockBuilder cellBlockBuilder, MetricsConnection metrics,
-    Map<String, byte[]> connectionAttributes) throws IOException {
+    String clusterId, boolean isSecurityEnabled, SaslClientAuthenticationProviders providers,
+    Codec codec, CompressionCodec compressor, CellBlockBuilder cellBlockBuilder,
+    MetricsConnection metrics, Map<String, byte[]> connectionAttributes) throws IOException {
     this.timeoutTimer = timeoutTimer;
     this.codec = codec;
     this.compressor = compressor;
@@ -134,8 +134,6 @@ abstract class RpcConnection {
     this.useSasl = isSecurityEnabled;
 
     // Choose the correct Token and AuthenticationProvider for this client to use
-    SaslClientAuthenticationProviders providers =
-      SaslClientAuthenticationProviders.getInstance(conf);
     Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> pair;
     if (useSasl && securityInfo != null) {
       pair = providers.selectProvider(clusterId, ticket);

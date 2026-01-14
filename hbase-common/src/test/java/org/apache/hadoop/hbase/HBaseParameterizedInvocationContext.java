@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.TestTemplateInvocationContext;
@@ -49,6 +50,6 @@ public class HBaseParameterizedInvocationContext implements TestTemplateInvocati
 
   @Override
   public List<Extension> getAdditionalExtensions() {
-    return List.of(new HBaseParameterizedParameterResolver(arguments));
+    return Collections.singletonList(new HBaseParameterizedParameterResolver(arguments));
   }
 }
