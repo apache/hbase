@@ -67,6 +67,7 @@ const renderer = toClientRenderer(
   docs.doc,
   ({ toc, default: Mdx, frontmatter }, { tree }: { tree: PageTree.Root }) => {
     const route = useParams()["*"];
+    const baseGithubPath = "hbase-website/app/pages/_docs/docs/_mdx/(multi-page)/";
 
     // Filter TOC: only H1 (depth: 1) for single-page, all headings for other pages
     const isSinglePage = route?.startsWith("single-page");
@@ -74,10 +75,14 @@ const renderer = toClientRenderer(
 
     // Handle hash navigation for single-page after content loads
     useEffect(() => {
-      if (!isSinglePage) return;
+      if (!isSinglePage) {
+        return;
+      }
 
       const hash = window.location.hash;
-      if (!hash) return;
+      if (!hash) {
+        return;
+      }
 
       const targetId = hash.substring(1);
 
@@ -124,13 +129,13 @@ const renderer = toClientRenderer(
         owner: "apache",
         repo: "hbase",
         // file path in Git
-        path: `hbase-website/app/pages/_docs/docs/_mdx/${route}.mdx`
+        path: `${baseGithubPath}${isSinglePage ? "" : `${route}.mdx`}`
       }).then((value) => {
         if (value) {
           setLastModifiedTime(value);
         }
       });
-    }, [route]);
+    }, [isSinglePage, route]);
 
     // Custom link component that transforms /docs/ links to anchors on single-page
     const CustomLink = ({ href, children, ...rest }: any) => {
@@ -188,7 +193,7 @@ const renderer = toClientRenderer(
             {/* TODO: check this link */}
             <div className="flex items-end gap-3">
               <a
-                href={`https://github.com/apache/hbase/hbase-website/app/pages/_docs/docs/_mdx/${route}.mdx`}
+                href={`https://github.com/apache/hbase/${baseGithubPath}${isSinglePage ? "" : `${trimmedRoute}.mdx`}`}
                 rel="noreferrer noopener"
                 target="_blank"
                 className="text-fd-secondary-foreground bg-fd-secondary hover:text-fd-accent-foreground hover:bg-fd-accent w-fit rounded-xl border p-2 text-sm font-medium transition-colors"
