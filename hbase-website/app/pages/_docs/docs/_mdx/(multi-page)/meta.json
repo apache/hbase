@@ -1,6 +1,6 @@
 {
   "title": "Multi-Page Documentation",
-  "description": "Multiple page documentation",
+  "description": "Split across multiple pages",
   "root": true,
   "pages": [
     "---Getting Started---",
