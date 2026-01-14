@@ -93,7 +93,6 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -426,7 +425,7 @@ public final class BackupCommands {
           .withTargetRootDir(targetBackupDir).withTotalTasks(workers)
           .withBandwidthPerTasks(bandwidth).withNoChecksumVerify(ignoreChecksum)
           .withBackupSetName(setName).withContinuousBackupEnabled(continuousBackup).build();
-        String backupId = admin.backupTables(request);
+        String backupId = admin.backupTables(request).getBackupId();
         System.out.println("Backup session " + backupId + " finished. Status: SUCCESS");
       } catch (IOException e) {
         System.out.println("Backup session finished. Status: FAILURE");
