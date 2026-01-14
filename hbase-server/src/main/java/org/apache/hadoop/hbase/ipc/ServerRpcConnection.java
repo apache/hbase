@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.security.SaslStatus;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.provider.SaslServerAuthenticationProvider;
-import org.apache.hadoop.hbase.security.provider.SaslServerAuthenticationProviders;
 import org.apache.hadoop.hbase.security.provider.SimpleSaslServerAuthenticationProvider;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -137,13 +136,11 @@ abstract class ServerRpcConnection implements Closeable {
 
   protected User user = null;
   protected UserGroupInformation ugi = null;
-  protected SaslServerAuthenticationProviders saslProviders = null;
   protected X509Certificate[] clientCertificateChain = null;
 
   public ServerRpcConnection(RpcServer rpcServer) {
     this.rpcServer = rpcServer;
     this.callCleanup = null;
-    this.saslProviders = SaslServerAuthenticationProviders.getInstance(rpcServer.getConf());
   }
 
   @Override
@@ -781,7 +778,7 @@ abstract class ServerRpcConnection implements Closeable {
       return PreambleResponse.CLOSE;
     }
 
-    this.provider = this.saslProviders.selectProvider(authByte);
+    this.provider = rpcServer.saslProviders.selectProvider(authByte);
     if (this.provider == null) {
       String msg = getFatalConnectionString(version, authByte);
       doBadPreambleHandling(msg, new BadAuthException(msg));
@@ -801,7 +798,7 @@ abstract class ServerRpcConnection implements Closeable {
     if (!this.rpcServer.isSecurityEnabled && !isSimpleAuthentication()) {
       doRawSaslReply(SaslStatus.SUCCESS, new IntWritable(SaslUtil.SWITCH_TO_SIMPLE_AUTH), null,
         null);
-      provider = saslProviders.getSimpleProvider();
+      provider = rpcServer.saslProviders.getSimpleProvider();
       // client has already sent the initial Sasl message and we
       // should ignore it. Both client and server should fall back
       // to simple auth from now on.
