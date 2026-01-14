@@ -17,7 +17,7 @@
 //
 
 import { describe, it, expect } from "vitest";
-import { scoreMatch } from "./docs-search";
+import { scoreMatch } from "@/components/docs/docs-search";
 
 describe("Search Ranking - scoreMatch", () => {
   describe("Exact matches", () => {

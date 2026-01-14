@@ -234,7 +234,6 @@ export function DocsPage({ loaderData }: { loaderData: DocsLoaderData }) {
       tree={tree as PageTree.Root}
       searchToggle={{ enabled: !isSinglePage }}
       shouldRenderPageTree={!isSinglePage}
-      
     >
       <Content tree={tree as PageTree.Root} />
     </DocsLayout>
