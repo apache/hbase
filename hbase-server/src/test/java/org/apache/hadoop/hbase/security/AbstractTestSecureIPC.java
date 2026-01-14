@@ -23,11 +23,11 @@ import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getKeytabFileF
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getPrincipalForTesting;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.loginKerberosPrincipal;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.setSecuredConfiguration;
-import static org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProviders.SELECTOR_KEY;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.either;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
@@ -42,8 +42,6 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Map;
-import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -56,17 +54,10 @@ import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServerFactory;
-import org.apache.hadoop.hbase.security.provider.AuthenticationProviderSelector;
-import org.apache.hadoop.hbase.security.provider.BuiltInProviderSelector;
-import org.apache.hadoop.hbase.security.provider.SaslAuthMethod;
-import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
-import org.junit.Test;
+import org.junit.jupiter.api.TestTemplate;
 import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -74,7 +65,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 
 public class AbstractTestSecureIPC {
 
@@ -120,7 +110,7 @@ public class AbstractTestSecureIPC {
     setSecuredConfiguration(serverConf);
   }
 
-  @Test
+  @TestTemplate
   public void testRpcCallWithEnabledKerberosSaslAuth() throws Exception {
     UserGroupInformation ugi2 = UserGroupInformation.getCurrentUser();
 
@@ -132,8 +122,16 @@ public class AbstractTestSecureIPC {
     callRpcService(User.create(ugi2));
   }
 
-  @Test
-  public void testRpcCallWithEnabledKerberosSaslAuthCanonicalHostname() throws Exception {
+  private static void setCanonicalHostName(InetAddress addr, String canonicalHostName)
+    throws Exception {
+    final Field field = InetAddress.class.getDeclaredField("canonicalHostName");
+    field.setAccessible(true);
+    field.set(addr, canonicalHostName);
+
+  }
+
+  @TestTemplate
+  public void testRpcCallWithKerberosSaslAuthCanonicalHostname() throws Exception {
     UserGroupInformation ugi2 = UserGroupInformation.getCurrentUser();
 
     // check that the login user is okay:
@@ -141,109 +139,33 @@ public class AbstractTestSecureIPC {
     assertEquals(AuthenticationMethod.KERBEROS, ugi.getAuthenticationMethod());
     assertEquals(krbPrincipal, ugi.getUserName());
 
-    enableCanonicalHostnameTesting(clientConf, "localhost");
     clientConf.setBoolean(
       SecurityConstants.UNSAFE_HBASE_CLIENT_KERBEROS_HOSTNAME_DISABLE_REVERSEDNS, false);
     clientConf.set(HBaseKerberosUtils.KRB_PRINCIPAL, "hbase/_HOST@" + KDC.getRealm());
 
-    callRpcService(User.create(ugi2));
-  }
+    // The InetAddress for localhost is always the same, so here we just modify it to simulate
+    // hostname mismatch
+    InetAddress addr = InetAddress.getByName(HOST);
+    String originalCanonicalHostname = addr.getCanonicalHostName();
+    assertNotEquals("127.0.0.1", originalCanonicalHostname);
+    setCanonicalHostName(addr, "127.0.0.1");
+    // should fail because of canonical hostname does not match the principal name
+    assertThrows(Exception.class, () -> callRpcService(User.create(ugi2)));
 
-  @Test
-  public void testRpcCallWithEnabledKerberosSaslAuthNoCanonicalHostname() throws Exception {
-    UserGroupInformation ugi2 = UserGroupInformation.getCurrentUser();
-
-    // check that the login user is okay:
-    assertSame(ugi2, ugi);
-    assertEquals(AuthenticationMethod.KERBEROS, ugi.getAuthenticationMethod());
-    assertEquals(krbPrincipal, ugi.getUserName());
-
-    enableCanonicalHostnameTesting(clientConf, "127.0.0.1");
     clientConf
       .setBoolean(SecurityConstants.UNSAFE_HBASE_CLIENT_KERBEROS_HOSTNAME_DISABLE_REVERSEDNS, true);
-    clientConf.set(HBaseKerberosUtils.KRB_PRINCIPAL, "hbase/_HOST@" + KDC.getRealm());
+    // should pass since we do not use canonical hostname
+    callRpcService(User.create(ugi2));
 
+    clientConf.setBoolean(
+      SecurityConstants.UNSAFE_HBASE_CLIENT_KERBEROS_HOSTNAME_DISABLE_REVERSEDNS, false);
+    setCanonicalHostName(addr, originalCanonicalHostname);
+    // should pass since we set the canonical hostname back, which should be same with the one in
+    // the principal name
     callRpcService(User.create(ugi2));
   }
 
-  private static void enableCanonicalHostnameTesting(Configuration conf, String canonicalHostname) {
-    conf.setClass(SELECTOR_KEY, CanonicalHostnameTestingAuthenticationProviderSelector.class,
-      AuthenticationProviderSelector.class);
-    conf.set(CanonicalHostnameTestingAuthenticationProviderSelector.CANONICAL_HOST_NAME_KEY,
-      canonicalHostname);
-  }
-
-  public static class CanonicalHostnameTestingAuthenticationProviderSelector
-    extends BuiltInProviderSelector {
-    private static final String CANONICAL_HOST_NAME_KEY =
-      "CanonicalHostnameTestingAuthenticationProviderSelector.canonicalHostName";
-
-    @Override
-    public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>>
-      selectProvider(String clusterId, User user) {
-      final Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> pair =
-        super.selectProvider(clusterId, user);
-      pair.setFirst(createCanonicalHostNameTestingProvider(pair.getFirst()));
-      return pair;
-    }
-
-    SaslClientAuthenticationProvider
-      createCanonicalHostNameTestingProvider(SaslClientAuthenticationProvider delegate) {
-      return new SaslClientAuthenticationProvider() {
-        @Override
-        public SaslClient createClient(Configuration conf, InetAddress serverAddr,
-          String serverPrincipal, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
-          Map<String, String> saslProps) throws IOException {
-          final String s = conf.get(CANONICAL_HOST_NAME_KEY);
-          if (s != null) {
-            try {
-              final Field canonicalHostName =
-                InetAddress.class.getDeclaredField("canonicalHostName");
-              canonicalHostName.setAccessible(true);
-              canonicalHostName.set(serverAddr, s);
-            } catch (NoSuchFieldException | IllegalAccessException e) {
-              throw new RuntimeException(e);
-            }
-          }
-
-          return delegate.createClient(conf, serverAddr, serverPrincipal, token, fallbackAllowed,
-            saslProps);
-        }
-
-        @Override
-        public UserInformation getUserInfo(User user) {
-          return delegate.getUserInfo(user);
-        }
-
-        @Override
-        public UserGroupInformation getRealUser(User ugi) {
-          return delegate.getRealUser(ugi);
-        }
-
-        @Override
-        public boolean canRetry() {
-          return delegate.canRetry();
-        }
-
-        @Override
-        public void relogin() throws IOException {
-          delegate.relogin();
-        }
-
-        @Override
-        public SaslAuthMethod getSaslAuthMethod() {
-          return delegate.getSaslAuthMethod();
-        }
-
-        @Override
-        public String getTokenKind() {
-          return delegate.getTokenKind();
-        }
-      };
-    }
-  }
-
-  @Test
+  @TestTemplate
   public void testRpcServerFallbackToSimpleAuth() throws Exception {
     String clientUsername = "testuser";
     UserGroupInformation clientUgi =
@@ -259,7 +181,7 @@ public class AbstractTestSecureIPC {
     callRpcService(User.create(clientUgi));
   }
 
-  @Test
+  @TestTemplate
   public void testRpcServerDisallowFallbackToSimpleAuth() throws Exception {
     String clientUsername = "testuser";
     UserGroupInformation clientUgi =
@@ -281,7 +203,7 @@ public class AbstractTestSecureIPC {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testRpcClientFallbackToSimpleAuth() throws Exception {
     String serverUsername = "testuser";
     UserGroupInformation serverUgi =
@@ -296,7 +218,7 @@ public class AbstractTestSecureIPC {
     callRpcService(User.create(serverUgi), User.create(ugi));
   }
 
-  @Test
+  @TestTemplate
   public void testRpcClientDisallowFallbackToSimpleAuth() throws Exception {
     String serverUsername = "testuser";
     UserGroupInformation serverUgi =
@@ -320,7 +242,7 @@ public class AbstractTestSecureIPC {
   /**
    * Test various combinations of Server and Client qops.
    */
-  @Test
+  @TestTemplate
   public void testSaslWithCommonQop() throws Exception {
     setRpcProtection("privacy,authentication", "authentication");
     callRpcService();
@@ -338,7 +260,7 @@ public class AbstractTestSecureIPC {
     callRpcService();
   }
 
-  @Test
+  @TestTemplate
   public void testSaslNoCommonQop() throws Exception {
     setRpcProtection("integrity", "privacy");
     SaslException se = assertThrows(SaslException.class, () -> callRpcService());
@@ -348,7 +270,7 @@ public class AbstractTestSecureIPC {
   /**
    * Test sasl encryption with Crypto AES.
    */
-  @Test
+  @TestTemplate
   public void testSaslWithCryptoAES() throws Exception {
     setRpcProtection("privacy", "privacy");
     setCryptoAES("true", "true");
@@ -358,7 +280,7 @@ public class AbstractTestSecureIPC {
   /**
    * Test various combinations of Server and Client configuration for Crypto AES.
    */
-  @Test
+  @TestTemplate
   public void testDifferentConfWithCryptoAES() throws Exception {
     setRpcProtection("privacy", "privacy");
 
@@ -446,7 +368,7 @@ public class AbstractTestSecureIPC {
       try {
         int[] messageSize = new int[] { 100, 1000, 10000 };
         for (int i = 0; i < messageSize.length; i++) {
-          String input = RandomStringUtils.random(messageSize[i]);
+          String input = RandomStringUtils.insecure().next(messageSize[i]);
           String result =
             stub.echo(null, TestProtos.EchoRequestProto.newBuilder().setMessage(input).build())
               .getMessage();

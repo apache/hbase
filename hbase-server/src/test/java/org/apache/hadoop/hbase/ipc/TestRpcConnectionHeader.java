@@ -20,12 +20,14 @@ package org.apache.hadoop.hbase.ipc;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProviders;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
@@ -33,6 +35,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
@@ -57,10 +61,11 @@ public class TestRpcConnectionHeader {
   }
 
   private class MyRpcConnection extends RpcConnection {
+
     protected MyRpcConnection(Configuration conf, Map<String, byte[]> connectionAttributes)
       throws IOException {
-      super(conf, null, connectionId, "cluster-id", false, null, null, null, null,
-        connectionAttributes);
+      super(conf, null, connectionId, "cluster-id", false,
+        new SaslClientAuthenticationProviders(conf), null, null, null, null, connectionAttributes);
     }
 
     @Override
@@ -89,7 +94,7 @@ public class TestRpcConnectionHeader {
   public void testEmptyHeaders() throws IOException {
     Configuration configuration = HBaseConfiguration.create();
 
-    MyRpcConnection connection = new MyRpcConnection(configuration, Map.of());
+    MyRpcConnection connection = new MyRpcConnection(configuration, Collections.emptyMap());
     RPCProtos.ConnectionHeader connectionHeader = connection.getConnectionHeader();
 
     assertEquals(0, connectionHeader.getAttributeCount());
@@ -100,7 +105,7 @@ public class TestRpcConnectionHeader {
     Configuration configuration = HBaseConfiguration.create();
     configuration.set("hbase.client.header.test", "true");
 
-    MyRpcConnection connection = new MyRpcConnection(configuration, Map.of());
+    MyRpcConnection connection = new MyRpcConnection(configuration, Collections.emptyMap());
     RPCProtos.ConnectionHeader connectionHeader = connection.getConnectionHeader();
 
     assertEquals(1, connectionHeader.getAttributeCount());
@@ -116,7 +121,8 @@ public class TestRpcConnectionHeader {
     configuration.set("hbase.client.header.test", "true");
     configuration.set("hbase.client.header.test2", "true");
 
-    Map<String, byte[]> attributes = Map.of("hbase.client.header.test", Bytes.toBytes("false"));
+    Map<String, byte[]> attributes =
+      ImmutableMap.of("hbase.client.header.test", Bytes.toBytes("false"));
 
     MyRpcConnection connection = new MyRpcConnection(configuration, attributes);
     RPCProtos.ConnectionHeader connectionHeader = connection.getConnectionHeader();
