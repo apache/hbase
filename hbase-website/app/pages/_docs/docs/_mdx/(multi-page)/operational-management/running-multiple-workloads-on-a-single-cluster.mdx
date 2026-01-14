@@ -1,0 +1,252 @@
+---
+title: "Running Multiple Workloads On a Single Cluster"
+description: "Managing multiple workloads on HBase clusters using quotas, request queues, and priority mechanisms for resource allocation."
+---
+
+HBase provides the following mechanisms for managing the performance of a cluster handling multiple workloads:
+
+- [Quotas](/docs/operational-management/running-multiple-workloads-on-a-single-cluster#quotas)
+- [Request Queues](/docs/operational-management/running-multiple-workloads-on-a-single-cluster#request-queues)
+- [Multiple-Typed Queues](/docs/operational-management/running-multiple-workloads-on-a-single-cluster#multiple-typed-queues)
+
+## Quotas
+
+HBASE-11598 introduces RPC quotas, which allow you to throttle requests based on the following limits:
+
+1.  [The number or size of requests(read, write, or read+write) in a given timeframe](/docs/operational-management/running-multiple-workloads-on-a-single-cluster#setting-request-quotas)
+2.  [The number of tables allowed in a namespace](/docs/operational-management/running-multiple-workloads-on-a-single-cluster#setting-namespace-quotas)
+
+These limits can be enforced for a specified user, table, or namespace.
+
+### Enabling Quotas
+
+Quotas are disabled by default. To enable the feature, set the `hbase.quota.enabled` property to `true` in _hbase-site.xml_ file for all cluster nodes.
+
+### General Quota Syntax
+
+1.  THROTTLE_TYPE can be expressed as READ, WRITE, or the default type(read + write).
+2.  Timeframes can be expressed in the following units: `sec`, `min`, `hour`, `day`
+3.  Request sizes can be expressed in the following units: `B` (bytes), `K` (kilobytes), `M` (megabytes), `G` (gigabytes), `T` (terabytes), `P` (petabytes)
+4.  Numbers of requests are expressed as an integer followed by the string `req`
+5.  Limits relating to time are expressed as req/time or size/time. For instance `10req/day` or `100P/hour`.
+6.  Numbers of tables or regions are expressed as integers.
+
+### Setting Request Quotas
+
+You can set quota rules ahead of time, or you can change the throttle at runtime. The change will propagate after the quota refresh period has expired. This expiration period defaults to 5 minutes. To change it, modify the `hbase.quota.refresh.period` property in `hbase-site.xml`. This property is expressed in milliseconds and defaults to `300000`.
+
+```ruby
+# Limit user u1 to 10 requests per second
+hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => '10req/sec'
+
+# Limit user u1 to 10 read requests per second
+hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => READ, USER => 'u1', LIMIT => '10req/sec'
+
+# Limit user u1 to 10 M per day everywhere
+hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => '10M/day'
+
+# Limit user u1 to 10 M write size per sec
+hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, USER => 'u1', LIMIT => '10M/sec'
+
+# Limit user u1 to 5k per minute on table t2
+hbase> set_quota TYPE => THROTTLE, USER => 'u1', TABLE => 't2', LIMIT => '5K/min'
+
+# Limit user u1 to 10 read requests per sec on table t2
+hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => READ, USER => 'u1', TABLE => 't2', LIMIT => '10req/sec'
+
+# Remove an existing limit from user u1 on namespace ns2
+hbase> set_quota TYPE => THROTTLE, USER => 'u1', NAMESPACE => 'ns2', LIMIT => NONE
+
+# Limit all users to 10 requests per hour on namespace ns1
+hbase> set_quota TYPE => THROTTLE, NAMESPACE => 'ns1', LIMIT => '10req/hour'
+
+# Limit all users to 10 T per hour on table t1
+hbase> set_quota TYPE => THROTTLE, TABLE => 't1', LIMIT => '10T/hour'
+
+# Remove all existing limits from user u1
+hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => NONE
+
+# List all quotas for user u1 in namespace ns2
+hbase> list_quotas USER => 'u1, NAMESPACE => 'ns2'
+
+# List all quotas for namespace ns2
+hbase> list_quotas NAMESPACE => 'ns2'
+
+# List all quotas for table t1
+hbase> list_quotas TABLE => 't1'
+
+# list all quotas
+hbase> list_quotas
+```
+
+You can also place a global limit and exclude a user or a table from the limit by applying the `GLOBAL_BYPASS` property.
+
+```ruby
+hbase> set_quota NAMESPACE => 'ns1', LIMIT => '100req/min'               # a per-namespace request limit
+hbase> set_quota USER => 'u1', GLOBAL_BYPASS => true                     # user u1 is not affected by the limit
+```
+
+### Enabling, Disabling, and Checking RPC Throttling
+HBase provides shell commands to control RPC throttling at runtime. When throttling is disabled, HBase will not apply any request throttling. This can be useful in production environments that require temporary unthrottled operation.
+
+The following HBase shell commands are available:
+
+```ruby
+# Enable RPC throttling
+hbase> enable_rpc_throttle
+
+# Disable RPC throttling
+hbase> disable_rpc_throttle
+
+# Check whether RPC throttling is enabled
+hbase> rpc_throttle_enabled
+```
+
+`enable_rpc_throttle` and `disable_rpc_throttle` return the previous RPC throttling state as a boolean value. `rpc_throttle_enabled` returns the current state.
+
+<Callout type="info">
+If no quotas are configured, RPC throttling is not applied, and enabling or disabling throttling will always return false.
+</Callout>
+
+### Setting Namespace Quotas
+
+You can specify the maximum number of tables or regions allowed in a given namespace, either when you create the namespace or by altering an existing namespace, by setting the `hbase.namespace.quota.maxtables property` on the namespace.
+
+### Limiting Tables Per Namespace
+
+```ruby
+# Create a namespace with a max of 5 tables
+hbase> create_namespace 'ns1', {'hbase.namespace.quota.maxtables'=>'5'}
+
+# Alter an existing namespace to have a max of 8 tables
+hbase> alter_namespace 'ns2', {METHOD => 'set', 'hbase.namespace.quota.maxtables'=>'8'}
+
+# Show quota information for a namespace
+hbase> describe_namespace 'ns2'
+
+# Alter an existing namespace to remove a quota
+hbase> alter_namespace 'ns2', {METHOD => 'unset', NAME=>'hbase.namespace.quota.maxtables'}
+```
+
+### Limiting Regions Per Namespace
+
+```ruby
+# Create a namespace with a max of 10 regions
+hbase> create_namespace 'ns1', {'hbase.namespace.quota.maxregions'=>'10'}
+
+# Show quota information for a namespace
+hbase> describe_namespace 'ns1'
+
+# Alter an existing namespace to have a max of 20 tables
+hbase> alter_namespace 'ns2', {METHOD => 'set', 'hbase.namespace.quota.maxregions'=>'20'}
+
+# Alter an existing namespace to remove a quota
+hbase> alter_namespace 'ns2', {METHOD => 'unset', NAME=> 'hbase.namespace.quota.maxregions'}
+```
+
+## Request Queues
+
+If no throttling policy is configured, when the RegionServer receives multiple requests, they are now placed into a queue waiting for a free execution slot (HBASE-6721). The simplest queue is a FIFO queue, where each request waits for all previous requests in the queue to finish before running. Fast or interactive queries can get stuck behind large requests.
+
+If you are able to guess how long a request will take, you can reorder requests by pushing the long requests to the end of the queue and allowing short requests to preempt them. Eventually, you must still execute the large requests and prioritize the new requests behind them. The short requests will be newer, so the result is not terrible, but still suboptimal compared to a mechanism which allows large requests to be split into multiple smaller ones.
+
+HBASE-10993 introduces such a system for deprioritizing long-running scanners. There are two types of queues, `fifo` and `deadline`. To configure the type of queue used, configure the `hbase.ipc.server.callqueue.type` property in `hbase-site.xml`. There is no way to estimate how long each request may take, so de-prioritization only affects scans, and is based on the number of “next” calls a scan request has made. An assumption is made that when you are doing a full table scan, your job is not likely to be interactive, so if there are concurrent requests, you can delay long-running scans up to a limit tunable by setting the `hbase.ipc.server.queue.max.call.delay` property. The slope of the delay is calculated by a simple square root of `(numNextCall * weight)` where the weight is configurable by setting the `hbase.ipc.server.scan.vtime.weight` property.
+
+## Multiple-Typed Queues
+
+You can also prioritize or deprioritize different kinds of requests by configuring a specified number of dedicated handlers and queues. You can segregate the scan requests in a single queue with a single handler, and all the other available queues can service short `Get` requests.
+
+You can adjust the IPC queues and handlers based on the type of workload, using static tuning options. This approach is an interim first step that will eventually allow you to change the settings at runtime, and to dynamically adjust values based on the load.
+
+### Multiple Queues
+
+To avoid contention and separate different kinds of requests, configure the `hbase.ipc.server.callqueue.handler.factor` property, which allows you to increase the number of queues and control how many handlers can share the same queue., allows admins to increase the number of queues and decide how many handlers share the same queue.
+
+Using more queues reduces contention when adding a task to a queue or selecting it from a queue. You can even configure one queue per handler. The trade-off is that if some queues contain long-running tasks, a handler may need to wait to execute from that queue rather than stealing from another queue which has waiting tasks.
+
+### Read and Write Queues
+
+With multiple queues, you can now divide read and write requests, giving more priority (more queues) to one or the other type. Use the `hbase.ipc.server.callqueue.read.ratio` property to choose to serve more reads or more writes.
+
+### Get and Scan Queues
+
+Similar to the read/write split, you can split gets and scans by tuning the `hbase.ipc.server.callqueue.scan.ratio` property to give more priority to gets or to scans. A scan ratio of `0.1` will give more queue/handlers to the incoming gets, which means that more gets can be processed at the same time and that fewer scans can be executed at the same time. A value of `0.9` will give more queue/handlers to scans, so the number of scans executed will increase and the number of gets will decrease.
+
+## Space Quotas
+
+[HBASE-16961](https://issues.apache.org/jira/browse/HBASE-16961) introduces a new type of quotas for HBase to leverage: filesystem quotas. These "space" quotas limit the amount of space on the filesystem that HBase namespaces and tables can consume. If a user, malicious or ignorant, has the ability to write data into HBase, with enough time, that user can effectively crash HBase (or worse HDFS) by consuming all available space. When there is no filesystem space available, HBase crashes because it can no longer create/sync data to the write-ahead log.
+
+This feature allows a for a limit to be set on the size of a table or namespace. When a space quota is set on a namespace, the quota's limit applies to the sum of usage of all tables in that namespace. When a table with a quota exists in a namespace with a quota, the table quota takes priority over the namespace quota. This allows for a scenario where a large limit can be placed on a collection of tables, but a single table in that collection can have a fine-grained limit set.
+
+The existing `set_quota` and `list_quota` HBase shell commands can be used to interact with space quotas. Space quotas are quotas with a `TYPE` of `SPACE` and have `LIMIT` and `POLICY` attributes. The `LIMIT` is a string that refers to the amount of space on the filesystem that the quota subject (e.g. the table or namespace) may consume. For example, valid values of `LIMIT` are `'10G'`, `'2T'`, or `'256M'`. The `POLICY` refers to the action that HBase will take when the quota subject's usage exceeds the `LIMIT`. The following are valid `POLICY` values.
+
+- `NO_INSERTS` - No new data may be written (e.g. `Put`, `Increment`, `Append`).
+- `NO_WRITES` - Same as `NO_INSERTS` but `Deletes` are also disallowed.
+- `NO_WRITES_COMPACTIONS` - Same as `NO_WRITES` but compactions are also disallowed.
+  - This policy only prevents user-submitted compactions. System can still run compactions.
+- `DISABLE` - The table(s) are disabled, preventing all read/write access.
+
+### Setting simple space quotas
+
+```ruby
+# Sets a quota on the table 't1' with a limit of 1GB, disallowing Puts/Increments/Appends when the table exceeds 1GB
+hbase> set_quota TYPE => SPACE, TABLE => 't1', LIMIT => '1G', POLICY => NO_INSERTS
+
+# Sets a quota on the namespace 'ns1' with a limit of 50TB, disallowing Puts/Increments/Appends/Deletes
+hbase> set_quota TYPE => SPACE, NAMESPACE => 'ns1', LIMIT => '50T', POLICY => NO_WRITES
+
+# Sets a quota on the table 't3' with a limit of 2TB, disallowing any writes and compactions when the table exceeds 2TB.
+hbase> set_quota TYPE => SPACE, TABLE => 't3', LIMIT => '2T', POLICY => NO_WRITES_COMPACTIONS
+
+# Sets a quota on the table 't2' with a limit of 50GB, disabling the table when it exceeds 50GB
+hbase> set_quota TYPE => SPACE, TABLE => 't2', LIMIT => '50G', POLICY => DISABLE
+```
+
+Consider the following scenario to set up quotas on a namespace, overriding the quota on tables in that namespace
+
+### Table and Namespace space quotas
+
+```ruby
+hbase> create_namespace 'ns1'
+hbase> create 'ns1:t1'
+hbase> create 'ns1:t2'
+hbase> create 'ns1:t3'
+hbase> set_quota TYPE => SPACE, NAMESPACE => 'ns1', LIMIT => '100T', POLICY => NO_INSERTS
+hbase> set_quota TYPE => SPACE, TABLE => 'ns1:t2', LIMIT => '200G', POLICY => NO_WRITES
+hbase> set_quota TYPE => SPACE, TABLE => 'ns1:t3', LIMIT => '20T', POLICY => NO_WRITES
+```
+
+In the above scenario, the tables in the namespace `ns1` will not be allowed to consume more than 100TB of space on the filesystem among each other. The table 'ns1:t2' is only allowed to be 200GB in size, and will disallow all writes when the usage exceeds this limit. The table 'ns1:t3' is allowed to grow to 20TB in size and also will disallow all writes then the usage exceeds this limit. Because there is no table quota on 'ns1:t1', this table can grow up to 100TB, but only if 'ns1:t2' and 'ns1:t3' have a usage of zero bytes. Practically, it's limit is 100TB less the current usage of 'ns1:t2' and 'ns1:t3'.
+
+## Disabling Automatic Space Quota Deletion
+
+By default, if a table or namespace is deleted that has a space quota, the quota itself is also deleted. In some cases, it may be desirable for the space quota to not be automatically deleted. In these cases, the user may configure the system to not delete any space quota automatically via hbase-site.xml.
+
+```xml
+<property>
+  <name>hbase.quota.remove.on.table.delete</name>
+  <value>false</value>
+</property>
+```
+
+The value is set to `true` by default.
+
+## HBase Snapshots with Space Quotas
+
+One common area of unintended-filesystem-use with HBase is via HBase snapshots. Because snapshots exist outside of the management of HBase tables, it is not uncommon for administrators to suddenly realize that hundreds of gigabytes or terabytes of space is being used by HBase snapshots which were forgotten and never removed.
+
+[HBASE-17748](https://issues.apache.org/jira/browse/HBASE-17748) is the umbrella JIRA issue which expands on the original space quota functionality to also include HBase snapshots. While this is a confusing subject, the implementation attempts to present this support in as reasonable and simple of a manner as possible for administrators. This feature does not make any changes to administrator interaction with space quotas, only in the internal computation of table/namespace usage. Table and namespace usage will automatically incorporate the size taken by a snapshot per the rules defined below.
+
+As a review, let's cover a snapshot's lifecycle: a snapshot is metadata which points to a list of HFiles on the filesystem. This is why creating a snapshot is a very cheap operation; no HBase table data is actually copied to perform a snapshot. Cloning a snapshot into a new table or restoring a table is a cheap operation for the same reason; the new table references the files which already exist on the filesystem without a copy. To include snapshots in space quotas, we need to define which table "owns" a file when a snapshot references the file ("owns" refers to encompassing the filesystem usage of that file).
+
+Consider a snapshot which was made against a table. When the snapshot refers to a file and the table no longer refers to that file, the "originating" table "owns" that file. When multiple snapshots refer to the same file and no table refers to that file, the snapshot with the lowest-sorting name (lexicographically) is chosen and the table which that snapshot was created from "owns" that file. HFiles are not "double-counted" hen a table and one or more snapshots refer to that HFile.
+
+When a table is "rematerialized" (via `clone_snapshot` or `restore_snapshot`), a similar problem of file ownership arises. In this case, while the rematerialized table references a file which a snapshot also references, the table does not "own" the file. The table from which the snapshot was created still "owns" that file. When the rematerialized table is compacted or the snapshot is deleted, the rematerialized table will uniquely refer to a new file and "own" the usage of that file. Similarly, when a table is duplicated via a snapshot and `restore_snapshot`, the new table will not consume any quota size until the original table stops referring to the files, either due to a compaction on the original table, a compaction on the new table, or the original table being deleted.
+
+One new HBase shell command was added to inspect the computed sizes of each snapshot in an HBase instance.
+
+```ruby
+hbase> list_snapshot_sizes
+SNAPSHOT                                      SIZE
+ t1.s1                                        1159108
+```
