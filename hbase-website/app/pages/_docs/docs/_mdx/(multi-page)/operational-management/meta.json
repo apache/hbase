@@ -5,7 +5,7 @@
     "node",
     "metrics-and-monitoring",
     "cluster-replication",
-    "running-multiple_workloads-on-a-single-cluster",
+    "running-multiple-workloads-on-a-single-cluster",
     "backup-and-snapshots",
     "table-rename",
     "region-and-capacity"
