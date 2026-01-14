@@ -190,7 +190,6 @@ const renderer = toClientRenderer(
               </div>
             )}
 
-            {/* TODO: check this link */}
             <div className="flex items-end gap-3">
               <a
                 href={`https://github.com/apache/hbase/${baseGithubPath}${isSinglePage ? "" : `${trimmedRoute}.mdx`}`}
