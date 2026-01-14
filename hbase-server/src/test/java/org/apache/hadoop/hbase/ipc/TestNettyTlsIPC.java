@@ -26,10 +26,11 @@ import java.net.InetSocketAddress;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseServerBase;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.ConnectionRegistryEndpoint;
@@ -44,22 +45,18 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.provider.Arguments;
 
-@RunWith(Parameterized.class)
-@Category({ RPCTests.class, MediumTests.class })
+@Tag(RPCTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: rpcServerImpl={0}, caKeyType={1},"
+  + " certKeyType={2}, keyPassword={3}, acceptPlainText={4}, clientTlsEnabled={5}")
 public class TestNettyTlsIPC extends AbstractTestIPC {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNettyTlsIPC.class);
 
   private static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil(CONF);
 
@@ -67,48 +64,51 @@ public class TestNettyTlsIPC extends AbstractTestIPC {
 
   private static NettyEventLoopGroupConfig EVENT_LOOP_GROUP_CONFIG;
 
-  @Parameterized.Parameter(1)
-  public X509KeyType caKeyType;
+  private X509KeyType caKeyType;
 
-  @Parameterized.Parameter(2)
-  public X509KeyType certKeyType;
+  private X509KeyType certKeyType;
 
-  @Parameterized.Parameter(3)
-  public char[] keyPassword;
+  private char[] keyPassword;
 
-  @Parameterized.Parameter(4)
-  public boolean acceptPlainText;
+  private boolean acceptPlainText;
 
-  @Parameterized.Parameter(5)
-  public boolean clientTlsEnabled;
+  private boolean clientTlsEnabled;
+
+  public TestNettyTlsIPC(Class<? extends RpcServer> rpcServerImpl, X509KeyType caKeyType,
+    X509KeyType certKeyType, char[] keyPassword, boolean acceptPlainText,
+    boolean clientTlsEnabled) {
+    super(rpcServerImpl);
+    this.caKeyType = caKeyType;
+    this.certKeyType = certKeyType;
+    this.keyPassword = keyPassword;
+    this.acceptPlainText = acceptPlainText;
+    this.clientTlsEnabled = clientTlsEnabled;
+  }
 
   private X509TestContext x509TestContext;
 
   // only netty rpc server supports TLS, so here we will only test NettyRpcServer
-  @Parameterized.Parameters(
-      name = "{index}: rpcServerImpl={0}, caKeyType={1}, certKeyType={2}, keyPassword={3},"
-        + " acceptPlainText={4}, clientTlsEnabled={5}")
-  public static List<Object[]> data() {
-    List<Object[]> params = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     for (X509KeyType caKeyType : X509KeyType.values()) {
       for (X509KeyType certKeyType : X509KeyType.values()) {
         for (char[] keyPassword : new char[][] { "".toCharArray(), "pa$$w0rd".toCharArray() }) {
           // do not accept plain text
-          params.add(new Object[] { NettyRpcServer.class, caKeyType, certKeyType, keyPassword,
-            false, true });
+          params.add(
+            Arguments.of(NettyRpcServer.class, caKeyType, certKeyType, keyPassword, false, true));
           // support plain text and client enables tls
           params.add(
-            new Object[] { NettyRpcServer.class, caKeyType, certKeyType, keyPassword, true, true });
+            Arguments.of(NettyRpcServer.class, caKeyType, certKeyType, keyPassword, true, true));
           // support plain text and client disables tls
-          params.add(new Object[] { NettyRpcServer.class, caKeyType, certKeyType, keyPassword, true,
-            false });
+          params.add(
+            Arguments.of(NettyRpcServer.class, caKeyType, certKeyType, keyPassword, true, false));
         }
       }
     }
-    return params;
+    return params.stream();
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws IOException {
     Security.addProvider(new BouncyCastleProvider());
     File dir = new File(UTIL.getDataTestDir(TestNettyTlsIPC.class.getSimpleName()).toString())
@@ -121,14 +121,14 @@ public class TestNettyTlsIPC extends AbstractTestIPC {
       NettyEventLoopGroupConfig.setup(CONF, TestNettyTlsIPC.class.getSimpleName());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws InterruptedException {
     Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME);
     EVENT_LOOP_GROUP_CONFIG.group().shutdownGracefully().sync();
     UTIL.cleanupTestDir();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     x509TestContext = PROVIDER.get(caKeyType, certKeyType, keyPassword);
     x509TestContext.setConfigurations(KeyStoreFileType.JKS, KeyStoreFileType.JKS);
@@ -136,7 +136,7 @@ public class TestNettyTlsIPC extends AbstractTestIPC {
     CONF.setBoolean(X509Util.HBASE_CLIENT_NETTY_TLS_ENABLED, clientTlsEnabled);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     x509TestContext.clearConfigurations();
     x509TestContext.getConf().unset(X509Util.TLS_CONFIG_OCSP);
