@@ -510,7 +510,7 @@ public class BackupAdminImpl implements BackupAdmin {
   }
 
   @Override
-  public String backupTables(BackupRequest request) throws IOException {
+  public BackupInfo backupTables(BackupRequest request) throws IOException {
     BackupType type = request.getBackupType();
     String targetRootDir = request.getTargetRootDir();
     List<TableName> tableList = request.getTableList();
@@ -594,7 +594,7 @@ public class BackupAdminImpl implements BackupAdmin {
 
     client.execute();
 
-    return backupId;
+    return client.getBackupInfo();
   }
 
   private List<TableName> excludeNonExistingTables(List<TableName> tableList,

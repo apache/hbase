@@ -217,7 +217,7 @@ public class TestBackupRestoreWithModifications {
       BackupRequest backupRequest =
         new BackupRequest.Builder().withTargetRootDir(BACKUP_ROOT_DIR.toString())
           .withTableList(new ArrayList<>(tables)).withBackupType(backupType).build();
-      return backupAdmin.backupTables(backupRequest);
+      return backupAdmin.backupTables(backupRequest).getBackupId();
     }
 
   }
