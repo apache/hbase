@@ -69,4 +69,8 @@ function ScrollBar({
   );
 }
 
-export { ScrollArea, ScrollBar };
+const ScrollViewport = ScrollAreaPrimitive.ScrollAreaViewport;
+
+export type ScrollAreaProps = ScrollAreaPrimitive.ScrollAreaProps;
+
+export { ScrollArea, ScrollBar, ScrollViewport };

@@ -18,17 +18,17 @@
 
 import { docs } from "@/.source";
 import { toClientRenderer } from "fumadocs-mdx/runtime/vite";
-import { DocsLayout } from "fumadocs-ui/layouts/docs";
+import { DocsLayout } from "@/components/docs/layout/docs";
 import {
   DocsBody as FumaDocsBody,
   DocsDescription as FumaDocsDescription,
   DocsPage as FumaDocsPage,
-  DocsTitle as FumaDocsTitle
-} from "fumadocs-ui/page";
+  DocsTitle as FumaDocsTitle,
+  PageLastUpdate
+} from "@/components/docs/layout/docs/page";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import type * as PageTree from "fumadocs-core/page-tree";
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
-import { PageLastUpdate } from "fumadocs-ui/layouts/docs/page";
 import { useParams } from "react-router";
 import { getGithubLastEdit } from "fumadocs-core/content/github";
 import { useEffect, useState } from "react";
@@ -228,40 +228,13 @@ export function DocsPage({ loaderData }: { loaderData: DocsLoaderData }) {
       }
     : baseOptions();
 
-  useEffect(() => {
-    if (!isSinglePage) return;
-
-    const links = document.querySelectorAll<HTMLAnchorElement>("#nd-sidebar a");
-
-    for (const a of links) {
-      if (
-        a.textContent?.trim().includes("Single-Page Documentation") ||
-        a.getAttribute("href") === "/docs/single-page"
-      ) {
-        // Hide instead of remove - React can still clean it up properly
-        a.style.display = "none";
-      }
-    }
-
-    // Cleanup: restore visibility when unmounting
-    return () => {
-      const links = document.querySelectorAll<HTMLAnchorElement>("#nd-sidebar a");
-      for (const a of links) {
-        if (
-          a.textContent?.trim().includes("Single-Page Documentation") ||
-          a.getAttribute("href") === "/docs/single-page"
-        ) {
-          a.style.display = ""; // Restore original display
-        }
-      }
-    };
-  }, [isSinglePage]);
-
   return (
     <DocsLayout
       {...layoutOptions}
       tree={tree as PageTree.Root}
       searchToggle={{ enabled: !isSinglePage }}
+      shouldRenderPageTree={!isSinglePage}
+      
     >
       <Content tree={tree as PageTree.Root} />
     </DocsLayout>
