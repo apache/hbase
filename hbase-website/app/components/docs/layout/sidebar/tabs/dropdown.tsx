@@ -20,9 +20,9 @@ import { Check, ChevronsUpDown } from "lucide-react";
 import { type ComponentProps, type ReactNode, useMemo, useState } from "react";
 import Link from "fumadocs-core/link";
 import { usePathname } from "fumadocs-core/framework";
-import { isActive, normalize } from "../../../../../lib/urls";
+import { isActive, normalize } from "@/lib/urls";
 import { useSidebar } from "../base";
-import { Popover, PopoverContent, PopoverTrigger } from "../../../../../ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import type { SidebarTab } from "./index";
 import { cn } from "@/lib/utils";
 

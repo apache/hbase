@@ -16,27 +16,18 @@
 // limitations under the License.
 //
 
-import { defineConfig, defineDocs } from "fumadocs-mdx/config";
-import remarkGfm from "remark-gfm";
-import rehypeKatex from "rehype-katex";
-import remarkMath from "remark-math";
+import { source } from "@/lib/source";
+import type { InferPageType } from "fumadocs-core/source";
 
-export const docs = defineDocs({
-  dir: "app/pages/_docs/docs/_mdx",
-  docs: {
-    files: ["**/*.mdx"], // ← only index .mdx
-    postprocess: {
-      includeProcessedMarkdown: true
-    }
-  },
-  meta: {
-    files: ["**/*.{json,yaml}"]
-  }
-});
+export async function loader() {
+  const scan = source.getPages().map(getLLMText);
+  const scanned = await Promise.all(scan);
 
-export default defineConfig({
-  mdxOptions: {
-    remarkPlugins: (v) => [remarkMath, remarkGfm, ...v],
-    rehypePlugins: (v) => [rehypeKatex, ...v]
-  }
-});
+  return new Response(scanned.join("\n\n"));
+}
+
+export async function getLLMText(page: InferPageType<typeof source>) {
+  const processed = await page.data.getText("processed");
+  return `# ${page.data.title} (${page.url})
+${processed}`;
+}

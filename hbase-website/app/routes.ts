@@ -35,5 +35,7 @@ export default [
   ]),
   // Docs
   layout("./pages/_docs/docs-layout.tsx", [route("docs/*", "routes/_docs/docs.tsx")]),
+  // API (Rendered at build time)
+  route("llms-full.txt", "routes/_api/llms-full.ts"),
   route("api/search", "routes/_api/search.ts")
 ] satisfies RouteConfig;
