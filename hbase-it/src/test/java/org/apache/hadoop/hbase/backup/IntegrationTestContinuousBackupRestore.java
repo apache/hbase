@@ -51,8 +51,7 @@ public class IntegrationTestContinuousBackupRestore extends IntegrationTestBacku
   @Override
   @BeforeEach
   public void setUp() throws Exception {
-    util = new IntegrationTestingUtility();
-    conf = util.getConfiguration();
+    initializeTestParameters();
     BackupTestUtil.enableBackup(conf);
     conf.setBoolean(REPLICATION_MARKER_ENABLED_KEY, true);
     conf.setBoolean(IGNORE_EMPTY_FILES, true);
