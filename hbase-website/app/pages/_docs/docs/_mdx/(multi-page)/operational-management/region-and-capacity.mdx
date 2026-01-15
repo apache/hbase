@@ -68,7 +68,7 @@ You can view the current number of regions for a given table using the HMaster U
 
 #### Number of regions per RS - upper bound
 
-In production scenarios, where you have a lot of data, you are normally concerned with the maximum number of regions you can have per server. [too many regions](/docs/architecture/regions#why-should-i-keep-my-region-count-low) has technical discussion on the subject. Basically, the maximum number of regions is mostly determined by memstore memory usage. Each region has its own memstores; these grow up to a configurable size; usually in 128-256 MB range, see [hbase.hregion.memstore.flush.size](#hbase.hregion.memstore.flush.size). One memstore exists per column family (so there's only one per region if there's one CF in the table). The RS dedicates some fraction of total memory to its memstores (see [hbase.regionserver.global.memstore.size](#hbase.regionserver.global.memstore.size)). If this memory is exceeded (too much memstore usage), it can cause undesirable consequences such as unresponsive server or compaction storms. A good starting point for the number of regions per RS (assuming one table) is:
+In production scenarios, where you have a lot of data, you are normally concerned with the maximum number of regions you can have per server. [too many regions](/docs/architecture/regions#why-should-i-keep-my-region-count-low) has technical discussion on the subject. Basically, the maximum number of regions is mostly determined by memstore memory usage. Each region has its own memstores; these grow up to a configurable size; usually in 128-256 MB range, see [hbase.hregion.memstore.flush.size](/docs/configuration/default#hbasehregionmemstoreflushsize-toc). One memstore exists per column family (so there's only one per region if there's one CF in the table). The RS dedicates some fraction of total memory to its memstores (see [hbase.regionserver.global.memstore.size](/docs/configuration/default#hbaseregionserverglobalmemstoresize-toc)). If this memory is exceeded (too much memstore usage), it can cause undesirable consequences such as unresponsive server or compaction storms. A good starting point for the number of regions per RS (assuming one table) is:
 
 ```text
 ((RS memory) * (total memstore fraction)) / ((memstore size)*(# column families))
@@ -104,7 +104,7 @@ On the other hand, if you have a very large amount of data, you may also want to
 
 For large tables in production scenarios, maximum region size is mostly limited by compactions - very large compactions, esp. major, can degrade cluster performance. Currently, the recommended maximum region size is 10-20Gb, and 5-10Gb is optimal. For older 0.90.x codebase, the upper-bound of regionsize is about 4Gb, with a default of 256Mb.
 
-The size at which the region is split into two is generally configured via [hbase.hregion.max.filesize](#hbase.hregion.max.filesize); for details, see [arch.region.splits](/docs/architecture/regions#region-splits).
+The size at which the region is split into two is generally configured via [hbase.hregion.max.filesize](/docs/configuration/default#hbasehregionmaxfilesize-toc); for details, see [arch.region.splits](/docs/architecture/regions#region-splits).
 
 If you cannot estimate the size of your tables well, when starting off, it's probably best to stick to the default region size, perhaps going smaller for hot tables (or manually split hot regions to spread the load over the cluster), or go with larger region sizes if your cell sizes tend to be largish (100k and up).
 
@@ -118,7 +118,7 @@ According to above numbers for region size and number of regions per region serv
 
 First, see [important configurations](/docs/configuration/important). Note that some configurations, more than others, depend on specific scenarios. Pay special attention to:
 
-- [hbase.regionserver.handler.count](#hbase.regionserver.handler.count) - request handler thread count, vital for high-throughput workloads.
+- [hbase.regionserver.handler.count](/docs/configuration/default#hbaseregionserverhandlercount-toc) - request handler thread count, vital for high-throughput workloads.
 - [config.wals](/docs/configuration/important#configuring-the-size-and-number-of-wal-files) - the blocking number of WAL files depends on your memstore configuration and should be set accordingly to prevent potential blocking when doing high volume of writes.
 
 Then, there are some considerations when setting up your cluster and tables.
@@ -127,7 +127,7 @@ Then, there are some considerations when setting up your cluster and tables.
 
 Depending on read/write volume and latency requirements, optimal compaction settings may be different. See [compaction](/docs/architecture/regions#compaction) for some details.
 
-When provisioning for large data sizes, however, it's good to keep in mind that compactions can affect write throughput. Thus, for write-intensive workloads, you may opt for less frequent compactions and more store files per regions. Minimum number of files for compactions (`hbase.hstore.compaction.min`) can be set to higher value; [hbase.hstore.blockingStoreFiles](#hbase.hstore.blockingStoreFiles) should also be increased, as more files might accumulate in such case. You may also consider manually managing compactions: [managed.compactions](/docs/configuration/important#managed-compactions)
+When provisioning for large data sizes, however, it's good to keep in mind that compactions can affect write throughput. Thus, for write-intensive workloads, you may opt for less frequent compactions and more store files per regions. Minimum number of files for compactions (`hbase.hstore.compaction.min`) can be set to higher value; [hbase.hstore.blockingStoreFiles](/docs/configuration/default#hbasehstoreblockingStoreFiles-toc) should also be increased, as more files might accumulate in such case. You may also consider manually managing compactions: [managed.compactions](/docs/configuration/important#managed-compactions)
 
 #### Pre-splitting the table
 

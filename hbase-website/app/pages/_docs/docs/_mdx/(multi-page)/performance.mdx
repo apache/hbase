@@ -104,11 +104,11 @@ For larger systems, managing [compactions and splits](/docs/configuration/import
 
 ### `hbase.regionserver.handler.count` [#performance-hbaseregionserverhandlercount]
 
-See [hbase.regionserver.handler.count](#hbase.regionserver.handler.count).
+See [hbase.regionserver.handler.count](/docs/configuration/default#hbaseregionserverhandlercount-toc).
 
 ### `hfile.block.cache.size`
 
-See [hfile.block.cache.size](#hfile.block.cache.size). A memory setting for the RegionServer process.
+See [hfile.block.cache.size](/docs/configuration/default#hfileblockcachesize-toc). A memory setting for the RegionServer process.
 
 ### Prefetch Option for Blockcache
 
@@ -139,25 +139,25 @@ To see prefetch in operation, enable TRACE level logging on `org.apache.hadoop.h
 
 ### `hbase.regionserver.global.memstore.size`
 
-See [hbase.regionserver.global.memstore.size](#hbase.regionserver.global.memstore.size). This memory setting is often adjusted for the RegionServer process depending on needs.
+See [hbase.regionserver.global.memstore.size](/docs/configuration/default#hbaseregionserverglobalmemstoresize-toc). This memory setting is often adjusted for the RegionServer process depending on needs.
 
 ### `hbase.regionserver.global.memstore.size.lower.limit`
 
-See [hbase.regionserver.global.memstore.size.lower.limit](#hbase.regionserver.global.memstore.size.lower.limit). This memory setting is often adjusted for the RegionServer process depending on needs.
+See [hbase.regionserver.global.memstore.size.lower.limit](/docs/configuration/default#hbaseregionserverglobalmemstoresizelowerlimit-toc). This memory setting is often adjusted for the RegionServer process depending on needs.
 
 ### `hbase.hstore.blockingStoreFiles`
 
-See [hbase.hstore.blockingStoreFiles](#hbase.hstore.blockingStoreFiles). If there is blocking in the RegionServer logs, increasing this can help.
+See [hbase.hstore.blockingStoreFiles](/docs/configuration/default#hbasehstoreblockingStoreFiles-toc). If there is blocking in the RegionServer logs, increasing this can help.
 
 ### `hbase.hregion.memstore.block.multiplier`
 
-See [hbase.hregion.memstore.block.multiplier](#hbase.hregion.memstore.block.multiplier). If there is enough RAM, increasing this can help.
+See [hbase.hregion.memstore.block.multiplier](/docs/configuration/default#hbasehregionmemstoreblockmultiplier-toc). If there is enough RAM, increasing this can help.
 
 ### `hbase.regionserver.checksum.verify`
 
 Have HBase write the checksum into the datablock and save having to do the checksum seek whenever you read.
 
-See [hbase.regionserver.checksum.verify](#hbase.regionserver.checksum.verify), [hbase.hstore.bytes.per.checksum](#hbase.hstore.bytes.per.checksum) and [hbase.hstore.checksum.algorithm](#hbase.hstore.checksum.algorithm). For more information see the release note on [HBASE-5074 support checksums in HBase block cache](https://issues.apache.org/jira/browse/HBASE-5074).
+See [hbase.regionserver.checksum.verify](/docs/configuration/default#hbaseregionserverchecksumverify-toc), [hbase.hstore.bytes.per.checksum](/docs/configuration/default#hbasehstorebytesperchecksum-toc) and [hbase.hstore.checksum.algorithm](/docs/configuration/default#hbasehstorechecksumalgorithm-toc). For more information see the release note on [HBASE-5074 support checksums in HBase block cache](https://issues.apache.org/jira/browse/HBASE-5074).
 
 ### Tuning `callQueue` Options
 
