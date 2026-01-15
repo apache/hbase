@@ -43,6 +43,7 @@ import type { MDXComponents } from "mdx/types";
 const baseMdxComponents: MDXComponents = {
   ...defaultMdxComponents,
   p: (props) => <p className="wrap-anywhere" {...props} />,
+  h1: (props) => <h1 className="font-bold" {...props} />,
   Step,
   Steps
 };
