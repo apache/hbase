@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.security.provider;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.concurrent.atomic.AtomicReference;
@@ -35,14 +37,46 @@ public final class SaslServerAuthenticationProviders {
     LoggerFactory.getLogger(SaslClientAuthenticationProviders.class);
 
   public static final String EXTRA_PROVIDERS_KEY = "hbase.server.sasl.provider.extras";
-  private static final AtomicReference<SaslServerAuthenticationProviders> holder =
+
+  private static final AtomicReference<SaslServerAuthenticationProviders> HOLDER =
     new AtomicReference<>();
 
-  private final HashMap<Byte, SaslServerAuthenticationProvider> providers;
+  private final Map<Byte, SaslServerAuthenticationProvider> providers;
 
-  private SaslServerAuthenticationProviders(Configuration conf,
-    HashMap<Byte, SaslServerAuthenticationProvider> providers) {
-    this.providers = providers;
+  /**
+   * Creates a new instance of SaslServerAuthenticationProviders.
+   * @param conf the configuration to use for loading providers
+   */
+  public SaslServerAuthenticationProviders(Configuration conf) {
+    ServiceLoader<SaslServerAuthenticationProvider> loader =
+      ServiceLoader.load(SaslServerAuthenticationProvider.class);
+    HashMap<Byte, SaslServerAuthenticationProvider> providerMap = new HashMap<>();
+    for (SaslServerAuthenticationProvider provider : loader) {
+      addProviderIfNotExists(provider, providerMap);
+    }
+
+    addExtraProviders(conf, providerMap);
+
+    if (LOG.isTraceEnabled()) {
+      String loadedProviders = providerMap.values().stream()
+        .map((provider) -> provider.getClass().getName()).collect(Collectors.joining(", "));
+      if (loadedProviders.isEmpty()) {
+        loadedProviders = "None!";
+      }
+      LOG.trace("Found SaslServerAuthenticationProviders {}", loadedProviders);
+    }
+
+    // Initialize the providers once, before we get into the RPC path.
+    providerMap.forEach((b, provider) -> {
+      try {
+        // Give them a copy, just to make sure there is no funny-business going on.
+        provider.init(new Configuration(conf));
+      } catch (IOException e) {
+        LOG.error("Failed to initialize {}", provider.getClass(), e);
+        throw new RuntimeException("Failed to initialize " + provider.getClass().getName(), e);
+      }
+    });
+    this.providers = Collections.unmodifiableMap(providerMap);
   }
 
   /**
@@ -54,19 +88,23 @@ public final class SaslServerAuthenticationProviders {
 
   /**
    * Returns a singleton instance of {@link SaslServerAuthenticationProviders}.
+   * @deprecated Since 2.5.14 and 2.6.4, will be removed in newer minor release lines. This class
+   *             should not be singleton, please do not use it any more. see HBASE-29144 for more
+   *             details.
    */
+  @Deprecated
   public static SaslServerAuthenticationProviders getInstance(Configuration conf) {
-    SaslServerAuthenticationProviders providers = holder.get();
+    SaslServerAuthenticationProviders providers = HOLDER.get();
     if (null == providers) {
-      synchronized (holder) {
+      synchronized (HOLDER) {
         // Someone else beat us here
-        providers = holder.get();
+        providers = HOLDER.get();
         if (null != providers) {
           return providers;
         }
 
-        providers = createProviders(conf);
-        holder.set(providers);
+        providers = new SaslServerAuthenticationProviders(conf);
+        HOLDER.set(providers);
       }
     }
     return providers;
@@ -74,10 +112,14 @@ public final class SaslServerAuthenticationProviders {
 
   /**
    * Removes the cached singleton instance of {@link SaslServerAuthenticationProviders}.
+   * @deprecated Since 2.5.14 and 2.6.4, will be removed in newer minor release lines. This class
+   *             should not be singleton, please do not use it any more. see HBASE-29144 for more
+   *             details.
    */
+  @Deprecated
   public static void reset() {
-    synchronized (holder) {
-      holder.set(null);
+    synchronized (HOLDER) {
+      HOLDER.set(null);
     }
   }
 
@@ -127,43 +169,6 @@ public final class SaslServerAuthenticationProviders {
         LOG.warn("Failed to instantiate {}", clz, e);
       }
     }
-  }
-
-  /**
-   * Loads server authentication providers from the classpath and configuration, and then creates
-   * the SaslServerAuthenticationProviders instance.
-   */
-  static SaslServerAuthenticationProviders createProviders(Configuration conf) {
-    ServiceLoader<SaslServerAuthenticationProvider> loader =
-      ServiceLoader.load(SaslServerAuthenticationProvider.class);
-    HashMap<Byte, SaslServerAuthenticationProvider> providers = new HashMap<>();
-    for (SaslServerAuthenticationProvider provider : loader) {
-      addProviderIfNotExists(provider, providers);
-    }
-
-    addExtraProviders(conf, providers);
-
-    if (LOG.isTraceEnabled()) {
-      String loadedProviders = providers.values().stream()
-        .map((provider) -> provider.getClass().getName()).collect(Collectors.joining(", "));
-      if (loadedProviders.isEmpty()) {
-        loadedProviders = "None!";
-      }
-      LOG.trace("Found SaslServerAuthenticationProviders {}", loadedProviders);
-    }
-
-    // Initialize the providers once, before we get into the RPC path.
-    providers.forEach((b, provider) -> {
-      try {
-        // Give them a copy, just to make sure there is no funny-business going on.
-        provider.init(new Configuration(conf));
-      } catch (IOException e) {
-        LOG.error("Failed to initialize {}", provider.getClass(), e);
-        throw new RuntimeException("Failed to initialize " + provider.getClass().getName(), e);
-      }
-    });
-
-    return new SaslServerAuthenticationProviders(conf, providers);
   }
 
   /**
