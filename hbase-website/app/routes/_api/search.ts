@@ -19,7 +19,24 @@
 import { source } from "@/lib/source";
 import { createFromSource } from "fumadocs-core/search/server";
 
-const server = createFromSource(source);
+// export const server = createFromSource(source, {
+//   language: "english"
+// buildIndex(page) {
+//   return {
+//     title: page.data.title,
+//     description: page.data.description,
+//     url: page.url,
+//     id: page.url,
+//     structuredData: page.data.structuredData,
+//     tag: page.url.startsWith("/single-page/") ? "single-page" : "multi-page"
+//   };
+// }
+// });
+
+const server = createFromSource(source, {
+  // https://docs.orama.com/docs/orama-js/supported-languages
+  language: "english"
+});
 
 export async function loader() {
   return server.staticGET();

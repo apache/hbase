@@ -27,7 +27,8 @@ import {
   SearchDialogOverlay,
   type SharedProps
 } from "fumadocs-ui/components/dialog/search";
-import { useDocsSearch } from "fumadocs-core/search/client";
+// import { useDocsSearch } from "fumadocs-core/search/client";
+import { useDocsSearch } from "./use-docs-search";
 import { create } from "@orama/orama";
 import { useI18n } from "fumadocs-ui/contexts/i18n";
 import { useMemo } from "react";
@@ -70,7 +71,6 @@ export function scoreMatch(text: string, searchTerm: string, isPageTitle: boolea
 
   // Scoring hierarchy: Page titles rank higher than headings
   if (isPageTitle) {
-    // Page title scores
     if (isExactMatch) return wordCount === 1 ? 10000 : 9500;
     if (hasExactSegmentAlone) return 9200;
     if (hasExactSegment) return 9000;
@@ -78,13 +78,11 @@ export function scoreMatch(text: string, searchTerm: string, isPageTitle: boolea
     if (startsWithTermSpace) return 8500 - wordCount * 20;
     if (segmentStarts) return 8200 - wordCount * 20;
     if (textStarts) return 8000 - wordCount * 20;
-    // KEY FIX: Treat plurals in titles as high priority (same as exact word)
     if (hasPluralBoundary) return 7600 - wordCount * 15;
-    if (hasWordBoundary) return 7500 - wordCount * 15; // Key: word match in title
+    if (hasWordBoundary) return 7500 - wordCount * 15;
     if (hasWordStart) return 6000 - wordCount * 15;
     if (hasSubstring) return 3000 - wordCount * 10;
   } else {
-    // Heading scores (lower than title word matches)
     if (isExactMatch) return 7000;
     if (hasExactSegmentAlone) return 6800;
     if (hasExactSegment) return 6500;
@@ -105,18 +103,65 @@ export function scoreMatch(text: string, searchTerm: string, isPageTitle: boolea
 function reRankResults(results: any[], searchTerm: string) {
   if (!results || results.length === 0 || !searchTerm) return results;
 
+  console.log("\n========================================");
+  console.log(`SEARCH DEBUG for: "${searchTerm}"`);
+  console.log("========================================");
+  console.log(`Received ${results.length} results from Fumadocs\n`);
+
+  // Log first 3 raw results to see structure
+  console.log("First 3 raw results:");
+  results.slice(0, 3).forEach((item, i) => {
+    console.log(`${i + 1}.`, {
+      type: item.type,
+      content: item.content,
+      url: item.url,
+      id: item.id,
+      allKeys: Object.keys(item)
+    });
+  });
+  console.log("");
+
   const scored = results.map((item) => {
     const isPageTitle = item.type === "page";
-    const matchScore = scoreMatch(item.content || "", searchTerm, isPageTitle);
-    const urlBonus = (item.url || "").toLowerCase().includes(searchTerm.toLowerCase()) ? 100 : 0;
+    const isHeading = item.type === "heading";
+    const isText = item.type === "text";
+
+    // Type priority scores - ensures pages > headings > text
+    const typeScore = isPageTitle ? 100000 : isHeading ? 50000 : 0;
+
+    let matchScore = 0;
+
+    if (isPageTitle) {
+      // Page titles: highest priority
+      matchScore = scoreMatch(item.content || "", searchTerm, true);
+    } else if (isHeading) {
+      // Headings: medium priority
+      matchScore = scoreMatch(item.content || "", searchTerm, false);
+    } else if (isText) {
+      // Text/paragraphs: lowest priority with minimal scoring
+      matchScore = scoreMatch(item.content || "", searchTerm, false);
+    }
+
+    const urlBonus = (item.url || "").toLowerCase().includes(searchTerm.toLowerCase()) ? 10 : 0;
 
     return {
       ...item,
-      _score: matchScore + urlBonus
+      _score: typeScore + matchScore + urlBonus
     };
   });
 
   scored.sort((a, b) => b._score - a._score);
+
+  // Log top 10 re-ranked results
+  console.log("Top 10 results after re-ranking:");
+  scored.slice(0, 10).forEach((item, i) => {
+    console.log(`${i + 1}. Score: ${item._score}`);
+    console.log(`   Type: ${item.type}`);
+    console.log(`   Content: ${item.content}`);
+    console.log(`   URL: ${item.url}`);
+    console.log("");
+  });
+  console.log("========================================\n");
 
   return scored.map(({ _score, ...item }) => item);
 }
@@ -126,18 +171,19 @@ export function SearchDialog(props: SharedProps) {
 
   const { search, setSearch, query } = useDocsSearch({
     type: "static",
+    // tag: "multi-page",
     initOrama,
     locale
   });
 
   // Apply smart re-ranking to prioritize titles over headings
-  const reRankedResults = useMemo(() => {
-    if (query.data === "empty" || !query.data || !Array.isArray(query.data)) {
-      return query.data;
-    }
+  // const reRankedResults = useMemo(() => {
+  //   if (query.data === "empty" || !query.data || !Array.isArray(query.data)) {
+  //     return query.data;
+  //   }
 
-    return reRankResults(query.data, search);
-  }, [query.data, search]);
+  //   return reRankResults(query.data, search);
+  // }, [query.data, search]);
 
   return (
     <FumaDocsSearchDialog
@@ -153,7 +199,8 @@ export function SearchDialog(props: SharedProps) {
           <SearchDialogInput />
           <SearchDialogClose />
         </SearchDialogHeader>
-        <SearchDialogList items={reRankedResults !== "empty" ? reRankedResults : null} />
+        <SearchDialogList items={query.data !== "empty" ? query.data : null} />
+        {/* <SearchDialogList items={reRankedResults !== "empty" ? reRankedResults : null} /> */}
       </SearchDialogContent>
     </FumaDocsSearchDialog>
   );
