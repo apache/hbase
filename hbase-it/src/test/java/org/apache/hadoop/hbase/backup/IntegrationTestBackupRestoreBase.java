@@ -96,12 +96,12 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   protected static String DEFAULT_BACKUP_ROOT_DIR = "backupIT";
 
   // These test parameters can be configured using a Configuration object or via the command line.
-  protected static int rowsInIteration = -1;
-  protected static int regionsCountPerServer = -1;
-  protected static int regionServerCount = -1;
-  protected static int numIterations = -1;
-  protected static int numTables = -1;
-  protected static long sleepTime = -1;
+  protected int rowsInIteration;
+  protected int regionsCountPerServer;
+  protected int regionServerCount;
+  protected int numIterations;
+  protected int numTables;
+  protected long sleepTime;
 
   protected static TableName[] tableNames;
   protected FileSystem fs;
@@ -725,35 +725,28 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     util = new IntegrationTestingUtility();
     conf = util.getConfiguration();
 
-    if (regionsCountPerServer == -1) {
-      regionsCountPerServer = conf.getInt(REGION_COUNT_KEY, DEFAULT_REGION_COUNT);
-    }
-    LOG.info("regionsCountPerServer is set to {}", regionsCountPerServer);
+    regionsCountPerServer = conf.getInt(REGION_COUNT_KEY,
+      regionsCountPerServer > 0 ? regionsCountPerServer : DEFAULT_REGION_COUNT);
+    LOG.debug("regionsCountPerServer is set to {}", regionsCountPerServer);
 
-    if (regionServerCount == -1) {
-      regionServerCount = conf.getInt(REGIONSERVER_COUNT_KEY, DEFAULT_REGIONSERVER_COUNT);
-    }
-    LOG.info("regionServerCount is set to {}", regionServerCount);
+    regionServerCount = conf.getInt(REGIONSERVER_COUNT_KEY,
+      regionServerCount > 0 ? regionServerCount : DEFAULT_REGIONSERVER_COUNT);
+    LOG.debug("regionServerCount is set to {}", regionServerCount);
 
-    if (rowsInIteration == -1) {
-      rowsInIteration = conf.getInt(ROWS_PER_ITERATION_KEY, DEFAULT_ROWS_IN_ITERATION);
-    }
-    LOG.info("rowsInIteration is set to {}", rowsInIteration);
+    rowsInIteration = conf.getInt(ROWS_PER_ITERATION_KEY,
+      rowsInIteration > 0 ? rowsInIteration : DEFAULT_ROWS_IN_ITERATION);
+    LOG.debug("rowsInIteration is set to {}", rowsInIteration);
 
-    if (numIterations == -1) {
-      numIterations = conf.getInt(NUM_ITERATIONS_KEY, DEFAULT_NUM_ITERATIONS);
-    }
-    LOG.info("numIterations is set to {}", numIterations);
+    numIterations =
+      conf.getInt(NUM_ITERATIONS_KEY, numIterations > 0 ? numIterations : DEFAULT_NUM_ITERATIONS);
+    LOG.debug("numIterations is set to {}", numIterations);
 
-    if (numTables == -1) {
-      numTables = conf.getInt(NUMBER_OF_TABLES_KEY, DEFAULT_NUMBER_OF_TABLES);
-    }
-    LOG.info("numTables is set to {}", numTables);
+    numTables =
+      conf.getInt(NUMBER_OF_TABLES_KEY, numTables > 0 ? numTables : DEFAULT_NUMBER_OF_TABLES);
+    LOG.debug("numTables is set to {}", numTables);
 
-    if (sleepTime == -1) {
-      sleepTime = conf.getLong(SLEEP_TIME_KEY, SLEEP_TIME_DEFAULT);
-    }
-    LOG.info("sleepTime is set to {}", sleepTime);
+    sleepTime = conf.getLong(SLEEP_TIME_KEY, sleepTime > 0 ? sleepTime : SLEEP_TIME_DEFAULT);
+    LOG.debug("sleepTime is set to {}", sleepTime);
   }
 
   @Override
