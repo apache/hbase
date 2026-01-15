@@ -25,12 +25,7 @@ import {
   search as searchOrama,
   getByID
 } from "@orama/orama";
-import {
-  type AdvancedDocument,
-  type advancedSchema,
-  type SimpleDocument,
-  type simpleSchema
-} from "./create-db";
+import { type AdvancedDocument, type advancedSchema } from "./create-db";
 import { createContentHighlighter, type SortedResult } from "fumadocs-core/search";
 import type { ExportedData } from "fumadocs-core/search/server";
 import { removeUndefined } from "./utils";
@@ -62,7 +57,6 @@ const cache = new Map<string, Promise<Database>>();
 type Database = Map<
   string,
   {
-    type: "simple" | "advanced";
     db: AnyOrama;
   }
 >;
@@ -93,7 +87,6 @@ async function loadDB({
 
           load(db, v);
           dbs.set(k, {
-            type: v.type,
             db
           });
         })
@@ -105,7 +98,6 @@ async function loadDB({
     const db = await initOrama();
     load(db, data);
     dbs.set("", {
-      type: data.type,
       db
     });
     return dbs;
@@ -122,35 +114,8 @@ export async function search(query: string, options: StaticOptions) {
   const db = (await loadDB(options)).get(locale ?? "");
 
   if (!db) return [];
-  if (db.type === "simple") return searchSimple(db as unknown as Orama<typeof simpleSchema>, query);
 
   return searchAdvanced(db.db as Orama<typeof advancedSchema>, query, tag);
-}
-
-export async function searchSimple(
-  db: Orama<typeof simpleSchema>,
-  query: string,
-  params: Partial<SearchParams<Orama<typeof simpleSchema>, SimpleDocument>> = {}
-): Promise<SortedResult[]> {
-  const highlighter = createContentHighlighter(query);
-  const result = await searchOrama(db, {
-    term: query,
-    tolerance: 1,
-    ...params,
-    boost: {
-      title: 2,
-      ...("boost" in params ? params.boost : undefined)
-    }
-  });
-
-  return result.hits.map<SortedResult>((hit) => ({
-    type: "page",
-    content: hit.document.title,
-    breadcrumbs: hit.document.breadcrumbs,
-    contentWithHighlights: highlighter.highlight(hit.document.title),
-    id: hit.document.url,
-    url: hit.document.url
-  }));
 }
 
 export async function searchAdvanced(
@@ -193,13 +158,63 @@ export async function searchAdvanced(
 
   const highlighter = createContentHighlighter(query);
   const result = await searchOrama(db, params);
-  const list: SortedResult[] = [];
+
+  // Helper to score match quality (exact > starts with > contains)
+  const getMatchQuality = (content: string, searchTerm: string): number => {
+    const lower = content.toLowerCase();
+    const term = searchTerm.toLowerCase();
+
+    if (lower === term) return 1000; // Exact match
+    if (lower.startsWith(term + " ")) return 500; // Starts with term + space
+    if (lower.startsWith(term)) return 400; // Starts with term
+    if (new RegExp(`\\b${term}\\b`, "i").test(content)) return 300; // Whole word
+    if (lower.includes(term)) return 100; // Contains
+    return 0;
+  };
+
+  // Collect all groups with scoring
+  const groupsWithScores: Array<{
+    pageId: string;
+    pageScore: number;
+    matchQuality: number;
+    page: any;
+    hits: any[];
+  }> = [];
+
   for (const item of result.groups ?? []) {
     const pageId = item.values[0] as string;
-
     const page = getByID(db, pageId);
     if (!page) continue;
 
+    // Find the page hit to get its Orama score
+    const pageHit = item.result.find((hit: any) => hit.document.type === "page");
+    const pageScore = pageHit?.score || 0;
+    const matchQuality = getMatchQuality(page.content, query);
+
+    groupsWithScores.push({
+      pageId,
+      pageScore,
+      matchQuality,
+      page,
+      hits: item.result
+    });
+  }
+
+  // Sort groups: exact matches first, then by Orama score
+  groupsWithScores.sort((a, b) => {
+    // Prioritize exact matches
+    if (a.matchQuality !== b.matchQuality) {
+      return b.matchQuality - a.matchQuality;
+    }
+    // Then by Orama relevance
+    return b.pageScore - a.pageScore;
+  });
+
+  const list: SortedResult[] = [];
+
+  // Build final list from sorted groups
+  for (const { pageId, page, hits } of groupsWithScores) {
+    // Add page title
     list.push({
       id: pageId,
       type: "page",
@@ -209,9 +224,26 @@ export async function searchAdvanced(
       url: page.url
     });
 
-    for (const hit of item.result) {
-      if (hit.document.type === "page") continue;
+    // Sort hits within this group: by type, then match quality, then Orama score
+    const sortedHits = [...hits]
+      .filter((hit: any) => hit.document.type !== "page")
+      .map((hit: any) => ({
+        hit,
+        typeScore: hit.document.type === "heading" ? 2 : 1,
+        matchQuality: getMatchQuality(hit.document.content, query)
+      }))
+      .sort((a, b) => {
+        // Type first (heading > text)
+        if (a.typeScore !== b.typeScore) return b.typeScore - a.typeScore;
+        // Then match quality (exact > partial)
+        if (a.matchQuality !== b.matchQuality) return b.matchQuality - a.matchQuality;
+        // Then Orama relevance
+        return b.hit.score - a.hit.score;
+      })
+      .map((item) => item.hit);
 
+    // Add sorted hits
+    for (const hit of sortedHits) {
       list.push({
         id: hit.document.id.toString(),
         content: hit.document.content,
@@ -222,5 +254,6 @@ export async function searchAdvanced(
       });
     }
   }
+
   return list;
 }

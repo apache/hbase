@@ -16,7 +16,7 @@
 // limitations under the License.
 //
 
-import { type DependencyList, useEffect, useRef, useState } from "react";
+import { type DependencyList, useRef, useState } from "react";
 import { type StaticOptions } from "fumadocs-core/search/client";
 import type { SortedResult } from "fumadocs-core/search";
 import { useDebounce, useOnChange } from "./utils";

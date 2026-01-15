@@ -17,25 +17,11 @@
 //
 
 import { source } from "@/lib/source";
-import { createFromSource } from "fumadocs-core/search/server";
-
-// export const server = createFromSource(source, {
-//   language: "english"
-// buildIndex(page) {
-//   return {
-//     title: page.data.title,
-//     description: page.data.description,
-//     url: page.url,
-//     id: page.url,
-//     structuredData: page.data.structuredData,
-//     tag: page.url.startsWith("/single-page/") ? "single-page" : "multi-page"
-//   };
-// }
-// });
+import { createFromSource } from "@/components/docs/search/create-from-source";
 
 const server = createFromSource(source, {
-  // https://docs.orama.com/docs/orama-js/supported-languages
-  language: "english"
+  language: "english",
+  tag: (pageUrl: string) => (pageUrl.startsWith("/docs/single-page") ? "single-page" : "multi-page")
 });
 
 export async function loader() {
