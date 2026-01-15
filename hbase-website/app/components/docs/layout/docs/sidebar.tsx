@@ -69,7 +69,7 @@ export function SidebarContent({
         <>
           <div
             data-sidebar-placeholder=""
-            className="pointer-events-none sticky top-(--fd-docs-row-1) z-20 h-[calc(var(--fd-docs-height)-var(--fd-docs-row-1))] [grid-area:sidebar] *:pointer-events-auto max-md:hidden md:[--fd-sidebar-width:285px]"
+            className="pointer-events-none sticky top-(--fd-docs-row-1) z-20 h-[calc(var(--fd-docs-height)-var(--fd-docs-row-1))] [grid-area:sidebar] *:pointer-events-auto max-md:hidden"
           >
             {collapsed && <div className="absolute inset-y-0 start-0 w-4" {...rest} />}
             <aside
