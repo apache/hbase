@@ -174,36 +174,33 @@ const renderer = toClientRenderer(
         <FumaDocsDescription>{frontmatter.description}</FumaDocsDescription>
         <FumaDocsBody>
           <Mdx components={mdxComponents} />
+          {route !== undefined && isGrouppedRoute && (
+            // table of content for groupped routes
+            <div className="flex flex-col">
+              <p>In this section:</p>
+              <Cards>
+                {getPageTreePeers(tree, `/docs/${trimmedRoute}`).map((peer) => (
+                  <Card key={peer.url} title={peer.name} href={peer.url}>
+                    {peer.description}
+                  </Card>
+                ))}
+              </Cards>
+            </div>
+          )}
         </FumaDocsBody>
 
         {route !== undefined && (
-          <div className="mt-10 flex flex-col gap-10">
-            {/* table of content for groupped routes */}
-            {isGrouppedRoute && (
-              <div className="flex flex-col gap-4">
-                <p>In this section:</p>
-                <Cards>
-                  {getPageTreePeers(tree, `/docs/${trimmedRoute}`).map((peer) => (
-                    <Card key={peer.url} title={peer.name} href={peer.url}>
-                      {peer.description}
-                    </Card>
-                  ))}
-                </Cards>
-              </div>
-            )}
+          <div className="flex items-end gap-3">
+            <a
+              href={`https://github.com/apache/hbase/${baseGithubPath}${mdxFileRoute}`}
+              rel="noreferrer noopener"
+              target="_blank"
+              className="text-fd-secondary-foreground bg-fd-secondary hover:text-fd-accent-foreground hover:bg-fd-accent w-fit rounded-xl border p-2 text-sm font-medium transition-colors"
+            >
+              Edit on GitHub
+            </a>
 
-            <div className="flex items-end gap-3">
-              <a
-                href={`https://github.com/apache/hbase/${baseGithubPath}${mdxFileRoute}`}
-                rel="noreferrer noopener"
-                target="_blank"
-                className="text-fd-secondary-foreground bg-fd-secondary hover:text-fd-accent-foreground hover:bg-fd-accent w-fit rounded-xl border p-2 text-sm font-medium transition-colors"
-              >
-                Edit on GitHub
-              </a>
-
-              {lastModifiedTime && <PageLastUpdate date={lastModifiedTime} />}
-            </div>
+            {lastModifiedTime && <PageLastUpdate date={lastModifiedTime} />}
           </div>
         )}
       </FumaDocsPage>
