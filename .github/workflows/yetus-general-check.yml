@@ -95,44 +95,6 @@ jobs:
           cd "${{ github.workspace }}"
           bash src/dev-support/jenkins_precommit_github_yetus.sh
 
-      - name: Hide Old Comments
-        if: always()
-        env:
-          DEBUG: 'true'
-        run: |
-          # github-actions[bot] has a known user ID: 41898282
-          # Verify: curl -s "https://api.github.com/users/github-actions%5Bbot%5D" | jq .id
-          export DEBUG="${DEBUG:-false}"
-          export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
-          export BUILD_BOT_USER_ID="41898282"
-          export JOB_NAME="HBase-PreCommit-GH-Actions-PR"
-          export REPO="${{ github.repository }}"
-          bash src/dev-support/gh_hide_old_comments.sh ${{ github.event.pull_request.number }} || true
-
-      - name: Create Nightlies Directory Structure
-        # this version of rsync doesn't support --mkdirs so we do this step manually
-        if: always()
-        run: |
-          eval $(ssh-agent -s)
-          ssh-add - <<< "${{ secrets.NIGHTLIES_RSYNC_KEY }}"
-          ssh -p ${{ secrets.NIGHTLIES_RSYNC_PORT }} \
-            -o StrictHostKeyChecking=no \
-            ${{ secrets.NIGHTLIES_RSYNC_USER }}@${{ secrets.NIGHTLIES_RSYNC_HOST }} \
-            "mkdir -p ${{ secrets.NIGHTLIES_RSYNC_PATH }}/hbase/HBase-PreCommit-GH-Actions-PR/PR-${{ github.event.pull_request.number }}/${{ github.run_number }}"
-          ssh-agent -k
-
-      - name: Publish to Nightlies
-        if: always()
-        uses: burnett01/rsync-deployments@0dc935cdecc5f5e571865e60d2a6cdc673704823
-        with:
-          switches: -avzr --no-o
-          path: yetus-general-check
-          remote_path: ${{ secrets.NIGHTLIES_RSYNC_PATH }}/hbase/HBase-PreCommit-GH-Actions-PR/PR-${{ github.event.pull_request.number }}/${{ github.run_number }}/
-          remote_host: ${{ secrets.NIGHTLIES_RSYNC_HOST }}
-          remote_port: ${{ secrets.NIGHTLIES_RSYNC_PORT }}
-          remote_user: ${{ secrets.NIGHTLIES_RSYNC_USER }}
-          remote_key: ${{ secrets.NIGHTLIES_RSYNC_KEY }}
-
       - name: Publish Test Results
         if: always()
         uses: actions/upload-artifact@v4
