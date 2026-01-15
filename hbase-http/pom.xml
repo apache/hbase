@@ -239,20 +239,6 @@
           <skipAssembly>true</skipAssembly>
         </configuration>
       </plugin>
-      <!-- Make a jar and put the sources in the jar -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>jar</goal>
-              <goal>test-jar</goal>
-            </goals>
-            <phase>package</phase>
-          </execution>
-        </executions>
-      </plugin>
       <!-- Testing plugins -->
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
