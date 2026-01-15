@@ -16,6 +16,7 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "extract-developers": "node scripts/extract-developers.js",
+    "extract-hbase-config": "node scripts/extract-hbase-config.js",
     "ci": "npm run lint && npm run typecheck && npm run test:run && npm run build"
   },
   "dependencies": {
