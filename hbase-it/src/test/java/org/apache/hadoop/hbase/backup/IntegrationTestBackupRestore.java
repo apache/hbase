@@ -45,8 +45,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBackupRestoreBa
   @Override
   @Before
   public void setUp() throws Exception {
-    util = new IntegrationTestingUtility();
-    conf = util.getConfiguration();
+    initializeTestParameters();
     BackupTestUtil.enableBackup(conf);
     LOG.info("Initializing cluster with {} region servers.", regionServerCount);
     util.initializeCluster(regionServerCount);

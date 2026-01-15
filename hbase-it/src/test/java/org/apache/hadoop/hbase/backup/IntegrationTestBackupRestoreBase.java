@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.IntegrationTestBase;
+import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
@@ -90,20 +91,19 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   protected static final int DEFAULT_NUM_ITERATIONS = 10;
   protected static final int DEFAULT_ROWS_IN_ITERATION = 10000;
   protected static final String SLEEP_TIME_KEY = "sleeptime";
-  // short default interval because tests don't run very long.
+  // Short default interval because tests don't run very long.
   protected static final long SLEEP_TIME_DEFAULT = 50000L;
   protected static String DEFAULT_BACKUP_ROOT_DIR = "backupIT";
 
-  protected static int rowsInIteration;
-  protected static int regionsCountPerServer;
-  protected static int regionServerCount;
-
-  protected static int numIterations;
-  protected static int numTables;
-  protected static TableName[] tableNames;
+  // These test parameters can be configured using a Configuration object or via the command line.
+  protected int rowsInIteration;
+  protected int regionsCountPerServer;
+  protected int regionServerCount;
+  protected int numIterations;
+  protected int numTables;
   protected long sleepTime;
-  protected static Object lock = new Object();
 
+  protected static TableName[] tableNames;
   protected FileSystem fs;
   protected String backupRootDir;
 
@@ -713,6 +713,40 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   protected Set<String> getColumnFamilies() {
     // That is only valid when Monkey is CALM (no monkey)
     return null;
+  }
+
+  /**
+   * This method is useful for ensuring important test parameters are initialized when running
+   * integration tests in IntelliJ or in the command line with Maven. Tests executed in the command
+   * line via the bin/hbase command have their parameters set in
+   * {@link IntegrationTestBase#processOptions}
+   */
+  protected void initializeTestParameters() {
+    util = new IntegrationTestingUtility();
+    conf = util.getConfiguration();
+
+    regionsCountPerServer = conf.getInt(REGION_COUNT_KEY,
+      regionsCountPerServer > 0 ? regionsCountPerServer : DEFAULT_REGION_COUNT);
+    LOG.debug("regionsCountPerServer is set to {}", regionsCountPerServer);
+
+    regionServerCount = conf.getInt(REGIONSERVER_COUNT_KEY,
+      regionServerCount > 0 ? regionServerCount : DEFAULT_REGIONSERVER_COUNT);
+    LOG.debug("regionServerCount is set to {}", regionServerCount);
+
+    rowsInIteration = conf.getInt(ROWS_PER_ITERATION_KEY,
+      rowsInIteration > 0 ? rowsInIteration : DEFAULT_ROWS_IN_ITERATION);
+    LOG.debug("rowsInIteration is set to {}", rowsInIteration);
+
+    numIterations =
+      conf.getInt(NUM_ITERATIONS_KEY, numIterations > 0 ? numIterations : DEFAULT_NUM_ITERATIONS);
+    LOG.debug("numIterations is set to {}", numIterations);
+
+    numTables =
+      conf.getInt(NUMBER_OF_TABLES_KEY, numTables > 0 ? numTables : DEFAULT_NUMBER_OF_TABLES);
+    LOG.debug("numTables is set to {}", numTables);
+
+    sleepTime = conf.getLong(SLEEP_TIME_KEY, sleepTime > 0 ? sleepTime : SLEEP_TIME_DEFAULT);
+    LOG.debug("sleepTime is set to {}", sleepTime);
   }
 
   @Override

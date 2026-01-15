@@ -54,8 +54,7 @@ public class IntegrationTestContinuousBackupRestore extends IntegrationTestBacku
   @Override
   @Before
   public void setUp() throws Exception {
-    util = new IntegrationTestingUtility();
-    conf = util.getConfiguration();
+    initializeTestParameters();
     BackupTestUtil.enableBackup(conf);
     conf.set(CONF_BACKUP_MAX_WAL_SIZE, "10240");
     conf.set(CONF_STAGED_WAL_FLUSH_INITIAL_DELAY, "10");
