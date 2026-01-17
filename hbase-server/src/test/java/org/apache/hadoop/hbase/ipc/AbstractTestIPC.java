@@ -27,19 +27,22 @@ import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.has
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlockingStub;
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newStub;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.lessThan;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -48,7 +51,7 @@ import static org.mockito.internal.verification.VerificationModeFactory.times;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
-import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
+import io.opentelemetry.sdk.testing.junit5.OpenTelemetryExtension;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -73,10 +76,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.util.StringUtils;
 import org.hamcrest.Matcher;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runners.Parameterized.Parameter;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,13 +116,16 @@ public abstract class AbstractTestIPC {
 
   protected abstract AbstractRpcClient<?> createRpcClientNoCodec(Configuration conf);
 
-  @Rule
-  public OpenTelemetryRule traceRule = OpenTelemetryRule.create();
+  @RegisterExtension
+  private static final OpenTelemetryExtension OTEL_EXT = OpenTelemetryExtension.create();
 
-  @Parameter(0)
-  public Class<? extends RpcServer> rpcServerImpl;
+  private Class<? extends RpcServer> rpcServerImpl;
 
-  @Before
+  protected AbstractTestIPC(Class<? extends RpcServer> rpcServerImpl) {
+    this.rpcServerImpl = rpcServerImpl;
+  }
+
+  @BeforeEach
   public void setUpBeforeTest() {
     CONF.setClass(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, rpcServerImpl, RpcServer.class);
   }
@@ -128,7 +133,7 @@ public abstract class AbstractTestIPC {
   /**
    * Ensure we do not HAVE TO HAVE a codec.
    */
-  @Test
+  @TestTemplate
   public void testNoCodec() throws IOException, ServiceException {
     Configuration conf = HBaseConfiguration.create();
     RpcServer rpcServer = createRpcServer(null, "testRpcServer",
@@ -154,7 +159,7 @@ public abstract class AbstractTestIPC {
    * unsupported, we'll get an exception out of some time (meantime, have to trace it manually to
    * confirm that compression is happening down in the client and server).
    */
-  @Test
+  @TestTemplate
   public void testCompressCellBlock() throws IOException, ServiceException {
     Configuration conf = new Configuration(HBaseConfiguration.create());
     conf.set("hbase.client.rpc.compressor", GzipCodec.class.getCanonicalName());
@@ -190,7 +195,7 @@ public abstract class AbstractTestIPC {
   protected abstract AbstractRpcClient<?>
     createRpcClientRTEDuringConnectionSetup(Configuration conf) throws IOException;
 
-  @Test
+  @TestTemplate
   public void testRTEDuringConnectionSetup() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     RpcServer rpcServer = createRpcServer(null, "testRpcServer",
@@ -203,7 +208,7 @@ public abstract class AbstractTestIPC {
       fail("Expected an exception to have been thrown!");
     } catch (Exception e) {
       LOG.info("Caught expected exception: " + e.toString());
-      assertTrue(e.toString(), StringUtils.stringifyException(e).contains("Injected fault"));
+      assertTrue(StringUtils.stringifyException(e).contains("Injected fault"), e.toString());
     } finally {
       rpcServer.stop();
     }
@@ -212,7 +217,7 @@ public abstract class AbstractTestIPC {
   /**
    * Tests that the rpc scheduler is called when requests arrive.
    */
-  @Test
+  @TestTemplate
   public void testRpcScheduler() throws IOException, ServiceException, InterruptedException {
     RpcScheduler scheduler = spy(new FifoRpcScheduler(CONF, 1));
     RpcServer rpcServer = createRpcServer(null, "testRpcServer",
@@ -235,7 +240,7 @@ public abstract class AbstractTestIPC {
   }
 
   /** Tests that the rpc scheduler is called when requests arrive. */
-  @Test
+  @TestTemplate
   public void testRpcMaxRequestSize() throws IOException, ServiceException {
     Configuration conf = new Configuration(CONF);
     conf.setInt(RpcServer.MAX_REQUEST_SIZE, 1000);
@@ -257,8 +262,8 @@ public abstract class AbstractTestIPC {
       fail("RPC should have failed because it exceeds max request size");
     } catch (ServiceException e) {
       LOG.info("Caught expected exception: " + e);
-      assertTrue(e.toString(),
-        StringUtils.stringifyException(e).contains("RequestTooBigException"));
+      assertTrue(StringUtils.stringifyException(e).contains("RequestTooBigException"),
+        e.toString());
     } finally {
       rpcServer.stop();
     }
@@ -268,7 +273,7 @@ public abstract class AbstractTestIPC {
    * Tests that the RpcServer creates & dispatches CallRunner object to scheduler with non-null
    * remoteAddress set to its Call Object
    */
-  @Test
+  @TestTemplate
   public void testRpcServerForNotNullRemoteAddressInCallObject()
     throws IOException, ServiceException {
     RpcServer rpcServer = createRpcServer(null, "testRpcServer",
@@ -285,7 +290,7 @@ public abstract class AbstractTestIPC {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testRemoteError() throws IOException, ServiceException {
     RpcServer rpcServer = createRpcServer(null, "testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
@@ -293,18 +298,18 @@ public abstract class AbstractTestIPC {
     try (AbstractRpcClient<?> client = createRpcClient(CONF)) {
       rpcServer.start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
-      stub.error(null, EmptyRequestProto.getDefaultInstance());
-    } catch (ServiceException e) {
-      LOG.info("Caught expected exception: " + e);
-      IOException ioe = ProtobufUtil.handleRemoteException(e);
-      assertTrue(ioe instanceof DoNotRetryIOException);
-      assertTrue(ioe.getMessage().contains("server error!"));
+      ServiceException se = assertThrows(ServiceException.class,
+        () -> stub.error(null, EmptyRequestProto.getDefaultInstance()));
+      LOG.info("Caught expected exception: " + se);
+      IOException ioe = ProtobufUtil.handleRemoteException(se);
+      assertThat(ioe, instanceOf(DoNotRetryIOException.class));
+      assertThat(ioe.getMessage(), containsString("server error!"));
     } finally {
       rpcServer.stop();
     }
   }
 
-  @Test
+  @TestTemplate
   public void testTimeout() throws IOException {
     RpcServer rpcServer = createRpcServer(null, "testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
@@ -319,23 +324,25 @@ public abstract class AbstractTestIPC {
         pcrc.reset();
         pcrc.setCallTimeout(timeout);
         long startTime = System.nanoTime();
-        try {
-          stub.pause(pcrc, PauseRequestProto.newBuilder().setMs(ms).build());
-        } catch (ServiceException e) {
-          long waitTime = (System.nanoTime() - startTime) / 1000000;
-          // expected
-          LOG.info("Caught expected exception: " + e);
-          IOException ioe = ProtobufUtil.handleRemoteException(e);
-          assertTrue(ioe.getCause() instanceof CallTimeoutException);
-          // confirm that we got exception before the actual pause.
-          assertTrue(waitTime < ms);
-        }
+        ServiceException se = assertThrows(ServiceException.class,
+          () -> stub.pause(pcrc, PauseRequestProto.newBuilder().setMs(ms).build()));
+        long waitTime = (System.nanoTime() - startTime) / 1000000;
+        // expected
+        LOG.info("Caught expected exception: " + se);
+        IOException ioe = ProtobufUtil.handleRemoteException(se);
+        assertThat(ioe.getCause(), instanceOf(CallTimeoutException.class));
+        // confirm that we got exception before the actual pause.
+        assertThat(waitTime, lessThan((long) ms));
       }
     } finally {
+      // wait until all active calls quit, otherwise it may mess up the tracing spans
+      await().atMost(Duration.ofSeconds(2))
+        .untilAsserted(() -> assertEquals(0, rpcServer.getScheduler().getActiveRpcHandlerCount()));
       rpcServer.stop();
     }
   }
 
+  @SuppressWarnings("deprecation")
   private static class FailingSimpleRpcServer extends SimpleRpcServer {
 
     FailingSimpleRpcServer(Server server, String name,
@@ -407,7 +414,7 @@ public abstract class AbstractTestIPC {
   }
 
   /** Tests that the connection closing is handled by the client with outstanding RPC calls */
-  @Test
+  @TestTemplate
   public void testConnectionCloseWithOutstandingRPCs() throws InterruptedException, IOException {
     Configuration conf = new Configuration(CONF);
     RpcServer rpcServer = createTestFailingRpcServer("testRpcServer",
@@ -418,16 +425,15 @@ public abstract class AbstractTestIPC {
       rpcServer.start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
-      stub.echo(null, param);
-      fail("RPC should have failed because connection closed");
-    } catch (ServiceException e) {
-      LOG.info("Caught expected exception: " + e.toString());
+      ServiceException se = assertThrows(ServiceException.class, () -> stub.echo(null, param),
+        "RPC should have failed because connection closed");
+      LOG.info("Caught expected exception: " + se);
     } finally {
       rpcServer.stop();
     }
   }
 
-  @Test
+  @TestTemplate
   public void testAsyncEcho() throws IOException {
     Configuration conf = HBaseConfiguration.create();
     RpcServer rpcServer = createRpcServer(null, "testRpcServer",
@@ -457,13 +463,13 @@ public abstract class AbstractTestIPC {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testAsyncRemoteError() throws IOException {
-    AbstractRpcClient<?> client = createRpcClient(CONF);
+    Configuration clientConf = new Configuration(CONF);
     RpcServer rpcServer = createRpcServer(null, "testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
       new InetSocketAddress("localhost", 0), CONF, new FifoRpcScheduler(CONF, 1));
-    try {
+    try (AbstractRpcClient<?> client = createRpcClient(clientConf)) {
       rpcServer.start();
       Interface stub = newStub(client, rpcServer.getListenerAddress());
       BlockingRpcCallback<EmptyResponseProto> callback = new BlockingRpcCallback<>();
@@ -473,15 +479,14 @@ public abstract class AbstractTestIPC {
       assertTrue(pcrc.failed());
       LOG.info("Caught expected exception: " + pcrc.getFailed());
       IOException ioe = ProtobufUtil.handleRemoteException(pcrc.getFailed());
-      assertTrue(ioe instanceof DoNotRetryIOException);
-      assertTrue(ioe.getMessage().contains("server error!"));
+      assertThat(ioe, instanceOf(DoNotRetryIOException.class));
+      assertThat(ioe.getMessage(), containsString("server error!"));
     } finally {
-      client.close();
       rpcServer.stop();
     }
   }
 
-  @Test
+  @TestTemplate
   public void testAsyncTimeout() throws IOException {
     RpcServer rpcServer = createRpcServer(null, "testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
@@ -510,19 +515,21 @@ public abstract class AbstractTestIPC {
         assertTrue(pcrc.failed());
         LOG.info("Caught expected exception: " + pcrc.getFailed());
         IOException ioe = ProtobufUtil.handleRemoteException(pcrc.getFailed());
-        assertTrue(ioe.getCause() instanceof CallTimeoutException);
+        assertThat(ioe.getCause(), instanceOf(CallTimeoutException.class));
       }
       // confirm that we got exception before the actual pause.
-      assertTrue(waitTime < ms);
+      assertThat(waitTime, lessThan((long) ms));
     } finally {
+      // wait until all active calls quit, otherwise it may mess up the tracing spans
+      await().atMost(Duration.ofSeconds(2))
+        .untilAsserted(() -> assertEquals(0, rpcServer.getScheduler().getActiveRpcHandlerCount()));
       rpcServer.stop();
     }
   }
 
   private SpanData waitSpan(Matcher<SpanData> matcher) {
-    Waiter.waitFor(CONF, 1000,
-      new MatcherPredicate<>(() -> traceRule.getSpans(), hasItem(matcher)));
-    return traceRule.getSpans().stream().filter(matcher::matches).findFirst()
+    Waiter.waitFor(CONF, 1000, new MatcherPredicate<>(() -> OTEL_EXT.getSpans(), hasItem(matcher)));
+    return OTEL_EXT.getSpans().stream().filter(matcher::matches).findFirst()
       .orElseThrow(AssertionError::new);
   }
 
@@ -562,7 +569,7 @@ public abstract class AbstractTestIPC {
     assertEquals(SpanKind.SERVER, data.getKind());
   }
 
-  @Test
+  @TestTemplate
   public void testTracingSuccessIpc() throws IOException, ServiceException {
     RpcServer rpcServer = createRpcServer(null, "testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
@@ -582,17 +589,17 @@ public abstract class AbstractTestIPC {
       assertThat(pauseServerSpan,
         buildIpcServerSpanAttributesMatcher("hbase.test.pb.TestProtobufRpcProto", "pause"));
       assertRemoteSpan();
-      assertFalse("no spans provided", traceRule.getSpans().isEmpty());
-      assertThat(traceRule.getSpans(),
+      assertFalse(OTEL_EXT.getSpans().isEmpty(), "no spans provided");
+      assertThat(OTEL_EXT.getSpans(),
         everyItem(allOf(hasStatusWithCode(StatusCode.OK),
-          hasTraceId(traceRule.getSpans().iterator().next().getTraceId()),
+          hasTraceId(OTEL_EXT.getSpans().iterator().next().getTraceId()),
           hasDuration(greaterThanOrEqualTo(Duration.ofMillis(100L))))));
     } finally {
       rpcServer.stop();
     }
   }
 
-  @Test
+  @TestTemplate
   public void testTracingErrorIpc() throws IOException {
     RpcServer rpcServer = createRpcServer(null, "testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
@@ -613,9 +620,9 @@ public abstract class AbstractTestIPC {
       assertThat(errorServerSpan,
         buildIpcServerSpanAttributesMatcher("hbase.test.pb.TestProtobufRpcProto", "error"));
       assertRemoteSpan();
-      assertFalse("no spans provided", traceRule.getSpans().isEmpty());
-      assertThat(traceRule.getSpans(), everyItem(allOf(hasStatusWithCode(StatusCode.ERROR),
-        hasTraceId(traceRule.getSpans().iterator().next().getTraceId()))));
+      assertFalse(OTEL_EXT.getSpans().isEmpty(), "no spans provided");
+      assertThat(OTEL_EXT.getSpans(), everyItem(allOf(hasStatusWithCode(StatusCode.ERROR),
+        hasTraceId(OTEL_EXT.getSpans().iterator().next().getTraceId()))));
     } finally {
       rpcServer.stop();
     }
@@ -629,7 +636,7 @@ public abstract class AbstractTestIPC {
     return ProtobufUtil.handleRemoteException(se);
   }
 
-  @Test
+  @TestTemplate
   public void testBadPreambleHeader() throws Exception {
     Configuration clientConf = new Configuration(CONF);
     RpcServer rpcServer = createRpcServer(null, "testRpcServer", Collections.emptyList(),
@@ -648,11 +655,10 @@ public abstract class AbstractTestIPC {
         }
         Thread.sleep(100);
       }
-      assertNotNull("Can not get expected BadAuthException", error);
+      assertNotNull(error, "Can not get expected BadAuthException");
       assertThat(error.getMessage(), containsString("authName=unknown"));
     } finally {
       rpcServer.stop();
     }
   }
-
 }
