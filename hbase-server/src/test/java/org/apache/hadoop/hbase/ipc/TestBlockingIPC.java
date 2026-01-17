@@ -18,31 +18,26 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.provider.Arguments;
 
-@RunWith(Parameterized.class)
-@Category({ RPCTests.class, MediumTests.class })
+@Tag(RPCTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: rpcServerImpl={0}")
 public class TestBlockingIPC extends AbstractTestIPC {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBlockingIPC.class);
+  public TestBlockingIPC(Class<? extends RpcServer> rpcServerImpl) {
+    super(rpcServerImpl);
+  }
 
-  @Parameters(name = "{index}: rpcServerImpl={0}")
-  public static List<Object[]> data() {
-    return Arrays.asList(new Object[] { SimpleRpcServer.class },
-      new Object[] { NettyRpcServer.class });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(SimpleRpcServer.class), Arguments.of(NettyRpcServer.class));
   }
 
   @Override
