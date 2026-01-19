@@ -16,19 +16,9 @@
 // limitations under the License.
 //
 
-import { type RouteConfig, index, route } from "@react-router/dev/routes";
+import { MarkdownLayout } from "@/components/markdown-layout";
+import content from "./content.md?raw";
 
-export default [
-  index("routes/home.tsx"),
-  route("code-of-conduct", "routes/code-of-conduct.tsx"),
-  route("downloads", "routes/downloads.tsx"),
-  route("mailing-lists", "routes/mailing-lists.tsx"),
-  route("team", "routes/team.tsx"),
-  route("sponsors", "routes/sponsors.tsx"),
-  route("powered-by-hbase", "routes/powered-by-hbase.tsx"),
-  route("other-resources", "routes/other-resources.tsx"),
-  route("source-repository", "routes/source-repository.tsx"),
-  route("acid-semantics", "routes/acid-semantics.tsx"),
-  route("news", "routes/news.tsx"),
-  route("export-control", "routes/export-control.tsx")
-] satisfies RouteConfig;
+export function ExportControlPage() {
+  return <MarkdownLayout>{content}</MarkdownLayout>;
+}
