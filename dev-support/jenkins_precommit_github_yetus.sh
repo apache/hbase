@@ -96,7 +96,11 @@ YETUS_ARGS+=("--console-report-file=${PATCHDIR}/console.txt")
 YETUS_ARGS+=("--html-report-file=${PATCHDIR}/report.html")
 # enable writing back to Github
 YETUS_ARGS+=("--github-token=${GITHUB_PASSWORD}")
-YETUS_ARGS+=("--github-write-comment")
+# GitHub Actions fork PRs cannot write comments (GITHUB_TOKEN has no PR write permission)
+# Jenkins can write comments via its own credentials
+if [[ "${GITHUB_ACTIONS}" != "true" ]]; then
+  YETUS_ARGS+=("--github-write-comment")
+fi
 # auto-kill any surefire stragglers during unit test runs
 YETUS_ARGS+=("--reapermode=kill")
 # set relatively high limits for ASF machines
@@ -108,7 +112,9 @@ YETUS_ARGS+=("--spotbugs-strict-precheck")
 # rsync these files back into the archive dir
 YETUS_ARGS+=("--archive-list=${ARCHIVE_PATTERN_LIST}")
 # URL for user-side presentation in reports and such to our artifacts
-YETUS_ARGS+=("--build-url-artifacts=${BUILD_URL_ARTIFACTS}")
+if [[ -n "${BUILD_URL_ARTIFACTS}" ]]; then
+  YETUS_ARGS+=("--build-url-artifacts=${BUILD_URL_ARTIFACTS}")
+fi
 # plugins to enable
 YETUS_ARGS+=("--plugins=${PLUGINS},-findbugs")
 # run in docker mode and specifically point to our
