@@ -19,10 +19,14 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
@@ -36,6 +40,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.MultiTenantHFileWriter;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -48,6 +54,11 @@ import org.slf4j.LoggerFactory;
 public final class StoreUtils {
 
   private static final Logger LOG = LoggerFactory.getLogger(StoreUtils.class);
+  private static final Set<String> MULTI_TENANT_CONF_KEYS =
+    Collections.unmodifiableSet(new java.util.HashSet<>(
+      java.util.Arrays.asList(MultiTenantHFileWriter.TABLE_MULTI_TENANT_ENABLED,
+        MultiTenantHFileWriter.TABLE_TENANT_PREFIX_LENGTH,
+        MultiTenantHFileWriter.TENANT_PREFIX_LENGTH)));
 
   private StoreUtils() {
   }
@@ -171,12 +182,47 @@ public final class StoreUtils {
     return conf.getInt(HConstants.BYTES_PER_CHECKSUM, HFile.DEFAULT_BYTES_PER_CHECKSUM);
   }
 
+  /**
+   * Build a store-specific configuration. Multi-tenant settings are table/cluster scoped and are
+   * not expected at the column-family level, so we strip them from CF maps to preserve precedence.
+   */
   public static Configuration createStoreConfiguration(Configuration conf, TableDescriptor td,
     ColumnFamilyDescriptor cfd) {
     // CompoundConfiguration will look for keys in reverse order of addition, so we'd
     // add global config first, then table and cf overrides, then cf metadata.
+    Map<String, String> filteredCfConfiguration = stripMultiTenantKeys(cfd.getConfiguration());
+    Map<Bytes, Bytes> filteredCfValues = stripMultiTenantKeysFromBytesMap(cfd.getValues());
     return new CompoundConfiguration().add(conf).addBytesMap(td.getValues())
-      .addStringMap(cfd.getConfiguration()).addBytesMap(cfd.getValues());
+      .addStringMap(filteredCfConfiguration).addBytesMap(filteredCfValues);
+  }
+
+  private static Map<String, String> stripMultiTenantKeys(Map<String, String> source) {
+    if (source == null || source.isEmpty()) {
+      return source;
+    }
+    Map<String, String> filtered = new HashMap<>(source);
+    for (String key : MULTI_TENANT_CONF_KEYS) {
+      filtered.remove(key);
+    }
+    return filtered;
+  }
+
+  private static Map<Bytes, Bytes> stripMultiTenantKeysFromBytesMap(Map<Bytes, Bytes> source) {
+    if (source == null || source.isEmpty()) {
+      return source;
+    }
+    Map<Bytes, Bytes> filtered = new HashMap<>();
+    for (Map.Entry<Bytes, Bytes> entry : source.entrySet()) {
+      Bytes key = entry.getKey();
+      if (key == null || key.get() == null) {
+        continue;
+      }
+      String keyString = Bytes.toString(key.get());
+      if (!MULTI_TENANT_CONF_KEYS.contains(keyString)) {
+        filtered.put(key, entry.getValue());
+      }
+    }
+    return filtered;
   }
 
   public static List<StoreFileInfo> toStoreFileInfo(Collection<HStoreFile> storefiles) {

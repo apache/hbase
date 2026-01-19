@@ -39,11 +39,6 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.MultiTenantFSDataInputStreamWrapper;
@@ -77,7 +72,7 @@ import org.apache.hbase.thirdparty.com.google.common.cache.RemovalNotification;
  * <ul>
  * <li>Multi-level tenant index support for efficient section lookup</li>
  * <li>Prefetching for sequential access optimization</li>
- * <li>Table property loading to support tenant configuration</li>
+ * <li>Configuration-driven tenant settings recorded in the trailer</li>
  * <li>Transparent delegation to HFile v3 readers for each section</li>
  * </ul>
  */
@@ -85,10 +80,6 @@ import org.apache.hbase.thirdparty.com.google.common.cache.RemovalNotification;
 public abstract class AbstractMultiTenantReader extends HFileReaderImpl
   implements MultiTenantBloomSupport {
   private static final Logger LOG = LoggerFactory.getLogger(AbstractMultiTenantReader.class);
-
-  /** Static storage for table properties to avoid repeated loading */
-  private static final Cache<TableName, Map<String, String>> TABLE_PROPERTIES_CACHE =
-    CacheBuilder.newBuilder().maximumSize(100).expireAfterWrite(5, TimeUnit.MINUTES).build();
 
   /** Tenant extractor for identifying tenant information from cells */
   protected final TenantExtractor tenantExtractor;
@@ -690,52 +681,6 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
   public BloomFilter getDeleteFamilyBloomFilterInstance() throws IOException {
     SectionBloomState state = findSectionBloomState(false, true);
     return state != null ? state.getDeleteBloom() : null;
-  }
-
-  /**
-   * Get table properties from the file context if available.
-   * <p>
-   * Properties are used for tenant configuration and optimization settings.
-   * @return A map of table properties, or empty map if not available
-   */
-  protected Map<String, String> getTableProperties() {
-    Map<String, String> tableProperties = new HashMap<>();
-
-    try {
-      // If file context has table name, try to get table properties
-      HFileContext fileContext = getFileContext();
-      if (fileContext == null || fileContext.getTableName() == null) {
-        LOG.debug("Table name not available in HFileContext");
-        return tableProperties;
-      }
-
-      // Get the table descriptor from Admin API
-      TableName tableName = TableName.valueOf(fileContext.getTableName());
-
-      try {
-        tableProperties = TABLE_PROPERTIES_CACHE.get(tableName, () -> {
-          Map<String, String> props = new HashMap<>();
-          try (Connection conn = ConnectionFactory.createConnection(getConf());
-            Admin admin = conn.getAdmin()) {
-            TableDescriptor tableDesc = admin.getDescriptor(tableName);
-            if (tableDesc != null) {
-              // Extract relevant properties for multi-tenant configuration
-              tableDesc.getValues().forEach((k, v) -> {
-                props.put(Bytes.toString(k.get()), Bytes.toString(v.get()));
-              });
-              LOG.debug("Loaded table properties for {}", tableName);
-            }
-          }
-          return props;
-        });
-      } catch (Exception e) {
-        LOG.warn("Failed to get table descriptor for {}", tableName, e);
-      }
-    } catch (Exception e) {
-      LOG.warn("Error loading table properties", e);
-    }
-
-    return tableProperties;
   }
 
   /**
