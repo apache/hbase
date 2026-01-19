@@ -126,6 +126,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
 
   /** List for section navigation */
   private List<ImmutableBytesWritable> sectionIds;
+  /** Section entries sorted by file offset for fast lookup */
+  private List<SectionOffsetEntry> sectionEntriesByOffset;
 
   /** Number of levels in the tenant index structure */
   private int tenantIndexLevels = 1;
@@ -442,6 +444,18 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     // Sort by tenant prefix to ensure lexicographic order
     sectionIds.sort((a, b) -> Bytes.compareTo(a.get(), b.get()));
     LOG.debug("Initialized {} section IDs for navigation", sectionIds.size());
+
+    sectionEntriesByOffset = new ArrayList<>(sectionLocations.size());
+    for (Map.Entry<ImmutableBytesWritable, SectionMetadata> entry : sectionLocations.entrySet()) {
+      ImmutableBytesWritable sectionKey = entry.getKey();
+      SectionMetadata metadata = entry.getValue();
+      byte[] sectionId =
+        Bytes.copy(sectionKey.get(), sectionKey.getOffset(), sectionKey.getLength());
+      long startOffset = metadata.getOffset();
+      long endOffset = startOffset + (long) metadata.getSize();
+      sectionEntriesByOffset.add(new SectionOffsetEntry(sectionId, startOffset, endOffset));
+    }
+    sectionEntriesByOffset.sort((left, right) -> Long.compare(left.startOffset, right.startOffset));
   }
 
   /**
@@ -716,6 +730,18 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
      */
     int getSize() {
       return size;
+    }
+  }
+
+  private static final class SectionOffsetEntry {
+    private final byte[] sectionId;
+    private final long startOffset;
+    private final long endOffset;
+
+    private SectionOffsetEntry(byte[] sectionId, long startOffset, long endOffset) {
+      this.sectionId = sectionId;
+      this.startOffset = startOffset;
+      this.endOffset = endOffset;
     }
   }
 
@@ -1229,22 +1255,24 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
 
     @Override
     public boolean seekTo() throws IOException {
-      // Get the first section from the section index
-      if (!sectionIds.isEmpty()) {
-        // Get the first section ID from the list
-        byte[] firstSectionId = sectionIds.get(0).get();
+      if (sectionIds == null || sectionIds.isEmpty()) {
+        seeked = false;
+        return false;
+      }
 
-        if (switchToSection(firstSectionId)) {
-          boolean result = currentScanner.seekTo();
-          seeked = result;
-          return result;
-        } else {
-          LOG.debug("No section reader available for first section {}",
-            Bytes.toStringBinary(firstSectionId));
+      // Find the first section that actually contains data.
+      for (ImmutableBytesWritable sectionId : sectionIds) {
+        byte[] candidate = sectionId.get();
+        if (!switchToSection(candidate)) {
+          continue;
+        }
+        boolean result = currentScanner.seekTo();
+        if (result) {
+          seeked = true;
+          return true;
         }
       }
 
-      // If we reach here, no sections were found or seeking failed
       seeked = false;
       return false;
     }
@@ -1376,22 +1404,64 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
 
     @Override
     public boolean seekBefore(ExtendedCell key) throws IOException {
-      // Extract tenant section ID
-      byte[] tenantSectionId = tenantExtractor.extractTenantSectionId(key);
-
-      // Get the scanner for this tenant section
-      if (!switchToSection(tenantSectionId)) {
+      if (key == null || key.getRowLength() == 0) {
         seeked = false;
         return false;
       }
+      if (sectionIds == null || sectionIds.isEmpty()) {
+        seeked = false;
+        return false;
+      }
+
+      // Extract tenant section ID
+      byte[] targetSectionId = tenantExtractor.extractTenantSectionId(key);
+
+      // Find insertion point for the target section in the sorted sectionIds list
+      int n = sectionIds.size();
+      int insertionIndex = n; // default: after last
+      boolean exactSectionMatch = false;
+      for (int i = 0; i < n; i++) {
+        byte[] sid = sectionIds.get(i).get();
+        int cmp = Bytes.compareTo(sid, targetSectionId);
+        if (cmp == 0) {
+          insertionIndex = i;
+          exactSectionMatch = true;
+          break;
+        }
+        if (cmp > 0) {
+          insertionIndex = i;
+          break;
+        }
+      }
+
+      if (!exactSectionMatch) {
+        if (insertionIndex == 0) {
+          seeked = false;
+          return false;
+        }
+        return positionToPreviousSection(insertionIndex - 1) >= 0;
+      }
+
+      byte[] matchedSectionId = sectionIds.get(insertionIndex).get();
+      if (!switchToSection(matchedSectionId)) {
+        if (insertionIndex == 0) {
+          seeked = false;
+          return false;
+        }
+        return positionToPreviousSection(insertionIndex - 1) >= 0;
+      }
+
       boolean result = currentScanner.seekBefore(key);
       if (result) {
         seeked = true;
-      } else {
-        seeked = false;
+        return true;
       }
 
-      return result;
+      if (insertionIndex == 0) {
+        seeked = false;
+        return false;
+      }
+      return positionToPreviousSection(insertionIndex - 1) >= 0;
     }
 
     @Override
@@ -2116,13 +2186,20 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
    * @return the section reader containing this offset, or null if not found
    */
   private SectionReaderLease findSectionForOffset(long absoluteOffset) throws IOException {
-    for (Map.Entry<ImmutableBytesWritable, SectionMetadata> entry : sectionLocations.entrySet()) {
-      SectionMetadata metadata = entry.getValue();
-      if (
-        absoluteOffset >= metadata.getOffset()
-          && absoluteOffset < metadata.getOffset() + metadata.getSize()
-      ) {
-        return getSectionReader(entry.getKey().get());
+    if (sectionEntriesByOffset == null || sectionEntriesByOffset.isEmpty()) {
+      return null;
+    }
+    int low = 0;
+    int high = sectionEntriesByOffset.size() - 1;
+    while (low <= high) {
+      int mid = (low + high) >>> 1;
+      SectionOffsetEntry entry = sectionEntriesByOffset.get(mid);
+      if (absoluteOffset < entry.startOffset) {
+        high = mid - 1;
+      } else if (absoluteOffset >= entry.endOffset) {
+        low = mid + 1;
+      } else {
+        return getSectionReader(entry.sectionId);
       }
     }
     return null;

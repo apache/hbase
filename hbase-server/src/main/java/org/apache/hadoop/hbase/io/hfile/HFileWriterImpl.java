@@ -577,7 +577,7 @@ public class HFileWriterImpl implements HFile.Writer {
   private void doCacheOnWrite(long offset) {
     cacheConf.getBlockCache().ifPresent(cache -> {
       HFileBlock cacheFormatBlock = blockWriter.getBlockForCaching(cacheConf);
-      BlockCacheKey key = buildCacheBlockKey(offset, cacheFormatBlock.getBlockType());
+      BlockCacheKey key = buildCacheBlockKeyForCaching(offset, cacheFormatBlock.getBlockType());
       if (!shouldCacheBlock(cache, key)) {
         return;
       }
@@ -588,6 +588,13 @@ public class HFileWriterImpl implements HFile.Writer {
         cacheFormatBlock.release();
       }
     });
+  }
+
+  /**
+   * Build a cache key for cache-on-write. Subclasses may override to adjust offsets or file names.
+   */
+  protected BlockCacheKey buildCacheBlockKeyForCaching(long offset, BlockType blockType) {
+    return buildCacheBlockKey(offset, blockType);
   }
 
   private BlockCacheKey buildCacheBlockKey(long offset, BlockType blockType) {
