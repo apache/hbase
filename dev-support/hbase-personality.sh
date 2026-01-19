@@ -88,20 +88,6 @@ function personality_globals
   # See HBASE-19902 for how we arrived at 20g.
   #shellcheck disable=SC2034
   DOCKERMEMLIMIT=20g
-
-  # Override BUILD_URL for GitHub Actions to point to nightlies
-  # instead of the GitHub Actions run page
-  # The robot sets BUILD_URL to the GHA run page, but we want nightlies URLs
-  if [[ "${GITHUB_ACTIONS}" == "true" ]] && [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
-    local pr_number
-    # GITHUB_REF is a standard GitHub Actions environment variable
-    # shellcheck disable=SC2153
-    pr_number=$(echo "${GITHUB_REF}" | cut -f3 -d/)
-    #shellcheck disable=SC2034
-    BUILD_URL="https://nightlies.apache.org/hbase/HBase-PreCommit-GH-Actions-PR/PR-${pr_number}/${GITHUB_RUN_NUMBER}/"
-    #shellcheck disable=SC2034
-    BUILD_URL_ARTIFACTS="yetus-general-check/output"
-  fi
 }
 
 ## @description  Parse extra arguments required by personalities, if any.
@@ -849,19 +835,6 @@ function hbaseanti_patchfile
 
 add_test_type spotless
 
-## @description  Build artifact URL for GitHub Actions
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-if ! declare -f githubactions_artifact_url >/dev/null; then
-  function githubactions_artifact_url
-  {
-    if [[ -n "${BUILD_URL}" ]] && [[ -n "${BUILD_URL_ARTIFACTS}" ]]; then
-      echo "${BUILD_URL}${BUILD_URL_ARTIFACTS}"
-    fi
-  }
-fi
-
 ## @description  spotless file filter
 ## @audience     private
 ## @stability    evolving
@@ -879,6 +852,7 @@ function spotless_rebuild
 {
   local repostatus=$1
   local logfile="${PATCH_DIR}/${repostatus}-spotless.txt"
+  local linecommentsfile="${PATCH_DIR}/${repostatus}-spotless-linecomments.txt"
 
   if ! verify_needed_test spotless; then
     return 0
@@ -896,6 +870,20 @@ function spotless_rebuild
 
   count=$(${GREP} -c '\[ERROR\]' "${logfile}")
   if [[ ${count} -gt 0 ]]; then
+    # Generate file-level annotations for GitHub Actions
+    if [[ -n "${BUGLINECOMMENTS}" ]]; then
+      # Extract files with violations: lines like "[ERROR]     src/path/to/file.java"
+      # with leading whitespace after [ERROR]
+      ${GREP} '^\[ERROR\][[:space:]]\+[^[:space:]]' "${logfile}" \
+        | ${SED} 's/^\[ERROR\][[:space:]]*//g' \
+        | while read -r file; do
+            echo "${file}:1:Spotless formatting required, run mvn spotless:apply"
+          done > "${linecommentsfile}"
+      if [[ -s "${linecommentsfile}" ]]; then
+        bugsystem_linecomments_queue spotless "${linecommentsfile}"
+      fi
+    fi
+
     add_vote_table_v2 -1 spotless \
       "@@BASE@@/${repostatus}-spotless.txt" \
       "${repostatus} has ${count} errors when running spotless:check, run spotless:apply to fix."
