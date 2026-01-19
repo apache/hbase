@@ -23,7 +23,7 @@ package org.apache.hadoop.hbase.master.balancer;
  * periodically and restores the cache when it is restarted. This balancer implements a mechanism
  * where it maintains the amount by which a region is cached on a region server. During balancer
  * run, a region plan is generated that takes into account this cache information and tries to
- * move the regions so that the cache minimally impacted.
+ * move the regions so that the cache is minimally impacted.
  */
 
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_PERSISTENT_PATH_KEY;
@@ -130,7 +130,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
         int regionSizeMB = (int) rm.getRegionSizeMB().get(Size.Unit.MEGABYTE);
 
         rload.add(new BalancerRegionLoad(rm));
-        // Maintain a map of region and it's total size. This is needed to calculate the cache
+        // Maintain a map of region and its total size. This is needed to calculate the cache
         // ratios for the regions cached on old region servers
         regionCacheRatioOnCurrentServerMap.put(regionEncodedName, new Pair<>(sn, regionSizeMB));
         loads.put(regionEncodedName, rload);
@@ -285,9 +285,6 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
         return false;
       }
 
-      DecimalFormat df = new DecimalFormat("#");
-      df.setMaximumFractionDigits(4);
-
       float cacheRatioDiffThreshold = 0.6f;
 
       // Conditions for moving the region
@@ -307,7 +304,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
           LOG.debug(
             "Region {} moved from {} to {} as the region is cached {} equally on both servers",
             cluster.regions[regionIndex].getEncodedName(), cluster.servers[currentServerIndex],
-            cluster.servers[oldServerIndex], df.format(cacheRatioOnCurrentServer));
+            cluster.servers[oldServerIndex], cacheRatioOnCurrentServer);
         }
         return true;
       }
@@ -324,8 +321,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
             "Region {} moved from {} to {} as region cache ratio {} is better than the current "
               + "cache ratio {}",
             cluster.regions[regionIndex].getEncodedName(), cluster.servers[currentServerIndex],
-            cluster.servers[oldServerIndex], cacheRatioOnCurrentServer,
-            df.format(cacheRatioOnCurrentServer));
+            cluster.servers[oldServerIndex], cacheRatioOnOldServer, cacheRatioOnCurrentServer);
         }
         return true;
       }
@@ -334,8 +330,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
         LOG.debug(
           "Region {} not moved from {} to {} with current cache ratio {} and old cache ratio {}",
           cluster.regions[regionIndex], cluster.servers[currentServerIndex],
-          cluster.servers[oldServerIndex], cacheRatioOnCurrentServer,
-          df.format(cacheRatioOnCurrentServer));
+          cluster.servers[oldServerIndex], cacheRatioOnCurrentServer, cacheRatioOnOldServer);
       }
       return false;
     }
@@ -391,7 +386,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
         if (LOG.isDebugEnabled()) {
           LOG.debug(
             "CacheAwareSkewnessCandidateGenerator: Region {} moved from {} to {} as it "
-              + "was hosted their earlier",
+              + "was hosted there earlier",
             regionEncodedName, cluster.servers[thisServer].getHostname(),
             cluster.servers[otherServer].getHostname());
         }
