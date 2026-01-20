@@ -35,6 +35,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MetaTableNameStore;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
@@ -68,9 +70,9 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
 
   @Override
   public TableName getTableName() {
-    // Get dynamic meta table name from master services
-    // Currently returns "hbase:meta", future will support replicas
-    return TableName.valueOf("hbase:meta");
+    // Always returns default "hbase:meta" for now
+    // Future: will support replica-specific names (e.g., "hbase:meta_replica1")
+    return TableName.valueOf("hbase", "meta");
   }
 
   @Override
@@ -106,6 +108,21 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     try {
       switch (state) {
         case INIT_META_WRITE_FS_LAYOUT:
+          // Store the meta table name in Master Local Region before creating the table
+          // This establishes the storage pattern for dynamic meta table name discovery
+          TableName metaTableName = TableName.valueOf("hbase", "meta");
+          HMaster master = (HMaster) env.getMasterServices();
+          MetaTableNameStore store = master.getMetaTableNameStoreInternal();
+          
+          if (store != null && !store.isStored()) {
+            LOG.info("Storing meta table name in Master Local Region: {}", metaTableName);
+            store.store(metaTableName);
+          } else if (store == null) {
+            LOG.warn("MetaTableNameStore not initialized, skipping storage");
+          } else {
+            LOG.info("Meta table name already stored, skipping");
+          }
+          
           Configuration conf = env.getMasterConfiguration();
           Path rootDir = CommonFSUtils.getRootDir(conf);
           TableDescriptor td = writeFsLayout(rootDir, env);

@@ -511,6 +511,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private ReplicationPeerModificationStateStore replicationPeerModificationStateStore;
 
   /**
+   * Store for the meta table name in the Master Local Region.
+   * This provides cluster-specific storage for dynamic meta table name discovery.
+   */
+  private MetaTableNameStore metaTableNameStore;
+
+  /**
    * Initializes the HMaster. The steps are as follows:
    * <p>
    * <ol>
@@ -1016,6 +1022,19 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // initialize master local region
     masterRegion = MasterRegionFactory.create(this);
     rsListStorage = new MasterRegionServerList(masterRegion, this);
+
+    // Initialize meta table name store after master region is ready
+    metaTableNameStore = new MetaTableNameStore(masterRegion);
+    try {
+      if (metaTableNameStore.isStored()) {
+        TableName metaName = metaTableNameStore.load();
+        LOG.info("Loaded meta table name from Master Local Region: {}", metaName);
+      } else {
+        LOG.info("Meta table name not yet stored (will be set during InitMetaProcedure)");
+      }
+    } catch (IOException e) {
+      LOG.warn("Failed to load meta table name from Master Local Region, will use default", e);
+    }
 
     // Initialize the ServerManager and register it as a configuration observer
     this.serverManager = createServerManager(this, rsListStorage);
@@ -1655,6 +1674,33 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   @Override
   public TableStateManager getTableStateManager() {
     return tableStateManager;
+  }
+
+  /**
+   * Override base implementation to read from Master Local Region storage.
+   * This allows the master to return the cluster-specific meta table name.
+   */
+  @Override
+  public TableName getMetaTableName() {
+    if (metaTableNameStore != null) {
+      try {
+        return metaTableNameStore.load();
+      } catch (IOException e) {
+        LOG.warn("Failed to load meta table name from Master Local Region, using default", e);
+      }
+    }
+    // Fallback to base implementation (returns default "hbase:meta")
+    return super.getMetaTableName();
+  }
+
+  /**
+   * Internal accessor for procedures to get the meta table name store.
+   * This is not exposed via MasterServices interface to avoid interface pollution.
+   * Package visibility is insufficient as procedures are in a sub-package.
+   * @return the meta table name store, or null if not yet initialized
+   */
+  public MetaTableNameStore getMetaTableNameStoreInternal() {
+    return metaTableNameStore;
   }
 
   /*
