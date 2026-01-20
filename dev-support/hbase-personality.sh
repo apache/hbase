@@ -330,6 +330,9 @@ function personality_file_tests
 ## @audience     private
 ## @stability    evolving
 ## @param        name of variable to set with maven arguments
+# NOTE: INCLUDE_TESTS_URL uses -Dtest= which conflicts with pom.xml <include> patterns.
+#       Do not use INCLUDE_TESTS_URL with profiles that define their own <include> patterns
+#       (e.g., runLargeTests-wave1, runLargeTests-wave2, runLargeTests-wave3).
 function get_include_exclude_tests_arg
 {
   local  __resultvar=$1
