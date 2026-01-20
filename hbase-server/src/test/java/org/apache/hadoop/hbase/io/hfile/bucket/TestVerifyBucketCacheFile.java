@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -144,6 +143,7 @@ public class TestVerifyBucketCacheFile {
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
         testDir + "/bucket.persistence" + name.getMethodName());
       assertTrue(recoveredBucketCache.waitForCacheInitialization(10000));
+      waitPersistentCacheValidation(conf, recoveredBucketCache);
       assertEquals(0, recoveredBucketCache.getAllocator().getUsedSize());
       assertEquals(0, recoveredBucketCache.backingMap.size());
       BlockCacheKey[] newKeys = CacheTestUtils.regenerateKeys(blocks, names);
@@ -317,8 +317,6 @@ public class TestVerifyBucketCacheFile {
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       long usedSize = bucketCache.getAllocator().getUsedSize();
       assertEquals(0, usedSize);
-
-      Pair<String, Long> myPair = new Pair<>();
 
       CacheTestUtils.HFileBlockPair[] blocks =
         CacheTestUtils.generateHFileBlocks(constructedBlockSize, 1);
