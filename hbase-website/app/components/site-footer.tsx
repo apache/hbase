@@ -120,7 +120,7 @@ export function SiteFooter() {
         <hr className="border-border/60 my-8" />
 
         <p className="text-xs leading-6">
-          Copyright ©2007–2025 The Apache Software Foundation. All rights reserved. Apache HBase,
+          Copyright ©2007–2026 The Apache Software Foundation. All rights reserved. Apache HBase,
           HBase, Apache, the Apache HBase logo and the ASF logo are either registered trademarks or
           trademarks of the Apache Software Foundation. All other marks mentioned may be trademarks
           or registered trademarks of their respective owners.

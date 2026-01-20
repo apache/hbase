@@ -958,7 +958,7 @@
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
     <spotless.version>2.44.4</spotless.version>
-    <maven-site.version>3.12.0</maven-site.version>
+    <maven-site.version>3.21.0</maven-site.version>
     <reflow-maven-skin.version>2.3.3</reflow-maven-skin.version>
     <maven-download-plugin.version>1.2.1</maven-download-plugin.version>
     <!-- Website static CSS, JS dependencies -->
