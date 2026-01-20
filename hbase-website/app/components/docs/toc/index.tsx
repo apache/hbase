@@ -98,7 +98,7 @@ export function TocThumb({ containerRef, ...props }: ComponentProps<"div"> & Ref
     return () => {
       observer.disconnect();
     };
-  }, [containerRef]);
+  }, [containerRef, onPrint]);
 
   useOnChange(active, () => {
     if (containerRef.current) {

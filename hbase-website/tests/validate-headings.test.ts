@@ -68,7 +68,7 @@ describe("MDX Heading ID Uniqueness Validation", () => {
 
     // Find IDs that appear in multiple different pages
     const duplicates = Array.from(idToPages.entries())
-      .filter(([_, occurrences]) => {
+      .filter(([, occurrences]) => {
         // Check if this ID appears in multiple DIFFERENT pages
         const uniquePages = new Set(occurrences.map((o) => o.url));
         return uniquePages.size > 1;

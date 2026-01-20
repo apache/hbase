@@ -39,7 +39,6 @@ export const advancedSchema = {
 export async function createDB({
   indexes,
   tokenizer,
-  search: _,
   ...rest
 }: AdvancedOptions): Promise<Orama<typeof advancedSchema>> {
   const items = typeof indexes === "function" ? await indexes() : indexes;
