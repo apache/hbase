@@ -146,9 +146,16 @@ const renderer = toClientRenderer(
       // Transform internal /docs/ links to single-page anchors when on single-page route
       if (isSinglePage && href?.startsWith("/docs/") && !href.startsWith("/docs/single-page")) {
         // Convert /docs/configuration/basic-prerequisites to /docs/single-page#basic-prerequisites
-        // Extract the last segment as the anchor
-        const segments = href.replace("/docs/", "").split("/");
-        const anchor = segments[segments.length - 1];
+        // or /docs/architecture/regionserver#bucketcache-example-configuration to /docs/single-page#bucketcache-example-configuration
+        let anchor: string;
+        if (href.includes("#")) {
+          // If the href already has an anchor, use that
+          anchor = href.split("#")[1];
+        } else {
+          // Otherwise, extract the last path segment as the anchor
+          const segments = href.replace("/docs/", "").split("/");
+          anchor = segments[segments.length - 1];
+        }
         transformedHref = `/docs/single-page#${anchor}`;
       }
 
