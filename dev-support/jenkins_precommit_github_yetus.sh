@@ -167,6 +167,10 @@ fi
 if [[ -n "${JAVA8_HOME}" ]]; then
   YETUS_ARGS+=("--java8-home=${JAVA8_HOME}")
 fi
+# Test profile for running specific test categories (e.g., runDevTests, runLargeTests-wave1)
+if [[ -n "${TEST_PROFILE}" ]]; then
+  YETUS_ARGS+=("--test-profile=${TEST_PROFILE}")
+fi
 
 echo "Launching yetus with command line:"
 echo "${TESTPATCHBIN} ${YETUS_ARGS[*]}"
