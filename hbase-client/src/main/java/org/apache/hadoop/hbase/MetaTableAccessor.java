@@ -341,7 +341,7 @@ public class MetaTableAccessor {
    */
   public static Result getRegionResult(Connection connection, RegionInfo regionInfo)
     throws IOException {
-    return getCatalogFamilyRow(connection,regionInfo);
+    return getCatalogFamilyRow(connection, regionInfo);
   }
 
   /**

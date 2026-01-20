@@ -60,8 +60,7 @@ public class MetaRWQueueRpcExecutor extends RWQueueRpcExecutor {
     final boolean toWriteQueue = isWriteRequest(call.getHeader(), call.getParam());
     // dispatch client system read request to read handlers
     // dispatch internal system read request to scan handlers
-    final boolean toScanQueue =
-      getNumScanQueues() > 0 && level == HConstants.INTERNAL_READ_QOS;
+    final boolean toScanQueue = getNumScanQueues() > 0 && level == HConstants.INTERNAL_READ_QOS;
     return dispatchTo(toWriteQueue, toScanQueue, callTask);
   }
 
