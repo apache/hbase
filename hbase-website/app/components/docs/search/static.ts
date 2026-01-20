@@ -159,6 +159,40 @@ export async function searchAdvanced(
   const highlighter = createContentHighlighter(query);
   const result = await searchOrama(db, params);
 
+  // Helper to detect phrase matches (3+ consecutive words)
+  const getPhraseMatchBoost = (content: string, searchTerm: string): number => {
+    const contentLower = content.toLowerCase();
+    const termLower = searchTerm.toLowerCase();
+
+    // Split search term into words
+    const searchWords = termLower.split(/\s+/).filter((w) => w.length > 0);
+
+    // Need at least 3 words for phrase matching
+    if (searchWords.length < 3) return 0;
+
+    // Check for longest consecutive word match
+    let maxConsecutiveMatch = 0;
+
+    for (let i = 0; i <= searchWords.length - 3; i++) {
+      // Try matching from 3 words up to all remaining words
+      for (let len = 3; len <= searchWords.length - i; len++) {
+        const phrase = searchWords.slice(i, i + len).join(" ");
+        if (contentLower.includes(phrase)) {
+          maxConsecutiveMatch = Math.max(maxConsecutiveMatch, len);
+        }
+      }
+    }
+
+    // Boost based on length of consecutive match
+    // Make this VERY high to dominate over heading matches
+    // 3 words: +10000, 4 words: +15000, 5+ words: +20000+
+    if (maxConsecutiveMatch >= 3) {
+      return 10000 + (maxConsecutiveMatch - 3) * 5000;
+    }
+
+    return 0;
+  };
+
   // Helper to score match quality (exact > starts with > contains)
   const getMatchQuality = (content: string, searchTerm: string): number => {
     const lower = content.toLowerCase();
@@ -177,6 +211,8 @@ export async function searchAdvanced(
     pageId: string;
     pageScore: number;
     matchQuality: number;
+    phraseBoost: number;
+    totalScore: number;
     page: any;
     hits: any[];
   }> = [];
@@ -189,22 +225,42 @@ export async function searchAdvanced(
     // Find the page hit to get its Orama score
     const pageHit = item.result.find((hit: any) => hit.document.type === "page");
     const pageScore = pageHit?.score || 0;
-    const matchQuality = getMatchQuality(page.content, query);
+
+    // Check for phrase matches in ALL hits (page title + all content sections)
+    // Use the BEST phrase match from any hit to boost the entire group
+    let bestPhraseBoost = 0;
+    let bestMatchQuality = 0;
+
+    for (const hit of item.result) {
+      const hitPhraseBoost = getPhraseMatchBoost(hit.document.content, query);
+      const hitMatchQuality = getMatchQuality(hit.document.content, query);
+
+      if (hitPhraseBoost > bestPhraseBoost) {
+        bestPhraseBoost = hitPhraseBoost;
+      }
+      if (hitMatchQuality > bestMatchQuality) {
+        bestMatchQuality = hitMatchQuality;
+      }
+    }
+
+    const totalScore = bestMatchQuality + bestPhraseBoost;
 
     groupsWithScores.push({
       pageId,
       pageScore,
-      matchQuality,
+      matchQuality: bestMatchQuality,
+      phraseBoost: bestPhraseBoost,
+      totalScore,
       page,
       hits: item.result
     });
   }
 
-  // Sort groups: exact matches first, then by Orama score
+  // Sort groups: phrase matches + exact matches first, then by Orama score
   groupsWithScores.sort((a, b) => {
-    // Prioritize exact matches
-    if (a.matchQuality !== b.matchQuality) {
-      return b.matchQuality - a.matchQuality;
+    // Prioritize results with phrase matches and exact matches
+    if (a.totalScore !== b.totalScore) {
+      return b.totalScore - a.totalScore;
     }
     // Then by Orama relevance
     return b.pageScore - a.pageScore;
@@ -224,20 +280,29 @@ export async function searchAdvanced(
       url: page.url
     });
 
-    // Sort hits within this group: by type, then match quality, then Orama score
+    // Sort hits within this group: by phrase match + match quality, then type, then Orama score
     const sortedHits = [...hits]
       .filter((hit: any) => hit.document.type !== "page")
-      .map((hit: any) => ({
-        hit,
-        typeScore: hit.document.type === "heading" ? 2 : 1,
-        matchQuality: getMatchQuality(hit.document.content, query)
-      }))
+      .map((hit: any) => {
+        const typeScore = hit.document.type === "heading" ? 2 : 1;
+        const matchQuality = getMatchQuality(hit.document.content, query);
+        const phraseBoost = getPhraseMatchBoost(hit.document.content, query);
+        const totalScore = matchQuality + phraseBoost;
+
+        return {
+          hit,
+          typeScore,
+          matchQuality,
+          phraseBoost,
+          totalScore
+        };
+      })
       .sort((a, b) => {
-        // Type first (heading > text)
+        // First prioritize phrase matches and exact matches (combined score)
+        if (a.totalScore !== b.totalScore) return b.totalScore - a.totalScore;
+        // Then by type (heading > text)
         if (a.typeScore !== b.typeScore) return b.typeScore - a.typeScore;
-        // Then match quality (exact > partial)
-        if (a.matchQuality !== b.matchQuality) return b.matchQuality - a.matchQuality;
-        // Then Orama relevance
+        // Then by Orama relevance
         return b.hit.score - a.hit.score;
       })
       .map((item) => item.hit);
