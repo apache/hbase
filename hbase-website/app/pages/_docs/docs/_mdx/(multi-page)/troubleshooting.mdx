@@ -15,17 +15,17 @@ RegionServer suicides are 'normal', as this is what they do when something goes 
 
 The key process logs are as follows... (replace `<user>` with the user that started the service, and `<hostname>` for the machine name)
 
-NameNode: *$HADOOP_HOME/logs/hadoop-\<user>-namenode-\<hostname>.log*
+NameNode: *\$HADOOP_HOME/logs/hadoop-\<user>-namenode-\<hostname>.log*
 
-DataNode: *$HADOOP_HOME/logs/hadoop-\<user>-datanode-\<hostname>.log*
+DataNode: *\$HADOOP_HOME/logs/hadoop-\<user>-datanode-\<hostname>.log*
 
-JobTracker: *$HADOOP_HOME/logs/hadoop-\<user>-jobtracker-\<hostname>.log*
+JobTracker: *\$HADOOP_HOME/logs/hadoop-\<user>-jobtracker-\<hostname>.log*
 
-TaskTracker: *$HADOOP_HOME/logs/hadoop-\<user>-tasktracker-\<hostname>.log*
+TaskTracker: *\$HADOOP_HOME/logs/hadoop-\<user>-tasktracker-\<hostname>.log*
 
-HMaster: *$HBASE_HOME/logs/hbase-\<user>-master-\<hostname>.log*
+HMaster: *\$HBASE_HOME/logs/hbase-\<user>-master-\<hostname>.log*
 
-RegionServer: *$HBASE_HOME/logs/hbase-\<user>-regionserver-\<hostname>.log*
+RegionServer: *\$HBASE_HOME/logs/hbase-\<user>-regionserver-\<hostname>.log*
 
 ZooKeeper: *TODO*
 
@@ -478,7 +478,7 @@ In some situations clients that fetch data from a RegionServer get a LeaseExcept
 
 Since 0.20.0 the default log level for `org.apache.hadoop.hbase.*` is DEBUG.
 
-On your clients, edit *$HBASE_HOME/conf/log4j.properties* and change this: `log4j.logger.org.apache.hadoop.hbase=DEBUG` to this: `log4j.logger.org.apache.hadoop.hbase=INFO`, or even `log4j.logger.org.apache.hadoop.hbase=WARN`.
+On your clients, edit *\$HBASE_HOME/conf/log4j.properties* and change this: `log4j.logger.org.apache.hadoop.hbase=DEBUG` to this: `log4j.logger.org.apache.hadoop.hbase=INFO`, or even `log4j.logger.org.apache.hadoop.hbase=WARN`.
 
 ### Long Client Pauses With Compression [!toc]
 
