@@ -17,7 +17,7 @@
 
 # yamllint disable rule:line-length
 ---
-name: Yetus General Check
+name: Yetus JDK17 Hadoop3 Compile Check
 
 "on":
   pull_request:
@@ -28,9 +28,9 @@ permissions:
   statuses: write
 
 jobs:
-  general-check:
+  jdk17-hadoop3-compile-check:
     runs-on: ubuntu-latest
-    timeout-minutes: 600
+    timeout-minutes: 60
 
     env:
       YETUS_VERSION: '0.15.0'
@@ -42,10 +42,10 @@ jobs:
           path: src
           fetch-depth: 0
 
-      - name: Set up JDK 11
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '11'
+          java-version: '17'
           distribution: 'temurin'
 
       - name: Maven cache
@@ -68,29 +68,24 @@ jobs:
           tar --strip-components=1 -xzf apache-yetus-${{ env.YETUS_VERSION }}-bin.tar.gz
           rm apache-yetus-${{ env.YETUS_VERSION }}-bin.tar.gz
 
-      - name: Run Yetus General Check
+      - name: Run Yetus JDK17 Hadoop3 Compile Check
         env:
           ARCHIVE_PATTERN_LIST: "TEST-*.xml,org.apache.h*.txt,*.dumpstream,*.dump"
-          CHANGE_TARGET: "${{ github.base_ref }}"
           DOCKERFILE: "${{ github.workspace }}/src/dev-support/docker/Dockerfile"
           GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_USER: ${{ github.actor }}
-          HADOOP_PROFILE: "3.0"
-          JAVA8_HOME: "/usr/lib/jvm/java-8"
-          PATCHDIR: "${{ github.workspace }}/yetus-general-check/output"
-          PLUGINS: "all,-javadoc,-jira,-shadedjars,-unit"
-          SET_JAVA_HOME: "/usr/lib/jvm/java-11"
+          PATCHDIR: "${{ github.workspace }}/yetus-jdk17-hadoop3-compile-check/output"
+          PLUGINS: "compile,github,htmlout,javac,javadoc,maven,mvninstall,shadedjars"
+          SET_JAVA_HOME: "/usr/lib/jvm/java-17"
           SOURCEDIR: "${{ github.workspace }}/src"
-          TESTS_FILTER: "checkstyle,javac,pylint,shellcheck,shelldocs,blanks,perlcritic,ruby-lint,rubocop"
+          TESTS_FILTER: "javac,javadoc"
           YETUSDIR: "${{ github.workspace }}/yetus"
           AUTHOR_IGNORE_LIST: "src/main/asciidoc/_chapters/developer.adoc"
           BLANKS_EOL_IGNORE_FILE: "dev-support/blanks-eol-ignore.txt"
           BLANKS_TABS_IGNORE_FILE: "dev-support/blanks-tabs-ignore.txt"
-          EXCLUDE_TESTS_URL: "https://ci-hbase.apache.org/job/HBase-Find-Flaky-Tests/job/${{ github.base_ref }}/lastSuccessfulBuild/artifact/output/excludes"
           BUILD_THREAD: "4"
-          SUREFIRE_FIRST_PART_FORK_COUNT: "1.0C"
-          SUREFIRE_SECOND_PART_FORK_COUNT: "0.5C"
           BRANCH_NAME: "${{ github.base_ref }}"
+          SKIP_ERRORPRONE: 'true'
           DEBUG: 'true'
         run: |
           cd "${{ github.workspace }}"
@@ -100,12 +95,12 @@ jobs:
         if: always()
         run: |
           cd "${{ github.workspace }}"
-          python3 src/dev-support/yetus_console_to_md.py yetus-general-check/output/console.txt >> $GITHUB_STEP_SUMMARY
+          python3 src/dev-support/yetus_console_to_md.py yetus-jdk17-hadoop3-compile-check/output/console.txt >> $GITHUB_STEP_SUMMARY
 
-      - name: Publish Test Results
+      - name: Publish Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: yetus-general-check-output
-          path: ${{ github.workspace }}/yetus-general-check/output
+          name: yetus-jdk17-hadoop3-compile-check-output
+          path: ${{ github.workspace }}/yetus-jdk17-hadoop3-compile-check/output
           retention-days: 7
