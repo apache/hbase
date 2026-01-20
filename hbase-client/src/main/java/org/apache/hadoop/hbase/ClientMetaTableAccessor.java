@@ -196,7 +196,7 @@ public final class ClientMetaTableAccessor {
     final AsyncTable<AdvancedScanResultConsumer> metaTable, final TableName tableName,
     final boolean excludeOfflinedSplitParents) {
     CompletableFuture<List<Pair<RegionInfo, ServerName>>> future = new CompletableFuture<>();
-    if (MetaTableName.getInstance().equals(tableName)) {
+    if (TableName.isMetaTableName(tableName)) {
       future.completeExceptionally(new IOException(
         "This method can't be used to locate meta regions;" + " use MetaTableLocator instead"));
     }

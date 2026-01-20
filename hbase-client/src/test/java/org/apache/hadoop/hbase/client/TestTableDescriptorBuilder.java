@@ -26,7 +26,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
@@ -60,7 +59,7 @@ public class TestTableDescriptorBuilder {
   @Test(expected = IOException.class)
   public void testAddCoprocessorTwice() throws IOException {
     String cpName = "a.b.c.d";
-    TableDescriptorBuilder.newBuilder(connection.getMetaTableName()).setCoprocessor(cpName)
+    TableDescriptorBuilder.newBuilder(TableName.valueOf("hbase:meta")).setCoprocessor(cpName)
       .setCoprocessor(cpName).build();
   }
 
@@ -68,7 +67,7 @@ public class TestTableDescriptorBuilder {
   public void testPb() throws DeserializationException, IOException {
     final int v = 123;
     TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(connection.getMetaTableName()).setMaxFileSize(v)
+      TableDescriptorBuilder.newBuilder(TableName.valueOf("hbase:meta")).setMaxFileSize(v)
         .setDurability(Durability.ASYNC_WAL).setReadOnly(true).setRegionReplication(2).build();
 
     byte[] bytes = TableDescriptorBuilder.toByteArray(htd);

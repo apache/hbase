@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -66,10 +66,10 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     TEST_UTIL.createTable(tableName, FAMILY);
     exist = admin.tableExists(tableName).get();
     assertTrue(exist);
-    exist = admin.tableExists(connection.getMetaTableName()).get();
+    exist = admin.tableExists(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()).get();
     assertTrue(exist);
     // meta table already exists
-    exist = admin.tableExists(connection.getMetaTableName()).get();
+    exist = admin.tableExists(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()).get();
     assertTrue(exist);
   }
 
@@ -118,7 +118,7 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     assertEquals(0, size);
 
     Collections.addAll(tableNames, tables);
-    tableNames.add(connection.getMetaTableName());
+    tableNames.add(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable());
     tableDescs = admin.listTableDescriptors(tableNames).get();
     size = tableDescs.size();
     assertEquals(tables.length + 1, size);
@@ -126,7 +126,7 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
       assertTrue("tableName should be equal in order",
         tableDescs.get(j).getTableName().equals(tables[i]));
     }
-    assertTrue(tableDescs.get(size - 1).getTableName().equals(connection.getMetaTableName()));
+    assertTrue(tableDescs.get(size - 1).getTableName().equals(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()));
 
     for (int i = 0; i < tables.length; i++) {
       admin.disableTable(tables[i]).join();
@@ -205,7 +205,7 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     assertTrue(ok);
     // meta table can not be disabled.
     try {
-      admin.disableTable(connection.getMetaTableName()).get();
+      admin.disableTable(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()).get();
       fail("meta table can not be disabled");
     } catch (ExecutionException e) {
       Throwable cause = e.getCause();
@@ -286,7 +286,7 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     createTableWithDefaultConf(tableName, splitKeys);
 
     AsyncTable<AdvancedScanResultConsumer> metaTable =
-      ASYNC_CONN.getTable(connection.getMetaTableName());
+      ASYNC_CONN.getTable(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable());
     List<HRegionLocation> regions =
       ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
     assertEquals(
@@ -315,8 +315,8 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     assertTrue(admin.isTableDisabled(tableName).get());
 
     // meta table is always enabled
-    assertTrue(admin.isTableEnabled(connection.getMetaTableName()).get());
-    assertFalse(admin.isTableDisabled(connection.getMetaTableName()).get());
+    assertTrue(admin.isTableEnabled(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()).get());
+    assertFalse(admin.isTableDisabled(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()).get());
   }
 
   @Test
@@ -324,6 +324,6 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     createTableWithDefaultConf(tableName);
     TEST_UTIL.waitTableAvailable(tableName);
     assertTrue(admin.isTableAvailable(tableName).get());
-    assertTrue(admin.isTableAvailable(connection.getMetaTableName()).get());
+    assertTrue(admin.isTableAvailable(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()).get());
   }
 }

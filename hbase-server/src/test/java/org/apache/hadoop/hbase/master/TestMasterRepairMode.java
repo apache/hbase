@@ -29,7 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncTable;
@@ -94,7 +94,7 @@ public class TestMasterRepairMode {
     Connection conn = TEST_UTIL.getConnection();
     assertTrue(conn.getAdmin().isMasterInMaintenanceMode());
 
-    try (Table table = conn.getTable(connection.getMetaTableName());
+    try (Table table = conn.getTable(TEST_UTIL.getConnection().getMetaTableName());
       ResultScanner scanner = table.getScanner(new Scan())) {
       assertNotNull("Could not read meta.", scanner.next());
     }
@@ -121,7 +121,7 @@ public class TestMasterRepairMode {
     Connection conn = TEST_UTIL.getConnection();
     assertTrue(conn.getAdmin().isMasterInMaintenanceMode());
 
-    try (Table table = conn.getTable(connection.getMetaTableName());
+    try (Table table = conn.getTable(TEST_UTIL.getConnection().getMetaTableName());
       ResultScanner scanner = table.getScanner(HConstants.TABLE_FAMILY);
       Stream<Result> results = StreamSupport.stream(scanner.spliterator(), false)) {
       assertTrue("Did not find user table records while reading hbase:meta",

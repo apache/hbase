@@ -22,7 +22,7 @@ import static org.junit.Assert.assertEquals;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -49,7 +49,7 @@ public class TestMultiActionMetricsFromClient {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.getHBaseCluster().waitForActiveAndReadyMaster();
-    TEST_UTIL.waitUntilAllRegionsAssigned(connection.getMetaTableName());
+    TEST_UTIL.waitUntilAllRegionsAssigned(TEST_UTIL.getConnection().getMetaTableName());
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
   }
 

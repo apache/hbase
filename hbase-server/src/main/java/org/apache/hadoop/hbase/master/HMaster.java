@@ -83,7 +83,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.PleaseRestartMasterException;
@@ -1094,7 +1094,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     InitMetaProcedure initMetaProc = null;
     // Print out state of hbase:meta on startup; helps debugging.
     if (
-      !this.assignmentManager.getRegionStates().hasTableRegionStates(MetaTableName.getInstance())
+      !this.assignmentManager.getRegionStates().hasTableRegionStates(getConnection().getMetaTableName())
     ) {
       Optional<InitMetaProcedure> optProc = procedureExecutor.getProcedures().stream()
         .filter(p -> p instanceof InitMetaProcedure).map(o -> (InitMetaProcedure) o).findAny();
@@ -1159,7 +1159,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       return;
     }
 
-    TableDescriptor metaDescriptor = tableDescriptors.get(MetaTableName.getInstance());
+    TableDescriptor metaDescriptor = tableDescriptors.get(getConnection().getMetaTableName());
     final ColumnFamilyDescriptor tableFamilyDesc =
       metaDescriptor.getColumnFamily(HConstants.TABLE_FAMILY);
     final ColumnFamilyDescriptor replBarrierFamilyDesc =
@@ -1177,17 +1177,17 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (conf.get(HConstants.META_REPLICAS_NUM) != null) {
       int replicasNumInConf =
         conf.getInt(HConstants.META_REPLICAS_NUM, HConstants.DEFAULT_META_REPLICA_NUM);
-      TableDescriptor metaDesc = tableDescriptors.get(MetaTableName.getInstance());
+      TableDescriptor metaDesc = tableDescriptors.get(getConnection().getMetaTableName());
       if (metaDesc.getRegionReplication() != replicasNumInConf) {
         // it is possible that we already have some replicas before upgrading, so we must set the
         // region replication number in meta TableDescriptor directly first, without creating a
         // ModifyTableProcedure, otherwise it may cause a double assign for the meta replicas.
         int existingReplicasCount =
-          assignmentManager.getRegionStates().getRegionsOfTable(MetaTableName.getInstance()).size();
+          assignmentManager.getRegionStates().getRegionsOfTable(getConnection().getMetaTableName()).size();
         if (existingReplicasCount > metaDesc.getRegionReplication()) {
           LOG.info(
             "Update replica count of {} from {}(in TableDescriptor)" + " to {}(existing ZNodes)",
-            MetaTableName.getInstance(), metaDesc.getRegionReplication(), existingReplicasCount);
+            getConnection().getMetaTableName(), metaDesc.getRegionReplication(), existingReplicasCount);
           metaDesc = TableDescriptorBuilder.newBuilder(metaDesc)
             .setRegionReplication(existingReplicasCount).build();
           tableDescriptors.update(metaDesc);
@@ -1198,7 +1198,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
             "The {} config is {} while the replica count in TableDescriptor is {}"
               + " for hbase:meta, altering...",
             HConstants.META_REPLICAS_NUM, replicasNumInConf, metaDesc.getRegionReplication(),
-            MetaTableName.getInstance());
+            getConnection().getMetaTableName());
           procedureExecutor.submitProcedure(new ModifyTableProcedure(
             procedureExecutor.getEnvironment(), TableDescriptorBuilder.newBuilder(metaDesc)
               .setRegionReplication(replicasNumInConf).build(),
@@ -1428,7 +1428,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     TableDescriptor newMetaDesc = TableDescriptorBuilder.newBuilder(metaDescriptor)
       .setColumnFamily(FSTableDescriptors.getTableFamilyDescForMeta(conf))
       .setColumnFamily(FSTableDescriptors.getReplBarrierFamilyDescForMeta()).build();
-    long pid = this.modifyTable(TableName.META_TABLE_NAME, () -> newMetaDesc, 0, 0, false);
+    long pid = this.modifyTable(getConnection().getMetaTableName(), () -> newMetaDesc, 0, 0, false);
     waitForProcedureToComplete(pid, "Failed to add table and rep_barrier CFs to meta");
   }
 
@@ -2606,7 +2606,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   private static boolean isCatalogTable(final TableName tableName) {
-    return tableName.equals(MetaTableName.getInstance());
+    return TableName.isMetaTableName(tableName);
   }
 
   @Override

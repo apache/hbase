@@ -87,7 +87,7 @@ public class TestMetaUpdatesGoToPriorityQueue {
       }
     }
     MutateRowsRequest request = builder.build();
-    AsyncTable<?> table = UTIL.getAsyncConnection().getTable(connection.getMetaTableName());
+    AsyncTable<?> table = UTIL.getAsyncConnection().getTable(TEST_UTIL.getConnection().getMetaTableName());
     CompletableFuture<MutateRowsResponse> future = table.<MultiRowMutationService,
       MutateRowsResponse> coprocessorService(MultiRowMutationService::newStub,
         (stub, controller, done) -> stub.mutateRows(controller, request, done), row);

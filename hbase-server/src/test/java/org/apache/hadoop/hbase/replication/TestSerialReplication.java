@@ -66,7 +66,7 @@ public class TestSerialReplication extends SerialReplicationTestBase {
   @Test
   public void testRegionMove() throws Exception {
     TableName tableName = createTable();
-    try (Table table = UTIL.getConnection().getTable(tableName)) {
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
@@ -74,7 +74,7 @@ public class TestSerialReplication extends SerialReplicationTestBase {
     RegionInfo region = UTIL.getAdmin().getRegions(tableName).get(0);
     HRegionServer rs = UTIL.getOtherRegionServer(UTIL.getRSForFirstRegionInTable(tableName));
     moveRegion(region, rs);
-    try (Table table = UTIL.getConnection().getTable(tableName)) {
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       for (int i = 100; i < 200; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
@@ -86,7 +86,7 @@ public class TestSerialReplication extends SerialReplicationTestBase {
   @Test
   public void testRegionSplit() throws Exception {
     TableName tableName = createTable();
-    try (Table table = UTIL.getConnection().getTable(tableName)) {
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
@@ -98,7 +98,7 @@ public class TestSerialReplication extends SerialReplicationTestBase {
     UTIL.waitUntilNoRegionsInTransition(30000);
     List<RegionInfo> regions = UTIL.getAdmin().getRegions(tableName);
     assertEquals(2, regions.size());
-    try (Table table = UTIL.getConnection().getTable(tableName)) {
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
@@ -145,7 +145,7 @@ public class TestSerialReplication extends SerialReplicationTestBase {
         .build(),
       new byte[][] { splitKey });
     UTIL.waitTableAvailable(tableName);
-    try (Table table = UTIL.getConnection().getTable(tableName)) {
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
@@ -158,7 +158,7 @@ public class TestSerialReplication extends SerialReplicationTestBase {
     UTIL.waitUntilNoRegionsInTransition(30000);
     List<RegionInfo> regionsAfterMerge = UTIL.getAdmin().getRegions(tableName);
     assertEquals(1, regionsAfterMerge.size());
-    try (Table table = UTIL.getConnection().getTable(tableName)) {
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
@@ -212,7 +212,7 @@ public class TestSerialReplication extends SerialReplicationTestBase {
   @Test
   public void testRemovePeer() throws Exception {
     TableName tableName = createTable();
-    try (Table table = UTIL.getConnection().getTable(tableName)) {
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
@@ -232,7 +232,7 @@ public class TestSerialReplication extends SerialReplicationTestBase {
   @Test
   public void testRemoveSerialFlag() throws Exception {
     TableName tableName = createTable();
-    try (Table table = UTIL.getConnection().getTable(tableName)) {
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }

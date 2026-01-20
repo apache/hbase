@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -247,10 +247,10 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
 
     // move hbase:meta to meta_group
     Set<TableName> toAddTables = new HashSet<>();
-    toAddTables.add(connection.getMetaTableName());
+    toAddTables.add(TEST_UTIL.getConnection().getMetaTableName());
     ADMIN.setRSGroup(toAddTables, groupName);
     assertTrue(ADMIN.getConfiguredNamespacesAndTablesInRSGroup(groupName).getSecond()
-      .contains(connection.getMetaTableName()));
+      .contains(TEST_UTIL.getConnection().getMetaTableName()));
 
     // restart the regionserver in meta_group, and lower its version
     String originVersion = "";

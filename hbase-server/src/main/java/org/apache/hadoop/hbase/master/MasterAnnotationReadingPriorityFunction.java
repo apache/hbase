@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.AnnotationReadingPriorityFunction;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -85,7 +85,7 @@ public class MasterAnnotationReadingPriorityFunction
         if (rst.getRegionInfoList() != null) {
           for (HBaseProtos.RegionInfo info : rst.getRegionInfoList()) {
             TableName tn = ProtobufUtil.toTableName(info.getTableName());
-            if (MetaTableName.getInstance().equals(tn)) {
+            if (TableName.isMetaTableName(tn)) {
               return META_TRANSITION_QOS;
             }
           }

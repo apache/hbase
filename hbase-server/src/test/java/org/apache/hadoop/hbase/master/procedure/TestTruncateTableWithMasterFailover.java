@@ -64,7 +64,7 @@ public class TestTruncateTableWithMasterFailover extends MasterFailoverWithProce
     RegionInfo[] regions = MasterProcedureTestingUtility.createTable(getMasterProcedureExecutor(),
       tableName, splitKeys, families);
     // load and verify that there are rows in the table
-    MasterProcedureTestingUtility.loadData(UTIL.getConnection(), tableName, 100, splitKeys,
+    MasterProcedureTestingUtility.loadData(TEST_UTIL.getConnection(), tableName, 100, splitKeys,
       families);
     assertEquals(100, UTIL.countRows(tableName));
     // disable the table
@@ -95,7 +95,7 @@ public class TestTruncateTableWithMasterFailover extends MasterFailoverWithProce
     assertEquals(0, UTIL.countRows(tableName));
 
     // verify that the table is read/writable
-    MasterProcedureTestingUtility.loadData(UTIL.getConnection(), tableName, 50, splitKeys,
+    MasterProcedureTestingUtility.loadData(TEST_UTIL.getConnection(), tableName, 50, splitKeys,
       families);
     assertEquals(50, UTIL.countRows(tableName));
   }

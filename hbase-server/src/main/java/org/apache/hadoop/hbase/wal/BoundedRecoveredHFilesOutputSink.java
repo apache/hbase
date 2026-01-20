@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.MetaCellComparator;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -77,7 +77,7 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
   void append(RegionEntryBuffer buffer) throws IOException {
     Map<String, CellSet<ExtendedCell>> familyCells = new HashMap<>();
     Map<String, Long> familySeqIds = new HashMap<>();
-    boolean isMetaTable = buffer.tableName.equals(MetaTableName.getInstance());
+    boolean isMetaTable = TableName.isMetaTableName(buffer.tableName);
     // First iterate all Cells to find which column families are present and to stamp Cell with
     // sequence id.
     for (WAL.Entry entry : buffer.entryBuffer) {

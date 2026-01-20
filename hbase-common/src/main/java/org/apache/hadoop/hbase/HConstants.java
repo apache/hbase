@@ -1209,7 +1209,7 @@ public final class HConstants {
   @Deprecated
   public static final List<String> HBASE_NON_USER_TABLE_DIRS =
     Collections.unmodifiableList(Arrays.asList(
-      (String[]) ArrayUtils.addAll(new String[] { MetaTableName.getInstance().getNameAsString() },
+      (String[]) ArrayUtils.addAll(new String[] { "hbase:meta" },
         HBASE_NON_TABLE_DIRS.toArray())));
 
   /** Health script related settings. */

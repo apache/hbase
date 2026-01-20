@@ -22,7 +22,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -123,7 +123,7 @@ public class TestTableProcedureWaitingQueueCleanup {
 
     @Override
     public TableName getTableName() {
-      return connection.getMetaTableName();
+      return TEST_UTIL.getConnection().getMetaTableName();
     }
 
     @Override

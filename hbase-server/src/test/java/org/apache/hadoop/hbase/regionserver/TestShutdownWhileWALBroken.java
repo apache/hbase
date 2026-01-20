@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.YouAreDeadException;
@@ -136,7 +136,7 @@ public class TestShutdownWhileWALBroken {
     RegionServerThread rst1 = UTIL.getMiniHBaseCluster().getRegionServerThreads().get(1);
     HRegionServer liveRS;
     RegionServerThread toKillRSThread;
-    if (rst1.getRegionServer().getRegions(connection.getMetaTableName()).isEmpty()) {
+    if (rst1.getRegionServer().getRegions(TEST_UTIL.getConnection().getMetaTableName()).isEmpty()) {
       liveRS = rst0.getRegionServer();
       toKillRSThread = rst1;
     } else {

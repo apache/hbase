@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
@@ -168,7 +168,7 @@ public class TestRollbackSCP {
 
   @Test
   public void testFailAndRollback() throws Exception {
-    HRegionServer rsWithMeta = UTIL.getRSForFirstRegionInTable(connection.getMetaTableName());
+    HRegionServer rsWithMeta = UTIL.getRSForFirstRegionInTable(TEST_UTIL.getConnection().getMetaTableName());
     UTIL.getMiniHBaseCluster().killRegionServer(rsWithMeta.getServerName());
     UTIL.waitFor(15000, () -> getSCPForServer(rsWithMeta.getServerName()) != null);
     ServerCrashProcedure scp = getSCPForServer(rsWithMeta.getServerName());

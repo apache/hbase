@@ -30,7 +30,7 @@ import java.util.function.Supplier;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -562,11 +562,14 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   // Meta Queue Lookup Helpers
   // ============================================================================
   private MetaQueue getMetaQueue() {
-    MetaQueue node = AvlTree.get(metaMap, MetaTableName.getInstance(), META_QUEUE_KEY_COMPARATOR);
+    // TODO(HBASE-XXXXX - Phase 6): Make meta table name dynamic from MasterServices
+    // For now, hardcode default. Future: pass metaTableName via constructor from Master
+    TableName metaTableName = TableName.valueOf("hbase", "meta");
+    MetaQueue node = AvlTree.get(metaMap, metaTableName, META_QUEUE_KEY_COMPARATOR);
     if (node != null) {
       return node;
     }
-    node = new MetaQueue(locking.getMetaLock());
+    node = new MetaQueue(metaTableName, locking.getMetaLock());
     metaMap = AvlTree.insert(metaMap, node);
     return node;
   }
@@ -1080,7 +1083,9 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
         return false;
       }
       waitProcedure(lock, procedure);
-      logLockedResource(LockedResourceType.META, MetaTableName.getInstance().getNameAsString());
+      // TODO(Phase 6): Support replica-specific meta table names
+      // TODO(HBASE-XXXXX - Phase 6): Get dynamic name from MasterServices
+      logLockedResource(LockedResourceType.META, "hbase:meta");
       return true;
     } finally {
       schedUnlock();

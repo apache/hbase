@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -545,7 +545,7 @@ public class AccessChecker {
     TableName tableName, Map<byte[], ? extends Collection<?>> families) {
     // 1. All users need read access to hbase:meta table.
     // this is a very common operation, so deal with it quickly.
-    if (MetaTableName.getInstance().equals(tableName)) {
+    if (TableName.isMetaTableName(tableName)) {
       if (permRequest == Action.READ) {
         return AuthResult.allow(request, "All users allowed", user, permRequest, tableName,
           families);

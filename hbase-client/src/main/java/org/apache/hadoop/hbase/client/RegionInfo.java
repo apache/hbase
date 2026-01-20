@@ -26,7 +26,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.ByteArrayHashKey;
@@ -432,7 +431,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
    */
   static String prettyPrint(final String encodedRegionName) {
     if (encodedRegionName.equals("1028785192")) {
-      return encodedRegionName + "/" + MetaTableName.getInstance();
+      return encodedRegionName + "/hbase:meta";
     }
     return encodedRegionName;
   }

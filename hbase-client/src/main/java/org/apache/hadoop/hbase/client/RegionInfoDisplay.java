@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -82,7 +82,7 @@ public class RegionInfoDisplay {
    */
   public static byte[] getRegionNameForDisplay(RegionInfo ri, Configuration conf) {
     boolean displayKey = conf.getBoolean(DISPLAY_KEYS_KEY, true);
-    if (displayKey || ri.getTable().equals(MetaTableName.getInstance())) {
+    if (displayKey || TableName.isMetaTableName(ri.getTable())) {
       return ri.getRegionName();
     } else {
       // create a modified regionname with the startkey replaced but preserving

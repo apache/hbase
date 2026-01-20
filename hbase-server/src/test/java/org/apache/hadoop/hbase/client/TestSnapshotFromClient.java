@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -164,7 +164,7 @@ public class TestSnapshotFromClient {
    */
   @Test(expected = IllegalArgumentException.class)
   public void testMetaTablesSnapshot() throws Exception {
-    UTIL.getAdmin().snapshot("metaSnapshot", connection.getMetaTableName());
+    UTIL.getAdmin().snapshot("metaSnapshot", TEST_UTIL.getConnection().getMetaTableName());
   }
 
   /**

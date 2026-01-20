@@ -21,7 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -64,13 +64,13 @@ public class TestServerCrashProcedureCarryingMetaStuck {
   public void test() throws Exception {
     RegionServerThread rsThread = null;
     for (RegionServerThread t : UTIL.getMiniHBaseCluster().getRegionServerThreads()) {
-      if (!t.getRegionServer().getRegions(connection.getMetaTableName()).isEmpty()) {
+      if (!t.getRegionServer().getRegions(TEST_UTIL.getConnection().getMetaTableName()).isEmpty()) {
         rsThread = t;
         break;
       }
     }
     HRegionServer rs = rsThread.getRegionServer();
-    RegionInfo hri = rs.getRegions(connection.getMetaTableName()).get(0).getRegionInfo();
+    RegionInfo hri = rs.getRegions(TEST_UTIL.getConnection().getMetaTableName()).get(0).getRegionInfo();
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     ProcedureExecutor<MasterProcedureEnv> executor = master.getMasterProcedureExecutor();
     DummyRegionProcedure proc = new DummyRegionProcedure(executor.getEnvironment(), hri);

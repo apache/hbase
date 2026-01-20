@@ -25,7 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.ProcedureTestUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncAdmin;
@@ -95,7 +95,7 @@ public class TestOpenRegionProcedureBackoff {
     Configuration conf = UTIL.getConfiguration();
     conf.setClass(HConstants.MASTER_IMPL, HMasterForTest.class, HMaster.class);
     UTIL.startMiniCluster(1);
-    UTIL.waitTableAvailable(connection.getMetaTableName());
+    UTIL.waitTableAvailable(UTIL.getConnection().getMetaTableName());
   }
 
   @AfterClass

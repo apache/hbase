@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -201,7 +201,7 @@ public class TestInfoServersACL {
       @Override
       public Void run() throws Exception {
         // Check the expected content is present in the http response
-        Pair<Integer, String> pair = getTablePage(connection.getMetaTableName());
+        Pair<Integer, String> pair = getTablePage(TEST_UTIL.getConnection().getMetaTableName());
         assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
         assertTrue("expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),
           pair.getSecond().contains(expectedAuthorizedContent));
@@ -214,7 +214,7 @@ public class TestInfoServersACL {
     nonAdmin.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        Pair<Integer, String> pair = getTablePage(connection.getMetaTableName());
+        Pair<Integer, String> pair = getTablePage(TEST_UTIL.getConnection().getMetaTableName());
         assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
         assertFalse(
           "should not find=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),

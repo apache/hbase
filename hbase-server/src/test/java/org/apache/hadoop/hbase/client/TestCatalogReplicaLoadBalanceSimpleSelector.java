@@ -27,7 +27,7 @@ import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.User;
@@ -72,9 +72,9 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
     admin.balancerSwitch(false, true);
 
     // Enable hbase:meta replication.
-    HBaseTestingUtil.setReplicas(admin, connection.getMetaTableName(), numOfMetaReplica);
+    HBaseTestingUtil.setReplicas(admin, TEST_UTIL.getConnection().getMetaTableName(), numOfMetaReplica);
     TEST_UTIL.waitFor(30000,
-      () -> TEST_UTIL.getMiniHBaseCluster().getRegions(connection.getMetaTableName()).size()
+      () -> TEST_UTIL.getMiniHBaseCluster().getRegions(TEST_UTIL.getConnection().getMetaTableName()).size()
           >= numOfMetaReplica);
 
     registry = ConnectionRegistryFactory.create(TEST_UTIL.getConfiguration(), User.getCurrent());
@@ -95,14 +95,14 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
         CatalogReplicaLoadBalanceSimpleSelector.class.getName());
 
     CatalogReplicaLoadBalanceSelector metaSelector = CatalogReplicaLoadBalanceSelectorFactory
-      .createSelector(replicaSelectorClass, connection.getMetaTableName(), CONN, () -> {
+      .createSelector(replicaSelectorClass, TEST_UTIL.getConnection().getMetaTableName(), CONN, () -> {
         int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
         try {
           RegionLocations metaLocations = CONN.registry.getMetaRegionLocations()
             .get(CONN.connConf.getMetaReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
           numOfReplicas = metaLocations.size();
         } catch (Exception e) {
-          LOG.error("Failed to get table {}'s region replication, ", connection.getMetaTableName(),
+          LOG.error("Failed to get table {}'s region replication, ", TEST_UTIL.getConnection().getMetaTableName(),
             e);
         }
         return numOfReplicas;
@@ -117,20 +117,20 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
     IntStream.range(0, numOfMetaReplica).forEach(i -> assertNotEquals(replicaIdCount[i], 0));
 
     // Change to No meta replica
-    HBaseTestingUtil.setReplicas(admin, connection.getMetaTableName(), 1);
+    HBaseTestingUtil.setReplicas(admin, TEST_UTIL.getConnection().getMetaTableName(), 1);
     TEST_UTIL.waitFor(30000,
-      () -> TEST_UTIL.getMiniHBaseCluster().getRegions(connection.getMetaTableName()).size() == 1);
+      () -> TEST_UTIL.getMiniHBaseCluster().getRegions(TEST_UTIL.getConnection().getMetaTableName()).size() == 1);
 
     CatalogReplicaLoadBalanceSelector metaSelectorWithNoReplica =
       CatalogReplicaLoadBalanceSelectorFactory.createSelector(replicaSelectorClass,
-        connection.getMetaTableName(), CONN, () -> {
+        TEST_UTIL.getConnection().getMetaTableName(), CONN, () -> {
           int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
           try {
             RegionLocations metaLocations = CONN.registry.getMetaRegionLocations()
               .get(CONN.connConf.getMetaReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
             numOfReplicas = metaLocations.size();
           } catch (Exception e) {
-            LOG.error("Failed to get table {}'s region replication, ", connection.getMetaTableName(),
+            LOG.error("Failed to get table {}'s region replication, ", TEST_UTIL.getConnection().getMetaTableName(),
               e);
           }
           return numOfReplicas;

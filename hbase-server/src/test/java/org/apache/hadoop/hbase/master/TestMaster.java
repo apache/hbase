@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
@@ -244,7 +244,7 @@ public class TestMaster {
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(Bytes.toBytes("cf"))).build();
     Table table = TEST_UTIL.createTable(tableDescriptor, null);
     // flush META region
-    TEST_UTIL.flush(connection.getMetaTableName());
+    TEST_UTIL.flush(TEST_UTIL.getConnection().getMetaTableName());
     // wait for regionserver report
     Threads.sleep(msgInterval * 2);
     // record flush seqid before cluster shutdown

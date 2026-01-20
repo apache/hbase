@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
@@ -88,7 +88,7 @@ public class TestMetaCache {
     conf.setStrings(HConstants.REGION_SERVER_IMPL, RegionServerWithFakeRpcServices.class.getName());
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.getHBaseCluster().waitForActiveAndReadyMaster();
-    TEST_UTIL.waitUntilAllRegionsAssigned(connection.getMetaTableName());
+    TEST_UTIL.waitUntilAllRegionsAssigned(TEST_UTIL.getConnection().getMetaTableName());
     badRS = TEST_UTIL.getHBaseCluster().getRegionServer(0);
     assertTrue(badRS.getRSRpcServices() instanceof FakeRSRpcServices);
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TABLE_NAME)

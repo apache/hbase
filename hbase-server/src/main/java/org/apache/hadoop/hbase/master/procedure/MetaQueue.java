@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.procedure2.LockStatus;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -33,8 +33,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class MetaQueue extends Queue<TableName> {
 
-  protected MetaQueue(LockStatus lockStatus) {
-    super(MetaTableName.getInstance(), 1, lockStatus);
+  protected   // Note: This is called during initialization, tableName is passed from parent
+  MetaQueue(TableName metaTableName, LockStatus lockStatus) {
+    super(metaTableName, 1, lockStatus);
   }
 
   @Override

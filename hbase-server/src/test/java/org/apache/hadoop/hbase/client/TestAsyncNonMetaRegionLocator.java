@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
@@ -107,9 +107,9 @@ public class TestAsyncNonMetaRegionLocator {
     admin.balancerSwitch(false, true);
 
     // Enable hbase:meta replication.
-    HBaseTestingUtil.setReplicas(admin, connection.getMetaTableName(), NUM_OF_META_REPLICA);
+    HBaseTestingUtil.setReplicas(admin, TEST_UTIL.getConnection().getMetaTableName(), NUM_OF_META_REPLICA);
     TEST_UTIL.waitFor(30000,
-      () -> TEST_UTIL.getMiniHBaseCluster().getRegions(connection.getMetaTableName()).size()
+      () -> TEST_UTIL.getMiniHBaseCluster().getRegions(TEST_UTIL.getConnection().getMetaTableName()).size()
           >= NUM_OF_META_REPLICA);
 
     SPLIT_KEYS = new byte[8][];

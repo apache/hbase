@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
@@ -556,7 +556,7 @@ public class TestAsyncTableRpcPriority {
   @Test
   public void testScanMetaTable() throws Exception {
     CompletableFuture<Void> renewFuture = mockScanReturnRenewFuture(SYSTEMTABLE_QOS);
-    testForTable(connection.getMetaTableName(), renewFuture, Optional.empty());
+    testForTable(conn.getMetaTableName(), renewFuture, Optional.empty());
   }
 
   private void testForTable(TableName tableName, CompletableFuture<Void> renewFuture,

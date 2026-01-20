@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
@@ -127,7 +127,7 @@ public class TestRecreateCluster {
 
   private void restartHBaseCluster(boolean cleanUpWALs, boolean cleanUpZnodes) throws Exception {
     // flush cache so that everything is on disk
-    TEST_UTIL.getMiniHBaseCluster().flushcache(connection.getMetaTableName());
+    TEST_UTIL.getMiniHBaseCluster().flushcache(TEST_UTIL.getConnection().getMetaTableName());
     TEST_UTIL.getMiniHBaseCluster().flushcache();
 
     List<ServerName> oldServers =
@@ -178,7 +178,7 @@ public class TestRecreateCluster {
     put.addColumn(Bytes.toBytes("f"), Bytes.toBytes("c"), Bytes.toBytes("v"));
     table.put(put);
 
-    ensureTableNotColocatedWithSystemTable(tableName, connection.getMetaTableName());
+    ensureTableNotColocatedWithSystemTable(tableName, TEST_UTIL.getConnection().getMetaTableName());
   }
 
   private void ensureTableNotColocatedWithSystemTable(TableName userTable, TableName systemTable)

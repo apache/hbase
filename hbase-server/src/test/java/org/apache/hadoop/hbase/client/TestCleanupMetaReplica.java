@@ -22,7 +22,7 @@ import static org.junit.Assert.assertEquals;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -48,7 +48,7 @@ public class TestCleanupMetaReplica extends MetaWithReplicasTestBase {
     ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
     List<String> metaReplicaZnodes = zkw.getMetaReplicaNodes();
     assertEquals(3, metaReplicaZnodes.size());
-    HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), connection.getMetaTableName(), 1);
+    HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), RegionInfoBuilder.FIRST_META_REGIONINFO.getTable(), 1);
     metaReplicaZnodes = zkw.getMetaReplicaNodes();
     assertEquals(1, metaReplicaZnodes.size());
   }

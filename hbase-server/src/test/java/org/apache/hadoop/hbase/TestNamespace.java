@@ -117,7 +117,7 @@ public class TestNamespace {
     assertEquals(2, admin.listNamespaceDescriptors().length);
 
     // verify existence of system tables
-    Set<TableName> systemTables = Sets.newHashSet(connection.getMetaTableName());
+    Set<TableName> systemTables = Sets.newHashSet(TEST_UTIL.getConnection().getMetaTableName());
     List<TableDescriptor> descs = admin.listTableDescriptorsByNamespace(
       Bytes.toBytes(NamespaceDescriptor.SYSTEM_NAMESPACE.getName()));
     assertEquals(systemTables.size(), descs.size());

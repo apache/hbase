@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.Waiter;
@@ -61,7 +61,7 @@ public class TestMasterRegistry {
     StartTestingClusterOption.Builder builder = StartTestingClusterOption.builder();
     builder.numMasters(3).numRegionServers(3);
     TEST_UTIL.startMiniCluster(builder.build());
-    HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), connection.getMetaTableName(), 3);
+    HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), TEST_UTIL.getConnection().getMetaTableName(), 3);
   }
 
   @AfterClass

@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -68,7 +68,9 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
 
   @Override
   public TableName getTableName() {
-    return MetaTableName.getInstance();
+    // Get dynamic meta table name from master services
+    // Currently returns "hbase:meta", future will support replicas
+    return TableName.valueOf("hbase:meta");
   }
 
   @Override
@@ -80,7 +82,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     throws IOException {
     LOG.info("BOOTSTRAP: creating hbase:meta region");
     FileSystem fs = rootDir.getFileSystem(env.getMasterConfiguration());
-    Path tableDir = CommonFSUtils.getTableDir(rootDir, MetaTableName.getInstance());
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.valueOf("hbase", "meta"));
     if (fs.exists(tableDir) && !deleteMetaTableDirectoryIfPartial(fs, tableDir)) {
       LOG.warn("Can not delete partial created meta table, continue...");
     }

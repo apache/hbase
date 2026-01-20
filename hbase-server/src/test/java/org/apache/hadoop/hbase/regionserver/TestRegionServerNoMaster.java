@@ -23,7 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -98,12 +98,12 @@ public class TestRegionServerNoMaster {
     // cache meta location, so we will not go to master to lookup meta region location
     for (JVMClusterUtil.RegionServerThread t : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
       try (RegionLocator locator =
-        t.getRegionServer().getConnection().getRegionLocator(connection.getMetaTableName())) {
+        t.getRegionServer().getConnection().getRegionLocator(HTU.getConnection().getMetaTableName())) {
         locator.getAllRegionLocations();
       }
     }
     try (
-      RegionLocator locator = HTU.getConnection().getRegionLocator(connection.getMetaTableName())) {
+      RegionLocator locator = HTU.getConnection().getRegionLocator(HTU.getConnection().getMetaTableName())) {
       locator.getAllRegionLocations();
     }
     // Stop master

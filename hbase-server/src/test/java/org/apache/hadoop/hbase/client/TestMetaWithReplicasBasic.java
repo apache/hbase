@@ -24,7 +24,7 @@ import static org.junit.Assert.assertTrue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -54,7 +54,7 @@ public class TestMetaWithReplicasBasic extends MetaWithReplicasTestBase {
   @Test
   public void testMetaHTDReplicaCount() throws Exception {
     assertEquals(3,
-      TEST_UTIL.getAdmin().getDescriptor(connection.getMetaTableName()).getRegionReplication());
+      TEST_UTIL.getAdmin().getDescriptor(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()).getRegionReplication());
   }
 
   @Test

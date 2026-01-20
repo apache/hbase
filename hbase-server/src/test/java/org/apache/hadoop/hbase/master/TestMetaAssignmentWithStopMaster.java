@@ -22,7 +22,7 @@ import static org.junit.Assert.fail;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.client.Connection;
@@ -66,7 +66,7 @@ public class TestMetaAssignmentWithStopMaster {
   @Test
   public void testStopActiveMaster() throws Exception {
     try (Connection conn = ConnectionFactory.createConnection(UTIL.getConfiguration());
-      RegionLocator locator = conn.getRegionLocator(connection.getMetaTableName())) {
+      RegionLocator locator = conn.getRegionLocator(TEST_UTIL.getConnection().getMetaTableName())) {
       ServerName oldMetaServer = locator.getAllRegionLocations().get(0).getServerName();
       ServerName oldMaster = UTIL.getMiniHBaseCluster().getMaster().getServerName();
 

@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.ProcedureTestUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -151,11 +151,11 @@ public class TestCloseRegionWhileRSCrash {
     UTIL.createTable(TABLE_NAME, CF);
     UTIL.getAdmin().balancerSwitch(false, true);
     HRegionServer srcRs = UTIL.getRSForFirstRegionInTable(TABLE_NAME);
-    if (!srcRs.getRegions(connection.getMetaTableName()).isEmpty()) {
-      RegionInfo metaRegion = srcRs.getRegions(connection.getMetaTableName()).get(0).getRegionInfo();
+    if (!srcRs.getRegions(TEST_UTIL.getConnection().getMetaTableName()).isEmpty()) {
+      RegionInfo metaRegion = srcRs.getRegions(TEST_UTIL.getConnection().getMetaTableName()).get(0).getRegionInfo();
       HRegionServer dstRs = UTIL.getOtherRegionServer(srcRs);
       UTIL.getAdmin().move(metaRegion.getEncodedNameAsBytes(), dstRs.getServerName());
-      UTIL.waitFor(30000, () -> !dstRs.getRegions(connection.getMetaTableName()).isEmpty());
+      UTIL.waitFor(30000, () -> !dstRs.getRegions(TEST_UTIL.getConnection().getMetaTableName()).isEmpty());
     }
   }
 

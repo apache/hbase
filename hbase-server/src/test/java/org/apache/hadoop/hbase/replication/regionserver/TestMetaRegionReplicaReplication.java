@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -99,10 +99,10 @@ public class TestMetaRegionReplicaReplication {
     // conf.setInt(HConstants.META_REPLICAS_NUM, numOfMetaReplica);
     HTU.startMiniCluster(NB_SERVERS);
     // Enable hbase:meta replication.
-    HBaseTestingUtil.setReplicas(HTU.getAdmin(), connection.getMetaTableName(), numOfMetaReplica);
+    HBaseTestingUtil.setReplicas(HTU.getAdmin(), HTU.getConnection().getMetaTableName(), numOfMetaReplica);
 
     HTU.waitFor(30000,
-      () -> HTU.getMiniHBaseCluster().getRegions(connection.getMetaTableName()).size()
+      () -> HTU.getMiniHBaseCluster().getRegions(HTU.getConnection().getMetaTableName()).size()
           >= numOfMetaReplica);
   }
 
@@ -120,37 +120,37 @@ public class TestMetaRegionReplicaReplication {
     try (Table table = HTU.createTable(TableName.valueOf(this.name.getMethodName() + "_0"),
       HConstants.CATALOG_FAMILY,
       Arrays.copyOfRange(HBaseTestingUtil.KEYS, 1, HBaseTestingUtil.KEYS.length))) {
-      verifyReplication(connection.getMetaTableName(), numOfMetaReplica,
+      verifyReplication(HTU.getConnection().getMetaTableName(), numOfMetaReplica,
         getMetaCells(table.getName()));
     }
     try (Table table = HTU.createTable(TableName.valueOf(this.name.getMethodName() + "_1"),
       HConstants.CATALOG_FAMILY,
       Arrays.copyOfRange(HBaseTestingUtil.KEYS, 1, HBaseTestingUtil.KEYS.length))) {
-      verifyReplication(connection.getMetaTableName(), numOfMetaReplica,
+      verifyReplication(HTU.getConnection().getMetaTableName(), numOfMetaReplica,
         getMetaCells(table.getName()));
       // Try delete.
       HTU.deleteTableIfAny(table.getName());
-      verifyDeletedReplication(connection.getMetaTableName(), numOfMetaReplica, table.getName());
+      verifyDeletedReplication(HTU.getConnection().getMetaTableName(), numOfMetaReplica, table.getName());
     }
   }
 
   @Test
   public void testCatalogReplicaReplicationWithFlushAndCompaction() throws Exception {
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
-      Table table = connection.getTable(connection.getMetaTableName())) {
+      Table table = connection.getTable(HTU.getConnection().getMetaTableName())) {
       // load the data to the table
       for (int i = 0; i < 5; i++) {
         LOG.info("Writing data from " + i * 1000 + " to " + (i * 1000 + 1000));
         HTU.loadNumericRows(table, HConstants.CATALOG_FAMILY, i * 1000, i * 1000 + 1000);
         LOG.info("flushing table");
-        HTU.flush(connection.getMetaTableName());
+        HTU.flush(HTU.getConnection().getMetaTableName());
         LOG.info("compacting table");
         if (i < 4) {
-          HTU.compact(connection.getMetaTableName(), false);
+          HTU.compact(HTU.getConnection().getMetaTableName(), false);
         }
       }
 
-      verifyReplication(connection.getMetaTableName(), numOfMetaReplica, 0, 5000,
+      verifyReplication(HTU.getConnection().getMetaTableName(), numOfMetaReplica, 0, 5000,
         HConstants.CATALOG_FAMILY);
     }
   }
@@ -185,7 +185,7 @@ public class TestMetaRegionReplicaReplication {
       }
     }
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
-      Table table = connection.getTable(connection.getMetaTableName())) {
+      Table table = connection.getTable(HTU.getConnection().getMetaTableName())) {
       // load the data to the table
       for (int i = 0; i < 5; i++) {
         LOG.info("Writing data from " + i * 1000 + " to " + (i * 1000 + 1000));
@@ -195,7 +195,7 @@ public class TestMetaRegionReplicaReplication {
         }
       }
 
-      verifyReplication(connection.getMetaTableName(), numOfMetaReplica, 0, 5000,
+      verifyReplication(HTU.getConnection().getMetaTableName(), numOfMetaReplica, 0, 5000,
         HConstants.CATALOG_FAMILY);
     }
   }
@@ -417,7 +417,7 @@ public class TestMetaRegionReplicaReplication {
   @Test
   public void testHBaseMetaReplicaGets() throws Exception {
     TableName tn = TableName.valueOf(this.name.getMethodName());
-    final Region[] metaRegions = getAllRegions(connection.getMetaTableName(), numOfMetaReplica);
+    final Region[] metaRegions = getAllRegions(HTU.getConnection().getMetaTableName(), numOfMetaReplica);
     long[] readReqsForMetaReplicas = new long[numOfMetaReplica];
     long[] readReqsForMetaReplicasAfterGet = new long[numOfMetaReplica];
     long[] readReqsForMetaReplicasAfterGetAllLocations = new long[numOfMetaReplica];
@@ -430,7 +430,7 @@ public class TestMetaRegionReplicaReplication {
 
     try (Table table = HTU.createTable(tn, HConstants.CATALOG_FAMILY,
       Arrays.copyOfRange(HBaseTestingUtil.KEYS, 1, HBaseTestingUtil.KEYS.length))) {
-      verifyReplication(connection.getMetaTableName(), numOfMetaReplica,
+      verifyReplication(HTU.getConnection().getMetaTableName(), numOfMetaReplica,
         getMetaCells(table.getName()));
       // load different values
       HTU.loadTable(table, new byte[][] { HConstants.CATALOG_FAMILY }, VALUE);

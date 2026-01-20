@@ -28,7 +28,7 @@ import java.util.Random;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -75,7 +75,8 @@ public class TestLargeClusterBalancingTableIsolationAndReplicaDistribution {
     for (int i = 0; i < NUM_REGIONS; i++) {
       TableName tableName;
       if (i < 1) {
-        tableName = connection.getMetaTableName();
+        // TODO(HBASE-XXXXX - Phase 6): Make configurable for replica testing
+        tableName = TableName.valueOf("hbase", "meta");
       } else if (i < 10) {
         tableName = SYSTEM_TABLE_NAME;
       } else {
@@ -120,7 +121,8 @@ public class TestLargeClusterBalancingTableIsolationAndReplicaDistribution {
    * Validates whether all meta table regions are isolated.
    */
   private boolean isMetaTableIsolated(BalancerClusterState cluster) {
-    return isTableIsolated(cluster, connection.getMetaTableName(), "Meta");
+    // TODO(HBASE-XXXXX - Phase 6): Make configurable for replica testing
+    return isTableIsolated(cluster, TableName.valueOf("hbase", "meta"), "Meta");
   }
 
   /**

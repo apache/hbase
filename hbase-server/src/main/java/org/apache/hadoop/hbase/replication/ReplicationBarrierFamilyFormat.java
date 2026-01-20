@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor.QueryType;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
@@ -193,7 +193,7 @@ public final class ReplicationBarrierFamilyFormat {
       .addColumn(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)
       .addFamily(HConstants.REPLICATION_BARRIER_FAMILY).readAllVersions().setReversed(true)
       .setCaching(10);
-    try (Table table = conn.getTable(MetaTableName.getInstance());
+    try (Table table = conn.getTable(conn.getMetaTableName());
       ResultScanner scanner = table.getScanner(scan)) {
       for (Result result;;) {
         result = scanner.next();
@@ -216,7 +216,7 @@ public final class ReplicationBarrierFamilyFormat {
 
   public static long[] getReplicationBarriers(Connection conn, byte[] regionName)
     throws IOException {
-    try (Table table = conn.getTable(MetaTableName.getInstance())) {
+    try (Table table = conn.getTable(conn.getMetaTableName())) {
       Result result = table.get(new Get(regionName)
         .addColumn(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER)
         .readAllVersions());

@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
@@ -288,7 +288,7 @@ public class TestRegionMover1 {
   public void testLoadMetaRegion() throws Exception {
     HRegionServer rsWithMeta = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
       .map(t -> t.getRegionServer())
-      .filter(rs -> rs.getRegions(connection.getMetaTableName()).size() > 0).findFirst().get();
+      .filter(rs -> rs.getRegions(TEST_UTIL.getConnection().getMetaTableName()).size() > 0).findFirst().get();
     int onlineRegions = rsWithMeta.getNumberOfOnlineRegions();
     String rsName = rsWithMeta.getServerName().getAddress().toString();
     try (RegionMover rm =

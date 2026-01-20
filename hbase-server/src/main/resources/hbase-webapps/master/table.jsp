@@ -41,7 +41,6 @@
   import="org.apache.hadoop.hbase.ServerMetrics"
   import="org.apache.hadoop.hbase.ServerName"
   import="org.apache.hadoop.hbase.Size"
-  import="org.apache.hadoop.hbase.MetaTableName"
   import="org.apache.hadoop.hbase.TableName"
   import="org.apache.hadoop.hbase.client.AsyncAdmin"
   import="org.apache.hadoop.hbase.client.AsyncConnection"

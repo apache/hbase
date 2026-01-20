@@ -396,7 +396,7 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     } catch (Exception e) {
       throw new ServiceException(e);
     }
-    
+
     return builder.build();
   }
 

@@ -68,11 +68,11 @@ public class TestHBaseMetaEdit {
   // make sure that with every possible way, we get the same meta table descriptor.
   private TableDescriptor getMetaDescriptor() throws TableNotFoundException, IOException {
     Admin admin = UTIL.getAdmin();
-    TableDescriptor get = admin.getDescriptor(connection.getMetaTableName());
+    TableDescriptor get = admin.getDescriptor(UTIL.getConnection().getMetaTableName());
     TableDescriptor list =
       admin.listTableDescriptors(true).stream().filter(td -> td.isMetaTable()).findAny().get();
     TableDescriptor listByName =
-      admin.listTableDescriptors(Collections.singletonList(connection.getMetaTableName())).get(0);
+      admin.listTableDescriptors(Collections.singletonList(UTIL.getConnection().getMetaTableName())).get(0);
     TableDescriptor listByNs =
       admin.listTableDescriptorsByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME).stream()
         .filter(td -> td.isMetaTable()).findAny().get();
@@ -91,7 +91,7 @@ public class TestHBaseMetaEdit {
   @Test
   public void testEditMeta() throws IOException {
     Admin admin = UTIL.getAdmin();
-    admin.tableExists(connection.getMetaTableName());
+    admin.tableExists(UTIL.getConnection().getMetaTableName());
     TableDescriptor originalDescriptor = getMetaDescriptor();
     ColumnFamilyDescriptor cfd = originalDescriptor.getColumnFamily(HConstants.CATALOG_FAMILY);
     int oldVersions = cfd.getMaxVersions();
@@ -100,11 +100,11 @@ public class TestHBaseMetaEdit {
       .setConfiguration(ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING,
         DataBlockEncoding.ROW_INDEX_V1.toString())
       .build();
-    admin.modifyColumnFamily(connection.getMetaTableName(), cfd);
+    admin.modifyColumnFamily(UTIL.getConnection().getMetaTableName(), cfd);
     byte[] extraColumnFamilyName = Bytes.toBytes("xtra");
     ColumnFamilyDescriptor newCfd =
       ColumnFamilyDescriptorBuilder.newBuilder(extraColumnFamilyName).build();
-    admin.addColumnFamily(connection.getMetaTableName(), newCfd);
+    admin.addColumnFamily(UTIL.getConnection().getMetaTableName(), newCfd);
     TableDescriptor descriptor = getMetaDescriptor();
     // Assert new max versions is == old versions plus 1.
     assertEquals(oldVersions + 1,
@@ -126,11 +126,11 @@ public class TestHBaseMetaEdit {
     assertEquals(encoding, DataBlockEncoding.ROW_INDEX_V1.toString());
     assertTrue(r.getStore(extraColumnFamilyName) != null);
     // Assert we can't drop critical hbase:meta column family but we can drop any other.
-    admin.deleteColumnFamily(connection.getMetaTableName(), newCfd.getName());
+    admin.deleteColumnFamily(UTIL.getConnection().getMetaTableName(), newCfd.getName());
     descriptor = getMetaDescriptor();
     assertTrue(descriptor.getColumnFamily(newCfd.getName()) == null);
     try {
-      admin.deleteColumnFamily(connection.getMetaTableName(), HConstants.CATALOG_FAMILY);
+      admin.deleteColumnFamily(UTIL.getConnection().getMetaTableName(), HConstants.CATALOG_FAMILY);
       fail("Should not reach here");
     } catch (HBaseIOException hioe) {
       assertTrue(hioe.getMessage().contains("Delete of hbase:meta"));
@@ -144,7 +144,7 @@ public class TestHBaseMetaEdit {
   @Test
   public void testAlterMetaWithReadOnly() throws IOException {
     Admin admin = UTIL.getAdmin();
-    TableDescriptor origMetaTableDesc = admin.getDescriptor(connection.getMetaTableName());
+    TableDescriptor origMetaTableDesc = admin.getDescriptor(UTIL.getConnection().getMetaTableName());
     assertFalse(origMetaTableDesc.isReadOnly());
     TableDescriptor newTD =
       TableDescriptorBuilder.newBuilder(origMetaTableDesc).setReadOnly(true).build();
@@ -152,7 +152,7 @@ public class TestHBaseMetaEdit {
       admin.modifyTable(newTD);
       fail("Meta table can't be set as read only");
     } catch (Exception e) {
-      assertFalse(admin.getDescriptor(connection.getMetaTableName()).isReadOnly());
+      assertFalse(admin.getDescriptor(UTIL.getConnection().getMetaTableName()).isReadOnly());
     }
 
     // Create a table to check region assignment & meta operation

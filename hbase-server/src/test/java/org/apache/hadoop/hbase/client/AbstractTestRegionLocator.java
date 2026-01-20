@@ -26,7 +26,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -50,7 +50,7 @@ public abstract class AbstractTestRegionLocator {
 
   protected static void startClusterAndCreateTable() throws Exception {
     UTIL.startMiniCluster(3);
-    HBaseTestingUtil.setReplicas(UTIL.getAdmin(), connection.getMetaTableName(), REGION_REPLICATION);
+    HBaseTestingUtil.setReplicas(UTIL.getAdmin(), TEST_UTIL.getConnection().getMetaTableName(), REGION_REPLICATION);
     TableDescriptor td =
       TableDescriptorBuilder.newBuilder(TABLE_NAME).setRegionReplication(REGION_REPLICATION)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
@@ -70,7 +70,7 @@ public abstract class AbstractTestRegionLocator {
   @After
   public void tearDownAfterTest() throws IOException {
     clearCache(TABLE_NAME);
-    clearCache(connection.getMetaTableName());
+    clearCache(TEST_UTIL.getConnection().getMetaTableName());
   }
 
   private byte[] getStartKey(int index) {
@@ -172,7 +172,7 @@ public abstract class AbstractTestRegionLocator {
     assertArrayEquals(HConstants.EMPTY_END_ROW, region.getEndKey());
     assertEquals(replicaId, region.getReplicaId());
     ServerName expected =
-      findRegionLocation(connection.getMetaTableName(), region.getStartKey(), replicaId);
+      findRegionLocation(TEST_UTIL.getConnection().getMetaTableName(), region.getStartKey(), replicaId);
     assertEquals(expected, loc.getServerName());
   }
 
@@ -185,19 +185,19 @@ public abstract class AbstractTestRegionLocator {
 
   @Test
   public void testMeta() throws IOException {
-    assertMetaStartOrEndKeys(getStartKeys(connection.getMetaTableName()));
-    assertMetaStartOrEndKeys(getEndKeys(connection.getMetaTableName()));
-    Pair<byte[][], byte[][]> startEndKeys = getStartEndKeys(connection.getMetaTableName());
+    assertMetaStartOrEndKeys(getStartKeys(TEST_UTIL.getConnection().getMetaTableName()));
+    assertMetaStartOrEndKeys(getEndKeys(TEST_UTIL.getConnection().getMetaTableName()));
+    Pair<byte[][], byte[][]> startEndKeys = getStartEndKeys(TEST_UTIL.getConnection().getMetaTableName());
     assertMetaStartOrEndKeys(startEndKeys.getFirst());
     assertMetaStartOrEndKeys(startEndKeys.getSecond());
     for (int replicaId = 0; replicaId < REGION_REPLICATION; replicaId++) {
       assertMetaRegionLocation(
-        getRegionLocation(connection.getMetaTableName(), HConstants.EMPTY_START_ROW, replicaId),
+        getRegionLocation(TEST_UTIL.getConnection().getMetaTableName(), HConstants.EMPTY_START_ROW, replicaId),
         replicaId);
     }
     assertMetaRegionLocations(
-      getRegionLocations(connection.getMetaTableName(), HConstants.EMPTY_START_ROW));
-    assertMetaRegionLocations(getAllRegionLocations(connection.getMetaTableName()));
+      getRegionLocations(TEST_UTIL.getConnection().getMetaTableName(), HConstants.EMPTY_START_ROW));
+    assertMetaRegionLocations(getAllRegionLocations(TEST_UTIL.getConnection().getMetaTableName()));
   }
 
   protected abstract byte[][] getStartKeys(TableName tableName) throws IOException;

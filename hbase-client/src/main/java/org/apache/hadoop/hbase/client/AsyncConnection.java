@@ -118,6 +118,15 @@ public interface AsyncConnection extends Closeable {
   }
 
   /**
+   * Retrieve an AsyncTable implementation for accessing the meta table.
+   * This method returns the correct meta table for this connection (hbase:meta or hbase:meta_suffix).
+   * @return An AsyncTable to use for interactions with the meta table
+   */
+  default AsyncTable<AdvancedScanResultConsumer> getMetaTable() {
+    return getTable(getMetaTableName());
+  }
+
+  /**
    * Returns an {@link AsyncTableBuilder} for creating {@link AsyncTable}.
    * <p>
    * This method no longer checks table existence. An exception will be thrown if the table does not

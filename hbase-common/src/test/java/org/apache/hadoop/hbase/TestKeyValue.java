@@ -198,32 +198,32 @@ public class TestKeyValue {
   private void metacomparisons(final CellComparatorImpl c) {
     long now = EnvironmentEdgeManager.currentTime();
     assertTrue(c.compare(
-      new KeyValue(Bytes.toBytes(connection.getMetaTableName().getNameAsString() + ",a,,0,1"), now),
-      new KeyValue(Bytes.toBytes(connection.getMetaTableName().getNameAsString() + ",a,,0,1"), now))
+      new KeyValue(Bytes.toBytes("hbase:meta" + ",a,,0,1"), now),
+      new KeyValue(Bytes.toBytes("hbase:meta" + ",a,,0,1"), now))
         == 0);
     KeyValue a =
-      new KeyValue(Bytes.toBytes(connection.getMetaTableName().getNameAsString() + ",a,,0,1"), now);
+      new KeyValue(Bytes.toBytes("hbase:meta" + ",a,,0,1"), now);
     KeyValue b =
-      new KeyValue(Bytes.toBytes(connection.getMetaTableName().getNameAsString() + ",a,,0,2"), now);
+      new KeyValue(Bytes.toBytes("hbase:meta" + ",a,,0,2"), now);
     assertTrue(c.compare(a, b) < 0);
     assertTrue(c.compare(
-      new KeyValue(Bytes.toBytes(connection.getMetaTableName().getNameAsString() + ",a,,0,2"), now),
-      new KeyValue(Bytes.toBytes(connection.getMetaTableName().getNameAsString() + ",a,,0,1"), now))
+      new KeyValue(Bytes.toBytes("hbase:meta" + ",a,,0,2"), now),
+      new KeyValue(Bytes.toBytes("hbase:meta" + ",a,,0,1"), now))
         > 0);
   }
 
   private void comparisons(final CellComparatorImpl c) {
     long now = EnvironmentEdgeManager.currentTime();
     assertTrue(c.compare(
-      new KeyValue(Bytes.toBytes(connection.getMetaTableName().getNameAsString() + ",,1"), now),
-      new KeyValue(Bytes.toBytes(connection.getMetaTableName().getNameAsString() + ",,1"), now))
+      new KeyValue(Bytes.toBytes("hbase:meta" + ",,1"), now),
+      new KeyValue(Bytes.toBytes("hbase:meta" + ",,1"), now))
         == 0);
     assertTrue(c.compare(
-      new KeyValue(Bytes.toBytes(connection.getMetaTableName().getNameAsString() + ",,1"), now),
-      new KeyValue(Bytes.toBytes(connection.getMetaTableName().getNameAsString() + ",,2"), now)) < 0);
+      new KeyValue(Bytes.toBytes("hbase:meta" + ",,1"), now),
+      new KeyValue(Bytes.toBytes("hbase:meta" + ",,2"), now)) < 0);
     assertTrue(c.compare(
-      new KeyValue(Bytes.toBytes(connection.getMetaTableName().getNameAsString() + ",,2"), now),
-      new KeyValue(Bytes.toBytes(connection.getMetaTableName().getNameAsString() + ",,1"), now)) > 0);
+      new KeyValue(Bytes.toBytes("hbase:meta" + ",,2"), now),
+      new KeyValue(Bytes.toBytes("hbase:meta" + ",,1"), now)) > 0);
   }
 
   @Test

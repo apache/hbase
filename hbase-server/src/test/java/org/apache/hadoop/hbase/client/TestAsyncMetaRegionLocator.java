@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MatcherPredicate;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.MiniClusterRule;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
@@ -106,7 +106,7 @@ public class TestAsyncMetaRegionLocator {
     protected void before() throws Throwable {
       final AsyncAdmin admin = connectionRule.getAsyncConnection().getAdmin();
       testUtil = miniClusterRule.getTestingUtility();
-      HBaseTestingUtil.setReplicas(admin, connection.getMetaTableName(), 3);
+      HBaseTestingUtil.setReplicas(admin, testUtil.getConnection().getMetaTableName(), 3);
       testUtil.waitUntilNoRegionsInTransition();
       registry = ConnectionRegistryFactory.create(testUtil.getConfiguration(), User.getCurrent());
       RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(testUtil, registry);
@@ -164,7 +164,7 @@ public class TestAsyncMetaRegionLocator {
 
       TraceUtil.trace(() -> {
         try {
-          testLocator(miniClusterRule.getTestingUtility(), connection.getMetaTableName(),
+          testLocator(miniClusterRule.getTestingUtility(), testUtil.getConnection().getMetaTableName(),
             new Locator() {
               @Override
               public void updateCachedLocationOnError(HRegionLocation loc, Throwable error) {

@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -170,9 +170,9 @@ public class RegionStateStore {
       final long openSeqNum = hrl.getSeqNum();
 
       LOG.debug(
-        "Load {} entry region={}, regionState={}, lastHost={}, "
+        "Load hbase:meta entry region={}, regionState={}, lastHost={}, "
           + "regionLocation={}, openSeqNum={}",
-        MetaTableName.getInstance(), regionInfo.getEncodedName(), state, lastHost,
+        regionInfo.getEncodedName(), state, lastHost,
         regionLocation, openSeqNum);
       visitor.visitRegionState(result, regionInfo, state, regionLocation, lastHost, openSeqNum);
     }
@@ -192,7 +192,7 @@ public class RegionStateStore {
     final Put put = new Put(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo), time);
     MetaTableAccessor.addRegionInfo(put, regionInfo);
     final StringBuilder info = new StringBuilder("pid=").append(pid).append(" updating ")
-      .append(MetaTableName.getInstance()).append(" row=")
+      .append(master.getConnection().getMetaTableName()).append(" row=")
       .append(regionInfo.getEncodedName()).append(", regionState=").append(state);
     if (openSeqNum >= 0) {
       Preconditions.checkArgument(state == State.OPEN && regionLocation != null,
@@ -286,7 +286,7 @@ public class RegionStateStore {
       }
     } else {
       AsyncTable<?> table =
-        master.getAsyncConnection().getTable(MetaTableName.getInstance());
+        master.getAsyncConnection().getTable(master.getConnection().getMetaTableName());
       future = table.put(put);
     }
     FutureUtils.addListener(future, (r, e) -> {
@@ -333,7 +333,7 @@ public class RegionStateStore {
     }
     MutateRowsRequest request = builder.build();
     AsyncTable<?> table = master.getConnection().toAsyncConnection()
-      .getTable(MetaTableName.getInstance());
+      .getTable(master.getConnection().getMetaTableName());
     CompletableFuture<MutateRowsResponse> future = table.<MultiRowMutationService,
       MutateRowsResponse> coprocessorService(MultiRowMutationService::newStub,
         (stub, controller, done) -> stub.mutateRows(controller, request, done), row);
@@ -341,7 +341,7 @@ public class RegionStateStore {
   }
 
   private Table getMetaTable() throws IOException {
-    return master.getConnection().getTable(MetaTableName.getInstance());
+    return master.getConnection().getTable(master.getConnection().getMetaTableName());
   }
 
   private Result getRegionCatalogResult(RegionInfo region) throws IOException {
@@ -479,7 +479,6 @@ public class RegionStateStore {
 
   /**
    * Deletes merge qualifiers for the specified merge region.
-   * @param connection  connection we're using
    * @param mergeRegion the merged region
    */
   public void deleteMergeQualifiers(RegionInfo mergeRegion) throws IOException {
@@ -508,7 +507,7 @@ public class RegionStateStore {
       return;
     }
     try (Table table =
-      master.getConnection().getTable(MetaTableName.getInstance())) {
+      master.getConnection().getTable(master.getConnection().getMetaTableName())) {
       table.delete(delete);
     }
     LOG.info(
@@ -570,7 +569,6 @@ public class RegionStateStore {
   /**
    * Overwrites the specified regions from hbase:meta. Deletes old rows for the given regions and
    * adds new ones. Regions added back have state CLOSED.
-   * @param connection  connection we're using
    * @param regionInfos list of regions to be added to META
    */
   public void overwriteRegions(List<RegionInfo> regionInfos, int regionReplication)
@@ -698,8 +696,7 @@ public class RegionStateStore {
       return State.valueOf(state);
     } catch (IllegalArgumentException e) {
       LOG.warn(
-        "BAD value {} in " + MetaTableName.getInstance()
-          + " info:state column for region {} , "
+        "BAD value {} in hbase:meta info:state column for region {} , "
           + "Consider using HBCK2 setRegionState ENCODED_REGION_NAME STATE",
         state, regionInfo.getEncodedName());
       return null;

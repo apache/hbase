@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MatcherPredicate;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Waiter;
@@ -85,7 +85,7 @@ public class TestAsyncRegionLocatorTracing {
 
   @Before
   public void setUp() throws IOException {
-    RegionInfo metaRegionInfo = RegionInfoBuilder.newBuilder(connection.getMetaTableName()).build();
+    RegionInfo metaRegionInfo = RegionInfoBuilder.newBuilder(conn.getMetaTableName()).build();
     locs = new RegionLocations(
       new HRegionLocation(metaRegionInfo,
         ServerName.valueOf("127.0.0.1", 12345, EnvironmentEdgeManager.currentTime())),
@@ -147,30 +147,30 @@ public class TestAsyncRegionLocatorTracing {
 
   @Test
   public void testClearCacheTableName() {
-    conn.getLocator().clearCache(connection.getMetaTableName());
+    conn.getLocator().clearCache(conn.getMetaTableName());
     SpanData span = waitSpan("AsyncRegionLocator.clearCache");
     assertThat(span,
       allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.INTERNAL),
         buildConnectionAttributesMatcher(conn),
-        buildTableAttributesMatcher(connection.getMetaTableName())));
+        buildTableAttributesMatcher(conn.getMetaTableName())));
   }
 
   @Test
   public void testGetRegionLocation() {
-    conn.getLocator().getRegionLocation(connection.getMetaTableName(), HConstants.EMPTY_START_ROW,
+    conn.getLocator().getRegionLocation(conn.getMetaTableName(), HConstants.EMPTY_START_ROW,
       RegionLocateType.CURRENT, TimeUnit.SECONDS.toNanos(1)).join();
     SpanData span = waitSpan("AsyncRegionLocator.getRegionLocation");
     assertThat(span,
       allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.INTERNAL),
         buildConnectionAttributesMatcher(conn),
-        buildTableAttributesMatcher(connection.getMetaTableName()),
+        buildTableAttributesMatcher(conn.getMetaTableName()),
         hasAttributes(containsEntryWithStringValuesOf("db.hbase.regions",
           locs.getDefaultRegionLocation().getRegion().getRegionNameAsString()))));
   }
 
   @Test
   public void testGetRegionLocations() {
-    conn.getLocator().getRegionLocations(connection.getMetaTableName(), HConstants.EMPTY_START_ROW,
+    conn.getLocator().getRegionLocations(conn.getMetaTableName(), HConstants.EMPTY_START_ROW,
       RegionLocateType.CURRENT, false, TimeUnit.SECONDS.toNanos(1)).join();
     SpanData span = waitSpan("AsyncRegionLocator.getRegionLocations");
     String[] expectedRegions =
@@ -178,7 +178,7 @@ public class TestAsyncRegionLocatorTracing {
         .map(RegionInfo::getRegionNameAsString).toArray(String[]::new);
     assertThat(span, allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.INTERNAL),
       buildConnectionAttributesMatcher(conn),
-      buildTableAttributesMatcher(connection.getMetaTableName()), hasAttributes(
+      buildTableAttributesMatcher(conn.getMetaTableName()), hasAttributes(
         containsEntryWithStringValuesOf("db.hbase.regions", containsInAnyOrder(expectedRegions)))));
   }
 }

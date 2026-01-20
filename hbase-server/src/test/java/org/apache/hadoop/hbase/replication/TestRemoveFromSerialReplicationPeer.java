@@ -80,7 +80,7 @@ public class TestRemoveFromSerialReplicationPeer extends SerialReplicationTestBa
       .setReplicateAllUserTables(false)
       .setTableCFsMap(ImmutableMap.of(tableName, Collections.emptyList())).setSerial(true).build();
     UTIL.getAdmin().addReplicationPeer(PEER_ID, peerConfig, true);
-    try (Table table = UTIL.getConnection().getTable(tableName)) {
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
@@ -101,7 +101,7 @@ public class TestRemoveFromSerialReplicationPeer extends SerialReplicationTestBa
   public void testRemoveSerialFlag() throws Exception {
     TableName tableName = createTable();
     addPeer(true);
-    try (Table table = UTIL.getConnection().getTable(tableName)) {
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }

@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -85,13 +85,13 @@ public class TestAdmin2 extends TestAdminBase {
   public void testCreateBadTables() throws IOException {
     String msg = null;
     try {
-      ADMIN.createTable(TableDescriptorBuilder.newBuilder(connection.getMetaTableName()).build());
+      ADMIN.createTable(TableDescriptorBuilder.newBuilder(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()).build());
     } catch (TableExistsException e) {
       msg = e.toString();
     }
     assertTrue("Unexcepted exception message " + msg,
       msg != null && msg.startsWith(TableExistsException.class.getName())
-        && msg.contains(connection.getMetaTableName().getNameAsString()));
+        && msg.contains(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable().getNameAsString()));
 
     // Now try and do concurrent creation with a bunch of threads.
     TableDescriptor tableDescriptor =
@@ -457,7 +457,7 @@ public class TestAdmin2 extends TestAdminBase {
   private HRegionServer startAndWriteData(TableName tableName, byte[] value)
     throws IOException, InterruptedException {
     // When the hbase:meta table can be opened, the region servers are running
-    TEST_UTIL.getConnection().getTable(connection.getMetaTableName()).close();
+    TEST_UTIL.getConnection().getMetaTable().close();
 
     // Create the test table and open it
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
@@ -487,7 +487,7 @@ public class TestAdmin2 extends TestAdminBase {
   @Test
   public void testDisableCatalogTable() throws Exception {
     try {
-      ADMIN.disableTable(connection.getMetaTableName());
+      ADMIN.disableTable(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable());
       fail("Expected to throw ConstraintException");
     } catch (ConstraintException e) {
     }

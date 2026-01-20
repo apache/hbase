@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.security.access.PermissionStorage;
@@ -73,7 +73,7 @@ public class TestReplicationWALEntryFilters {
     // meta
     WALKeyImpl key1 =
       new WALKeyImpl(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
-        connection.getMetaTableName(), EnvironmentEdgeManager.currentTime());
+        RegionInfoBuilder.FIRST_META_REGIONINFO.getTable(), EnvironmentEdgeManager.currentTime());
     Entry metaEntry = new Entry(key1, null);
 
     assertNull(filter.filter(metaEntry));

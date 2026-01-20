@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
@@ -136,7 +136,7 @@ public class TestRegionServerRejectDuringAbort {
       .getRegionServerThreads()) {
       HRegionServer regionServer = regionServerThread.getRegionServer();
       if (
-        regionServer.getRegions(connection.getMetaTableName()).isEmpty()
+        regionServer.getRegions(UTIL.getConnection().getMetaTableName()).isEmpty()
           && !regionServer.getRegions(TABLE_NAME).isEmpty()
       ) {
         serverWithoutMeta = regionServer;

@@ -607,16 +607,16 @@ public class ConnectionFactory {
             future.completeExceptionally(new IOException("meta table name came back null"));
             return;
           }
-          Class<? extends AsyncConnection> clazz = appliedConf.getClass(
-            HBASE_CLIENT_ASYNC_CONNECTION_IMPL, AsyncConnectionImpl.class, AsyncConnection.class);
-          try {
-            future.complete(user.runAs((PrivilegedExceptionAction<
-              ? extends AsyncConnection>) () -> ReflectionUtils.newInstance(clazz, appliedConf,
+        Class<? extends AsyncConnection> clazz = appliedConf.getClass(
+          HBASE_CLIENT_ASYNC_CONNECTION_IMPL, AsyncConnectionImpl.class, AsyncConnection.class);
+        try {
+          future.complete(user.runAs((PrivilegedExceptionAction<
+            ? extends AsyncConnection>) () -> ReflectionUtils.newInstance(clazz, appliedConf,
                 registry, clusterId, metaTableName, null, user, connectionAttributes)));
-          } catch (Exception e) {
-            registry.close();
-            future.completeExceptionally(e);
-          }
+        } catch (Exception e) {
+          registry.close();
+          future.completeExceptionally(e);
+        }
         });
       });
       return future;

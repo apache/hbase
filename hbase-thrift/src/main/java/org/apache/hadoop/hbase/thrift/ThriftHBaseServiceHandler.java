@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -1074,10 +1074,12 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
     try {
       byte[] row = getBytes(searchRow);
       Result startRowResult =
-        getReverseScanResult(MetaTableName.getInstance().getName(), row, HConstants.CATALOG_FAMILY);
+        // TODO(HBASE-XXXXX - Phase 6): Get dynamic name from connection
+        // For now, hardcode default. Future: use getConnection(user).getMetaTableName().getName()
+        getReverseScanResult(TableName.valueOf("hbase", "meta").getName(), row, HConstants.CATALOG_FAMILY);
 
       if (startRowResult == null) {
-        throw new IOException("Cannot find row in " + MetaTableName.getInstance() + ", row="
+        throw new IOException("Cannot find row in hbase:meta, row="
           + Bytes.toStringBinary(row));
       }
 

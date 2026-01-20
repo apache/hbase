@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -95,7 +95,7 @@ public class TestLogRollingNoCluster {
     CommonFSUtils.setRootDir(conf, dir);
     FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(TEST_UTIL.getConfiguration());
     FSTableDescriptors.tryUpdateMetaTableDescriptor(TEST_UTIL.getConfiguration());
-    TableDescriptor metaTableDescriptor = fsTableDescriptors.get(connection.getMetaTableName());
+    TableDescriptor metaTableDescriptor = fsTableDescriptors.get(TEST_UTIL.getConnection().getMetaTableName());
     conf.set(FSHLogProvider.WRITER_IMPL, HighLatencySyncWriter.class.getName());
     final WALFactory wals = new WALFactory(conf, TestLogRollingNoCluster.class.getName());
     final WAL wal = wals.getWAL(null);
@@ -159,7 +159,7 @@ public class TestLogRollingNoCluster {
       try {
         TableDescriptors tds = new FSTableDescriptors(TEST_UTIL.getConfiguration());
         FSTableDescriptors.tryUpdateMetaTableDescriptor(TEST_UTIL.getConfiguration());
-        TableDescriptor htd = tds.get(connection.getMetaTableName());
+        TableDescriptor htd = tds.get(TEST_UTIL.getConnection().getMetaTableName());
         for (int i = 0; i < this.count; i++) {
           long now = EnvironmentEdgeManager.currentTime();
           // Roll every ten edits
@@ -176,7 +176,7 @@ public class TestLogRollingNoCluster {
             scopes.put(fam, 0);
           }
           final long txid = wal.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),
-            connection.getMetaTableName(), now, mvcc, scopes), edit);
+            TEST_UTIL.getConnection().getMetaTableName(), now, mvcc, scopes), edit);
           Threads.sleep(ThreadLocalRandom.current().nextInt(5));
           wal.sync(txid);
         }

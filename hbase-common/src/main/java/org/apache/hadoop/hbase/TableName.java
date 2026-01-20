@@ -92,9 +92,17 @@ public final class TableName implements Comparable<TableName> {
   /** One globally disallowed name */
   public static final String DISALLOWED_TABLE_NAME = "zookeeper";
 
-  /** Returns True if <code>tn</code> is the hbase:meta table name. */
+  /** 
+   * Returns True if <code>tn</code> is a meta table (hbase:meta or hbase:meta_suffix).
+   * This handles both the default meta table and read replica meta tables.
+   */
   public static boolean isMetaTableName(final TableName tn) {
-    return tn.equals(MetaTableName.getInstance());
+    if (tn == null) return false;
+    if (!tn.getNamespaceAsString().equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
+      return false;
+    }
+    String qualifier = tn.getQualifierAsString();
+    return qualifier.equals("meta") || qualifier.startsWith("meta_");
   }
 
   /**
@@ -296,7 +304,7 @@ public final class TableName implements Comparable<TableName> {
     }
     if (qualifierAsString.equals(OLD_META_STR)) {
       throw new IllegalArgumentException(OLD_META_STR + " no longer exists. The table has been "
-        + "renamed to " + MetaTableName.getInstance());
+        + "renamed to hbase:meta");
     }
 
     if (Bytes.equals(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME, namespace)) {

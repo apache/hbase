@@ -38,7 +38,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
@@ -616,8 +616,8 @@ public class TableDescriptorBuilder {
       this.name = name;
       families.forEach(c -> this.families.put(c.getName(), ColumnFamilyDescriptorBuilder.copy(c)));
       this.values.putAll(values);
-      this.values.put(IS_META_KEY,
-        new Bytes(Bytes.toBytes(Boolean.toString(name.equals(MetaTableName.getInstance())))));
+    this.values.put(IS_META_KEY,
+      new Bytes(Bytes.toBytes(Boolean.toString(TableName.isMetaTableName(name)))));
     }
 
     /**

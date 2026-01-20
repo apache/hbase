@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.AsyncAdmin;
@@ -148,7 +148,13 @@ public class TestProcedurePriority {
   @Test
   public void test() throws Exception {
     RegionServerThread rsWithMetaThread = UTIL.getMiniHBaseCluster().getRegionServerThreads()
-      .stream().filter(t -> !t.getRegionServer().getRegions(connection.getMetaTableName()).isEmpty())
+      .stream().filter(t -> {
+        try {
+          return !t.getRegionServer().getRegions(UTIL.getConnection().getMetaTableName()).isEmpty();
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      })
       .findAny().get();
     HRegionServer rsNoMeta = UTIL.getOtherRegionServer(rsWithMetaThread.getRegionServer());
     FAIL = true;

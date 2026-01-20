@@ -25,9 +25,10 @@ import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
@@ -152,7 +153,7 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
         if (rs.isClosing()) {
           // Move region to CLOSED in hbase:meta.
           LOG.info("Moving {} from CLOSING to CLOSED in {}",
-            hrl.getRegion().getRegionNameAsString(), MetaTableName.getInstance());
+            hrl.getRegion().getRegionNameAsString(), "hbase:meta");
           try {
             MetaTableAccessor.updateRegionState(this.connection, hrl.getRegion(),
               RegionState.State.CLOSED);

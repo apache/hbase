@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MetaTableName;
+
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -199,7 +199,7 @@ public class TestHBaseFsckCleanReplicationBarriers {
       put.addColumn(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER,
         put.getTimestamp() - barriers.length + i, Bytes.toBytes(barriers[i]));
     }
-    try (Table table = UTIL.getConnection().getTable(connection.getMetaTableName())) {
+    try (Table table = UTIL.getConnection().getMetaTable()) {
       table.put(put);
     }
   }
