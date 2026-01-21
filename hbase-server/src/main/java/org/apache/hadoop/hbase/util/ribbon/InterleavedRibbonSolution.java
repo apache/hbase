@@ -301,7 +301,9 @@ public class InterleavedRibbonSolution {
    * Computes floor(log2(n)) for positive n.
    */
   private static int floorLog2(long n) {
-    if (n <= 0) return 0;
+    if (n <= 0) {
+      return 0;
+    }
     return 63 - Long.numberOfLeadingZeros(n);
   }
 

@@ -38,10 +38,10 @@
  * <p>
  * Main classes:
  * <ul>
- *   <li>{@link org.apache.hadoop.hbase.util.ribbon.RibbonFilterChunk} - Main filter implementation</li>
+ *   <li>{@link org.apache.hadoop.hbase.util.ribbon.RibbonFilterChunk} - Main filter</li>
  *   <li>{@link org.apache.hadoop.hbase.util.ribbon.RibbonHasher} - Hash generation for keys</li>
- *   <li>{@link org.apache.hadoop.hbase.util.ribbon.RibbonBanding} - Gaussian elimination for construction</li>
- *   <li>{@link org.apache.hadoop.hbase.util.ribbon.InterleavedRibbonSolution} - ICML solution storage</li>
+ *   <li>{@link org.apache.hadoop.hbase.util.ribbon.RibbonBanding} - Gaussian elimination</li>
+ *   <li>{@link org.apache.hadoop.hbase.util.ribbon.InterleavedRibbonSolution} - ICML solution</li>
  *   <li>{@link org.apache.hadoop.hbase.util.ribbon.RibbonFilterUtil} - Utility methods</li>
  * </ul>
  *

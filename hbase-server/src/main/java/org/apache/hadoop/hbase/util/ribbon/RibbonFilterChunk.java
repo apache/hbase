@@ -98,10 +98,8 @@ public class RibbonFilterChunk implements BloomFilterBase {
    * @param bloomType Bloom type for key extraction
    */
   public RibbonFilterChunk(BloomType bloomType) {
-    this(RibbonFilterUtil.DEFAULT_BANDWIDTH, RibbonFilterUtil.getDefaultHashType(), bloomType, 0.01, // Default
-                                                                                                     // 1%
-                                                                                                     // FP
-                                                                                                     // rate
+    // Default 1% FP rate
+    this(RibbonFilterUtil.DEFAULT_BANDWIDTH, RibbonFilterUtil.getDefaultHashType(), bloomType, 0.01,
       RibbonFilterUtil.computeOptimalOverheadForFpRate(0.01, RibbonFilterUtil.DEFAULT_BANDWIDTH));
   }
 
