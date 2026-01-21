@@ -345,7 +345,7 @@ enum TBloomFilterType {
    */
   RIBBON_ROW = 4,
   /**
-   * Ribbon filter enabled with Table row & column (family+qualifier) as Key. Ribbon filters are more space-efficient than Bloom filters.
+   * Ribbon filter enabled with Table row &amp; column (family+qualifier) as Key. Ribbon filters are more space-efficient than Bloom filters.
    */
   RIBBON_ROWCOL = 5,
   /**
