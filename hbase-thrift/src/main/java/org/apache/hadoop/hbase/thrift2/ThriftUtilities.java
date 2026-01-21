@@ -898,6 +898,12 @@ public final class ThriftUtilities {
         return BloomType.ROWCOL;
       case 3:
         return BloomType.ROWPREFIX_FIXED_LENGTH;
+      case 4:
+        return BloomType.RIBBON_ROW;
+      case 5:
+        return BloomType.RIBBON_ROWCOL;
+      case 6:
+        return BloomType.RIBBON_ROWPREFIX_FIXED_LENGTH;
       default:
         return BloomType.ROW;
     }
@@ -1133,6 +1139,12 @@ public final class ThriftUtilities {
         return TBloomFilterType.ROWCOL;
       case ROWPREFIX_FIXED_LENGTH:
         return TBloomFilterType.ROWPREFIX_FIXED_LENGTH;
+      case RIBBON_ROW:
+        return TBloomFilterType.RIBBON_ROW;
+      case RIBBON_ROWCOL:
+        return TBloomFilterType.RIBBON_ROWCOL;
+      case RIBBON_ROWPREFIX_FIXED_LENGTH:
+        return TBloomFilterType.RIBBON_ROWPREFIX_FIXED_LENGTH;
       default:
         return TBloomFilterType.ROW;
     }
