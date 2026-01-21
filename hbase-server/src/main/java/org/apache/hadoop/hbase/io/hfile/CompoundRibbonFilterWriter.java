@@ -87,15 +87,13 @@ public class CompoundRibbonFilterWriter extends CompoundRibbonFilterBase
   /**
    * A Ribbon filter chunk ready for writing.
    * <p>
-   * This class holds the constructed Ribbon filter chunk along with its metadata (first key, slot
-   * count, ICML parameters) until it can be written to the HFile.
+   * This class holds the constructed Ribbon filter chunk along with its metadata (first key, ICML
+   * parameters) until it can be written to the HFile.
    */
-  private static class ReadyChunk {
+  private static final class ReadyChunk {
     int chunkId;
     byte[] firstKey;
     RibbonFilterChunk chunk;
-    int numSlots;
-    long byteSize;
     // ICML metadata
     int upperNumColumns;
     int upperStartBlock;
@@ -189,8 +187,6 @@ public class CompoundRibbonFilterWriter extends CompoundRibbonFilterBase
     readyChunk.chunkId = numChunks - 1;
     readyChunk.firstKey = firstKeyInChunk;
     readyChunk.chunk = chunk;
-    readyChunk.numSlots = chunk.getNumSlots();
-    readyChunk.byteSize = chunk.getByteSize();
 
     // Store ICML metadata
     InterleavedRibbonSolution sol = chunk.getInterleavedSolution();
@@ -322,7 +318,7 @@ public class CompoundRibbonFilterWriter extends CompoundRibbonFilterBase
    * Writes all metadata required to reconstruct the CompoundRibbonFilter at read time, including
    * filter parameters, per-chunk ICML metadata, and the block index.
    */
-  private class MetaWriter implements Writable {
+  private final class MetaWriter implements Writable {
     /**
      * Not supported - this is a write-only implementation.
      * @throws IOException Always thrown
