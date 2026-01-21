@@ -57,7 +57,7 @@ When you are ready to submit your patch, first be sure that HBase builds cleanly
 </Step>
 
 <Step>
-If you have made documentation changes, be sure the documentation and website builds by running `mvn clean site`.
+If you have made documentation or website changes, verify that the site builds correctly by running the development server from the `hbase-website/` directory.
 </Step>
 
 <Step>
@@ -97,114 +97,229 @@ After a change has been committed, there is no need to keep your local branch ar
 
 </Steps>
 
-## Editing the HBase Website
+## Editing the HBase Website and Documentation
 
-The source for the HBase website is in the HBase source, in the _src/site/_ directory. Within this directory, source for the individual pages is in the _xdocs/_ directory, and images referenced in those pages are in the _resources/images/_ directory. This directory also stores images used in the HBase Reference Guide.
+The HBase website and documentation are now part of a single application built with Remix and Fumadocs. The source files are located in the `hbase-website/` directory:
 
-The website's pages are written in an HTML-like XML dialect called xdoc, which has a reference guide at [https://maven.apache.org/archives/maven-1.x/plugins/xdoc/reference/xdocs.html](https://maven.apache.org/archives/maven-1.x/plugins/xdoc/reference/xdocs.html). You can edit these files in a plain-text editor, an IDE, or an XML editor such as XML Mind XML Editor (XXE) or Oxygen XML Author.
+- **Documentation pages**: `hbase-website/app/pages/_docs/docs/_mdx/(multi-page)/` - individual MDX files for each documentation section
+- **Single-page view**: `hbase-website/app/pages/_docs/docs/_mdx/single-page/index.mdx` - combines all documentation into one page
+- **Website components**: `hbase-website/app/components/` - React components used throughout the site
+- **Images**: `hbase-website/public/` - static assets including images
 
-To preview your changes, build the website using the `mvn clean site -DskipTests` command. The HTML output resides in the _target/site/_ directory. When you are satisfied with your changes, follow the procedure in [submit doc patch procedure](/docs/contributing-to-documentation#procedure-suggested-work-flow-for-submitting-patches) to submit your patch.
+You can edit MDX files in any text editor or IDE. To preview your changes locally, run the development server from the `hbase-website/` directory and navigate to the documentation pages in your browser. When you are satisfied with your changes, follow the procedure in [submit doc patch procedure](/docs/contributing-to-documentation#procedure-suggested-work-flow-for-submitting-patches) to submit your patch.
 
 ## Publishing the HBase Website and Documentation
 
-HBase uses the ASF's `gitpubsub` mechanism. A Jenkins job runs the `dev-support/jenkins-scripts/generate-hbase-website.sh` script, which runs the `mvn clean site site:stage` against the `master` branch of the `hbase` repository and commits the built artifacts to the `asf-site` branch of the `hbase-site` repository. When the commit is pushed, the website is redeployed automatically. If the script encounters an error, an email is sent to the developer mailing list. You can run the script manually or examine it to see the steps involved.
+The HBase website and documentation are built and deployed as a single Remix application. The deployment process is managed through the project's CI/CD pipeline, which builds the site from the `hbase-website/` directory and deploys it automatically when changes are merged to the main branch.
 
-## Checking the HBase Website for Broken Links
+## MDX and Fumadocs Components
 
-A Jenkins job runs periodically to check HBase website for broken links, using the `dev-support/jenkins-scripts/check-website-links.sh` script. This script uses a tool called `linklint` to check for bad links and create a report. If broken links are found, an email is sent to the developer mailing list. You can run the script manually or examine it to see the steps involved.
+The HBase documentation is written in MDX (Markdown with JSX), which allows you to use standard Markdown syntax along with React components. For comprehensive documentation on Markdown formatting and MDX features, refer to:
 
-## HBase Reference Guide Style Guide and Cheat Sheet
+- [Fumadocs Markdown Documentation](https://www.fumadocs.dev/docs/markdown) - Complete guide to MDX syntax and Fumadocs features
+- [CommonMark specification](https://commonmark.org/) - Standard Markdown syntax reference
+- [GFM (GitHub Flavored Markdown)](https://github.github.com/gfm) - GitHub-style Markdown extensions
 
-The HBase Reference Guide is written in Asciidoc and built using [AsciiDoctor](http://asciidoctor.org). The following cheat sheet is included for your reference. More nuanced and comprehensive documentation is available at [http://asciidoctor.org/docs/user-manual/](http://asciidoctor.org/docs/user-manual/).
+### Fumadocs Components
 
-| Element Type | Desired Rendering | How to do it |
-|----|----|----|
-| A paragraph | a paragraph | Just type some text with a blank line at the top and bottom. |
-| Add line breaks within a paragraph without adding blank lines | Manual line breaks | This will break + at the plus sign. Or prefix the whole paragraph with a line containing '[%hardbreaks]' |
-| Give a title to anything | Colored italic bold differently-sized text | |
-| In-Line Code or commands | monospace | \`text` |
-| In-line literal content (things to be typed exactly as shown) | bold mono | \*\`typethis`* |
-| In-line replaceable content (things to substitute with your own values) | bold italic mono | \*\_typesomething_* |
-| Code blocks with highlighting | monospace, highlighted, preserve space | `[source,java]`<br/>`----`<br/>`  myAwesomeCode() {`<br/>`}`<br/>`----` |
-| Code block included from a separate file | included just as though it were part of the main file | `[source,ruby]`<br/>`----`<br/>`include::path/to/app.rb[]`<br/>`----` |
-| Include only part of a separate file | Similar to Javadoc | See [http://asciidoctor.org/docs/user-manual/#by-tagged-regions](http://asciidoctor.org/docs/user-manual/#by-tagged-regions) |
-| Filenames, directory names, new terms | italic | _hbase-default.xml_ |
-| External naked URLs | A link with the URL as link text | `link:http://www.google.com` |
-| External URLs with text | A link with arbitrary link text | `link:http://www.google.com[Google]` |
-| Create an internal anchor to cross-reference | not rendered | `[[anchor_name]]` |
-| Cross-reference an existing anchor using its default title | an internal hyperlink using the element title if available, otherwise using the anchor name | `<<anchor_name>>` |
-| Cross-reference an existing anchor using custom text | an internal hyperlink using arbitrary text | `<<anchor_name,Anchor Text>>` |
-| A block image | The image with alt text | `image::sunset.jpg[Alt Text]`<br/>(put the image in the src/site/resources/images directory) |
-| An inline image | The image with alt text, as part of the text flow | `image:sunset.jpg [Alt Text]`<br/>(only one colon) |
-| Link to a remote image | show an image hosted elsewhere | `image::http://inkscape.org/doc/examples/tux.svg[Tux,250,350]`<br/>(or `image:`) |
-| Add dimensions or a URL to the image | depends | inside the brackets after the alt text, specify width, height and/or link="http://my_link.com" |
-| A footnote | subscript link which takes you to the footnote | `Some text.footnote:[The footnote text.]` |
-| A note or warning with no title | The admonition image followed by the admonition | `NOTE:My note here`<br/>`WARNING:My warning here` |
-| A complex note | The note has a title and/or multiple paragraphs and/or code blocks or lists, etc | `.The Title`<br/>`[NOTE]`<br/>`====`<br/>`Here is the note text. Everything until the second set of four equals signs is part of the note.`<br/>`----`<br/>`some source code`<br/>`----`<br/>`====` |
-| Bullet lists | bullet lists | `* list item 1`<br/>(see [http://asciidoctor.org/docs/user-manual/#unordered-lists](http://asciidoctor.org/docs/user-manual/#unordered-lists)) |
-| Numbered lists | numbered list | `. list item 2`<br/>(see [http://asciidoctor.org/docs/user-manual/#ordered-lists](http://asciidoctor.org/docs/user-manual/#ordered-lists)) |
-| Checklists | Checked or unchecked boxes | Checked:<br/>`- [*]`<br/>Unchecked:<br/>`- [ ]` |
-| Multiple levels of lists | bulleted or numbered or combo | `. Numbered (1), at top level`<br/>`* Bullet (2), nested under 1`<br/>`* Bullet (3), nested under 1`<br/>`. Numbered (4), at top level`<br/>`* Bullet (5), nested under 4`<br/>`** Bullet (6), nested under 5`<br/>`- [x] Checked (7), at top level` |
-| Labelled lists / variablelists | a list item title or summary followed by content | `Title:: content`<br/><br/>`Title::`<br/>`ㅤcontent` |
-| Sidebars, quotes, or other blocks of text | a block of text, formatted differently from the default | Delimited using different delimiters, see [http://asciidoctor.org/docs/user-manual/#built-in-blocks-summary](http://asciidoctor.org/docs/user-manual/#built-in-blocks-summary). Some of the examples above use delimiters like ...., ----,====.<br/><br/>`[example]`<br/>`====`<br/>`This is an example block.`<br/>`====`<br/><br/>`[source]`<br/>`----`<br/>`This is a source block.`<br/>`----`<br/><br/>`[note]`<br/>`====`<br/>`This is a note block.`<br/>`====`<br/><br/>`[quote]`<br/>`____`<br/>`This is a quote block.`<br/>`____`<br/><br/>If you want to insert literal Asciidoc content that keeps being interpreted, when in doubt, use eight dots as the delimiter at the top and bottom. |
-| Nested Sections | chapter, section, sub-section, etc | `= Book (or chapter if the chapter can be built alone, see the leveloffset info below)`<br/><br/>`== Chapter (or section if the chapter is standalone)`<br/><br/>`=== Section (or subsection, etc)`<br/><br/>`==== Subsection`<br/><br/>and so on up to 6 levels (think carefully about going deeper than 4 levels, maybe you can just titled paragraphs or lists instead). Note that you can include a book inside another book by adding the `:leveloffset:+1` macro directive directly before your include, and resetting it to 0 directly after. See the _book.adoc_ source for examples, as this is how this guide handles chapters. **Don't do it for prefaces, glossaries, appendixes, or other special types of chapters.** |
-| Include one file from another | Content is included as though it were inline | `include::[/path/to/file.adoc]`<br/><br/>For plenty of examples. see _book.adoc_. |
-| A table | a table | See [http://asciidoctor.org/docs/user-manual/#tables](http://asciidoctor.org/docs/user-manual/#tables). Generally rows are separated by newlines and columns by pipes |
-| Comment out a single line | A line is skipped during rendering | `+//+ This line won't show up` |
-| Comment out a block | A section of the file is skipped during rendering | `////`<br/>`Nothing between the slashes will show up.`<br/>`////` |
-| Highlight text for review | text shows up with yellow background | `Test between #hash marks# is highlighted yellow.` |
+Fumadocs provides several components that enhance the documentation:
+
+#### Steps Component
+
+Use `<Steps>` to create numbered step-by-step instructions:
+
+```mdx
+<Steps>
+
+<Step>
+First, do this thing.
+</Step>
+
+<Step>
+Then, do this other thing.
+</Step>
+
+</Steps>
+```
+
+**Example output:**
+
+<Steps>
+
+<Step>
+First, do this thing.
+</Step>
+
+<Step>
+Then, do this other thing.
+</Step>
+
+</Steps>
+
+#### Callout Component
+
+Use `<Callout>` for notes, warnings, and important information:
+
+```mdx
+<Callout type="info">
+This is an informational callout.
+</Callout>
+
+<Callout type="warning">
+This is a warning callout.
+</Callout>
+```
+
+**Example output:**
+
+<Callout type="info">
+This is an informational callout.
+</Callout>
+
+<Callout type="warning">
+This is a warning callout.
+</Callout>
+
+#### Include Directive
+
+The single-page documentation view uses `<include>` tags to combine multiple MDX files:
+
+```mdx
+<include>../(multi-page)/getting-started.mdx</include>
+```
+
+See `hbase-website/app/pages/_docs/docs/_mdx/single-page/index.mdx` for examples of how all documentation sections are included in the single-page view.
 
 ## Auto-Generated Content
 
-Some parts of the HBase Reference Guide, most notably [config.files](/docs/configuration/default#configuration-default-hbase-default-configuration), are generated automatically, so that this area of the documentation stays in sync with the code. This is done by means of an XSLT transform, which you can examine in the source at _src/main/xslt/configuration_to_asciidoc_chapter.xsl_. This transforms the _hbase-common/src/main/resources/hbase-default.xml_ file into an Asciidoc output which can be included in the Reference Guide.
+Some parts of the HBase documentation, such as the [default configuration](/docs/configuration/default), are generated automatically to stay in sync with the code. The configuration documentation is generated from the `hbase-common/src/main/resources/hbase-default.xml` file.
 
-Sometimes, it is necessary to add configuration parameters or modify their descriptions. Make the modifications to the source file, and they will be included in the Reference Guide when it is rebuilt.
+To add or modify configuration parameters, update the source XML file. To regenerate the documentation from the updated configuration, run:
 
-It is possible that other types of content can and will be automatically generated from HBase source files in the future.
-
-## Images in the HBase Reference Guide
-
-You can include images in the HBase Reference Guide. It is important to include an image title if possible, and alternate text always. This allows screen readers to navigate to the image and also provides alternative text for the image. The following is an example of an image with a title and alternate text. Notice the double colon.
-
-```asciidoc
-.My Image Title
-image::sunset.jpg[Alt Text]
+```bash
+npm run extract-hbase-config
 ```
 
-Here is an example of an inline image with alternate text. Notice the single colon. Inline images cannot have titles. They are generally small images like GUI buttons.
+This command is also executed automatically when you run `npm ci`.
 
-```asciidoc
-image:sunset.jpg[Alt Text]
+## Images in the Documentation
+
+You can include images in the HBase documentation using standard Markdown syntax. Always include descriptive alt text for accessibility:
+
+```markdown
+![Alt text describing the image](/path/to/image.png)
 ```
 
-When doing a local build, save the image to the _src/site/resources/images/_ directory. When you link to the image, do not include the directory portion of the path. The image will be copied to the appropriate target location during the build of the output.
+Save images to the `hbase-website/public/` directory or an appropriate subdirectory. Reference them in your MDX files using absolute paths from the public directory:
 
-When you submit a patch which includes adding an image to the HBase Reference Guide, attach the image to the JIRA. If the committer asks where the image should be committed, it should go into the above directory.
+```markdown
+![Architecture diagram](/images/architecture-diagram.png)
+```
 
-## Adding a New Chapter to the HBase Reference Guide
+When submitting a patch that includes images, attach the images to the JIRA issue.
 
-If you want to add a new chapter to the HBase Reference Guide, the easiest way is to copy an existing chapter file, rename it, and change the ID (in double brackets) and title. Chapters are located in the _src/main/asciidoc/_chapters/_ directory.
+## Adding a New Section to the Documentation
 
-Delete the existing content and create the new content. Then open the _src/main/asciidoc/book.adoc_ file, which is the main file for the HBase Reference Guide, and copy an existing `include` element to include your new chapter in the appropriate location. Be sure to add your new file to your Git repository before creating your patch.
+To add a new section to the HBase documentation:
 
-When in doubt, check to see how other files have been included.
+1. Create a new MDX file in `hbase-website/app/pages/_docs/docs/_mdx/(multi-page)/` with a descriptive name (e.g., `my-new-section.mdx`)
+2. Add frontmatter at the top of the file with a title and description:
+
+```mdx
+---
+title: "My New Section"
+description: "Brief description of what this section covers"
+---
+
+## My New Section
+
+Your content here...
+```
+
+3. Add your new file to `hbase-website/app/pages/_docs/docs/_mdx/(multi-page)/meta.json` in the appropriate location within the `pages` array (without the `.mdx` extension):
+
+```json
+{
+  "pages": [
+    "---My Category---",
+    "my-new-section",
+    ...
+  ]
+}
+```
+
+4. Add an `<include>` directive to `hbase-website/app/pages/_docs/docs/_mdx/single-page/index.mdx` in the appropriate location:
+
+```mdx
+<include>../(multi-page)/my-new-section.mdx</include>
+```
+
+5. Add your new file to Git before creating your patch.
+
+## Unique Headings Requirement
+
+Since all documentation files are merged into a single-page view, **all heading IDs must be unique across the entire documentation**. A test will fail during the build if duplicate heading IDs are detected, marking the problematic headings.
+
+Headings don't have to be visually unique, but their link IDs must be unique. You can customize the heading ID using Fumadocs syntax:
+
+```markdown
+## Configuration [#server-configuration]
+```
+
+This creates a heading that displays as "Configuration" but has the unique ID `#server-configuration` for linking purposes.
+
+### Hiding Headings from Table of Contents
+
+You can hide specific headings from the right-side table of contents:
+
+```markdown
+## Internal Implementation Details [!toc]
+```
+
+This heading will still appear in the document but won't show up in the table of contents navigation.
+
+<Callout type="warning">
+Note: `[!toc]` becomes part of the heading ID. For example, `## Usage [!toc]` will have the ID `#usage-toc`.
+</Callout>
+
+### Combining Custom IDs and TOC Hiding
+
+You can combine both attributes:
+
+```markdown
+## Configuration Details [#server-config] [!toc]
+```
 
 ## Common Documentation Issues
 
-The following documentation issues come up often. Some of these are preferences, but others can create mysterious build errors or other problems.
+The following documentation issues come up often:
 
-1.  *Isolate Changes for Easy Diff Review.*
+1.  **Isolate Changes for Easy Diff Review**
 
-    Be careful with pretty-printing or re-formatting an entire XML file, even if the formatting has degraded over time. If you need to reformat a file, do that in a separate JIRA where you do not change any content. Be careful because some XML editors do a bulk-reformat when you open a new file, especially if you use GUI mode in the editor.
-2.  *Syntax Highlighting*
+    Avoid reformatting entire files when making content changes. If you need to reformat a file, do that in a separate JIRA where you do not change any content.
 
-    The HBase Reference Guide uses `coderay` for syntax highlighting. To enable syntax highlighting for a given code listing, use the following type of syntax:
+2.  **Syntax Highlighting**
 
-    ```text
-    [source,xml]
-    ----
-    <name>My Name</name>
-    ----
+    MDX supports syntax highlighting for code blocks. Specify the language after the opening triple backticks:
+
+    ````markdown
+    ```java
+    public class Example {
+        // your code here
+    }
+    ```
+    ````
+
+3.  **Component Syntax**
+
+    Remember to properly close Fumadocs components. Components like `<Steps>` and `<Callout>` must be properly closed:
+
+    ```mdx
+    <Callout>
+    Your content here
+    </Callout>
     ```
 
-    Several syntax types are supported. The most interesting ones for the HBase Reference Guide are `java`, `xml`, `sql`, and `bash`.
+4.  **Unique Heading IDs**
+
+    Ensure all heading IDs are unique across the entire documentation. If you get a test failure about duplicate headings, customize the heading ID using `[#custom-id]` syntax as described in the [Unique Headings Requirement](#unique-headings-requirement) section.
