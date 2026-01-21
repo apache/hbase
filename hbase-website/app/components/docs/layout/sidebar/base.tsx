@@ -236,6 +236,8 @@ export function SidebarViewport(props: ScrollAreaProps) {
         className="overscroll-contain p-4"
         style={
           {
+            overflowY: "unset",
+            overflowX: "unset",
             maskImage:
               "linear-gradient(to bottom, transparent, white 12px, white calc(100% - 12px), transparent)"
           } as object
