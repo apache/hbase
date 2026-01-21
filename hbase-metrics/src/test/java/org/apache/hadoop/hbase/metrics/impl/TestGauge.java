@@ -17,33 +17,26 @@
  */
 package org.apache.hadoop.hbase.metrics.impl;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.metrics.Gauge;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test class for {@link Gauge}.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestGauge {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestGauge.class);
 
   @Test
   public void testGetValue() {
     SimpleGauge gauge = new SimpleGauge();
-
     assertEquals(0, (long) gauge.getValue());
 
     gauge.setValue(1000L);
-
     assertEquals(1000L, (long) gauge.getValue());
   }
 
