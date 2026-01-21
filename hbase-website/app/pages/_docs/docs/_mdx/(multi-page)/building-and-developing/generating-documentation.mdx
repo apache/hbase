@@ -1,9 +1,9 @@
 ---
 title: "Generating the HBase Reference Guide"
-description: "Building HBase documentation from Asciidoc markup using the Asciidoctor Maven plugin."
+description: "Building HBase documentation from MDX markup."
 ---
 
-The manual is marked up using Asciidoc.
-We then use the [Asciidoctor maven plugin](http://asciidoctor.org/docs/asciidoctor-maven-plugin/) to transform the markup to html.
-This plugin is run when you specify the `site` goal as in when you run `mvn site`.
+The manual is marked up using [MDX](https://mdxjs.com/) (just extended markdown).
+Then we render markdown into HTML content by using [Fumadocs](https://fumadocs.dev/).
+To build run `mvn site` from the root or `hbase-website` directory.
 See [appendix contributing to documentation](/docs/contributing-to-documentation) for more information on building the documentation.
