@@ -225,12 +225,14 @@ public class StoreFileReader {
     byte[] row = scan.getStartRow();
     switch (this.bloomFilterType) {
       case ROW:
+      case RIBBON_ROW:
         if (!scan.isGetScan()) {
           return true;
         }
         return passesGeneralRowBloomFilter(row, 0, row.length);
 
       case ROWCOL:
+      case RIBBON_ROWCOL:
         if (!scan.isGetScan()) {
           return true;
         }
@@ -246,6 +248,7 @@ public class StoreFileReader {
         // seekExact operation.
         return true;
       case ROWPREFIX_FIXED_LENGTH:
+      case RIBBON_ROWPREFIX_FIXED_LENGTH:
         return passesGeneralRowPrefixBloomFilter(scan);
       default:
         if (scan.isGetScan()) {
@@ -384,14 +387,14 @@ public class StoreFileReader {
         // hbase:meta does not have blooms. So we need not have special interpretation
         // of the hbase:meta cells. We can safely use Bytes.BYTES_RAWCOMPARATOR for ROW Bloom
         if (keyIsAfterLast) {
-          if (bloomFilterType == BloomType.ROWCOL) {
+          if (bloomFilterType.isRowCol()) {
             keyIsAfterLast = (getComparator().compare(kvKey, lastBloomKeyOnlyKV)) > 0;
           } else {
             keyIsAfterLast = (Bytes.BYTES_RAWCOMPARATOR.compare(key, lastBloomKey) > 0);
           }
         }
 
-        if (bloomFilterType == BloomType.ROWCOL) {
+        if (bloomFilterType.isRowCol()) {
           // Since a Row Delete is essentially a DeleteFamily applied to all
           // columns, a file might be skipped if using row+col Bloom filter.
           // In order to ensure this file is included an additional check is
@@ -464,12 +467,12 @@ public class StoreFileReader {
     }
 
     byte[] p = fi.get(BLOOM_FILTER_PARAM_KEY);
-    if (bloomFilterType == BloomType.ROWPREFIX_FIXED_LENGTH) {
+    if (bloomFilterType.isRowPrefixFixedLength()) {
       prefixLength = Bytes.toInt(p);
     }
 
     lastBloomKey = fi.get(LAST_BLOOM_KEY);
-    if (bloomFilterType == BloomType.ROWCOL) {
+    if (bloomFilterType.isRowCol()) {
       lastBloomKeyOnlyKV = new KeyValue.KeyOnlyKeyValue(lastBloomKey, 0, lastBloomKey.length);
     }
     byte[] cnt = fi.get(DELETE_FAMILY_COUNT);

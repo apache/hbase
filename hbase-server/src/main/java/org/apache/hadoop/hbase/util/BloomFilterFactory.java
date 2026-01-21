@@ -20,14 +20,19 @@ package org.apache.hadoop.hbase.util;
 import java.io.DataInput;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.io.hfile.BloomFilterMetrics;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilter;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilterBase;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilterWriter;
+import org.apache.hadoop.hbase.io.hfile.CompoundRibbonFilter;
+import org.apache.hadoop.hbase.io.hfile.CompoundRibbonFilterBase;
+import org.apache.hadoop.hbase.io.hfile.CompoundRibbonFilterWriter;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.util.ribbon.RibbonFilterUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,11 +60,6 @@ public final class BloomFilterFactory {
    * this times if we oversize it initially.
    */
   public static final String IO_STOREFILE_BLOOM_MAX_FOLD = "io.storefile.bloom.max.fold";
-
-  /**
-   * For default (single-block) Bloom filters this specifies the maximum number of keys.
-   */
-  public static final String IO_STOREFILE_BLOOM_MAX_KEYS = "io.storefile.bloom.max.keys";
 
   /** Master switch to enable Bloom filters */
   public static final String IO_STOREFILE_BLOOM_ENABLED = "io.storefile.bloom.enabled";
@@ -92,13 +92,11 @@ public final class BloomFilterFactory {
   public static BloomFilter createFromMeta(DataInput meta, HFile.Reader reader,
     BloomFilterMetrics metrics) throws IllegalArgumentException, IOException {
     int version = meta.readInt();
-    switch (version) {
-      case CompoundBloomFilterBase.VERSION:
-        return new CompoundBloomFilter(meta, reader, metrics);
-
-      default:
-        throw new IllegalArgumentException("Bad bloom filter format version " + version);
-    }
+    return switch (version) {
+      case CompoundBloomFilterBase.VERSION -> new CompoundBloomFilter(meta, reader, metrics);
+      case CompoundRibbonFilterBase.VERSION -> new CompoundRibbonFilter(meta, reader, metrics);
+      default -> throw new IllegalArgumentException("Bad bloom filter format version " + version);
+    };
   }
 
   /**
@@ -118,6 +116,20 @@ public final class BloomFilterFactory {
     return conf.getFloat(IO_STOREFILE_BLOOM_ERROR_RATE, (float) 0.01);
   }
 
+  /**
+   * Returns the adjusted error rate for the given bloom type. In case of row/column bloom filter
+   * lookups, each lookup is an OR of two separate lookups. Therefore, if each lookup's false
+   * positive rate is p, the resulting false positive rate is err = 1 - (1 - p)^2, and p = 1 -
+   * sqrt(1 - err).
+   */
+  private static double getAdjustedErrorRate(Configuration conf, BloomType bloomType) {
+    double err = getErrorRate(conf);
+    if (bloomType.toBaseType() == BloomType.ROWCOL) {
+      err = 1 - Math.sqrt(1 - err);
+    }
+    return err;
+  }
+
   /** Returns the value for Bloom filter max fold in the given configuration */
   public static int getMaxFold(Configuration conf) {
     return conf.getInt(IO_STOREFILE_BLOOM_MAX_FOLD, MAX_ALLOWED_FOLD_FACTOR);
@@ -128,22 +140,15 @@ public final class BloomFilterFactory {
     return conf.getInt(IO_STOREFILE_BLOOM_BLOCK_SIZE, 128 * 1024);
   }
 
-  /** Returns max key for the Bloom filter from the configuration */
-  public static int getMaxKeys(Configuration conf) {
-    return conf.getInt(IO_STOREFILE_BLOOM_MAX_KEYS, 128 * 1000 * 1000);
-  }
-
   /**
-   * Creates a new general (Row or RowCol) Bloom filter at the time of
+   * Creates a new general (Row or RowCol) Bloom or Ribbon filter at the time of
    * {@link org.apache.hadoop.hbase.regionserver.HStoreFile} writing.
-   * @param maxKeys an estimate of the number of keys we expect to insert. Irrelevant if compound
-   *                Bloom filters are enabled.
-   * @param writer  the HFile writer
-   * @return the new Bloom filter, or null in case Bloom filters are disabled or when failed to
+   * @param writer the HFile writer
+   * @return the new Bloom/Ribbon filter, or null in case filters are disabled or when failed to
    *         create one.
    */
   public static BloomFilterWriter createGeneralBloomAtWrite(Configuration conf,
-    CacheConfig cacheConf, BloomType bloomType, int maxKeys, HFile.Writer writer) {
+    CacheConfig cacheConf, BloomType bloomType, HFile.Writer writer) {
     if (!isGeneralBloomEnabled(conf)) {
       LOG.trace("Bloom filters are disabled by configuration for " + writer.getPath()
         + (conf == null ? " (configuration is null)" : ""));
@@ -153,16 +158,12 @@ public final class BloomFilterFactory {
       return null;
     }
 
-    float err = getErrorRate(conf);
-
-    // In case of row/column Bloom filter lookups, each lookup is an OR if two
-    // separate lookups. Therefore, if each lookup's false positive rate is p,
-    // the resulting false positive rate is err = 1 - (1 - p)^2, and
-    // p = 1 - sqrt(1 - err).
-    if (bloomType == BloomType.ROWCOL) {
-      err = (float) (1 - Math.sqrt(1 - err));
+    // Check if Ribbon filter is requested
+    if (bloomType.isRibbon()) {
+      return createRibbonFilterAtWrite(conf, cacheConf, bloomType, writer);
     }
 
+    float err = (float) getAdjustedErrorRate(conf, bloomType);
     int maxFold = conf.getInt(IO_STOREFILE_BLOOM_MAX_FOLD, MAX_ALLOWED_FOLD_FACTOR);
 
     // Do we support compound bloom filters?
@@ -175,30 +176,97 @@ public final class BloomFilterFactory {
   }
 
   /**
-   * Creates a new Delete Family Bloom filter at the time of
+   * Creates a new Ribbon filter at the time of HStoreFile writing.
+   * @param conf      Configuration
+   * @param cacheConf Cache configuration
+   * @param bloomType The Ribbon filter type (RIBBON_ROW, RIBBON_ROWCOL, etc.)
+   * @param writer    The HFile writer
+   * @return The new Ribbon filter writer
+   */
+  private static BloomFilterWriter createRibbonFilterAtWrite(Configuration conf,
+    CacheConfig cacheConf, BloomType bloomType, HFile.Writer writer) {
+    int blockSize = getBloomBlockSize(conf);
+    int hashType = Hash.getHashType(conf);
+    double fpRate = getAdjustedErrorRate(conf, bloomType);
+
+    BloomType baseType = bloomType.toBaseType();
+    CellComparator comparator = baseType.isRowCol() ? CellComparatorImpl.COMPARATOR : null;
+
+    CompoundRibbonFilterWriter ribbonWriter =
+      new CompoundRibbonFilterWriter(blockSize, RibbonFilterUtil.DEFAULT_BANDWIDTH, hashType,
+        cacheConf.shouldCacheBloomsOnWrite(), comparator, bloomType, fpRate);
+
+    writer.addInlineBlockWriter(ribbonWriter);
+
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Created Ribbon filter for {} with blockSize={}, fpRate={}", writer.getPath(),
+        blockSize, fpRate);
+    }
+
+    return ribbonWriter;
+  }
+
+  /**
+   * Creates a new Delete Family Bloom or Ribbon filter at the time of
    * {@link org.apache.hadoop.hbase.regionserver.HStoreFile} writing.
-   * @param maxKeys an estimate of the number of keys we expect to insert. Irrelevant if compound
-   *                Bloom filters are enabled.
-   * @param writer  the HFile writer
-   * @return the new Bloom filter, or null in case Bloom filters are disabled or when failed to
+   * <p>
+   * If the general bloom type is a Ribbon type, the delete family filter will also use Ribbon.
+   * Otherwise, a traditional Bloom filter is created.
+   * @param conf      Configuration
+   * @param cacheConf Cache configuration
+   * @param bloomType The general bloom type (used to determine if Ribbon should be used)
+   * @param writer    the HFile writer
+   * @return the new Bloom/Ribbon filter, or null in case filters are disabled or when failed to
    *         create one.
    */
   public static BloomFilterWriter createDeleteBloomAtWrite(Configuration conf,
-    CacheConfig cacheConf, int maxKeys, HFile.Writer writer) {
+    CacheConfig cacheConf, BloomType bloomType, HFile.Writer writer) {
     if (!isDeleteFamilyBloomEnabled(conf)) {
       LOG.info("Delete Bloom filters are disabled by configuration for " + writer.getPath()
         + (conf == null ? " (configuration is null)" : ""));
       return null;
     }
 
-    float err = getErrorRate(conf);
+    // Use Ribbon filter if the general bloom type is Ribbon
+    if (bloomType.isRibbon()) {
+      return createDeleteRibbonAtWrite(conf, cacheConf, writer);
+    }
 
+    // Use traditional Bloom filter
+    float err = getErrorRate(conf);
     int maxFold = getMaxFold(conf);
-    // In case of compound Bloom filters we ignore the maxKeys hint.
+
     CompoundBloomFilterWriter bloomWriter =
       new CompoundBloomFilterWriter(getBloomBlockSize(conf), err, Hash.getHashType(conf), maxFold,
         cacheConf.shouldCacheBloomsOnWrite(), null, BloomType.ROW);
     writer.addInlineBlockWriter(bloomWriter);
     return bloomWriter;
+  }
+
+  /**
+   * Creates a new Delete Family Ribbon filter at the time of HStoreFile writing.
+   * @param conf      Configuration
+   * @param cacheConf Cache configuration
+   * @param writer    The HFile writer
+   * @return The new Ribbon filter writer
+   */
+  private static BloomFilterWriter createDeleteRibbonAtWrite(Configuration conf,
+    CacheConfig cacheConf, HFile.Writer writer) {
+    int blockSize = getBloomBlockSize(conf);
+    int hashType = Hash.getHashType(conf);
+    double fpRate = getErrorRate(conf);
+
+    CompoundRibbonFilterWriter ribbonWriter =
+      new CompoundRibbonFilterWriter(blockSize, RibbonFilterUtil.DEFAULT_BANDWIDTH, hashType,
+        cacheConf.shouldCacheBloomsOnWrite(), null, BloomType.RIBBON_ROW, fpRate);
+
+    writer.addInlineBlockWriter(ribbonWriter);
+
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Created Delete Family Ribbon filter for {} with blockSize={}, fpRate={}",
+        writer.getPath(), blockSize, fpRate);
+    }
+
+    return ribbonWriter;
   }
 }

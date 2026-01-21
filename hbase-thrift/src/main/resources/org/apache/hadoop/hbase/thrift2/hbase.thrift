@@ -340,6 +340,18 @@ enum TBloomFilterType {
    * Bloom enabled with Table row prefix as Key, specify the length of the prefix
    */
   ROWPREFIX_FIXED_LENGTH = 3,
+  /**
+   * Ribbon filter enabled with Table row as Key. Ribbon filters are more space-efficient than Bloom filters.
+   */
+  RIBBON_ROW = 4,
+  /**
+   * Ribbon filter enabled with Table row & column (family+qualifier) as Key. Ribbon filters are more space-efficient than Bloom filters.
+   */
+  RIBBON_ROWCOL = 5,
+  /**
+   * Ribbon filter enabled with Table row prefix as Key. Ribbon filters are more space-efficient than Bloom filters.
+   */
+  RIBBON_ROWPREFIX_FIXED_LENGTH = 6,
 }
 
 /**

@@ -534,8 +534,8 @@ public class StoreFileWriter implements CellSink, ShipperListener {
         HFile.getWriterFactory(conf, cacheConf).withPath(fs, path).withFavoredNodes(favoredNodes)
           .withFileContext(fileContext).withShouldDropCacheBehind(shouldDropCacheBehind).create();
 
-      generalBloomFilterWriter = BloomFilterFactory.createGeneralBloomAtWrite(conf, cacheConf,
-        bloomType, (int) Math.min(maxKeys, Integer.MAX_VALUE), writer);
+      generalBloomFilterWriter =
+        BloomFilterFactory.createGeneralBloomAtWrite(conf, cacheConf, bloomType, writer);
 
       if (generalBloomFilterWriter != null) {
         this.bloomType = bloomType;
@@ -550,14 +550,17 @@ public class StoreFileWriter implements CellSink, ShipperListener {
         // init bloom context
         switch (bloomType) {
           case ROW:
+          case RIBBON_ROW:
             bloomContext =
               new RowBloomContext(generalBloomFilterWriter, fileContext.getCellComparator());
             break;
           case ROWCOL:
+          case RIBBON_ROWCOL:
             bloomContext =
               new RowColBloomContext(generalBloomFilterWriter, fileContext.getCellComparator());
             break;
           case ROWPREFIX_FIXED_LENGTH:
+          case RIBBON_ROWPREFIX_FIXED_LENGTH:
             bloomContext = new RowPrefixFixedLengthBloomContext(generalBloomFilterWriter,
               fileContext.getCellComparator(), Bytes.toInt(bloomParam));
             break;
@@ -570,10 +573,10 @@ public class StoreFileWriter implements CellSink, ShipperListener {
         this.bloomType = BloomType.NONE;
       }
 
-      // initialize delete family Bloom filter when there is NO RowCol Bloom filter
-      if (this.bloomType != BloomType.ROWCOL) {
-        this.deleteFamilyBloomFilterWriter = BloomFilterFactory.createDeleteBloomAtWrite(conf,
-          cacheConf, (int) Math.min(maxKeys, Integer.MAX_VALUE), writer);
+      // initialize delete family Bloom filter when there is NO RowCol Bloom/Ribbon filter
+      if (!this.bloomType.isRowCol()) {
+        this.deleteFamilyBloomFilterWriter =
+          BloomFilterFactory.createDeleteBloomAtWrite(conf, cacheConf, this.bloomType, writer);
         deleteFamilyBloomContext =
           new RowBloomContext(deleteFamilyBloomFilterWriter, fileContext.getCellComparator());
       } else {
