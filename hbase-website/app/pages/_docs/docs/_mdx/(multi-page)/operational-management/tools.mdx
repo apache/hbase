@@ -888,14 +888,25 @@ Files targeted for compaction must be specified as parent hdfs dirs. It allows f
 Since these dirs are nested under **hbase** hdfs directory tree, **CompactionTool** requires hbase super user permissions in order to have access to required hfiles.
 
 <Callout type="info" title="Running in MapReduce mode">
-MapReduce mode offers the ability to process each family dir in parallel, as a separate map task. Generally, it would make sense to run in this mode when specifying one or more table dirs as targets for compactions. The caveat, though, is that if number of families to be compacted become too large, the related mapreduce job may have indirect impacts on **RegionServers** performance . Since **NodeManagers** are normally co-located with RegionServers, such large jobs could compete for IO/Bandwidth resources with the **RegionServers**.
+  MapReduce mode offers the ability to process each family dir in parallel, as a separate map task.
+  Generally, it would make sense to run in this mode when specifying one or more table dirs as
+  targets for compactions. The caveat, though, is that if number of families to be compacted become
+  too large, the related mapreduce job may have indirect impacts on **RegionServers** performance .
+  Since **NodeManagers** are normally co-located with RegionServers, such large jobs could compete
+  for IO/Bandwidth resources with the **RegionServers**.
 </Callout>
 
-
-<Callout type="info" title="MajorCompaction completely disabled on RegionServers due performance impacts">
-**Major compactions** can be a costly operation (see [compaction](/docs/architecture/regions#compaction)), and can indeed impact performance on RegionServers, leading operators to completely disable it for critical low latency application. **CompactionTool** could be used as an alternative in such scenarios, although, additional custom application logic would need to be implemented, such as deciding scheduling and selection of tables/regions/families target for a given compaction run.
+<Callout
+  type="info"
+  title="MajorCompaction completely disabled on RegionServers due performance impacts"
+>
+  **Major compactions** can be a costly operation (see
+  [compaction](/docs/architecture/regions#compaction)), and can indeed impact performance on
+  RegionServers, leading operators to completely disable it for critical low latency application.
+  **CompactionTool** could be used as an alternative in such scenarios, although, additional custom
+  application logic would need to be implemented, such as deciding scheduling and selection of
+  tables/regions/families target for a given compaction run.
 </Callout>
-
 
 For additional details about CompactionTool, see also [CompactionTool](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/CompactionTool.html).
 

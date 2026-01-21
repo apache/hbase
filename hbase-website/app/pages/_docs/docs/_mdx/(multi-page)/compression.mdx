@@ -4,8 +4,9 @@ description: "Comprehensive guide to compression algorithms and data block encod
 ---
 
 <Callout type="info">
-Codecs mentioned in this section are for encoding and decoding data blocks or row keys.
-For information about replication codecs, see [cluster.replication.preserving.tags](/docs/operational-management/cluster-replication#life-of-a-wal-edit).
+  Codecs mentioned in this section are for encoding and decoding data blocks or row keys. For
+  information about replication codecs, see
+  [cluster.replication.preserving.tags](/docs/operational-management/cluster-replication#life-of-a-wal-edit).
 </Callout>
 
 HBase supports several different compression algorithms which can be enabled on a ColumnFamily.
@@ -36,31 +37,31 @@ To enable data block encoding for a ColumnFamily, see [data.block.encoding.enabl
 
 ## Block Compressors
 
-* **NONE**  
+- **NONE**  
   This compression type constant selects no compression, and is the default.
-* **BROTLI**  
+- **BROTLI**  
   [Brotli](https://en.wikipedia.org/wiki/Brotli) is a generic-purpose lossless compression algorithm
   that compresses data using a combination of a modern variant of the LZ77 algorithm, Huffman
   coding, and 2nd order context modeling, with a compression ratio comparable to the best currently
   available general-purpose compression methods. It is similar in speed with GZ but offers more
   dense compression.
-* **BZIP2**  
+- **BZIP2**  
   [Bzip2](https://en.wikipedia.org/wiki/Bzip2) compresses files using the Burrows-Wheeler block
   sorting text compression algorithm and Huffman coding. Compression is generally considerably
   better than that achieved by the dictionary- (LZ-) based compressors, but both compression and
   decompression can be slow in comparison to other options.
-* **GZ**  
+- **GZ**  
   gzip is based on the [DEFLATE](https://en.wikipedia.org/wiki/Deflate) algorithm, which is a
   combination of LZ77 and Huffman coding. It is universally available in the Java Runtime
   Environment so is a good lowest common denominator option. However in comparison to more modern
   algorithms like Zstandard it is quite slow.
-* **LZ4**  
-  [LZ4](https://en.wikipedia.org/wiki/LZ4_(compression_algorithm)) is a lossless data compression
+- **LZ4**  
+  [LZ4](<https://en.wikipedia.org/wiki/LZ4_(compression_algorithm)>) is a lossless data compression
   algorithm that is focused on compression and decompression speed. It belongs to the LZ77 family
   of compression algorithms, like Brotli, DEFLATE, Zstandard, and others. In our microbenchmarks
   LZ4 is the fastest option for both compression and decompression in that family, and is our
   universally recommended option.
-* **LZMA**  
+- **LZMA**  
   [LZMA](https://en.wikipedia.org/wiki/Lempel%E2%80%93Ziv%E2%80%93Markov_chain_algorithm) is a
   dictionary compression scheme somewhat similar to the LZ77 algorithm that achieves very high
   compression ratios with a computationally expensive predictive model and variable size
@@ -68,17 +69,17 @@ To enable data block encoding for a ColumnFamily, see [data.block.encoding.enabl
   compression algorithms. LZMA is superior to all other options in general compression ratio but as
   a compressor it can be extremely slow, especially when configured to operate at higher levels of
   compression.
-* **LZO**  
+- **LZO**  
   [LZO](https://en.wikipedia.org/wiki/Lempel%E2%80%93Ziv%E2%80%93Oberhumer) is another LZ-variant
   data compression algorithm, with an implementation focused on decompression speed. It is almost
   but not quite as fast as LZ4.
-* **SNAPPY**  
-  [Snappy](https://en.wikipedia.org/wiki/Snappy_(compression)) is based on ideas from LZ77 but is
+- **SNAPPY**  
+  [Snappy](<https://en.wikipedia.org/wiki/Snappy_(compression)>) is based on ideas from LZ77 but is
   optimized for very high compression speed, achieving only a "reasonable" compression in trade.
   It is as fast as LZ4 but does not compress quite as well. We offer a pure Java Snappy codec
   that can be used instead of GZ as the universally available option for any Java runtime on any
   hardware architecture.
-* **ZSTD**  
+- **ZSTD**  
   [Zstandard](https://en.wikipedia.org/wiki/Zstd) combines a dictionary-matching stage (LZ77) with
   a large search window and a fast entropy coding stage, using both Finite State Entropy and
   Huffman coding. Compression speed can vary by a factor of 20 or more between the fastest and
@@ -94,7 +95,7 @@ To enable data block encoding for a ColumnFamily, see [data.block.encoding.enabl
 
 ### Prefix
 
-Often, keys are very similar. Specifically, keys often share a common prefix and only differ near the end. For instance, one key might be `RowKey:Family:Qualifier0` and the next key might be `RowKey:Family:Qualifier1`. 
+Often, keys are very similar. Specifically, keys often share a common prefix and only differ near the end. For instance, one key might be `RowKey:Family:Qualifier0` and the next key might be `RowKey:Family:Qualifier1`.
 In Prefix encoding, an extra column is added which holds the length of the prefix shared between the current key and the previous key. Assuming the first key here is totally different from the key before, its prefix length is 0.
 
 The second key's prefix length is `23`, since they have the first 23 characters in common.
@@ -149,21 +150,21 @@ The compression or codec type to use depends on the characteristics of your data
 
 In general, you need to weigh your options between smaller size and faster compression/decompression. Following are some general guidelines, expanded from a discussion at [Documenting Guidance on compression and codecs](https://lists.apache.org/thread.html/481e67a61163efaaf4345510447a9244871a8d428244868345a155ff%401378926618%40%3Cdev.hbase.apache.org%3E).
 
-* In most cases, enabling LZ4 or Snappy by default is a good choice, because they have a low
+- In most cases, enabling LZ4 or Snappy by default is a good choice, because they have a low
   performance overhead and provide reasonable space savings. A fast compression algorithm almost
   always improves overall system performance by trading some increased CPU usage for better I/O
   efficiency.
-* If the values are large (and not pre-compressed, such as images), use a data block compressor.
-* For _cold data_, which is accessed infrequently, depending on your use case, it might
+- If the values are large (and not pre-compressed, such as images), use a data block compressor.
+- For _cold data_, which is accessed infrequently, depending on your use case, it might
   make sense to opt for Zstandard at its higher compression levels, or LZMA, especially for high
   entropy binary data, or Brotli for data similar in characteristics to web data. Bzip2 might also
   be a reasonable option but Zstandard is very likely to offer superior decompression speed.
-* For _hot data_, which is accessed frequently, you almost certainly want only LZ4,
+- For _hot data_, which is accessed frequently, you almost certainly want only LZ4,
   Snappy, LZO, or Zstandard at a low compression level. These options will not provide as high of
   a compression ratio but will in trade not unduly impact system performance.
-* If you have long keys (compared to the values) or many columns, use a prefix encoder.
+- If you have long keys (compared to the values) or many columns, use a prefix encoder.
   FAST_DIFF is recommended.
-* If enabling WAL value compression, consider LZ4 or SNAPPY compression, or Zstandard at
+- If enabling WAL value compression, consider LZ4 or SNAPPY compression, or Zstandard at
   level 1. Reading and writing the WAL is performance critical. That said, the I/O
   savings of these compression options can improve overall system performance.
 
@@ -191,7 +192,7 @@ Then if you see the following in your HBase logs, you know that HBase was unable
 If the libraries loaded successfully, the WARN message does not show. Usually this means you are good to go but read on.
 
 Let's presume your Hadoop shipped with a native library that suits the platform you are running HBase on.
-To check if the Hadoop native library is available to HBase, run the following tool (available in  Hadoop 2.1 and greater):
+To check if the Hadoop native library is available to HBase, run the following tool (available in Hadoop 2.1 and greater):
 
 ```bash
 $ ./bin/hbase --config ~/conf_hbase org.apache.hadoop.util.NativeLibraryChecker
@@ -215,7 +216,7 @@ when it goes to use them.
 To fix the above, either copy the Hadoop native libraries local or symlink to them if the Hadoop and HBase stalls are adjacent in the filesystem.
 You could also point at their location by setting the `LD_LIBRARY_PATH` environment variable in your hbase-env.sh.
 
-Where the JVM looks to find native libraries is "system dependent" (See `java.lang.System#loadLibrary(name)`). On linux, by default, is going to look in _lib/native/PLATFORM_ where `PLATFORM`      is the label for the platform your HBase is installed on.
+Where the JVM looks to find native libraries is "system dependent" (See `java.lang.System#loadLibrary(name)`). On linux, by default, is going to look in _lib/native/PLATFORM_ where `PLATFORM` is the label for the platform your HBase is installed on.
 On a local linux machine, it seems to be the concatenation of the java properties `os.name` and `os.arch` followed by whether 32 or 64 bit.
 HBase on startup prints out all of the java system properties so find the os.name and os.arch in the log.
 For example:
@@ -228,7 +229,7 @@ For example:
 ```
 
 So in this case, the PLATFORM string is `Linux-amd64-64`.
-Copying the Hadoop native libraries or symlinking at _lib/native/Linux-amd64-64_     will ensure they are found.
+Copying the Hadoop native libraries or symlinking at _lib/native/Linux-amd64-64_ will ensure they are found.
 Rolling restart after you have made this change.
 
 Here is an example of how you would set up the symlinks.
@@ -256,7 +257,7 @@ See [HBASE-11927 Use Native Hadoop Library for HFile checksum (And flip default 
 for more on native checksumming support. See in particular the release note for how to check if your hardware to see if your processor has support for hardware CRCs.
 Or checkout the Apache [Checksums in HBase](https://blogs.apache.org/hbase/entry/saving_cpu_using_native_hadoop) blog post.
 
-Here is example of how to point at the Hadoop libs with `LD_LIBRARY_PATH`      environment variable:
+Here is example of how to point at the Hadoop libs with `LD_LIBRARY_PATH` environment variable:
 
 ```bash
 $ LD_LIBRARY_PATH=~/hadoop-2.5.0-SNAPSHOT/lib/native ./bin/hbase --config ~/conf_hbase org.apache.hadoop.util.NativeLibraryChecker
@@ -282,37 +283,37 @@ site configuration using its short label, e.g. _snappy_ for Snappy, or _zstd_ fo
 codec implementation is dynamically loaded to support what label is configurable by way of site
 configuration.
 
-| Algorithm label | Codec implementation configuration key | Default value |
-| --------------- | -------------------------------------- | ------------- |
-| BROTLI | hbase.io.compress.brotli.codec | org.apache.hadoop.hbase.io.compress.brotli.BrotliCodec |
-| BZIP2 | hbase.io.compress.bzip2.codec | org.apache.hadoop.io.compress.BZip2Codec |
-| GZ | hbase.io.compress.gz.codec | org.apache.hadoop.hbase.io.compress.ReusableStreamGzipCodec |
-| LZ4 | hbase.io.compress.lz4.codec | org.apache.hadoop.io.compress.Lz4Codec |
-| LZMA | hbase.io.compress.lzma.codec | org.apache.hadoop.hbase.io.compress.xz.LzmaCodec |
-| LZO | hbase.io.compress.lzo.codec | com.hadoop.compression.lzo.LzoCodec |
-| SNAPPY | hbase.io.compress.snappy.codec | org.apache.hadoop.io.compress.SnappyCodec |
-| ZSTD | hbase.io.compress.zstd.codec | org.apache.hadoop.io.compress.ZStandardCodec |
+| Algorithm label | Codec implementation configuration key | Default value                                               |
+| --------------- | -------------------------------------- | ----------------------------------------------------------- |
+| BROTLI          | hbase.io.compress.brotli.codec         | org.apache.hadoop.hbase.io.compress.brotli.BrotliCodec      |
+| BZIP2           | hbase.io.compress.bzip2.codec          | org.apache.hadoop.io.compress.BZip2Codec                    |
+| GZ              | hbase.io.compress.gz.codec             | org.apache.hadoop.hbase.io.compress.ReusableStreamGzipCodec |
+| LZ4             | hbase.io.compress.lz4.codec            | org.apache.hadoop.io.compress.Lz4Codec                      |
+| LZMA            | hbase.io.compress.lzma.codec           | org.apache.hadoop.hbase.io.compress.xz.LzmaCodec            |
+| LZO             | hbase.io.compress.lzo.codec            | com.hadoop.compression.lzo.LzoCodec                         |
+| SNAPPY          | hbase.io.compress.snappy.codec         | org.apache.hadoop.io.compress.SnappyCodec                   |
+| ZSTD            | hbase.io.compress.zstd.codec           | org.apache.hadoop.io.compress.ZStandardCodec                |
 
 The available codec implementation options are:
 
-| Label | Codec implementation class | Notes |
-| ----- | -------------------------- | ----- |
-| BROTLI | org.apache.hadoop.hbase.io.compress.brotli.BrotliCodec | Implemented with [Brotli4j](https://github.com/hyperxpro/Brotli4j) |
-| BZIP2 | org.apache.hadoop.io.compress.BZip2Codec | Hadoop native codec |
-| GZ | org.apache.hadoop.hbase.io.compress.ReusableStreamGzipCodec | Requires the Hadoop native GZ codec |
-| LZ4 | org.apache.hadoop.io.compress.Lz4Codec | Hadoop native codec |
-| LZ4 | org.apache.hadoop.hbase.io.compress.aircompressor.Lz4Codec | Pure Java implementation |
-| LZ4 | org.apache.hadoop.hbase.io.compress.lz4.Lz4Codec | Implemented with [lz4-java](https://github.com/lz4/lz4-java) |
-| LZMA | org.apache.hadoop.hbase.io.compress.xz.LzmaCodec | Implemented with [XZ For Java](https://tukaani.org/xz/java.html) |
-| LZO | com.hadoop.compression.lzo.LzoCodec | Hadoop native codec, requires GPL licensed native dependencies |
-| LZO | org.apache.hadoop.io.compress.LzoCodec | Hadoop native codec, requires GPL licensed native dependencies |
-| LZO | org.apache.hadoop.hbase.io.compress.aircompressor.LzoCodec | Pure Java implementation |
-| SNAPPY | org.apache.hadoop.io.compress.SnappyCodec | Hadoop native codec |
-| SNAPPY | org.apache.hadoop.hbase.io.compress.aircompressor.SnappyCodec | Pure Java implementation |
-| SNAPPY | org.apache.hadoop.hbase.io.compress.xerial.SnappyCodec | Implemented with [snappy-java](https://github.com/xerial/snappy-java) |
-| ZSTD | org.apache.hadoop.io.compress.ZStandardCodec | Hadoop native codec |
-| ZSTD | org.apache.hadoop.hbase.io.compress.aircompressor.ZstdCodec | Pure Java implementation, limited to a fixed compression level, not data compatible with the Hadoop zstd codec |
-| ZSTD | org.apache.hadoop.hbase.io.compress.zstd.ZstdCodec | Implemented with [zstd-jni](https://github.com/luben/zstd-jni), supports all compression levels, supports custom dictionaries |
+| Label  | Codec implementation class                                    | Notes                                                                                                                         |
+| ------ | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| BROTLI | org.apache.hadoop.hbase.io.compress.brotli.BrotliCodec        | Implemented with [Brotli4j](https://github.com/hyperxpro/Brotli4j)                                                            |
+| BZIP2  | org.apache.hadoop.io.compress.BZip2Codec                      | Hadoop native codec                                                                                                           |
+| GZ     | org.apache.hadoop.hbase.io.compress.ReusableStreamGzipCodec   | Requires the Hadoop native GZ codec                                                                                           |
+| LZ4    | org.apache.hadoop.io.compress.Lz4Codec                        | Hadoop native codec                                                                                                           |
+| LZ4    | org.apache.hadoop.hbase.io.compress.aircompressor.Lz4Codec    | Pure Java implementation                                                                                                      |
+| LZ4    | org.apache.hadoop.hbase.io.compress.lz4.Lz4Codec              | Implemented with [lz4-java](https://github.com/lz4/lz4-java)                                                                  |
+| LZMA   | org.apache.hadoop.hbase.io.compress.xz.LzmaCodec              | Implemented with [XZ For Java](https://tukaani.org/xz/java.html)                                                              |
+| LZO    | com.hadoop.compression.lzo.LzoCodec                           | Hadoop native codec, requires GPL licensed native dependencies                                                                |
+| LZO    | org.apache.hadoop.io.compress.LzoCodec                        | Hadoop native codec, requires GPL licensed native dependencies                                                                |
+| LZO    | org.apache.hadoop.hbase.io.compress.aircompressor.LzoCodec    | Pure Java implementation                                                                                                      |
+| SNAPPY | org.apache.hadoop.io.compress.SnappyCodec                     | Hadoop native codec                                                                                                           |
+| SNAPPY | org.apache.hadoop.hbase.io.compress.aircompressor.SnappyCodec | Pure Java implementation                                                                                                      |
+| SNAPPY | org.apache.hadoop.hbase.io.compress.xerial.SnappyCodec        | Implemented with [snappy-java](https://github.com/xerial/snappy-java)                                                         |
+| ZSTD   | org.apache.hadoop.io.compress.ZStandardCodec                  | Hadoop native codec                                                                                                           |
+| ZSTD   | org.apache.hadoop.hbase.io.compress.aircompressor.ZstdCodec   | Pure Java implementation, limited to a fixed compression level, not data compatible with the Hadoop zstd codec                |
+| ZSTD   | org.apache.hadoop.hbase.io.compress.zstd.ZstdCodec            | Implemented with [zstd-jni](https://github.com/luben/zstd-jni), supports all compression levels, supports custom dictionaries |
 
 Specify which codec implementation option you prefer for a given compression algorithm
 in site configuration, like so:
@@ -342,31 +343,31 @@ block encoding and actual persistence.
 
 These are the results:
 
-| Codec | Level | Time (milliseconds) | Result (bytes) | Improvement |
-| ----- | ----- | ------------------- | -------------- | ----------- |
-| AirCompressor LZ4 | - | 349.989 ± 2.835 | 76,999,408 | 70.17% |
-| AirCompressor LZO | - | 334.554 ± 3.243 | 79,369,805 | 69.25% |
-| AirCompressor Snappy | - | 364.153 ± 19.718 | 80,201,763 | 68.93% |
-| AirCompressor Zstandard | 3 (effective) | 1108.267 ± 8.969 | 55,129,189 | 78.64% |
-| Brotli | 1 | 593.107 ± 2.376 | 58,672,319 | 77.27% |
-| Brotli | 3 | 1345.195 ± 27.327 | 53,917,438 | 79.11% |
-| Brotli | 6 | 2812.411 ± 25.372 | 48,696,441 | 81.13% |
-| Brotli | 10 | 74615.936 ± 224.854 | 44,970,710 | 82.58% |
-| LZ4 (lz4-java) | - | 303.045 ± 0.783 | 76,974,364 | 70.18% |
-| LZMA | 1 | 6410.428 ± 115.065 | 49,948,535 | 80.65% |
-| LZMA | 3 | 8144.620 ± 152.119 | 49,109,363 | 80.97% |
-| LZMA | 6 | 43802.576 ± 382.025 | 46,951,810 | 81.81% |
-| LZMA | 9 | 49821.979 ± 580.110 | 46,951,810 | 81.81% |
-| Snappy (xerial) | - | 360.225 ± 2.324 | 80,749,937 | 68.72% |
-| Zstd (zstd-jni) | 1 | 654.699 ± 16.839 | 56,719,994 | 78.03% |
-| Zstd (zstd-jni) | 3 | 839.160 ± 24.906 | 54,573,095 | 78.86% |
-| Zstd (zstd-jni) | 5 | 1594.373 ± 22.384 | 52,025,485 | 79.84% |
-| Zstd (zstd-jni) | 7 | 2308.705 ± 24.744 | 50,651,554 | 80.38% |
-| Zstd (zstd-jni) | 9 | 3659.677 ± 58.018 | 50,208,425 | 80.55% |
-| Zstd (zstd-jni) | 12 | 8705.294 ± 58.080 | 49,841,446 | 80.69% |
-| Zstd (zstd-jni) | 15 | 19785.646 ± 278.080 | 48,499,508 | 81.21% |
-| Zstd (zstd-jni) | 18 | 47702.097 ± 442.670 | 48,319,879 | 81.28% |
-| Zstd (zstd-jni) | 22 | 97799.695 ± 1106.571 | 48,212,220 | 81.32% |
+| Codec                   | Level         | Time (milliseconds)  | Result (bytes) | Improvement |
+| ----------------------- | ------------- | -------------------- | -------------- | ----------- |
+| AirCompressor LZ4       | -             | 349.989 ± 2.835      | 76,999,408     | 70.17%      |
+| AirCompressor LZO       | -             | 334.554 ± 3.243      | 79,369,805     | 69.25%      |
+| AirCompressor Snappy    | -             | 364.153 ± 19.718     | 80,201,763     | 68.93%      |
+| AirCompressor Zstandard | 3 (effective) | 1108.267 ± 8.969     | 55,129,189     | 78.64%      |
+| Brotli                  | 1             | 593.107 ± 2.376      | 58,672,319     | 77.27%      |
+| Brotli                  | 3             | 1345.195 ± 27.327    | 53,917,438     | 79.11%      |
+| Brotli                  | 6             | 2812.411 ± 25.372    | 48,696,441     | 81.13%      |
+| Brotli                  | 10            | 74615.936 ± 224.854  | 44,970,710     | 82.58%      |
+| LZ4 (lz4-java)          | -             | 303.045 ± 0.783      | 76,974,364     | 70.18%      |
+| LZMA                    | 1             | 6410.428 ± 115.065   | 49,948,535     | 80.65%      |
+| LZMA                    | 3             | 8144.620 ± 152.119   | 49,109,363     | 80.97%      |
+| LZMA                    | 6             | 43802.576 ± 382.025  | 46,951,810     | 81.81%      |
+| LZMA                    | 9             | 49821.979 ± 580.110  | 46,951,810     | 81.81%      |
+| Snappy (xerial)         | -             | 360.225 ± 2.324      | 80,749,937     | 68.72%      |
+| Zstd (zstd-jni)         | 1             | 654.699 ± 16.839     | 56,719,994     | 78.03%      |
+| Zstd (zstd-jni)         | 3             | 839.160 ± 24.906     | 54,573,095     | 78.86%      |
+| Zstd (zstd-jni)         | 5             | 1594.373 ± 22.384    | 52,025,485     | 79.84%      |
+| Zstd (zstd-jni)         | 7             | 2308.705 ± 24.744    | 50,651,554     | 80.38%      |
+| Zstd (zstd-jni)         | 9             | 3659.677 ± 58.018    | 50,208,425     | 80.55%      |
+| Zstd (zstd-jni)         | 12            | 8705.294 ± 58.080    | 49,841,446     | 80.69%      |
+| Zstd (zstd-jni)         | 15            | 19785.646 ± 278.080  | 48,499,508     | 81.21%      |
+| Zstd (zstd-jni)         | 18            | 47702.097 ± 442.670  | 48,319,879     | 81.28%      |
+| Zstd (zstd-jni)         | 22            | 97799.695 ± 1106.571 | 48,212,220     | 81.32%      |
 
 #### Compressor Support On the Master
 
@@ -440,6 +441,7 @@ The Snappy and Hadoop libraries need to be available on each node of your cluste
 See [compression.test](/docs/compression#compressiontest) to find out how to test that this is the case.
 
 See [hbase.regionserver.codecs](/docs/compression#enforce-compression-settings-on-a-regionserver) to configure your RegionServers to fail to start if a given compressor is not available.
+
 </Callout>
 
 Each of these library locations need to be added to the environment variable `HBASE_LIBRARY_PATH` for the operating system user that runs HBase.
@@ -590,4 +592,3 @@ DESCRIPTION                                          ENABLED
  e', BLOCKCACHE => 'true'}
 1 row(s) in 0.0650 seconds
 ```
-

@@ -42,6 +42,7 @@ Preliminary support for JDK11 is introduced with HBase 2.3.0, and for JDK17 is i
 For JDK11/JDK17 support in HBase, please refer to [HBASE-22972](https://issues.apache.org/jira/browse/HBASE-22972) and [HBASE-26038](https://issues.apache.org/jira/browse/HBASE-26038)
 
 For JDK11/JDK17 support in Hadoop, which may also affect HBase, please refer to [HADOOP-15338](https://issues.apache.org/jira/browse/HADOOP-15338) and [HADOOP-17177](https://issues.apache.org/jira/browse/HADOOP-17177)
+
 </Callout>
 
 <Callout type="info">
@@ -52,15 +53,19 @@ For JDK11/JDK17 support in Hadoop, which may also affect HBase, please refer to 
 ### Operating System Utilities
 
 #### ssh
+
 HBase uses the Secure Shell (ssh) command and utilities extensively to communicate between cluster nodes. Each server in the cluster must be running `ssh` so that the Hadoop and HBase daemons can be managed. You must be able to connect to all nodes via SSH, including the local node, from the Master as well as any backup Master, using a shared key rather than a password. You can see the basic methodology for such a set-up in Linux or Unix systems at "[Procedure: Configure Passwordless SSH Access](/docs/getting-started#procedure-configure-passwordless-ssh-access)" chapter. If your cluster nodes use OS X, see the section, [SSH: Setting up Remote Desktop and Enabling Self-Login](<https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=120730246#RunningHadoopOnOSX10.564-bit(Single-NodeCluster)-SSH:SettingupRemoteDesktopandEnablingSelf-Login>) on the Hadoop wiki.
 
-#### DNS  
+#### DNS
+
 HBase uses the local hostname to self-report its IP address.
 
-#### NTP  
+#### NTP
+
 The clocks on cluster nodes should be synchronized. A small amount of variation is acceptable, but larger amounts of skew can cause erratic and unexpected behavior. Time synchronization is one of the first things to check if you see unexplained problems in your cluster. It is recommended that you run a Network Time Protocol (NTP) service, or another time-synchronization mechanism on your cluster and that all nodes look to the same service for time synchronization. See the [Basic NTP Configuration](http://www.tldp.org/LDP/sag/html/basic-ntp-config.html) at _The Linux Documentation Project (TLDP)_ to set up NTP.
 
-#### Limits on Number of Files and Processes (ulimit)  
+#### Limits on Number of Files and Processes (ulimit)
+
 Apache HBase is a database. It requires the ability to open a large number of files at once. Many Linux distributions limit the number of files a single user is allowed to open to `1024` (or `256` on older versions of OS X). You can check this limit on your servers by running the command `ulimit -n` when logged in as the user which runs HBase. See [the Troubleshooting section](/docs/troubleshooting#javaioioexceptiontoo-many-open-files) for some of the problems you may experience if the limit is too low. You may also notice errors such as the following:
 
 ```text
@@ -97,10 +102,12 @@ The settings are only applied if the Pluggable Authentication Module (PAM) envir
 session required  pam_limits.so
 ```
 
-#### Linux Shell  
+#### Linux Shell
+
 All of the shell scripts that come with HBase rely on the [GNU Bash](http://www.gnu.org/software/bash) shell.
 
-#### Windows  
+#### Windows
+
 Running production systems on Windows machines is not recommended.
 
 ## Hadoop
@@ -113,6 +120,7 @@ Based on the version of HBase, you should select the most appropriate version of
 Comparing to Hadoop 1.x, Hadoop 2.x is faster and includes features, such as short-circuit reads (see [Leveraging local data](/docs/performance#leveraging-local-data)), which will help improve your HBase random read profile. Hadoop 2.x also includes important bug fixes that will improve your overall HBase experience. HBase does not support running with earlier versions of Hadoop. See the table below for requirements specific to different HBase versions.
 
 Today, Hadoop 3.x is recommended as the last Hadoop 2.x release 2.10.2 was released years ago, and there is no release for Hadoop 2.x for a very long time, although the Hadoop community does not officially EOL Hadoop 2.x yet.
+
 </Callout>
 
 Use the following legend to interpret these tables:

@@ -98,27 +98,27 @@ plugins necessary for building Java projects with Maven.
 
 - Use either File > New > "Project from Existing Sources..." or "Project From Version Control.."
 - Depending on your version of IntelliJ, you may need to choose Maven as the "project" or "model"
-type.
+  type.
 
 The following plugins are recommended:
 
 - Maven, bundled. This allows IntelliJ to resolve dependencies and recognize the project structure.
 - EditorConfig, bundled. This will apply project whitespace settings found in the
-`.editorconfig` file available on branches with
-[HBASE-23234](https://issues.apache.org/jira/browse/HBASE-23234) or later.
+  `.editorconfig` file available on branches with
+  [HBASE-23234](https://issues.apache.org/jira/browse/HBASE-23234) or later.
 - [Checkstyle-IDEA](https://plugins.jetbrains.com/plugin/1065-checkstyle-idea/). Configure this
-against the configuration file found under `hbase-checkstyle/src/main/resources/hbase/checkstyle.xml`
-(If the Intellij checkstyle plugin complains parsing the volunteered hbase `checkstyle.xml`, make
-sure the plugin's `version` popup menu matches the hbase checkstyle version. Find the current
-checkstyle version as a property in `pom.xml`.
-This plugin will highlight style errors in the IDE, so you can fix them before they get flagged during the
-pre-commit process.
+  against the configuration file found under `hbase-checkstyle/src/main/resources/hbase/checkstyle.xml`
+  (If the Intellij checkstyle plugin complains parsing the volunteered hbase `checkstyle.xml`, make
+  sure the plugin's `version` popup menu matches the hbase checkstyle version. Find the current
+  checkstyle version as a property in `pom.xml`.
+  This plugin will highlight style errors in the IDE, so you can fix them before they get flagged during the
+  pre-commit process.
 - [Protobuf Support](https://plugins.jetbrains.com/plugin/8277-protobuf-support/). HBase uses
-[Protocol Buffers](https://developers.google.com/protocol-buffers/) in a number of places where
-serialization is required. This plugin is helpful when editing these object definitions.
+  [Protocol Buffers](https://developers.google.com/protocol-buffers/) in a number of places where
+  serialization is required. This plugin is helpful when editing these object definitions.
 - [MDX](https://plugins.jetbrains.com/plugin/14944-mdx). HBase uses
-[MDX](https://mdxjs.com) (just extended markdown) for building it's project documentation. This plugin is helpful
-when editing this book.
+  [MDX](https://mdxjs.com) (just extended markdown) for building it's project documentation. This plugin is helpful
+  when editing this book.
 
 ## Other IDEs
 

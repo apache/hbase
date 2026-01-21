@@ -34,7 +34,6 @@ Set the following configuration in hbase-site to set max age to zero and disable
 </property>
 ```
 
-
 ## Using SPNEGO for Kerberos authentication with Web UIs
 
 Kerberos-authentication to HBase Web UIs can be enabled via configuring SPNEGO with the `hbase.security.authentication.ui` property in _hbase-site.xml_. Enabling this authentication requires that HBase is also configured to use Kerberos authentication for RPCs (e.g `hbase.security.authentication` = `kerberos`).

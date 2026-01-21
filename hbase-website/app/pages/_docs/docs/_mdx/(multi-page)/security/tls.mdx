@@ -82,26 +82,27 @@ Follow the following steps to generate self-signed certificates.
 
 1. Create SSL key store JKS to store local credentials
 
-    Please note that the alias (-alias) and the distinguished name (-dname) must match the hostname of the machine that is associated with, otherwise hostname verification won't work.
+   Please note that the alias (-alias) and the distinguished name (-dname) must match the hostname of the machine that is associated with, otherwise hostname verification won't work.
 
-    ```bash
-    keytool -genkeypair -alias $(hostname -f) -keyalg RSA -keysize 2048 -dname "cn=$(hostname -f)" -keypass password -keystore keystore.jks -storepass password
-    ```
+   ```bash
+   keytool -genkeypair -alias $(hostname -f) -keyalg RSA -keysize 2048 -dname "cn=$(hostname -f)" -keypass password -keystore keystore.jks -storepass password
+   ```
 
-    At the end of this operation you'll have as many key store files as many servers you have in your cluster. Each cluster member will have its own key store.
+   At the end of this operation you'll have as many key store files as many servers you have in your cluster. Each cluster member will have its own key store.
 
 2. Extract the signed public key (certificate) from each key store
 
-    ```bash
-    keytool -exportcert -alias $(hostname -f) -keystore keystore.jks -file $(hostname -f).cer -rfc
-    ```
+   ```bash
+   keytool -exportcert -alias $(hostname -f) -keystore keystore.jks -file $(hostname -f).cer -rfc
+   ```
 
 3. Create SSL trust store JKS containing certificates for the clients
 
-    The same truststore (storing all accepted certs) should be shared on participants of the cluster. You need to use different aliases to store multiple certificates in the same truststore. Name of the aliases doesn't matter.
-    ```bash
-    keytool -importcert -alias [host1..3] -file [host1..3].cer -keystore truststore.jks -storepass password
-    ```
+   The same truststore (storing all accepted certs) should be shared on participants of the cluster. You need to use different aliases to store multiple certificates in the same truststore. Name of the aliases doesn't matter.
+
+   ```bash
+   keytool -importcert -alias [host1..3] -file [host1..3].cer -keystore truststore.jks -storepass password
+   ```
 
 ## Upgrading existing non-TLS cluster with no downtime
 

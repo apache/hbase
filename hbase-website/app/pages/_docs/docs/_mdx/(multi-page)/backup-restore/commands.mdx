@@ -12,9 +12,9 @@ and its options. The below information is captured in this help message for each
 ### Creating a Backup Image
 
 <Callout type="info">
-For HBase clusters also using Apache Phoenix: include the SQL system catalog tables in the backup. In the event that you
-need to restore the HBase backup, access to the system catalog tables enable you to resume Phoenix interoperability with the
-restored data.
+  For HBase clusters also using Apache Phoenix: include the SQL system catalog tables in the backup.
+  In the event that you need to restore the HBase backup, access to the system catalog tables enable
+  you to resume Phoenix interoperability with the restored data.
 </Callout>
 
 The first step in running the backup and restore utilities is to perform a full backup and to store the data in a separate image
@@ -30,8 +30,9 @@ After the command finishes running, the console prints a SUCCESS or FAILURE stat
 The backup ID is the Unix time (also known as Epoch time) that the HBase master received the backup request from the client.
 
 <Callout type="info">
-Record the backup ID that appears at the end of a successful backup. In case the source cluster fails and you need to recover the
-dataset with a restore operation, having the backup ID readily available can save time.
+  Record the backup ID that appears at the end of a successful backup. In case the source cluster
+  fails and you need to recover the dataset with a restore operation, having the backup ID readily
+  available can save time.
 </Callout>
 
 #### Positional Command-Line Arguments [#backup-restore-commands-creating-a-backup-image-positional-command-line-arguments]
@@ -138,8 +139,9 @@ This command restores two tables of an incremental backup image. In this example
 • `mytable1` and `mytable2` are the names of tables in the backup image to be restored.
 
 <Callout type="info">
-If the namespace of a table being restored does not exist in the target environment, it will be automatically created during the restore operation.
-[HBASE-25707](https://issues.apache.org/jira/browse/HBASE-25707)
+  If the namespace of a table being restored does not exist in the target environment, it will be
+  automatically created during the restore operation.
+  [HBASE-25707](https://issues.apache.org/jira/browse/HBASE-25707)
 </Callout>
 
 ### Merging Incremental Backup Images
@@ -176,9 +178,9 @@ the `-set` option to invoke the name of a backup set in the `hbase backup create
 individually every table in the group. You can have multiple backup sets.
 
 <Callout type="info">
-Note the differentiation between the `hbase backup set add` command and the _-set_ option. The `hbase backup set add`
-command must be run before using the `-set` option in a different command because backup sets must be named and defined
-before using backup sets as a shortcut.
+  Note the differentiation between the `hbase backup set add` command and the _-set_ option. The
+  `hbase backup set add` command must be run before using the `-set` option in a different command
+  because backup sets must be named and defined before using backup sets as a shortcut.
 </Callout>
 
 If you run the `hbase backup set add` command and specify a backup set name that does not yet exist on your system, a new set
@@ -188,8 +190,9 @@ to the set.
 In this command, the backup set name is case-sensitive.
 
 <Callout type="info">
-The metadata of backup sets are stored within HBase. If you do not have access to the original HBase cluster with the
-backup set metadata, then you must specify individual table names to restore the data.
+  The metadata of backup sets are stored within HBase. If you do not have access to the original
+  HBase cluster with the backup set metadata, then you must specify individual table names to
+  restore the data.
 </Callout>
 
 To create a backup set, run the following command as the HBase superuser:
@@ -203,8 +206,8 @@ $ hbase backup set <subcommand> <backup_set_name> <tables>
 The following list details subcommands of the hbase backup set command.
 
 <Callout type="info">
-You must enter one (and no more than one) of the following subcommands after hbase backup set to complete an operation.
-Also, the backup set name is case-sensitive in the command-line utility.
+  You must enter one (and no more than one) of the following subcommands after hbase backup set to
+  complete an operation. Also, the backup set name is case-sensitive in the command-line utility.
 </Callout>
 
 **_add_**  
@@ -234,8 +237,9 @@ List of tables (or a single table) to include in the backup set. Enter the table
 are specified, all tables are included in the set.
 
 <Callout type="info">
-Maintain a log or other record of the case-sensitive backup set names and the corresponding tables in each set on a separate
-or remote cluster, backup strategy. This information can help you in case of failure on the primary cluster.
+  Maintain a log or other record of the case-sensitive backup set names and the corresponding tables
+  in each set on a separate or remote cluster, backup strategy. This information can help you in
+  case of failure on the primary cluster.
 </Callout>
 
 #### Example of Usage
@@ -246,5 +250,5 @@ $ hbase backup set add Q1Data TEAM3,TEAM_4
 
 Depending on the environment, this command results in _one_ of the following actions:
 
-* If the `Q1Data` backup set does not exist, a backup set containing tables `TEAM_3` and `TEAM_4` is created.
-* If the `Q1Data` backup set exists already, the tables `TEAM_3` and `TEAM_4` are added to the `Q1Data` backup set.
+- If the `Q1Data` backup set does not exist, a backup set containing tables `TEAM_3` and `TEAM_4` is created.
+- If the `Q1Data` backup set exists already, the tables `TEAM_3` and `TEAM_4` are added to the `Q1Data` backup set.

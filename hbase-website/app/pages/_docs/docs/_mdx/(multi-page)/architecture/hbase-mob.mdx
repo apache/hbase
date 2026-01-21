@@ -505,66 +505,70 @@ hbase(main):017:2* end
 <Step>
 
 Run the _mobrefs_ utility to ensure there are no MOB cells. Specifically, the tool will launch a
-   Hadoop MapReduce job that will show a job counter of 0 input records when we've successfully
-   rewritten all of the data.
-   ```bash
-   $> HADOOP_CLASSPATH=/etc/hbase/conf:$(hbase mapredcp) yarn jar \
-   /some/path/to/hbase-shaded-mapreduce.jar mobrefs mobrefs-report-output some_table foo
-   ...
-   19/12/10 11:38:47 INFO impl.YarnClientImpl: Submitted application application_1575695902338_0004
-   19/12/10 11:38:47 INFO mapreduce.Job: The url to track the job: https://rm-2.example.com:8090/proxy application_1575695902338_0004/
-   19/12/10 11:38:47 INFO mapreduce.Job: Running job: job_1575695902338_0004
-   19/12/10 11:38:57 INFO mapreduce.Job: Job job_1575695902338_0004 running in uber mode : false
-   19/12/10 11:38:57 INFO mapreduce.Job:  map 0% reduce 0%
-   19/12/10 11:39:07 INFO mapreduce.Job:  map 7% reduce 0%
-   19/12/10 11:39:17 INFO mapreduce.Job:  map 13% reduce 0%
-   19/12/10 11:39:19 INFO mapreduce.Job:  map 33% reduce 0%
-   19/12/10 11:39:21 INFO mapreduce.Job:  map 40% reduce 0%
-   19/12/10 11:39:22 INFO mapreduce.Job:  map 47% reduce 0%
-   19/12/10 11:39:23 INFO mapreduce.Job:  map 60% reduce 0%
-   19/12/10 11:39:24 INFO mapreduce.Job:  map 73% reduce 0%
-   19/12/10 11:39:27 INFO mapreduce.Job:  map 100% reduce 0%
-   19/12/10 11:39:35 INFO mapreduce.Job:  map 100% reduce 100%
-   19/12/10 11:39:35 INFO mapreduce.Job: Job job_1575695902338_0004 completed successfully
-   19/12/10 11:39:35 INFO mapreduce.Job: Counters: 54
-   ...
-          Map-Reduce Framework
-                  Map input records=0
-   ...
-   19/12/09 22:41:28 INFO mapreduce.MobRefReporter: Finished creating report for 'some_table', family='foo'
-   ```
-   If the data has not successfully been migrated out, this report will show both a non-zero number
-   of input records and a count of mob cells.
-   ```bash
-   $> HADOOP_CLASSPATH=/etc/hbase/conf:$(hbase mapredcp) yarn jar \
-   /some/path/to/hbase-shaded-mapreduce.jar mobrefs mobrefs-report-output some_table foo
-   ...
-   19/12/10 11:44:18 INFO impl.YarnClientImpl: Submitted application application_1575695902338_0005
-   19/12/10 11:44:18 INFO mapreduce.Job: The url to track the job: https://busbey-2.gce.cloudera.com:8090 proxy/application_1575695902338_0005/
-   19/12/10 11:44:18 INFO mapreduce.Job: Running job: job_1575695902338_0005
-   19/12/10 11:44:26 INFO mapreduce.Job: Job job_1575695902338_0005 running in uber mode : false
-   19/12/10 11:44:26 INFO mapreduce.Job:  map 0% reduce 0%
-   19/12/10 11:44:36 INFO mapreduce.Job:  map 7% reduce 0%
-   19/12/10 11:44:45 INFO mapreduce.Job:  map 13% reduce 0%
-   19/12/10 11:44:47 INFO mapreduce.Job:  map 27% reduce 0%
-   19/12/10 11:44:48 INFO mapreduce.Job:  map 33% reduce 0%
-   19/12/10 11:44:50 INFO mapreduce.Job:  map 40% reduce 0%
-   19/12/10 11:44:51 INFO mapreduce.Job:  map 53% reduce 0%
-   19/12/10 11:44:52 INFO mapreduce.Job:  map 73% reduce 0%
-   19/12/10 11:44:54 INFO mapreduce.Job:  map 100% reduce 0%
-   19/12/10 11:44:59 INFO mapreduce.Job:  map 100% reduce 100%
-   19/12/10 11:45:00 INFO mapreduce.Job: Job job_1575695902338_0005 completed successfully
-   19/12/10 11:45:00 INFO mapreduce.Job: Counters: 54
-   ...
-          Map-Reduce Framework
-                  Map input records=1
-   ...
-          MOB
-                  NUM_CELLS=1
-   ...
-   19/12/10 11:45:00 INFO mapreduce.MobRefReporter: Finished creating report for 'some_table', family='foo'
-   ```
-   If this happens you should verify that MOB compactions are disabled, verify that you have picked a sufficiently large MOB threshold, and redo the major compaction step.
+Hadoop MapReduce job that will show a job counter of 0 input records when we've successfully
+rewritten all of the data.
+
+```bash
+$> HADOOP_CLASSPATH=/etc/hbase/conf:$(hbase mapredcp) yarn jar \
+/some/path/to/hbase-shaded-mapreduce.jar mobrefs mobrefs-report-output some_table foo
+...
+19/12/10 11:38:47 INFO impl.YarnClientImpl: Submitted application application_1575695902338_0004
+19/12/10 11:38:47 INFO mapreduce.Job: The url to track the job: https://rm-2.example.com:8090/proxy application_1575695902338_0004/
+19/12/10 11:38:47 INFO mapreduce.Job: Running job: job_1575695902338_0004
+19/12/10 11:38:57 INFO mapreduce.Job: Job job_1575695902338_0004 running in uber mode : false
+19/12/10 11:38:57 INFO mapreduce.Job:  map 0% reduce 0%
+19/12/10 11:39:07 INFO mapreduce.Job:  map 7% reduce 0%
+19/12/10 11:39:17 INFO mapreduce.Job:  map 13% reduce 0%
+19/12/10 11:39:19 INFO mapreduce.Job:  map 33% reduce 0%
+19/12/10 11:39:21 INFO mapreduce.Job:  map 40% reduce 0%
+19/12/10 11:39:22 INFO mapreduce.Job:  map 47% reduce 0%
+19/12/10 11:39:23 INFO mapreduce.Job:  map 60% reduce 0%
+19/12/10 11:39:24 INFO mapreduce.Job:  map 73% reduce 0%
+19/12/10 11:39:27 INFO mapreduce.Job:  map 100% reduce 0%
+19/12/10 11:39:35 INFO mapreduce.Job:  map 100% reduce 100%
+19/12/10 11:39:35 INFO mapreduce.Job: Job job_1575695902338_0004 completed successfully
+19/12/10 11:39:35 INFO mapreduce.Job: Counters: 54
+...
+       Map-Reduce Framework
+               Map input records=0
+...
+19/12/09 22:41:28 INFO mapreduce.MobRefReporter: Finished creating report for 'some_table', family='foo'
+```
+
+If the data has not successfully been migrated out, this report will show both a non-zero number
+of input records and a count of mob cells.
+
+```bash
+$> HADOOP_CLASSPATH=/etc/hbase/conf:$(hbase mapredcp) yarn jar \
+/some/path/to/hbase-shaded-mapreduce.jar mobrefs mobrefs-report-output some_table foo
+...
+19/12/10 11:44:18 INFO impl.YarnClientImpl: Submitted application application_1575695902338_0005
+19/12/10 11:44:18 INFO mapreduce.Job: The url to track the job: https://busbey-2.gce.cloudera.com:8090 proxy/application_1575695902338_0005/
+19/12/10 11:44:18 INFO mapreduce.Job: Running job: job_1575695902338_0005
+19/12/10 11:44:26 INFO mapreduce.Job: Job job_1575695902338_0005 running in uber mode : false
+19/12/10 11:44:26 INFO mapreduce.Job:  map 0% reduce 0%
+19/12/10 11:44:36 INFO mapreduce.Job:  map 7% reduce 0%
+19/12/10 11:44:45 INFO mapreduce.Job:  map 13% reduce 0%
+19/12/10 11:44:47 INFO mapreduce.Job:  map 27% reduce 0%
+19/12/10 11:44:48 INFO mapreduce.Job:  map 33% reduce 0%
+19/12/10 11:44:50 INFO mapreduce.Job:  map 40% reduce 0%
+19/12/10 11:44:51 INFO mapreduce.Job:  map 53% reduce 0%
+19/12/10 11:44:52 INFO mapreduce.Job:  map 73% reduce 0%
+19/12/10 11:44:54 INFO mapreduce.Job:  map 100% reduce 0%
+19/12/10 11:44:59 INFO mapreduce.Job:  map 100% reduce 100%
+19/12/10 11:45:00 INFO mapreduce.Job: Job job_1575695902338_0005 completed successfully
+19/12/10 11:45:00 INFO mapreduce.Job: Counters: 54
+...
+       Map-Reduce Framework
+               Map input records=1
+...
+       MOB
+               NUM_CELLS=1
+...
+19/12/10 11:45:00 INFO mapreduce.MobRefReporter: Finished creating report for 'some_table', family='foo'
+```
+
+If this happens you should verify that MOB compactions are disabled, verify that you have picked a sufficiently large MOB threshold, and redo the major compaction step.
 
 </Step>
 

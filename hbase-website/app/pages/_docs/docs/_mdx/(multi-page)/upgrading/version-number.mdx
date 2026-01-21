@@ -8,6 +8,7 @@ description: "Understanding HBase semantic versioning scheme and compatibility g
 Starting with the 1.0.0 release, HBase is working towards [Semantic Versioning](http://semver.org/) for its release versioning. In summary:
 
 #### Given a version number MAJOR.MINOR.PATCH, increment the: [!toc]
+
 - MAJOR version when you make incompatible API changes,
 - MINOR version when you add functionality in a backwards-compatible manner, and
 - PATCH version when you make backwards-compatible bug fixes.
@@ -89,19 +90,19 @@ In addition to the usual API versioning considerations HBase has other compatibi
 
 #### Compatibility Matrix: [!toc]
 
-|                                           | Major | Minor | Patch |
-| ----------------------------------------- | :---: | :---: | :---: |
-| Client-Server wire Compatibility          |   N   |   Y   |   Y   |
-| Server-Server Compatibility               |   N   |   Y   |   Y   |
+|                                           | Major  | Minor | Patch |
+| ----------------------------------------- | :----: | :---: | :---: |
+| Client-Server wire Compatibility          |   N    |   Y   |   Y   |
+| Server-Server Compatibility               |   N    |   Y   |   Y   |
 | File Format Compatibility                 | N [^1] |   Y   |   Y   |
-| Client API Compatibility                  |   N   |   Y   |   Y   |
-| Client Binary Compatibility               |   N   |   N   |   Y   |
-| **Server-Side Limited API Compatibility** |       |       |       |
-| → Stable                                  |   N   |   Y   |   Y   |
-| → Evolving                                |   N   |   N   |   Y   |
-| → Unstable                                |   N   |   N   |   N   |
-| Dependency Compatibility                  |   N   |   Y   |   Y   |
-| Operational Compatibility                 |   N   |   N   |   Y   |
+| Client API Compatibility                  |   N    |   Y   |   Y   |
+| Client Binary Compatibility               |   N    |   N   |   Y   |
+| **Server-Side Limited API Compatibility** |        |       |       |
+| → Stable                                  |   N    |   Y   |   Y   |
+| → Evolving                                |   N    |   N   |   Y   |
+| → Unstable                                |   N    |   N   |   N   |
+| Dependency Compatibility                  |   N    |   Y   |   Y   |
+| Operational Compatibility                 |   N    |   N   |   Y   |
 
 <Callout type="warn">
   HBase 1.7.0 release violated client-server wire compatibility guarantees and was subsequently
@@ -136,7 +137,8 @@ HBase Client API consists of all the classes or methods that are marked with Int
 
 LimitedPrivate annotation comes with a set of target consumers for the interfaces. Those consumers are coprocessors, phoenix, replication endpoint implementations or similar. At this point, HBase only guarantees source and binary compatibility for these interfaces between patch versions.
 
-### HBase Private API  
+### HBase Private API
+
 All classes annotated with InterfaceAudience.Private or all classes that do not have the annotation are for HBase internal use only. The interfaces and method signatures can change at any point in time. If you are relying on a particular interface that is marked Private, you should open a jira to propose changing the interface to be Public or LimitedPrivate, or an interface exposed for this purpose.
 
 ### Binary Compatibility

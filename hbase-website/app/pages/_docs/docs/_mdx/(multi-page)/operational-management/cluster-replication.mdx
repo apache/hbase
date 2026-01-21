@@ -33,7 +33,6 @@ HBase provides a cluster replication mechanism which allows you to keep one clus
   ([HBASE-26849](https://issues.apache.org/jira/browse/HBASE-26849)) for details.
 </Callout>
 
-
 ### Replication Overview
 
 Cluster replication uses a source-push methodology. An HBase cluster can be a source (also called master or active, meaning that it is the originator of new data), a destination (also called slave or passive, meaning that it receives data via replication), or can fulfill both roles at once. Replication is asynchronous, and the goal of replication is eventual consistency. When the source receives an edit to a column family with replication enabled, that edit is propagated to all destination clusters using the WAL for that for that column family on the RegionServer managing the relevant region.
@@ -50,13 +49,14 @@ How your application builds on top of the HBase API matters when replication is 
 The combination of these two properties (at-least-once delivery and the lack of message ordering) means that some destination clusters may end up in a different state if your application makes use of operations that are not idempotent, e.g. Increments.
 
 To solve the problem, HBase now supports serial replication, which sends edits to destination cluster as the order of requests from client. See [Serial Replication](/docs/operational-management/cluster-replication#serial-replication).
-</Callout>
 
+</Callout>
 
 <Callout type="info" title="Terminology Changes">
-Previously, terms such as **master-master**, **master-slave**, and **cyclical** were used to describe replication relationships in HBase. These terms added confusion, and have been abandoned in favor of discussions about cluster topologies appropriate for different scenarios.
+  Previously, terms such as **master-master**, **master-slave**, and **cyclical** were used to
+  describe replication relationships in HBase. These terms added confusion, and have been abandoned
+  in favor of discussions about cluster topologies appropriate for different scenarios.
 </Callout>
-
 
 #### Cluster Topologies
 
@@ -87,9 +87,11 @@ LOG.info("Replicating "+clusterId + " -> " + peerClusterId);
 ```
 
 #### Serial Replication Configuration
+
 See [Serial Replication](/docs/operational-management/cluster-replication#serial-replication)
 
-#### Cluster Management Commands  
+#### Cluster Management Commands
+
 **add_peer `<ID>` `<CLUSTER_KEY>`**  
 Adds a replication relationship between two clusters.
 
@@ -145,6 +147,7 @@ Note: this feature is introduced in HBase 2.1
 Serial replication supports to push logs to the destination cluster in the same order as logs reach to the source cluster.
 
 ### Why need serial replication?
+
 In replication of HBase, we push mutations to destination cluster by reading WAL in each region server. We have a queue for WAL files so we can read them in order of creation time. However, when region-move or RS failure occurs in source cluster, the hlog entries that are not pushed before region-move or RS-failure will be pushed by original RS(for region move) or another RS which takes over the remained hlog of dead RS(for RS failure), and the new entries for the same region(s) will be pushed by the RS which now serves the region(s), but they push the hlog entries of a same region concurrently without coordination.
 
 This treatment can possibly lead to data inconsistency between source and destination clusters:
@@ -159,21 +162,21 @@ Set the serial flag to true for a repliation peer. And the default serial flag i
 
 - Add a new replication peer which serial flag is true
 
-    ```ruby
-    hbase> add_peer '1', CLUSTER_KEY => "server1.cie.com:2181:/hbase", SERIAL => true
-    ```
+  ```ruby
+  hbase> add_peer '1', CLUSTER_KEY => "server1.cie.com:2181:/hbase", SERIAL => true
+  ```
 
 - Set a replication peer's serial flag to false
 
-    ```ruby
-    hbase> set_peer_serial '1', false
-    ```
+  ```ruby
+  hbase> set_peer_serial '1', false
+  ```
 
 - Set a replication peer's serial flag to true
 
-    ```ruby
-    hbase> set_peer_serial '1', true
-    ```
+  ```ruby
+  hbase> set_peer_serial '1', true
+  ```
 
 The serial replication feature had been done firstly in [HBASE-9465](https://issues.apache.org/jira/browse/HBASE-9465) and then reverted and redone in [HBASE-20046](https://issues.apache.org/jira/browse/HBASE-20046). You can find more details in these issues.
 
@@ -185,7 +188,7 @@ The `VerifyReplication` MapReduce job, which is included in HBase, performs a sy
 $ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` "${HADOOP_HOME}/bin/hadoop" jar "${HBASE_HOME}/hbase-mapreduce-VERSION.jar" verifyrep --starttime=<timestamp> --endtime=<timestamp> --families=<myFam> <ID> <tableName>
 ```
 
-+ The `VerifyReplication` command prints out `GOODROWS` and `BADROWS` counters to indicate rows that did and did not replicate correctly.
+- The `VerifyReplication` command prints out `GOODROWS` and `BADROWS` counters to indicate rows that did and did not replicate correctly.
 
 ### Detailed Information About Cluster Replication
 
@@ -433,9 +436,9 @@ Incremented when the HBase replication system believes it is at the end of a wri
 
 You can use the HBase Shell command `status 'replication'` to monitor the replication status on your cluster. The command has three variations:
 
-* `status 'replication'` — prints the status of each source and its sinks, sorted by hostname.
-* `status 'replication', 'source'` — prints the status for each replication source, sorted by hostname.
-* `status 'replication', 'sink'` — prints the status for each replication sink, sorted by hostname.
+- `status 'replication'` — prints the status of each source and its sinks, sorted by hostname.
+- `status 'replication', 'source'` — prints the status for each replication source, sorted by hostname.
+- `status 'replication', 'sink'` — prints the status for each replication sink, sorted by hostname.
 
 #### Understanding the output
 

@@ -19,7 +19,7 @@ If you have a cluster with a lot of regions, it is possible that a Regionserver 
 
 The default timeout is 90 seconds (specified in milliseconds). This means that if a server crashes, it will be 90 seconds before the Master notices the crash and starts recovery. You might need to tune the timeout down to a minute or even less so the Master notices failures sooner. Before changing this value, be sure you have your JVM garbage collection configuration under control, otherwise, a long garbage collection that lasts beyond the ZooKeeper session timeout will take out your RegionServer. (You might be fine with this — you probably want recovery to start on the server if a RegionServer has been in GC for a long period of time).
 
-To change this configuration, edit *hbase-site.xml*, copy the changed file across the cluster and restart.
+To change this configuration, edit _hbase-site.xml_, copy the changed file across the cluster and restart.
 
 We set this value high to save our having to field questions up on the mailing lists asking why a RegionServer went down during a massive import. The usual cause is that their JVM is untuned and they are running into long GC pauses. Our thinking is that while users are getting familiar with HBase, we'd save them having to know all of its intricacies. Later when they've built some confidence, then they can play with configuration such as this.
 
@@ -31,7 +31,7 @@ See [zookeeper](/docs/zookeeper).
 
 #### `dfs.datanode.failed.volumes.tolerated`
 
-This is the "...number of volumes that are allowed to fail before a DataNode stops offering service. By default, any volume failure will cause a datanode to shutdown" from the *hdfs-default.xml* description. You might want to set this to about half the amount of your available disks.
+This is the "...number of volumes that are allowed to fail before a DataNode stops offering service. By default, any volume failure will cause a datanode to shutdown" from the _hdfs-default.xml_ description. You might want to set this to about half the amount of your available disks.
 
 #### `hbase.regionserver.handler.count` [#configuration-important-hbaseregionserverhandlercount]
 
@@ -61,7 +61,7 @@ HBase also has a limit on the number of WAL files, designed to ensure there's ne
 
 ### Managed Splitting
 
-HBase generally handles splitting of your regions based upon the settings in your *hbase-default.xml* and *hbase-site.xml* configuration files. Important settings include `hbase.regionserver.region.split.policy`, `hbase.hregion.max.filesize`, `hbase.regionserver.regionSplitLimit`. A simplistic view of splitting is that when a region grows to `hbase.hregion.max.filesize`, it is split. For most usage patterns, you should use automatic splitting. See [manual region splitting decisions](/docs/architecture/regions#manual-region-splitting) for more information about manual region splitting.
+HBase generally handles splitting of your regions based upon the settings in your _hbase-default.xml_ and _hbase-site.xml_ configuration files. Important settings include `hbase.regionserver.region.split.policy`, `hbase.hregion.max.filesize`, `hbase.regionserver.regionSplitLimit`. A simplistic view of splitting is that when a region grows to `hbase.hregion.max.filesize`, it is split. For most usage patterns, you should use automatic splitting. See [manual region splitting decisions](/docs/architecture/regions#manual-region-splitting) for more information about manual region splitting.
 
 Instead of allowing HBase to split your regions automatically, you can choose to manage the splitting yourself. Manually managing splits works if you know your keyspace well, otherwise let HBase figure where to split for you. Manual splitting can mitigate region creation and movement under load. It also makes it so region boundaries are known and invariant (if you disable region splitting). If you use manual splits, it is easier doing staggered, time-based major compactions to spread out your network IO load.
 
@@ -70,9 +70,10 @@ Instead of allowing HBase to split your regions automatically, you can choose to
 To disable automatic splitting, you can set region split policy in either cluster configuration or table configuration to be `org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy`
 
 <Callout type="info">
-If you disable automatic splits to diagnose a problem or during a period of fast data growth, it is recommended to re-enable them when your situation becomes more stable. The potential benefits of managing region splits yourself are not undisputed.
+  If you disable automatic splits to diagnose a problem or during a period of fast data growth, it
+  is recommended to re-enable them when your situation becomes more stable. The potential benefits
+  of managing region splits yourself are not undisputed.
 </Callout>
-
 
 #### Determine the Optimal Number of Pre-Split Regions
 
@@ -87,9 +88,10 @@ By default, major compactions are scheduled to run once in a 7-day period.
 If you need to control exactly when and how often major compaction runs, you can disable managed major compactions. See the entry for `hbase.hregion.majorcompaction` in the [compaction.parameters](/docs/architecture/regions#parameters-used-by-compaction-algorithm) table for details.
 
 <Callout type="warn">
-Major compactions are absolutely necessary for StoreFile clean-up. Do not disable them altogether. You can run major compactions manually via the HBase shell or via the [Admin API](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact(org.apache.hadoop.hbase.TableName)).
+  Major compactions are absolutely necessary for StoreFile clean-up. Do not disable them altogether.
+  You can run major compactions manually via the HBase shell or via the [Admin
+  API](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact(org.apache.hadoop.hbase.TableName)).
 </Callout>
-
 
 For more information about compactions and the compaction file selection process, see [compaction](/docs/architecture/regions#compaction)
 
@@ -177,7 +179,7 @@ And on the NameNode/DataNode side, set the following to enable 'staleness' intro
 
 JMX (Java Management Extensions) provides built-in instrumentation that enables you to monitor and manage the Java VM. To enable monitoring and management from remote systems, you need to set system property `com.sun.management.jmxremote.port` (the port number through which you want to enable JMX RMI connections) when you start the Java VM. See the [official documentation](http://docs.oracle.com/javase/8/docs/technotes/guides/management/agent.html) for more information. Historically, besides above port mentioned, JMX opens two additional random TCP listening ports, which could lead to port conflict problem. (See [HBASE-10289](https://issues.apache.org/jira/browse/HBASE-10289) for details)
 
-As an alternative, you can use the coprocessor-based JMX implementation provided by HBase. To enable it, add below property in *hbase-site.xml*:
+As an alternative, you can use the coprocessor-based JMX implementation provided by HBase. To enable it, add below property in _hbase-site.xml_:
 
 ```xml
 <property>
@@ -187,9 +189,8 @@ As an alternative, you can use the coprocessor-based JMX implementation provided
 ```
 
 <Callout type="info">
-DO NOT set `com.sun.management.jmxremote.port` for Java VM at the same time.
+  DO NOT set `com.sun.management.jmxremote.port` for Java VM at the same time.
 </Callout>
-
 
 Currently it supports Master and RegionServer Java VM. By default, the JMX listens on TCP port 10102, you can further configure the port using below properties:
 
@@ -206,7 +207,7 @@ Currently it supports Master and RegionServer Java VM. By default, the JMX liste
 
 The registry port can be shared with connector port in most cases, so you only need to configure `regionserver.rmi.registry.port`. However, if you want to use SSL communication, the 2 ports must be configured to different values.
 
-By default the password authentication and SSL communication is disabled. To enable password authentication, you need to update *hbase-env.sh* like below:
+By default the password authentication and SSL communication is disabled. To enable password authentication, you need to update _hbase-env.sh_ like below:
 
 ```bash
 export HBASE_JMX_BASE="-Dcom.sun.management.jmxremote.authenticate=true                  \
@@ -232,7 +233,7 @@ keytool -export -alias jconsole -keystore myKeyStore -file jconsole.cert
 keytool -import -alias jconsole -keystore jconsoleKeyStore -file jconsole.cert
 ```
 
-And then update *hbase-env.sh* like below:
+And then update _hbase-env.sh_ like below:
 
 ```bash
 export HBASE_JMX_BASE="-Dcom.sun.management.jmxremote.ssl=true                         \
@@ -253,9 +254,9 @@ jconsole -J-Djavax.net.ssl.trustStore=/home/tianq/jconsoleKeyStore
 ```
 
 <Callout type="info">
-To enable the HBase JMX implementation on Master, you also need to add below property in *hbase-site.xml*:
+  To enable the HBase JMX implementation on Master, you also need to add below property in
+  *hbase-site.xml*:
 </Callout>
-
 
 ```xml
 <property>

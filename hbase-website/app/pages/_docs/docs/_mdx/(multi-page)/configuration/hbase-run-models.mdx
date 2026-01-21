@@ -32,15 +32,17 @@ To configure this standalone variant, edit your _hbase-site.xml_ setting _hbase.
 
 ## Distributed
 
-Distributed mode can be subdivided into distributed but all daemons run on a single node — a.k.a. *pseudo-distributed* — and _fully-distributed_ where the daemons are spread across all nodes in the cluster. The _pseudo-distributed_ vs. _fully-distributed_ nomenclature comes from Hadoop.
+Distributed mode can be subdivided into distributed but all daemons run on a single node — a.k.a. _pseudo-distributed_ — and _fully-distributed_ where the daemons are spread across all nodes in the cluster. The _pseudo-distributed_ vs. _fully-distributed_ nomenclature comes from Hadoop.
 
 Pseudo-distributed mode can run against the local filesystem or it can run against an instance of the _Hadoop Distributed File System_ (HDFS). Fully-distributed mode can ONLY run on HDFS. See the Hadoop [documentation](https://hadoop.apache.org/docs/current/) for how to set up HDFS. A good walk-through for setting up HDFS on Hadoop 2 can be found at [https://web.archive.org/web/20221007121526/https://www.alexjf.net/blog/distributed-systems/hadoop-yarn-installation-definitive-guide/](https://web.archive.org/web/20221007121526/https://www.alexjf.net/blog/distributed-systems/hadoop-yarn-installation-definitive-guide/).
 
 ### Pseudo-distributed
 
 <Callout type="info">
-  A quickstart has been added to the [quickstart](/docs/getting-started#quick-start---standalone-hbase) chapter. See
-  [quickstart-pseudo](/docs/getting-started#pseudo-distributed-for-local-testing). Some of the information that was originally in this section has been moved there.
+  A quickstart has been added to the
+  [quickstart](/docs/getting-started#quick-start---standalone-hbase) chapter. See
+  [quickstart-pseudo](/docs/getting-started#pseudo-distributed-for-local-testing). Some of the
+  information that was originally in this section has been moved there.
 </Callout>
 
 A pseudo-distributed mode is simply a fully-distributed mode run on a single host. Use this HBase configuration for testing and prototyping purposes only. Do not use this configuration for production or for performance evaluation.
@@ -104,9 +106,9 @@ See [quickstart-fully-distributed](/docs/getting-started#fully-distributed-for-p
 ### Procedure: HDFS Client Configuration
 
 1.  Of note, if you have made HDFS client configuration changes on your Hadoop cluster, such as configuration directives for HDFS clients, as opposed to server-side configurations, you must use one of the following methods to enable HBase to see and use these configuration changes:
-    -  Add a pointer to your `HADOOP_CONF_DIR` to the `HBASE_CLASSPATH` environment variable in _hbase-env.sh_.
-    -  Add a copy of _hdfs-site.xml_ (or _hadoop-site.xml_) or, better, symlinks, under `$HBASE_HOME/conf`, or
-    -  if only a small set of HDFS client configurations, add them to _hbase-site.xml_.
+    - Add a pointer to your `HADOOP_CONF_DIR` to the `HBASE_CLASSPATH` environment variable in _hbase-env.sh_.
+    - Add a copy of _hdfs-site.xml_ (or _hadoop-site.xml_) or, better, symlinks, under `$HBASE_HOME/conf`, or
+    - if only a small set of HDFS client configurations, add them to _hbase-site.xml_.
 
 An example of such an HDFS client configuration is `dfs.replication`. If for example, you want to run with a replication factor of 5, HBase will create files with the default of 3 unless you do the above to make the configuration available to HBase.
 

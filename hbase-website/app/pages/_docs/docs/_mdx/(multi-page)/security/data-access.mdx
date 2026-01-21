@@ -151,8 +151,8 @@ Install and configure the AccessController coprocessor, by setting the following
 <Callout type="info">
   If you use the AccessController along with the VisibilityController, the AccessController must
   come first in the list, because with both components active, the VisibilityController will
-  delegate access control on its system tables to the AccessController. For an example of using
-  both together, see [Security Configuration Example](/docs/security/example).
+  delegate access control on its system tables to the AccessController. For an example of using both
+  together, see [Security Configuration Example](/docs/security/example).
 </Callout>
 
 ```xml
@@ -291,8 +291,8 @@ Install and configure the AccessController coprocessor, by setting the following
 <Callout type="info">
   If you use the AccessController along with the VisibilityController, the AccessController must
   come first in the list, because with both components active, the VisibilityController will
-  delegate access control on its system tables to the AccessController. For an example of using
-  both together, see [Security Configuration Example](/docs/security/example).
+  delegate access control on its system tables to the AccessController. For an example of using both
+  together, see [Security Configuration Example](/docs/security/example).
 </Callout>
 
 ```xml
@@ -458,10 +458,10 @@ Visibility labels can be used in conjunction with ACLs.
 
 ### Examples of Visibility Expressions
 
-| Expression | Interpretation |
-| ---------- | -------------- |
-| `fulltime` | Allow access to users associated with the fulltime label. |
-| `!public` | Allow access to users not associated with the public label. |
+| Expression                                | Interpretation                                                                                                             |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `fulltime`                                | Allow access to users associated with the fulltime label.                                                                  |
+| `!public`                                 | Allow access to users not associated with the public label.                                                                |
 | `( secret \| topsecret ) & !probationary` | Allow access to users associated with either the secret or topsecret label and not associated with the probationary label. |
 
 ### Server-Side Configuration [#security-data-access-visibility-labels-server-side-configuration]
@@ -496,8 +496,7 @@ Install and configure the VisibilityController coprocessor by setting the follow
 <Callout type="info">
   If you use the AccessController and VisibilityController coprocessors together, the
   AccessController must come first in the list, because with both components active, the
-  VisibilityController will delegate access control on its system tables to the
-  AccessController.
+  VisibilityController will delegate access control on its system tables to the AccessController.
 </Callout>
 
 </Step>
@@ -639,10 +638,10 @@ hbase> set_visibility 'user', 'test', { COLUMNS => [ 'i', 'pii' ], FILTER => "(P
 ```
 
 <Callout type="info">
-  HBase Shell support for applying labels or permissions to cells is for testing and
-  verification support, and should not be employed for production use because it won't apply the
-  labels to cells that don't exist yet. The correct way to apply cell level labels is to do so
-  in the application code when storing the values.
+  HBase Shell support for applying labels or permissions to cells is for testing and verification
+  support, and should not be employed for production use because it won't apply the labels to cells
+  that don't exist yet. The correct way to apply cell level labels is to do so in the application
+  code when storing the values.
 </Callout>
 
 **Java API example:**
@@ -861,9 +860,8 @@ Configure WAL encryption in every RegionServer's _hbase-site.xml_, by setting th
 
 <Callout type="info">
   Starting from 2.6.0, the hbase.regionserver.hlog.reader.impl and
-  hbase.regionserver.hlog.writer.impl configurations are removed, you do not need to specify
-  them any more. Just set hbase.regionserver.wal.encryption to true is enough to enable WAL
-  encryption.
+  hbase.regionserver.hlog.writer.impl configurations are removed, you do not need to specify them
+  any more. Just set hbase.regionserver.wal.encryption to true is enough to enable WAL encryption.
 </Callout>
 
 </Step>

@@ -87,6 +87,7 @@ hbase> set_quota USER => 'u1', GLOBAL_BYPASS => true                     # user 
 ```
 
 ### Enabling, Disabling, and Checking RPC Throttling
+
 HBase provides shell commands to control RPC throttling at runtime. When throttling is disabled, HBase will not apply any request throttling. This can be useful in production environments that require temporary unthrottled operation.
 
 The following HBase shell commands are available:
@@ -105,7 +106,8 @@ hbase> rpc_throttle_enabled
 `enable_rpc_throttle` and `disable_rpc_throttle` return the previous RPC throttling state as a boolean value. `rpc_throttle_enabled` returns the current state.
 
 <Callout type="info">
-If no quotas are configured, RPC throttling is not applied, and enabling or disabling throttling will always return false.
+  If no quotas are configured, RPC throttling is not applied, and enabling or disabling throttling
+  will always return false.
 </Callout>
 
 ### Setting Namespace Quotas

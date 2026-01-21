@@ -29,9 +29,10 @@ For example, an ensemble with 4 peers requires 3 to form a quorum, while an ense
 Thus, an ensemble of 5 allows 2 peers to fail, and thus is more fault tolerant than the ensemble of 4, which allows only 1 down peer.
 
 Give each ZooKeeper server around 1GB of RAM, and if possible, its own dedicated disk (A dedicated disk is the best thing you can do to ensure a performant ZooKeeper ensemble). For very heavily loaded clusters, run ZooKeeper servers on separate machines from RegionServers (DataNodes and TaskTrackers).
+
 </Callout>
 
-For example, to have HBase manage a ZooKeeper quorum on nodes _rs\{1,2,3,4,5\}.example.com_, bound to port 2222 (the default is 2181) ensure `HBASE_MANAGE_ZK` is commented out or set to `true` in _conf/hbase-env.sh_ and then edit _conf/hbase-site.xml_    and set `hbase.zookeeper.property.clientPort` and `hbase.zookeeper.quorum`.
+For example, to have HBase manage a ZooKeeper quorum on nodes _rs\{1,2,3,4,5\}.example.com_, bound to port 2222 (the default is 2181) ensure `HBASE_MANAGE_ZK` is commented out or set to `true` in _conf/hbase-env.sh_ and then edit _conf/hbase-site.xml_ and set `hbase.zookeeper.property.clientPort` and `hbase.zookeeper.quorum`.
 You should also set `hbase.zookeeper.property.dataDir` to other than the default as the default has ZooKeeper persist data under _/tmp_ which is often cleared on system restart.
 In the example below we have ZooKeeper persist to _/user/local/zookeeper_.
 
@@ -68,12 +69,16 @@ In the example below we have ZooKeeper persist to _/user/local/zookeeper_.
 ```
 
 <Callout type="warn" title="What version of ZooKeeper should I use?">
-The newer version, the better. ZooKeeper 3.4.x is required as of HBase 1.0.0
+  The newer version, the better. ZooKeeper 3.4.x is required as of HBase 1.0.0
 </Callout>
 
 <Callout type="warn" title="ZooKeeper Maintenance">
-Be sure to set up the data dir cleaner described under [ZooKeeper Maintenance](https://zookeeper.apache.org/doc/r3.1.2/zookeeperAdmin.html#sc_maintenance) else you could have 'interesting' problems a couple of months in; i.e.
-zookeeper could start dropping sessions if it has to run through a directory of hundreds of thousands of logs which is wont to do around leader reelection time — a process rare but run on occasion whether because a machine is dropped or happens to hiccup.
+  Be sure to set up the data dir cleaner described under [ZooKeeper
+  Maintenance](https://zookeeper.apache.org/doc/r3.1.2/zookeeperAdmin.html#sc_maintenance) else you
+  could have 'interesting' problems a couple of months in; i.e. zookeeper could start dropping
+  sessions if it has to run through a directory of hundreds of thousands of logs which is wont to do
+  around leader reelection time — a process rare but run on occasion whether because a machine is
+  dropped or happens to hiccup.
 </Callout>
 
 ## Using existing ZooKeeper ensemble
@@ -96,7 +101,7 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
 ```
 
 Note that you can use HBase in this manner to spin up a ZooKeeper cluster, unrelated to HBase.
-Just make sure to set `HBASE_MANAGES_ZK` to `false`      if you want it to stay up across HBase restarts so that when HBase shuts down, it doesn't take ZooKeeper down with it.
+Just make sure to set `HBASE_MANAGES_ZK` to `false` if you want it to stay up across HBase restarts so that when HBase shuts down, it doesn't take ZooKeeper down with it.
 
 For more information about running a distinct ZooKeeper cluster, see the ZooKeeper [Getting Started Guide](https://zookeeper.apache.org/doc/current/zookeeperStarted.html).
 Additionally, see the [ZooKeeper Wiki](https://cwiki.apache.org/confluence/display/HADOOP2/ZooKeeper+FAQ#ZooKeeperFAQ-7) or the [ZooKeeper documentation](https://zookeeper.apache.org/doc/r3.4.10/zookeeperAdmin.html#sc_zkMulitServerSetup) for more information on ZooKeeper sizing.
@@ -112,7 +117,7 @@ ZooKeeper/HBase mutual authentication ([HBASE-2418](https://issues.apache.org/ji
 
 You need to have a working Kerberos KDC setup.
 For each `$HOST` that will run a ZooKeeper server, you should have a principle `zookeeper/$HOST`.
-For each such host, add a service key (using the `kadmin` or `kadmin.local`        tool's `ktadd` command) for `zookeeper/$HOST` and copy this file to `$HOST`, and make it readable only to the user that will run zookeeper on `$HOST`.
+For each such host, add a service key (using the `kadmin` or `kadmin.local` tool's `ktadd` command) for `zookeeper/$HOST` and copy this file to `$HOST`, and make it readable only to the user that will run zookeeper on `$HOST`.
 Note the location of this file, which we will use below as _\$PATH_TO_ZOOKEEPER_KEYTAB_.
 
 Similarly, for each `$HOST` that will run an HBase server (master or regionserver), you should have a principle: `hbase/$HOST`.
@@ -139,7 +144,7 @@ We'll refer to this JAAS configuration file as _\$CLIENT_CONF_ below.
 
 ### HBase-managed ZooKeeper Configuration
 
-On each node that will run a zookeeper, a master, or a regionserver, create a [JAAS](http://docs.oracle.com/javase/7/docs/technotes/guides/security/jgss/tutorials/LoginConfigFile.html)        configuration file in the conf directory of the node's _HBASE_HOME_        directory that looks like the following:
+On each node that will run a zookeeper, a master, or a regionserver, create a [JAAS](http://docs.oracle.com/javase/7/docs/technotes/guides/security/jgss/tutorials/LoginConfigFile.html) configuration file in the conf directory of the node's _HBASE_HOME_ directory that looks like the following:
 
 ```java
 Server {
@@ -400,14 +405,14 @@ Setting up KeyStore is optional and only required if ZooKeeper server requests f
 Find more detailed information in the [ZooKeeper SSL User Guide](https://cwiki.apache.org/confluence/display/ZOOKEEPER/ZooKeeper+SSL+User+Guide).
 
 <Callout type="warn">
-These're standard Java properties which should be set in the HBase command line and are effective in
-the entire Java process. All ZooKeeper clients running in the same process will pick them up including
-co-processors.
+  These're standard Java properties which should be set in the HBase command line and are effective
+  in the entire Java process. All ZooKeeper clients running in the same process will pick them up
+  including co-processors.
 </Callout>
 
 <Callout type="info">
-Since ZooKeeper version 3.8 the following two properties are useful to store the
-keystore and truststore passwords in protected text files rather than exposing them in the command line.
+  Since ZooKeeper version 3.8 the following two properties are useful to store the keystore and
+  truststore passwords in protected text files rather than exposing them in the command line.
 </Callout>
 
 ```properties
@@ -440,7 +445,6 @@ to Java system properties this could be more convenient under some circumstances
 ```
 
 <Callout type="info">
-These settings are eventually transformed into Java system properties, it's just a convenience feature.
-So, the same rules that mentioned in the previous point, applies to them as well.
+  These settings are eventually transformed into Java system properties, it's just a convenience
+  feature. So, the same rules that mentioned in the previous point, applies to them as well.
 </Callout>
-

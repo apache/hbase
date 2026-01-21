@@ -3,27 +3,27 @@ title: "Default Configuration"
 description: "HBase default configuration properties and how to customize them via hbase-site.xml for site-specific settings."
 ---
 
-## *hbase-site.xml* and *hbase-default.xml*
+## _hbase-site.xml_ and _hbase-default.xml_
 
-Just as in Hadoop where you add site-specific HDFS configuration to the *hdfs-site.xml* file, for HBase, site specific customizations go into the file *conf/hbase-site.xml*. For the list of configurable properties, see [hbase default configurations](/docs/configuration/default#configuration-default-hbase-default-configuration) below or view the raw *hbase-default.xml* source file in the HBase source code at *src/main/resources*.
+Just as in Hadoop where you add site-specific HDFS configuration to the _hdfs-site.xml_ file, for HBase, site specific customizations go into the file _conf/hbase-site.xml_. For the list of configurable properties, see [hbase default configurations](/docs/configuration/default#configuration-default-hbase-default-configuration) below or view the raw _hbase-default.xml_ source file in the HBase source code at _src/main/resources_.
 
-Not all configuration options make it out to *hbase-default.xml*. Some configurations would only appear in source code; the only way to identify these changes are through code review.
+Not all configuration options make it out to _hbase-default.xml_. Some configurations would only appear in source code; the only way to identify these changes are through code review.
 
 Currently, changes here will require a cluster restart for HBase to notice the change.
 
 ## HBase Default configuration [#configuration-default-hbase-default-configuration]
 
-The documentation below is generated using the default hbase configuration file, *hbase-default.xml*, as source.
+The documentation below is generated using the default hbase configuration file, _hbase-default.xml_, as source.
 
 <include>./hbase-default.md</include>
 
 ## hbase-env.sh [#configuration-default-hbase-env-sh]
 
-Set HBase environment variables in this file. Examples include options to pass the JVM on start of an HBase daemon such as heap size and garbage collector configs. You can also set configurations for HBase configuration, log directories, niceness, ssh options, where to locate process pid files, etc. Open the file at *conf/hbase-env.sh* and peruse its content. Each option is fairly well documented. Add your own environment variables here if you want them read by HBase daemons on startup.
+Set HBase environment variables in this file. Examples include options to pass the JVM on start of an HBase daemon such as heap size and garbage collector configs. You can also set configurations for HBase configuration, log directories, niceness, ssh options, where to locate process pid files, etc. Open the file at _conf/hbase-env.sh_ and peruse its content. Each option is fairly well documented. Add your own environment variables here if you want them read by HBase daemons on startup.
 
 Changes here will require a cluster restart for HBase to notice the change.
 
-## *log4j2.properties*
+## _log4j2.properties_
 
 Since version 2.5.0, HBase has upgraded to Log4j2, so the configuration file name and format has changed. Read more in [Apache Log4j2](https://logging.apache.org/log4j/2.x/index.html).
 
@@ -69,7 +69,7 @@ The default implementation was switched to a rpc based connection registry. With
 </configuration>
 ```
 
-The configuration value for *hbase.masters* is a comma separated list of *host:port* values. If no port value is specified, the default of *16000* is assumed.
+The configuration value for _hbase.masters_ is a comma separated list of _host:port_ values. If no port value is specified, the default of _16000_ is assumed.
 
 Of course you are free to specify bootstrap nodes other than masters, like:
 
@@ -82,11 +82,11 @@ Of course you are free to specify bootstrap nodes other than masters, like:
 </property>
 ```
 
-The configuration value for *hbase.client.bootstrap.servers* is a comma separated list of *host:port* values. Notice that port must be specified here.
+The configuration value for _hbase.client.bootstrap.servers_ is a comma separated list of _host:port_ values. Notice that port must be specified here.
 
-Usually these configurations are kept out in the *hbase-site.xml* and is picked up by the client from the `CLASSPATH`.
+Usually these configurations are kept out in the _hbase-site.xml_ and is picked up by the client from the `CLASSPATH`.
 
-If you are configuring an IDE to run an HBase client, you should include the *conf/* directory on your classpath so *hbase-site.xml* settings can be found (or add *src/test/resources* to pick up the hbase-site.xml used by tests).
+If you are configuring an IDE to run an HBase client, you should include the _conf/_ directory on your classpath so _hbase-site.xml_ settings can be found (or add _src/test/resources_ to pick up the hbase-site.xml used by tests).
 
 For Java applications using Maven, including the hbase-shaded-client module is the recommended dependency when connecting to a cluster:
 
@@ -102,7 +102,7 @@ For Java applications using Maven, including the hbase-shaded-client module is t
 
 The configuration used by a Java client is kept in an [HBaseConfiguration](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/HBaseConfiguration) instance.
 
-The factory method on HBaseConfiguration, `HBaseConfiguration.create();`, on invocation, will read in the content of the first *hbase-site.xml* found on the client's `CLASSPATH`, if one is present (Invocation will also factor in any *hbase-default.xml* found; an *hbase-default.xml* ships inside the *hbase.X.X.X.jar*). It is also possible to specify configuration directly without having to read from a *hbase-site.xml*.
+The factory method on HBaseConfiguration, `HBaseConfiguration.create();`, on invocation, will read in the content of the first _hbase-site.xml_ found on the client's `CLASSPATH`, if one is present (Invocation will also factor in any _hbase-default.xml_ found; an _hbase-default.xml_ ships inside the _hbase.X.X.X.jar_). It is also possible to specify configuration directly without having to read from a _hbase-site.xml_.
 
 For example, to set the ZooKeeper ensemble or bootstrap nodes for the cluster programmatically do as follows:
 

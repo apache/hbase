@@ -17,25 +17,25 @@ A Procedure is a transform made on an HBase entity. Examples of HBase entities w
 Procedures are run by a ProcedureExecutor instance. Procedure current state is kept in the ProcedureStore.
 The ProcedureExecutor has but a primitive view on what goes on inside a Procedure. From its PoV, Procedures are submitted and then the ProcedureExecutor keeps calling _#execute(Object)_ until the Procedure is done. Execute may be called multiple times in the case of failure or restart, so Procedure code must be idempotent yielding the same result each time it run. Procedure code can also implement _rollback_ so steps can be undone if failure. A call to _execute()_ can result in one of following possibilities:
 
-* _execute()_ returns
-  * _null_: indicates we are done.
-  * _this_: indicates there is more to do so, persist current procedure state and re-_execute()_.
-  * _Array_ of sub-procedures: indicates a set of procedures needed to be run to completion before we can proceed (after which we expect the framework to call our execute again).
-* _execute()_ throws exception
-  * _suspend_: indicates execution of procedure is suspended and can be resumed due to some external event. The procedure state is persisted.
-  * _yield_: procedure is added back to scheduler. The procedure state is not persisted.
-  * _interrupted_: currently same as _yield_.
-  * Any _exception_ not listed above: Procedure _state_ is changed to _FAILED_ (after which we expect the framework will attempt rollback).
+- _execute()_ returns
+  - _null_: indicates we are done.
+  - _this_: indicates there is more to do so, persist current procedure state and re-_execute()_.
+  - _Array_ of sub-procedures: indicates a set of procedures needed to be run to completion before we can proceed (after which we expect the framework to call our execute again).
+- _execute()_ throws exception
+  - _suspend_: indicates execution of procedure is suspended and can be resumed due to some external event. The procedure state is persisted.
+  - _yield_: procedure is added back to scheduler. The procedure state is not persisted.
+  - _interrupted_: currently same as _yield_.
+  - Any _exception_ not listed above: Procedure _state_ is changed to _FAILED_ (after which we expect the framework will attempt rollback).
 
 The ProcedureExecutor stamps the frameworks notions of Procedure State into the Procedure itself; e.g. it marks Procedures as INITIALIZING on submit. It moves the state to RUNNABLE when it goes to execute. When done, a Procedure gets marked FAILED or SUCCESS depending. Here is the list of all states as of this writing:
 
-* **_INITIALIZING_** Procedure in construction, not yet added to the executor
-* **_RUNNABLE_** Procedure added to the executor, and ready to be executed.
-* **_WAITING_** The procedure is waiting on children (subprocedures) to be completed
-* **_WAITING_TIMEOUT_** The procedure is waiting a timeout or an external event
-* **_ROLLEDBACK_** The procedure failed and was rolledback.
-* **_SUCCESS_** The procedure execution completed successfully.
-* **_FAILED_** The procedure execution failed, may need to rollback.
+- **_INITIALIZING_** Procedure in construction, not yet added to the executor
+- **_RUNNABLE_** Procedure added to the executor, and ready to be executed.
+- **_WAITING_** The procedure is waiting on children (subprocedures) to be completed
+- **_WAITING_TIMEOUT_** The procedure is waiting a timeout or an external event
+- **_ROLLEDBACK_** The procedure failed and was rolledback.
+- **_SUCCESS_** The procedure execution completed successfully.
+- **_FAILED_** The procedure execution failed, may need to rollback.
 
 After each execute, the Procedure state is persisted to the ProcedureStore. Hooks are invoked on Procedures so they can preserve custom state. Post-fault, the ProcedureExecutor re-hydrates its pre-crash state by replaying the content of the ProcedureStore. This makes the Procedure Framework resilient against process failure.
 
@@ -55,14 +55,14 @@ Rollback is called when the procedure or one of the sub-procedures has failed. T
 
 There are hooks for collecting metrics on submit of the procedure and on finish.
 
-* updateMetricsOnSubmit()
-* updateMetricsOnFinish()
+- updateMetricsOnSubmit()
+- updateMetricsOnFinish()
 
-Individual procedures can override these methods to collect procedure specific metrics. The default implementations of these methods  try to get an object implementing an interface ProcedureMetrics which encapsulates following set of generic metrics:
+Individual procedures can override these methods to collect procedure specific metrics. The default implementations of these methods try to get an object implementing an interface ProcedureMetrics which encapsulates following set of generic metrics:
 
-* SubmittedCount (Counter): Total number of procedure instances submitted of a type.
-* Time (Histogram): Histogram of runtime for procedure instances.
-* FailedCount (Counter): Total number of failed procedure instances.
+- SubmittedCount (Counter): Total number of procedure instances submitted of a type.
+- Time (Histogram): Histogram of runtime for procedure instances.
+- FailedCount (Counter): Total number of failed procedure instances.
 
 Individual procedures can implement this object and define these generic set of metrics.
 
@@ -89,10 +89,10 @@ Subprocedures are _Procedure_ instances created and returned by _#execute(Object
 
 _ProcedureExecutor_ uses _ProcedureStore_ and _ProcedureScheduler_ and executes procedures submitted to it. Some of the basic operations supported are:
 
-* _abort(procId)_: aborts specified procedure if its not finished
-* _submit(Procedure)_: submits procedure for execution
-* _retrieve:_ list of get methods to get _Procedure_ instances and results
-* _register/ unregister_ listeners: for listening on Procedure related notifications
+- _abort(procId)_: aborts specified procedure if its not finished
+- _submit(Procedure)_: submits procedure for execution
+- _retrieve:_ list of get methods to get _Procedure_ instances and results
+- _register/ unregister_ listeners: for listening on Procedure related notifications
 
 When _ProcedureExecutor_ starts it loads procedure instances persisted in _ProcedureStore_ from previous run. All unfinished procedures are resumed from the last stored state.
 
@@ -134,6 +134,5 @@ A new RemoteProcedureDispatcher (+ subclass RSProcedureDispatcher) primitive tak
 
 ## References
 
-* Matteo had a slide deck on what it the Procedure Framework would look like and the problems it addresses initially [attached to the Pv2 issue.](https://issues.apache.org/jira/secure/attachment/12845124/ProcedureV2b.pdf)
-* [A good doc by Matteo](https://issues.apache.org/jira/secure/attachment/12693273/Procedurev2Notification-Bus.pdf) on problem and how Pv2 addresses it w/ roadmap (from the Pv2 JIRA). We should go back to the roadmap to do the Notification Bus, convertion of log splitting to Pv2, etc.
-
+- Matteo had a slide deck on what it the Procedure Framework would look like and the problems it addresses initially [attached to the Pv2 issue.](https://issues.apache.org/jira/secure/attachment/12845124/ProcedureV2b.pdf)
+- [A good doc by Matteo](https://issues.apache.org/jira/secure/attachment/12693273/Procedurev2Notification-Bus.pdf) on problem and how Pv2 addresses it w/ roadmap (from the Pv2 JIRA). We should go back to the roadmap to do the Notification Bus, convertion of log splitting to Pv2, etc.

@@ -18,11 +18,11 @@ For more background on how we arrived at this spec., see [HBase RPC: WIP](https:
 ## TODO
 
 1. List of problems with currently specified format and where we would like to go in a version2, etc.
-  For example, what would we have to change if anything to move server async or to support streaming/chunking?
+   For example, what would we have to change if anything to move server async or to support streaming/chunking?
 2. Diagram on how it works
 3. A grammar that succinctly describes the wire-format.
-  Currently we have these words and the content of the rpc protobuf idl but a grammar for the back and forth would help with groking rpc.
-  Also, a little state machine on client/server interactions would help with understanding (and ensuring correct implementation).
+   Currently we have these words and the content of the rpc protobuf idl but a grammar for the back and forth would help with groking rpc.
+   Also, a little state machine on client/server interactions would help with understanding (and ensuring correct implementation).
 
 ## RPC
 
@@ -44,10 +44,12 @@ Client initiates connection.
 
 On connection setup, client sends a preamble followed by a connection header.
 
-`<preamble>`  
+`<preamble>`
+
 ```text
 <MAGIC 4 byte integer> <1 byte RPC Format Version> <1 byte auth type>
-```  
+```
+
 We need the auth method spec.
 here so the connection header is encoded if auth enabled.  
 E.g.: HBas0x000x50 — 4 bytes of MAGIC — `HBas' — plus one-byte of version, 0 in this case, and one byte, 0x50 (SIMPLE). of an auth type.
@@ -151,7 +153,7 @@ Doing header+param rather than a single protobuf Message with both header and pa
 1. Is closer to what we currently have
 2. Having a single fat pb requires extra copying putting the already pb'd param into the body of the fat request pb (and same making result)
 3. We can decide whether to accept the request or not before we read the param; for example, the request might be low priority.
-  As is, we read header+param in one go as server is currently implemented so this is a TODO.
+   As is, we read header+param in one go as server is currently implemented so this is a TODO.
 
 The advantages are minor.
 If later, fat request has clear advantage, can roll out a v2 later.
@@ -180,4 +182,3 @@ To enable compressing of passed CellBlocks, set `hbase.client.rpc.compressor` to
 Compressor must implement Hadoop's CompressionCodec Interface.
 After connection setup, all passed cellblocks will be sent compressed.
 The server will return cellblocks compressed using this same compressor as long as the compressor is on its CLASSPATH (else you will get `UnsupportedCompressionCodecException`).
-

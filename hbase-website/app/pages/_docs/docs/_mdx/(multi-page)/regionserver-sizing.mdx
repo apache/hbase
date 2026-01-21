@@ -385,7 +385,7 @@ ROW                                                                             
 1 row(s) in 0.0650 seconds
 ```
 
-KEEP_DELETED_CELLS is to avoid removing Cells from HBase when the _only_ reason to remove them is the delete marker. So with KEEP_DELETED_CELLS enabled deleted cells would get removed if either you write more versions than the configured max, or you have a TTL and Cells are in excess of the configured timeout, etc.
+KEEP*DELETED_CELLS is to avoid removing Cells from HBase when the \_only* reason to remove them is the delete marker. So with KEEP_DELETED_CELLS enabled deleted cells would get removed if either you write more versions than the configured max, or you have a TTL and Cells are in excess of the configured timeout, etc.
 
 ## Secondary Indexes and Alternate Query Paths
 

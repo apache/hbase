@@ -101,7 +101,6 @@ The following properties have been renamed. Attempts to set the old property wil
 | hbase.hfile.compactions.discharger.interval         | hbase.hfile.compaction.discharger.interval              |
 | hbase.hregion.percolumnfamilyflush.size.lower.bound | hbase.hregion.percolumnfamilyflush.size.lower.bound.min |
 
-
 #### Configuration settings with different defaults in HBase 2.0+ [!toc]
 
 The following configuration settings changed their default value. Where applicable, the value to set to restore the behavior of HBase 1.2 is given.
@@ -329,7 +328,7 @@ To use coprocessors in 2.0, they should be rebuilt against new API otherwise the
 
 Suggested order of changes to upgrade the coprocessors:
 
-1.  Directly implement observer interfaces instead of extending Base*Observer classes. Change `Foo extends BaseXXXObserver` to `Foo implements XXXObserver`. ([HBASE-17312](https://issues.apache.org/jira/browse/HBASE-17312)).
+1.  Directly implement observer interfaces instead of extending Base\*Observer classes. Change `Foo extends BaseXXXObserver` to `Foo implements XXXObserver`. ([HBASE-17312](https://issues.apache.org/jira/browse/HBASE-17312)).
 2.  Adapt to design change from Inheritence to Composition ([HBASE-17732](https://issues.apache.org/jira/browse/HBASE-17732)) by following [this example](https://github.com/apache/hbase/blob/master/dev-support/design-docs/Coprocessor_Design_Improvements-Use_composition_instead_of_inheritance-HBASE-17732.adoc#migrating-existing-cps-to-new-design).
 3.  getTable() has been removed from the CoprocessorEnvrionment, coprocessors should self-manage Table instances.
 
@@ -361,10 +360,10 @@ That said, the below is a prescription for a rolling upgrade of a 1.4 cluster.
 It is OK that during the rolling upgrading there are region server crashes. The 1.x master can assign regions to both 1.x and 2.x region servers, and [HBASE-19166](https://issues.apache.org/jira/browse/HBASE-19166) fixed a problem so that 1.x region server can also read the WALs written by 2.x region server and split them.
 
 <Callout type="info">
-  Please read the [Changes of Note!](/docs/upgrading/paths#changes-of-note) section carefully before rolling upgrading.
-  Make sure that you do not use the removed features in 2.0, for example, the prefix-tree encoding,
-  the old hfile format, etc. They could both fail the upgrading and leave the cluster in an
-  intermediate state and hard to recover.
+  Please read the [Changes of Note!](/docs/upgrading/paths#changes-of-note) section carefully before
+  rolling upgrading. Make sure that you do not use the removed features in 2.0, for example, the
+  prefix-tree encoding, the old hfile format, etc. They could both fail the upgrading and leave the
+  cluster in an intermediate state and hard to recover.
 </Callout>
 
 <Callout type="info">

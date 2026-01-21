@@ -51,9 +51,9 @@ practice needs to whither. We'll explain why in the later
 As of hbase-2.0.0, our protobuf usage gets a little more involved. HBase
 core protobuf references are offset so as to refer to a private,
 bundled protobuf. Core stops referring to protobuf
-classes at com.google.protobuf.* and instead references protobuf at
+classes at com.google.protobuf._ and instead references protobuf at
 the HBase-specific offset
-org.apache.hadoop.hbase.shaded.com.google.protobuf.*.  We do this indirection
+org.apache.hadoop.hbase.shaded.com.google.protobuf._. We do this indirection
 so hbase core can evolve its protobuf version independent of whatever our
 dependencies rely on. For instance, HDFS serializes using protobuf.
 HDFS is on our CLASSPATH. Without the above described indirection, our
@@ -98,8 +98,8 @@ The `hbase-protocol-shaded` module hosts all
 protobufs used by HBase core.
 
 But for the vestigial CPEP references to the (non-shaded) content of
-`hbase-protocol`, we keep around most of this  module going forward
-just so it is available to CPEPs.  Retaining the most of `hbase-protocol`
+`hbase-protocol`, we keep around most of this module going forward
+just so it is available to CPEPs. Retaining the most of `hbase-protocol`
 makes for overlapping, 'duplicated' proto instances where some exist as
 non-shaded/non-relocated here in their old module
 location but also in the new location, shaded under
@@ -111,7 +111,7 @@ regards except its protobuf references are to the internal shaded
 version at `org.apache.hadoop.hbase.shaded.protobuf.generated.ServerName`
 (note the 'shaded' addition in the middle of the package name).
 
-If you extend a proto in `hbase-protocol-shaded` for  internal use,
+If you extend a proto in `hbase-protocol-shaded` for internal use,
 consider extending it also in
 `hbase-protocol` (and regenerating).
 
@@ -191,4 +191,3 @@ In hbase-examples module, we have some examples under the
 `BulkDeleteEndpoint` and `BulkDelete.proto` for more details, and you can also
 check the `pom.xml` of hbase-examples module to see how to make use of the above
 plugin.
-

@@ -115,7 +115,7 @@ Comma-separated list of backup IDs to delete.
 Deletes all backup images completed more than the specified number of days ago.
 
 <Callout type="info">
-These options are **mutually exclusive**. Only one of `-l` or `-k` may be used at a time.
+  These options are **mutually exclusive**. Only one of `-l` or `-k` may be used at a time.
 </Callout>
 
 #### Example Usage [#backup-restore-administation-deleting-backup-images-example-usage]
@@ -133,16 +133,17 @@ $ hbase backup delete -k 30
 ```
 
 <Callout type="warn">
-* Deleting a backup may affect all following incremental backups (in the same backup root) up to 
+- Deleting a backup may affect all following incremental backups (in the same backup root) up to 
   the next full backup. For example, if you take a full backup every 2 weeks and 
   daily incremental backups, running `hbase backup delete -k 7` when the full backup is older than 
   7 days will effectively remove the data for all subsequent incremental backups.
   The backup IDs may still be listed, but their data will be gone.
 
-* If the most recent backup is an incremental backup and you delete it, 
+- If the most recent backup is an incremental backup and you delete it,
   you should run a **full backup** next.
-  Running another incremental backup immediately after may result in missing data in the 
+  Running another incremental backup immediately after may result in missing data in the
   backup image. (See [HBASE-28084](https://issues.apache.org/jira/browse/HBASE-28084))
+
 </Callout>
 
 ### Backup Repair Command

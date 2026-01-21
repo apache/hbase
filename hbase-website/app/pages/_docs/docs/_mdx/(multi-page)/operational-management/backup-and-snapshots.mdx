@@ -21,6 +21,7 @@ Distcp could be used to either copy the contents of the HBase directory in HDFS 
 Note: Distcp works in this situation because the cluster is down and there are no in-flight edits to files. Distcp-ing of files in the HBase directory is not generally recommended on a live cluster.
 
 #### Restore (if needed)
+
 The backup of the hbase directory from HDFS is copied onto the 'real' hbase directory via distcp. The act of copying these files creates new HDFS metadata, which is why a restore of the NameNode edits from the time of the HBase backup isn't required for this kind of restore, because it's a restore (via distcp) of a specific HDFS directory (i.e., the HBase part) not the entire HDFS file-system.
 
 ### Live Cluster Backup - Replication
@@ -224,7 +225,8 @@ You can store and retrieve snapshots from Amazon S3, using the following procedu
 
 <Callout type="info">
   You can also store snapshots in Microsoft Azure Blob Storage. See [Storing Snapshots in Microsoft
-  Azure Blob Storage](/docs/operational-management/backup-and-snapshots#storing-snapshots-in-microsoft-azure-blob-storage).
+  Azure Blob
+  Storage](/docs/operational-management/backup-and-snapshots#storing-snapshots-in-microsoft-azure-blob-storage).
 </Callout>
 
 ### Prerequisites [#operational-management-backup-and-snapshots-stroing-in-s3-prerequisites]

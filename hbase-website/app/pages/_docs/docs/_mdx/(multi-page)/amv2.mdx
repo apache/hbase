@@ -13,7 +13,7 @@ Assignment in HBase 1.x has been problematic in operation. It is not hard to see
 
 AMv2 (AssignmentManager Version 2) is a refactor ([HBASE-14350](https://issues.apache.org/jira/browse/HBASE-14350)) of the hbase-1.x AssignmentManager putting it up on a [ProcedureV2 (HBASE-12439)](https://issues.apache.org/jira/browse/HBASE-12439) basis. ProcedureV2 (Pv2), is an awkwardly named system that allows describing and running multi-step state machines. It is performant and persists all state to a Store which is recoverable post crash. See the companion chapter on [Procedure Framework (Pv2)](/docs/pv2), to learn more about the ProcedureV2 system.
 
-In AMv2, all assignment, crash handling, splits and merges are recast as Procedures(v2).  ZooKeeper is purged from the mix. As before, the final assignment state gets published to _hbase:meta_ for non-Master participants to read (all-clients) with intermediate state kept in the local Pv2 WAL-based 'store' but only the active Master, a single-writer, evolves state. The Master's in-memory cluster image is the authority and if disagreement, RegionServers are forced to comply. Pv2 adds shared/exclusive locking of all core HBase Entities — namespace, tables, and regions — to ensure one actor at a time access and to prevent operations contending over resources (move/split, disable/assign, etc.).
+In AMv2, all assignment, crash handling, splits and merges are recast as Procedures(v2). ZooKeeper is purged from the mix. As before, the final assignment state gets published to _hbase:meta_ for non-Master participants to read (all-clients) with intermediate state kept in the local Pv2 WAL-based 'store' but only the active Master, a single-writer, evolves state. The Master's in-memory cluster image is the authority and if disagreement, RegionServers are forced to comply. Pv2 adds shared/exclusive locking of all core HBase Entities — namespace, tables, and regions — to ensure one actor at a time access and to prevent operations contending over resources (move/split, disable/assign, etc.).
 
 This redo of AM atop of a purposed, performant state machine with all operations taking on the common Procedure form with a single state writer only moves our AM to a new level of resilience and scale.
 
@@ -60,7 +60,7 @@ Next we move to the dispatch phase where we update hbase:meta table setting the 
 2017-05-23 12:04:24,498 INFO  [ProcExecWrkr-38] assignment.RegionTransitionProcedure: Dispatch pid=1179, ppid=1176, state=RUNNABLE:REGION_TRANSITION_DISPATCH; AssignProcedure table=IntegrationTestBigLinkedList, region=56f985a727afe80a184dac75fbf6860c, target=ve0540.halxg.example.org,16020,1495525111232; rit=OPENING, location=ve0540.halxg.example.org,16020,1495525111232
 ```
 
-Below we log the incoming report that the region opened successfully on ve540. The Procedure is woken up (you can tell it the procedure is running by the name of the thread, its a ProcedureExecutor thread, ProcExecWrkr-9).  The woken up Procedure updates state in hbase:meta to denote the region as open on ve0540. It then reports finished and exits.
+Below we log the incoming report that the region opened successfully on ve540. The Procedure is woken up (you can tell it the procedure is running by the name of the thread, its a ProcedureExecutor thread, ProcExecWrkr-9). The woken up Procedure updates state in hbase:meta to denote the region as open on ve0540. It then reports finished and exits.
 
 ```
 2017-05-23 12:04:26,643 DEBUG [RpcServer.default.FPBQ.Fifo.handler=46,queue=1,port=16000] assignment.RegionTransitionProcedure: Received report OPENED seqId=11984985, pid=1179, ppid=1176, state=RUNNABLE:REGION_TRANSITION_DISPATCH; AssignProcedure table=IntegrationTestBigLinkedList, region=56f985a727afe80a184dac75fbf6860c, target=ve0540.halxg.example.org,16020,1495525111232; rit=OPENING, location=ve0540.halxg.example.org,16020,1495525111232
@@ -144,4 +144,3 @@ Raw format for scripts
 
 RESULT [num_ops=10000000, ops_type=both, num_table=5, regions_per_table=10, threads=10, num_yield=22025876, time_addback_ms=5060, time_poll_ms=19459]
 ```
-

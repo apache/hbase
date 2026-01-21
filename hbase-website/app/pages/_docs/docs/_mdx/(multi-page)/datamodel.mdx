@@ -283,7 +283,7 @@ Note that generally the easiest way to specify a specific stop point for a scan 
 ### Delete
 
 [Delete](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Delete.html) removes a row from a table.
-Deletes are executed via [Table.delete](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#delete(org.apache.hadoop.hbase.client.Delete)).
+Deletes are executed via [Table.delete](<https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#delete(org.apache.hadoop.hbase.client.Delete)>).
 
 HBase does not modify data in place, and so deletes are handled by creating new markers called _tombstones_.
 These tombstones, along with the dead values, are cleaned up on major compactions.

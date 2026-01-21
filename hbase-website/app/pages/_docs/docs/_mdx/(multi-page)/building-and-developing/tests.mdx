@@ -154,12 +154,14 @@ testing running tens of seconds perhaps combining test rather than spin up a jvm
 per test method; this practice will help w/ overall test times.
 
 #### Large Tests:
+
 _Large_ test cases are everything else. They are typically large-scale tests, regression tests
 for specific bugs, timeout tests, or performance tests. No large test suite can take longer than
 thirteen minutes. It will be killed as timed out. Cast your test as an Integration Test if it needs
 to run longer.
 
 #### Integration Tests: [#building-and-developing-unit-tests-categorizing-tests-integration-tests]
+
 _Integration_ tests are system level tests.
 See [Integration Tests](/docs/building-and-developing/tests#building-and-developing-integration-tests) for more info.
 If you invoke `$ mvn test` on integration tests, there is no timeout for the test.
@@ -312,7 +314,7 @@ developer machine with nothing else running on it).
 ### Test Resource Checker
 
 A custom Maven SureFire plugin listener checks a number of resources before and after each HBase unit test runs and logs its findings at the end of the test output files which can be found in _target/surefire-reports_ per Maven module (Tests write test reports named for the test class into this directory.
-Check the _*-out.txt_ files). The resources counted are the number of threads, the number of file descriptors, etc.
+Check the _\*-out.txt_ files). The resources counted are the number of threads, the number of file descriptors, etc.
 If the number has increased, it adds a _LEAK?_ comment in the logs.
 As you can have an HBase instance running in the background, some threads can be deleted/created without any specific action in the test.
 However, if the test does not work as expected, or if the test should not impact these resources, it's worth checking these log lines `...hbase.ResourceChecker(157): before...` and `...hbase.ResourceChecker(157): after...`.
@@ -573,7 +575,8 @@ Actions are predefined sequences of events, such as the following:
 - Batch restart of 50% of regionservers (sleep 5 sec)
 - Rolling restart of 100% of regionservers (sleep 5 sec)
 
-#### Policies:  
+#### Policies:
+
 A policy is a strategy for executing one or more actions. The default policy
 executes a random action every minute based on predefined action weights.
 A given policy will be executed until ChaosMonkey is interrupted.

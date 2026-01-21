@@ -366,8 +366,8 @@ When you create a Column Family, you can specify the maximum number of versions 
 <Callout type="info">
   In some situations, older versions can be inadvertently resurrected if a newer version is
   explicitly deleted. See [Major compactions change query
-  results](/docs/datamodel#major-compactions-change-query-results) for a more in-depth explanation. This situation
-  is only possible before the compaction finishes.
+  results](/docs/datamodel#major-compactions-change-query-results) for a more in-depth explanation.
+  This situation is only possible before the compaction finishes.
 </Callout>
 
 In theory, major compactions improve performance. However, on a highly loaded system, major compactions can require an inappropriate number of resources and adversely affect performance. In a default configuration, major compactions are scheduled automatically to run once in a 7-day period. This is sometimes inappropriate for systems in production. You can manage major compactions manually. See [Managed Compactions](/docs/configuration/important#managed-compactions).
@@ -413,10 +413,11 @@ The logic of this policy can be examined in hbase-server/src/main/java/org/apach
     - Do size-based sanity checks against each StoreFile in this set of StoreFiles.
       - If the size of this StoreFile is larger than `hbase.hstore.compaction.max.size`, take it out of consideration.
       - If the size is greater than or equal to `hbase.hstore.compaction.min.size`, sanity-check it against the file-based ratio to see whether it is too large to be considered.
-      
+
       The sanity-checking is successful if:
       - There is only one StoreFile in this set, or
       - For each StoreFile, its size multiplied by `hbase.hstore.compaction.ratio` (or `hbase.hstore.compaction.ratio.offpeak` if off-peak hours are configured and it is during off-peak hours) is less than the sum of the sizes of the other HFiles in the set.
+
 5.  If this set of StoreFiles is still in consideration, compare it to the previously-selected best compaction. If it is better, replace the previously-selected best compaction with this one.
 6.  When the entire list of potential compactions has been processed, perform the best compaction that was found. If no StoreFiles were selected for compaction, but there are multiple StoreFiles, assume the algorithm is stuck (see [Being Stuck](/docs/architecture/regions#being-stuck)) and if so, perform the smallest compaction that was found in step 3.
 
@@ -466,7 +467,7 @@ This table contains the main configuration parameters for compaction. This list 
   - A large ratio, such as 10, will produce a single giant StoreFile. Conversely, a value of .25, will produce behavior similar to the BigTable compaction algorithm, producing four StoreFiles.
   - A moderate value of between 1.0 and 1.4 is recommended. When tuning this value, you are balancing write costs with read costs. Raising the value (to something like 1.4) will have more write costs, because you will compact larger StoreFiles. However, during reads, HBase will need to seek through fewer StoreFiles to accomplish the read. Consider this approach if you cannot take advantage of [Bloom Filters](/docs/performance#bloom-filters).
   - Alternatively, you can lower this value to something like 1.0 to reduce the background cost of writes, and use to limit the number of StoreFiles touched during reads. For most cases, the default value is appropriate.  
-  **Default**: `1.2F`
+    **Default**: `1.2F`
 
 - `hbase.hstore.compaction.ratio.offpeak`  
    The compaction ratio used during off-peak compactions, if off-peak hours are also configured (see below). Expressed as a floating-point decimal. This allows for more aggressive (or less aggressive, if you set it lower than `hbase.hstore.compaction.ratio`) compaction during a set time period. Ignored if off-peak is disabled (default). This works the same as `hbase.hstore.compaction.ratio`.  
@@ -497,8 +498,9 @@ This table contains the main configuration parameters for compaction. This list 
 <Callout type="info" title="Legacy Information">
   This section has been preserved for historical reasons and refers to the way compaction worked
   prior to HBase 0.96.x. You can still use this behavior if you enable [RatioBasedCompactionPolicy
-  Algorithm](/docs/architecture/regions#ratiobasedcompactionpolicy-algorithm). For information on the way that
-  compactions work in HBase 0.96.x and later, see [Compaction](/docs/architecture/regions#compaction).
+  Algorithm](/docs/architecture/regions#ratiobasedcompactionpolicy-algorithm). For information on
+  the way that compactions work in HBase 0.96.x and later, see
+  [Compaction](/docs/architecture/regions#compaction).
 </Callout>
 
 To understand the core algorithm for StoreFile selection, there is some ASCII-art in the Store source code that will serve as useful reference.
@@ -781,11 +783,11 @@ You can improve this pattern for your own data. A good rule is to aim for a stri
 
 **Stripe Sizing Settings**
 
-| Setting                                 | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Setting                                 | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `hbase.store.stripe.initialStripeCount` | The number of stripes to create when stripe compaction is enabled. You can use it as follows:<br/>- For relatively uniform row keys, if you know the approximate target number of stripes from the above, you can avoid some splitting overhead by starting with several stripes (2, 5, 10...). If the early data is not representative of overall row key distribution, this will not be as efficient.<br/>- For existing tables with a large amount of data, this setting will effectively pre-split your stripes.<br/>- For keys such as hash-prefixed sequential keys, with more than one hash prefix per region, pre-splitting may make sense. |
-| `hbase.store.stripe.sizeToSplit`        | The maximum size a stripe grows before splitting. Use this in conjunction with `hbase.store.stripe.splitPartCount` to control the target stripe size (`sizeToSplit = splitPartsCount * target stripe size`), according to the above sizing considerations.                                                                                                                                                                                                                                                                                                                                                                                         |
-| `hbase.store.stripe.splitPartCount`     | The number of new stripes to create when splitting a stripe. The default is 2, which is appropriate for most cases. For non-uniform row keys, you can experiment with increasing the number to 3 or 4, to isolate the arriving updates into narrower slice of the region without additional splits being required.                                                                                                                                                                                                                                                                                                                                 |
+| `hbase.store.stripe.sizeToSplit`        | The maximum size a stripe grows before splitting. Use this in conjunction with `hbase.store.stripe.splitPartCount` to control the target stripe size (`sizeToSplit = splitPartsCount * target stripe size`), according to the above sizing considerations.                                                                                                                                                                                                                                                                                                                                                                                          |
+| `hbase.store.stripe.splitPartCount`     | The number of new stripes to create when splitting a stripe. The default is 2, which is appropriate for most cases. For non-uniform row keys, you can experiment with increasing the number to 3 or 4, to isolate the arriving updates into narrower slice of the region without additional splits being required.                                                                                                                                                                                                                                                                                                                                  |
 
 **MemStore Size Settings**  
 By default, the flush creates several files from one MemStore, according to existing stripe boundaries and row keys to flush. This approach minimizes write amplification, but can be undesirable if the MemStore is small and there are many stripes, because the files will be too small.  

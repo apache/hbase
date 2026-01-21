@@ -5,9 +5,9 @@ description: "Sample configuration files and setup examples for distributed HBas
 
 ## Basic Distributed HBase Install
 
-Here is a basic configuration example for a distributed ten node cluster: \* The nodes are named `example0`, `example1`, etc., through node `example9` in this example. \* The HBase Master and the HDFS NameNode are running on the node `example0`. \* RegionServers run on nodes `example1`-`example9`. \* A 3-node ZooKeeper ensemble runs on `example1`, `example2`, and `example3` on the default ports. \* ZooKeeper data is persisted to the directory */export/zookeeper*.
+Here is a basic configuration example for a distributed ten node cluster: \* The nodes are named `example0`, `example1`, etc., through node `example9` in this example. \* The HBase Master and the HDFS NameNode are running on the node `example0`. \* RegionServers run on nodes `example1`-`example9`. \* A 3-node ZooKeeper ensemble runs on `example1`, `example2`, and `example3` on the default ports. \* ZooKeeper data is persisted to the directory _/export/zookeeper_.
 
-Below we show what the main configuration files — *hbase-site.xml*, *regionservers*, and *hbase-env.sh* — found in the HBase *conf* directory might look like.
+Below we show what the main configuration files — _hbase-site.xml_, _regionservers_, and _hbase-env.sh_ — found in the HBase _conf_ directory might look like.
 
 ### hbase-site.xml
 
@@ -43,7 +43,7 @@ Below we show what the main configuration files — *hbase-site.xml*, *regionser
 </configuration>
 ```
 
-### *regionservers*
+### _regionservers_
 
 In this file you list the nodes that will run RegionServers. In our case, these nodes are `example1`-`example9`.
 
@@ -61,7 +61,7 @@ example9
 
 ### hbase-env.sh [#configuration-example-basic-distributed-hbase-install-hbase-env-sh]
 
-The following lines in the *hbase-env.sh* file show how to set the `JAVA_HOME` environment variable (required for HBase) and set the heap to 4 GB (rather than the default value of 1 GB). If you copy and paste this example, be sure to adjust the `JAVA_HOME` to suit your environment.
+The following lines in the _hbase-env.sh_ file show how to set the `JAVA_HOME` environment variable (required for HBase) and set the heap to 4 GB (rather than the default value of 1 GB). If you copy and paste this example, be sure to adjust the `JAVA_HOME` to suit your environment.
 
 ```bash
 # The java implementation to use.
@@ -71,4 +71,4 @@ export JAVA_HOME=/usr/java/jdk1.8.0/
 export HBASE_HEAPSIZE=4G
 ```
 
-Use rsync to copy the content of the *conf* directory to all nodes of the cluster.
+Use rsync to copy the content of the _conf_ directory to all nodes of the cluster.

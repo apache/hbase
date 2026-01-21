@@ -18,17 +18,18 @@ The implementation can be set at the HBase service leve in **hbase-site.xml** or
 Table or Column Family via the TableDescriptor configuration.
 
 <Callout type="info">
-When the store file tracking implementation is specified in **hbase_site.xml**, this configuration is also propagated into a tables configuration at table creation time. This is to avoid dangerous configuration mismatches between processes, which
-could potentially lead to data loss.
+  When the store file tracking implementation is specified in **hbase_site.xml**, this configuration
+  is also propagated into a tables configuration at table creation time. This is to avoid dangerous
+  configuration mismatches between processes, which could potentially lead to data loss.
 </Callout>
 
 ## Available Implementations
 
 Store File Tracking initial version provides three builtin implementations:
 
-* DEFAULT
-* FILE
-* MIGRATION
+- DEFAULT
+- FILE
+- MIGRATION
 
 ### DEFAULT
 
@@ -62,8 +63,8 @@ implementation, so that the _new tracker_ can safely build its list of tracked f
 list of the _current tracker_.
 
 <Callout type="info">
-MIGRATION tracker should NOT be set at global configuration. To use it, follow below section
-about setting Store File Tacking at Table or Column Family configuration.
+  MIGRATION tracker should NOT be set at global configuration. To use it, follow below section about
+  setting Store File Tacking at Table or Column Family configuration.
 </Callout>
 
 ### Configuring for Table or Column Family
@@ -119,7 +120,7 @@ alter 'my-table', CONFIGURATION => {'hbase.store.file-tracker.impl' => 'FILE'}
 ### Specifying trackers during snapshot recovery
 
 It's also possible to specify a given store file tracking implementation when recovering a snapshot
-using the _CLONE_SFT_ option of  _clone_snasphot_ command. This is useful when recovering old
+using the _CLONE_SFT_ option of _clone_snasphot_ command. This is useful when recovering old
 snapshots, taken prior to a change in the global configuration, or if the snapshot has been
 imported from a different cluster that had a different store file tracking setting.
 Because snapshots preserve table and colum family descriptors, a simple restore would reload
@@ -133,7 +134,6 @@ clone_snapshot 'snapshotName', 'namespace:tableName', {CLONE_SFT=>'FILE'}
 ```
 
 <Callout type="info">
-The option to specify the tracker during snapshot recovery is only available for the
-_clone_snapshot_ command. The _restore_snapshot_ command does not support this parameter.
+  The option to specify the tracker during snapshot recovery is only available for the
+  _clone_snapshot_ command. The _restore_snapshot_ command does not support this parameter.
 </Callout>
-

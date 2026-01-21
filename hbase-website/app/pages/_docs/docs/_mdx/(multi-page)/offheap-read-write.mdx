@@ -9,7 +9,7 @@ To help reduce P99/P999 RPC latencies, HBase 2.x has made the read and write pat
 allocated in offheap memory outside of the purview of the JVM garbage collector with attendent reduction in GC pressure.
 In the write path, the request packet received from client will be read in on a pre-allocated offheap buffer and retained
 offheap until those cells are successfully persisted to the WAL and Memstore. The memory data structure in Memstore does
-not directly store the cell memory, but references the cells encoded in the offheap buffers.  Similarly for the read path.
+not directly store the cell memory, but references the cells encoded in the offheap buffers. Similarly for the read path.
 We'll try to read the block cache first and if a cache misses, we'll go to the HFile and read the respective block. The
 workflow from reading blocks to sending cells to client does its best to avoid on-heap memory allocations reducing the
 amount of work the GC has to do.
@@ -31,13 +31,13 @@ and [Offheap Read-Path in Production - The Alibaba story](https://blogs.apache.o
 For an end-to-end off-heaped read-path, all you have to do is enable an off-heap backed [Off-heap Block Cache](/docs/architecture/regionserver#off-heap-block-cache)(BC).
 To do this, configure _hbase.bucketcache.ioengine_ to be _offheap_ in _hbase-site.xml_ (See [BucketCache Deploy Modes](/docs/architecture/regionserver#bucketcache-deploy-modes) to learn
 more about _hbase.bucketcache.ioengine_ options). Also specify the total capacity of the BC using `hbase.bucketcache.size`.
-Please remember to adjust value of 'HBASE_OFFHEAPSIZE' in _hbase-env.sh_ (See [BucketCache Example Configuration](/docs/architecture/regionserver#bucketcache-example-configuration) for help sizing and an example
+Please remember to adjust value of 'HBASE*OFFHEAPSIZE' in \_hbase-env.sh* (See [BucketCache Example Configuration](/docs/architecture/regionserver#bucketcache-example-configuration) for help sizing and an example
 enabling). This configuration is for specifying the maximum possible off-heap memory allocation for the RegionServer java
 process. This should be bigger than the off-heap BC size to accommodate usage by other features making use of off-heap memory
 such as Server RPC buffer pool and short-circuit reads (See discussion in [BucketCache Example Configuration](/docs/architecture/regionserver#bucketcache-example-configuration)).
 
 Please keep in mind that there is no default for `hbase.bucketcache.ioengine` which means the `BlockCache` is OFF by default
-(See the "Direct Memory Usage In HBase" info section in [BucketCache Example Configuration](/docs/architecture/regionserver#bucketcache-example-configuration)). 
+(See the "Direct Memory Usage In HBase" info section in [BucketCache Example Configuration](/docs/architecture/regionserver#bucketcache-example-configuration)).
 
 This is all you need to do to enable off-heap read path. Most buffers in HBase are already off-heap. With BC off-heap,
 the read pipeline will copy data between HDFS and the server socket — caveat hbase.ipc.server.reservoir.initial.max —
@@ -54,10 +54,11 @@ If this pool is turned off, the server will create temp buffers onheap to accumu
 make a result cell block. This can impact the GC on a highly read loaded server.
 
 <Callout type="info">
-The config keys which start with prefix `hbase.ipc.server.reservoir` are deprecated in hbase-3.x (the
-internal pool implementation changed). If you are still in hbase-2.2.x or older, then just use the old config
-keys. Otherwise if in hbase-3.x or hbase-2.3.x+, please use the new config keys
-(See [deprecated and new configs in HBase3.x](/docs/offheap-read-write#read-block-from-hdfs-to-offheap-directly))
+  The config keys which start with prefix `hbase.ipc.server.reservoir` are deprecated in hbase-3.x
+  (the internal pool implementation changed). If you are still in hbase-2.2.x or older, then just
+  use the old config keys. Otherwise if in hbase-3.x or hbase-2.3.x+, please use the new config keys
+  (See [deprecated and new configs in
+  HBase3.x](/docs/offheap-read-write#read-block-from-hdfs-to-offheap-directly))
 </Callout>
 
 Next thing to tune is the ByteBuffer pool on the RPC server side. The user can tune this pool with respect to how
@@ -108,11 +109,11 @@ in the next CP hook call etc. For such cases, pls clone the required fields of t
 
 In HBase-2.x, the RegionServer will read blocks from HDFS to a temporary onheap ByteBuffer and then flush to
 the BucketCache. Even if the BucketCache is offheap, we will first pull the HDFS read onheap before writing
-it out to the offheap BucketCache.  We can observe much GC pressure when cache hit ratio low (e.g. a cacheHitRatio ~ 60% ).
+it out to the offheap BucketCache. We can observe much GC pressure when cache hit ratio low (e.g. a cacheHitRatio ~ 60% ).
 [HBASE-21879](https://issues.apache.org/jira/browse/HBASE-21879) addresses this issue (Requires hbase-2.3.x/hbase-3.x).
 It depends on there being a supporting HDFS being in place (hadoop-2.10.x or hadoop-3.3.x) and it may require patching
 HBase itself (as of this writing); see
-[HBASE-21879 Read HFile's block to ByteBuffer directly instead of to byte for reducing young gc purpose](https://issues.apache.org/jira/browse/HBASE-21879). 
+[HBASE-21879 Read HFile's block to ByteBuffer directly instead of to byte for reducing young gc purpose](https://issues.apache.org/jira/browse/HBASE-21879).
 Appropriately setup, reads from HDFS can be into offheap buffers passed offheap to the offheap BlockCache to cache.
 
 For more details about the design and performance improvement, please see the
@@ -124,16 +125,16 @@ hbase-2.2.x configurations discussed above in the [Tuning the RPC buffer pool](/
 in the [Tuning the RPC buffer pool](/docs/offheap-read-write#tuning-the-rpc-buffer-pool) since the implementations have similar configurations.
 
 1. `hbase.server.allocator.pool.enabled` is for whether the RegionServer will use the pooled offheap ByteBuffer allocator. Default
-value is true. In hbase-2.x, the deprecated `hbase.ipc.server.reservoir.enabled` did similar and is mapped to this config
-until support for the old configuration is removed. This new name will be used in hbase-3.x and hbase-2.3.x+.
+   value is true. In hbase-2.x, the deprecated `hbase.ipc.server.reservoir.enabled` did similar and is mapped to this config
+   until support for the old configuration is removed. This new name will be used in hbase-3.x and hbase-2.3.x+.
 2. `hbase.server.allocator.minimal.allocate.size` is the threshold at which we start allocating from the pool. Otherwise the
-request will be allocated from onheap directly because it would be wasteful allocating small stuff from our pool of fixed-size
-ByteBuffers. The default minimum is `hbase.server.allocator.buffer.size/6`.
-3. `hbase.server.allocator.max.buffer.count`: The `ByteBuffAllocator`, the new pool/reservoir implementation,  has fixed-size
-ByteBuffers. This config is for how many buffers to pool. Its default value is 2MB * 2 * hbase.regionserver.handler.count / 65KB
-(similar to the discussion above in [Tuning the RPC buffer pool](/docs/offheap-read-write#tuning-the-rpc-buffer-pool)). If the default `hbase.regionserver.handler.count` is 30, then the default will be 1890.
+   request will be allocated from onheap directly because it would be wasteful allocating small stuff from our pool of fixed-size
+   ByteBuffers. The default minimum is `hbase.server.allocator.buffer.size/6`.
+3. `hbase.server.allocator.max.buffer.count`: The `ByteBuffAllocator`, the new pool/reservoir implementation, has fixed-size
+   ByteBuffers. This config is for how many buffers to pool. Its default value is 2MB _ 2 _ hbase.regionserver.handler.count / 65KB
+   (similar to the discussion above in [Tuning the RPC buffer pool](/docs/offheap-read-write#tuning-the-rpc-buffer-pool)). If the default `hbase.regionserver.handler.count` is 30, then the default will be 1890.
 4. `hbase.server.allocator.buffer.size`: The byte size of each ByteBuffer. The default value is 66560 (65KB), here we choose 65KB instead of 64KB
-because of [HBASE-22532](https://issues.apache.org/jira/browse/HBASE-22532).
+   because of [HBASE-22532](https://issues.apache.org/jira/browse/HBASE-22532).
 
 The three config keys —`hbase.ipc.server.reservoir.enabled`, `hbase.ipc.server.reservoir.initial.buffer.size` and `hbase.ipc.server.reservoir.initial.max` — introduced in hbase-2.x
 have been renamed and deprecated in hbase-3.x/hbase-2.3.x. Please use the new config keys instead:
@@ -145,8 +146,8 @@ Next, we have some suggestions regards performance.
 The ByteBuffAllocator will allocate ByteBuffer from the DirectByteBuffer pool first. If
 there's no available ByteBuffer in the pool, then we will allocate the ByteBuffers from onheap.
 By default, we will pre-allocate 4MB for each RPC handler (The handler count is determined by the config:
-`hbase.regionserver.handler.count`, it has the default value 30) . That's to say,  if your `hbase.server.allocator.buffer.size`
-is 65KB, then your pool will have 2MB * 2 / 65KB * 30 = 945 DirectByteBuffer.  If you have a large scan and a big cache,
+`hbase.regionserver.handler.count`, it has the default value 30) . That's to say, if your `hbase.server.allocator.buffer.size`
+is 65KB, then your pool will have 2MB _ 2 / 65KB _ 30 = 945 DirectByteBuffer. If you have a large scan and a big cache,
 you may have a RPC response whose bytes size is greater than 2MB (another 2MB for receiving rpc request), then it will
 be better to increase the `hbase.server.allocator.max.buffer.count`.
 
@@ -163,7 +164,7 @@ heapAllocationRatio >= hbase.server.allocator.minimal.allocate.size / hbase.serv
 **Please make sure the buffer size is greater than your block size.**  
 We have the default block size of 64KB, so almost all of the data blocks will be 64KB + a small delta, where the delta is
 very small, depending on the size of the last Cell. If we set `hbase.server.allocator.buffer.size`=64KB,
-then each block will be allocated as two ByteBuffers:  one 64KB DirectByteBuffer and one HeapByteBuffer for the delta bytes.
+then each block will be allocated as two ByteBuffers: one 64KB DirectByteBuffer and one HeapByteBuffer for the delta bytes.
 Ideally, we should let the data block to be allocated as one ByteBuffer; it has a simpler data structure, faster access speed,
 and less heap usage. Also, if the blocks are a composite of multiple ByteBuffers, to validate the checksum
 we have to perform a temporary heap copy (see [HBASE-21917](https://issues.apache.org/jira/browse/HBASE-21917))
@@ -194,4 +195,3 @@ The decision to flush a MemStore considers both the on-heap and off-heap usage o
 compare them against the region flush size (128MB, by default). Globally, on-heap size occupancy of all memstores are tracked as well as off-heap size. When any of
 these sizes breache the lower mark (`hbase.regionserver.global.memstore.size.lower.limit`) or the maximum size `hbase.regionserver.global.memstore.size`), all
 regions are selected for forced flushes.
-

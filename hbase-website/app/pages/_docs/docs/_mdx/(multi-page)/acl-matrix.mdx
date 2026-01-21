@@ -15,12 +15,12 @@ A scope corresponds to a level of the data model. From broadest to narrowest, th
 
 #### Scopes
 
-* Global
-* Namespace (NS)
-* Table
-* Column Family (CF)
-* Column Qualifier (CQ)
-* Cell
+- Global
+- Namespace (NS)
+- Table
+- Column Family (CF)
+- Column Qualifier (CQ)
+- Cell
 
 For instance, a permission granted at table level dominates any grants done at the Column Family, Column Qualifier, or cell level. The user can do what that grant implies at any location in the table. A permission granted at global scope dominates all: the user is always allowed to take that action everywhere.
 
@@ -30,12 +30,12 @@ Possible permissions include the following:
 
 #### Permissions
 
-* Superuser - a special user that belongs to group "supergroup" and has unlimited access
-* Admin (A)
-* Create (C)
-* Write (W)
-* Read (R)
-* Execute (X)
+- Superuser - a special user that belongs to group "supergroup" and has unlimited access
+- Admin (A)
+- Create (C)
+- Write (W)
+- Read (R)
+- Execute (X)
 
 For the most part, permissions work in an expected way, with the following caveats:
 
@@ -54,102 +54,101 @@ In case the table goes out of date, the unit tests which check for accuracy of p
 
 ## ACL Matrix
 
-| Interface | Operation | Permissions |
-| --------- | --------- | ----------- |
-| Master | createTable | superuser\|global(C)\|NS(C) |
-|  | modifyTable | superuser\|global(A)\|global(C)\|NS(A)\|NS(C)\|TableOwner\|table(A)\|table(C) |
-|  | deleteTable | superuser\|global(A)\|global(C)\|NS(A)\|NS(C)\|TableOwner\|table(A)\|table(C) |
-|  | truncateTable | superuser\|global(A)\|global(C)\|NS(A)\|NS(C)\|TableOwner\|table(A)\|table(C) |
-|  | addColumn | superuser\|global(A)\|global(C)\|NS(A)\|NS(C)\|TableOwner\|table(A)\|table(C) |
-|  | modifyColumn | superuser\|global(A)\|global(C)\|NS(A)\|NS(C)\|TableOwner\|table(A)\|table(C)\|column(A)\|column(C) |
-|  | deleteColumn | superuser\|global(A)\|global(C)\|NS(A)\|NS(C)\|TableOwner\|table(A)\|table(C)\|column(A)\|column(C) |
-|  | enableTable | superuser\|global(A)\|global(C)\|NS(A)\|NS(C)\|TableOwner\|table(A)\|table(C) |
-|  | disableTable | superuser\|global(A)\|global(C)\|NS(A)\|NS(C)\|TableOwner\|table(A)\|table(C) |
-|  | disableAclTable | Not allowed |
-|  | move | superuser\|global(A)\|NS(A)\|TableOwner\|table(A) |
-|  | assign | superuser\|global(A)\|NS(A)\|TableOwner\|table(A) |
-|  | unassign | superuser\|global(A)\|NS(A)\|TableOwner\|table(A) |
-|  | regionOffline | superuser\|global(A)\|NS(A)\|TableOwner\|table(A) |
-|  | balance | superuser\|global(A) |
-|  | balanceSwitch | superuser\|global(A) |
-|  | shutdown | superuser\|global(A) |
-|  | stopMaster | superuser\|global(A) |
-|  | snapshot | superuser\|global(A)\|NS(A)\|TableOwner\|table(A) |
-|  | listSnapshot | superuser\|global(A)\|SnapshotOwner |
-|  | cloneSnapshot | superuser\|global(A)\|(SnapshotOwner & TableName matches) |
-|  | restoreSnapshot | superuser\|global(A)\|SnapshotOwner & (NS(A)\|TableOwner\|table(A)) |
-|  | deleteSnapshot | superuser\|global(A)\|SnapshotOwner |
-|  | createNamespace | superuser\|global(A) |
-|  | deleteNamespace | superuser\|global(A) |
-|  | modifyNamespace | superuser\|global(A) |
-|  | getNamespaceDescriptor | superuser\|global(A)\|NS(A) |
-|  | listNamespaceDescriptors* | superuser\|global(A)\|NS(A) |
-|  | flushTable | superuser\|global(A)\|global(C)\|NS(A)\|NS(C)\|TableOwner\|table(A)\|table(C) |
-|  | getTableDescriptors* | superuser\|global(A)\|global(C)\|NS(A)\|NS(C)\|TableOwner\|table(A)\|table(C) |
-|  | getTableNames* | superuser\|TableOwner\|Any global or table perm |
-|  | setUserQuota(global level) | superuser\|global(A) |
-|  | setUserQuota(namespace level) | superuser\|global(A) |
-|  | setUserQuota(Table level) | superuser\|global(A)\|NS(A)\|TableOwner\|table(A) |
-|  | setTableQuota | superuser\|global(A)\|NS(A)\|TableOwner\|table(A) |
-|  | setNamespaceQuota | superuser\|global(A) |
-|  | addReplicationPeer | superuser\|global(A) |
-|  | removeReplicationPeer | superuser\|global(A) |
-|  | enableReplicationPeer | superuser\|global(A) |
-|  | disableReplicationPeer | superuser\|global(A) |
-|  | getReplicationPeerConfig | superuser\|global(A) |
-|  | updateReplicationPeerConfig | superuser\|global(A) |
-|  | listReplicationPeers | superuser\|global(A) |
-|  | getClusterStatus | any user |
-| Region | openRegion | superuser\|global(A) |
-|  | closeRegion | superuser\|global(A) |
-|  | flush | superuser\|global(A)\|global(C)\|TableOwner\|table(A)\|table(C) |
-|  | split | superuser\|global(A)\|TableOwner\|TableOwner\|table(A) |
-|  | compact | superuser\|global(A)\|global(C)\|TableOwner\|table(A)\|table(C) |
-|  | getClosestRowBefore | superuser\|global(R)\|NS(R)\|TableOwner\|table(R)\|CF(R)\|CQ(R) |
-|  | getOp | superuser\|global(R)\|NS(R)\|TableOwner\|table(R)\|CF(R)\|CQ(R) |
-|  | exists | superuser\|global(R)\|NS(R)\|TableOwner\|table(R)\|CF(R)\|CQ(R) |
-|  | put | superuser\|global(W)\|NS(W)\|table(W)\|TableOwner\|CF(W)\|CQ(W) |
-|  | delete | superuser\|global(W)\|NS(W)\|table(W)\|TableOwner\|CF(W)\|CQ(W) |
-|  | batchMutate | superuser\|global(W)\|NS(W)\|TableOwner\|table(W)\|CF(W)\|CQ(W) |
-|  | checkAndPut | superuser\|global(RW)\|NS(RW)\|TableOwner\|table(RW)\|CF(RW)\|CQ(RW) |
-|  | checkAndPutAfterRowLock | superuser\|global(R)\|NS(R)\|TableOwner\|Table(R)\|CF(R)\|CQ(R) |
-|  | checkAndDelete   | superuser\|global(RW)\|NS(RW)\|TableOwner\|table(RW)\|CF(RW)\|CQ(RW) |
-|  | checkAndDeleteAfterRowLock | superuser\|global(R)\|NS(R)\|TableOwner\|table(R)\|CF(R)\|CQ(R) |
-|  | incrementColumnValue | superuser\|global(W)\|NS(W)\|TableOwner\|table(W)\|CF(W)\|CQ(W) |
-|  | append | superuser\|global(W)\|NS(W)\|TableOwner\|table(W)\|CF(W)\|CQ(W) |
-|  | appendAfterRowLock | superuser\|global(W)\|NS(W)\|TableOwner\|table(W)\|CF(W)\|CQ(W) |
-|  | increment | superuser\|global(W)\|NS(W)\|TableOwner\|table(W)\|CF(W)\|CQ(W) |
-|  | incrementAfterRowLock | superuser\|global(W)\|NS(W)\|TableOwner\|table(W)\|CF(W)\|CQ(W) |
-|  | scannerOpen | superuser\|global(R)\|NS(R)\|TableOwner\|table(R)\|CF(R)\|CQ(R) |
-|  | scannerNext | superuser\|global(R)\|NS(R)\|TableOwner\|table(R)\|CF(R)\|CQ(R) |
-|  | scannerClose | superuser\|global(R)\|NS(R)\|TableOwner\|table(R)\|CF(R)\|CQ(R) |
-|  | bulkLoadHFile | superuser\|global(C)\|TableOwner\|table(C)\|CF(C) |
-|  | prepareBulkLoad | superuser\|global(C)\|TableOwner\|table(C)\|CF(C) |
-|  | cleanupBulkLoad | superuser\|global(C)\|TableOwner\|table(C)\|CF(C) |
-| Endpoint | invoke | superuser\|global(X)\|NS(X)\|TableOwner\|table(X) |
-| AccessController | grant(global level) | global(A) |
-|  | grant(namespace level) | global(A)\|NS(A) |
-|  | grant(table level) | global(A)\|NS(A)\|TableOwner\|table(A)\|CF(A)\|CQ(A) |
-|  | revoke(global level) | global(A) |
-|  | revoke(namespace level) | global(A)\|NS(A) |
-|  | revoke(table level) | global(A)\|NS(A)\|TableOwner\|table(A)\|CF(A)\|CQ(A) |
-|  | getUserPermissions(global level) | global(A) |
-|  | getUserPermissions(namespace level) | global(A)\|NS(A) |
-|  | getUserPermissions(table level) | global(A)\|NS(A)\|TableOwner\|table(A)\|CF(A)\|CQ(A) |
-|  | hasPermission(table level) | global(A)\|SelfUserCheck |
-| RegionServer | stopRegionServer | superuser\|global(A) |
-|  | mergeRegions | superuser\|global(A) |
-|  | rollWALWriterRequest | superuser\|global(A) |
-|  | replicateLogEntries | superuser\|global(W) |
-| RSGroup | addRSGroup | superuser\|global(A) |
-|  | balanceRSGroup | superuser\|global(A) |
-|  | getRSGroupInfo | superuser\|global(A) |
-|  | getRSGroupInfoOfTable | superuser\|global(A) |
-|  | getRSGroupOfServer | superuser\|global(A) |
-|  | listRSGroups | superuser\|global(A) |
-|  | moveServers | superuser\|global(A) |
-|  | moveServersAndTables | superuser\|global(A) |
-|  | moveTables | superuser\|global(A) |
-|  | removeRSGroup | superuser\|global(A) |
-|  | removeServers | superuser\|global(A) |
-
+| Interface        | Operation                           | Permissions                                                                                         |
+| ---------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Master           | createTable                         | superuser\|global(C)\|NS(C)                                                                         |
+|                  | modifyTable                         | superuser\|global(A)\|global(C)\|NS(A)\|NS(C)\|TableOwner\|table(A)\|table(C)                       |
+|                  | deleteTable                         | superuser\|global(A)\|global(C)\|NS(A)\|NS(C)\|TableOwner\|table(A)\|table(C)                       |
+|                  | truncateTable                       | superuser\|global(A)\|global(C)\|NS(A)\|NS(C)\|TableOwner\|table(A)\|table(C)                       |
+|                  | addColumn                           | superuser\|global(A)\|global(C)\|NS(A)\|NS(C)\|TableOwner\|table(A)\|table(C)                       |
+|                  | modifyColumn                        | superuser\|global(A)\|global(C)\|NS(A)\|NS(C)\|TableOwner\|table(A)\|table(C)\|column(A)\|column(C) |
+|                  | deleteColumn                        | superuser\|global(A)\|global(C)\|NS(A)\|NS(C)\|TableOwner\|table(A)\|table(C)\|column(A)\|column(C) |
+|                  | enableTable                         | superuser\|global(A)\|global(C)\|NS(A)\|NS(C)\|TableOwner\|table(A)\|table(C)                       |
+|                  | disableTable                        | superuser\|global(A)\|global(C)\|NS(A)\|NS(C)\|TableOwner\|table(A)\|table(C)                       |
+|                  | disableAclTable                     | Not allowed                                                                                         |
+|                  | move                                | superuser\|global(A)\|NS(A)\|TableOwner\|table(A)                                                   |
+|                  | assign                              | superuser\|global(A)\|NS(A)\|TableOwner\|table(A)                                                   |
+|                  | unassign                            | superuser\|global(A)\|NS(A)\|TableOwner\|table(A)                                                   |
+|                  | regionOffline                       | superuser\|global(A)\|NS(A)\|TableOwner\|table(A)                                                   |
+|                  | balance                             | superuser\|global(A)                                                                                |
+|                  | balanceSwitch                       | superuser\|global(A)                                                                                |
+|                  | shutdown                            | superuser\|global(A)                                                                                |
+|                  | stopMaster                          | superuser\|global(A)                                                                                |
+|                  | snapshot                            | superuser\|global(A)\|NS(A)\|TableOwner\|table(A)                                                   |
+|                  | listSnapshot                        | superuser\|global(A)\|SnapshotOwner                                                                 |
+|                  | cloneSnapshot                       | superuser\|global(A)\|(SnapshotOwner & TableName matches)                                           |
+|                  | restoreSnapshot                     | superuser\|global(A)\|SnapshotOwner & (NS(A)\|TableOwner\|table(A))                                 |
+|                  | deleteSnapshot                      | superuser\|global(A)\|SnapshotOwner                                                                 |
+|                  | createNamespace                     | superuser\|global(A)                                                                                |
+|                  | deleteNamespace                     | superuser\|global(A)                                                                                |
+|                  | modifyNamespace                     | superuser\|global(A)                                                                                |
+|                  | getNamespaceDescriptor              | superuser\|global(A)\|NS(A)                                                                         |
+|                  | listNamespaceDescriptors\*          | superuser\|global(A)\|NS(A)                                                                         |
+|                  | flushTable                          | superuser\|global(A)\|global(C)\|NS(A)\|NS(C)\|TableOwner\|table(A)\|table(C)                       |
+|                  | getTableDescriptors\*               | superuser\|global(A)\|global(C)\|NS(A)\|NS(C)\|TableOwner\|table(A)\|table(C)                       |
+|                  | getTableNames\*                     | superuser\|TableOwner\|Any global or table perm                                                     |
+|                  | setUserQuota(global level)          | superuser\|global(A)                                                                                |
+|                  | setUserQuota(namespace level)       | superuser\|global(A)                                                                                |
+|                  | setUserQuota(Table level)           | superuser\|global(A)\|NS(A)\|TableOwner\|table(A)                                                   |
+|                  | setTableQuota                       | superuser\|global(A)\|NS(A)\|TableOwner\|table(A)                                                   |
+|                  | setNamespaceQuota                   | superuser\|global(A)                                                                                |
+|                  | addReplicationPeer                  | superuser\|global(A)                                                                                |
+|                  | removeReplicationPeer               | superuser\|global(A)                                                                                |
+|                  | enableReplicationPeer               | superuser\|global(A)                                                                                |
+|                  | disableReplicationPeer              | superuser\|global(A)                                                                                |
+|                  | getReplicationPeerConfig            | superuser\|global(A)                                                                                |
+|                  | updateReplicationPeerConfig         | superuser\|global(A)                                                                                |
+|                  | listReplicationPeers                | superuser\|global(A)                                                                                |
+|                  | getClusterStatus                    | any user                                                                                            |
+| Region           | openRegion                          | superuser\|global(A)                                                                                |
+|                  | closeRegion                         | superuser\|global(A)                                                                                |
+|                  | flush                               | superuser\|global(A)\|global(C)\|TableOwner\|table(A)\|table(C)                                     |
+|                  | split                               | superuser\|global(A)\|TableOwner\|TableOwner\|table(A)                                              |
+|                  | compact                             | superuser\|global(A)\|global(C)\|TableOwner\|table(A)\|table(C)                                     |
+|                  | getClosestRowBefore                 | superuser\|global(R)\|NS(R)\|TableOwner\|table(R)\|CF(R)\|CQ(R)                                     |
+|                  | getOp                               | superuser\|global(R)\|NS(R)\|TableOwner\|table(R)\|CF(R)\|CQ(R)                                     |
+|                  | exists                              | superuser\|global(R)\|NS(R)\|TableOwner\|table(R)\|CF(R)\|CQ(R)                                     |
+|                  | put                                 | superuser\|global(W)\|NS(W)\|table(W)\|TableOwner\|CF(W)\|CQ(W)                                     |
+|                  | delete                              | superuser\|global(W)\|NS(W)\|table(W)\|TableOwner\|CF(W)\|CQ(W)                                     |
+|                  | batchMutate                         | superuser\|global(W)\|NS(W)\|TableOwner\|table(W)\|CF(W)\|CQ(W)                                     |
+|                  | checkAndPut                         | superuser\|global(RW)\|NS(RW)\|TableOwner\|table(RW)\|CF(RW)\|CQ(RW)                                |
+|                  | checkAndPutAfterRowLock             | superuser\|global(R)\|NS(R)\|TableOwner\|Table(R)\|CF(R)\|CQ(R)                                     |
+|                  | checkAndDelete                      | superuser\|global(RW)\|NS(RW)\|TableOwner\|table(RW)\|CF(RW)\|CQ(RW)                                |
+|                  | checkAndDeleteAfterRowLock          | superuser\|global(R)\|NS(R)\|TableOwner\|table(R)\|CF(R)\|CQ(R)                                     |
+|                  | incrementColumnValue                | superuser\|global(W)\|NS(W)\|TableOwner\|table(W)\|CF(W)\|CQ(W)                                     |
+|                  | append                              | superuser\|global(W)\|NS(W)\|TableOwner\|table(W)\|CF(W)\|CQ(W)                                     |
+|                  | appendAfterRowLock                  | superuser\|global(W)\|NS(W)\|TableOwner\|table(W)\|CF(W)\|CQ(W)                                     |
+|                  | increment                           | superuser\|global(W)\|NS(W)\|TableOwner\|table(W)\|CF(W)\|CQ(W)                                     |
+|                  | incrementAfterRowLock               | superuser\|global(W)\|NS(W)\|TableOwner\|table(W)\|CF(W)\|CQ(W)                                     |
+|                  | scannerOpen                         | superuser\|global(R)\|NS(R)\|TableOwner\|table(R)\|CF(R)\|CQ(R)                                     |
+|                  | scannerNext                         | superuser\|global(R)\|NS(R)\|TableOwner\|table(R)\|CF(R)\|CQ(R)                                     |
+|                  | scannerClose                        | superuser\|global(R)\|NS(R)\|TableOwner\|table(R)\|CF(R)\|CQ(R)                                     |
+|                  | bulkLoadHFile                       | superuser\|global(C)\|TableOwner\|table(C)\|CF(C)                                                   |
+|                  | prepareBulkLoad                     | superuser\|global(C)\|TableOwner\|table(C)\|CF(C)                                                   |
+|                  | cleanupBulkLoad                     | superuser\|global(C)\|TableOwner\|table(C)\|CF(C)                                                   |
+| Endpoint         | invoke                              | superuser\|global(X)\|NS(X)\|TableOwner\|table(X)                                                   |
+| AccessController | grant(global level)                 | global(A)                                                                                           |
+|                  | grant(namespace level)              | global(A)\|NS(A)                                                                                    |
+|                  | grant(table level)                  | global(A)\|NS(A)\|TableOwner\|table(A)\|CF(A)\|CQ(A)                                                |
+|                  | revoke(global level)                | global(A)                                                                                           |
+|                  | revoke(namespace level)             | global(A)\|NS(A)                                                                                    |
+|                  | revoke(table level)                 | global(A)\|NS(A)\|TableOwner\|table(A)\|CF(A)\|CQ(A)                                                |
+|                  | getUserPermissions(global level)    | global(A)                                                                                           |
+|                  | getUserPermissions(namespace level) | global(A)\|NS(A)                                                                                    |
+|                  | getUserPermissions(table level)     | global(A)\|NS(A)\|TableOwner\|table(A)\|CF(A)\|CQ(A)                                                |
+|                  | hasPermission(table level)          | global(A)\|SelfUserCheck                                                                            |
+| RegionServer     | stopRegionServer                    | superuser\|global(A)                                                                                |
+|                  | mergeRegions                        | superuser\|global(A)                                                                                |
+|                  | rollWALWriterRequest                | superuser\|global(A)                                                                                |
+|                  | replicateLogEntries                 | superuser\|global(W)                                                                                |
+| RSGroup          | addRSGroup                          | superuser\|global(A)                                                                                |
+|                  | balanceRSGroup                      | superuser\|global(A)                                                                                |
+|                  | getRSGroupInfo                      | superuser\|global(A)                                                                                |
+|                  | getRSGroupInfoOfTable               | superuser\|global(A)                                                                                |
+|                  | getRSGroupOfServer                  | superuser\|global(A)                                                                                |
+|                  | listRSGroups                        | superuser\|global(A)                                                                                |
+|                  | moveServers                         | superuser\|global(A)                                                                                |
+|                  | moveServersAndTables                | superuser\|global(A)                                                                                |
+|                  | moveTables                          | superuser\|global(A)                                                                                |
+|                  | removeRSGroup                       | superuser\|global(A)                                                                                |
+|                  | removeServers                       | superuser\|global(A)                                                                                |

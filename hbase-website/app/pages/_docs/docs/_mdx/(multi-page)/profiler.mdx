@@ -28,49 +28,49 @@ or direct interaction with the infoserver.
 
 Examples:
 
-* To collect 30 second CPU profile of current process (returns FlameGraph svg)
+- To collect 30 second CPU profile of current process (returns FlameGraph svg)
   `curl http://localhost:16030/prof`
-* To collect 1 minute CPU profile of current process and output in tree format (html)
+- To collect 1 minute CPU profile of current process and output in tree format (html)
   `curl http://localhost:16030/prof?output=tree&duration=60`
-* To collect 30 second heap allocation profile of current process (returns FlameGraph svg)
+- To collect 30 second heap allocation profile of current process (returns FlameGraph svg)
   `curl http://localhost:16030/prof?event=alloc`
-* To collect lock contention profile of current process (returns FlameGraph svg)
+- To collect lock contention profile of current process (returns FlameGraph svg)
   `curl http://localhost:16030/prof?event=lock`
 
 The following event types are supported by async-profiler. Use the 'event' parameter to specify. Default is 'cpu'. Not all operating systems will support all types.
 
 Perf events:
 
-* cpu
-* page-faults
-* context-switches
-* cycles
-* instructions
-* cache-references
-* cache-misses
-* branches
-* branch-misses
-* bus-cycles
-* L1-dcache-load-misses
-* LLC-load-misses
-* dTLB-load-misses
+- cpu
+- page-faults
+- context-switches
+- cycles
+- instructions
+- cache-references
+- cache-misses
+- branches
+- branch-misses
+- bus-cycles
+- L1-dcache-load-misses
+- LLC-load-misses
+- dTLB-load-misses
 
 Java events:
 
-* alloc
-* lock
+- alloc
+- lock
 
 The following output formats are supported. Use the 'output' parameter to specify. Default is 'flamegraph'.
 
 Output formats:
 
-* summary: A dump of basic profiling statistics.
-* traces: Call traces.
-* flat: Flat profile (top N hot methods).
-* collapsed: Collapsed call traces in the format used by FlameGraph script. This is a collection of call stacks, where each line is a semicolon separated list of frames followed by a counter.
-* svg: FlameGraph in SVG format.
-* tree: Call tree in HTML format.
-* jfr: Call traces in Java Flight Recorder format.
+- summary: A dump of basic profiling statistics.
+- traces: Call traces.
+- flat: Flat profile (top N hot methods).
+- collapsed: Collapsed call traces in the format used by FlameGraph script. This is a collection of call stacks, where each line is a semicolon separated list of frames followed by a counter.
+- svg: FlameGraph in SVG format.
+- tree: Call tree in HTML format.
+- jfr: Call traces in Java Flight Recorder format.
 
 The 'duration' parameter specifies how long to collect trace data before generating output, specified in seconds. The default is 10 seconds.
 
@@ -81,4 +81,3 @@ In the UI, there is a new entry 'Profiler' in the top menu that will run the def
 ## Notes [#profiler-notes]
 
 The query parameter `pid` can be used to specify the process id of a specific process to be profiled. If this parameter is missing the local process in which the infoserver is embedded will be profiled. Profile targets that are not JVMs might work but is not specifically supported. There are security implications. Access to the infoserver should be appropriately restricted.
-

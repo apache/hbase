@@ -100,13 +100,13 @@ activation. Hadoop version profile activation is summarized by the following tab
 
 #### Hadoop Profile Activation by HBase Release
 
-|              | Hadoop2 Activation   | Hadoop3 Activation        |
-| ------------ | -------------------- | ------------------------- |
-| HBase 1.3+   | _active by default_  | `-Dhadoop.profile=3.0`    |
-| HBase 3.0+   | _not supported_      | _active by default_       |
+|            | Hadoop2 Activation  | Hadoop3 Activation     |
+| ---------- | ------------------- | ---------------------- |
+| HBase 1.3+ | _active by default_ | `-Dhadoop.profile=3.0` |
+| HBase 3.0+ | _not supported_     | _active by default_    |
 
 <Callout type="warn">
-Please note that where a profile is active by default, `hadoop.profile` must NOT be provided.
+  Please note that where a profile is active by default, `hadoop.profile` must NOT be provided.
 </Callout>
 
 Once the Hadoop major version profile is activated, the exact Hadoop version can be
@@ -210,7 +210,8 @@ on a platform where protoc fails, you will have to compile protoc from source, a
 You can disable the inline code generation by specifying `-Dprotoc.skip` in your maven arguments, allowing your build to proceed further.
 
 <Callout type="info">
-If you need to manually generate your protobuf files, you should not use `clean` in subsequent maven calls, as that will delete the newly generated files.
+  If you need to manually generate your protobuf files, you should not use `clean` in subsequent
+  maven calls, as that will delete the newly generated files.
 </Callout>
 
 Read the _hbase-protocol/README.txt_ for more details
@@ -291,6 +292,6 @@ mvn clean install -Paarch64 -DskipTests
 ```
 
 <Callout type="info">
-Protobuf is released with aarch64 protoc since version '3.5.0', and we are planning to
-upgrade protobuf later, then we don't have to add the profile '-Paarch64' anymore.
+  Protobuf is released with aarch64 protoc since version '3.5.0', and we are planning to upgrade
+  protobuf later, then we don't have to add the profile '-Paarch64' anymore.
 </Callout>
