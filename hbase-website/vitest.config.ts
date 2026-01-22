@@ -28,10 +28,16 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "happy-dom",
-    setupFiles: ["./tests/setup.ts"],
+    setupFiles: ["./unit-tests/setup.ts"],
     css: true,
     pool: "threads",
-    exclude: ["**/node_modules/**", "**/dist/**"]
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/e2e-tests/**",
+      "**/playwright-report/**",
+      "**/test-results/**"
+    ]
   },
   resolve: {
     alias: {

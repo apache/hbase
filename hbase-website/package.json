@@ -23,7 +23,7 @@
     "test:e2e:debug": "playwright test --debug",
     "extract-developers": "node scripts/extract-developers.js",
     "extract-hbase-config": "node scripts/extract-hbase-config.js",
-    "ci": "npm run lint && npm run typecheck && npm run extract-developers && npm run extract-hbase-config && npm run test:unit:run && npm run build && npm run test:e2e"
+    "ci": "npm run lint && npm run typecheck && npm run extract-developers && npm run extract-hbase-config && npm run test:unit:run && npm run test:e2e && npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
