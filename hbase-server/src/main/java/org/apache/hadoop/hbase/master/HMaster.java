@@ -1821,6 +1821,14 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
 
     LOG.debug("Stopping service threads");
+
+    // Stop SplitWALManager before procedure executor to unregister its WorkerAssigner from
+    // ServerManager and prevent NPE when serverAdded() is called after procedureExecutor is null.
+    // See HBASE-29804.
+    if (this.splitWALManager != null) {
+      this.splitWALManager.stop();
+    }
+
     // stop procedure executor prior to other services such as server manager and assignment
     // manager, as these services are important for some running procedures. See HBASE-24117 for
     // example.
