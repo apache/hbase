@@ -48,7 +48,7 @@ public class TestReadOnlyControllerRegionServerObserver {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestReadOnlyControllerRegionServerObserver.class);
 
-  ReadOnlyController readOnlyController;
+  RegionServerReadOnlyController regionServerReadOnlyController;
   HBaseConfiguration readOnlyConf;
 
   // Region Server Coprocessor mocking variables
@@ -58,7 +58,7 @@ public class TestReadOnlyControllerRegionServerObserver {
 
   @Before
   public void setup() throws Exception {
-    readOnlyController = new ReadOnlyController();
+    regionServerReadOnlyController = new RegionServerReadOnlyController();
     readOnlyConf = new HBaseConfiguration();
     readOnlyConf.setBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
 
@@ -79,45 +79,34 @@ public class TestReadOnlyControllerRegionServerObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreRollWALWriterRequestReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preRollWALWriterRequest(ctx);
+    regionServerReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionServerReadOnlyController.preRollWALWriterRequest(ctx);
   }
 
   @Test
   public void testPreRollWALWriterRequestNoException() throws IOException {
-    readOnlyController.preRollWALWriterRequest(ctx);
-  }
-
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreExecuteProceduresReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preExecuteProcedures(ctx);
-  }
-
-  @Test
-  public void testPreExecuteProceduresNoException() throws IOException {
-    readOnlyController.preExecuteProcedures(ctx);
+    regionServerReadOnlyController.preRollWALWriterRequest(ctx);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreReplicationSinkBatchMutateReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preReplicationSinkBatchMutate(ctx, walEntry, mutation);
+    regionServerReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionServerReadOnlyController.preReplicationSinkBatchMutate(ctx, walEntry, mutation);
   }
 
   @Test
   public void testPreReplicationSinkBatchMutateNoException() throws IOException {
-    readOnlyController.preReplicationSinkBatchMutate(ctx, walEntry, mutation);
+    regionServerReadOnlyController.preReplicationSinkBatchMutate(ctx, walEntry, mutation);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreReplicateLogEntriesReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preReplicateLogEntries(ctx);
+    regionServerReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionServerReadOnlyController.preReplicateLogEntries(ctx);
   }
 
   @Test
   public void testPreReplicateLogEntriesNoException() throws IOException {
-    readOnlyController.preReplicateLogEntries(ctx);
+    regionServerReadOnlyController.preReplicateLogEntries(ctx);
   }
 }

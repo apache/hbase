@@ -25,89 +25,48 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.BalanceRequest;
-import org.apache.hadoop.hbase.client.CheckAndMutate;
-import org.apache.hadoop.hbase.client.CheckAndMutateResult;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
-import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
-import org.apache.hadoop.hbase.coprocessor.EndpointObserver;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
-import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
-import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
-import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
-import org.apache.hadoop.hbase.filter.ByteArrayComparable;
-import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.GlobalQuotaSettings;
-import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
-import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
-import org.apache.hadoop.hbase.regionserver.ScanOptions;
-import org.apache.hadoop.hbase.regionserver.ScanType;
-import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.protobuf.Message;
-import org.apache.hbase.thirdparty.com.google.protobuf.Service;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-
 @CoreCoprocessor
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor, MasterObserver,
-  RegionObserver, RegionServerCoprocessor, RegionServerObserver, EndpointObserver, BulkLoadObserver,
-  ConfigurationObserver {
+public class MasterReadOnlyController
+  implements MasterCoprocessor, MasterObserver, ConfigurationObserver {
 
-  private static final Logger LOG = LoggerFactory.getLogger(ReadOnlyController.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MasterReadOnlyController.class);
+
   private MasterServices masterServices;
-
   private volatile boolean globalReadOnlyEnabled;
 
   private void internalReadOnlyGuard() throws DoNotRetryIOException {
     if (this.globalReadOnlyEnabled) {
       throw new DoNotRetryIOException("Operation not allowed in Read-Only Mode");
     }
-  }
-
-  private boolean isOnMeta(final ObserverContext<? extends RegionCoprocessorEnvironment> c) {
-    return TableName.isMetaTableName(c.getEnvironment().getRegionInfo().getTable());
   }
 
   @Override
@@ -128,311 +87,54 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   public void stop(CoprocessorEnvironment env) {
   }
 
-  /* ---- RegionObserver Overrides ---- */
   @Override
-  public Optional<RegionObserver> getRegionObserver() {
-    return Optional.of(this);
-  }
-
-  @Override
-  public void preFlushScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c,
-    Store store, ScanOptions options, FlushLifeCycleTracker tracker) throws IOException {
-    if (!isOnMeta(c)) {
-      internalReadOnlyGuard();
+  public void onConfigurationChange(Configuration conf) {
+    boolean maybeUpdatedConfValue = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+    if (this.globalReadOnlyEnabled != maybeUpdatedConfValue) {
+      if (this.masterServices != null) {
+        manageActiveClusterIdFile(maybeUpdatedConfValue);
+      } else {
+        LOG.debug("Global R/O flag changed, but not running on master");
+      }
+      this.globalReadOnlyEnabled = maybeUpdatedConfValue;
+      LOG.info("Config {} has been dynamically changed to {}.",
+        HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, this.globalReadOnlyEnabled);
     }
-    RegionObserver.super.preFlushScannerOpen(c, store, options, tracker);
   }
 
-  @Override
-  public void preFlush(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
-    FlushLifeCycleTracker tracker) throws IOException {
-    if (!isOnMeta(c)) {
-      internalReadOnlyGuard();
+  private void manageActiveClusterIdFile(boolean newValue) {
+    MasterFileSystem mfs = this.masterServices.getMasterFileSystem();
+    FileSystem fs = mfs.getFileSystem();
+    Path rootDir = mfs.getRootDir();
+    Path activeClusterFile = new Path(rootDir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
+
+    try {
+      if (newValue) {
+        // ENABLING READ-ONLY (false -> true), delete the active cluster file.
+        LOG.debug("Global read-only mode is being ENABLED. Deleting active cluster file: {}",
+          activeClusterFile);
+        try {
+          fs.delete(activeClusterFile, false);
+          LOG.info("Successfully deleted active cluster file: {}", activeClusterFile);
+        } catch (IOException e) {
+          LOG.error(
+            "Failed to delete active cluster file: {}. "
+              + "Read-only flag will be updated, but file system state is inconsistent.",
+            activeClusterFile);
+        }
+      } else {
+        // DISABLING READ-ONLY (true -> false), create the active cluster file id file
+        int wait = mfs.getConfiguration().getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
+        FSUtils.setActiveClusterSuffix(fs, rootDir, mfs.getSuffixFileDataToWrite(), wait);
+      }
+    } catch (IOException e) {
+      // We still update the flag, but log that the operation failed.
+      LOG.error("Failed to perform file operation for read-only switch. "
+        + "Flag will be updated, but file system state may be inconsistent.", e);
     }
-    RegionObserver.super.preFlush(c, tracker);
   }
 
-  @Override
-  public InternalScanner preFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c,
-    Store store, InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
-    if (!isOnMeta(c)) {
-      internalReadOnlyGuard();
-    }
-    return RegionObserver.super.preFlush(c, store, scanner, tracker);
-  }
-
-  @Override
-  public void preMemStoreCompaction(ObserverContext<? extends RegionCoprocessorEnvironment> c,
-    Store store) throws IOException {
-    internalReadOnlyGuard();
-    RegionObserver.super.preMemStoreCompaction(c, store);
-  }
-
-  @Override
-  public void preMemStoreCompactionCompactScannerOpen(
-    ObserverContext<? extends RegionCoprocessorEnvironment> c, Store store, ScanOptions options)
-    throws IOException {
-    internalReadOnlyGuard();
-    RegionObserver.super.preMemStoreCompactionCompactScannerOpen(c, store, options);
-  }
-
-  @Override
-  public InternalScanner preMemStoreCompactionCompact(
-    ObserverContext<? extends RegionCoprocessorEnvironment> c, Store store, InternalScanner scanner)
-    throws IOException {
-    internalReadOnlyGuard();
-    return RegionObserver.super.preMemStoreCompactionCompact(c, store, scanner);
-  }
-
-  @Override
-  public void preCompactSelection(ObserverContext<? extends RegionCoprocessorEnvironment> c,
-    Store store, List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker)
-    throws IOException {
-    if (!isOnMeta(c)) {
-      internalReadOnlyGuard();
-    }
-    RegionObserver.super.preCompactSelection(c, store, candidates, tracker);
-  }
-
-  @Override
-  public void preCompactScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c,
-    Store store, ScanType scanType, ScanOptions options, CompactionLifeCycleTracker tracker,
-    CompactionRequest request) throws IOException {
-    if (!isOnMeta(c)) {
-      internalReadOnlyGuard();
-    }
-    RegionObserver.super.preCompactScannerOpen(c, store, scanType, options, tracker, request);
-  }
-
-  @Override
-  public InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> c,
-    Store store, InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
-    CompactionRequest request) throws IOException {
-    if (!isOnMeta(c)) {
-      internalReadOnlyGuard();
-    }
-    return RegionObserver.super.preCompact(c, store, scanner, scanType, tracker, request);
-  }
-
-  @Override
-  public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
-    WALEdit edit, Durability durability) throws IOException {
-    if (!isOnMeta(c)) {
-      internalReadOnlyGuard();
-    }
-    RegionObserver.super.prePut(c, put, edit, durability);
-  }
-
-  @Override
-  public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
-    WALEdit edit) throws IOException {
-    if (!isOnMeta(c)) {
-      internalReadOnlyGuard();
-    }
-    RegionObserver.super.prePut(c, put, edit);
-  }
-
-  @Override
-  public void preDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c, Delete delete,
-    WALEdit edit, Durability durability) throws IOException {
-    if (!isOnMeta(c)) {
-      internalReadOnlyGuard();
-    }
-    RegionObserver.super.preDelete(c, delete, edit, durability);
-  }
-
-  @Override
-  public void preDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c, Delete delete,
-    WALEdit edit) throws IOException {
-    if (!isOnMeta(c)) {
-      internalReadOnlyGuard();
-    }
-    RegionObserver.super.preDelete(c, delete, edit);
-  }
-
-  @Override
-  public void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
-    MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
-    if (!isOnMeta(c)) {
-      internalReadOnlyGuard();
-    }
-    RegionObserver.super.preBatchMutate(c, miniBatchOp);
-  }
-
-  @Override
-  public boolean preCheckAndPut(ObserverContext<? extends RegionCoprocessorEnvironment> c,
-    byte[] row, byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
-    Put put, boolean result) throws IOException {
-    if (!isOnMeta(c)) {
-      internalReadOnlyGuard();
-    }
-    return RegionObserver.super.preCheckAndPut(c, row, family, qualifier, op, comparator, put,
-      result);
-  }
-
-  @Override
-  public boolean preCheckAndPut(ObserverContext<? extends RegionCoprocessorEnvironment> c,
-    byte[] row, Filter filter, Put put, boolean result) throws IOException {
-    if (!isOnMeta(c)) {
-      internalReadOnlyGuard();
-    }
-    return RegionObserver.super.preCheckAndPut(c, row, filter, put, result);
-  }
-
-  @Override
-  public boolean preCheckAndPutAfterRowLock(
-    ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, byte[] family,
-    byte[] qualifier, CompareOperator op, ByteArrayComparable comparator, Put put, boolean result)
-    throws IOException {
-    if (!isOnMeta(c)) {
-      internalReadOnlyGuard();
-    }
-    return RegionObserver.super.preCheckAndPutAfterRowLock(c, row, family, qualifier, op,
-      comparator, put, result);
-  }
-
-  @Override
-  public boolean preCheckAndPutAfterRowLock(
-    ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, Filter filter, Put put,
-    boolean result) throws IOException {
-    if (!isOnMeta(c)) {
-      internalReadOnlyGuard();
-    }
-    return RegionObserver.super.preCheckAndPutAfterRowLock(c, row, filter, put, result);
-  }
-
-  @Override
-  public boolean preCheckAndDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c,
-    byte[] row, byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
-    Delete delete, boolean result) throws IOException {
-    if (!isOnMeta(c)) {
-      internalReadOnlyGuard();
-    }
-    return RegionObserver.super.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete,
-      result);
-  }
-
-  @Override
-  public boolean preCheckAndDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c,
-    byte[] row, Filter filter, Delete delete, boolean result) throws IOException {
-    if (!isOnMeta(c)) {
-      internalReadOnlyGuard();
-    }
-    return RegionObserver.super.preCheckAndDelete(c, row, filter, delete, result);
-  }
-
-  @Override
-  public boolean preCheckAndDeleteAfterRowLock(
-    ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, byte[] family,
-    byte[] qualifier, CompareOperator op, ByteArrayComparable comparator, Delete delete,
-    boolean result) throws IOException {
-    if (!isOnMeta(c)) {
-      internalReadOnlyGuard();
-    }
-    return RegionObserver.super.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op,
-      comparator, delete, result);
-  }
-
-  @Override
-  public boolean preCheckAndDeleteAfterRowLock(
-    ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, Filter filter,
-    Delete delete, boolean result) throws IOException {
-    if (!isOnMeta(c)) {
-      internalReadOnlyGuard();
-    }
-    return RegionObserver.super.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
-  }
-
-  @Override
-  public CheckAndMutateResult preCheckAndMutate(
-    ObserverContext<? extends RegionCoprocessorEnvironment> c, CheckAndMutate checkAndMutate,
-    CheckAndMutateResult result) throws IOException {
-    internalReadOnlyGuard();
-    return RegionObserver.super.preCheckAndMutate(c, checkAndMutate, result);
-  }
-
-  @Override
-  public CheckAndMutateResult preCheckAndMutateAfterRowLock(
-    ObserverContext<? extends RegionCoprocessorEnvironment> c, CheckAndMutate checkAndMutate,
-    CheckAndMutateResult result) throws IOException {
-    internalReadOnlyGuard();
-    return RegionObserver.super.preCheckAndMutateAfterRowLock(c, checkAndMutate, result);
-  }
-
-  @Override
-  public Result preAppend(ObserverContext<? extends RegionCoprocessorEnvironment> c, Append append)
-    throws IOException {
-    internalReadOnlyGuard();
-    return RegionObserver.super.preAppend(c, append);
-  }
-
-  @Override
-  public Result preAppend(ObserverContext<? extends RegionCoprocessorEnvironment> c, Append append,
-    WALEdit edit) throws IOException {
-    internalReadOnlyGuard();
-    return RegionObserver.super.preAppend(c, append, edit);
-  }
-
-  @Override
-  public Result preAppendAfterRowLock(ObserverContext<? extends RegionCoprocessorEnvironment> c,
-    Append append) throws IOException {
-    internalReadOnlyGuard();
-    return RegionObserver.super.preAppendAfterRowLock(c, append);
-  }
-
-  @Override
-  public Result preIncrement(ObserverContext<? extends RegionCoprocessorEnvironment> c,
-    Increment increment) throws IOException {
-    internalReadOnlyGuard();
-    return RegionObserver.super.preIncrement(c, increment);
-  }
-
-  @Override
-  public Result preIncrement(ObserverContext<? extends RegionCoprocessorEnvironment> c,
-    Increment increment, WALEdit edit) throws IOException {
-    internalReadOnlyGuard();
-    return RegionObserver.super.preIncrement(c, increment, edit);
-  }
-
-  @Override
-  public Result preIncrementAfterRowLock(ObserverContext<? extends RegionCoprocessorEnvironment> c,
-    Increment increment) throws IOException {
-    internalReadOnlyGuard();
-    return RegionObserver.super.preIncrementAfterRowLock(c, increment);
-  }
-
-  @Override
-  public void preReplayWALs(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
-    RegionInfo info, Path edits) throws IOException {
-    internalReadOnlyGuard();
-    RegionObserver.super.preReplayWALs(ctx, info, edits);
-  }
-
-  @Override
-  public void preBulkLoadHFile(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
-    List<Pair<byte[], String>> familyPaths) throws IOException {
-    internalReadOnlyGuard();
-    RegionObserver.super.preBulkLoadHFile(ctx, familyPaths);
-  }
-
-  @Override
-  public void preCommitStoreFile(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
-    byte[] family, List<Pair<Path, Path>> pairs) throws IOException {
-    internalReadOnlyGuard();
-    RegionObserver.super.preCommitStoreFile(ctx, family, pairs);
-  }
-
-  @Override
-  public void preWALAppend(ObserverContext<? extends RegionCoprocessorEnvironment> ctx, WALKey key,
-    WALEdit edit) throws IOException {
-    // Only allow this operation for meta table
-    if (!TableName.isMetaTableName(key.getTableName())) {
-      internalReadOnlyGuard();
-    }
-    RegionObserver.super.preWALAppend(ctx, key, edit);
-  }
-
-  /* ---- MasterObserver Overrides ---- */
   @Override
   public Optional<MasterObserver> getMasterObserver() {
     return Optional.of(this);
@@ -809,105 +511,5 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
     UserPermission userPermission) throws IOException {
     internalReadOnlyGuard();
     MasterObserver.super.preRevoke(ctx, userPermission);
-  }
-
-  /* ---- RegionServerObserver Overrides ---- */
-  @Override
-  public void preRollWALWriterRequest(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
-    throws IOException {
-    internalReadOnlyGuard();
-    RegionServerObserver.super.preRollWALWriterRequest(ctx);
-  }
-
-  @Override
-  public void preExecuteProcedures(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
-    throws IOException {
-    internalReadOnlyGuard();
-    RegionServerObserver.super.preExecuteProcedures(ctx);
-  }
-
-  @Override
-  public void preReplicationSinkBatchMutate(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-    AdminProtos.WALEntry walEntry, Mutation mutation) throws IOException {
-    internalReadOnlyGuard();
-    RegionServerObserver.super.preReplicationSinkBatchMutate(ctx, walEntry, mutation);
-  }
-
-  @Override
-  public void preReplicateLogEntries(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
-    throws IOException {
-    internalReadOnlyGuard();
-    RegionServerObserver.super.preReplicateLogEntries(ctx);
-  }
-
-  /* ---- EndpointObserver Overrides ---- */
-  @Override
-  public Message preEndpointInvocation(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
-    Service service, String methodName, Message request) throws IOException {
-    internalReadOnlyGuard();
-    return EndpointObserver.super.preEndpointInvocation(ctx, service, methodName, request);
-  }
-
-  /* ---- BulkLoadObserver Overrides ---- */
-  @Override
-  public void prePrepareBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx)
-    throws IOException {
-    internalReadOnlyGuard();
-    BulkLoadObserver.super.prePrepareBulkLoad(ctx);
-  }
-
-  @Override
-  public void preCleanupBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx)
-    throws IOException {
-    internalReadOnlyGuard();
-    BulkLoadObserver.super.preCleanupBulkLoad(ctx);
-  }
-
-  private void manageActiveClusterIdFile(boolean newValue) {
-    MasterFileSystem mfs = this.masterServices.getMasterFileSystem();
-    FileSystem fs = mfs.getFileSystem();
-    Path rootDir = mfs.getRootDir();
-    Path activeClusterFile = new Path(rootDir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
-
-    try {
-      if (newValue) {
-        // ENABLING READ-ONLY (false -> true), delete the active cluster file.
-        LOG.debug("Global read-only mode is being ENABLED. Deleting active cluster file: {}",
-          activeClusterFile);
-        try {
-          fs.delete(activeClusterFile, false);
-          LOG.info("Successfully deleted active cluster file: {}", activeClusterFile);
-        } catch (IOException e) {
-          LOG.error(
-            "Failed to delete active cluster file: {}. "
-              + "Read-only flag will be updated, but file system state is inconsistent.",
-            activeClusterFile);
-        }
-      } else {
-        // DISABLING READ-ONLY (true -> false), create the active cluster file id file
-        int wait = mfs.getConfiguration().getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
-        FSUtils.setActiveClusterSuffix(fs, rootDir, mfs.getSuffixFileDataToWrite(), wait);
-      }
-    } catch (IOException e) {
-      // We still update the flag, but log that the operation failed.
-      LOG.error("Failed to perform file operation for read-only switch. "
-        + "Flag will be updated, but file system state may be inconsistent.", e);
-    }
-  }
-
-  /* ---- ConfigurationObserver Overrides ---- */
-  public void onConfigurationChange(Configuration conf) {
-    boolean maybeUpdatedConfValue = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
-    if (this.globalReadOnlyEnabled != maybeUpdatedConfValue) {
-      if (this.masterServices != null) {
-        manageActiveClusterIdFile(maybeUpdatedConfValue);
-      } else {
-        LOG.debug("Global R/O flag changed, but not running on master");
-      }
-      this.globalReadOnlyEnabled = maybeUpdatedConfValue;
-      LOG.info("Config {} has been dynamically changed to {}.",
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, this.globalReadOnlyEnabled);
-    }
   }
 }

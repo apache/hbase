@@ -42,7 +42,7 @@ public class TestReadOnlyControllerBulkLoadObserver {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestReadOnlyControllerBulkLoadObserver.class);
 
-  ReadOnlyController readOnlyController;
+  BulkLoadReadOnlyController bulkLoadReadOnlyController;
   HBaseConfiguration readOnlyConf;
 
   // Region Server Coprocessor mocking variables
@@ -50,7 +50,7 @@ public class TestReadOnlyControllerBulkLoadObserver {
 
   @Before
   public void setup() throws Exception {
-    readOnlyController = new ReadOnlyController();
+    bulkLoadReadOnlyController = new BulkLoadReadOnlyController();
     readOnlyConf = new HBaseConfiguration();
     readOnlyConf.setBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
 
@@ -65,23 +65,23 @@ public class TestReadOnlyControllerBulkLoadObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPrePrepareBulkLoadReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.prePrepareBulkLoad(ctx);
+    bulkLoadReadOnlyController.onConfigurationChange(readOnlyConf);
+    bulkLoadReadOnlyController.prePrepareBulkLoad(ctx);
   }
 
   @Test
   public void testPrePrepareBulkLoadNoException() throws IOException {
-    readOnlyController.prePrepareBulkLoad(ctx);
+    bulkLoadReadOnlyController.prePrepareBulkLoad(ctx);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCleanupBulkLoadReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preCleanupBulkLoad(ctx);
+    bulkLoadReadOnlyController.onConfigurationChange(readOnlyConf);
+    bulkLoadReadOnlyController.preCleanupBulkLoad(ctx);
   }
 
   @Test
   public void testPreCleanupBulkLoadNoException() throws IOException {
-    readOnlyController.preCleanupBulkLoad(ctx);
+    bulkLoadReadOnlyController.preCleanupBulkLoad(ctx);
   }
 }
