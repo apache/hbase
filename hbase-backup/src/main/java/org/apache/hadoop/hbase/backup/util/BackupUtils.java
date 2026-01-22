@@ -544,12 +544,21 @@ public final class BackupUtils {
       + HConstants.HREGION_LOGDIR_NAME;
   }
 
+  /**
+   * Loads all backup history as stored in files on the given backup root path.
+   * @return all backup history, from newest (most recent) to oldest (least recent)
+   */
   private static List<BackupInfo> getHistory(Configuration conf, Path backupRootPath)
     throws IOException {
     // Get all (n) history from backup root destination
 
     FileSystem fs = FileSystem.get(backupRootPath.toUri(), conf);
-    RemoteIterator<LocatedFileStatus> it = fs.listLocatedStatus(backupRootPath);
+    RemoteIterator<LocatedFileStatus> it;
+    try {
+      it = fs.listLocatedStatus(backupRootPath);
+    } catch (FileNotFoundException e) {
+      return Collections.emptyList();
+    }
 
     List<BackupInfo> infos = new ArrayList<>();
     while (it.hasNext()) {
@@ -568,26 +577,15 @@ public final class BackupUtils {
       }
     }
     // Sort
-    Collections.sort(infos, new Comparator<BackupInfo>() {
-      @Override
-      public int compare(BackupInfo o1, BackupInfo o2) {
-        long ts1 = getTimestamp(o1.getBackupId());
-        long ts2 = getTimestamp(o2.getBackupId());
-
-        if (ts1 == ts2) {
-          return 0;
-        }
-
-        return ts1 < ts2 ? 1 : -1;
-      }
-
-      private long getTimestamp(String backupId) {
-        return Long.parseLong(Iterators.get(Splitter.on('_').split(backupId).iterator(), 1));
-      }
-    });
+    infos.sort(Comparator.<BackupInfo> naturalOrder().reversed());
     return infos;
   }
 
+  /**
+   * Loads all backup history as stored in files on the given backup root path, and returns the
+   * first n entries matching all given filters.
+   * @return (subset of) backup history, from newest (most recent) to oldest (least recent)
+   */
   public static List<BackupInfo> getHistory(Configuration conf, int n, Path backupRootPath,
     BackupInfo.Filter... filters) throws IOException {
     List<BackupInfo> infos = getHistory(conf, backupRootPath);

@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -82,6 +81,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
 
@@ -598,24 +598,12 @@ public final class BackupSystemTable implements Closeable {
   }
 
   /**
-   * Get all backup information passing the given filters, ordered by descending start time. I.e.
-   * from newest to oldest.
-   */
-  public List<BackupInfo> getBackupHistory(BackupInfo.Filter... toInclude) throws IOException {
-    LOG.trace("get backup history from backup system table");
-
-    List<BackupInfo> list = getBackupInfos(toInclude);
-    list.sort(Comparator.comparing(BackupInfo::getStartTs).reversed());
-    return list;
-  }
-
-  /**
    * Retrieve all table names that are part of any known completed backup
    */
   public Set<TableName> getTablesIncludedInBackups() throws IOException {
     // Incremental backups have the same tables as the preceding full backups
     List<BackupInfo> infos =
-      getBackupInfos(withState(BackupState.COMPLETE), withType(BackupType.FULL));
+      getBackupHistory(withState(BackupState.COMPLETE), withType(BackupType.FULL));
     return infos.stream().flatMap(info -> info.getTableNames().stream())
       .collect(Collectors.toSet());
   }
@@ -647,26 +635,31 @@ public final class BackupSystemTable implements Closeable {
   }
 
   /**
-   * Get all backup infos passing the given filters (ordered by ascending backup id)
+   * Get all backup information passing the given filters, ordered by descending backupId. I.e. from
+   * newest to oldest.
    */
-  public List<BackupInfo> getBackupInfos(BackupInfo.Filter... toInclude) throws IOException {
-    return getBackupInfos(Integer.MAX_VALUE, toInclude);
+  public List<BackupInfo> getBackupHistory(BackupInfo.Filter... toInclude) throws IOException {
+    return getBackupHistory(Order.NEW_TO_OLD, Integer.MAX_VALUE, toInclude);
   }
 
   /**
-   * Get the first n backup infos passing the given filters (ordered by ascending backup id)
+   * Retrieves the first n entries of the sorted, filtered list of backup infos.
+   * @param order desired ordering of the results.
+   * @param n     number of entries to return
    */
-  public List<BackupInfo> getBackupInfos(int n, BackupInfo.Filter... toInclude) throws IOException {
+  public List<BackupInfo> getBackupHistory(Order order, int n, BackupInfo.Filter... toInclude)
+    throws IOException {
+    Preconditions.checkArgument(n >= 0, "n should be >= 0");
     LOG.trace("get backup infos from backup system table");
 
-    if (n <= 0) {
+    if (n == 0) {
       return Collections.emptyList();
     }
 
     Predicate<BackupInfo> combinedPredicate = Stream.of(toInclude)
       .map(filter -> (Predicate<BackupInfo>) filter).reduce(Predicate::and).orElse(x -> true);
 
-    Scan scan = createScanForBackupHistory();
+    Scan scan = createScanForBackupHistory(order);
     List<BackupInfo> list = new ArrayList<>();
 
     try (Table table = connection.getTable(tableName);
@@ -852,21 +845,17 @@ public final class BackupSystemTable implements Closeable {
   /**
    * Checks if we have at least one backup session in backup system table This API is used by
    * BackupLogCleaner
-   * @return true, if - at least one session exists in backup system table table
+   * @return true, if at least one session exists in backup system table
    * @throws IOException exception
    */
   public boolean hasBackupSessions() throws IOException {
     LOG.trace("Has backup sessions from backup system table");
 
-    boolean result = false;
-    Scan scan = createScanForBackupHistory();
+    Scan scan = createScanForBackupHistory(Order.OLD_TO_NEW);
     scan.setCaching(1);
     try (Table table = connection.getTable(tableName);
       ResultScanner scanner = table.getScanner(scan)) {
-      if (scanner.next() != null) {
-        result = true;
-      }
-      return result;
+      return scanner.next() != null;
     }
   }
 
@@ -1193,15 +1182,23 @@ public final class BackupSystemTable implements Closeable {
 
   /**
    * Creates Scan operation to load backup history
+   * @param order order of the scan results
    * @return scan operation
    */
-  private Scan createScanForBackupHistory() {
+  private Scan createScanForBackupHistory(Order order) {
     Scan scan = new Scan();
     byte[] startRow = Bytes.toBytes(BACKUP_INFO_PREFIX);
-    byte[] stopRow = Arrays.copyOf(startRow, startRow.length);
-    stopRow[stopRow.length - 1] = (byte) (stopRow[stopRow.length - 1] + 1);
-    scan.withStartRow(startRow);
-    scan.withStopRow(stopRow);
+    if (order == Order.NEW_TO_OLD) {
+      byte[] stopRow = Arrays.copyOf(startRow, startRow.length);
+      stopRow[stopRow.length - 1] = (byte) (stopRow[stopRow.length - 1] + 1);
+      scan.setReversed(true);
+      scan.withStartRow(stopRow, false);
+      scan.withStopRow(startRow);
+    } else if (order == Order.OLD_TO_NEW) {
+      scan.setStartStopRowForPrefixScan(startRow);
+    } else {
+      throw new IllegalArgumentException("Unsupported order: " + order);
+    }
     scan.addFamily(BackupSystemTable.SESSIONS_FAMILY);
     scan.readVersions(1);
     return scan;
@@ -1657,5 +1654,16 @@ public final class BackupSystemTable implements Closeable {
         LOG.info("Table {} is not disabled, ignoring enable request", tableName);
       }
     }
+  }
+
+  public enum Order {
+    /**
+     * Old backups first, most recents last. I.e. sorted by ascending backupId.
+     */
+    OLD_TO_NEW,
+    /**
+     * New backups first, oldest last. I.e. sorted by descending backupId.
+     */
+    NEW_TO_OLD
   }
 }
