@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.backup.impl;
 
 import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
+import static org.apache.hadoop.hbase.backup.impl.BackupSystemTable.Order.NEW_TO_OLD;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -250,7 +251,8 @@ public class BackupManager implements Closeable {
    * @throws IOException exception
    */
   private String getOngoingBackupId() throws IOException {
-    List<BackupInfo> sessions = systemTable.getBackupInfos(withState(BackupState.RUNNING));
+    List<BackupInfo> sessions =
+      systemTable.getBackupHistory(NEW_TO_OLD, 1, withState(BackupState.RUNNING));
     if (sessions.size() == 0) {
       return null;
     }
