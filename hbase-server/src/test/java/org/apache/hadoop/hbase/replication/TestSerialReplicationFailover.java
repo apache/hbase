@@ -56,7 +56,7 @@ public class TestSerialReplicationFailover extends SerialReplicationTestBase {
       TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
         .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build());
     UTIL.waitTableAvailable(tableName);
-    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
@@ -65,7 +65,7 @@ public class TestSerialReplicationFailover extends SerialReplicationTestBase {
       .filter(t -> !t.getRegionServer().getRegions(tableName).isEmpty()).findFirst().get();
     thread.getRegionServer().abort("for testing");
     thread.join();
-    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 100; i < 200; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }

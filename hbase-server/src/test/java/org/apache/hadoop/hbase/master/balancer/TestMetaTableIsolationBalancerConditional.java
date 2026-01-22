@@ -148,8 +148,13 @@ public class TestMetaTableIsolationBalancerConditional {
   private static void validateRegionLocations(Map<TableName, Set<ServerName>> tableToServers,
     TableName productTableName, boolean shouldBeBalanced) {
     // Validate that the region assignments
-    ServerName metaServer =
-      tableToServers.get(TEST_UTIL.getConnection().getMetaTableName()).stream().findFirst().orElseThrow();
+    ServerName metaServer;
+    try {
+      metaServer =
+        tableToServers.get(TEST_UTIL.getConnection().getMetaTableName()).stream().findFirst().orElseThrow();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
     ServerName quotaServer =
       tableToServers.get(QuotaUtil.QUOTA_TABLE_NAME).stream().findFirst().orElseThrow();
     Set<ServerName> productServers = tableToServers.get(productTableName);

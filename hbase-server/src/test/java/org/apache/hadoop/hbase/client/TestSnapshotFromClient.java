@@ -164,7 +164,7 @@ public class TestSnapshotFromClient {
    */
   @Test(expected = IllegalArgumentException.class)
   public void testMetaTablesSnapshot() throws Exception {
-    UTIL.getAdmin().snapshot("metaSnapshot", TEST_UTIL.getConnection().getMetaTableName());
+    UTIL.getAdmin().snapshot("metaSnapshot", UTIL.getConnection().getMetaTableName());
   }
 
   /**

@@ -288,7 +288,13 @@ public class TestRegionMover1 {
   public void testLoadMetaRegion() throws Exception {
     HRegionServer rsWithMeta = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
       .map(t -> t.getRegionServer())
-      .filter(rs -> rs.getRegions(TEST_UTIL.getConnection().getMetaTableName()).size() > 0).findFirst().get();
+      .filter(rs -> {
+        try {
+          return rs.getRegions(TEST_UTIL.getConnection().getMetaTableName()).size() > 0;
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }).findFirst().get();
     int onlineRegions = rsWithMeta.getNumberOfOnlineRegions();
     String rsName = rsWithMeta.getServerName().getAddress().toString();
     try (RegionMover rm =

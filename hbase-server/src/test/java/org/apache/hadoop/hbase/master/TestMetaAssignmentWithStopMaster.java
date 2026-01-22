@@ -66,7 +66,7 @@ public class TestMetaAssignmentWithStopMaster {
   @Test
   public void testStopActiveMaster() throws Exception {
     try (Connection conn = ConnectionFactory.createConnection(UTIL.getConfiguration());
-      RegionLocator locator = conn.getRegionLocator(TEST_UTIL.getConnection().getMetaTableName())) {
+      RegionLocator locator = conn.getRegionLocator(UTIL.getConnection().getMetaTableName())) {
       ServerName oldMetaServer = locator.getAllRegionLocations().get(0).getServerName();
       ServerName oldMaster = UTIL.getMiniHBaseCluster().getMaster().getServerName();
 

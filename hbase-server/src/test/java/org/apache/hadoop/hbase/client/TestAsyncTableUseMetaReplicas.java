@@ -95,14 +95,14 @@ public class TestAsyncTableUseMetaReplicas {
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       FailPrimaryMetaScanCp.class.getName());
     UTIL.startMiniCluster(3);
-    HBaseTestingUtil.setReplicas(UTIL.getAdmin(), TEST_UTIL.getConnection().getMetaTableName(), 3);
+    HBaseTestingUtil.setReplicas(UTIL.getAdmin(), UTIL.getConnection().getMetaTableName(), 3);
     try (ConnectionRegistry registry = ConnectionRegistryFactory.create(conf, User.getCurrent())) {
       RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(UTIL, registry);
     }
     try (Table table = UTIL.createTable(TABLE_NAME, FAMILY)) {
       table.put(new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE));
     }
-    UTIL.flush(TEST_UTIL.getConnection().getMetaTableName());
+    UTIL.flush(UTIL.getConnection().getMetaTableName());
     // wait for the store file refresh so we can read the region location from secondary meta
     // replicas
     Thread.sleep(2000);

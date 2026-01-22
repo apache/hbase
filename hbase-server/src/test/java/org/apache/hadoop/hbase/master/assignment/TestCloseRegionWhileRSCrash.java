@@ -151,11 +151,11 @@ public class TestCloseRegionWhileRSCrash {
     UTIL.createTable(TABLE_NAME, CF);
     UTIL.getAdmin().balancerSwitch(false, true);
     HRegionServer srcRs = UTIL.getRSForFirstRegionInTable(TABLE_NAME);
-    if (!srcRs.getRegions(TEST_UTIL.getConnection().getMetaTableName()).isEmpty()) {
-      RegionInfo metaRegion = srcRs.getRegions(TEST_UTIL.getConnection().getMetaTableName()).get(0).getRegionInfo();
+    if (!srcRs.getRegions(UTIL.getConnection().getMetaTableName()).isEmpty()) {
+      RegionInfo metaRegion = srcRs.getRegions(UTIL.getConnection().getMetaTableName()).get(0).getRegionInfo();
       HRegionServer dstRs = UTIL.getOtherRegionServer(srcRs);
       UTIL.getAdmin().move(metaRegion.getEncodedNameAsBytes(), dstRs.getServerName());
-      UTIL.waitFor(30000, () -> !dstRs.getRegions(TEST_UTIL.getConnection().getMetaTableName()).isEmpty());
+      UTIL.waitFor(30000, () -> !dstRs.getRegions(UTIL.getConnection().getMetaTableName()).isEmpty());
     }
   }
 

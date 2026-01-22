@@ -454,15 +454,19 @@ public class TestClientScannerTimeouts {
       } else {
         ScanResponse scanRes = super.scan(controller, request);
         String regionName = Bytes.toString(request.getRegion().getValue().toByteArray());
-        if (!regionName.contains(TEST_UTIL.getConnection().getMetaTableName().getNameAsString())) {
-          tableScannerId = scanRes.getScannerId();
-          if (sleepOnOpen) {
-            try {
-              LOG.info("openScanner SLEEPING " + sleepTime);
-              Thread.sleep(sleepTime);
-            } catch (InterruptedException e) {
+        try {
+          if (!regionName.contains(TEST_UTIL.getConnection().getMetaTableName().getNameAsString())) {
+            tableScannerId = scanRes.getScannerId();
+            if (sleepOnOpen) {
+              try {
+                LOG.info("openScanner SLEEPING " + sleepTime);
+                Thread.sleep(sleepTime);
+              } catch (InterruptedException e) {
+              }
             }
           }
+        } catch (IOException e) {
+          throw new RuntimeException(e);
         }
         return scanRes;
       }

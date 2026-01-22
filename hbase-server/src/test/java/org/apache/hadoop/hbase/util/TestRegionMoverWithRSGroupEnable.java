@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertEquals;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -87,7 +88,13 @@ public class TestRegionMoverWithRSGroupEnable {
     // Remove rs contains hbase:meta, otherwise test looks unstable and buggy in test env.
     ServerName rsContainMeta = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
       .map(t -> t.getRegionServer())
-      .filter(rs -> rs.getRegions(TEST_UTIL.getConnection().getMetaTableName()).size() > 0).findFirst().get()
+      .filter(rs -> {
+        try {
+          return rs.getRegions(TEST_UTIL.getConnection().getMetaTableName()).size() > 0;
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }).findFirst().get()
       .getServerName();
     LOG.info("{} contains hbase:meta", rsContainMeta);
     List<ServerName> modifiable = new ArrayList<>(allServers);

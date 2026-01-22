@@ -102,7 +102,7 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
             .get(CONN.connConf.getMetaReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
           numOfReplicas = metaLocations.size();
         } catch (Exception e) {
-          LOG.error("Failed to get table {}'s region replication, ", TEST_UTIL.getConnection().getMetaTableName(),
+          LOG.error("Failed to get table meta table's region replication, ",
             e);
         }
         return numOfReplicas;
@@ -130,7 +130,7 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
               .get(CONN.connConf.getMetaReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
             numOfReplicas = metaLocations.size();
           } catch (Exception e) {
-            LOG.error("Failed to get table {}'s region replication, ", TEST_UTIL.getConnection().getMetaTableName(),
+            LOG.error("Failed to get table meta table's region replication, ",
               e);
           }
           return numOfReplicas;
