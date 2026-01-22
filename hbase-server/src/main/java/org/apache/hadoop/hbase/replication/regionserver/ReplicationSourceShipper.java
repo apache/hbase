@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import static org.apache.hadoop.hbase.replication.ReplicationUtils.getAdaptiveTimeout;
 import static org.apache.hadoop.hbase.replication.ReplicationUtils.sleepForRetries;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -105,7 +106,10 @@ public class ReplicationSourceShipper extends Thread {
     while (isActive()) {
       // check if flush needed for WAL backup, this is need for timeout based flush
       if (shouldPersistLogPosition()) {
-        persistLogPosition();
+        IOException error = persistLogPosition();
+        if (error != null) {
+          LOG.warn("Exception while persisting replication state", error);
+        }
       }
       // Sleep until replication is enabled again
       if (!source.isPeerEnabled()) {
@@ -205,7 +209,10 @@ public class ReplicationSourceShipper extends Thread {
         entriesForCleanUpHFileRefs.addAll(entries);
         lastShippedBatch = entryBatch;
         if (shouldPersistLogPosition()) {
-          persistLogPosition();
+          IOException error = persistLogPosition();
+          if (error != null) {
+            throw error; // existing catch block handles retry
+          }
         }
 
         // offsets totalBufferUsed by deducting shipped batchSize (excludes bulk load size)
@@ -240,38 +247,50 @@ public class ReplicationSourceShipper extends Thread {
   }
 
   private boolean shouldPersistLogPosition() {
+    ReplicationEndpoint endpoint = source.getReplicationEndpoint();
+    if (!endpoint.isBufferedReplicationEndpoint()) {
+      // Non-buffering endpoints persist immediately
+      return true;
+    }
     if (stagedWalSize == 0 || lastShippedBatch == null) {
       return false;
     }
-    return (stagedWalSize >= source.getReplicationEndpoint().getMaxBufferSize())
-      || (EnvironmentEdgeManager.currentTime() - lastStagedFlushTs
-          >= source.getReplicationEndpoint().maxFlushInterval());
+    return stagedWalSize >= endpoint.getMaxBufferSize()
+      || (EnvironmentEdgeManager.currentTime() - lastStagedFlushTs >= endpoint.maxFlushInterval());
   }
 
-  private void persistLogPosition() {
+  @Nullable
+  // Returns IOException instead of throwing so callers can decide
+  // whether to retry (shipEdits) or best-effort log (run()).
+  private IOException persistLogPosition() {
     if (lastShippedBatch == null) {
-      return;
+      return null;
     }
-    if (stagedWalSize > 0) {
+
+    ReplicationEndpoint endpoint = source.getReplicationEndpoint();
+
+    if (endpoint.isBufferedReplicationEndpoint() && stagedWalSize > 0) {
       source.getReplicationEndpoint().beforePersistingReplicationOffset();
     }
+
     stagedWalSize = 0;
     lastStagedFlushTs = EnvironmentEdgeManager.currentTime();
 
     // Clean up hfile references
-    for (Entry entry : entriesForCleanUpHFileRefs) {
-      try {
+    try {
+      for (Entry entry : entriesForCleanUpHFileRefs) {
         cleanUpHFileRefs(entry.getEdit());
-      } catch (IOException e) {
-        LOG.warn("{} threw unknown exception:",
-          source.getReplicationEndpoint().getClass().getName(), e);
+        LOG.trace("shipped entry {}: ", entry);
       }
-      LOG.trace("shipped entry {}: ", entry);
+    } catch (IOException e) {
+      LOG.warn("{} threw exception while cleaning up hfile refs", endpoint.getClass().getName(), e);
+      return e;
     }
     entriesForCleanUpHFileRefs.clear();
 
     // Log and clean up WAL logs
     updateLogPosition(lastShippedBatch);
+    return null;
   }
 
   private void cleanUpHFileRefs(WALEdit edit) throws IOException {

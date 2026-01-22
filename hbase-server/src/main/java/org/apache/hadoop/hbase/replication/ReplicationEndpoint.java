@@ -284,28 +284,34 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
    */
   Throwable failureCause();
 
-  // WAL entries are buffered in ContinuousBackupReplicationEndpoint before flushing to WAL backup
-  // file. So we return config value CONF_BACKUP_MAX_WAL_SIZE for
-  // ContinuousBackupReplicationEndpoint
-  // and -1 for other ReplicationEndpoint since they don't buffer.
-  // For other ReplicationEndpoint, everytime a WALEntryBatch is shipped, we update replication
-  // offset. Please check ReplicationSourceShipper#shouldFlushStagedWal()
-  default long getMaxBufferSize() {
-    return -1;
+  /**
+   * @return true if this endpoint buffers WAL entries and requires explicit flush control before
+   *         persisting replication offsets.
+   */
+  default boolean isBufferedReplicationEndpoint() {
+    return false;
   }
 
-  // WAL entries are buffered in ContinuousBackupReplicationEndpoint before flushing to WAL backup
-  // file. So we return config value CONF_STAGED_WAL_FLUSH_INTERVAL for
-  // ContinuousBackupReplicationEndpoint
-  // and Long.MAX_VALUE for other ReplicationEndpoint since they don't buffer.
-  // For other ReplicationEndpoint, everytime a WALEntryBatch is shipped, we update replication
-  // offset. Please check ReplicationSourceShipper#shouldFlushStagedWal()
+  /**
+   * Maximum WAL size (bytes) to buffer before forcing a flush. Only meaningful when
+   * isBufferedReplicationEndpoint() == true.
+   */
+  default long getMaxBufferSize() {
+    return -1L;
+  }
+
+  /**
+   * Maximum time (ms) to wait before forcing a flush. Only meaningful when
+   * isBufferedReplicationEndpoint() == true.
+   */
   default long maxFlushInterval() {
     return Long.MAX_VALUE;
   }
 
-  // Used in ContinuousBackupReplicationEndpoint to flush/close WAL backup files
+  /**
+   * Hook invoked before persisting replication offsets. Buffered endpoints should flush/close WALs
+   * here.
+   */
   default void beforePersistingReplicationOffset() {
-
   }
 }
