@@ -244,8 +244,8 @@ class AsyncNonMetaRegionLocator {
                 .get(conn.connConf.getMetaReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
               numOfReplicas = metaLocations.size();
             } catch (Exception e) {
-              LOG.error("Failed to get table {}'s region replication, ",
-                conn.getMetaTableName(), e);
+              LOG.error("Failed to get table {}'s region replication, ", conn.getMetaTableName(),
+                e);
             }
             return numOfReplicas;
           });

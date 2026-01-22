@@ -22,7 +22,6 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.HConstants;
-
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.AsyncTable;
 import org.apache.hadoop.hbase.client.Connection;

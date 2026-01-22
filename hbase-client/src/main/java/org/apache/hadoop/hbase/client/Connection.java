@@ -107,8 +107,8 @@ public interface Connection extends Abortable, Closeable {
   }
 
   /**
-   * Retrieve a Table implementation for accessing the meta table. 
-   * This method returns the correct meta table for this connection (hbase:meta or hbase:meta_suffix).
+   * Retrieve a Table implementation for accessing the meta table. This method returns the correct
+   * meta table for this connection (hbase:meta or hbase:meta_suffix).
    * @return A Table to use for interactions with the meta table
    */
   default Table getMetaTable() throws IOException {

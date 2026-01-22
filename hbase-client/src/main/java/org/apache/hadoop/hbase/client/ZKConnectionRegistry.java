@@ -267,8 +267,8 @@ class ZKConnectionRegistry implements ConnectionRegistry {
   @Override
   public CompletableFuture<TableName> getMetaTableName() {
     return tracedFuture(
-      () -> CompletableFuture.completedFuture(
-        TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta")),
+      () -> CompletableFuture
+        .completedFuture(TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta")),
       "ZKConnectionRegistry.getMetaTableName");
   }
 

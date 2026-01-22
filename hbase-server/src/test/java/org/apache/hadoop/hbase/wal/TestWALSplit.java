@@ -59,7 +59,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -470,8 +469,8 @@ public class TestWALSplit {
 
   private Path createRecoveredEditsPathForRegion() throws IOException {
     byte[] encoded = RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
-    Path p = WALSplitUtil.getRegionSplitEditsPath(TEST_UTIL.getConnection().getMetaTableName(), encoded, 1,
-      FILENAME_BEING_SPLIT, TMPDIRNAME, conf, "");
+    Path p = WALSplitUtil.getRegionSplitEditsPath(TEST_UTIL.getConnection().getMetaTableName(),
+      encoded, 1, FILENAME_BEING_SPLIT, TMPDIRNAME, conf, "");
     return p;
   }
 

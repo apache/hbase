@@ -113,8 +113,8 @@ public class TestMetricsConnection {
     assertEquals(clusterId + "@" + Integer.toHexString(impl.hashCode()),
       metrics.get().getMetricScope());
     conf.set(MetricsConnection.METRICS_SCOPE_KEY, scope);
-    impl = new AsyncConnectionImpl(conf, null, "foo",
-      TableName.valueOf("hbase:meta"), null, User.getCurrent());
+    impl = new AsyncConnectionImpl(conf, null, "foo", TableName.valueOf("hbase:meta"), null,
+      User.getCurrent());
 
     metrics = impl.getConnectionMetrics();
     assertTrue("Metrics should be present", metrics.isPresent());
@@ -134,8 +134,7 @@ public class TestMetricsConnection {
     AsyncConnectionImpl impl;
     List<AsyncConnectionImpl> connList = new ArrayList<AsyncConnectionImpl>();
     for (int i = 0; i < num; i++) {
-      impl = new AsyncConnectionImpl(conf, null, null,
-        TableName.valueOf("hbase:meta"), null, user);
+      impl = new AsyncConnectionImpl(conf, null, null, TableName.valueOf("hbase:meta"), null, user);
       connList.add(impl);
     }
 

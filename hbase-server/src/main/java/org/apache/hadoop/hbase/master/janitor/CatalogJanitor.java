@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -147,8 +146,8 @@ public class CatalogJanitor extends ScheduledChore {
           + this.services.getServerManager().isClusterShutdown());
       }
     } catch (IOException e) {
-      LOG.warn("Failed janitorial scan of {} table",
-        services.getConnection().getMetaTableName(), e);
+      LOG.warn("Failed janitorial scan of {} table", services.getConnection().getMetaTableName(),
+        e);
     }
   }
 

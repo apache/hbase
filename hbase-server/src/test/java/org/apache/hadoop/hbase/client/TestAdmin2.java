@@ -37,7 +37,6 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -85,7 +84,8 @@ public class TestAdmin2 extends TestAdminBase {
   public void testCreateBadTables() throws IOException {
     String msg = null;
     try {
-      ADMIN.createTable(TableDescriptorBuilder.newBuilder(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()).build());
+      ADMIN.createTable(TableDescriptorBuilder
+        .newBuilder(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()).build());
     } catch (TableExistsException e) {
       msg = e.toString();
     }

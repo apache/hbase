@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -99,7 +98,8 @@ public class TestMetaRegionReplicaReplication {
     // conf.setInt(HConstants.META_REPLICAS_NUM, numOfMetaReplica);
     HTU.startMiniCluster(NB_SERVERS);
     // Enable hbase:meta replication.
-    HBaseTestingUtil.setReplicas(HTU.getAdmin(), HTU.getConnection().getMetaTableName(), numOfMetaReplica);
+    HBaseTestingUtil.setReplicas(HTU.getAdmin(), HTU.getConnection().getMetaTableName(),
+      numOfMetaReplica);
 
     HTU.waitFor(30000,
       () -> HTU.getMiniHBaseCluster().getRegions(HTU.getConnection().getMetaTableName()).size()
@@ -130,7 +130,8 @@ public class TestMetaRegionReplicaReplication {
         getMetaCells(table.getName()));
       // Try delete.
       HTU.deleteTableIfAny(table.getName());
-      verifyDeletedReplication(HTU.getConnection().getMetaTableName(), numOfMetaReplica, table.getName());
+      verifyDeletedReplication(HTU.getConnection().getMetaTableName(), numOfMetaReplica,
+        table.getName());
     }
   }
 
@@ -417,7 +418,8 @@ public class TestMetaRegionReplicaReplication {
   @Test
   public void testHBaseMetaReplicaGets() throws Exception {
     TableName tn = TableName.valueOf(this.name.getMethodName());
-    final Region[] metaRegions = getAllRegions(HTU.getConnection().getMetaTableName(), numOfMetaReplica);
+    final Region[] metaRegions =
+      getAllRegions(HTU.getConnection().getMetaTableName(), numOfMetaReplica);
     long[] readReqsForMetaReplicas = new long[numOfMetaReplica];
     long[] readReqsForMetaReplicasAfterGet = new long[numOfMetaReplica];
     long[] readReqsForMetaReplicasAfterGetAllLocations = new long[numOfMetaReplica];

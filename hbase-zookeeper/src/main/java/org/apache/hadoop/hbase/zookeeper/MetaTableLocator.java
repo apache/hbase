@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import com.google.errorprone.annotations.RestrictedApi;
 import org.apache.hadoop.hbase.HConstants;
-
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -183,7 +182,8 @@ public final class MetaTableLocator {
       ZKUtil.setData(zookeeper, zookeeper.getZNodePaths().getZNodeForReplica(replicaId), data);
     } catch (KeeperException.NoNodeException nne) {
       if (replicaId == RegionInfo.DEFAULT_REPLICA_ID) {
-        LOG.debug("{} region location doesn't exist, create it", TableName.valueOf("hbase", "meta"));
+        LOG.debug("{} region location doesn't exist, create it",
+          TableName.valueOf("hbase", "meta"));
       } else {
         LOG.debug("{} region location doesn't exist for replicaId={}, create it",
           TableName.valueOf("hbase", "meta"), replicaId);
@@ -238,8 +238,8 @@ public final class MetaTableLocator {
     if (replicaId == RegionInfo.DEFAULT_REPLICA_ID) {
       LOG.info("Deleting {} region location in ZooKeeper", TableName.valueOf("hbase", "meta"));
     } else {
-      LOG.info("Deleting {} for {} region location in ZooKeeper", TableName.valueOf("hbase", "meta"),
-        replicaId);
+      LOG.info("Deleting {} for {} region location in ZooKeeper",
+        TableName.valueOf("hbase", "meta"), replicaId);
     }
     try {
       // Just delete the node. Don't need any watches.

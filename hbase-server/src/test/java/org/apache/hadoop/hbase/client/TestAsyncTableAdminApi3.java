@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionLocation;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -126,7 +125,8 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
       assertTrue("tableName should be equal in order",
         tableDescs.get(j).getTableName().equals(tables[i]));
     }
-    assertTrue(tableDescs.get(size - 1).getTableName().equals(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()));
+    assertTrue(tableDescs.get(size - 1).getTableName()
+      .equals(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()));
 
     for (int i = 0; i < tables.length; i++) {
       admin.disableTable(tables[i]).join();

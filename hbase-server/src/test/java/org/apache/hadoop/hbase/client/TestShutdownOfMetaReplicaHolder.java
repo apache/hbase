@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -50,7 +49,8 @@ public class TestShutdownOfMetaReplicaHolder extends MetaWithReplicasTestBase {
     // checks that the when the server holding meta replica is shut down, the meta replica
     // can be recovered
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-      RegionLocator locator = conn.getRegionLocator(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable())) {
+      RegionLocator locator =
+        conn.getRegionLocator(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable())) {
       HRegionLocation hrl = locator.getRegionLocations(HConstants.EMPTY_START_ROW, true).get(1);
       ServerName oldServer = hrl.getServerName();
       TEST_UTIL.getHBaseClusterInterface().killRegionServer(oldServer);

@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -172,8 +171,7 @@ public class RegionStateStore {
       LOG.debug(
         "Load hbase:meta entry region={}, regionState={}, lastHost={}, "
           + "regionLocation={}, openSeqNum={}",
-        regionInfo.getEncodedName(), state, lastHost,
-        regionLocation, openSeqNum);
+        regionInfo.getEncodedName(), state, lastHost, regionLocation, openSeqNum);
       visitor.visitRegionState(result, regionInfo, state, regionLocation, lastHost, openSeqNum);
     }
   }
@@ -506,8 +504,7 @@ public class RegionStateStore {
         + " in meta table, they are cleaned up already, Skip.");
       return;
     }
-    try (Table table =
-      master.getConnection().getTable(master.getConnection().getMetaTableName())) {
+    try (Table table = master.getConnection().getTable(master.getConnection().getMetaTableName())) {
       table.delete(delete);
     }
     LOG.info(

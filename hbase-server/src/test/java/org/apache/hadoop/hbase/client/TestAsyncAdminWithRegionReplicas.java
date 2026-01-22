@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -55,7 +54,8 @@ public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TestAsyncAdminBase.setUpBeforeClass();
-    HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), RegionInfoBuilder.FIRST_META_REGIONINFO.getTable(), 3);
+    HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(),
+      RegionInfoBuilder.FIRST_META_REGIONINFO.getTable(), 3);
     try (ConnectionRegistry registry =
       ConnectionRegistryFactory.create(TEST_UTIL.getConfiguration(), User.getCurrent())) {
       RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL, registry);
@@ -139,7 +139,8 @@ public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
 
   @Test
   public void testGetTableRegions() throws InterruptedException, ExecutionException, IOException {
-    List<RegionInfo> metaRegions = admin.getRegions(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()).get();
+    List<RegionInfo> metaRegions =
+      admin.getRegions(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()).get();
     assertEquals(3, metaRegions.size());
     for (int i = 0; i < 3; i++) {
       RegionInfo metaRegion = metaRegions.get(i);

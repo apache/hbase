@@ -80,7 +80,7 @@ public class InnerStoreCellComparator extends CellComparatorImpl {
       ? MetaCellComparator.META_COMPARATOR
       : InnerStoreCellComparator.INNER_STORE_COMPARATOR;
   }
-  
+
   private static boolean isMetaTable(byte[] tableName) {
     return Bytes.startsWith(tableName, Bytes.toBytes("hbase:meta"));
   }

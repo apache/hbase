@@ -196,37 +196,31 @@ public class TestCellComparator {
     long now = EnvironmentEdgeManager.currentTime();
     CellComparator c = MetaCellComparator.META_COMPARATOR;
     assertTrue(c.compare(
-      createByteBufferKeyValueFromKeyValue(new KeyValue(
-        Bytes.toBytes("hbase:meta" + ",a,,0,1"), now)),
-      createByteBufferKeyValueFromKeyValue(new KeyValue(
-        Bytes.toBytes("hbase:meta" + ",a,,0,1"), now))) == 0);
+      createByteBufferKeyValueFromKeyValue(
+        new KeyValue(Bytes.toBytes("hbase:meta" + ",a,,0,1"), now)),
+      createByteBufferKeyValueFromKeyValue(
+        new KeyValue(Bytes.toBytes("hbase:meta" + ",a,,0,1"), now))) == 0);
     Cell a = createByteBufferKeyValueFromKeyValue(
       new KeyValue(Bytes.toBytes("hbase:meta" + ",a,,0,1"), now));
     Cell b = createByteBufferKeyValueFromKeyValue(
       new KeyValue(Bytes.toBytes("hbase:meta" + ",a,,0,2"), now));
     assertTrue(c.compare(a, b) < 0);
     assertTrue(c.compare(
-      createByteBufferKeyValueFromKeyValue(new KeyValue(
-        Bytes.toBytes("hbase:meta" + ",a,,0,2"), now)),
-      createByteBufferKeyValueFromKeyValue(new KeyValue(
-        Bytes.toBytes("hbase:meta" + ",a,,0,1"), now))) > 0);
+      createByteBufferKeyValueFromKeyValue(
+        new KeyValue(Bytes.toBytes("hbase:meta" + ",a,,0,2"), now)),
+      createByteBufferKeyValueFromKeyValue(
+        new KeyValue(Bytes.toBytes("hbase:meta" + ",a,,0,1"), now))) > 0);
     assertTrue(c.compare(
-      createByteBufferKeyValueFromKeyValue(
-        new KeyValue(Bytes.toBytes("hbase:meta" + ",,1"), now)),
-      createByteBufferKeyValueFromKeyValue(
-        new KeyValue(Bytes.toBytes("hbase:meta" + ",,1"), now)))
+      createByteBufferKeyValueFromKeyValue(new KeyValue(Bytes.toBytes("hbase:meta" + ",,1"), now)),
+      createByteBufferKeyValueFromKeyValue(new KeyValue(Bytes.toBytes("hbase:meta" + ",,1"), now)))
         == 0);
     assertTrue(c.compare(
-      createByteBufferKeyValueFromKeyValue(
-        new KeyValue(Bytes.toBytes("hbase:meta" + ",,1"), now)),
-      createByteBufferKeyValueFromKeyValue(
-        new KeyValue(Bytes.toBytes("hbase:meta" + ",,2"), now)))
+      createByteBufferKeyValueFromKeyValue(new KeyValue(Bytes.toBytes("hbase:meta" + ",,1"), now)),
+      createByteBufferKeyValueFromKeyValue(new KeyValue(Bytes.toBytes("hbase:meta" + ",,2"), now)))
         < 0);
     assertTrue(c.compare(
-      createByteBufferKeyValueFromKeyValue(
-        new KeyValue(Bytes.toBytes("hbase:meta" + ",,2"), now)),
-      createByteBufferKeyValueFromKeyValue(
-        new KeyValue(Bytes.toBytes("hbase:meta" + ",,1"), now)))
+      createByteBufferKeyValueFromKeyValue(new KeyValue(Bytes.toBytes("hbase:meta" + ",,2"), now)),
+      createByteBufferKeyValueFromKeyValue(new KeyValue(Bytes.toBytes("hbase:meta" + ",,1"), now)))
         > 0);
   }
 

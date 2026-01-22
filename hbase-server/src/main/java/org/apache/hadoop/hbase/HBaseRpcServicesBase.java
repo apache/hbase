@@ -387,7 +387,7 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
   public final GetMetaTableNameResponse getMetaTableName(RpcController controller,
     GetMetaTableNameRequest request) throws ServiceException {
     GetMetaTableNameResponse.Builder builder = GetMetaTableNameResponse.newBuilder();
-    
+
     try {
       TableName metaTableName = server.getMetaTableName();
       if (metaTableName != null) {

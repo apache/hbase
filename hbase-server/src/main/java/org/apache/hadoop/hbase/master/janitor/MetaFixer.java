@@ -32,7 +32,6 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -215,8 +214,8 @@ public class MetaFixer {
         "hbase:meta", createMetaEntriesFailures.size(), addMetaEntriesResults.size(),
         createMetaEntriesFailures.get(0).getMessage());
       if (LOG.isDebugEnabled()) {
-        createMetaEntriesFailures.forEach(ioe -> LOG
-          .debug("Attempt to fix region hole in {} failed.", "hbase:meta", ioe));
+        createMetaEntriesFailures
+          .forEach(ioe -> LOG.debug("Attempt to fix region hole in {} failed.", "hbase:meta", ioe));
       }
     }
 

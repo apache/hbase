@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MatcherPredicate;
-
 import org.apache.hadoop.hbase.MiniClusterRule;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
@@ -164,8 +163,8 @@ public class TestAsyncMetaRegionLocator {
 
       TraceUtil.trace(() -> {
         try {
-          testLocator(miniClusterRule.getTestingUtility(), testUtil.getConnection().getMetaTableName(),
-            new Locator() {
+          testLocator(miniClusterRule.getTestingUtility(),
+            testUtil.getConnection().getMetaTableName(), new Locator() {
               @Override
               public void updateCachedLocationOnError(HRegionLocation loc, Throwable error) {
                 locator.updateCachedLocationOnError(loc, error);

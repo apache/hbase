@@ -51,17 +51,15 @@ public class MetaTableNameStore {
   /**
    * Store the meta table name in the Master Local Region.
    * <p>
-   * This should be called once during cluster initialization (InitMetaProcedure).
-   * The stored value is cluster-specific and should not conflict with other clusters
-   * sharing the same HDFS.
+   * This should be called once during cluster initialization (InitMetaProcedure). The stored value
+   * is cluster-specific and should not conflict with other clusters sharing the same HDFS.
    * @param metaTableName the meta table name to store
    * @throws IOException if the storage operation fails
    */
   public void store(TableName metaTableName) throws IOException {
     LOG.info("Storing meta table name in Master Local Region: {}", metaTableName);
     Put put = new Put(META_TABLE_NAME_ROW);
-    put.addColumn(INFO_FAMILY, NAME_QUALIFIER,
-      Bytes.toBytes(metaTableName.getNameAsString()));
+    put.addColumn(INFO_FAMILY, NAME_QUALIFIER, Bytes.toBytes(metaTableName.getNameAsString()));
     masterRegion.update(r -> r.put(put));
     cachedMetaTableName = metaTableName;
     LOG.info("Successfully stored meta table name: {}", metaTableName);
@@ -111,4 +109,3 @@ public class MetaTableNameStore {
     return !result.isEmpty();
   }
 }
-

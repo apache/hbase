@@ -23,7 +23,6 @@ import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -64,7 +63,8 @@ public class TestMasterFileSystemWithStoreFileTracking {
 
   @Test
   public void tesMetaDescriptorHasSFTConfig() throws Exception {
-    TableDescriptor descriptor = UTIL.getAdmin().getDescriptor(UTIL.getConnection().getMetaTableName());
+    TableDescriptor descriptor =
+      UTIL.getAdmin().getDescriptor(UTIL.getConnection().getMetaTableName());
     assertEquals(FILE.name(), descriptor.getValue(TRACKER_IMPL));
   }
 }

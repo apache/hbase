@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -78,8 +77,7 @@ public class TestReadAndWriteRegionInfoFile {
     long modtime = getModTime(r);
     HBaseTestingUtil.closeRegionAndWAL(r);
     Thread.sleep(1001);
-    r = HRegion.openHRegion(ROOT_DIR, ri, fsTableDescriptors.get(ri.getTable()), null,
-      CONF);
+    r = HRegion.openHRegion(ROOT_DIR, ri, fsTableDescriptors.get(ri.getTable()), null, CONF);
     // Ensure the file is not written for a second time.
     long modtime2 = getModTime(r);
     assertEquals(modtime, modtime2);

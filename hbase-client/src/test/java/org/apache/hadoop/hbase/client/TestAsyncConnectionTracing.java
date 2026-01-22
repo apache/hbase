@@ -73,7 +73,8 @@ public class TestAsyncConnectionTracing {
         return CompletableFuture.completedFuture(masterServer);
       }
     };
-    conn = new AsyncConnectionImpl(CONF, registry, "test", TableName.valueOf("hbase:meta"), null, user);
+    conn =
+      new AsyncConnectionImpl(CONF, registry, "test", TableName.valueOf("hbase:meta"), null, user);
   }
 
   @After

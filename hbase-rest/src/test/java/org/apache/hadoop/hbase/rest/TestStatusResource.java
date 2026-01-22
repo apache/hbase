@@ -29,7 +29,6 @@ import javax.xml.bind.JAXBException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.rest.client.Client;
@@ -56,7 +55,8 @@ public class TestStatusResource {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestStatusResource.class);
 
-  private static final byte[] META_REGION_NAME = Bytes.toBytes(connection.getMetaTableName() + ",,1");
+  private static final byte[] META_REGION_NAME =
+    Bytes.toBytes(connection.getMetaTableName() + ",,1");
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();

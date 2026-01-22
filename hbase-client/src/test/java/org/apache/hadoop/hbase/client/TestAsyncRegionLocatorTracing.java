@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MatcherPredicate;
-
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -161,12 +160,10 @@ public class TestAsyncRegionLocatorTracing {
     conn.getLocator().getRegionLocation(conn.getMetaTableName(), HConstants.EMPTY_START_ROW,
       RegionLocateType.CURRENT, TimeUnit.SECONDS.toNanos(1)).join();
     SpanData span = waitSpan("AsyncRegionLocator.getRegionLocation");
-    assertThat(span,
-      allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.INTERNAL),
-        buildConnectionAttributesMatcher(conn),
-        buildTableAttributesMatcher(conn.getMetaTableName()),
-        hasAttributes(containsEntryWithStringValuesOf("db.hbase.regions",
-          locs.getDefaultRegionLocation().getRegion().getRegionNameAsString()))));
+    assertThat(span, allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.INTERNAL),
+      buildConnectionAttributesMatcher(conn), buildTableAttributesMatcher(conn.getMetaTableName()),
+      hasAttributes(containsEntryWithStringValuesOf("db.hbase.regions",
+        locs.getDefaultRegionLocation().getRegion().getRegionNameAsString()))));
   }
 
   @Test
@@ -178,8 +175,8 @@ public class TestAsyncRegionLocatorTracing {
       Arrays.stream(locs.getRegionLocations()).map(HRegionLocation::getRegion)
         .map(RegionInfo::getRegionNameAsString).toArray(String[]::new);
     assertThat(span, allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.INTERNAL),
-      buildConnectionAttributesMatcher(conn),
-      buildTableAttributesMatcher(conn.getMetaTableName()), hasAttributes(
+      buildConnectionAttributesMatcher(conn), buildTableAttributesMatcher(conn.getMetaTableName()),
+      hasAttributes(
         containsEntryWithStringValuesOf("db.hbase.regions", containsInAnyOrder(expectedRegions)))));
   }
 }

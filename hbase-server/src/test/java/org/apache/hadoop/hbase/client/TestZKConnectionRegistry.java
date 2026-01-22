@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -64,7 +63,8 @@ public class TestZKConnectionRegistry {
   @BeforeClass
   public static void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(3);
-    HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), TEST_UTIL.getConnection().getMetaTableName(), 3);
+    HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), TEST_UTIL.getConnection().getMetaTableName(),
+      3);
     REGISTRY = new ZKConnectionRegistry(TEST_UTIL.getConfiguration(), null);
   }
 

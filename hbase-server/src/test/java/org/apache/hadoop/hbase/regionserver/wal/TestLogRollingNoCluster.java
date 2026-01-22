@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -95,7 +94,8 @@ public class TestLogRollingNoCluster {
     CommonFSUtils.setRootDir(conf, dir);
     FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(TEST_UTIL.getConfiguration());
     FSTableDescriptors.tryUpdateMetaTableDescriptor(TEST_UTIL.getConfiguration());
-    TableDescriptor metaTableDescriptor = fsTableDescriptors.get(TEST_UTIL.getConnection().getMetaTableName());
+    TableDescriptor metaTableDescriptor =
+      fsTableDescriptors.get(TEST_UTIL.getConnection().getMetaTableName());
     conf.set(FSHLogProvider.WRITER_IMPL, HighLatencySyncWriter.class.getName());
     final WALFactory wals = new WALFactory(conf, TestLogRollingNoCluster.class.getName());
     final WAL wal = wals.getWAL(null);

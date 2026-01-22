@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
-
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -1963,8 +1962,8 @@ public class AssignmentManager {
     boolean meta = isMetaRegion(hri);
     boolean metaLoaded = isMetaLoaded();
     if (!meta && !metaLoaded) {
-      throw new PleaseHoldException("Master not fully online; " + master.getConnection().getMetaTableName() + "="
-        + meta + ", metaLoaded=" + metaLoaded);
+      throw new PleaseHoldException("Master not fully online; "
+        + master.getConnection().getMetaTableName() + "=" + meta + ", metaLoaded=" + metaLoaded);
     }
   }
 

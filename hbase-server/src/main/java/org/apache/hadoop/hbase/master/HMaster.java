@@ -83,7 +83,6 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.PleaseRestartMasterException;
@@ -511,8 +510,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private ReplicationPeerModificationStateStore replicationPeerModificationStateStore;
 
   /**
-   * Store for the meta table name in the Master Local Region.
-   * This provides cluster-specific storage for dynamic meta table name discovery.
+   * Store for the meta table name in the Master Local Region. This provides cluster-specific
+   * storage for dynamic meta table name discovery.
    */
   private MetaTableNameStore metaTableNameStore;
 
@@ -1113,7 +1112,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     InitMetaProcedure initMetaProc = null;
     // Print out state of hbase:meta on startup; helps debugging.
     if (
-      !this.assignmentManager.getRegionStates().hasTableRegionStates(getConnection().getMetaTableName())
+      !this.assignmentManager.getRegionStates()
+        .hasTableRegionStates(getConnection().getMetaTableName())
     ) {
       Optional<InitMetaProcedure> optProc = procedureExecutor.getProcedures().stream()
         .filter(p -> p instanceof InitMetaProcedure).map(o -> (InitMetaProcedure) o).findAny();
@@ -1201,12 +1201,13 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         // it is possible that we already have some replicas before upgrading, so we must set the
         // region replication number in meta TableDescriptor directly first, without creating a
         // ModifyTableProcedure, otherwise it may cause a double assign for the meta replicas.
-        int existingReplicasCount =
-          assignmentManager.getRegionStates().getRegionsOfTable(getConnection().getMetaTableName()).size();
+        int existingReplicasCount = assignmentManager.getRegionStates()
+          .getRegionsOfTable(getConnection().getMetaTableName()).size();
         if (existingReplicasCount > metaDesc.getRegionReplication()) {
           LOG.info(
             "Update replica count of {} from {}(in TableDescriptor)" + " to {}(existing ZNodes)",
-            getConnection().getMetaTableName(), metaDesc.getRegionReplication(), existingReplicasCount);
+            getConnection().getMetaTableName(), metaDesc.getRegionReplication(),
+            existingReplicasCount);
           metaDesc = TableDescriptorBuilder.newBuilder(metaDesc)
             .setRegionReplication(existingReplicasCount).build();
           tableDescriptors.update(metaDesc);
@@ -1677,8 +1678,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   /**
-   * Override base implementation to read from Master Local Region storage.
-   * This allows the master to return the cluster-specific meta table name.
+   * Override base implementation to read from Master Local Region storage. This allows the master
+   * to return the cluster-specific meta table name.
    */
   @Override
   public TableName getMetaTableName() {
@@ -1694,9 +1695,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   /**
-   * Internal accessor for procedures to get the meta table name store.
-   * This is not exposed via MasterServices interface to avoid interface pollution.
-   * Package visibility is insufficient as procedures are in a sub-package.
+   * Internal accessor for procedures to get the meta table name store. This is not exposed via
+   * MasterServices interface to avoid interface pollution. Package visibility is insufficient as
+   * procedures are in a sub-package.
    * @return the meta table name store, or null if not yet initialized
    */
   public MetaTableNameStore getMetaTableNameStoreInternal() {

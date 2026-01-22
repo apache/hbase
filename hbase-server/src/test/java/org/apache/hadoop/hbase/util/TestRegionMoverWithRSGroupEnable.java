@@ -27,7 +27,6 @@ import java.util.List;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -87,15 +86,13 @@ public class TestRegionMoverWithRSGroupEnable {
     Collection<ServerName> allServers = admin.getRegionServers();
     // Remove rs contains hbase:meta, otherwise test looks unstable and buggy in test env.
     ServerName rsContainMeta = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
-      .map(t -> t.getRegionServer())
-      .filter(rs -> {
+      .map(t -> t.getRegionServer()).filter(rs -> {
         try {
           return rs.getRegions(TEST_UTIL.getConnection().getMetaTableName()).size() > 0;
         } catch (IOException e) {
           throw new RuntimeException(e);
         }
-      }).findFirst().get()
-      .getServerName();
+      }).findFirst().get().getServerName();
     LOG.info("{} contains hbase:meta", rsContainMeta);
     List<ServerName> modifiable = new ArrayList<>(allServers);
     modifiable.remove(rsContainMeta);

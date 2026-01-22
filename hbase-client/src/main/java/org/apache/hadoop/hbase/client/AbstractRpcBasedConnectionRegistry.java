@@ -256,19 +256,15 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
 
   @Override
   public CompletableFuture<TableName> getMetaTableName() {
-    return tracedFuture(
-      () -> this
-        .<GetMetaTableNameResponse> call(
-          (c, s, d) -> s.getMetaTableName(c, GetMetaTableNameRequest.getDefaultInstance(), d),
-          GetMetaTableNameResponse::hasTableName, "getMetaTableName()")
-        .thenApply(resp -> {
-          if (resp.hasTableName() && !resp.getTableName().isEmpty()) {
-            return TableName.valueOf(resp.getTableName());
-          } else {
-            return TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
-          }
-        }),
-      getClass().getSimpleName() + ".getMetaTableName");
+    return tracedFuture(() -> this.<GetMetaTableNameResponse> call(
+      (c, s, d) -> s.getMetaTableName(c, GetMetaTableNameRequest.getDefaultInstance(), d),
+      GetMetaTableNameResponse::hasTableName, "getMetaTableName()").thenApply(resp -> {
+        if (resp.hasTableName() && !resp.getTableName().isEmpty()) {
+          return TableName.valueOf(resp.getTableName());
+        } else {
+          return TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
+        }
+      }), getClass().getSimpleName() + ".getMetaTableName");
   }
 
   @Override

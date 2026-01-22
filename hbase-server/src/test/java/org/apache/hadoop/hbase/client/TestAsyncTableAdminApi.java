@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -73,7 +72,8 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
   static TableState.State getStateFromMeta(TableName table) throws Exception {
     Optional<TableState> state = ClientMetaTableAccessor
-      .getTableState(ASYNC_CONN.getTable(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()), table).get();
+      .getTableState(ASYNC_CONN.getTable(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()), table)
+      .get();
     assertTrue(state.isPresent());
     return state.get().getState();
   }

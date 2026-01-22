@@ -29,7 +29,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.TableName;
@@ -455,7 +454,9 @@ public class TestClientScannerTimeouts {
         ScanResponse scanRes = super.scan(controller, request);
         String regionName = Bytes.toString(request.getRegion().getValue().toByteArray());
         try {
-          if (!regionName.contains(TEST_UTIL.getConnection().getMetaTableName().getNameAsString())) {
+          if (
+            !regionName.contains(TEST_UTIL.getConnection().getMetaTableName().getNameAsString())
+          ) {
             tableScannerId = scanRes.getScannerId();
             if (sleepOnOpen) {
               try {

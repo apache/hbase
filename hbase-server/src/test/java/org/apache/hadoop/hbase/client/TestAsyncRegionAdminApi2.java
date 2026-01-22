@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
@@ -360,7 +359,8 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
 
   @Test
   public void testTruncateRegionsMetaTableRegionsNotAllowed() throws Exception {
-    AsyncTableRegionLocator locator = ASYNC_CONN.getRegionLocator(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable());
+    AsyncTableRegionLocator locator =
+      ASYNC_CONN.getRegionLocator(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable());
     List<HRegionLocation> regionLocations = locator.getAllRegionLocations().get();
     HRegionLocation regionToBeTruncated = regionLocations.get(0);
     // 1

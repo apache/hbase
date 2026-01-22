@@ -72,7 +72,8 @@ public class TestHBaseMetaEdit {
     TableDescriptor list =
       admin.listTableDescriptors(true).stream().filter(td -> td.isMetaTable()).findAny().get();
     TableDescriptor listByName =
-      admin.listTableDescriptors(Collections.singletonList(UTIL.getConnection().getMetaTableName())).get(0);
+      admin.listTableDescriptors(Collections.singletonList(UTIL.getConnection().getMetaTableName()))
+        .get(0);
     TableDescriptor listByNs =
       admin.listTableDescriptorsByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME).stream()
         .filter(td -> td.isMetaTable()).findAny().get();
@@ -144,7 +145,8 @@ public class TestHBaseMetaEdit {
   @Test
   public void testAlterMetaWithReadOnly() throws IOException {
     Admin admin = UTIL.getAdmin();
-    TableDescriptor origMetaTableDesc = admin.getDescriptor(UTIL.getConnection().getMetaTableName());
+    TableDescriptor origMetaTableDesc =
+      admin.getDescriptor(UTIL.getConnection().getMetaTableName());
     assertFalse(origMetaTableDesc.isReadOnly());
     TableDescriptor newTD =
       TableDescriptorBuilder.newBuilder(origMetaTableDesc).setReadOnly(true).build();

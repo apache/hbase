@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
-
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
@@ -256,8 +255,8 @@ public class TestImportExport {
    */
   @Test
   public void testMetaExport() throws Throwable {
-    String[] args =
-      new String[] { connection.getMetaTableName().getNameAsString(), FQ_OUTPUT_DIR, "1", "0", "0" };
+    String[] args = new String[] { connection.getMetaTableName().getNameAsString(), FQ_OUTPUT_DIR,
+      "1", "0", "0" };
     assertTrue(runExport(args));
   }
 

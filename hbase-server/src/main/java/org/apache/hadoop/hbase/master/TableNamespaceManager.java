@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
-
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -107,7 +106,9 @@ public class TableNamespaceManager {
   }
 
   private void loadFromMeta() throws IOException {
-    try (Table table = masterServices.getConnection().getTable(masterServices.getConnection().getMetaTableName());
+    try (
+      Table table =
+        masterServices.getConnection().getTable(masterServices.getConnection().getMetaTableName());
       ResultScanner scanner = table.getScanner(HConstants.NAMESPACE_FAMILY)) {
       for (Result result;;) {
         result = scanner.next();
@@ -213,7 +214,8 @@ public class TableNamespaceManager {
   public void deleteNamespace(String namespaceName) throws IOException {
     checkMigrationDone();
     Delete d = new Delete(Bytes.toBytes(namespaceName));
-    try (Table table = masterServices.getConnection().getTable(masterServices.getConnection().getMetaTableName())) {
+    try (Table table =
+      masterServices.getConnection().getTable(masterServices.getConnection().getMetaTableName())) {
       table.delete(d);
     }
     cache.remove(namespaceName);

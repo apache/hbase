@@ -25,7 +25,6 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,9 +90,9 @@ public final class TableName implements Comparable<TableName> {
   /** One globally disallowed name */
   public static final String DISALLOWED_TABLE_NAME = "zookeeper";
 
-  /** 
-   * Returns True if <code>tn</code> is a meta table (hbase:meta or hbase:meta_suffix).
-   * This handles both the default meta table and read replica meta tables.
+  /**
+   * Returns True if <code>tn</code> is a meta table (hbase:meta or hbase:meta_suffix). This handles
+   * both the default meta table and read replica meta tables.
    */
   public static boolean isMetaTableName(final TableName tn) {
     if (tn == null) return false;

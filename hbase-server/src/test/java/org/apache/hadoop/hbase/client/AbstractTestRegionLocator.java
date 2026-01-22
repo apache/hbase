@@ -26,7 +26,6 @@ import java.util.List;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -50,7 +49,8 @@ public abstract class AbstractTestRegionLocator {
 
   protected static void startClusterAndCreateTable() throws Exception {
     UTIL.startMiniCluster(3);
-    HBaseTestingUtil.setReplicas(UTIL.getAdmin(), UTIL.getConnection().getMetaTableName(), REGION_REPLICATION);
+    HBaseTestingUtil.setReplicas(UTIL.getAdmin(), UTIL.getConnection().getMetaTableName(),
+      REGION_REPLICATION);
     TableDescriptor td =
       TableDescriptorBuilder.newBuilder(TABLE_NAME).setRegionReplication(REGION_REPLICATION)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
@@ -173,8 +173,8 @@ public abstract class AbstractTestRegionLocator {
     assertEquals(replicaId, region.getReplicaId());
     ServerName expected;
     try {
-      expected =
-        findRegionLocation(UTIL.getConnection().getMetaTableName(), region.getStartKey(), replicaId);
+      expected = findRegionLocation(UTIL.getConnection().getMetaTableName(), region.getStartKey(),
+        replicaId);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -192,13 +192,13 @@ public abstract class AbstractTestRegionLocator {
   public void testMeta() throws IOException {
     assertMetaStartOrEndKeys(getStartKeys(UTIL.getConnection().getMetaTableName()));
     assertMetaStartOrEndKeys(getEndKeys(UTIL.getConnection().getMetaTableName()));
-    Pair<byte[][], byte[][]> startEndKeys = getStartEndKeys(UTIL.getConnection().getMetaTableName());
+    Pair<byte[][], byte[][]> startEndKeys =
+      getStartEndKeys(UTIL.getConnection().getMetaTableName());
     assertMetaStartOrEndKeys(startEndKeys.getFirst());
     assertMetaStartOrEndKeys(startEndKeys.getSecond());
     for (int replicaId = 0; replicaId < REGION_REPLICATION; replicaId++) {
-      assertMetaRegionLocation(
-        getRegionLocation(UTIL.getConnection().getMetaTableName(), HConstants.EMPTY_START_ROW, replicaId),
-        replicaId);
+      assertMetaRegionLocation(getRegionLocation(UTIL.getConnection().getMetaTableName(),
+        HConstants.EMPTY_START_ROW, replicaId), replicaId);
     }
     assertMetaRegionLocations(
       getRegionLocations(UTIL.getConnection().getMetaTableName(), HConstants.EMPTY_START_ROW));

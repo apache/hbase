@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -113,7 +112,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
           TableName metaTableName = TableName.valueOf("hbase", "meta");
           HMaster master = (HMaster) env.getMasterServices();
           MetaTableNameStore store = master.getMetaTableNameStoreInternal();
-          
+
           if (store != null && !store.isStored()) {
             LOG.info("Storing meta table name in Master Local Region: {}", metaTableName);
             store.store(metaTableName);
@@ -122,7 +121,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
           } else {
             LOG.info("Meta table name already stored, skipping");
           }
-          
+
           Configuration conf = env.getMasterConfiguration();
           Path rootDir = CommonFSUtils.getRootDir(conf);
           TableDescriptor td = writeFsLayout(rootDir, env);

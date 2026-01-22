@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.Waiter;

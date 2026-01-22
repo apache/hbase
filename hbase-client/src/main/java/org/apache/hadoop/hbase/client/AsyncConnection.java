@@ -116,8 +116,8 @@ public interface AsyncConnection extends Closeable {
   }
 
   /**
-   * Retrieve an {@link AsyncTable} implementation for accessing the meta table.
-   * This method returns the correct meta table for this connection
+   * Retrieve an {@link AsyncTable} implementation for accessing the meta table. This method returns
+   * the correct meta table for this connection
    * @return An AsyncTable to use for interactions with the meta table
    */
   default AsyncTable<AdvancedScanResultConsumer> getMetaTable() {

@@ -26,7 +26,6 @@ import java.util.Optional;
 import java.util.Set;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.testclassification.ClientTests;

@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -237,8 +236,8 @@ public class TestRpcAccessChecks {
   public void testExecProcedure() throws Exception {
     verifyAdminCheckForAction((admin) -> {
       // Using existing table instead of creating a new one.
-      admin.execProcedure("flush-table-proc", TEST_UTIL.getConnection().getMetaTableName().getNameAsString(),
-        new HashMap<>());
+      admin.execProcedure("flush-table-proc",
+        TEST_UTIL.getConnection().getMetaTableName().getNameAsString(), new HashMap<>());
     });
   }
 

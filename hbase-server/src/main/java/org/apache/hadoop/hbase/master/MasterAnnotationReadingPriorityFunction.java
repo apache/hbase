@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.HConstants;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.AnnotationReadingPriorityFunction;
 import org.apache.yetus.audience.InterfaceAudience;

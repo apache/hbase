@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
@@ -196,8 +195,8 @@ public class TestReplicationSource {
         new WALKeyImpl(HConstants.EMPTY_BYTE_ARRAY, TableName.valueOf("test"), -1, -1, uuid), we);
       assertTrue(wef.filter(e) == e);
       // Test system WAL edit.
-      e = new WAL.Entry(
-        new WALKeyImpl(HConstants.EMPTY_BYTE_ARRAY, TEST_UTIL.getConnection().getMetaTableName(), -1, -1, uuid), we);
+      e = new WAL.Entry(new WALKeyImpl(HConstants.EMPTY_BYTE_ARRAY,
+        TEST_UTIL.getConnection().getMetaTableName(), -1, -1, uuid), we);
       assertNull(wef.filter(e));
     } finally {
       rs.terminate("Done");

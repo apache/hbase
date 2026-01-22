@@ -28,7 +28,6 @@ import java.util.Random;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -120,7 +119,7 @@ public class TestLargeClusterBalancingTableIsolationAndReplicaDistribution {
    * Validates whether all meta table regions are isolated.
    */
   private boolean isMetaTableIsolated(BalancerClusterState cluster) {
-    
+
     return isTableIsolated(cluster, TableName.valueOf("hbase", "meta"), "Meta");
   }
 

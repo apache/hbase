@@ -267,7 +267,8 @@ public class MetaTableMetrics implements RegionCoprocessor {
     if (
       env instanceof RegionCoprocessorEnvironment
         && ((RegionCoprocessorEnvironment) env).getRegionInfo().getTable() != null
-        && TableName.isMetaTableName(((RegionCoprocessorEnvironment) env).getRegionInfo().getTable())
+        && TableName
+          .isMetaTableName(((RegionCoprocessorEnvironment) env).getRegionInfo().getTable())
     ) {
       RegionCoprocessorEnvironment regionCoprocessorEnv = (RegionCoprocessorEnvironment) env;
       registry = regionCoprocessorEnv.getMetricRegistryForRegionServer();

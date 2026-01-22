@@ -221,9 +221,8 @@ public class TestClientClusterMetrics {
 
     ClusterMetrics metrics = ADMIN.getClusterMetrics();
     Assert.assertEquals(metrics.getTableRegionStatesCount().size(), 2);
-    Assert.assertEquals(
-      metrics.getTableRegionStatesCount().get(connection.getMetaTableName()).getRegionsInTransition(),
-      0);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(connection.getMetaTableName())
+      .getRegionsInTransition(), 0);
     Assert.assertEquals(
       metrics.getTableRegionStatesCount().get(connection.getMetaTableName()).getOpenRegions(), 1);
     Assert.assertEquals(
@@ -252,9 +251,8 @@ public class TestClientClusterMetrics {
 
     ClusterMetrics metrics = ADMIN.getClusterMetrics();
     Assert.assertEquals(metrics.getTableRegionStatesCount().size(), 2);
-    Assert.assertEquals(
-      metrics.getTableRegionStatesCount().get(connection.getMetaTableName()).getRegionsInTransition(),
-      0);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(connection.getMetaTableName())
+      .getRegionsInTransition(), 0);
     Assert.assertEquals(
       metrics.getTableRegionStatesCount().get(connection.getMetaTableName()).getOpenRegions(), 1);
     Assert.assertEquals(
@@ -272,9 +270,8 @@ public class TestClientClusterMetrics {
 
     metrics = ADMIN.getClusterMetrics();
     Assert.assertEquals(metrics.getTableRegionStatesCount().size(), 2);
-    Assert.assertEquals(
-      metrics.getTableRegionStatesCount().get(connection.getMetaTableName()).getRegionsInTransition(),
-      0);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(connection.getMetaTableName())
+      .getRegionsInTransition(), 0);
     Assert.assertEquals(
       metrics.getTableRegionStatesCount().get(connection.getMetaTableName()).getOpenRegions(), 1);
     Assert.assertEquals(

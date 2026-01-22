@@ -142,7 +142,8 @@ public class TestMigrateAndMirrorMetaLocations {
     }
     // wait until all meta regions have been assigned
     UTIL.waitFor(30000,
-      () -> UTIL.getMiniHBaseCluster().getRegions(UTIL.getConnection().getMetaTableName()).size() == 2);
+      () -> UTIL.getMiniHBaseCluster().getRegions(UTIL.getConnection().getMetaTableName()).size()
+          == 2);
     // make sure all the SCPs are finished
     waitUntilNoSCP();
     checkMirrorLocation(2);

@@ -27,7 +27,6 @@ import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.User;
@@ -72,10 +71,10 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
     admin.balancerSwitch(false, true);
 
     // Enable hbase:meta replication.
-    HBaseTestingUtil.setReplicas(admin, TEST_UTIL.getConnection().getMetaTableName(), numOfMetaReplica);
-    TEST_UTIL.waitFor(30000,
-      () -> TEST_UTIL.getMiniHBaseCluster().getRegions(TEST_UTIL.getConnection().getMetaTableName()).size()
-          >= numOfMetaReplica);
+    HBaseTestingUtil.setReplicas(admin, TEST_UTIL.getConnection().getMetaTableName(),
+      numOfMetaReplica);
+    TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getMiniHBaseCluster()
+      .getRegions(TEST_UTIL.getConnection().getMetaTableName()).size() >= numOfMetaReplica);
 
     registry = ConnectionRegistryFactory.create(TEST_UTIL.getConfiguration(), User.getCurrent());
     CONN = new AsyncConnectionImpl(conf, registry, registry.getClusterId().get(),
@@ -94,19 +93,19 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
       CONN.getConfiguration().get(RegionLocator.LOCATOR_META_REPLICAS_MODE_LOADBALANCE_SELECTOR,
         CatalogReplicaLoadBalanceSimpleSelector.class.getName());
 
-    CatalogReplicaLoadBalanceSelector metaSelector = CatalogReplicaLoadBalanceSelectorFactory
-      .createSelector(replicaSelectorClass, TEST_UTIL.getConnection().getMetaTableName(), CONN, () -> {
-        int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
-        try {
-          RegionLocations metaLocations = CONN.registry.getMetaRegionLocations()
-            .get(CONN.connConf.getMetaReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
-          numOfReplicas = metaLocations.size();
-        } catch (Exception e) {
-          LOG.error("Failed to get table meta table's region replication, ",
-            e);
-        }
-        return numOfReplicas;
-      });
+    CatalogReplicaLoadBalanceSelector metaSelector =
+      CatalogReplicaLoadBalanceSelectorFactory.createSelector(replicaSelectorClass,
+        TEST_UTIL.getConnection().getMetaTableName(), CONN, () -> {
+          int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
+          try {
+            RegionLocations metaLocations = CONN.registry.getMetaRegionLocations()
+              .get(CONN.connConf.getMetaReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
+            numOfReplicas = metaLocations.size();
+          } catch (Exception e) {
+            LOG.error("Failed to get table meta table's region replication, ", e);
+          }
+          return numOfReplicas;
+        });
 
     // Loop for 100 times, it should cover all replica ids.
     int[] replicaIdCount = new int[numOfMetaReplica];
@@ -118,8 +117,8 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
 
     // Change to No meta replica
     HBaseTestingUtil.setReplicas(admin, TEST_UTIL.getConnection().getMetaTableName(), 1);
-    TEST_UTIL.waitFor(30000,
-      () -> TEST_UTIL.getMiniHBaseCluster().getRegions(TEST_UTIL.getConnection().getMetaTableName()).size() == 1);
+    TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getMiniHBaseCluster()
+      .getRegions(TEST_UTIL.getConnection().getMetaTableName()).size() == 1);
 
     CatalogReplicaLoadBalanceSelector metaSelectorWithNoReplica =
       CatalogReplicaLoadBalanceSelectorFactory.createSelector(replicaSelectorClass,
@@ -130,8 +129,7 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
               .get(CONN.connConf.getMetaReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
             numOfReplicas = metaLocations.size();
           } catch (Exception e) {
-            LOG.error("Failed to get table meta table's region replication, ",
-              e);
+            LOG.error("Failed to get table meta table's region replication, ", e);
           }
           return numOfReplicas;
         });

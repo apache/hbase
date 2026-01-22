@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -71,8 +70,7 @@ public class TestLargeClusterBalancingMetaTableIsolation {
     // Create regions
     List<RegionInfo> allRegions = new ArrayList<>();
     for (int i = 0; i < NUM_REGIONS; i++) {
-      TableName tableName = i < 3 ?
-        TableName.valueOf("hbase:meta") : NON_META_TABLE_NAME;
+      TableName tableName = i < 3 ? TableName.valueOf("hbase:meta") : NON_META_TABLE_NAME;
       byte[] startKey = new byte[1];
       startKey[0] = (byte) i;
       byte[] endKey = new byte[1];

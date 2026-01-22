@@ -46,7 +46,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HConstants;
-
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -153,8 +152,8 @@ public class FSTableDescriptors implements TableDescriptors {
     FileSystem fs, Path rootdir) throws IOException {
     // see if we already have meta descriptor on fs. Write one if not.
     TableName metaTableName = getMetaTableNameFromConf(conf);
-    Optional<Pair<FileStatus, TableDescriptor>> opt = getTableDescriptorFromFs(fs,
-      CommonFSUtils.getTableDir(rootdir, metaTableName), false);
+    Optional<Pair<FileStatus, TableDescriptor>> opt =
+      getTableDescriptorFromFs(fs, CommonFSUtils.getTableDir(rootdir, metaTableName), false);
     if (opt.isPresent()) {
       return opt.get().getSecond();
     }

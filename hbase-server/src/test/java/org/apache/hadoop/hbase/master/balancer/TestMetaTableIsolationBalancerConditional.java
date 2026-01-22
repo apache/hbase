@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -150,8 +149,8 @@ public class TestMetaTableIsolationBalancerConditional {
     // Validate that the region assignments
     ServerName metaServer;
     try {
-      metaServer =
-        tableToServers.get(TEST_UTIL.getConnection().getMetaTableName()).stream().findFirst().orElseThrow();
+      metaServer = tableToServers.get(TEST_UTIL.getConnection().getMetaTableName()).stream()
+        .findFirst().orElseThrow();
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

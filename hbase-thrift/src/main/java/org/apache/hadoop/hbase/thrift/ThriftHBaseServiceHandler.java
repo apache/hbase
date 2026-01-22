@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -1076,11 +1075,11 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
       Result startRowResult =
         // TODO(HBASE-XXXXX - Phase 6): Get dynamic name from connection
         // For now, hardcode default. Future: use getConnection(user).getMetaTableName().getName()
-        getReverseScanResult(TableName.valueOf("hbase", "meta").getName(), row, HConstants.CATALOG_FAMILY);
+        getReverseScanResult(TableName.valueOf("hbase", "meta").getName(), row,
+          HConstants.CATALOG_FAMILY);
 
       if (startRowResult == null) {
-        throw new IOException("Cannot find row in hbase:meta, row="
-          + Bytes.toStringBinary(row));
+        throw new IOException("Cannot find row in hbase:meta, row=" + Bytes.toStringBinary(row));
       }
 
       // find region start and end keys

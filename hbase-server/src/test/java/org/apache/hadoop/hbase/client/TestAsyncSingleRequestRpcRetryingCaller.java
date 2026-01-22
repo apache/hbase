@@ -165,8 +165,8 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
         }
       };
     try (AsyncConnectionImpl mockedConn = new AsyncConnectionImpl(CONN.getConfiguration(),
-      CONN.registry, CONN.registry.getClusterId().get(),
-      TableName.valueOf("hbase:meta"), null, User.getCurrent()) {
+      CONN.registry, CONN.registry.getClusterId().get(), TableName.valueOf("hbase:meta"), null,
+      User.getCurrent()) {
 
       @Override
       AsyncRegionLocator getLocator() {

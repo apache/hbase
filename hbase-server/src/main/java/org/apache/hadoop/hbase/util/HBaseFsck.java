@@ -81,7 +81,6 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -2203,7 +2202,8 @@ public class HBaseFsck extends Configured implements Closeable {
             }
           }
         }
-        LOG.info("Patching {} with .regioninfo: " + hbi.getHdfsHRI(), connection.getMetaTableName());
+        LOG.info("Patching {} with .regioninfo: " + hbi.getHdfsHRI(),
+          connection.getMetaTableName());
         int numReplicas = admin.getDescriptor(hbi.getTableName()).getRegionReplication();
         HBaseFsckRepair.fixMetaHoleOnlineAndAddReplicas(getConf(), hbi.getHdfsHRI(),
           admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().keySet(),
