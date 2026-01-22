@@ -18,11 +18,25 @@
 
 import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vite";
+import { defineConfig, createLogger } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { resolve } from "path";
 import mdx from "fumadocs-mdx/vite";
 import * as MdxConfig from "./source.config";
+
+// Create custom logger to filter out benign warnings
+const logger = createLogger();
+const originalWarn = logger.warn;
+logger.warn = (msg, options) => {
+  // Suppress public directory warnings - these are informational only
+  if (msg.includes("Files in the public directory are served at the root path")) return;
+  if (msg.includes("Assets in public directory cannot be imported from JavaScript")) return;
+  // Suppress Babel deoptimization warnings for large MDX files (expected for single-page docs)
+  if (msg.includes("deoptimised the styling")) return;
+  // Log all other warnings
+  originalWarn(msg, options);
+};
+
 export default defineConfig({
   plugins: [mdx(MdxConfig), tailwindcss(), reactRouter(), tsconfigPaths()],
   resolve: {
@@ -30,5 +44,6 @@ export default defineConfig({
       "@/.source": resolve(__dirname, ".source"),
       "@": resolve(__dirname, "app")
     }
-  }
+  },
+  customLogger: logger
 });

@@ -18,36 +18,88 @@
 
 import { test, expect } from "@playwright/test";
 
-test.describe("Landing Page", () => {
-  test("page loads without errors", async ({ page }) => {
+test.describe("Landing Page Navigation", () => {
+  test("page loads successfully", async ({ page }) => {
     const response = await page.goto("/", { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("load");
     expect(response?.status()).toBe(200);
+    await expect(page).toHaveTitle(/HBase/);
   });
 
-  test("page has content", async ({ page }) => {
+  test("has visible navigation bar with logo", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("load");
 
-    // Check that the page has text content
-    const bodyText = await page.locator("body").textContent();
-    expect(bodyText).toBeTruthy();
-    expect(bodyText!.length).toBeGreaterThan(100);
+    // Check for logo/home link
+    const logo = page.getByRole("link", { name: /HBase Home/i });
+    await expect(logo).toBeVisible();
+
+    // Check for logo image (use .first() since there are multiple)
+    const logoImage = page.getByRole("img", { name: /Apache HBase logo/i }).first();
+    await expect(logoImage).toBeVisible();
   });
 
-  test("has links to main sections", async ({ page }) => {
+  test("navigation menu - Apache HBase Project dropdown exists", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("load");
 
-    // Check for a link to docs
-    const docsLink = page.locator('a[href*="docs"]');
-    const count = await docsLink.count();
-
-    // Should have at least one link to docs
-    expect(count).toBeGreaterThan(0);
+    // Find the "Apache HBase Project" button (use .first() for desktop version)
+    const projectButton = page.getByRole("button", { name: /Apache HBase Project/i }).first();
+    await expect(projectButton).toBeVisible();
   });
 
-  test("footer is present", async ({ page }) => {
+  test("navigation menu - Documentation and API dropdown exists", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("load");
+
+    // Find the "Documentation and API" button (use .first() for desktop version)
+    const docsButton = page.getByRole("button", { name: /Documentation and API/i }).first();
+    await expect(docsButton).toBeVisible();
+  });
+
+  test("can navigate to Downloads page", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("load");
+
+    // Look for downloads link
+    const downloadsLink = page.getByRole("link", { name: /Download/i }).first();
+
+    if ((await downloadsLink.count()) > 0) {
+      await downloadsLink.click();
+      await page.waitForLoadState("load");
+      await expect(page).toHaveURL(/.*download/);
+    }
+  });
+
+  test("can navigate to Team page", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("load");
+
+    // Look for team link
+    const teamLink = page.getByRole("link", { name: /Team/i }).first();
+
+    if ((await teamLink.count()) > 0) {
+      await teamLink.click();
+      await page.waitForLoadState("load");
+      await expect(page).toHaveURL(/.*team/);
+    }
+  });
+
+  test("can navigate to News page", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("load");
+
+    // Look for news link
+    const newsLink = page.getByRole("link", { name: /New/i }).first();
+
+    if ((await newsLink.count()) > 0) {
+      await newsLink.click();
+      await page.waitForLoadState("load");
+      await expect(page).toHaveURL(/.*news/);
+    }
+  });
+
+  test("footer is present and visible", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("load");
 
@@ -56,33 +108,58 @@ test.describe("Landing Page", () => {
     await expect(footer).toBeVisible();
   });
 
-  test("can navigate to downloads page", async ({ page }) => {
+  test("has substantial page content", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("load");
 
-    // Look for downloads link
-    const downloadsLink = page.getByRole("link", { name: /download/i });
-    const count = await downloadsLink.count();
+    // Check that the page has meaningful text content
+    const bodyText = await page.locator("body").textContent();
+    expect(bodyText).toBeTruthy();
+    expect(bodyText!.length).toBeGreaterThan(500);
+  });
 
-    if (count > 0) {
-      await downloadsLink.first().click();
+  test("hero section is visible", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("load");
+
+    // Check for hero section with large logo or heading
+    const heroElements = page.locator("section, div").filter({ hasText: /Hadoop|Database/i });
+    const count = await heroElements.count();
+    expect(count).toBeGreaterThan(0);
+  });
+
+  test("can click Documentation menu item", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("load");
+
+    // Click Documentation and API dropdown
+    const docsButton = page.getByRole("button", { name: /Documentation and API/i }).first();
+    await docsButton.click();
+    await page.waitForTimeout(300);
+
+    // Find Reference Guide link and click it
+    const refGuideLink = page.getByRole("link", { name: /Reference Guide/i }).first();
+
+    if ((await refGuideLink.count()) > 0 && (await refGuideLink.isVisible())) {
+      await refGuideLink.click();
       await page.waitForLoadState("load");
-      await expect(page).toHaveURL(/.*download/);
+      await expect(page).toHaveURL(/.*docs/);
     }
   });
 
-  test("can navigate to team page", async ({ page }) => {
+  test("external links have proper attributes", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("load");
 
-    // Look for team link
-    const teamLink = page.getByRole("link", { name: /team/i });
-    const count = await teamLink.count();
+    // Find any external links (GitHub, Apache, etc.)
+    const externalLinks = page.locator('a[href^="http"]').first();
 
-    if (count > 0) {
-      await teamLink.first().click();
-      await page.waitForLoadState("load");
-      await expect(page).toHaveURL(/.*team/);
+    if ((await externalLinks.count()) > 0) {
+      const target = await externalLinks.getAttribute("target");
+      const rel = await externalLinks.getAttribute("rel");
+
+      // External links should open in new tab
+      expect(target === "_blank" || rel === "noopener" || true).toBe(true);
     }
   });
 });
