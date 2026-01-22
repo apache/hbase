@@ -18,27 +18,21 @@
 package org.apache.hadoop.hbase.metrics.impl;
 
 import com.codahale.metrics.Meter;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 /**
  * Test class for {@link DropwizardMeter}.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestDropwizardMeter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDropwizardMeter.class);
 
   private Meter meter;
 
-  @Before
+  @BeforeEach
   public void setup() {
     this.meter = Mockito.mock(Meter.class);
   }
