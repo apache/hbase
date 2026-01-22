@@ -103,7 +103,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
   }
 
   /**
-   * Check if a given path is belongs to active WAL directory
+   * Check if a given path belongs to active WAL directory
    * @param p path
    * @return true, if yes
    */
@@ -126,9 +126,9 @@ public class IncrementalTableBackupClient extends TableBackupClient {
 
   /**
    * Reads bulk load records from backup table, iterates through the records and forms the paths for
-   * bulk loaded hfiles. Copies the bulk loaded hfiles to backup destination. This method does NOT
-   * clean up the entries in the bulk load system table. Those entries should not be cleaned until
-   * the backup is marked as complete.
+   * bulk loaded hfiles. Copies the bulk loaded hfiles to the backup destination. This method does
+   * NOT clean up the entries in the bulk load system table. Those entries should not be cleaned
+   * until the backup is marked as complete.
    * @param tablesToBackup list of tables to be backed up
    */
   protected List<BulkLoad> handleBulkLoad(List<TableName> tablesToBackup,
@@ -403,13 +403,17 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       failBackup(conn, backupInfo, backupManager, e, "Unexpected Exception : ",
         BackupType.INCREMENTAL, conf);
       throw new IOException(e);
+    } finally {
+      if (backupInfo.isContinuousBackupEnabled()) {
+        deleteBulkLoadDirectory();
+      }
     }
   }
 
   protected void incrementalCopyHFiles(String[] files, String backupDest) throws IOException {
     boolean diskBasedSortingOriginalValue = HFileOutputFormat2.diskBasedSortingEnabled(conf);
     try {
-      LOG.debug("Incremental copy HFiles is starting. dest=" + backupDest);
+      LOG.debug("Incremental copy HFiles is starting. dest={}", backupDest);
       // set overall backup phase: incremental_copy
       backupInfo.setPhase(BackupPhase.INCREMENTAL_COPY);
       // get incremental backup file list and prepare parms for DistCp
