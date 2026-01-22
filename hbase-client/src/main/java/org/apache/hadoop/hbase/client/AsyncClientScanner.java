@@ -19,13 +19,13 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.EMPTY_END_ROW;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.*;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.createScanResultCache;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getLocateType;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.incRPCCallsMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.incRPCRetriesMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.incRegionCountMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isRemote;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.timelineConsistentRead;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import io.opentelemetry.api.trace.Span;
@@ -202,40 +202,42 @@ class AsyncClientScanner {
     }
   }
 
-  private void startScan(OpenScannerResponse resp) {
-    addListener(
+  // lastNextCallNanos is used to calculate the MILLIS_BETWEEN_NEXTS scan metrics
+  private void startScan(OpenScannerResponse resp, long lastNextCallNanos) {
+    AsyncScanSingleRegionRpcRetryingCaller scanSingleRegionCaller =
       conn.callerFactory.scanSingleRegion().id(resp.resp.getScannerId()).location(resp.loc)
         .remote(resp.isRegionServerRemote)
         .scannerLeaseTimeoutPeriod(resp.resp.getTtl(), TimeUnit.MILLISECONDS).stub(resp.stub)
         .setScan(scan).metrics(scanMetrics).consumer(consumer).resultCache(resultCache)
         .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
         .scanTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
+        .lastNextCallNanos(lastNextCallNanos)
         .pauseForServerOverloaded(pauseNsForServerOverloaded, TimeUnit.NANOSECONDS)
         .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt)
-        .setRequestAttributes(requestAttributes).start(resp.controller, resp.resp),
-      (hasMore, error) -> {
-        try (Scope ignored = span.makeCurrent()) {
-          if (error != null) {
-            try {
-              consumer.onError(error);
-              return;
-            } finally {
-              TraceUtil.setError(span, error);
-              span.end();
-            }
-          }
-          if (hasMore) {
-            openScanner();
-          } else {
-            try {
-              consumer.onComplete();
-            } finally {
-              span.setStatus(StatusCode.OK);
-              span.end();
-            }
+        .setRequestAttributes(requestAttributes).build();
+    addListener(scanSingleRegionCaller.start(resp.controller, resp.resp), (hasMore, error) -> {
+      try (Scope ignored = span.makeCurrent()) {
+        if (error != null) {
+          try {
+            consumer.onError(error);
+            return;
+          } finally {
+            TraceUtil.setError(span, error);
+            span.end();
           }
         }
-      });
+        if (hasMore) {
+          openScanner(scanSingleRegionCaller);
+        } else {
+          try {
+            consumer.onComplete();
+          } finally {
+            span.setStatus(StatusCode.OK);
+            span.end();
+          }
+        }
+      }
+    });
   }
 
   private CompletableFuture<OpenScannerResponse> openScanner(int replicaId) {
@@ -256,11 +258,17 @@ class AsyncClientScanner {
       : conn.connConf.getPrimaryScanTimeoutNs();
   }
 
-  private void openScanner() {
+  private void openScanner(AsyncScanSingleRegionRpcRetryingCaller previousScanSingleRegionCaller) {
     if (this.isScanMetricsByRegionEnabled) {
       scanMetrics.moveToNextRegion();
     }
     incRegionCountMetrics(scanMetrics);
+    long openScannerStartNanos = System.nanoTime();
+    if (previousScanSingleRegionCaller != null) {
+      // open scanner is also a next call
+      incMillisBetweenNextsMetrics(scanMetrics, TimeUnit.NANOSECONDS
+        .toMillis(openScannerStartNanos - previousScanSingleRegionCaller.getLastNextCallNanos()));
+    }
     openScannerTries.set(1);
     addListener(timelineConsistentRead(conn.getLocator(), tableName, scan, scan.getStartRow(),
       getLocateType(scan), this::openScanner, rpcTimeoutNs, getPrimaryTimeoutNs(), retryTimer,
@@ -280,14 +288,14 @@ class AsyncClientScanner {
             this.scanMetrics.initScanMetricsRegionInfo(loc.getRegion().getEncodedName(),
               loc.getServerName());
           }
-          startScan(resp);
+          startScan(resp, openScannerStartNanos);
         }
       });
   }
 
   public void start() {
     try (Scope ignored = span.makeCurrent()) {
-      openScanner();
+      openScanner(null);
     }
   }
 }
