@@ -23,15 +23,13 @@ import {
   DocsBody as FumaDocsBody,
   DocsDescription as FumaDocsDescription,
   DocsPage as FumaDocsPage,
-  DocsTitle as FumaDocsTitle,
-  PageLastUpdate
+  DocsTitle as FumaDocsTitle
 } from "@/components/docs/layout/docs/page";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import type * as PageTree from "fumadocs-core/page-tree";
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
 import { useParams } from "react-router";
-import { getGithubLastEdit } from "fumadocs-core/content/github";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { getPageTreePeers } from "fumadocs-core/page-tree";
 import { Card, Cards } from "fumadocs-ui/components/card";
 import { Step, Steps } from "fumadocs-ui/components/steps";
@@ -124,21 +122,6 @@ const renderer = toClientRenderer(
     const mdxFileRoute = `${isSinglePage ? "" : `${trimmedRoute === "" ? "preface" : trimmedRoute}.mdx`}`;
     const isGrouppedRoute = !!trimmedRoute && grouppedRoutes.includes(trimmedRoute);
 
-    const [lastModifiedTime, setLastModifiedTime] = useState<Date | undefined>(undefined);
-
-    useEffect(() => {
-      getGithubLastEdit({
-        owner: "apache",
-        repo: "hbase",
-        // file path in Git
-        path: `${baseGithubPath}${mdxFileRoute}`
-      }).then((value) => {
-        if (value) {
-          setLastModifiedTime(value);
-        }
-      });
-    }, [isSinglePage, mdxFileRoute]);
-
     // Custom link component that transforms /docs/ links to anchors on single-page
     const CustomLink = ({ href, children, ...rest }: any) => {
       let transformedHref = href;
@@ -197,18 +180,14 @@ const renderer = toClientRenderer(
         </FumaDocsBody>
 
         {route !== undefined && (
-          <div className="flex items-end gap-3">
-            <a
-              href={`https://github.com/apache/hbase/${baseGithubPath}${mdxFileRoute}`}
-              rel="noreferrer noopener"
-              target="_blank"
-              className="text-fd-secondary-foreground bg-fd-secondary hover:text-fd-accent-foreground hover:bg-fd-accent w-fit rounded-xl border p-2 text-sm font-medium transition-colors"
-            >
-              Edit on GitHub
-            </a>
-
-            {lastModifiedTime && <PageLastUpdate date={lastModifiedTime} />}
-          </div>
+          <a
+            href={`https://github.com/apache/hbase/${baseGithubPath}${mdxFileRoute}`}
+            rel="noreferrer noopener"
+            target="_blank"
+            className="text-fd-secondary-foreground bg-fd-secondary hover:text-fd-accent-foreground hover:bg-fd-accent w-fit rounded-xl border p-2 text-sm font-medium transition-colors"
+          >
+            Edit on GitHub
+          </a>
         )}
       </FumaDocsPage>
     );
