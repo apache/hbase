@@ -75,7 +75,7 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
     ConnectionRegistry registry =
       ConnectionRegistryFactory.create(TEST_UTIL.getConfiguration(), User.getCurrent());
     CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
-      registry.getClusterId().get(), org.apache.hadoop.hbase.TableName.META_TABLE_NAME, null, User.getCurrent());
+      registry.getClusterId().get(), TableName.valueOf("hbase:meta"), null, User.getCurrent());
   }
 
   @AfterClass
@@ -166,7 +166,7 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
       };
     try (AsyncConnectionImpl mockedConn = new AsyncConnectionImpl(CONN.getConfiguration(),
       CONN.registry, CONN.registry.getClusterId().get(),
-      org.apache.hadoop.hbase.TableName.META_TABLE_NAME, null, User.getCurrent()) {
+      TableName.valueOf("hbase:meta"), null, User.getCurrent()) {
 
       @Override
       AsyncRegionLocator getLocator() {

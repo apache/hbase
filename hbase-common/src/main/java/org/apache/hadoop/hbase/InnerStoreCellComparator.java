@@ -82,11 +82,6 @@ public class InnerStoreCellComparator extends CellComparatorImpl {
   }
   
   private static boolean isMetaTable(byte[] tableName) {
-    // Quick check: meta tables are in hbase namespace and start with "meta"
-    return tableName != null && tableName.length > 11 && 
-           tableName[0] == 'h' && tableName[1] == 'b' && tableName[2] == 'a' && 
-           tableName[3] == 's' && tableName[4] == 'e' && tableName[5] == ':' &&
-           tableName[6] == 'm' && tableName[7] == 'e' && tableName[8] == 't' && 
-           tableName[9] == 'a';
+    return Bytes.startsWith(tableName, Bytes.toBytes("hbase:meta"));
   }
 }

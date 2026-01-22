@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -72,8 +73,7 @@ public class TestAsyncConnectionTracing {
         return CompletableFuture.completedFuture(masterServer);
       }
     };
-    conn = new AsyncConnectionImpl(CONF, registry, "test",
-      org.apache.hadoop.hbase.TableName.META_TABLE_NAME, null, user);
+    conn = new AsyncConnectionImpl(CONF, registry, "test", TableName.valueOf("hbase:meta"), null, user);
   }
 
   @After

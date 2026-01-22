@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.MatcherPredicate;
 
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -100,7 +101,7 @@ public class TestAsyncRegionLocatorTracing {
       public CompletableFuture<RegionLocations> getMetaRegionLocations() {
         return CompletableFuture.completedFuture(locs);
       }
-    }, "test", org.apache.hadoop.hbase.TableName.META_TABLE_NAME, null, user);
+    }, "test", TableName.valueOf("hbase:meta"), null, user);
   }
 
   @After

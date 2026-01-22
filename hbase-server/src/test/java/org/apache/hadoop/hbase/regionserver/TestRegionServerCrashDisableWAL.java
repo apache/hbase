@@ -66,7 +66,7 @@ public class TestRegionServerCrashDisableWAL {
     UTIL.createTable(TABLE_NAME, CF);
     UTIL.waitTableAvailable(TABLE_NAME);
     HRegionServer rs = UTIL.getRSForFirstRegionInTable(TABLE_NAME);
-    if (!rs.getRegions(TEST_UTIL.getConnection().getMetaTableName()).isEmpty()) {
+    if (!rs.getRegions(UTIL.getConnection().getMetaTableName()).isEmpty()) {
       HRegionServer rs1 = UTIL.getOtherRegionServer(rs);
       UTIL.moveRegionAndWait(
         UTIL.getMiniHBaseCluster().getRegions(TABLE_NAME).get(0).getRegionInfo(),

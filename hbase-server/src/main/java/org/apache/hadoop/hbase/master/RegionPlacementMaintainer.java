@@ -620,7 +620,6 @@ public class RegionPlacementMaintainer implements Closeable {
     } catch (Exception e) {
       LOG.error(
         "Failed to update hbase:meta with the new assignment" + "plan because " + e.getMessage());
-      LOG.info("Updated {} with the new assignment plan", connection.getMetaTableName());
     }
   }
 

@@ -75,7 +75,6 @@ public class TestLargeClusterBalancingTableIsolationAndReplicaDistribution {
     for (int i = 0; i < NUM_REGIONS; i++) {
       TableName tableName;
       if (i < 1) {
-        // TODO(HBASE-XXXXX - Phase 6): Make configurable for replica testing
         tableName = TableName.valueOf("hbase", "meta");
       } else if (i < 10) {
         tableName = SYSTEM_TABLE_NAME;
@@ -121,7 +120,7 @@ public class TestLargeClusterBalancingTableIsolationAndReplicaDistribution {
    * Validates whether all meta table regions are isolated.
    */
   private boolean isMetaTableIsolated(BalancerClusterState cluster) {
-    // TODO(HBASE-XXXXX - Phase 6): Make configurable for replica testing
+    
     return isTableIsolated(cluster, TableName.valueOf("hbase", "meta"), "Meta");
   }
 

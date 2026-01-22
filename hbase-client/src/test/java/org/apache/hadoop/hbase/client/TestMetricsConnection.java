@@ -107,14 +107,14 @@ public class TestMetricsConnection {
     conf.setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
 
     AsyncConnectionImpl impl = new AsyncConnectionImpl(conf, null, "foo",
-      org.apache.hadoop.hbase.TableName.META_TABLE_NAME, null, User.getCurrent());
+      TableName.valueOf("hbase:meta"), null, User.getCurrent());
     Optional<MetricsConnection> metrics = impl.getConnectionMetrics();
     assertTrue("Metrics should be present", metrics.isPresent());
     assertEquals(clusterId + "@" + Integer.toHexString(impl.hashCode()),
       metrics.get().getMetricScope());
     conf.set(MetricsConnection.METRICS_SCOPE_KEY, scope);
     impl = new AsyncConnectionImpl(conf, null, "foo",
-      org.apache.hadoop.hbase.TableName.META_TABLE_NAME, null, User.getCurrent());
+      TableName.valueOf("hbase:meta"), null, User.getCurrent());
 
     metrics = impl.getConnectionMetrics();
     assertTrue("Metrics should be present", metrics.isPresent());
@@ -135,7 +135,7 @@ public class TestMetricsConnection {
     List<AsyncConnectionImpl> connList = new ArrayList<AsyncConnectionImpl>();
     for (int i = 0; i < num; i++) {
       impl = new AsyncConnectionImpl(conf, null, null,
-        org.apache.hadoop.hbase.TableName.META_TABLE_NAME, null, user);
+        TableName.valueOf("hbase:meta"), null, user);
       connList.add(impl);
     }
 

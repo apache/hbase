@@ -262,7 +262,6 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
           (c, s, d) -> s.getMetaTableName(c, GetMetaTableNameRequest.getDefaultInstance(), d),
           GetMetaTableNameResponse::hasTableName, "getMetaTableName()")
         .thenApply(resp -> {
-          // If the response has a table name, parse it. Otherwise, return default.
           if (resp.hasTableName() && !resp.getTableName().isEmpty()) {
             return TableName.valueOf(resp.getTableName());
           } else {

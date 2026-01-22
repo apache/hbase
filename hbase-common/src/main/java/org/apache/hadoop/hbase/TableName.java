@@ -46,7 +46,6 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  * </p>
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public final class TableName implements Comparable<TableName> {
 
   private static final Logger LOG = LoggerFactory.getLogger(TableName.class);
@@ -304,7 +303,7 @@ public final class TableName implements Comparable<TableName> {
     }
     if (qualifierAsString.equals(OLD_META_STR)) {
       throw new IllegalArgumentException(OLD_META_STR + " no longer exists. The table has been "
-        + "renamed to hbase:meta");
+        + "renamed to hbase:meta or hbase:meta_suffix in conf");
     }
 
     if (Bytes.equals(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME, namespace)) {

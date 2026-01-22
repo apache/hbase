@@ -48,8 +48,6 @@ public interface AsyncConnection extends Closeable {
    * lifetime of this connection. For most clusters, this will be "hbase:meta". For read replica
    * clusters or other specialized configurations, this may return a different table name.
    * <p>
-   * This method should be used instead of static references to meta table name to ensure
-   * compatibility with clusters that use custom meta table names.
    * @return The meta table name for this cluster
    */
   TableName getMetaTableName();
@@ -118,8 +116,8 @@ public interface AsyncConnection extends Closeable {
   }
 
   /**
-   * Retrieve an AsyncTable implementation for accessing the meta table.
-   * This method returns the correct meta table for this connection (hbase:meta or hbase:meta_suffix).
+   * Retrieve an {@link AsyncTable} implementation for accessing the meta table.
+   * This method returns the correct meta table for this connection
    * @return An AsyncTable to use for interactions with the meta table
    */
   default AsyncTable<AdvancedScanResultConsumer> getMetaTable() {

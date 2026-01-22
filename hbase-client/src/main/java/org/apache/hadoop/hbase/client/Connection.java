@@ -69,8 +69,6 @@ public interface Connection extends Abortable, Closeable {
    * lifetime of this connection. For most clusters, this will be "hbase:meta". For read replica
    * clusters or other specialized configurations, this may return a different table name.
    * <p>
-   * This method should be used instead of static references to meta table name to ensure
-   * compatibility with clusters that use custom meta table names.
    * @return The meta table name for this cluster
    */
   TableName getMetaTableName();
@@ -111,8 +109,6 @@ public interface Connection extends Abortable, Closeable {
   /**
    * Retrieve a Table implementation for accessing the meta table. 
    * This method returns the correct meta table for this connection (hbase:meta or hbase:meta_suffix).
-   * The returned Table is not thread safe, a new instance should be created for each using thread.
-   * This is a lightweight operation, pooling or caching of the returned Table is neither required nor desired.
    * @return A Table to use for interactions with the meta table
    */
   default Table getMetaTable() throws IOException {

@@ -52,11 +52,8 @@ public interface ConnectionRegistry extends Closeable {
   /**
    * Get the name of the meta table for this cluster.
    * <p>
-   * Should only be called once, similar to {@link #getClusterId()}. The upper layer should cache
-   * this value as it will not change during the connection lifetime.
+   * Should only be called once, similar to {@link #getClusterId()}.
    * <p>
-   * For most clusters, this will return the default "hbase:meta". For read replica clusters or
-   * other specialized configurations, this may return a different table name.
    * @return CompletableFuture containing the meta table name
    */
   CompletableFuture<TableName> getMetaTableName();

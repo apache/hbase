@@ -51,7 +51,6 @@ public class DoNothingConnectionRegistry implements ConnectionRegistry {
 
   @Override public CompletableFuture<TableName> getMetaTableName() {
     return CompletableFuture.completedFuture(null);
-    
   }
 
   @Override

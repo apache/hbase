@@ -94,7 +94,7 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
   @Test
   public void testAddPeer() throws Exception {
     TableName tableName = createTable();
-    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
@@ -103,7 +103,7 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
     HRegionServer rs = UTIL.getOtherRegionServer(UTIL.getRSForFirstRegionInTable(tableName));
     moveRegionAndArchiveOldWals(region, rs);
     addPeer(true);
-    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
@@ -120,7 +120,7 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
     UTIL.getAdmin().addReplicationPeer(PEER_ID, peerConfig, true);
 
     TableName tableName = createTable();
-    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
@@ -142,7 +142,7 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
       ReplicationPeerConfig.newBuilder(peerConfig).setSerial(true).build());
     UTIL.getAdmin().enableReplicationPeer(PEER_ID);
 
-    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
@@ -160,7 +160,7 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
     UTIL.getAdmin().addReplicationPeer(PEER_ID, peerConfig, true);
 
     TableName tableName = createTable();
-    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
@@ -183,7 +183,7 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
       ReplicationPeerConfig.newBuilder(peerConfig)
         .setTableCFsMap(ImmutableMap.of(tableName, Collections.emptyList())).build());
     UTIL.getAdmin().enableReplicationPeer(PEER_ID);
-    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
@@ -195,7 +195,7 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
   @Test
   public void testDisabledTable() throws Exception {
     TableName tableName = createTable();
-    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
@@ -204,7 +204,7 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
     rollAllWALs();
     addPeer(true);
     UTIL.getAdmin().enableTable(tableName);
-    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
@@ -216,7 +216,7 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
   @Test
   public void testDisablingTable() throws Exception {
     TableName tableName = createTable();
-    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
@@ -239,7 +239,7 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
     tsm.setTableState(tableName, TableState.State.DISABLED);
     t.join();
     UTIL.getAdmin().enableTable(tableName);
-    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
@@ -251,7 +251,7 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
   @Test
   public void testEnablingTable() throws Exception {
     TableName tableName = createTable();
-    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
@@ -274,7 +274,7 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
     assertTrue(t.isAlive());
     tsm.setTableState(tableName, TableState.State.ENABLED);
     t.join();
-    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
