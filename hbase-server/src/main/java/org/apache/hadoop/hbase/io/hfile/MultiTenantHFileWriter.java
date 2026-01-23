@@ -27,6 +27,7 @@ import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
@@ -116,6 +118,8 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   private final FSDataOutputStream outputStream;
   /** Whether this writer owns the underlying output stream */
   private final boolean closeOutputStream;
+  /** Tracks whether close has already run */
+  private final AtomicBoolean closed = new AtomicBoolean(false);
   /** Block writer for HFile blocks */
   private HFileBlock.Writer blockWriter;
   /** Section index writer for tenant indexing */
@@ -734,6 +738,9 @@ public class MultiTenantHFileWriter implements HFile.Writer {
 
   @Override
   public void close() throws IOException {
+    if (!closed.compareAndSet(false, true)) {
+      return;
+    }
     if (outputStream == null) {
       return;
     }
@@ -877,6 +884,14 @@ public class MultiTenantHFileWriter implements HFile.Writer {
 
     // Bulk load timestamp - when this file was created/written
     fileInfo.append(HStoreFile.BULKLOAD_TIME_KEY, Bytes.toBytes(bulkloadTime), false);
+
+    // Global block encoding metadata (applies to all sections)
+    DataBlockEncoding dataBlockEncoding = fileContext.getDataBlockEncoding();
+    fileInfo.append(HFileDataBlockEncoder.DATA_BLOCK_ENCODING, dataBlockEncoding.getNameInBytes(),
+      false);
+    IndexBlockEncoding indexBlockEncoding = fileContext.getIndexBlockEncoding();
+    fileInfo.append(HFileIndexBlockEncoder.INDEX_BLOCK_ENCODING,
+      indexBlockEncoding.getNameInBytes(), false);
 
     // Memstore and version metadata
     if (fileContext.isIncludesMvcc()) {

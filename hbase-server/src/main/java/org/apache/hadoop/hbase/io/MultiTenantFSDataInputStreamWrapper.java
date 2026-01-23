@@ -376,7 +376,8 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
 
     @Override
     public void close() throws IOException {
-      rawStream.close();
+      // Do not close the shared raw stream. Section readers are lightweight views that
+      // should not own the lifecycle of the underlying stream.
     }
 
     @Override
