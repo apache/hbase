@@ -26,7 +26,6 @@ import java.util.TreeMap;
 import java.util.function.Function;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.io.hfile.HFileWriterImpl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -56,8 +55,8 @@ public class CustomTieringMultiFileWriter extends DateTieredMultiFileWriter {
       timeRangeTracker.setMin(tieringValue);
       timeRangeTracker.setMax(tieringValue);
       lowerBoundary2TimeRanger.put(entry.getKey(), timeRangeTracker);
-      ((HFileWriterImpl) lowerBoundary2Writer.get(entry.getKey()).getLiveFileWriter())
-        .setTimeRangeTrackerForTiering(() -> timeRangeTracker);
+      lowerBoundary2Writer.get(entry.getKey())
+        .setCustomTieringTimeRangeSupplier(() -> timeRangeTracker);
     } else {
       TimeRangeTracker timeRangeTracker = entry.getValue();
       if (timeRangeTracker.getMin() > tieringValue) {

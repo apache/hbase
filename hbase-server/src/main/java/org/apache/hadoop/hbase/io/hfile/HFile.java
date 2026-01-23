@@ -138,12 +138,15 @@ public final class HFile {
   /**
    * Maximum supported HFile format version
    */
-  public static final int MAX_FORMAT_VERSION = 3;
+  public static final int MAX_FORMAT_VERSION = 4;
 
   /**
    * Minimum HFile format version with support for persisting cell tags
    */
   public static final int MIN_FORMAT_VERSION_WITH_TAGS = 3;
+
+  /** Version for HFiles that support multi-tenant workloads */
+  public static final int MIN_FORMAT_VERSION_WITH_MULTI_TENANT = 4;
 
   /** Default compression name: none. */
   public final static String DEFAULT_COMPRESSION = DEFAULT_COMPRESSION_ALGORITHM.getName();
@@ -354,6 +357,8 @@ public final class HFile {
           + "in hbase-site.xml)");
       case 3:
         return new HFile.WriterFactory(conf, cacheConf);
+      case 4:
+        return new MultiTenantHFileWriter.WriterFactory(conf, cacheConf);
       default:
         throw new IllegalArgumentException(
           "Cannot create writer for HFile " + "format version " + version);
@@ -499,19 +504,29 @@ public final class HFile {
   public static Reader createReader(ReaderContext context, HFileInfo fileInfo,
     CacheConfig cacheConf, Configuration conf) throws IOException {
     try {
+      FixedFileTrailer trailer = fileInfo.getTrailer();
+      int majorVersion = trailer.getMajorVersion();
+
+      // Handle HFile V4 (multi-tenant) separately for both stream and pread modes
+      if (majorVersion == MIN_FORMAT_VERSION_WITH_MULTI_TENANT) {
+        LOG.debug("Opening MultiTenant HFile v4");
+        return MultiTenantReaderFactory.create(context, fileInfo, cacheConf, conf);
+      }
+
+      // For non-multi-tenant files, continue with existing approach
       if (context.getReaderType() == ReaderType.STREAM) {
         // stream reader will share trailer with pread reader, see HFileStreamReader#copyFields
         return new HFileStreamReader(context, fileInfo, cacheConf, conf);
       }
-      FixedFileTrailer trailer = fileInfo.getTrailer();
-      switch (trailer.getMajorVersion()) {
+
+      switch (majorVersion) {
         case 2:
           LOG.debug("Opening HFile v2 with v3 reader");
           // Fall through. FindBugs: SF_SWITCH_FALLTHROUGH
         case 3:
           return new HFilePreadReader(context, fileInfo, cacheConf, conf);
         default:
-          throw new IllegalArgumentException("Invalid HFile version " + trailer.getMajorVersion());
+          throw new IllegalArgumentException("Invalid HFile version " + majorVersion);
       }
     } catch (Throwable t) {
       IOUtils.closeQuietly(context.getInputStreamWrapper(),
@@ -560,7 +575,10 @@ public final class HFile {
         .withPrimaryReplicaReader(primaryReplicaReader).withReaderType(ReaderType.PREAD).build();
     HFileInfo fileInfo = new HFileInfo(context, conf);
     Reader reader = createReader(context, fileInfo, cacheConf, conf);
-    fileInfo.initMetaAndIndex(reader);
+    if (fileInfo.getTrailer().getMajorVersion() != HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT) {
+      // Only initialize meta and index for non-multi-tenant files
+      fileInfo.initMetaAndIndex(reader);
+    }
     return reader;
   }
 

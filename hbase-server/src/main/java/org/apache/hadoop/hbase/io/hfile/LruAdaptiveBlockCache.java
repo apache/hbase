@@ -674,7 +674,8 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
    */
   @Override
   public int evictBlocksByHfileName(String hfileName) {
-    int numEvicted = (int) map.keySet().stream().filter(key -> key.getHfileName().equals(hfileName))
+    int numEvicted = (int) map.keySet().stream()
+      .filter(key -> BlockCacheUtil.matchesHFileName(key.getHfileName(), hfileName))
       .filter(this::evictBlock).count();
     if (victimHandler != null) {
       numEvicted += victimHandler.evictBlocksByHfileName(hfileName);
