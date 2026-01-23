@@ -133,8 +133,8 @@ if [[ "${SKIP_ERRORPRONE}" = "true" ]]; then
   # skip error prone
   YETUS_ARGS+=("--skip-errorprone")
 fi
-# effectively treat dev-support as a custom maven module
-YETUS_ARGS+=("--skip-dirs=dev-support")
+# Exclude non-code directories from module detection to avoid triggering full builds
+YETUS_ARGS+=("--skip-dirs=dev-support,.github,bin,conf")
 # For testing with specific hadoop version. Activates corresponding profile in maven runs.
 if [[ -n "${HADOOP_PROFILE}" ]]; then
   # Master has only Hadoop3 support. We don't need to activate any profile.
