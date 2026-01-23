@@ -30,7 +30,26 @@ permissions:
 jobs:
   jdk17-hadoop3-check:
     runs-on: ubuntu-latest
-    timeout-minutes: 600
+    timeout-minutes: 360
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: "small-medium"
+            test_profile: "runDevTests"
+            test_pattern: ""
+          - name: "large-server-1"
+            test_profile: "runLargeTests"
+            test_pattern: "**/Test[BDEFJKQSU]*"
+          - name: "large-server-2"
+            test_profile: "runLargeTests"
+            test_pattern: "**/Test[CGHMNOT]*"
+          - name: "large-server-3"
+            test_profile: "runLargeTests"
+            test_pattern: "**/Test[AILPRVWXYZ]*"
+
+    name: ${{ matrix.name }}
 
     env:
       YETUS_VERSION: '0.15.0'
@@ -90,6 +109,8 @@ jobs:
           BRANCH_NAME: "${{ github.base_ref }}"
           SKIP_ERRORPRONE: 'true'
           DEBUG: 'true'
+          TEST_PROFILE: ${{ matrix.test_profile }}
+          TEST_INCLUDE_PATTERN: ${{ matrix.test_pattern }}
         run: |
           cd "${{ github.workspace }}"
           bash src/dev-support/jenkins_precommit_github_yetus.sh
@@ -98,6 +119,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: yetus-jdk17-hadoop3-check-output
+          name: yetus-jdk17-hadoop3-check-${{ matrix.name }}
           path: ${{ github.workspace }}/yetus-jdk17-hadoop3-check/output
           retention-days: 7

@@ -107,6 +107,10 @@ function personality_parse_args
         delete_parameter "${i}"
         INCLUDE_TESTS_URL=${i#*=}
       ;;
+      --include-tests-pattern=*)
+        delete_parameter "${i}"
+        INCLUDE_TESTS_PATTERN=${i#*=}
+      ;;
       --hadoop-profile=*)
         delete_parameter "${i}"
         HADOOP_PROFILE=${i#*=}
@@ -335,7 +339,12 @@ function get_include_exclude_tests_arg
   local  __resultvar=$1
   yetus_info "EXCLUDE_TESTS_URL=${EXCLUDE_TESTS_URL}"
   yetus_info "INCLUDE_TESTS_URL=${INCLUDE_TESTS_URL}"
-  if [[ -n "${EXCLUDE_TESTS_URL}" ]]; then
+  yetus_info "INCLUDE_TESTS_PATTERN=${INCLUDE_TESTS_PATTERN}"
+  # Direct pattern takes precedence over URL-based includes/excludes
+  if [[ -n "${INCLUDE_TESTS_PATTERN}" ]]; then
+    yetus_debug "Using include pattern: ${INCLUDE_TESTS_PATTERN}"
+    eval "${__resultvar}='-Dtest=${INCLUDE_TESTS_PATTERN}'"
+  elif [[ -n "${EXCLUDE_TESTS_URL}" ]]; then
       if wget "${EXCLUDE_TESTS_URL}" -O "excludes"; then
         excludes=$(cat excludes)
         yetus_debug "excludes=${excludes}"
