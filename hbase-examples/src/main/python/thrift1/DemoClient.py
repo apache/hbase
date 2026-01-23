@@ -202,7 +202,7 @@ def demo_client(host, port, is_framed_transport):
             demo_table, row, "entry:num".encode(), 10, dummy_attributes
         )
         printVersions(row, versions)
-        if len(versions) == 0:
+        if len(versions) != 3:
             print("FATAL: wrong # of versions")
             sys.exit(-1)
 
