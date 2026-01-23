@@ -22,15 +22,14 @@ import static org.apache.hadoop.hbase.replication.ReplicationUtils.sleepForRetri
 
 import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.replication.EmptyEntriesPolicy;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
-import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -49,6 +48,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescript
 @InterfaceAudience.Private
 public class ReplicationSourceShipper extends Thread {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationSourceShipper.class);
+  private long stagedWalSize = 0L;
+  private long lastStagedFlushTs = EnvironmentEdgeManager.currentTime();
+  private WALEntryBatch lastShippedBatch;
+  private final List<Entry> entriesForCleanUpHFileRefs = new ArrayList<>();
 
   // Hold the state of a replication worker thread
   public enum WorkerState {
@@ -101,6 +104,10 @@ public class ReplicationSourceShipper extends Thread {
     LOG.info("Running ReplicationSourceShipper Thread for wal group: {}", this.walGroupId);
     // Loop until we close down
     while (isActive()) {
+      // check if flush needed for WAL backup, this is need for timeout based flush
+      if (shouldFlushStagedWal()) {
+        flushStagedWal();
+      }
       // Sleep until replication is enabled again
       if (!source.isPeerEnabled()) {
         // The peer enabled check is in memory, not expensive, so do not need to increase the
@@ -162,15 +169,8 @@ public class ReplicationSourceShipper extends Thread {
     List<Entry> entries = entryBatch.getWalEntries();
     int sleepMultiplier = 0;
     if (entries.isEmpty()) {
-      /*
-       * Delegate to the endpoint to decide how to treat empty entry batches. In most replication
-       * flows, receiving an empty entry batch means that everything so far has been successfully
-       * replicated and committed — so it's safe to mark the WAL position as committed (COMMIT).
-       * However, some endpoints (e.g., asynchronous S3 backups) may buffer writes and delay actual
-       * persistence. In such cases, we must avoid committing the WAL position prematurely.
-       */
-      final ReplicationResult result = getReplicationResult();
-      updateLogPosition(entryBatch, result);
+      lastShippedBatch = entryBatch;
+      flushStagedWal();
       return;
     }
     int currentSize = (int) entryBatch.getHeapSize();
@@ -197,23 +197,20 @@ public class ReplicationSourceShipper extends Thread {
 
         long startTimeNs = System.nanoTime();
         // send the edits to the endpoint. Will block until the edits are shipped and acknowledged
-        ReplicationResult replicated = source.getReplicationEndpoint().replicate(replicateContext);
+        boolean replicated = source.getReplicationEndpoint().replicate(replicateContext);
         long endTimeNs = System.nanoTime();
 
-        if (replicated == ReplicationResult.FAILED) {
+        if (!replicated) {
           continue;
         } else {
           sleepMultiplier = Math.max(sleepMultiplier - 1, 0);
         }
-        if (replicated == ReplicationResult.COMMITTED) {
-          // Clean up hfile references
-          for (Entry entry : entries) {
-            cleanUpHFileRefs(entry.getEdit());
-            LOG.trace("shipped entry {}: ", entry);
-          }
+
+        stagedWalSize += currentSize;
+        entriesForCleanUpHFileRefs.addAll(entries);
+        if (shouldFlushStagedWal()) {
+          flushStagedWal();
         }
-        // Log and clean up WAL logs
-        updateLogPosition(entryBatch, replicated);
 
         // offsets totalBufferUsed by deducting shipped batchSize (excludes bulk load size)
         // this sizeExcludeBulkLoad has to use same calculation that when calling
@@ -246,11 +243,33 @@ public class ReplicationSourceShipper extends Thread {
     }
   }
 
-  private ReplicationResult getReplicationResult() {
-    EmptyEntriesPolicy policy = source.getReplicationEndpoint().getEmptyEntriesPolicy();
-    return (policy == EmptyEntriesPolicy.COMMIT)
-      ? ReplicationResult.COMMITTED
-      : ReplicationResult.SUBMITTED;
+  private boolean shouldFlushStagedWal() {
+    return (stagedWalSize >= source.getReplicationEndpoint().getMaxBufferSize())
+      || (EnvironmentEdgeManager.currentTime() - lastStagedFlushTs
+          >= source.getReplicationEndpoint().maxFlushInterval());
+  }
+
+  private void flushStagedWal() {
+    source.getReplicationEndpoint().beforePersistingReplicationOffset();
+    stagedWalSize = 0;
+    lastStagedFlushTs = EnvironmentEdgeManager.currentTime();
+
+    // Clean up hfile references
+    for (Entry entry : entriesForCleanUpHFileRefs) {
+      try {
+        cleanUpHFileRefs(entry.getEdit());
+      } catch (IOException e) {
+        LOG.warn("{} threw unknown exception:",
+          source.getReplicationEndpoint().getClass().getName(), e);
+      }
+      LOG.trace("shipped entry {}: ", entry);
+    }
+    entriesForCleanUpHFileRefs.clear();
+
+    // Log and clean up WAL logs
+    if (lastShippedBatch != null) {
+      updateLogPosition(lastShippedBatch);
+    }
   }
 
   private void cleanUpHFileRefs(WALEdit edit) throws IOException {
@@ -281,7 +300,7 @@ public class ReplicationSourceShipper extends Thread {
       explanation = "Package-private for test visibility only. Do not use outside tests.",
       link = "",
       allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/replication/regionserver/ReplicationSourceShipper.java)")
-  boolean updateLogPosition(WALEntryBatch batch, ReplicationResult replicated) {
+  boolean updateLogPosition(WALEntryBatch batch) {
     boolean updated = false;
     // if end of file is true, then the logPositionAndCleanOldLogs method will remove the file
     // record on zk, so let's call it. The last wal position maybe zero if end of file is true and
@@ -291,7 +310,7 @@ public class ReplicationSourceShipper extends Thread {
       batch.isEndOfFile() || !batch.getLastWalPath().equals(currentPath)
         || batch.getLastWalPosition() != currentPosition
     ) {
-      source.logPositionAndCleanOldLogs(batch, replicated);
+      source.logPositionAndCleanOldLogs(batch);
       updated = true;
     }
     // if end of file is true, then we can just skip to the next file in queue.

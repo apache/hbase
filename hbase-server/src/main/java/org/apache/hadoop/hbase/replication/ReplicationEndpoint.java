@@ -216,7 +216,7 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
    * the context are assumed to be persisted in the target cluster.
    * @param replicateContext a context where WAL entries and other parameters can be obtained.
    */
-  ReplicationResult replicate(ReplicateContext replicateContext);
+  boolean replicate(ReplicateContext replicateContext);
 
   // The below methods are inspired by Guava Service. See
   // https://github.com/google/guava/wiki/ServiceExplained for overview of Guava Service.
@@ -292,21 +292,25 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
    */
   Throwable failureCause();
 
-  /**
-   * Defines the behavior when the replication source encounters an empty entry batch.
-   * <p>
-   * By default, this method returns {@link EmptyEntriesPolicy#COMMIT}, meaning the replication
-   * source can safely consider the WAL position as committed and move on.
-   * </p>
-   * <p>
-   * However, certain endpoints like backup or asynchronous S3 writers may delay persistence (e.g.,
-   * writing to temporary files or buffers). In those cases, returning
-   * {@link EmptyEntriesPolicy#SUBMIT} avoids incorrectly advancing WAL position and risking data
-   * loss.
-   * </p>
-   * @return the {@link EmptyEntriesPolicy} to apply for empty entry batches.
-   */
-  default EmptyEntriesPolicy getEmptyEntriesPolicy() {
-    return EmptyEntriesPolicy.COMMIT;
+  // ContinuousBackupReplicationEndpoint return config value CONF_BACKUP_MAX_WAL_SIZE because
+  // WAL entries are buffered before flushing WAL backup file. For other ReplicationEndpoint
+  // we return -1 because no buffering is required, so everytime a WALEntryBatch is shipped, we
+  // update replication offset. Please check ReplicationSourceShipper#shouldFlushStagedWal()
+  default long getMaxBufferSize() {
+    return -1;
+  }
+
+  // ContinuousBackupReplicationEndpoint return config value CONF_STAGED_WAL_FLUSH_INTERVAL because
+  // WAL entries are buffered before flushing WAL backup file. For other ReplicationEndpoint
+  // we return Long.MAX_VALUE because no buffering is required, so everytime a WALEntryBatch is
+  // shipped, we update replication offset. Please check
+  // ReplicationSourceShipper#shouldFlushStagedWal()
+  default long maxFlushInterval() {
+    return Long.MAX_VALUE;
+  }
+
+  // Used in ContinuousBackupReplicationEndpoint to flush WAL backup files
+  default void beforePersistingReplicationOffset() {
+
   }
 }

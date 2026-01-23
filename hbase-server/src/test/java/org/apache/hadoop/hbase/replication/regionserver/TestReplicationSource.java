@@ -53,13 +53,11 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.replication.EmptyEntriesPolicy;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationQueueData;
 import org.apache.hadoop.hbase.replication.ReplicationQueueId;
-import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
@@ -499,10 +497,7 @@ public class TestReplicationSource {
    * this case, empty entry batches should not cause WAL position to be committed immediately.
    */
   public static class AsyncReplicationEndpoint extends DoNothingReplicationEndpoint {
-    @Override
-    public EmptyEntriesPolicy getEmptyEntriesPolicy() {
-      return EmptyEntriesPolicy.SUBMIT;
-    }
+
   }
 
   /**
@@ -531,7 +526,7 @@ public class TestReplicationSource {
     shipper.shipEdits(emptyBatch);
 
     // With default (COMMIT) policy, empty entry batch should advance WAL position
-    Mockito.verify(shipper).updateLogPosition(emptyBatch, ReplicationResult.COMMITTED);
+    Mockito.verify(shipper).updateLogPosition(emptyBatch);
   }
 
   /**
@@ -552,7 +547,7 @@ public class TestReplicationSource {
     shipper.shipEdits(emptyBatch);
 
     // With SUBMIT policy, empty entry batch should NOT advance WAL position
-    Mockito.verify(shipper).updateLogPosition(emptyBatch, ReplicationResult.SUBMITTED);
+    Mockito.verify(shipper).updateLogPosition(emptyBatch);
   }
 
   private RegionServerServices setupForAbortTests(ReplicationSource rs, Configuration conf,
