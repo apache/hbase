@@ -71,9 +71,12 @@ jobs:
       - name: Run Yetus General Check
         env:
           ARCHIVE_PATTERN_LIST: "TEST-*.xml,org.apache.h*.txt,*.dumpstream,*.dump"
+          CHANGE_TARGET: "${{ github.base_ref }}"
           DOCKERFILE: "${{ github.workspace }}/src/dev-support/docker/Dockerfile"
           GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_USER: ${{ github.actor }}
+          HADOOP_PROFILE: "3.0"
+          JAVA8_HOME: "/usr/lib/jvm/java-8"
           PATCHDIR: "${{ github.workspace }}/yetus-general-check/output"
           PLUGINS: "all,-javadoc,-jira,-shadedjars,-unit"
           SET_JAVA_HOME: "/usr/lib/jvm/java-11"
