@@ -70,19 +70,21 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
   private static final int ROWS_IN_BULK_LOAD = 100;
   private static final String backupWalDirName = "TestContinuousBackupWalDir";
 
+  private FileSystem fs;
+
   @Before
   public void beforeTest() throws IOException {
     Path root = TEST_UTIL.getDataTestDirOnTestFS();
     Path backupWalDir = new Path(root, backupWalDirName);
     conf1.set(CONF_CONTINUOUS_BACKUP_WAL_DIR, backupWalDir.toString());
     conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, true);
+    fs = FileSystem.get(conf1);
   }
 
   @After
   public void afterTest() throws IOException {
     Path root = TEST_UTIL.getDataTestDirOnTestFS();
     Path backupWalDir = new Path(root, backupWalDirName);
-    FileSystem fs = FileSystem.get(conf1);
     if (fs.exists(backupWalDir)) {
       fs.delete(backupWalDir, true);
     }
@@ -125,6 +127,12 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
         backupTables(BackupType.INCREMENTAL, List.of(tableName), BACKUP_ROOT_DIR, true);
       assertTrue(checkSucceeded(backup2));
       LOG.info("Incremental backup completed");
+
+      // Verify the temporary backup directory was deleted
+      Path backupTmpDir = new Path(BACKUP_ROOT_DIR, ".tmp");
+      Path bulkLoadOutputDir = new Path(backupTmpDir, backup2);
+      assertFalse("Bulk load output directory " + bulkLoadOutputDir + " should have been deleted",
+        fs.exists(bulkLoadOutputDir));
 
       // Verify backup history increased and all the backups are succeeded
       backups = table.getBackupHistory();
