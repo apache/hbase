@@ -55,7 +55,7 @@
       <% if (frags != null) { %>
         <td align="center"><%= frags.get(tableName.getNameAsString()) != null ? frags.get(tableName.getNameAsString()) + "%" : "n/a" %></td>
       <% } %>
-    <% String description = null;
+    <% String description = "";
         if (tableName.equals(TableName.META_TABLE_NAME)){
             description = "The hbase:meta table holds references to all User Table regions.";
         } else if (tableName.equals(CanaryTool.DEFAULT_WRITE_TABLE_NAME)){
@@ -73,6 +73,9 @@
         } else if (tableName.equals(TableName.valueOf("hbase:replication"))) {
             description = "The hbase:replication table tracks cross cluster replication through " +
             "WAL file offsets.";
+        } else if (tableName.equals(TableName.valueOf("hbase:slowlog"))) {
+            description = "The hbase:slowlog table holds information about slow and large rpc " +
+            "operations.";
         }
     %>
     <td><%= description %></td>
