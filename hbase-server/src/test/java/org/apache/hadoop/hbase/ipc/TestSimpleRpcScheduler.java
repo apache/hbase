@@ -814,4 +814,21 @@ public class TestSimpleRpcScheduler {
       }
     };
   }
+
+  @Test
+  public void testStealReadRWQueue() throws Exception {
+    String queueType = RpcExecutor.CALL_QUEUE_TYPE_READ_STEAL_CONF_VALUE;
+    Configuration schedConf = HBaseConfiguration.create();
+    schedConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY, queueType);
+    schedConf.setFloat(RWQueueRpcExecutor.CALL_QUEUE_READ_SHARE_CONF_KEY, 0.1f);
+
+    PriorityFunction priority = mock(PriorityFunction.class);
+    when(priority.getPriority(any(), any(), any())).thenReturn(HConstants.NORMAL_QOS);
+    SimpleRpcScheduler scheduler =
+      new SimpleRpcScheduler(schedConf, 0, 0, 0, priority, HConstants.QOS_THRESHOLD);
+
+    Field f = scheduler.getClass().getDeclaredField("callExecutor");
+    f.setAccessible(true);
+    assertTrue(f.get(scheduler) instanceof StealReadJobRWQueueRpcExecutor);
+  }
 }
