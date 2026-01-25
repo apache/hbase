@@ -237,6 +237,11 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <dependency>
+      <groupId>tools.profiler</groupId>
+      <artifactId>async-profiler</artifactId>
+      <version>${async-profiler.version}</version>
+    </dependency>
   </dependencies>
 
   <build>
