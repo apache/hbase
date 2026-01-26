@@ -206,7 +206,7 @@ public final class BloomFilterUtil {
   public static boolean contains(Cell cell, ByteBuff bloomBuf, int bloomOffset, int bloomSize,
     Hash hash, int hashCount, BloomType type) {
     HashKey<Cell> hashKey =
-      type.isRowCol() ? new RowColBloomHashKey(cell) : new RowBloomHashKey(cell);
+      type == BloomType.ROWCOL ? new RowColBloomHashKey(cell) : new RowBloomHashKey(cell);
     return contains(bloomBuf, bloomOffset, bloomSize, hash, hashCount, hashKey);
   }
 
@@ -253,7 +253,7 @@ public final class BloomFilterUtil {
     throws IllegalArgumentException {
     byte[] bloomParam = null;
     String message = "Bloom filter type is " + bloomFilterType + ", ";
-    if (bloomFilterType.isRowPrefixFixedLength()) {
+    if (bloomFilterType == BloomType.ROWPREFIX_FIXED_LENGTH) {
       String prefixLengthString = conf.get(PREFIX_LENGTH_KEY);
       if (prefixLengthString == null) {
         message += PREFIX_LENGTH_KEY + " not specified.";

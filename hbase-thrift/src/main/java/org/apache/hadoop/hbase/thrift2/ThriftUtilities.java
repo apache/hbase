@@ -71,12 +71,14 @@ import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.regionserver.BloomFilterImpl;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.thrift2.generated.TAppend;
 import org.apache.hadoop.hbase.thrift2.generated.TAuthorization;
+import org.apache.hadoop.hbase.thrift2.generated.TBloomFilterImpl;
 import org.apache.hadoop.hbase.thrift2.generated.TBloomFilterType;
 import org.apache.hadoop.hbase.thrift2.generated.TCellVisibility;
 import org.apache.hadoop.hbase.thrift2.generated.TColumn;
@@ -898,14 +900,18 @@ public final class ThriftUtilities {
         return BloomType.ROWCOL;
       case 3:
         return BloomType.ROWPREFIX_FIXED_LENGTH;
-      case 4:
-        return BloomType.RIBBON_ROW;
-      case 5:
-        return BloomType.RIBBON_ROWCOL;
-      case 6:
-        return BloomType.RIBBON_ROWPREFIX_FIXED_LENGTH;
       default:
         return BloomType.ROW;
+    }
+  }
+
+  public static BloomFilterImpl bloomFilterImplFromThrift(TBloomFilterImpl in) {
+    switch (in.getValue()) {
+      case 1:
+        return BloomFilterImpl.RIBBON;
+      case 0:
+      default:
+        return BloomFilterImpl.BLOOM;
     }
   }
 
@@ -979,6 +985,9 @@ public final class ThriftUtilities {
     }
     if (in.isSetBloomnFilterType()) {
       builder.setBloomFilterType(bloomFilterFromThrift(in.getBloomnFilterType()));
+    }
+    if (in.isSetBloomFilterImpl()) {
+      builder.setBloomFilterImpl(bloomFilterImplFromThrift(in.getBloomFilterImpl()));
     }
     if (in.isSetCompressionType()) {
       builder.setCompressionType(compressionAlgorithmFromThrift(in.getCompressionType()));
@@ -1139,14 +1148,18 @@ public final class ThriftUtilities {
         return TBloomFilterType.ROWCOL;
       case ROWPREFIX_FIXED_LENGTH:
         return TBloomFilterType.ROWPREFIX_FIXED_LENGTH;
-      case RIBBON_ROW:
-        return TBloomFilterType.RIBBON_ROW;
-      case RIBBON_ROWCOL:
-        return TBloomFilterType.RIBBON_ROWCOL;
-      case RIBBON_ROWPREFIX_FIXED_LENGTH:
-        return TBloomFilterType.RIBBON_ROWPREFIX_FIXED_LENGTH;
       default:
         return TBloomFilterType.ROW;
+    }
+  }
+
+  public static TBloomFilterImpl bloomFilterImplFromHBase(BloomFilterImpl in) {
+    switch (in) {
+      case RIBBON:
+        return TBloomFilterImpl.RIBBON;
+      case BLOOM:
+      default:
+        return TBloomFilterImpl.BLOOM;
     }
   }
 
@@ -1213,6 +1226,7 @@ public final class ThriftUtilities {
     }
     out.setBlockSize(in.getBlocksize());
     out.setBloomnFilterType(bloomFilterFromHBase(in.getBloomFilterType()));
+    out.setBloomFilterImpl(bloomFilterImplFromHBase(in.getBloomFilterImpl()));
     out.setCompressionType(compressionAlgorithmFromHBase(in.getCompressionType()));
     out.setDfsReplication(in.getDFSReplication());
     out.setDataBlockEncoding(dataBlockEncodingFromHBase(in.getDataBlockEncoding()));

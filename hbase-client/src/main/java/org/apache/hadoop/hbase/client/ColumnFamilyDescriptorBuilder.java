@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
+import org.apache.hadoop.hbase.regionserver.BloomFilterImpl;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PrettyPrinter;
@@ -141,6 +142,9 @@ public class ColumnFamilyDescriptorBuilder {
   @InterfaceAudience.Private
   public static final String BLOOMFILTER = "BLOOMFILTER";
   private static final Bytes BLOOMFILTER_BYTES = new Bytes(Bytes.toBytes(BLOOMFILTER));
+  @InterfaceAudience.Private
+  public static final String BLOOMFILTER_IMPL = "BLOOMFILTER_IMPL";
+  private static final Bytes BLOOMFILTER_IMPL_BYTES = new Bytes(Bytes.toBytes(BLOOMFILTER_IMPL));
   @InterfaceAudience.Private
   public static final String REPLICATION_SCOPE = "REPLICATION_SCOPE";
   @InterfaceAudience.Private
@@ -259,6 +263,11 @@ public class ColumnFamilyDescriptorBuilder {
   public static final BloomType DEFAULT_BLOOMFILTER = BloomType.ROW;
 
   /**
+   * Default bloom filter implementation.
+   */
+  public static final BloomFilterImpl DEFAULT_BLOOMFILTER_IMPL = BloomFilterImpl.BLOOM;
+
+  /**
    * Default setting for whether to cache bloom filter blocks on write if block caching is enabled.
    */
   public static final boolean DEFAULT_CACHE_BLOOMS_ON_WRITE = false;
@@ -305,6 +314,7 @@ public class ColumnFamilyDescriptorBuilder {
 
   static {
     DEFAULT_VALUES.put(BLOOMFILTER, DEFAULT_BLOOMFILTER.name());
+    DEFAULT_VALUES.put(BLOOMFILTER_IMPL, DEFAULT_BLOOMFILTER_IMPL.name());
     DEFAULT_VALUES.put(REPLICATION_SCOPE, String.valueOf(DEFAULT_REPLICATION_SCOPE));
     DEFAULT_VALUES.put(MAX_VERSIONS, String.valueOf(DEFAULT_MAX_VERSIONS));
     DEFAULT_VALUES.put(MIN_VERSIONS, String.valueOf(DEFAULT_MIN_VERSIONS));
@@ -453,6 +463,11 @@ public class ColumnFamilyDescriptorBuilder {
 
   public ColumnFamilyDescriptorBuilder setBloomFilterType(final BloomType value) {
     desc.setBloomFilterType(value);
+    return this;
+  }
+
+  public ColumnFamilyDescriptorBuilder setBloomFilterImpl(final BloomFilterImpl value) {
+    desc.setBloomFilterImpl(value);
     return this;
   }
 
@@ -1051,6 +1066,16 @@ public class ColumnFamilyDescriptorBuilder {
 
     public ModifyableColumnFamilyDescriptor setBloomFilterType(final BloomType bt) {
       return setValue(BLOOMFILTER_BYTES, bt.name());
+    }
+
+    @Override
+    public BloomFilterImpl getBloomFilterImpl() {
+      return getStringOrDefault(BLOOMFILTER_IMPL_BYTES,
+        n -> BloomFilterImpl.valueOf(n.toUpperCase()), DEFAULT_BLOOMFILTER_IMPL);
+    }
+
+    public ModifyableColumnFamilyDescriptor setBloomFilterImpl(final BloomFilterImpl impl) {
+      return setValue(BLOOMFILTER_IMPL_BYTES, impl.name());
     }
 
     @Override

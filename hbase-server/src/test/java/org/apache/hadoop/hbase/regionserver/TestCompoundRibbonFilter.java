@@ -72,8 +72,8 @@ public class TestCompoundRibbonFilter {
 
   // Test configurations
   private static final int NUM_TESTS = 4;
-  private static final BloomType[] RIBBON_TYPES = { BloomType.RIBBON_ROW, BloomType.RIBBON_ROW,
-    BloomType.RIBBON_ROWCOL, BloomType.RIBBON_ROWCOL };
+  private static final BloomType[] RIBBON_TYPES =
+    { BloomType.ROW, BloomType.ROW, BloomType.ROWCOL, BloomType.ROWCOL };
 
   private static final int[] NUM_KV;
   static {
@@ -198,7 +198,8 @@ public class TestCompoundRibbonFilter {
     cacheConf = new CacheConfig(conf, blockCache);
     HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCK_SIZES[t]).build();
     StoreFileWriter w = new StoreFileWriter.Builder(conf, cacheConf, fs)
-      .withOutputDir(TEST_UTIL.getDataTestDir()).withBloomType(bt).withFileContext(meta).build();
+      .withOutputDir(TEST_UTIL.getDataTestDir()).withBloomType(bt)
+      .withBloomFilterImpl(BloomFilterImpl.RIBBON).withFileContext(meta).build();
 
     assertTrue(w.hasGeneralBloom());
     assertTrue(
@@ -215,7 +216,7 @@ public class TestCompoundRibbonFilter {
       // Validate the key count
       boolean newKey = true;
       if (prev != null) {
-        newKey = !(bt.isRowOnly()
+        newKey = !(bt == BloomType.ROW
           ? CellUtil.matchingRows(kv, prev)
           : CellUtil.matchingRowColumn(kv, prev));
       }
@@ -244,11 +245,11 @@ public class TestCompoundRibbonFilter {
     // 2500 keys with ~500 max per chunk = ~5 chunks
     List<KeyValue> kvs = createSortedKeyValues(generationRand, 2500);
 
-    Path sfPath = writeStoreFile(0, BloomType.RIBBON_ROW, kvs);
+    Path sfPath = writeStoreFile(0, BloomType.ROW, kvs);
 
     // Read and verify per-chunk numSlots metadata
     StoreFileInfo storeFileInfo = StoreFileInfo.createStoreFileInfoForHFile(conf, fs, sfPath, true);
-    HStoreFile sf = new HStoreFile(storeFileInfo, BloomType.RIBBON_ROW, cacheConf);
+    HStoreFile sf = new HStoreFile(storeFileInfo, BloomType.ROW, cacheConf);
     sf.initReader();
     StoreFileReader r = sf.getReader();
     CompoundRibbonFilter crf = (CompoundRibbonFilter) r.getGeneralBloomFilter();
@@ -287,9 +288,10 @@ public class TestCompoundRibbonFilter {
     Path filePath = StoreFileWriter.getUniqueFile(fs, testDir);
 
     HFileContext meta = new HFileContextBuilder().withBlockSize(65536).build();
-    // Use RIBBON_ROW so delete family filter also uses Ribbon
+    // Use ROW + RIBBON impl so delete family filter also uses Ribbon
     StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(filePath)
-      .withBloomType(BloomType.RIBBON_ROW).withMaxKeyCount(2000).withFileContext(meta).build();
+      .withBloomType(BloomType.ROW).withBloomFilterImpl(BloomFilterImpl.RIBBON)
+      .withMaxKeyCount(2000).withFileContext(meta).build();
 
     // Add delete family markers for even rows
     long now = System.currentTimeMillis();
@@ -304,7 +306,7 @@ public class TestCompoundRibbonFilter {
     // Read and verify
     StoreFileInfo storeFileInfo =
       StoreFileInfo.createStoreFileInfoForHFile(conf, fs, filePath, true);
-    HStoreFile sf = new HStoreFile(storeFileInfo, BloomType.RIBBON_ROW, cacheConf);
+    HStoreFile sf = new HStoreFile(storeFileInfo, BloomType.ROW, cacheConf);
     sf.initReader();
     StoreFileReader reader = sf.getReader();
 

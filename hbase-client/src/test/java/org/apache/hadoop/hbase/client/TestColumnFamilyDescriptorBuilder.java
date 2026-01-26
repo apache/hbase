@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
+import org.apache.hadoop.hbase.regionserver.BloomFilterImpl;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -220,9 +221,11 @@ public class TestColumnFamilyDescriptorBuilder {
   @Test
   public void testDefaultBuilder() {
     final Map<String, String> defaultValueMap = ColumnFamilyDescriptorBuilder.getDefaultValues();
-    assertEquals(defaultValueMap.size(), 12);
+    assertEquals(defaultValueMap.size(), 13);
     assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.BLOOMFILTER),
       BloomType.ROW.toString());
+    assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.BLOOMFILTER_IMPL),
+      BloomFilterImpl.BLOOM.toString());
     assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.REPLICATION_SCOPE), "0");
     assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.MAX_VERSIONS), "1");
     assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.MIN_VERSIONS), "0");
