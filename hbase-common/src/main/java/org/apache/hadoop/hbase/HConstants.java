@@ -1244,6 +1244,8 @@ public final class HConstants {
   public static final int ADMIN_QOS = 100;
   public static final int HIGH_QOS = 200;
   public static final int SYSTEMTABLE_QOS = HIGH_QOS;
+  // QOS for internal meta read requests
+  public static final int INTERNAL_READ_QOS = 250;
   /**
    * @deprecated the name "META_QOS" is a bit ambiguous, actually only meta region transition can
    *             use this priority, and you should not use this directly. Will be removed in 3.0.0.

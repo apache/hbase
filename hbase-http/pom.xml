@@ -93,6 +93,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk18on</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
       <scope>test</scope>
@@ -201,7 +206,7 @@
                 <bundled_jquery>${license.bundles.jquery}</bundled_jquery>
                 <bundled_vega>${license.bundles.vega}</bundled_vega>
                 <bundled_logo>${license.bundles.logo}</bundled_logo>
-                <bundled_hbase-bootstrap>${license.bundles.bootstrap}</bundled_hbase-bootstrap>
+                <bundled_bootstrap>${license.bundles.bootstrap}</bundled_bootstrap>
               </properties>
               <resourceBundles>
                 <resourceBundle>${project.groupId}:hbase-resource-bundle:${project.version}</resourceBundle>

@@ -296,4 +296,8 @@ public class RWQueueRpcExecutor extends RpcExecutor {
       ((ConfigurationObserver) balancer).onConfigurationChange(conf);
     }
   }
+
+  protected int getNumScanQueues() {
+    return numScanQueues;
+  }
 }

@@ -96,7 +96,11 @@ YETUS_ARGS+=("--console-report-file=${PATCHDIR}/console.txt")
 YETUS_ARGS+=("--html-report-file=${PATCHDIR}/report.html")
 # enable writing back to Github
 YETUS_ARGS+=("--github-token=${GITHUB_PASSWORD}")
-YETUS_ARGS+=("--github-write-comment")
+# GitHub Actions fork PRs cannot write comments (GITHUB_TOKEN has no PR write permission)
+# Jenkins can write comments via its own credentials
+if [[ "${GITHUB_ACTIONS}" != "true" ]]; then
+  YETUS_ARGS+=("--github-write-comment")
+fi
 # auto-kill any surefire stragglers during unit test runs
 YETUS_ARGS+=("--reapermode=kill")
 # set relatively high limits for ASF machines
@@ -108,7 +112,9 @@ YETUS_ARGS+=("--spotbugs-strict-precheck")
 # rsync these files back into the archive dir
 YETUS_ARGS+=("--archive-list=${ARCHIVE_PATTERN_LIST}")
 # URL for user-side presentation in reports and such to our artifacts
-YETUS_ARGS+=("--build-url-artifacts=${BUILD_URL_ARTIFACTS}")
+if [[ -n "${BUILD_URL_ARTIFACTS}" ]]; then
+  YETUS_ARGS+=("--build-url-artifacts=${BUILD_URL_ARTIFACTS}")
+fi
 # plugins to enable
 YETUS_ARGS+=("--plugins=${PLUGINS},-findbugs")
 # run in docker mode and specifically point to our
@@ -127,8 +133,8 @@ if [[ "${SKIP_ERRORPRONE}" = "true" ]]; then
   # skip error prone
   YETUS_ARGS+=("--skip-errorprone")
 fi
-# effectively treat dev-support as a custom maven module
-YETUS_ARGS+=("--skip-dirs=dev-support")
+# Exclude non-code directories from module detection to avoid triggering full builds
+YETUS_ARGS+=("--skip-dirs=dev-support,.github,bin,conf")
 # For testing with specific hadoop version. Activates corresponding profile in maven runs.
 if [[ -n "${HADOOP_PROFILE}" ]]; then
   # Master has only Hadoop3 support. We don't need to activate any profile.
