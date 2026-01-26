@@ -244,7 +244,7 @@ The following example creates a table and enables a ROWCOL Bloom filter on the `
 hbase> create 'mytable',{NAME => 'colfam1', BLOOMFILTER => 'ROWCOL'}
 ```
 
-#### Configuring Server-Wide Behavior of Bloom Filters
+#### Configuring Server-Wide Behavior of Bloom Filters [#bloom-server-config]
 
 You can configure the following settings in the _hbase-site.xml_.
 
@@ -253,10 +253,40 @@ You can configure the following settings in the _hbase-site.xml_.
 | io.storefile.bloom.enabled               | yes       | Set to no to kill bloom filters server-wide if something goes wrong                                                                                            |
 | io.storefile.bloom.error.rate            | .01       | The average false positive rate for bloom filters. Folding is used to maintain the false positive rate. Expressed as a decimal representation of a percentage. |
 | io.storefile.bloom.max.fold              | 7         | The guaranteed maximum fold rate. Changing this setting should not be necessary and is not recommended.                                                        |
-| io.storefile.bloom.max.keys              | 128000000 | For default (single-block) Bloom filters, this specifies the maximum number of keys.                                                                           |
 | io.storefile.delete.family.bloom.enabled | true      | Master switch to enable Delete Family Bloom filters and store them in the StoreFile.                                                                           |
 | io.storefile.bloom.block.size            | 131072    | Target Bloom block size. Bloom filter blocks of approximately this size are interleaved with data blocks.                                                      |
 | hfile.block.bloom.cacheonwrite           | false     | Enables cache-on-write for inline blocks of a compound Bloom filter.                                                                                           |
+
+#### Ribbon Filter
+
+[Ribbon Filter](https://arxiv.org/abs/2103.02515) is a space-efficient alternative to Bloom Filter, achieving approximately 30% space savings while maintaining comparable query performance.
+It was introduced in [HBASE-29842](https://issues.apache.org/jira/browse/HBASE-29842).
+
+* Bloom Filter requires ~9.6 bits/key for 1% FPR (44% overhead vs theoretical minimum)
+* Ribbon Filter achieves ~7.3 bits/key for 1% FPR (~10% overhead)
+
+##### Enabling Ribbon Filter
+
+You can enable Ribbon Filter by setting `BLOOMFILTER_IMPL` to `RIBBON`:
+
+```
+hbase> create 'mytable',{NAME => 'colfam1', BLOOMFILTER => 'ROW', BLOOMFILTER_IMPL => 'RIBBON'}
+```
+
+##### Configuring Global Default
+
+A global default can be set in _hbase-site.xml_ (case insensitive):
+
+```xml
+<property>
+  <name>io.storefile.bloom.filter.impl</name>
+  <value>ribbon</value>
+</property>
+```
+
+When both global and per-table settings exist, the per-table setting takes precedence.
+
+Ribbon Filter uses existing Bloom Filter settings. See [Configuring Server-Wide Behavior of Bloom Filters](/docs/performance#bloom-server-config) for details.
 
 ### ColumnFamily BlockSize
 
