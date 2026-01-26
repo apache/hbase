@@ -19,22 +19,17 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * Specifies the filter implementation to use for probabilistic key lookups in store files.
+ */
 @InterfaceAudience.Public
-public enum BloomType {
+public enum BloomFilterImpl {
   /**
-   * Bloomfilters disabled
+   * Traditional Bloom filter implementation
    */
-  NONE,
+  BLOOM,
   /**
-   * Bloom enabled with Table row as Key
+   * Ribbon filter implementation (more space-efficient than Bloom filters)
    */
-  ROW,
-  /**
-   * Bloom enabled with Table row &amp; column (family+qualifier) as Key
-   */
-  ROWCOL,
-  /**
-   * Bloom enabled with Table row prefix as Key, specify the length of the prefix
-   */
-  ROWPREFIX_FIXED_LENGTH
+  RIBBON
 }

@@ -198,8 +198,9 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
     StoreFileWriter.Builder builder =
       new StoreFileWriter.Builder(conf, writerCacheConf, ctx.getRegionFileSystem().getFileSystem())
         .withOutputDir(outputDir).withBloomType(ctx.getBloomFilterType())
-        .withMaxKeyCount(params.maxKeyCount()).withFavoredNodes(ctx.getFavoredNodes())
-        .withFileContext(hFileContext).withShouldDropCacheBehind(params.shouldDropBehind())
+        .withBloomFilterImpl(ctx.getBloomFilterImpl()).withMaxKeyCount(params.maxKeyCount())
+        .withFavoredNodes(ctx.getFavoredNodes()).withFileContext(hFileContext)
+        .withShouldDropCacheBehind(params.shouldDropBehind())
         .withCompactedFilesSupplier(ctx.getCompactedFilesSupplier())
         .withFileStoragePolicy(params.fileStoragePolicy())
         .withWriterCreationTracker(params.writerCreationTracker())

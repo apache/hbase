@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTOR_CLASS_KEY;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.BLOOM_FILTER_IMPL_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.BLOOM_FILTER_PARAM_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.BLOOM_FILTER_TYPE_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.COMPACTION_EVENT_KEY;
@@ -98,6 +99,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
   private final Configuration conf;
   private final CacheConfig cacheConf;
   private final BloomType bloomType;
+  private final BloomFilterImpl bloomFilterImpl;
   private final long maxKeys;
   private final InetSocketAddress[] favoredNodes;
   private final HFileContext fileContext;
@@ -137,8 +139,9 @@ public class StoreFileWriter implements CellSink, ShipperListener {
    * @throws IOException problem writing to FS
    */
   private StoreFileWriter(FileSystem fs, Path liveFilePath, Path historicalFilePath,
-    final Configuration conf, CacheConfig cacheConf, BloomType bloomType, long maxKeys,
-    InetSocketAddress[] favoredNodes, HFileContext fileContext, boolean shouldDropCacheBehind,
+    final Configuration conf, CacheConfig cacheConf, BloomType bloomType,
+    BloomFilterImpl bloomFilterImpl, long maxKeys, InetSocketAddress[] favoredNodes,
+    HFileContext fileContext, boolean shouldDropCacheBehind,
     Supplier<Collection<HStoreFile>> compactedFilesSupplier, CellComparator comparator,
     int maxVersions, boolean newVersionBehavior) throws IOException {
     this.fs = fs;
@@ -146,6 +149,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     this.conf = conf;
     this.cacheConf = cacheConf;
     this.bloomType = bloomType;
+    this.bloomFilterImpl = bloomFilterImpl;
     this.maxKeys = maxKeys;
     this.favoredNodes = favoredNodes;
     this.fileContext = fileContext;
@@ -154,8 +158,9 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     this.comparator = comparator;
     this.maxVersions = maxVersions;
     this.newVersionBehavior = newVersionBehavior;
-    liveFileWriter = new SingleStoreFileWriter(fs, liveFilePath, conf, cacheConf, bloomType,
-      maxKeys, favoredNodes, fileContext, shouldDropCacheBehind, compactedFilesSupplier);
+    liveFileWriter =
+      new SingleStoreFileWriter(fs, liveFilePath, conf, cacheConf, bloomType, bloomFilterImpl,
+        maxKeys, favoredNodes, fileContext, shouldDropCacheBehind, compactedFilesSupplier);
   }
 
   public static boolean shouldEnableHistoricalCompactionFiles(Configuration conf) {
@@ -332,9 +337,9 @@ public class StoreFileWriter implements CellSink, ShipperListener {
 
   private SingleStoreFileWriter getHistoricalFileWriter() throws IOException {
     if (historicalFileWriter == null) {
-      historicalFileWriter =
-        new SingleStoreFileWriter(fs, historicalFilePath, conf, cacheConf, bloomType, maxKeys,
-          favoredNodes, fileContext, shouldDropCacheBehind, compactedFilesSupplier);
+      historicalFileWriter = new SingleStoreFileWriter(fs, historicalFilePath, conf, cacheConf,
+        bloomType, bloomFilterImpl, maxKeys, favoredNodes, fileContext, shouldDropCacheBehind,
+        compactedFilesSupplier);
     }
     return historicalFileWriter;
   }
@@ -502,6 +507,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     private final BloomFilterWriter generalBloomFilterWriter;
     private final BloomFilterWriter deleteFamilyBloomFilterWriter;
     private final BloomType bloomType;
+    private final BloomFilterImpl bloomFilterImpl;
     private byte[] bloomParam = null;
     private long deleteFamilyCnt = 0;
     private BloomContext bloomContext = null;
@@ -525,8 +531,8 @@ public class StoreFileWriter implements CellSink, ShipperListener {
      * @throws IOException problem writing to FS
      */
     private SingleStoreFileWriter(FileSystem fs, Path path, final Configuration conf,
-      CacheConfig cacheConf, BloomType bloomType, long maxKeys, InetSocketAddress[] favoredNodes,
-      HFileContext fileContext, boolean shouldDropCacheBehind,
+      CacheConfig cacheConf, BloomType bloomType, BloomFilterImpl bloomFilterImpl, long maxKeys,
+      InetSocketAddress[] favoredNodes, HFileContext fileContext, boolean shouldDropCacheBehind,
       Supplier<Collection<HStoreFile>> compactedFilesSupplier) throws IOException {
       this.compactedFilesSupplier = compactedFilesSupplier;
       // TODO : Change all writers to be specifically created for compaction context
@@ -534,8 +540,10 @@ public class StoreFileWriter implements CellSink, ShipperListener {
         HFile.getWriterFactory(conf, cacheConf).withPath(fs, path).withFavoredNodes(favoredNodes)
           .withFileContext(fileContext).withShouldDropCacheBehind(shouldDropCacheBehind).create();
 
-      generalBloomFilterWriter =
-        BloomFilterFactory.createGeneralBloomAtWrite(conf, cacheConf, bloomType, writer);
+      this.bloomFilterImpl = bloomFilterImpl;
+
+      generalBloomFilterWriter = BloomFilterFactory.createGeneralBloomAtWrite(conf, cacheConf,
+        bloomType, bloomFilterImpl, writer);
 
       if (generalBloomFilterWriter != null) {
         this.bloomType = bloomType;
@@ -550,17 +558,14 @@ public class StoreFileWriter implements CellSink, ShipperListener {
         // init bloom context
         switch (bloomType) {
           case ROW:
-          case RIBBON_ROW:
             bloomContext =
               new RowBloomContext(generalBloomFilterWriter, fileContext.getCellComparator());
             break;
           case ROWCOL:
-          case RIBBON_ROWCOL:
             bloomContext =
               new RowColBloomContext(generalBloomFilterWriter, fileContext.getCellComparator());
             break;
           case ROWPREFIX_FIXED_LENGTH:
-          case RIBBON_ROWPREFIX_FIXED_LENGTH:
             bloomContext = new RowPrefixFixedLengthBloomContext(generalBloomFilterWriter,
               fileContext.getCellComparator(), Bytes.toInt(bloomParam));
             break;
@@ -574,9 +579,9 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       }
 
       // initialize delete family Bloom filter when there is NO RowCol Bloom/Ribbon filter
-      if (!this.bloomType.isRowCol()) {
+      if (this.bloomType != BloomType.ROWCOL) {
         this.deleteFamilyBloomFilterWriter =
-          BloomFilterFactory.createDeleteBloomAtWrite(conf, cacheConf, this.bloomType, writer);
+          BloomFilterFactory.createDeleteBloomAtWrite(conf, cacheConf, bloomFilterImpl, writer);
         deleteFamilyBloomContext =
           new RowBloomContext(deleteFamilyBloomFilterWriter, fileContext.getCellComparator());
       } else {
@@ -754,6 +759,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       if (hasGeneralBloom) {
         writer.addGeneralBloomFilter(generalBloomFilterWriter);
         writer.appendFileInfo(BLOOM_FILTER_TYPE_KEY, Bytes.toBytes(bloomType.toString()));
+        writer.appendFileInfo(BLOOM_FILTER_IMPL_KEY, Bytes.toBytes(bloomFilterImpl.toString()));
         if (bloomParam != null) {
           writer.appendFileInfo(BLOOM_FILTER_PARAM_KEY, bloomParam);
         }
@@ -813,6 +819,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     private final FileSystem fs;
 
     private BloomType bloomType = BloomType.NONE;
+    private BloomFilterImpl bloomFilterImpl = BloomFilterImpl.BLOOM;
     private long maxKeyCount = 0;
     private Path dir;
     private Path liveFilePath;
@@ -884,6 +891,12 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     public Builder withBloomType(BloomType bloomType) {
       Preconditions.checkNotNull(bloomType);
       this.bloomType = bloomType;
+      return this;
+    }
+
+    public Builder withBloomFilterImpl(BloomFilterImpl bloomFilterImpl) {
+      Preconditions.checkNotNull(bloomFilterImpl);
+      this.bloomFilterImpl = bloomFilterImpl;
       return this;
     }
 
@@ -1005,8 +1018,8 @@ public class StoreFileWriter implements CellSink, ShipperListener {
         }
       }
       return new StoreFileWriter(fs, liveFilePath, historicalFilePath, conf, cacheConf, bloomType,
-        maxKeyCount, favoredNodes, fileContext, shouldDropCacheBehind, compactedFilesSupplier,
-        comparator, maxVersions, newVersionBehavior);
+        bloomFilterImpl, maxKeyCount, favoredNodes, fileContext, shouldDropCacheBehind,
+        compactedFilesSupplier, comparator, maxVersions, newVersionBehavior);
     }
   }
 }

@@ -22,6 +22,8 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.BloomFilterMetrics;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilter;
@@ -31,6 +33,7 @@ import org.apache.hadoop.hbase.io.hfile.CompoundRibbonFilter;
 import org.apache.hadoop.hbase.io.hfile.CompoundRibbonFilterBase;
 import org.apache.hadoop.hbase.io.hfile.CompoundRibbonFilterWriter;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.regionserver.BloomFilterImpl;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.ribbon.RibbonFilterUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -73,6 +76,12 @@ public final class BloomFilterFactory {
    * data blocks.
    */
   public static final String IO_STOREFILE_BLOOM_BLOCK_SIZE = "io.storefile.bloom.block.size";
+
+  /**
+   * Default filter implementation to use. Can be "BLOOM" or "RIBBON" (case insensitive). This
+   * serves as the default when a column family does not explicitly specify a filter implementation.
+   */
+  public static final String IO_STOREFILE_BLOOM_FILTER_IMPL = "io.storefile.bloom.filter.impl";
 
   /** Maximum number of times a Bloom filter can be "folded" if oversized */
   private static final int MAX_ALLOWED_FOLD_FACTOR = 7;
@@ -124,7 +133,7 @@ public final class BloomFilterFactory {
    */
   private static double getAdjustedErrorRate(Configuration conf, BloomType bloomType) {
     double err = getErrorRate(conf);
-    if (bloomType.toBaseType() == BloomType.ROWCOL) {
+    if (bloomType == BloomType.ROWCOL) {
       err = 1 - Math.sqrt(1 - err);
     }
     return err;
@@ -141,14 +150,40 @@ public final class BloomFilterFactory {
   }
 
   /**
+   * Returns the filter implementation for a column family. If the column family has an explicitly
+   * set filter implementation, that value is used. Otherwise, falls back to the global
+   * configuration default. The value is case insensitive. Defaults to BLOOM if not specified.
+   * @param conf   the configuration
+   * @param family the column family descriptor (may be null)
+   * @return the filter implementation to use
+   */
+  public static BloomFilterImpl getBloomFilterImpl(Configuration conf,
+    ColumnFamilyDescriptor family) {
+    // Check family-level setting first
+    if (family != null) {
+      String impl = family.getValue(ColumnFamilyDescriptorBuilder.BLOOMFILTER_IMPL);
+      if (impl != null) {
+        return BloomFilterImpl.valueOf(impl.toUpperCase());
+      }
+    }
+    // Fall back to global configuration
+    String impl = conf.get(IO_STOREFILE_BLOOM_FILTER_IMPL);
+    if (impl == null) {
+      return BloomFilterImpl.BLOOM;
+    }
+    return BloomFilterImpl.valueOf(impl.toUpperCase());
+  }
+
+  /**
    * Creates a new general (Row or RowCol) Bloom or Ribbon filter at the time of
    * {@link org.apache.hadoop.hbase.regionserver.HStoreFile} writing.
-   * @param writer the HFile writer
+   * @param bloomImpl The filter implementation (BLOOM or RIBBON)
+   * @param writer    the HFile writer
    * @return the new Bloom/Ribbon filter, or null in case filters are disabled or when failed to
    *         create one.
    */
   public static BloomFilterWriter createGeneralBloomAtWrite(Configuration conf,
-    CacheConfig cacheConf, BloomType bloomType, HFile.Writer writer) {
+    CacheConfig cacheConf, BloomType bloomType, BloomFilterImpl bloomImpl, HFile.Writer writer) {
     if (!isGeneralBloomEnabled(conf)) {
       LOG.trace("Bloom filters are disabled by configuration for " + writer.getPath()
         + (conf == null ? " (configuration is null)" : ""));
@@ -159,7 +194,7 @@ public final class BloomFilterFactory {
     }
 
     // Check if Ribbon filter is requested
-    if (bloomType.isRibbon()) {
+    if (bloomImpl == BloomFilterImpl.RIBBON) {
       return createRibbonFilterAtWrite(conf, cacheConf, bloomType, writer);
     }
 
@@ -179,7 +214,7 @@ public final class BloomFilterFactory {
    * Creates a new Ribbon filter at the time of HStoreFile writing.
    * @param conf      Configuration
    * @param cacheConf Cache configuration
-   * @param bloomType The Ribbon filter type (RIBBON_ROW, RIBBON_ROWCOL, etc.)
+   * @param bloomType The bloom type for key extraction (ROW, ROWCOL, etc.)
    * @param writer    The HFile writer
    * @return The new Ribbon filter writer
    */
@@ -189,8 +224,8 @@ public final class BloomFilterFactory {
     int hashType = Hash.getHashType(conf);
     double fpRate = getAdjustedErrorRate(conf, bloomType);
 
-    BloomType baseType = bloomType.toBaseType();
-    CellComparator comparator = baseType.isRowCol() ? CellComparatorImpl.COMPARATOR : null;
+    CellComparator comparator =
+      bloomType == BloomType.ROWCOL ? CellComparatorImpl.COMPARATOR : null;
 
     CompoundRibbonFilterWriter ribbonWriter =
       new CompoundRibbonFilterWriter(blockSize, RibbonFilterUtil.DEFAULT_BANDWIDTH, hashType,
@@ -210,25 +245,25 @@ public final class BloomFilterFactory {
    * Creates a new Delete Family Bloom or Ribbon filter at the time of
    * {@link org.apache.hadoop.hbase.regionserver.HStoreFile} writing.
    * <p>
-   * If the general bloom type is a Ribbon type, the delete family filter will also use Ribbon.
+   * If the bloom filter implementation is RIBBON, the delete family filter will also use Ribbon.
    * Otherwise, a traditional Bloom filter is created.
    * @param conf      Configuration
    * @param cacheConf Cache configuration
-   * @param bloomType The general bloom type (used to determine if Ribbon should be used)
+   * @param bloomImpl The filter implementation (BLOOM or RIBBON)
    * @param writer    the HFile writer
    * @return the new Bloom/Ribbon filter, or null in case filters are disabled or when failed to
    *         create one.
    */
   public static BloomFilterWriter createDeleteBloomAtWrite(Configuration conf,
-    CacheConfig cacheConf, BloomType bloomType, HFile.Writer writer) {
+    CacheConfig cacheConf, BloomFilterImpl bloomImpl, HFile.Writer writer) {
     if (!isDeleteFamilyBloomEnabled(conf)) {
       LOG.info("Delete Bloom filters are disabled by configuration for " + writer.getPath()
         + (conf == null ? " (configuration is null)" : ""));
       return null;
     }
 
-    // Use Ribbon filter if the general bloom type is Ribbon
-    if (bloomType.isRibbon()) {
+    // Use Ribbon filter if the implementation is Ribbon
+    if (bloomImpl == BloomFilterImpl.RIBBON) {
       return createDeleteRibbonAtWrite(conf, cacheConf, writer);
     }
 
@@ -258,7 +293,7 @@ public final class BloomFilterFactory {
 
     CompoundRibbonFilterWriter ribbonWriter =
       new CompoundRibbonFilterWriter(blockSize, RibbonFilterUtil.DEFAULT_BANDWIDTH, hashType,
-        cacheConf.shouldCacheBloomsOnWrite(), null, BloomType.RIBBON_ROW, fpRate);
+        cacheConf.shouldCacheBloomsOnWrite(), null, BloomType.ROW, fpRate);
 
     writer.addInlineBlockWriter(ribbonWriter);
 

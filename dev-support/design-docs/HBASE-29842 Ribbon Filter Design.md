@@ -43,32 +43,62 @@ Among modern filter alternatives (Cuckoo, Xor, Xor+, Ribbon), Ribbon Filter offe
 
 ## 2. Design
 
-### 2.1 Ribbon Filter Overview
+### 2.1 Overview
 
 Ribbon Filter is based on the paper ["Ribbon filter: practically smaller than Bloom and Xor"](https://arxiv.org/abs/2103.02515), and this implementation references [FastFilter/fastfilter_cpp](https://github.com/FastFilter/fastfilter_cpp).
 
 Ribbon Filter has combinations of Standard/Homogeneous variants and Row-Major/ICML storage formats. This implementation adopts the **Homogeneous Ribbon + ICML** combination. Homogeneous is a simplified version of Standard, and ICML offers better space efficiency than Row-Major with variable fingerprint bits and cache-friendly structure. Supporting Standard + Row-Major combination would increase implementation complexity with minimal benefits, so it was excluded.
 
-### 2.2 New BloomType Values
+### 2.2 Configuration
+
+A new enum `BloomFilterImpl` is added to select the filter implementation:
 
 ```java
-public enum BloomType {
-  // Existing Bloom Filter types
-  NONE, ROW, ROWCOL, ROWPREFIX_FIXED_LENGTH, ROWPREFIX_DELIMITED,
-
-  // New Ribbon Filter types
-  RIBBON_ROW,
-  RIBBON_ROWCOL,
-  RIBBON_ROWPREFIX_FIXED_LENGTH
+public enum BloomFilterImpl {
+  BLOOM,   // Traditional Bloom filter (default)
+  RIBBON   // Ribbon filter (more space-efficient)
 }
 ```
 
-### 2.3 File Structure
+#### Per-Table Configuration
+
+```ruby
+create 'mytable', {NAME => 'cf', BLOOMFILTER => 'ROW', BLOOMFILTER_IMPL => 'RIBBON'}
+create 'mytable', {NAME => 'cf', BLOOMFILTER => 'ROWCOL', BLOOMFILTER_IMPL => 'RIBBON'}
+create 'mytable', {NAME => 'cf', BLOOMFILTER => 'ROWPREFIX_FIXED_LENGTH',
+                   BLOOMFILTER_IMPL => 'RIBBON',
+                   CONFIGURATION => {'RowPrefixBloomFilter.prefix_length' => '10'}}
+```
+
+#### Global Configuration
+
+A global default can be set in `hbase-site.xml`:
+
+```xml
+<property>
+  <name>io.storefile.bloom.filter.impl</name>
+  <value>RIBBON</value>  <!-- or BLOOM (default) -->
+</property>
+```
+
+When both global and per-table settings exist, the per-table setting takes precedence.
+
+Ribbon Filter uses existing Bloom Filter settings as-is:
+
+- `io.storefile.bloom.error.rate`: Target false positive rate (default: 0.01)
+- `io.storefile.bloom.block.size`: Block size in bytes (default: 128KB)
+
+### 2.3 Storage Format
+
+Ribbon Filter reuses the existing `BLOOM_CHUNK` block type and is distinguished by the VERSION field in metadata (Bloom=3, Ribbon=101).
+
+### 2.4 File Structure
 
 ```
 hbase-client/
 └── regionserver/
-    └── BloomType.java                    # Added RIBBON_* types
+    ├── BloomType.java                    # Key extraction strategy
+    └── BloomFilterImpl.java              # Filter implementation enum
 
 hbase-server/
 ├── io/hfile/
@@ -87,22 +117,6 @@ hbase-server/
         ├── RibbonFilterUtil.java          # New: Utilities
         └── RibbonHasher.java              # New: Hash function
 ```
-
-### 2.4 HFile Storage Format
-
-Ribbon Filter reuses the existing `BLOOM_CHUNK` block type and is distinguished by the VERSION field in metadata (Bloom=3, Ribbon=101).
-
-### 2.5 Configuration
-
-```ruby
-# HBase Shell
-create 'mytable', {NAME => 'cf', BLOOMFILTER => 'RIBBON_ROW'}
-create 'mytable', {NAME => 'cf', BLOOMFILTER => 'RIBBON_ROWCOL'}
-create 'mytable', {NAME => 'cf', BLOOMFILTER => 'RIBBON_ROWPREFIX_FIXED_LENGTH',
-                   CONFIGURATION => {'RowPrefixBloomFilter.prefix_length' => '10'}}
-```
-
-Ribbon Filter does not add separate configuration options and uses existing Bloom Filter settings (`io.storefile.bloom.error.rate`, `io.storefile.bloom.block.size`) as-is.
 
 ---
 
@@ -268,7 +282,7 @@ major_compact 'mytable'
 
 ```ruby
 # Enable Ribbon filter
-alter 'mytable', {NAME => 'cf', BLOOMFILTER => 'RIBBON_ROW'}
+alter 'mytable', {NAME => 'cf', BLOOMFILTER_IMPL => 'RIBBON'}
 major_compact 'mytable'
 ```
 

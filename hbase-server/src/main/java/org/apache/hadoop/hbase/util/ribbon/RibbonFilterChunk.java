@@ -132,7 +132,7 @@ public class RibbonFilterChunk implements BloomFilterBase {
    * @throws IllegalStateException If not allocated or already finalized
    */
   public void add(Cell cell) {
-    byte[] key = RibbonFilterUtil.extractKeyFromCell(cell, bloomType.toBaseType());
+    byte[] key = RibbonFilterUtil.extractKeyFromCell(cell, bloomType);
     addKey(key);
   }
 
