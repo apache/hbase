@@ -255,7 +255,7 @@ public class TestImportExport {
    */
   @Test
   public void testMetaExport() throws Throwable {
-    String[] args = new String[] { connection.getMetaTableName().getNameAsString(), FQ_OUTPUT_DIR,
+    String[] args = new String[] { UTIL.getConnection().getMetaTableName().getNameAsString(), FQ_OUTPUT_DIR,
       "1", "0", "0" };
     assertTrue(runExport(args));
   }
