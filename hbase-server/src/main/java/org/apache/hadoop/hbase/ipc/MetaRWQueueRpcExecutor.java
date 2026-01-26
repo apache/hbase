@@ -35,6 +35,7 @@ public class MetaRWQueueRpcExecutor extends RWQueueRpcExecutor {
     "hbase.ipc.server.metacallqueue.scan.ratio";
   public static final String META_CALL_QUEUE_HANDLER_FACTOR_CONF_KEY =
     "hbase.ipc.server.metacallqueue.handler.factor";
+  public static final float DEFAULT_META_CALL_QUEUE_HANDLER_FACTOR = 0.5f;
   public static final float DEFAULT_META_CALL_QUEUE_READ_SHARE = 0.8f;
   private static final float DEFAULT_META_CALL_QUEUE_SCAN_SHARE = 0.2f;
 
@@ -66,6 +67,7 @@ public class MetaRWQueueRpcExecutor extends RWQueueRpcExecutor {
 
   @Override
   protected float getCallQueueHandlerFactor(Configuration conf) {
-    return conf.getFloat(META_CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 0.5f);
+    return conf.getFloat(META_CALL_QUEUE_HANDLER_FACTOR_CONF_KEY,
+      DEFAULT_META_CALL_QUEUE_HANDLER_FACTOR);
   }
 }
