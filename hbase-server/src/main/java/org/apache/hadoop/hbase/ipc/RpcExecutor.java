@@ -130,7 +130,7 @@ public abstract class RpcExecutor {
     this.conf = conf;
     this.abortable = abortable;
 
-    float callQueuesHandlersFactor = this.conf.getFloat(CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 0.1f);
+    float callQueuesHandlersFactor = getCallQueueHandlerFactor(conf);
     if (
       Float.compare(callQueuesHandlersFactor, 1.0f) > 0
         || Float.compare(0.0f, callQueuesHandlersFactor) > 0
@@ -465,5 +465,9 @@ public abstract class RpcExecutor {
         ((ConfigurationObserver) queue).onConfigurationChange(conf);
       }
     }
+  }
+
+  protected float getCallQueueHandlerFactor(Configuration conf) {
+    return conf.getFloat(CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 0.1f);
   }
 }

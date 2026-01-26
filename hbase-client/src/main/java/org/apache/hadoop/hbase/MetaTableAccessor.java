@@ -285,6 +285,7 @@ public class MetaTableAccessor {
     }
     Get get = new Get(row);
     get.addFamily(HConstants.CATALOG_FAMILY);
+    get.setPriority(HConstants.INTERNAL_READ_QOS);
     Result r = get(getMetaHTable(connection), get);
     RegionLocations locations = getRegionLocations(r);
     return locations == null
@@ -310,6 +311,7 @@ public class MetaTableAccessor {
     throws IOException {
     Get get = new Get(getMetaKeyForRegion(ri));
     get.addFamily(HConstants.CATALOG_FAMILY);
+    get.setPriority(HConstants.INTERNAL_READ_QOS);
     return get(getMetaHTable(connection), get);
   }
 
@@ -339,9 +341,7 @@ public class MetaTableAccessor {
    */
   public static Result getRegionResult(Connection connection, RegionInfo regionInfo)
     throws IOException {
-    Get get = new Get(getMetaKeyForRegion(regionInfo));
-    get.addFamily(HConstants.CATALOG_FAMILY);
-    return get(getMetaHTable(connection), get);
+    return getCatalogFamilyRow(connection, regionInfo);
   }
 
   /**
@@ -576,6 +576,7 @@ public class MetaTableAccessor {
       scan.setReadType(Scan.ReadType.PREAD);
     }
     scan.setCaching(scannerCaching);
+    scan.setPriority(HConstants.INTERNAL_READ_QOS);
     return scan;
   }
 
@@ -776,9 +777,11 @@ public class MetaTableAccessor {
     }
 
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Scanning META" + " starting at row=" + Bytes.toStringBinary(startRow)
-        + " stopping at row=" + Bytes.toStringBinary(stopRow) + " for max=" + rowUpperLimit
-        + " with caching=" + scan.getCaching());
+      LOG.trace(
+        "Scanning META starting at row={} stopping at row={} for max={} with caching={} "
+          + "priority={}",
+        Bytes.toStringBinary(startRow), Bytes.toStringBinary(stopRow), rowUpperLimit,
+        scan.getCaching(), scan.getPriority());
     }
 
     int currentRow = 0;
@@ -1774,7 +1777,7 @@ public class MetaTableAccessor {
     addRegionInfo(put, regionInfo);
     addLocation(put, sn, openSeqNum, regionInfo.getReplicaId());
     putToMetaTable(connection, put);
-    LOG.info("Updated row {} with server=", regionInfo.getRegionNameAsString(), sn);
+    LOG.info("Updated row {} with server = {}", regionInfo.getRegionNameAsString(), sn);
   }
 
   /**
@@ -1899,7 +1902,7 @@ public class MetaTableAccessor {
         .setType(Cell.Type.Put).setValue(Bytes.toBytes(sn.getAddress().toString())).build())
       .add(builder.clear().setRow(p.getRow()).setFamily(getCatalogFamily())
         .setQualifier(getStartCodeColumn(replicaId)).setTimestamp(p.getTimestamp())
-        .setType(Cell.Type.Put).setValue(Bytes.toBytes(sn.getStartcode())).build())
+        .setType(Cell.Type.Put).setValue(Bytes.toBytes(sn.getStartCode())).build())
       .add(builder.clear().setRow(p.getRow()).setFamily(getCatalogFamily())
         .setQualifier(getSeqNumColumn(replicaId)).setTimestamp(p.getTimestamp())
         .setType(Cell.Type.Put).setValue(Bytes.toBytes(openSeqNum)).build());
