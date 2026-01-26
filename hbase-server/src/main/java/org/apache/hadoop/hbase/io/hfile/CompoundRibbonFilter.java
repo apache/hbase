@@ -118,8 +118,7 @@ public class CompoundRibbonFilter extends CompoundRibbonFilterBase implements Bl
   }
 
   private boolean containsInternal(Cell keyCell, BloomType type) {
-    BloomType baseType = type.toBaseType();
-    byte[] key = RibbonFilterUtil.extractKeyFromCell(keyCell, baseType);
+    byte[] key = RibbonFilterUtil.extractKeyFromCell(keyCell, type);
 
     // Find block using appropriate index type
     int block;

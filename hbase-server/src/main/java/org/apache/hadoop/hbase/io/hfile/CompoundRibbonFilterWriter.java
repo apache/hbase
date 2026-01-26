@@ -227,7 +227,7 @@ public class CompoundRibbonFilterWriter extends CompoundRibbonFilterBase
           "First key in chunk already set: " + Bytes.toStringBinary(firstKeyInChunk));
       }
       // This will be done only once per chunk
-      firstKeyInChunk = RibbonFilterUtil.extractKeyFromCell(cell, bloomType.toBaseType());
+      firstKeyInChunk = RibbonFilterUtil.extractKeyFromCell(cell, bloomType);
       allocateNewChunk();
     }
 
@@ -242,8 +242,7 @@ public class CompoundRibbonFilterWriter extends CompoundRibbonFilterBase
   private void allocateNewChunk() {
     if (prevChunk == null) {
       // First chunk
-      chunk =
-        new RibbonFilterChunk(bandwidth, hashType, bloomType.toBaseType(), desiredFpRate, overhead);
+      chunk = new RibbonFilterChunk(bandwidth, hashType, bloomType, desiredFpRate, overhead);
     } else {
       // Use the same parameters as the last chunk
       chunk = prevChunk.createAnother();

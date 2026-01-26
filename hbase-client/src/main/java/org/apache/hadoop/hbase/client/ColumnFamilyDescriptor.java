@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
+import org.apache.hadoop.hbase.regionserver.BloomFilterImpl;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -83,6 +84,9 @@ public interface ColumnFamilyDescriptor {
 
   /** Returns bloom filter type used for new StoreFiles in ColumnFamily */
   BloomType getBloomFilterType();
+
+  /** Returns bloom filter implementation used for new StoreFiles in ColumnFamily */
+  BloomFilterImpl getBloomFilterImpl();
 
   /** Returns Compression type setting. */
   Compression.Algorithm getCompactionCompressionType();
