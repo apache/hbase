@@ -152,8 +152,8 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
         RegionState rs = new RegionState(hrl.getRegion(), state, hrl.getServerName());
         if (rs.isClosing()) {
           // Move region to CLOSED in hbase:meta.
-          LOG.info("Moving {} from CLOSING to CLOSED in {}",
-            hrl.getRegion().getRegionNameAsString(), "hbase:meta");
+          LOG.info("Moving {} from CLOSING to CLOSED in hbase:meta",
+            hrl.getRegion().getRegionNameAsString());
           try {
             MetaTableAccessor.updateRegionState(this.connection, hrl.getRegion(),
               RegionState.State.CLOSED);

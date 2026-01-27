@@ -64,7 +64,7 @@ public class TestAdmin extends TestAdminBase {
   @Test
   public void testListTableDescriptors() throws IOException {
     TableDescriptor metaTableDescriptor =
-      TEST_UTIL.getAdmin().getDescriptor(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable());
+      TEST_UTIL.getAdmin().getDescriptor(TEST_UTIL.getConnection().getMetaTableName());
     List<TableDescriptor> tableDescriptors = TEST_UTIL.getAdmin().listTableDescriptors(true);
     assertTrue(tableDescriptors.contains(metaTableDescriptor));
     tableDescriptors = TEST_UTIL.getAdmin().listTableDescriptors(false);

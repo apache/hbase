@@ -54,8 +54,8 @@ public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TestAsyncAdminBase.setUpBeforeClass();
-    HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(),
-      RegionInfoBuilder.FIRST_META_REGIONINFO.getTable(), 3);
+    HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), TEST_UTIL.getConnection().getMetaTableName(),
+      3);
     try (ConnectionRegistry registry =
       ConnectionRegistryFactory.create(TEST_UTIL.getConfiguration(), User.getCurrent())) {
       RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL, registry);
@@ -81,7 +81,7 @@ public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
     throws InterruptedException, ExecutionException, IOException {
     createTableWithDefaultConf(tableName, 3);
     testMoveNonDefaultReplica(tableName);
-    testMoveNonDefaultReplica(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable());
+    testMoveNonDefaultReplica(TEST_UTIL.getConnection().getMetaTableName());
   }
 
   @Test
@@ -140,11 +140,11 @@ public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
   @Test
   public void testGetTableRegions() throws InterruptedException, ExecutionException, IOException {
     List<RegionInfo> metaRegions =
-      admin.getRegions(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()).get();
+      admin.getRegions(TEST_UTIL.getConnection().getMetaTableName()).get();
     assertEquals(3, metaRegions.size());
     for (int i = 0; i < 3; i++) {
       RegionInfo metaRegion = metaRegions.get(i);
-      assertEquals(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable(), metaRegion.getTable());
+      assertEquals(TEST_UTIL.getConnection().getMetaTableName(), metaRegion.getTable());
       assertEquals(i, metaRegion.getReplicaId());
     }
     createTableWithDefaultConf(tableName, 3);

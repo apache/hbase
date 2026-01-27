@@ -32,8 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class MetaQueue extends Queue<TableName> {
 
-  protected // Note: This is called during initialization, tableName is passed from parent
-  MetaQueue(TableName metaTableName, LockStatus lockStatus) {
+  protected MetaQueue(TableName metaTableName, LockStatus lockStatus) {
     super(metaTableName, 1, lockStatus);
   }
 

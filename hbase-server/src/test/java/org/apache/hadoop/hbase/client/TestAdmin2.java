@@ -84,14 +84,14 @@ public class TestAdmin2 extends TestAdminBase {
   public void testCreateBadTables() throws IOException {
     String msg = null;
     try {
-      ADMIN.createTable(TableDescriptorBuilder
-        .newBuilder(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()).build());
+      ADMIN.createTable(
+        TableDescriptorBuilder.newBuilder(TEST_UTIL.getConnection().getMetaTableName()).build());
     } catch (TableExistsException e) {
       msg = e.toString();
     }
     assertTrue("Unexcepted exception message " + msg,
       msg != null && msg.startsWith(TableExistsException.class.getName())
-        && msg.contains(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable().getNameAsString()));
+        && msg.contains(TEST_UTIL.getConnection().getMetaTableName().getNameAsString()));
 
     // Now try and do concurrent creation with a bunch of threads.
     TableDescriptor tableDescriptor =
@@ -487,7 +487,7 @@ public class TestAdmin2 extends TestAdminBase {
   @Test
   public void testDisableCatalogTable() throws Exception {
     try {
-      ADMIN.disableTable(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable());
+      ADMIN.disableTable(TEST_UTIL.getConnection().getMetaTableName());
       fail("Expected to throw ConstraintException");
     } catch (ConstraintException e) {
     }

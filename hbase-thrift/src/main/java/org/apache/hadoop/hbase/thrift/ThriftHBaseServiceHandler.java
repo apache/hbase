@@ -1072,11 +1072,9 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
   public TRegionInfo getRegionInfo(ByteBuffer searchRow) throws IOError {
     try {
       byte[] row = getBytes(searchRow);
-      Result startRowResult =
-        // TODO(HBASE-XXXXX - Phase 6): Get dynamic name from connection
-        // For now, hardcode default. Future: use getConnection(user).getMetaTableName().getName()
-        getReverseScanResult(TableName.valueOf("hbase", "meta").getName(), row,
-          HConstants.CATALOG_FAMILY);
+      Result startRowResult = getReverseScanResult(
+        connectionCache.getAdmin().getConnection().getMetaTableName().getName(), row,
+        HConstants.CATALOG_FAMILY);
 
       if (startRowResult == null) {
         throw new IOException("Cannot find row in hbase:meta, row=" + Bytes.toStringBinary(row));

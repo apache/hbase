@@ -101,8 +101,9 @@ public class TestAsyncRegionLocator {
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     ConnectionRegistry registry =
       ConnectionRegistryFactory.create(TEST_UTIL.getConfiguration(), User.getCurrent());
-    CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
-      registry.getClusterId().get(), TableName.valueOf("hbase:meta"), null, User.getCurrent());
+    CONN =
+      new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry, registry.getClusterId().get(),
+        TEST_UTIL.getConnection().getMetaTableName(), null, User.getCurrent());
     LOCATOR = CONN.getLocator();
   }
 

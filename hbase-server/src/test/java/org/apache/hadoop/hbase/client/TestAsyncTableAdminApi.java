@@ -72,7 +72,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
   static TableState.State getStateFromMeta(TableName table) throws Exception {
     Optional<TableState> state = ClientMetaTableAccessor
-      .getTableState(ASYNC_CONN.getTable(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()), table)
+      .getTableState(ASYNC_CONN.getTable(TEST_UTIL.getConnection().getMetaTableName()), table)
       .get();
     assertTrue(state.isPresent());
     return state.get().getState();
@@ -81,7 +81,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
   @Test
   public void testCreateTableNumberOfRegions() throws Exception {
     AsyncTable<AdvancedScanResultConsumer> metaTable =
-      ASYNC_CONN.getTable(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable());
+      ASYNC_CONN.getTable(TEST_UTIL.getConnection().getMetaTableName());
 
     createTableWithDefaultConf(tableName);
     List<HRegionLocation> regionLocations =
@@ -130,7 +130,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     assertTrue("Table should be created with splitKyes + 1 rows in META", tableAvailable);
 
     AsyncTable<AdvancedScanResultConsumer> metaTable =
-      ASYNC_CONN.getTable(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable());
+      ASYNC_CONN.getTable(TEST_UTIL.getConnection().getMetaTableName());
     List<HRegionLocation> regions =
       ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
     Iterator<HRegionLocation> hris = regions.iterator();

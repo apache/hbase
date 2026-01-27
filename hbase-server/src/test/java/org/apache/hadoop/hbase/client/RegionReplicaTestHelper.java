@@ -46,8 +46,8 @@ public final class RegionReplicaTestHelper {
   static void waitUntilAllMetaReplicasAreReady(HBaseTestingUtil util, ConnectionRegistry registry)
     throws IOException {
     Configuration conf = util.getConfiguration();
-    int regionReplicaCount = util.getAdmin()
-      .getDescriptor(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable()).getRegionReplication();
+    int regionReplicaCount =
+      util.getAdmin().getDescriptor(util.getConnection().getMetaTableName()).getRegionReplication();
     Waiter.waitFor(conf, conf.getLong("hbase.client.sync.wait.timeout.msec", 60000), 200, true,
       new ExplainingPredicate<IOException>() {
         @Override

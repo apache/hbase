@@ -49,7 +49,7 @@ public class TestIncreaseMetaReplicaThroughConfig extends MetaWithReplicasTestBa
   public void testUpgradeAndIncreaseReplicaCount() throws Exception {
     HMaster oldMaster = TEST_UTIL.getMiniHBaseCluster().getMaster();
     TableDescriptors oldTds = oldMaster.getTableDescriptors();
-    TableDescriptor oldMetaTd = oldTds.get(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable());
+    TableDescriptor oldMetaTd = oldTds.get(TEST_UTIL.getConnection().getMetaTableName());
     assertEquals(3, oldMetaTd.getRegionReplication());
     // force update the replica count to 1 and then kill the master, to simulate that hen upgrading,
     // we have no region replication in meta table descriptor but we actually have meta region

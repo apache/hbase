@@ -174,8 +174,7 @@ class SchemaLocking {
     addToLockedResources(lockedResources, regionLocks, Function.identity(),
       LockedResourceType.REGION);
     addToLockedResources(lockedResources, peerLocks, Function.identity(), LockedResourceType.PEER);
-    // TODO(Phase 6): Support replica-specific meta table names
-    // TODO(HBASE-XXXXX - Phase 6): Get dynamic name from MasterServices
+    // TODO: Get dynamic name from MasterServices
     addToLockedResources(lockedResources,
       ImmutableMap.of(TableName.valueOf("hbase", "meta"), metaLock), tn -> tn.getNameAsString(),
       LockedResourceType.META);
@@ -239,8 +238,7 @@ class SchemaLocking {
       .append("tableLocks", filterUnlocked(tableLocks))
       .append("regionLocks", filterUnlocked(regionLocks))
       .append("peerLocks", filterUnlocked(peerLocks))
-      // TODO(Phase 6): Support replica-specific meta table names
-      // TODO(HBASE-XXXXX - Phase 6): Get dynamic name from MasterServices
+      // TODO: Get dynamic name from MasterServices
       .append("metaLocks",
         filterUnlocked(ImmutableMap.of(TableName.valueOf("hbase", "meta"), metaLock)))
       .append("globalLocks", filterUnlocked(globalLocks)).build();

@@ -231,7 +231,8 @@ public class TestTableInputFormatBase {
       throw new UnsupportedOperationException();
     }
 
-    @Override public TableName getMetaTableName() {
+    @Override
+    public TableName getMetaTableName() {
       throw new UnsupportedOperationException();
     }
 

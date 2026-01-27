@@ -1205,7 +1205,8 @@ public class TestHFileOutputFormat2 extends HFileOutputFormat2TestBase {
       return delegate.getConfiguration();
     }
 
-    @Override public TableName getMetaTableName() {
+    @Override
+    public TableName getMetaTableName() {
       return delegate.getMetaTableName();
     }
 

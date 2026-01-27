@@ -145,7 +145,8 @@ public class TestMultiTableInputFormatBase {
       return this.configuration;
     }
 
-    @Override public TableName getMetaTableName() {
+    @Override
+    public TableName getMetaTableName() {
       return null;
     }
 

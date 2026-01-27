@@ -75,7 +75,10 @@ public class TestStatusResource {
       assertTrue(node.getStartCode() > 0L);
       assertTrue(node.getRequests() >= 0);
       for (StorageClusterStatusModel.Node.Region region : node.getRegions()) {
-        if (Bytes.equals(region.getName(), Bytes.toBytes(TEST_UTIL.getConnection().getMetaTableName() + ",,1"))) {
+        if (
+          Bytes.equals(region.getName(),
+            Bytes.toBytes(TEST_UTIL.getConnection().getMetaTableName() + ",,1"))
+        ) {
           foundMeta = true;
         }
       }

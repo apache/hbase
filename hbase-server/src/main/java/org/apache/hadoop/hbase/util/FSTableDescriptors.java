@@ -144,7 +144,7 @@ public class FSTableDescriptors implements TableDescriptors {
   }
 
   private static TableName getMetaTableNameFromConf(Configuration conf) {
-    // TODO(Phase 6): Support replica-specific meta table names from configuration
+    // TODO: Support replica-specific meta table names from masterRegion
     return TableName.valueOf("hbase", "meta");
   }
 

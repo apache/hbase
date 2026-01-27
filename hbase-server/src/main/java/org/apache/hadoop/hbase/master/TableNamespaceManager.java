@@ -106,9 +106,7 @@ public class TableNamespaceManager {
   }
 
   private void loadFromMeta() throws IOException {
-    try (
-      Table table =
-        masterServices.getConnection().getTable(masterServices.getConnection().getMetaTableName());
+    try (Table table = masterServices.getConnection().getMetaTable();
       ResultScanner scanner = table.getScanner(HConstants.NAMESPACE_FAMILY)) {
       for (Result result;;) {
         result = scanner.next();
@@ -206,7 +204,7 @@ public class TableNamespaceManager {
     Put put = new Put(row, true).addColumn(HConstants.NAMESPACE_FAMILY,
       HConstants.NAMESPACE_COL_DESC_QUALIFIER,
       ProtobufUtil.toProtoNamespaceDescriptor(ns).toByteArray());
-    try (Table table = conn.getTable(conn.getMetaTableName())) {
+    try (Table table = conn.getMetaTable()) {
       table.put(put);
     }
   }
@@ -214,8 +212,7 @@ public class TableNamespaceManager {
   public void deleteNamespace(String namespaceName) throws IOException {
     checkMigrationDone();
     Delete d = new Delete(Bytes.toBytes(namespaceName));
-    try (Table table =
-      masterServices.getConnection().getTable(masterServices.getConnection().getMetaTableName())) {
+    try (Table table = masterServices.getConnection().getMetaTable()) {
       table.delete(d);
     }
     cache.remove(namespaceName);

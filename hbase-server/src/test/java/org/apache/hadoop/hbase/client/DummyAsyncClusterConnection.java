@@ -46,7 +46,7 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
 
   @Override
   public TableName getMetaTableName() {
-    return TableName.META_TABLE_NAME;
+    return null;
   }
 
   @Override
