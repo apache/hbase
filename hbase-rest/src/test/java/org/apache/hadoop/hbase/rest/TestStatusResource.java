@@ -55,16 +55,13 @@ public class TestStatusResource {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestStatusResource.class);
 
-  private static final byte[] META_REGION_NAME =
-    Bytes.toBytes(connection.getMetaTableName() + ",,1");
-
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
   private static Client client;
   private static JAXBContext context;
   private static Configuration conf;
 
-  private static void validate(StorageClusterStatusModel model) {
+  private static void validate(StorageClusterStatusModel model) throws IOException {
     assertNotNull(model);
     assertTrue(model.getRegions() + ">= 1", model.getRegions() >= 1);
     assertTrue(model.getRequests() >= 0);
@@ -78,7 +75,7 @@ public class TestStatusResource {
       assertTrue(node.getStartCode() > 0L);
       assertTrue(node.getRequests() >= 0);
       for (StorageClusterStatusModel.Node.Region region : node.getRegions()) {
-        if (Bytes.equals(region.getName(), META_REGION_NAME)) {
+        if (Bytes.equals(region.getName(), Bytes.toBytes(TEST_UTIL.getConnection().getMetaTableName() + ",,1"))) {
           foundMeta = true;
         }
       }

@@ -75,7 +75,7 @@ public final class ZKDump {
           sb.append("\n ").append(child);
         }
       }
-      sb.append("\nRegion server holding ").append(TableName.valueOf("hbase", "meta")).append(":");
+      sb.append("\nRegion server holding hbase:meta:");
       sb.append("\n ").append(MetaTableLocator.getMetaRegionLocation(zkWatcher));
       int numMetaReplicas = zkWatcher.getMetaReplicaNodes().size();
       for (int i = 1; i < numMetaReplicas; i++) {
