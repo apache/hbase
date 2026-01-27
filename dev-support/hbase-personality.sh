@@ -123,6 +123,10 @@ function personality_parse_args
         delete_parameter "${i}"
         TEST_PROFILE=${i#*=}
       ;;
+      --wave-data-dir=*)
+        delete_parameter "${i}"
+        WAVE_DATA_DIR=${i#*=}
+      ;;
       --skip-errorprone)
         delete_parameter "${i}"
         SKIP_ERRORPRONE=true
@@ -255,6 +259,10 @@ function personality_modules
       extra="${extra} -P${TEST_PROFILE}"
     else
       extra="${extra} -PrunAllTests"
+    fi
+
+    if [ -n "${WAVE_DATA_DIR}" ]; then
+      extra="${extra} -Dwave.data.dir=${WAVE_DATA_DIR}"
     fi
 
     get_include_exclude_tests_arg tests_arg

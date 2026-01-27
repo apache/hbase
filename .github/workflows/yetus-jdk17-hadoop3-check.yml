@@ -36,18 +36,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Wave 0: Small and Medium tests (uses existing runDevTests profile)
           - name: "small-medium"
+            wave: 0
             test_profile: "runDevTests"
-            test_pattern: ""
-          - name: "large-server-1"
-            test_profile: "runLargeTests"
-            test_pattern: "**/Test[BDEFJKQSU]*"
-          - name: "large-server-2"
-            test_profile: "runLargeTests"
-            test_pattern: "**/Test[CGHMNOT]*"
-          - name: "large-server-3"
-            test_profile: "runLargeTests"
-            test_pattern: "**/Test[AILPRVWXYZ]*"
+          # Waves 1-3: Large tests split by wave assignment files
+          - name: "large-wave-1"
+            wave: 1
+            test_profile: "runLargeTests-wave1"
+          - name: "large-wave-2"
+            wave: 2
+            test_profile: "runLargeTests-wave2"
+          - name: "large-wave-3"
+            wave: 3
+            test_profile: "runLargeTests-wave3"
 
     name: ${{ matrix.name }}
 
@@ -74,6 +76,26 @@ jobs:
           key: hbase-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             hbase-m2-
+
+      - name: Fetch wave files
+        id: wave-files
+        if: matrix.wave > 0
+        working-directory: src
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          pip install -q -r dev-support/test-waves/requirements.txt
+
+          WAVE_DATA_DIR="${RUNNER_TEMP}/wave-data"
+          mkdir -p "${WAVE_DATA_DIR}"
+
+          WAVE_FILE=$(python dev-support/test-waves/fetch-wave-files.py "${{ matrix.wave }}" "${{ github.base_ref }}")
+          cp "${WAVE_FILE}" "${WAVE_DATA_DIR}/"
+
+          echo "Wave data directory contents:"
+          ls -la "${WAVE_DATA_DIR}"
+          echo "wave_data_dir=${WAVE_DATA_DIR}" >> "$GITHUB_OUTPUT"
 
       - name: Download Yetus
         run: |
@@ -110,7 +132,7 @@ jobs:
           SKIP_ERRORPRONE: 'true'
           DEBUG: 'true'
           TEST_PROFILE: ${{ matrix.test_profile }}
-          TEST_INCLUDE_PATTERN: ${{ matrix.test_pattern }}
+          WAVE_DATA_DIR: ${{ steps.wave-files.outputs.wave_data_dir }}
         run: |
           cd "${{ github.workspace }}"
           bash src/dev-support/jenkins_precommit_github_yetus.sh

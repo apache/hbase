@@ -4605,6 +4605,161 @@
       </properties>
     </profile>
     <profile>
+      <!--
+        Wave profiles for partitioning Large tests across parallel CI jobs.
+        Requires: -Dwave.data.dir=/path/to/wave-files
+
+        Wave files are generated weekly by the test-waves-aggregation GHA workflow
+        and stored as GitHub Actions artifacts. The CI workflow fetches these
+        files before running tests.
+
+        Wave 1: runs Large tests NOT assigned to waves 2-3 (excludes file)
+        Wave 2-3: run specific Large tests (includes file)
+      -->
+      <id>runLargeTests-wave1</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
+        <surefire.secondPartGroups/>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-enforcer-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>require-wave-data-dir</id>
+                <goals>
+                  <goal>enforce</goal>
+                </goals>
+                <configuration>
+                  <rules>
+                    <requireProperty>
+                      <property>wave.data.dir</property>
+                      <message>
+wave.data.dir property is required when using wave profiles.
+Usage: mvn test -PrunLargeTests-wave1 -Dwave.data.dir=/path/to/wave-files
+
+Wave files can be fetched using: dev-support/test-waves/fetch-wave-files.sh
+                      </message>
+                    </requireProperty>
+                  </rules>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <excludesFile>${wave.data.dir}/wave1-excludes.txt</excludesFile>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>runLargeTests-wave2</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
+        <surefire.secondPartGroups/>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-enforcer-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>require-wave-data-dir</id>
+                <goals>
+                  <goal>enforce</goal>
+                </goals>
+                <configuration>
+                  <rules>
+                    <requireProperty>
+                      <property>wave.data.dir</property>
+                      <message>
+wave.data.dir property is required when using wave profiles.
+Usage: mvn test -PrunLargeTests-wave2 -Dwave.data.dir=/path/to/wave-files
+
+Wave files can be fetched using: dev-support/test-waves/fetch-wave-files.sh
+                      </message>
+                    </requireProperty>
+                  </rules>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includesFile>${wave.data.dir}/wave2-includes.txt</includesFile>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>runLargeTests-wave3</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
+        <surefire.secondPartGroups/>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-enforcer-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>require-wave-data-dir</id>
+                <goals>
+                  <goal>enforce</goal>
+                </goals>
+                <configuration>
+                  <rules>
+                    <requireProperty>
+                      <property>wave.data.dir</property>
+                      <message>
+wave.data.dir property is required when using wave profiles.
+Usage: mvn test -PrunLargeTests-wave3 -Dwave.data.dir=/path/to/wave-files
+
+Wave files can be fetched using: dev-support/test-waves/fetch-wave-files.sh
+                      </message>
+                    </requireProperty>
+                  </rules>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includesFile>${wave.data.dir}/wave3-includes.txt</includesFile>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
       <!-- Use it to launch small & medium tests -->
       <id>runDevTests</id>
       <activation>

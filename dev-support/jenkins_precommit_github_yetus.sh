@@ -167,13 +167,13 @@ fi
 if [[ -n "${JAVA8_HOME}" ]]; then
   YETUS_ARGS+=("--java8-home=${JAVA8_HOME}")
 fi
-# Test profile for running specific test categories (e.g., runSmallTests, runLargeTests)
+# Test profile for running specific test categories (e.g., runDevTests, runLargeTests-wave1)
 if [[ -n "${TEST_PROFILE}" ]]; then
   YETUS_ARGS+=("--test-profile=${TEST_PROFILE}")
 fi
-# Test include pattern for filtering which tests run (e.g., '**/Test[ABC]*')
-if [[ -n "${TEST_INCLUDE_PATTERN}" ]]; then
-  YETUS_ARGS+=("--include-tests-pattern=${TEST_INCLUDE_PATTERN}")
+# Wave data directory for test wave profiles (required for runLargeTests-wave1/2/3)
+if [[ -n "${WAVE_DATA_DIR}" ]]; then
+  YETUS_ARGS+=("--wave-data-dir=${WAVE_DATA_DIR}")
 fi
 
 echo "Launching yetus with command line:"
