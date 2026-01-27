@@ -76,7 +76,7 @@ public class TestReadOnlyControllerRegionObserver {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestReadOnlyControllerRegionObserver.class);
 
-  ReadOnlyController readOnlyController;
+  RegionReadOnlyController regionReadOnlyController;
   HBaseConfiguration readOnlyConf;
 
   // Region Coprocessor mocking variables
@@ -116,7 +116,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Before
   public void setup() throws Exception {
-    readOnlyController = new ReadOnlyController();
+    regionReadOnlyController = new RegionReadOnlyController();
     readOnlyConf = new HBaseConfiguration();
     readOnlyConf.setBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
 
@@ -183,631 +183,655 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreFlushV1ReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preFlush(c, flushLifeCycleTracker);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preFlush(c, flushLifeCycleTracker);
   }
 
   @Test
   public void testPreFlushV1NoException() throws IOException {
-    readOnlyController.preFlush(c, flushLifeCycleTracker);
+    regionReadOnlyController.preFlush(c, flushLifeCycleTracker);
   }
 
   @Test
   public void testPreFlushV1ReadOnlyMetaNoException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
     mockOperationForMetaTable();
-    readOnlyController.preFlush(c, flushLifeCycleTracker);
+    regionReadOnlyController.preFlush(c, flushLifeCycleTracker);
   }
 
   @Test
   public void testPreFlushV1MetaNoException() throws IOException {
-    readOnlyController.preFlush(c, flushLifeCycleTracker);
+    mockOperationForMetaTable();
+    regionReadOnlyController.preFlush(c, flushLifeCycleTracker);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreFlushV2ReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preFlush(c, store, scanner, flushLifeCycleTracker);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preFlush(c, store, scanner, flushLifeCycleTracker);
   }
 
   @Test
   public void testPreFlushV2NoException() throws IOException {
-    readOnlyController.preFlush(c, store, scanner, flushLifeCycleTracker);
+    regionReadOnlyController.preFlush(c, store, scanner, flushLifeCycleTracker);
   }
 
   @Test
   public void testPreFlushV2ReadOnlyMetaNoException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
     mockOperationForMetaTable();
-    readOnlyController.preFlush(c, store, scanner, flushLifeCycleTracker);
+    regionReadOnlyController.preFlush(c, store, scanner, flushLifeCycleTracker);
   }
 
   @Test
   public void testPreFlushV2MetaNoException() throws IOException {
-    readOnlyController.preFlush(c, store, scanner, flushLifeCycleTracker);
+    mockOperationForMetaTable();
+    regionReadOnlyController.preFlush(c, store, scanner, flushLifeCycleTracker);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreFlushScannerOpenReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
   }
 
   @Test
   public void testPreFlushScannerOpenNoException() throws IOException {
-    readOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
+    regionReadOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
   }
 
   @Test
   public void testPreFlushScannerOpenReadOnlyMetaNoException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
     mockOperationForMetaTable();
-    readOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
+    regionReadOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
   }
 
   @Test
   public void testPreFlushScannerOpenMetaNoException() throws IOException {
-    readOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
+    mockOperationForMetaTable();
+    regionReadOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreMemStoreCompactionReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preMemStoreCompaction(c, store);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preMemStoreCompaction(c, store);
   }
 
   @Test
   public void testPreMemStoreCompactionNoException() throws IOException {
-    readOnlyController.preMemStoreCompaction(c, store);
+    regionReadOnlyController.preMemStoreCompaction(c, store);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreMemStoreCompactionCompactScannerOpenReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preMemStoreCompactionCompactScannerOpen(c, store, options);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preMemStoreCompactionCompactScannerOpen(c, store, options);
   }
 
   @Test
   public void testPreMemStoreCompactionCompactScannerOpenNoException() throws IOException {
-    readOnlyController.preMemStoreCompactionCompactScannerOpen(c, store, options);
+    regionReadOnlyController.preMemStoreCompactionCompactScannerOpen(c, store, options);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreMemStoreCompactionCompactReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preMemStoreCompactionCompact(c, store, scanner);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preMemStoreCompactionCompact(c, store, scanner);
   }
 
   @Test
   public void testPreMemStoreCompactionCompactNoException() throws IOException {
-    readOnlyController.preMemStoreCompactionCompact(c, store, scanner);
+    regionReadOnlyController.preMemStoreCompactionCompact(c, store, scanner);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCompactSelectionReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preCompactSelection(c, store, candidates, compactionLifeCycleTracker);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preCompactSelection(c, store, candidates, compactionLifeCycleTracker);
   }
 
   @Test
   public void testPreCompactSelectionNoException() throws IOException {
-    readOnlyController.preCompactSelection(c, store, candidates, compactionLifeCycleTracker);
+    regionReadOnlyController.preCompactSelection(c, store, candidates, compactionLifeCycleTracker);
   }
 
   @Test
   public void testPreCompactSelectionReadOnlyMetaNoException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
     mockOperationForMetaTable();
-    readOnlyController.preCompactSelection(c, store, candidates, compactionLifeCycleTracker);
+    regionReadOnlyController.preCompactSelection(c, store, candidates, compactionLifeCycleTracker);
   }
 
   @Test
   public void testPreCompactSelectionMetaNoException() throws IOException {
-    readOnlyController.preCompactSelection(c, store, candidates, compactionLifeCycleTracker);
+    mockOperationForMetaTable();
+    regionReadOnlyController.preCompactSelection(c, store, candidates, compactionLifeCycleTracker);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCompactScannerOpenReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preCompactScannerOpen(c, store, scanType, options,
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preCompactScannerOpen(c, store, scanType, options,
       compactionLifeCycleTracker, compactionRequest);
   }
 
   @Test
   public void testPreCompactScannerOpenNoException() throws IOException {
-    readOnlyController.preCompactScannerOpen(c, store, scanType, options,
+    regionReadOnlyController.preCompactScannerOpen(c, store, scanType, options,
       compactionLifeCycleTracker, compactionRequest);
   }
 
   @Test
   public void testPreCompactScannerOpenReadOnlyMetaNoException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
     mockOperationForMetaTable();
-    readOnlyController.preCompactScannerOpen(c, store, scanType, options,
+    regionReadOnlyController.preCompactScannerOpen(c, store, scanType, options,
       compactionLifeCycleTracker, compactionRequest);
   }
 
   @Test
   public void testPreCompactScannerOpenMetaNoException() throws IOException {
-    readOnlyController.preCompactScannerOpen(c, store, scanType, options,
+    mockOperationForMetaTable();
+    regionReadOnlyController.preCompactScannerOpen(c, store, scanType, options,
       compactionLifeCycleTracker, compactionRequest);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCompactReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preCompact(c, store, scanner, scanType, compactionLifeCycleTracker,
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preCompact(c, store, scanner, scanType, compactionLifeCycleTracker,
       compactionRequest);
   }
 
   @Test
   public void testPreCompactNoException() throws IOException {
-    readOnlyController.preCompact(c, store, scanner, scanType, compactionLifeCycleTracker,
+    regionReadOnlyController.preCompact(c, store, scanner, scanType, compactionLifeCycleTracker,
       compactionRequest);
   }
 
   @Test
   public void testPreCompactReadOnlyMetaNoException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
     mockOperationForMetaTable();
-    readOnlyController.preCompact(c, store, scanner, scanType, compactionLifeCycleTracker,
+    regionReadOnlyController.preCompact(c, store, scanner, scanType, compactionLifeCycleTracker,
       compactionRequest);
   }
 
   @Test
   public void testPreCompactMetaNoException() throws IOException {
-    readOnlyController.preCompact(c, store, scanner, scanType, compactionLifeCycleTracker,
+    mockOperationForMetaTable();
+    regionReadOnlyController.preCompact(c, store, scanner, scanType, compactionLifeCycleTracker,
       compactionRequest);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPrePutV1ReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.prePut(c, put, edit);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.prePut(c, put, edit);
   }
 
   @Test
   public void testPrePutV1NoException() throws IOException {
-    readOnlyController.prePut(c, put, edit);
+    regionReadOnlyController.prePut(c, put, edit);
   }
 
   @Test
   public void testPrePutV1ReadOnlyMetaNoException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
     mockOperationForMetaTable();
-    readOnlyController.prePut(c, put, edit);
+    regionReadOnlyController.prePut(c, put, edit);
   }
 
   @Test
   public void testPrePutV1MetaNoException() throws IOException {
-    readOnlyController.prePut(c, put, edit);
+    mockOperationForMetaTable();
+    regionReadOnlyController.prePut(c, put, edit);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPrePutV2ReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.prePut(c, put, edit, durability);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.prePut(c, put, edit, durability);
   }
 
   @Test
   public void testPrePutV2NoException() throws IOException {
-    readOnlyController.prePut(c, put, edit, durability);
+    regionReadOnlyController.prePut(c, put, edit, durability);
   }
 
   @Test
   public void testPrePutV2ReadOnlyMetaNoException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
     mockOperationForMetaTable();
-    readOnlyController.prePut(c, put, edit, durability);
+    regionReadOnlyController.prePut(c, put, edit, durability);
   }
 
   @Test
   public void testPrePutV2MetaNoException() throws IOException {
-    readOnlyController.prePut(c, put, edit, durability);
+    mockOperationForMetaTable();
+    regionReadOnlyController.prePut(c, put, edit, durability);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreDeleteV1ReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preDelete(c, delete, edit);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preDelete(c, delete, edit);
   }
 
   @Test
   public void testPreDeleteV1NoException() throws IOException {
-    readOnlyController.preDelete(c, delete, edit);
+    regionReadOnlyController.preDelete(c, delete, edit);
   }
 
   @Test
   public void testPreDeleteV1ReadOnlyMetaNoException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
     mockOperationForMetaTable();
-    readOnlyController.preDelete(c, delete, edit);
+    regionReadOnlyController.preDelete(c, delete, edit);
   }
 
   @Test
   public void testPreDeleteV1MetaNoException() throws IOException {
-    readOnlyController.preDelete(c, delete, edit);
+    mockOperationForMetaTable();
+    regionReadOnlyController.preDelete(c, delete, edit);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreDeleteV2ReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preDelete(c, delete, edit, durability);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preDelete(c, delete, edit, durability);
   }
 
   @Test
   public void testPreDeleteV2NoException() throws IOException {
-    readOnlyController.preDelete(c, delete, edit, durability);
+    regionReadOnlyController.preDelete(c, delete, edit, durability);
   }
 
   @Test
   public void testPreDeleteV2ReadOnlyMetaNoException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
     mockOperationForMetaTable();
-    readOnlyController.preDelete(c, delete, edit, durability);
+    regionReadOnlyController.preDelete(c, delete, edit, durability);
   }
 
   @Test
   public void testPreDeleteV2MetaNoException() throws IOException {
-    readOnlyController.preDelete(c, delete, edit, durability);
+    mockOperationForMetaTable();
+    regionReadOnlyController.preDelete(c, delete, edit, durability);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreBatchMutateReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preBatchMutate(c, miniBatchOp);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preBatchMutate(c, miniBatchOp);
   }
 
   @Test
   public void testPreBatchMutateNoException() throws IOException {
-    readOnlyController.preBatchMutate(c, miniBatchOp);
+    regionReadOnlyController.preBatchMutate(c, miniBatchOp);
   }
 
   @Test
   public void testPreBatchMutateReadOnlyMetaNoException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
     mockOperationForMetaTable();
-    readOnlyController.preBatchMutate(c, miniBatchOp);
+    regionReadOnlyController.preBatchMutate(c, miniBatchOp);
   }
 
   @Test
   public void testPreBatchMutateMetaNoException() throws IOException {
-    readOnlyController.preBatchMutate(c, miniBatchOp);
+    mockOperationForMetaTable();
+    regionReadOnlyController.preBatchMutate(c, miniBatchOp);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndPutV1ReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preCheckAndPut(c, row, family, qualifier, op, comparator, put, result);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preCheckAndPut(c, row, family, qualifier, op, comparator, put, result);
   }
 
   @Test
   public void testPreCheckAndPutV1NoException() throws IOException {
-    readOnlyController.preCheckAndPut(c, row, family, qualifier, op, comparator, put, result);
+    regionReadOnlyController.preCheckAndPut(c, row, family, qualifier, op, comparator, put, result);
   }
 
   @Test
   public void testPreCheckAndPutV1ReadOnlyMetaNoException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
     mockOperationForMetaTable();
-    readOnlyController.preCheckAndPut(c, row, family, qualifier, op, comparator, put, result);
+    regionReadOnlyController.preCheckAndPut(c, row, family, qualifier, op, comparator, put, result);
   }
 
   @Test
   public void testPreCheckAndPutV1MetaNoException() throws IOException {
-    readOnlyController.preCheckAndPut(c, row, family, qualifier, op, comparator, put, result);
+    mockOperationForMetaTable();
+    regionReadOnlyController.preCheckAndPut(c, row, family, qualifier, op, comparator, put, result);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndPutV2ReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preCheckAndPut(c, row, filter, put, result);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preCheckAndPut(c, row, filter, put, result);
   }
 
   @Test
   public void testPreCheckAndPutV2NoException() throws IOException {
-    readOnlyController.preCheckAndPut(c, row, filter, put, result);
+    regionReadOnlyController.preCheckAndPut(c, row, filter, put, result);
   }
 
   @Test
   public void testPreCheckAndPutV2ReadOnlyMetaNoException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
     mockOperationForMetaTable();
-    readOnlyController.preCheckAndPut(c, row, filter, put, result);
+    regionReadOnlyController.preCheckAndPut(c, row, filter, put, result);
   }
 
   @Test
   public void testPreCheckAndPutV2MetaNoException() throws IOException {
-    readOnlyController.preCheckAndPut(c, row, filter, put, result);
+    mockOperationForMetaTable();
+    regionReadOnlyController.preCheckAndPut(c, row, filter, put, result);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndPutAfterRowLockV1ReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preCheckAndPutAfterRowLock(c, row, family, qualifier, op, comparator, put,
-      result);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, family, qualifier, op, comparator,
+      put, result);
   }
 
   @Test
   public void testPreCheckAndPutAfterRowLockV1NoException() throws IOException {
-    readOnlyController.preCheckAndPutAfterRowLock(c, row, family, qualifier, op, comparator, put,
-      result);
+    regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, family, qualifier, op, comparator,
+      put, result);
   }
 
   @Test
   public void testPreCheckAndPutAfterRowLockV1ReadOnlyMetaNoException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
     mockOperationForMetaTable();
-    readOnlyController.preCheckAndPutAfterRowLock(c, row, family, qualifier, op, comparator, put,
-      result);
+    regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, family, qualifier, op, comparator,
+      put, result);
   }
 
   @Test
   public void testPreCheckAndPutAfterRowLockV1MetaNoException() throws IOException {
-    readOnlyController.preCheckAndPutAfterRowLock(c, row, family, qualifier, op, comparator, put,
-      result);
+    mockOperationForMetaTable();
+    regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, family, qualifier, op, comparator,
+      put, result);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndPutAfterRowLockV2ReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
   }
 
   @Test
   public void testPreCheckAndPutAfterRowLockV2NoException() throws IOException {
-    readOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
+    regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
   }
 
   @Test
   public void testPreCheckAndPutAfterRowLockV2ReadOnlyMetaNoException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
     mockOperationForMetaTable();
-    readOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
+    regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
   }
 
   @Test
   public void testPreCheckAndPutAfterRowLockV2MetaNoException() throws IOException {
-    readOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
+    mockOperationForMetaTable();
+    regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndDeleteV1ReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete, result);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete,
+      result);
   }
 
   @Test
   public void testPreCheckAndDeleteV1NoException() throws IOException {
-    readOnlyController.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete, result);
+    regionReadOnlyController.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete,
+      result);
   }
 
   @Test
   public void testPreCheckAndDeleteV1ReadOnlyMetaNoException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
     mockOperationForMetaTable();
-    readOnlyController.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete, result);
+    regionReadOnlyController.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete,
+      result);
   }
 
   @Test
   public void testPreCheckAndDeleteV1MetaNoException() throws IOException {
-    readOnlyController.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete, result);
+    mockOperationForMetaTable();
+    regionReadOnlyController.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete,
+      result);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndDeleteV2ReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preCheckAndDelete(c, row, filter, delete, result);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preCheckAndDelete(c, row, filter, delete, result);
   }
 
   @Test
   public void testPreCheckAndDeleteV2NoException() throws IOException {
-    readOnlyController.preCheckAndDelete(c, row, filter, delete, result);
+    regionReadOnlyController.preCheckAndDelete(c, row, filter, delete, result);
   }
 
   @Test
   public void testPreCheckAndDeleteV2ReadOnlyMetaNoException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
     mockOperationForMetaTable();
-    readOnlyController.preCheckAndDelete(c, row, filter, delete, result);
+    regionReadOnlyController.preCheckAndDelete(c, row, filter, delete, result);
   }
 
   @Test
   public void testPreCheckAndDeleteV2MetaNoException() throws IOException {
-    readOnlyController.preCheckAndDelete(c, row, filter, delete, result);
+    mockOperationForMetaTable();
+    regionReadOnlyController.preCheckAndDelete(c, row, filter, delete, result);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndDeleteAfterRowLockV1ReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op, comparator,
-      delete, result);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op,
+      comparator, delete, result);
   }
 
   @Test
   public void testPreCheckAndDeleteAfterRowLockV1NoException() throws IOException {
-    readOnlyController.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op, comparator,
-      delete, result);
+    regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op,
+      comparator, delete, result);
   }
 
   @Test
   public void testPreCheckAndDeleteAfterRowLockV1ReadOnlyMetaNoException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
     mockOperationForMetaTable();
-    readOnlyController.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op, comparator,
-      delete, result);
+    regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op,
+      comparator, delete, result);
   }
 
   @Test
   public void testPreCheckAndDeleteAfterRowLockV1MetaNoException() throws IOException {
-    readOnlyController.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op, comparator,
-      delete, result);
+    mockOperationForMetaTable();
+    regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op,
+      comparator, delete, result);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndDeleteAfterRowLockV2ReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
   }
 
   @Test
   public void testPreCheckAndDeleteAfterRowLockV2NoException() throws IOException {
-    readOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
+    regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
   }
 
   @Test
   public void testPreCheckAndDeleteAfterRowLockV2ReadOnlyMetaNoException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
     mockOperationForMetaTable();
-    readOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
+    regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
   }
 
   @Test
   public void testPreCheckAndDeleteAfterRowLockV2MetaNoException() throws IOException {
-    readOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
+    mockOperationForMetaTable();
+    regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndMutateReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preCheckAndMutate(c, checkAndMutate, checkAndMutateResult);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preCheckAndMutate(c, checkAndMutate, checkAndMutateResult);
   }
 
   @Test
   public void testPreCheckAndMutateNoException() throws IOException {
-    readOnlyController.preCheckAndMutate(c, checkAndMutate, checkAndMutateResult);
+    regionReadOnlyController.preCheckAndMutate(c, checkAndMutate, checkAndMutateResult);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndMutateAfterRowLockReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preCheckAndMutateAfterRowLock(c, checkAndMutate, checkAndMutateResult);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preCheckAndMutateAfterRowLock(c, checkAndMutate, checkAndMutateResult);
   }
 
   @Test
   public void testPreCheckAndMutateAfterRowLockNoException() throws IOException {
-    readOnlyController.preCheckAndMutateAfterRowLock(c, checkAndMutate, checkAndMutateResult);
+    regionReadOnlyController.preCheckAndMutateAfterRowLock(c, checkAndMutate, checkAndMutateResult);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreAppendV1ReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preAppend(c, append);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preAppend(c, append);
   }
 
   @Test
   public void testPreAppendV1NoException() throws IOException {
-    readOnlyController.preAppend(c, append);
+    regionReadOnlyController.preAppend(c, append);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreAppendV2ReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preAppend(c, append, edit);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preAppend(c, append, edit);
   }
 
   @Test
   public void testPreAppendV2NoException() throws IOException {
-    readOnlyController.preAppend(c, append, edit);
+    regionReadOnlyController.preAppend(c, append, edit);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreAppendAfterRowLockReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preAppendAfterRowLock(c, append);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preAppendAfterRowLock(c, append);
   }
 
   @Test
   public void testPreAppendAfterRowLockNoException() throws IOException {
-    readOnlyController.preAppendAfterRowLock(c, append);
+    regionReadOnlyController.preAppendAfterRowLock(c, append);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreIncrementV1ReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preIncrement(c, increment);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preIncrement(c, increment);
   }
 
   @Test
   public void testPreIncrementV1NoException() throws IOException {
-    readOnlyController.preIncrement(c, increment);
+    regionReadOnlyController.preIncrement(c, increment);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreIncrementV2ReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preIncrement(c, increment, edit);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preIncrement(c, increment, edit);
   }
 
   @Test
   public void testPreIncrementV2NoException() throws IOException {
-    readOnlyController.preIncrement(c, increment, edit);
+    regionReadOnlyController.preIncrement(c, increment, edit);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreIncrementAfterRowLockReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preIncrementAfterRowLock(c, increment);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preIncrementAfterRowLock(c, increment);
   }
 
   @Test
   public void testPreIncrementAfterRowLockNoException() throws IOException {
-    readOnlyController.preIncrementAfterRowLock(c, increment);
+    regionReadOnlyController.preIncrementAfterRowLock(c, increment);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreReplayWALsReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preReplayWALs(ctx, info, edits);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preReplayWALs(ctx, info, edits);
   }
 
   @Test
   public void testPreReplayWALsNoException() throws IOException {
-    readOnlyController.preReplayWALs(ctx, info, edits);
+    regionReadOnlyController.preReplayWALs(ctx, info, edits);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreBulkLoadHFileReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preBulkLoadHFile(ctx, familyPaths);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preBulkLoadHFile(ctx, familyPaths);
   }
 
   @Test
   public void testPreBulkLoadHFileNoException() throws IOException {
-    readOnlyController.preBulkLoadHFile(ctx, familyPaths);
+    regionReadOnlyController.preBulkLoadHFile(ctx, familyPaths);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCommitStoreFileReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preCommitStoreFile(ctx, family, pairs);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preCommitStoreFile(ctx, family, pairs);
   }
 
   @Test
   public void testPreCommitStoreFileNoException() throws IOException {
-    readOnlyController.preCommitStoreFile(ctx, family, pairs);
+    regionReadOnlyController.preCommitStoreFile(ctx, family, pairs);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreWALAppendReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preWALAppend(ctx, key, edit);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.preWALAppend(ctx, key, edit);
   }
 
   @Test
   public void testPreWALAppendNoException() throws IOException {
-    readOnlyController.preWALAppend(ctx, key, edit);
+    regionReadOnlyController.preWALAppend(ctx, key, edit);
   }
 
   @Test
   public void testPreWALAppendReadOnlyMetaNoException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.onConfigurationChange(readOnlyConf);
     when(key.getTableName()).thenReturn(TableName.META_TABLE_NAME);
-    readOnlyController.preWALAppend(ctx, key, edit);
+    regionReadOnlyController.preWALAppend(ctx, key, edit);
   }
 
   @Test
   public void testPreWALAppendMetaNoException() throws IOException {
-    readOnlyController.preWALAppend(ctx, key, edit);
+    when(key.getTableName()).thenReturn(TableName.META_TABLE_NAME);
+    regionReadOnlyController.preWALAppend(ctx, key, edit);
   }
 }

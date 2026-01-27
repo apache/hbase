@@ -45,7 +45,7 @@ public class TestReadOnlyControllerEndpointObserver {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestReadOnlyControllerEndpointObserver.class);
 
-  ReadOnlyController readOnlyController;
+  EndpointReadOnlyController endpointReadOnlyController;
   HBaseConfiguration readOnlyConf;
 
   // Region Server Coprocessor mocking variables.
@@ -56,7 +56,7 @@ public class TestReadOnlyControllerEndpointObserver {
 
   @Before
   public void setup() throws Exception {
-    readOnlyController = new ReadOnlyController();
+    endpointReadOnlyController = new EndpointReadOnlyController();
     readOnlyConf = new HBaseConfiguration();
     readOnlyConf.setBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
 
@@ -76,12 +76,12 @@ public class TestReadOnlyControllerEndpointObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreEndpointInvocationReadOnlyException() throws IOException {
-    readOnlyController.onConfigurationChange(readOnlyConf);
-    readOnlyController.preEndpointInvocation(ctx, service, methodName, request);
+    endpointReadOnlyController.onConfigurationChange(readOnlyConf);
+    endpointReadOnlyController.preEndpointInvocation(ctx, service, methodName, request);
   }
 
   @Test
   public void testPreEndpointInvocationNoException() throws IOException {
-    readOnlyController.preEndpointInvocation(ctx, service, methodName, request);
+    endpointReadOnlyController.preEndpointInvocation(ctx, service, methodName, request);
   }
 }
