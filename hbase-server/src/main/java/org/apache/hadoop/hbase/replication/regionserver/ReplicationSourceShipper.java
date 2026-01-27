@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import static org.apache.hadoop.hbase.replication.ReplicationUtils.getAdaptiveTimeout;
 import static org.apache.hadoop.hbase.replication.ReplicationUtils.sleepForRetries;
 
-import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -104,11 +103,12 @@ public class ReplicationSourceShipper extends Thread {
     LOG.info("Running ReplicationSourceShipper Thread for wal group: {}", this.walGroupId);
     // Loop until we close down
     while (isActive()) {
-      // check if flush needed for WAL backup, this is need for timeout based flush
+      // Whether to persist replication offsets based on size/time thresholds
       if (shouldPersistLogPosition()) {
-        IOException error = persistLogPosition();
-        if (error != null) {
-          LOG.warn("Exception while persisting replication state", error);
+        try {
+          persistLogPosition();
+        } catch (IOException e) {
+          LOG.warn("Exception while persisting replication state", e);
         }
       }
       // Sleep until replication is enabled again
@@ -169,7 +169,11 @@ public class ReplicationSourceShipper extends Thread {
     int sleepMultiplier = 0;
     if (entries.isEmpty()) {
       lastShippedBatch = entryBatch;
-      persistLogPosition();
+      try {
+        persistLogPosition();
+      } catch (IOException e) {
+        LOG.warn("Exception while persisting replication state", e);
+      }
       return;
     }
     int currentSize = (int) entryBatch.getHeapSize();
@@ -209,10 +213,7 @@ public class ReplicationSourceShipper extends Thread {
         entriesForCleanUpHFileRefs.addAll(entries);
         lastShippedBatch = entryBatch;
         if (shouldPersistLogPosition()) {
-          IOException error = persistLogPosition();
-          if (error != null) {
-            throw error; // existing catch block handles retry
-          }
+          persistLogPosition();
         }
 
         // offsets totalBufferUsed by deducting shipped batchSize (excludes bulk load size)
@@ -248,49 +249,37 @@ public class ReplicationSourceShipper extends Thread {
 
   private boolean shouldPersistLogPosition() {
     ReplicationEndpoint endpoint = source.getReplicationEndpoint();
-    if (!endpoint.isBufferedReplicationEndpoint()) {
-      // Non-buffering endpoints persist immediately
-      return true;
-    }
+    long maxBufferSize = endpoint.getMaxBufferSize();
     if (stagedWalSize == 0 || lastShippedBatch == null) {
       return false;
     }
-    return stagedWalSize >= endpoint.getMaxBufferSize()
+    if (maxBufferSize == -1) {
+      return true;
+    }
+    return stagedWalSize >= maxBufferSize
       || (EnvironmentEdgeManager.currentTime() - lastStagedFlushTs >= endpoint.maxFlushInterval());
   }
 
-  @Nullable
-  // Returns IOException instead of throwing so callers can decide
-  // whether to retry (shipEdits) or best-effort log (run()).
-  private IOException persistLogPosition() {
+  private void persistLogPosition() throws IOException {
     if (lastShippedBatch == null) {
-      return null;
+      return;
     }
 
     ReplicationEndpoint endpoint = source.getReplicationEndpoint();
+    endpoint.beforePersistingReplicationOffset();
 
-    if (endpoint.isBufferedReplicationEndpoint() && stagedWalSize > 0) {
-      source.getReplicationEndpoint().beforePersistingReplicationOffset();
+    // Clean up hfile references
+    for (Entry entry : entriesForCleanUpHFileRefs) {
+      cleanUpHFileRefs(entry.getEdit());
+      LOG.trace("shipped entry {}: ", entry);
     }
+    entriesForCleanUpHFileRefs.clear();
 
     stagedWalSize = 0;
     lastStagedFlushTs = EnvironmentEdgeManager.currentTime();
 
-    // Clean up hfile references
-    try {
-      for (Entry entry : entriesForCleanUpHFileRefs) {
-        cleanUpHFileRefs(entry.getEdit());
-        LOG.trace("shipped entry {}: ", entry);
-      }
-    } catch (IOException e) {
-      LOG.warn("{} threw exception while cleaning up hfile refs", endpoint.getClass().getName(), e);
-      return e;
-    }
-    entriesForCleanUpHFileRefs.clear();
-
     // Log and clean up WAL logs
     updateLogPosition(lastShippedBatch);
-    return null;
   }
 
   private void cleanUpHFileRefs(WALEdit edit) throws IOException {

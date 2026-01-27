@@ -285,32 +285,32 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
   Throwable failureCause();
 
   /**
-   * @return true if this endpoint buffers WAL entries and requires explicit flush control before
-   *         persisting replication offsets.
-   */
-  default boolean isBufferedReplicationEndpoint() {
-    return false;
-  }
-
-  /**
-   * Maximum WAL size (bytes) to buffer before forcing a flush. Only meaningful when
-   * isBufferedReplicationEndpoint() == true.
+   * Buffered replication endpoints can use this to indicate when staged WAL data should be flushed
+   * before offsets are persisted.
+   * <p>
+   * The default value {@code -1L} indicates that offsets may be persisted immediately after a
+   * {@link WALEntryBatch} is replicated.
+   * </p>
    */
   default long getMaxBufferSize() {
     return -1L;
   }
 
   /**
-   * Maximum time (ms) to wait before forcing a flush. Only meaningful when
-   * isBufferedReplicationEndpoint() == true.
+   * Buffered replication endpoints can use this to indicate the maximum time (in milliseconds) that
+   * WAL data may remain staged before offsets are persisted.
+   * <p>
+   * The default value {@link Long#MAX_VALUE} indicates that offsets may be persisted without any
+   * time-based flush constraint.
+   * </p>
    */
   default long maxFlushInterval() {
     return Long.MAX_VALUE;
   }
 
   /**
-   * Hook invoked before persisting replication offsets. Buffered endpoints should flush/close WALs
-   * here.
+   * Hook invoked before persisting replication offsets. Eg: Buffered endpoints can flush/close
+   * WALs here.
    */
   default void beforePersistingReplicationOffset() {
   }
