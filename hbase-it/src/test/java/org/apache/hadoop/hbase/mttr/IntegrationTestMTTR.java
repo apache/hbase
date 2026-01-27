@@ -184,7 +184,7 @@ public class IntegrationTestMTTR {
 
     // Set up the action that will move the regions of meta.
     moveMetaRegionsAction = new MoveRegionsOfTableAction(sleepTime,
-      MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME, connection.getMetaTableName());
+      MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME, util.getConnection().getMetaTableName());
 
     // Set up the action that will move the regions of our table.
     moveRegionAction = new MoveRegionsOfTableAction(sleepTime,

@@ -164,7 +164,7 @@ public class ProcessBasedLocalHBaseCluster {
     int attemptsLeft = 10;
     while (attemptsLeft-- > 0) {
       try {
-        testUtil.getConnection().getTable(connection.getMetaTableName());
+        testUtil.getConnection().getMetaTable();
       } catch (Exception e) {
         LOG.info("Waiting for HBase to startup. Retries left: " + attemptsLeft, e);
         Threads.sleep(1000);
