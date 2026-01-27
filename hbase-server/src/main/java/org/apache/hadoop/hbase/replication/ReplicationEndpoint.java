@@ -309,8 +309,8 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
   }
 
   /**
-   * Hook invoked before persisting replication offsets. Eg: Buffered endpoints can flush/close
-   * WALs here.
+   * Hook invoked before persisting replication offsets. Eg: Buffered endpoints can flush/close WALs
+   * here.
    */
   default void beforePersistingReplicationOffset() {
   }
