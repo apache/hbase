@@ -206,18 +206,24 @@ public class SplitTableRegionProcedure
     IOException splittableCheckIOE = null;
     boolean splittable = false;
     if (node != null) {
+      // Check if region is assigned to a server before proceeding
+      ServerName regionLocation = node.getRegionLocation();
+      if (regionLocation == null) {
+        throw new DoNotRetryIOException("Region " + regionToSplit.getShortNameToLog()
+          + " is not assigned to any server. Cannot check splittability.");
+      }
       try {
         GetRegionInfoResponse response;
         if (!hasBestSplitRow()) {
           LOG.info(
             "{} splitKey isn't explicitly specified, will try to find a best split key from RS {}",
-            node.getRegionInfo().getRegionNameAsString(), node.getRegionLocation());
-          response = AssignmentManagerUtil.getRegionInfoResponse(env, node.getRegionLocation(),
+            node.getRegionInfo().getRegionNameAsString(), regionLocation);
+          response = AssignmentManagerUtil.getRegionInfoResponse(env, regionLocation,
             node.getRegionInfo(), true);
           bestSplitRow =
             response.hasBestSplitRow() ? response.getBestSplitRow().toByteArray() : null;
         } else {
-          response = AssignmentManagerUtil.getRegionInfoResponse(env, node.getRegionLocation(),
+          response = AssignmentManagerUtil.getRegionInfoResponse(env, regionLocation,
             node.getRegionInfo(), false);
         }
         splittable = response.hasSplittable() && response.getSplittable();
