@@ -251,7 +251,8 @@ public class BackupManager implements Closeable {
    * @throws IOException exception
    */
   private String getOngoingBackupId() throws IOException {
-    List<BackupInfo> sessions = systemTable.getBackupInfos(withState(BackupState.RUNNING));
+    List<BackupInfo> sessions =
+      systemTable.getBackupHistory(true, 1, withState(BackupState.RUNNING));
     if (sessions.size() == 0) {
       return null;
     }

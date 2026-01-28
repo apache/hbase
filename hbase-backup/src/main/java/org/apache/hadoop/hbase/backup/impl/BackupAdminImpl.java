@@ -78,7 +78,8 @@ public class BackupAdminImpl implements BackupAdmin {
     BackupInfo backupInfo;
     try (final BackupSystemTable table = new BackupSystemTable(conn)) {
       if (backupId == null) {
-        List<BackupInfo> recentSessions = table.getBackupInfos(withState(BackupState.RUNNING));
+        List<BackupInfo> recentSessions =
+          table.getBackupHistory(true, 1, withState(BackupState.RUNNING));
         if (recentSessions.isEmpty()) {
           LOG.warn("No ongoing sessions found.");
           return null;
@@ -115,7 +116,7 @@ public class BackupAdminImpl implements BackupAdmin {
       }
 
       // Step 2: Make sure there is no failed session
-      List<BackupInfo> list = sysTable.getBackupInfos(withState(BackupState.RUNNING));
+      List<BackupInfo> list = sysTable.getBackupHistory(true, 1, withState(BackupState.RUNNING));
       if (list.size() != 0) {
         // ailed sessions found
         LOG.warn("Failed backup session found. Run backup repair tool first.");
@@ -374,7 +375,7 @@ public class BackupAdminImpl implements BackupAdmin {
   @Override
   public List<BackupInfo> getHistory(int n, BackupInfo.Filter... filters) throws IOException {
     try (final BackupSystemTable table = new BackupSystemTable(conn)) {
-      return table.getBackupInfos(n, filters);
+      return table.getBackupHistory(true, n, filters);
     }
   }
 
