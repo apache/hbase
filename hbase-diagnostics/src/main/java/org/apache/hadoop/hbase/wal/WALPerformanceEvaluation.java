@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.WALPerformanceEvaluationUtil;
 import org.apache.hadoop.util.Tool;
@@ -442,7 +443,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     System.err.println(" $ hbase org.apache.hadoop.hbase.wal." + "WALPerformanceEvaluation \\");
     System.err.println("    -conf ./core-site.xml -path hdfs://example.org:7000/tmp "
       + "-threads 100 -roll 10000 -verify");
-    System.exit(1);
+    ExitHandler.getInstance().exit(1);
   }
 
   private final Set<WAL> walsListenedTo = new HashSet<>();
@@ -541,6 +542,6 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
   }
 
   public static void main(String[] args) throws Exception {
-    System.exit(innerMain(HBaseConfiguration.create(), args));
+    ExitHandler.getInstance().exit(innerMain(HBaseConfiguration.create(), args));
   }
 }

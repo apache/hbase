@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
@@ -414,6 +415,6 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
       LOG.error("Exiting due to error", e);
       status = -1;
     }
-    System.exit(status);
+    ExitHandler.getInstance().exit(status);
   }
 }

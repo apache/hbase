@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -771,6 +772,6 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     Configuration conf = HBaseConfiguration.create();
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     int status = ToolRunner.run(conf, new IntegrationTestBulkLoad(), args);
-    System.exit(status);
+    ExitHandler.getInstance().exit(status);
   }
 }

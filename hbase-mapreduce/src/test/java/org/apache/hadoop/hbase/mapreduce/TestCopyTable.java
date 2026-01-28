@@ -44,7 +44,8 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.LauncherSecurityManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
+import org.apache.hadoop.hbase.util.LauncherExitHandler;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -158,17 +159,17 @@ public class TestCopyTable extends CopyTableTestBase {
     ByteArrayOutputStream data = new ByteArrayOutputStream();
     PrintStream writer = new PrintStream(data);
     System.setErr(writer);
-    SecurityManager SECURITY_MANAGER = System.getSecurityManager();
-    LauncherSecurityManager newSecurityManager = new LauncherSecurityManager();
-    System.setSecurityManager(newSecurityManager);
+    ExitHandler originalHandler = ExitHandler.getInstance();
+    LauncherExitHandler newExitHandler = new LauncherExitHandler();
+    ExitHandler.setInstance(newExitHandler);
     try {
       CopyTable.main(emptyArgs);
       fail("should be exit");
     } catch (SecurityException e) {
-      assertEquals(1, newSecurityManager.getExitCode());
+      assertEquals(1, newExitHandler.getExitCode());
     } finally {
       System.setErr(oldWriter);
-      System.setSecurityManager(SECURITY_MANAGER);
+      ExitHandler.setInstance(originalHandler);
     }
     assertTrue(data.toString().contains("rs.class"));
     // should print usage information

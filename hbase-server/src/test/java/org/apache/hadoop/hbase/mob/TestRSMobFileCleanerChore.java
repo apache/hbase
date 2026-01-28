@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -318,7 +319,7 @@ public class TestRSMobFileCleanerChore {
       if (HTU != null) {
         assertTrue(false);
       } else {
-        System.exit(-1);
+        ExitHandler.getInstance().exit(-1);
       }
     }
     return 0;

@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClientUtils;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.THttpClient;
@@ -71,7 +72,7 @@ public class HttpDoAsClient {
       System.out.println("Invalid arguments!");
       System.out.println(
         "Usage: HttpDoAsClient host port doAsUserName [security=true] [principal] [keytab]");
-      System.exit(-1);
+      ExitHandler.getInstance().exit(-1);
     }
 
     host = args[0];
@@ -84,7 +85,7 @@ public class HttpDoAsClient {
         keyTab = args[5];
         if (!new File(keyTab).exists()) {
           System.err.printf("ERROR: KeyTab File %s not found %n", keyTab);
-          System.exit(-1);
+          ExitHandler.getInstance().exit(-1);
         }
       } else {
         principal = getSubject().getPrincipals().iterator().next().getName();

@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -160,6 +161,6 @@ public class RegionReplicationLagEvaluation extends Configured implements Tool {
   public static void main(String[] args) throws Exception {
     int res =
       ToolRunner.run(HBaseConfiguration.create(), new RegionReplicationLagEvaluation(), args);
-    System.exit(res);
+    ExitHandler.getInstance().exit(res);
   }
 }

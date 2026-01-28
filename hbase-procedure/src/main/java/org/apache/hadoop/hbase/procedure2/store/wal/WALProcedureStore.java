@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.procedure2.util.ByteSlot;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.ipc.RemoteException;
@@ -1404,7 +1405,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     if (args == null || args.length != 1) {
       System.out.println("ERROR: Empty arguments list; pass path to MASTERPROCWALS_DIR.");
       System.out.println("Usage: WALProcedureStore MASTERPROCWALS_DIR");
-      System.exit(-1);
+      ExitHandler.getInstance().exit(-1);
     }
     WALProcedureStore store =
       new WALProcedureStore(conf, new Path(args[0]), null, new LeaseRecovery() {

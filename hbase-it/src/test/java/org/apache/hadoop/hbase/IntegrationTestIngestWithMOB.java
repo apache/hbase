@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.hbase.util.LoadTestDataGeneratorWithMOB;
 import org.apache.hadoop.hbase.util.LoadTestTool;
@@ -151,6 +152,6 @@ public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
     Configuration conf = HBaseConfiguration.create();
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     int ret = ToolRunner.run(conf, new IntegrationTestIngestWithMOB(), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 }
