@@ -2778,6 +2778,11 @@
                   <artifactId>jsr305</artifactId>
                   <version>3.0.2</version>
                 </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.osgi</groupId>
+                  <artifactId>osgi.annotation</artifactId>
+                  <version>8.1.0</version>
+                </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
             </configuration>
@@ -2828,6 +2833,11 @@
                   <groupId>com.google.code.findbugs</groupId>
                   <artifactId>jsr305</artifactId>
                   <version>3.0.2</version>
+                </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.osgi</groupId>
+                  <artifactId>osgi.annotation</artifactId>
+                  <version>8.1.0</version>
                 </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
@@ -2888,6 +2898,11 @@
                   <artifactId>jsr305</artifactId>
                   <version>3.0.2</version>
                 </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.osgi</groupId>
+                  <artifactId>osgi.annotation</artifactId>
+                  <version>8.1.0</version>
+                </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
             </configuration>
@@ -2945,6 +2960,11 @@
                   <groupId>com.google.code.findbugs</groupId>
                   <artifactId>jsr305</artifactId>
                   <version>3.0.2</version>
+                </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.osgi</groupId>
+                  <artifactId>osgi.annotation</artifactId>
+                  <version>8.1.0</version>
                 </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
