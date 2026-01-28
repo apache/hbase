@@ -1,0 +1,185 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+# yamllint disable rule:line-length
+---
+name: Test Waves Aggregation
+
+"on":
+  schedule:
+    # Run weekly on Sunday at 00:00 UTC
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to generate wave assignments for'
+        required: true
+        default: 'master'
+        type: choice
+        options:
+          - master
+          - branch-3
+          - branch-2
+          - branch-2.6
+          - branch-2.5
+      num_builds:
+        description: 'Number of recent builds to analyze'
+        required: false
+        default: 10
+        type: number
+
+permissions:
+  contents: read
+
+env:
+  NUM_BUILDS: ${{ github.event.inputs.num_builds || 10 }}
+
+jobs:
+  generate-wave-assignments:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        branch:
+          - master
+          - branch-3
+          - branch-2
+          - branch-2.6
+          - branch-2.5
+
+    name: waves-${{ matrix.branch }}
+
+    steps:
+      - name: Check if manual run for specific branch
+        id: check-branch
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ "${{ matrix.branch }}" != "${{ github.event.inputs.branch }}" ]]; then
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              echo "Skipping ${{ matrix.branch }} - manual run requested ${{ github.event.inputs.branch }}"
+            else
+              echo "skip=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout HBase
+        if: steps.check-branch.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.branch }}
+          sparse-checkout: |
+            dev-support/test-waves
+
+      - name: Check if test-waves exists on this branch
+        if: steps.check-branch.outputs.skip != 'true'
+        id: check-dir
+        run: |
+          if [[ -d "dev-support/test-waves" && -f "dev-support/test-waves/generate-wave-assignments.py" ]]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::test-waves directory not found on ${{ matrix.branch }} - skipping"
+          fi
+
+      - name: Set up Python
+        if: steps.check-branch.outputs.skip != 'true' && steps.check-dir.outputs.exists == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        if: steps.check-branch.outputs.skip != 'true' && steps.check-dir.outputs.exists == 'true'
+        run: pip install -r dev-support/test-waves/requirements.txt
+
+      - name: Generate wave assignments
+        if: steps.check-branch.outputs.skip != 'true' && steps.check-dir.outputs.exists == 'true'
+        id: generate
+        run: |
+          mkdir -p output
+
+          python dev-support/test-waves/generate-wave-assignments.py \
+            --branch "${{ matrix.branch }}" \
+            --num-builds "${{ env.NUM_BUILDS }}" \
+            --output-dir output
+
+          echo "Files generated:"
+          ls -la output/
+
+      - name: Upload wave1-excludes
+        if: steps.check-branch.outputs.skip != 'true' && steps.check-dir.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave1-excludes-${{ matrix.branch }}
+          path: output/wave1-excludes.txt
+          retention-days: 90
+
+      - name: Upload wave2-includes
+        if: steps.check-branch.outputs.skip != 'true' && steps.check-dir.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave2-includes-${{ matrix.branch }}
+          path: output/wave2-includes.txt
+          retention-days: 90
+
+      - name: Upload wave3-includes
+        if: steps.check-branch.outputs.skip != 'true' && steps.check-dir.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave3-includes-${{ matrix.branch }}
+          path: output/wave3-includes.txt
+          retention-days: 90
+
+      - name: Summary
+        if: steps.check-branch.outputs.skip != 'true' && steps.check-dir.outputs.exists == 'true'
+        run: |
+          echo "## Wave Assignments for ${{ matrix.branch }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          # Count tests and extract durations
+          WAVE1_EXCLUDES=$(wc -l < output/wave1-excludes.txt | tr -d ' ')
+          WAVE2_INCLUDES=$(wc -l < output/wave2-includes.txt | tr -d ' ')
+          WAVE3_INCLUDES=$(wc -l < output/wave3-includes.txt | tr -d ' ')
+          TOTAL_LARGE=$(grep "total_large_tests:" output/large-wave-assignments.yaml | awk '{print $2}')
+          WAVE1_DURATION=$(grep "wave1_estimated_duration_minutes:" output/large-wave-assignments.yaml | awk '{print $2}')
+          WAVE2_DURATION=$(grep "wave2_estimated_duration_minutes:" output/large-wave-assignments.yaml | awk '{print $2}')
+          WAVE3_DURATION=$(grep "wave3_estimated_duration_minutes:" output/large-wave-assignments.yaml | awk '{print $2}')
+
+          echo "| Wave | Tests | Est. Duration |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|-------|---------------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Wave 1 (excludes ${WAVE1_EXCLUDES}) | $((TOTAL_LARGE - WAVE1_EXCLUDES)) | ${WAVE1_DURATION} min |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Wave 2 | ${WAVE2_INCLUDES} | ${WAVE2_DURATION} min |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Wave 3 | ${WAVE3_INCLUDES} | ${WAVE3_DURATION} min |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Total** | **${TOTAL_LARGE}** | |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "### Artifacts" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`wave1-excludes-${{ matrix.branch }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`wave2-includes-${{ matrix.branch }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`wave3-includes-${{ matrix.branch }}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Summary (skipped - no test-waves)
+        if: steps.check-branch.outputs.skip != 'true' && steps.check-dir.outputs.exists != 'true'
+        run: |
+          echo "## ${{ matrix.branch }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "⚠️ Skipped - test-waves directory not found on this branch" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "This branch needs the test-waves code backported before wave assignments can be generated." >> "$GITHUB_STEP_SUMMARY"

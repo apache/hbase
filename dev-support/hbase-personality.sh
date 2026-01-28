@@ -107,6 +107,10 @@ function personality_parse_args
         delete_parameter "${i}"
         INCLUDE_TESTS_URL=${i#*=}
       ;;
+      --include-tests-pattern=*)
+        delete_parameter "${i}"
+        INCLUDE_TESTS_PATTERN=${i#*=}
+      ;;
       --hadoop-profile=*)
         delete_parameter "${i}"
         HADOOP_PROFILE=${i#*=}
@@ -118,6 +122,10 @@ function personality_parse_args
       --test-profile=*)
         delete_parameter "${i}"
         TEST_PROFILE=${i#*=}
+      ;;
+      --wave-data-dir=*)
+        delete_parameter "${i}"
+        WAVE_DATA_DIR=${i#*=}
       ;;
       --skip-errorprone)
         delete_parameter "${i}"
@@ -253,6 +261,10 @@ function personality_modules
       extra="${extra} -PrunAllTests"
     fi
 
+    if [ -n "${WAVE_DATA_DIR}" ]; then
+      extra="${extra} -Dwave.data.dir=${WAVE_DATA_DIR}"
+    fi
+
     get_include_exclude_tests_arg tests_arg
     extra="${extra} ${tests_arg}"
 
@@ -332,48 +344,64 @@ function personality_file_tests
 ## @param        name of variable to set with maven arguments
 function get_include_exclude_tests_arg
 {
-  local  __resultvar=$1
+  local __resultvar=$1
+  local result=""
+  local excludes=""
+  local includes=""
+
   yetus_info "EXCLUDE_TESTS_URL=${EXCLUDE_TESTS_URL}"
   yetus_info "INCLUDE_TESTS_URL=${INCLUDE_TESTS_URL}"
+  yetus_info "INCLUDE_TESTS_PATTERN=${INCLUDE_TESTS_PATTERN}"
+
+  # Handle includes (direct pattern takes precedence over URL)
+  if [[ -n "${INCLUDE_TESTS_PATTERN}" ]]; then
+    yetus_debug "Using include pattern: ${INCLUDE_TESTS_PATTERN}"
+    result="-Dtest=${INCLUDE_TESTS_PATTERN}"
+  elif [[ -n "${INCLUDE_TESTS_URL}" ]]; then
+    if wget "${INCLUDE_TESTS_URL}" -O "includes"; then
+      includes=$(cat includes)
+      yetus_debug "includes=${includes}"
+      if [[ -n "${includes}" ]]; then
+        result="-Dtest=${includes}"
+      fi
+      rm includes
+    else
+      yetus_error "Wget error $? in fetching includes file from url" \
+           "${INCLUDE_TESTS_URL}. Ignoring and proceeding."
+    fi
+  fi
+
+  # Handle excludes (URL takes precedence, fallback to flaky URL)
+  # Excludes are applied alongside includes to filter out flaky tests
   if [[ -n "${EXCLUDE_TESTS_URL}" ]]; then
-      if wget "${EXCLUDE_TESTS_URL}" -O "excludes"; then
-        excludes=$(cat excludes)
-        yetus_debug "excludes=${excludes}"
-        if [[ -n "${excludes}" ]]; then
-          eval "${__resultvar}='-Dtest.exclude.pattern=${excludes}'"
-        fi
-        rm excludes
-      else
-        yetus_error "Wget error $? in fetching excludes file from url" \
-             "${EXCLUDE_TESTS_URL}. Ignoring and proceeding."
+    if wget "${EXCLUDE_TESTS_URL}" -O "excludes"; then
+      excludes=$(cat excludes)
+      yetus_debug "excludes=${excludes}"
+      if [[ -n "${excludes}" ]]; then
+        result="${result:+${result} }-Dtest.exclude.pattern=${excludes}"
       fi
-  elif [[ -n "$INCLUDE_TESTS_URL" ]]; then
-      if wget "$INCLUDE_TESTS_URL" -O "includes"; then
-        includes=$(cat includes)
-        yetus_debug "includes=${includes}"
-        if [[ -n "${includes}" ]]; then
-          eval "${__resultvar}='-Dtest=${includes}'"
-        fi
-        rm includes
-      else
-        yetus_error "Wget error $? in fetching includes file from url" \
-             "${INCLUDE_TESTS_URL}. Ignoring and proceeding."
-      fi
+      rm excludes
+    else
+      yetus_error "Wget error $? in fetching excludes file from url" \
+           "${EXCLUDE_TESTS_URL}. Ignoring and proceeding."
+    fi
   else
-    # Use branch specific exclude list when EXCLUDE_TESTS_URL and INCLUDE_TESTS_URL are empty
+    # Use branch specific exclude list for flaky tests
     FLAKY_URL="https://ci-hadoop.apache.org/job/HBase/job/HBase-Find-Flaky-Tests/job/${PATCH_BRANCH}/lastSuccessfulBuild/artifact/output/excludes"
     if wget "${FLAKY_URL}" -O "excludes"; then
       excludes=$(cat excludes)
-        yetus_debug "excludes=${excludes}"
-        if [[ -n "${excludes}" ]]; then
-          eval "${__resultvar}='-Dtest.exclude.pattern=${excludes}'"
-        fi
-        rm excludes
-      else
-        yetus_error "Wget error $? in fetching excludes file from url" \
-             "${FLAKY_URL}. Ignoring and proceeding."
+      yetus_debug "excludes=${excludes}"
+      if [[ -n "${excludes}" ]]; then
+        result="${result:+${result} }-Dtest.exclude.pattern=${excludes}"
       fi
+      rm excludes
+    else
+      yetus_error "Wget error $? in fetching excludes file from url" \
+           "${FLAKY_URL}. Ignoring and proceeding."
+    fi
   fi
+
+  eval "${__resultvar}='${result}'"
 }
 
 ###################################################
@@ -520,12 +548,13 @@ function shadedjars_rebuild
 
   count=$(${GREP} -c '\[ERROR\]' "${logfile}")
   if [[ ${count} -gt 0 ]]; then
-    add_vote_table -1 shadedjars "${repostatus} has ${count} errors when building our shaded downstream artifacts."
-    add_footer_table shadedjars "@@BASE@@/${repostatus}-shadedjars.txt"
+    add_vote_table_v2 -1 shadedjars \
+      "@@BASE@@/${repostatus}-shadedjars.txt" \
+      "${repostatus} has ${count} errors when building our shaded downstream artifacts."
     return 1
   fi
 
-  add_vote_table +1 shadedjars "${repostatus} has no errors when building our shaded downstream artifacts."
+  add_vote_table_v2 +1 shadedjars "" "${repostatus} has no errors when building our shaded downstream artifacts."
   return 0
 }
 

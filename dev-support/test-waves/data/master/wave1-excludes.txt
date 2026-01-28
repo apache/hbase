@@ -1,0 +1,16 @@
+**/TestChoreService.java
+**/TestRegistryEndpointsRefresher.java
+**/TestLruAdaptiveBlockCache.java
+**/TestLargeClusterBalancingConditionalReplicaDistribution.java
+**/TestLargeClusterBalancingSystemTableIsolation.java
+**/TestStochasticLoadBalancer.java
+**/TestStochasticLoadBalancerBalanceCluster.java
+**/TestStochasticLoadBalancerLargeCluster.java
+**/TestStochasticLoadBalancerRegionReplicaHighReplication.java
+**/TestStochasticLoadBalancerRegionReplicaLargeCluster.java
+**/TestStochasticLoadBalancerRegionReplicaWithRacks.java
+**/TestUnattainableBalancerCostGoal.java
+**/TestStateMachineProcedure.java
+**/TestStressWALProcedureStore.java
+**/TestBootstrapNodeManager.java
+**/TestReadOnlyZKClient.java
