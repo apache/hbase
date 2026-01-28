@@ -85,6 +85,8 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
   public static final int DEFAULT_REGION_SERVER_REGION_SPLIT_LIMIT = 1000;
   public static final String HBASE_REGION_SERVER_ENABLE_COMPACTION =
     "hbase.regionserver.compaction.enabled";
+  public static final String HBASE_REGION_SERVER_ENABLE_DELAYED_SELECTION =
+    "hbase.regionserver.compaction.delayedSelection.enabled";
 
   private final HRegionServer server;
   private final Configuration conf;
@@ -96,6 +98,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
   private volatile Set<String> underCompactionStores = ConcurrentHashMap.newKeySet();
 
   private volatile boolean compactionsEnabled;
+  private volatile boolean delayedSelectionEnabled;
   /**
    * Splitting should not take place if the total number of regions exceed this. This is not a hard
    * limit to the number of regions but it is a guideline to stop splitting after number of online
@@ -107,6 +110,8 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     this.server = server;
     this.conf = server.getConfiguration();
     this.compactionsEnabled = this.conf.getBoolean(HBASE_REGION_SERVER_ENABLE_COMPACTION, true);
+    this.delayedSelectionEnabled =
+      this.conf.getBoolean(HBASE_REGION_SERVER_ENABLE_DELAYED_SELECTION, true);
     createCompactionExecutors();
     createSplitExcecutors();
 
@@ -415,8 +420,8 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
   }
 
   public synchronized void requestSystemCompaction(HRegion region, String why) throws IOException {
-    requestCompactionInternal(region, why, NO_PRIORITY, false, CompactionLifeCycleTracker.DUMMY,
-      DUMMY_COMPLETE_TRACKER, null);
+    requestCompactionInternal(region, why, NO_PRIORITY, delayedSelectionEnabled ? false : true,
+      CompactionLifeCycleTracker.DUMMY, DUMMY_COMPLETE_TRACKER, null);
   }
 
   public void requestSystemCompaction(HRegion region, HStore store, String why) throws IOException {
