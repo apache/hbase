@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.HashMap;
@@ -58,6 +59,11 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private long numReferenceFiles;
   private long maxFlushQueueSize;
   private long maxCompactionQueueSize;
+  private long compactionsFinishedCount;
+  private long compactionsFailedCount;
+  private long compactionNumFilesCompacted;
+  private long compactionNumBytesCompacted;
+  private long compactionsQueuedCount;
   private Map<String, Long> readsOnlyFromMemstore;
   private Map<String, Long> mixedReadsOnStore;
 
@@ -162,17 +168,17 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
   @Override
   public long getNumFilesCompacted() {
-    return this.region.compactionNumFilesCompacted.sum();
+    return this.compactionNumFilesCompacted;
   }
 
   @Override
   public long getNumBytesCompacted() {
-    return this.region.compactionNumBytesCompacted.sum();
+    return this.compactionNumBytesCompacted;
   }
 
   @Override
   public long getNumCompactionsCompleted() {
-    return this.region.compactionsFinished.sum();
+    return this.compactionsFinishedCount;
   }
 
   @Override
@@ -194,12 +200,12 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
   @Override
   public long getNumCompactionsFailed() {
-    return this.region.compactionsFailed.sum();
+    return this.compactionsFailedCount;
   }
 
   @Override
   public long getNumCompactionsQueued() {
-    return this.region.compactionsQueued.sum();
+    return this.compactionsQueuedCount;
   }
 
   @Override
@@ -265,11 +271,21 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       long tempMinStoreFileAge = Long.MAX_VALUE;
       long tempNumReferenceFiles = 0;
       long tempMaxCompactionQueueSize = 0;
+      long tempCompactionsFinishedCount = 0;
+      long tempCompactionsFailedCount = 0;
+      long tempCompactionNumFilesCompacted = 0;
+      long tempCompactionNumBytesCompacted = 0;
+      long tempCompactionsQueuedCount = 0;
       long tempMaxFlushQueueSize = 0;
       long avgAgeNumerator = 0;
       long numHFiles = 0;
       if (region.stores != null) {
         for (HStore store : region.stores.values()) {
+          tempCompactionsFinishedCount += store.getCompactionsFinishedCount();
+          tempCompactionsFailedCount += store.getCompactionsFailedCount();
+          tempCompactionNumFilesCompacted += store.getCompactionsNumFiles();
+          tempCompactionNumBytesCompacted += store.getCompactionsNumBytes();
+          tempCompactionsQueuedCount += store.getCompactionsQueuedCount();
           tempNumStoreFiles += store.getStorefilesCount();
           int currentStoreRefCount = store.getStoreRefCount();
           tempStoreRefCount += currentStoreRefCount;
@@ -356,6 +372,11 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       if (tempMaxFlushQueueSize > maxFlushQueueSize) {
         maxFlushQueueSize = tempMaxFlushQueueSize;
       }
+      compactionsFinishedCount = tempCompactionsFinishedCount;
+      compactionsFailedCount = tempCompactionsFailedCount;
+      compactionNumFilesCompacted = tempCompactionNumFilesCompacted;
+      compactionNumBytesCompacted = tempCompactionNumBytesCompacted;
+      compactionsQueuedCount = tempCompactionsQueuedCount;
     }
   }
 
@@ -385,4 +406,9 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
     return region.getRegionInfo().getReplicaId();
   }
 
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  void updateMetricsAtOnce() {
+    runnable.run();
+  }
 }
