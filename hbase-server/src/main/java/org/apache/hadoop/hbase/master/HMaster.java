@@ -515,6 +515,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
    */
   private MetaTableNameStore metaTableNameStore;
 
+  private volatile TableName cachedMetaTableName;
+
   /**
    * Initializes the HMaster. The steps are as follows:
    * <p>
@@ -1022,18 +1024,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     masterRegion = MasterRegionFactory.create(this);
     rsListStorage = new MasterRegionServerList(masterRegion, this);
 
-    // Initialize meta table name store after master region is ready
-    metaTableNameStore = new MetaTableNameStore(masterRegion);
-    try {
-      if (metaTableNameStore.isStored()) {
-        TableName metaName = metaTableNameStore.load();
-        LOG.info("Loaded meta table name from Master Local Region: {}", metaName);
-      } else {
-        LOG.info("Meta table name not yet stored (will be set during InitMetaProcedure)");
-      }
-    } catch (IOException e) {
-      LOG.warn("Failed to load meta table name from Master Local Region, will use default", e);
-    }
+    cachedMetaTableName = initMetaTableName();
 
     // Initialize the ServerManager and register it as a configuration observer
     this.serverManager = createServerManager(this, rsListStorage);
@@ -1683,25 +1674,25 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
    */
   @Override
   public TableName getMetaTableName() {
-    if (metaTableNameStore != null) {
-      try {
-        return metaTableNameStore.load();
-      } catch (IOException e) {
-        LOG.warn("Failed to load meta table name from Master Local Region, using default", e);
-      }
-    }
-    // Fallback to base implementation (returns default "hbase:meta")
-    return super.getMetaTableName();
+    return cachedMetaTableName;
   }
 
-  /**
-   * Internal accessor for procedures to get the meta table name store. This is not exposed via
-   * MasterServices interface to avoid interface pollution. Package visibility is insufficient as
-   * procedures are in a sub-package.
-   * @return the meta table name store, or null if not yet initialized
-   */
-  public MetaTableNameStore getMetaTableNameStoreInternal() {
-    return metaTableNameStore;
+  private TableName initMetaTableName() {
+    metaTableNameStore = new MetaTableNameStore(masterRegion);
+    try {
+      TableName metaTableName = metaTableNameStore.load();
+      // If metaTableNameStore is empty (bootstrap case), get meta table name from super, store it,
+      // and return.
+      if (Objects.isNull(metaTableName)) {
+        metaTableName = super.getDefaultMetaTableName();
+        LOG.info("Bootstrap: storing default meta table name in master region: {}", metaTableName);
+        metaTableNameStore.store(metaTableName);
+      }
+      return metaTableName;
+    } catch (IOException e) {
+      LOG.info("Exception loading/storing meta table name from master region");
+      throw new RuntimeException(e);
+    }
   }
 
   /*

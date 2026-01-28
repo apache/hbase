@@ -264,6 +264,11 @@ class ZKConnectionRegistry implements ConnectionRegistry {
       "ZKConnectionRegistry.getActiveMaster");
   }
 
+  /**
+   * Returns the meta table name. This implementation always returns the default "hbase:meta"
+   * because ZKConnectionRegistry is deprecated and does not support custom meta table names. Custom
+   * meta table name support requires using RPC-based connection registry.
+   */
   @Override
   public CompletableFuture<TableName> getMetaTableName() {
     return tracedFuture(

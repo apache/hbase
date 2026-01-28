@@ -29,10 +29,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Stores and retrieves the meta table name for this cluster in the Master Local Region.
- * <p>
- * This provides cluster-specific storage for the meta table name.
- * <p>
+ * Stores and retrieves the meta table name for this cluster in the Master Local Region. This
+ * provides cluster-specific storage for the meta table name.
  */
 @InterfaceAudience.Private
 public class MetaTableNameStore {
@@ -49,12 +47,11 @@ public class MetaTableNameStore {
   }
 
   /**
-   * Store the meta table name in the Master Local Region.
-   * <p>
-   * This should be called once during cluster initialization (InitMetaProcedure). The stored value
-   * is cluster-specific and should not conflict with other clusters sharing the same HDFS.
+   * Store the meta table name in the Master Local Region. This should be called once during cluster
+   * initialization. The stored value is cluster-specific and should not conflict with other
+   * clusters sharing the same HDFS.
    * @param metaTableName the meta table name to store
-   * @throws IOException if the storage operation fails
+   * @throws IOException if the operation fails
    */
   public void store(TableName metaTableName) throws IOException {
     LOG.info("Storing meta table name in Master Local Region: {}", metaTableName);
@@ -67,7 +64,6 @@ public class MetaTableNameStore {
 
   /**
    * Load the meta table name from the Master Local Region.
-   * <p>
    * @return the meta table name for this cluster
    * @throws IOException if the load operation fails
    */
@@ -90,22 +86,8 @@ public class MetaTableNameStore {
         LOG.debug("Loaded meta table name from Master Local Region: {}", cachedMetaTableName);
         return cachedMetaTableName;
       }
-      cachedMetaTableName = TableName.valueOf("hbase", "meta");
-      LOG.info("No stored meta table name found in Master Local Region, using default: {}",
-        cachedMetaTableName);
+      LOG.info("No stored meta table name found in Master Local Region:  {}", cachedMetaTableName);
       return cachedMetaTableName;
     }
-  }
-
-  /**
-   * Check if a meta table name has been stored in the Master Local Region.
-   * @return true if a meta table name is stored, false otherwise
-   * @throws IOException if the check operation fails
-   */
-  public boolean isStored() throws IOException {
-    Get get = new Get(META_TABLE_NAME_ROW);
-    get.addColumn(INFO_FAMILY, NAME_QUALIFIER);
-    Result result = masterRegion.get(get);
-    return !result.isEmpty();
   }
 }
