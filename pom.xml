@@ -1098,6 +1098,7 @@
     <vega.version>5.32.0</vega.version>
     <vega-embed.version>6.29.0</vega-embed.version>
     <vega-lite.version>5.23.0</vega-lite.version>
+    <async-profiler.version>2.9</async-profiler.version>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
