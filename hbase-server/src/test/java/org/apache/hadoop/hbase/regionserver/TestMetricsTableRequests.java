@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Optional;
@@ -35,6 +36,9 @@ import org.apache.hadoop.hbase.metrics.impl.HistogramImpl;
 import org.apache.hadoop.hbase.regionserver.metrics.MetricsTableRequests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.metrics2.MetricsCollector;
+import org.apache.hadoop.metrics2.MetricsSource;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -128,5 +132,65 @@ public class TestMetricsTableRequests {
     read = registry.get().get("tableReadQueryPerSecond");
     assertTrue(read.isPresent());
     assertEquals(((DropwizardMeter) read.get()).getCount(), 500);
+  }
+
+  /**
+   * When a new MetricRegistry object is created, it needs to be re-registered (HBASE-29322)
+   */
+  @Test
+  public void testMetricRegistryReregistered() {
+    TableName tn = TableName.valueOf("test_table");
+    // Create a new MetricRegistry for the first time
+    MetricsTableRequests requests = new MetricsTableRequests(tn, new Configuration());
+    MetricRegistryInfo info = requests.getMetricRegistryInfo();
+    MetricRegistry oldRegistry = requests.getMetricRegistry();
+    // Register the MetricRegistry with the DefaultMetricsSystem
+    MetricsSourceAdapter adapter = new MetricsSourceAdapter(oldRegistry);
+    DefaultMetricsSystem.instance().register(info.getMetricsJmxContext(),
+      info.getMetricsDescription(), adapter);
+
+    Optional<MetricRegistry> registry1 = MetricRegistries.global().get(info);
+    assertTrue(registry1.isPresent());
+    assertEquals(oldRegistry, registry1.get());
+    // remove old MetricRegistry
+    requests.removeRegistry();
+
+    // Recreate a new MetricRegistry
+    requests = new MetricsTableRequests(tn, new Configuration());
+    MetricRegistry newRegistry = requests.getMetricRegistry();
+    Optional<MetricRegistry> registry2 = MetricRegistries.global().get(info);
+    assertTrue(registry2.isPresent());
+    assertEquals(newRegistry, registry2.get());
+
+    // The old MetricRegistry is still registered in the DefaultMetricsSystem
+    MetricsSourceAdapter metricsSource =
+      (MetricsSourceAdapter) DefaultMetricsSystem.instance().getSource(info.getMetricsJmxContext());
+    assertEquals(oldRegistry, metricsSource.registry);
+    assertNotEquals(newRegistry, metricsSource.registry);
+
+    // Re-register the new MetricRegistry in DefaultMetricsSystem
+    DefaultMetricsSystem.instance().unregisterSource(info.getMetricsJmxContext());
+    MetricsSourceAdapter newAdapter = new MetricsSourceAdapter(newRegistry);
+    DefaultMetricsSystem.instance().register(info.getMetricsJmxContext(),
+      info.getMetricsDescription(), newAdapter);
+
+    // The old MetricRegistry is replaced
+    MetricsSourceAdapter newMetricsSource =
+      (MetricsSourceAdapter) DefaultMetricsSystem.instance().getSource(info.getMetricsJmxContext());
+    assertNotEquals(oldRegistry, newMetricsSource.registry);
+    assertEquals(newRegistry, newMetricsSource.registry);
+  }
+
+  private static class MetricsSourceAdapter implements MetricsSource {
+    private final MetricRegistry registry;
+
+    MetricsSourceAdapter(MetricRegistry registry) {
+      this.registry = registry;
+    }
+
+    @Override
+    public void getMetrics(MetricsCollector collector, boolean all) {
+
+    }
   }
 }
