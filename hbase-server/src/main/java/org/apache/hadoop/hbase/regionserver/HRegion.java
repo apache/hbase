@@ -3928,7 +3928,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         byte[] family = e.getKey();
         List<ExtendedCell> cells = e.getValue();
         assert cells instanceof RandomAccess;
-        region.applyToMemStore(region.getStore(family), cells, false, memstoreAccounting);
+        region.getStore(family).add(cells, memstoreAccounting);
       }
     }
   }
@@ -5468,22 +5468,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.writestate.setReadsEnabled(readsEnabled);
   }
 
-  /**
-   * @param delta If we are doing delta changes -- e.g. increment/append -- then this flag will be
-   *              set; when set we will run operations that make sense in the increment/append
-   *              scenario but that do not make sense otherwise.
-   */
-  private void applyToMemStore(HStore store, List<ExtendedCell> cells, boolean delta,
-    MemStoreSizing memstoreAccounting) {
-    // Any change in how we update Store/MemStore needs to also be done in other applyToMemStore!!!!
-    boolean upsert = delta && store.getColumnFamilyDescriptor().getMaxVersions() == 1;
-    if (upsert) {
-      store.upsert(cells, getSmallestReadPoint(), memstoreAccounting);
-    } else {
-      store.add(cells, memstoreAccounting);
-    }
-  }
-
   private void checkFamilies(Collection<byte[]> families, Durability durability)
     throws NoSuchColumnFamilyException, InvalidMutationDurabilityException {
     for (byte[] family : families) {
@@ -6694,7 +6678,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     startRegionOperation(Operation.REPLAY_BATCH_MUTATE);
     try {
       for (Map.Entry<byte[], List<ExtendedCell>> entry : family2Cells.entrySet()) {
-        applyToMemStore(getStore(entry.getKey()), entry.getValue(), false, memStoreSizing);
+        getStore(entry.getKey()).add(entry.getValue(), memStoreSizing);
       }
     } finally {
       closeRegionOperation(Operation.REPLAY_BATCH_MUTATE);
