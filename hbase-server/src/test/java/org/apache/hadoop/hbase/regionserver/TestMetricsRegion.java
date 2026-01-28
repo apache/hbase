@@ -68,6 +68,9 @@ public class TestMetricsRegion {
     HELPER
       .assertCounter("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_"
         + "filteredReadRequestCount", 107, agg);
+    HELPER
+      .assertCounter("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_"
+        + "deletedReadRequestCount", 108, agg);
     HELPER.assertCounter(
       "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_replicaid", 0,
       agg);
@@ -88,6 +91,8 @@ public class TestMetricsRegion {
       + "_metric_cpRequestCount", 108, agg);
     HELPER.assertCounter("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001"
       + "_metric_filteredReadRequestCount", 107, agg);
+    HELPER.assertCounter("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001"
+      + "_metric_deletedReadRequestCount", 108, agg);
     HELPER.assertCounter(
       "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001" + "_metric_replicaid", 1,
       agg);
