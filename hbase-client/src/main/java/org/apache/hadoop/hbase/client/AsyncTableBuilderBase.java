@@ -55,6 +55,9 @@ abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
 
   protected Map<String, byte[]> requestAttributes = Collections.emptyMap();
 
+  protected RequestAttributesFactory requestAttributesFactory =
+    RequestAttributesFactory.PASSTHROUGH;
+
   AsyncTableBuilderBase(TableName tableName, AsyncConnectionConfiguration connConf) {
     this.tableName = tableName;
     this.operationTimeoutNs = tableName.isSystemTable()
@@ -133,6 +136,13 @@ abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
       requestAttributes = new HashMap<>();
     }
     requestAttributes.put(key, value);
+    return this;
+  }
+
+  @Override
+  public AsyncTableBuilder<C>
+    setRequestAttributesFactory(RequestAttributesFactory requestAttributesFactory) {
+    this.requestAttributesFactory = requestAttributesFactory;
     return this;
   }
 }
