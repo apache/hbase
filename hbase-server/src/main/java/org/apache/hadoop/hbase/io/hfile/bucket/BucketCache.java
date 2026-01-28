@@ -1755,6 +1755,13 @@ public class BucketCache implements BlockCache, HeapSize {
     BucketCacheProtos.BucketCacheEntry cacheEntry =
       BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in);
 
+    // HBASE-29857: Handle case where persistence file is empty or corrupted.
+    // parseDelimitedFrom() returns null when there's no data to read.
+    if (cacheEntry == null) {
+      throw new IOException(
+        "Failed to read cache entry from persistence file (possibly empty or corrupted)");
+    }
+
     fullyCachedFiles.clear();
     fullyCachedFiles.putAll(BucketProtoUtils.fromPB(cacheEntry.getCachedFilesMap()));
 
