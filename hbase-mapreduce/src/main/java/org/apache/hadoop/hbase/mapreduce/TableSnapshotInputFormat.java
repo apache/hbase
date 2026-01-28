@@ -94,6 +94,7 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
       this.delegate = delegate;
     }
 
+    @Deprecated
     public TableSnapshotRegionSplit(TableDescriptor htd, RegionInfo regionInfo,
       List<String> locations, Scan scan, Path restoreDir) {
       this.delegate =
