@@ -1,0 +1,7 @@
+**/TestRegistryEndpointsRefresher.java
+**/TestLargeClusterBalancingConditionalReplicaDistribution.java
+**/TestStochasticLoadBalancerRegionReplicaHighReplication.java
+**/TestStochasticLoadBalancerRegionReplicaLargeCluster.java
+**/TestStochasticLoadBalancerRegionReplicaWithRacks.java
+**/TestStateMachineProcedure.java
+**/TestBootstrapNodeManager.java

@@ -41,6 +41,7 @@ import requests
 REPO = "apache/hbase"
 WORKFLOW = "test-waves-aggregation.yml"
 API_BASE = f"https://api.github.com/repos/{REPO}"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def get_token():
@@ -67,6 +68,15 @@ def get_cache_dir(branch: str) -> str:
     return os.path.join(tmpdir, "hbase-wave-files", branch)
 
 
+def get_fallback_file(wave_num: int, branch: str) -> str:
+    """Get path to committed fallback file if it exists."""
+    _, wave_file = get_wave_file_info(wave_num, branch)
+    fallback_path = os.path.join(SCRIPT_DIR, "data", branch, wave_file)
+    if os.path.exists(fallback_path):
+        return fallback_path
+    return None
+
+
 def fetch_wave_file(wave_num: int, branch: str) -> str:
     """Fetch wave file and return path to it."""
     artifact_name, wave_file = get_wave_file_info(wave_num, branch)
@@ -89,7 +99,12 @@ def fetch_wave_file(wave_num: int, branch: str) -> str:
     runs = response.json().get("workflow_runs", [])
 
     if not runs:
+        fallback = get_fallback_file(wave_num, branch)
+        if fallback:
+            print(f"No GHA artifacts found, using committed fallback: {fallback}", file=sys.stderr)
+            return fallback
         print(f"Error: No successful test-waves-aggregation run found for branch {branch}", file=sys.stderr)
+        print("And no committed fallback files exist.", file=sys.stderr)
         sys.exit(1)
 
     run_id = runs[0]["id"]
@@ -109,6 +124,10 @@ def fetch_wave_file(wave_num: int, branch: str) -> str:
             break
 
     if not artifact_url:
+        fallback = get_fallback_file(wave_num, branch)
+        if fallback:
+            print(f"Artifact '{artifact_name}' not found, using committed fallback: {fallback}", file=sys.stderr)
+            return fallback
         print(f"Error: Artifact '{artifact_name}' not found in run {run_id}", file=sys.stderr)
         sys.exit(1)
 
@@ -144,8 +163,14 @@ def main():
         path = fetch_wave_file(wave_num, branch)
         print(path)
     except requests.RequestException as e:
-        print(f"Error: API request failed: {e}", file=sys.stderr)
-        sys.exit(1)
+        fallback = get_fallback_file(wave_num, branch)
+        if fallback:
+            print(f"API request failed ({e}), using committed fallback: {fallback}", file=sys.stderr)
+            print(fallback)
+        else:
+            print(f"Error: API request failed: {e}", file=sys.stderr)
+            print("And no committed fallback files exist.", file=sys.stderr)
+            sys.exit(1)
 
 
 if __name__ == "__main__":

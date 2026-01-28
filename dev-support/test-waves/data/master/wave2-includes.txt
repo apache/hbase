@@ -1,0 +1,9 @@
+**/TestChoreService.java
+**/TestLruAdaptiveBlockCache.java
+**/TestLargeClusterBalancingSystemTableIsolation.java
+**/TestStochasticLoadBalancer.java
+**/TestStochasticLoadBalancerBalanceCluster.java
+**/TestStochasticLoadBalancerLargeCluster.java
+**/TestUnattainableBalancerCostGoal.java
+**/TestStressWALProcedureStore.java
+**/TestReadOnlyZKClient.java

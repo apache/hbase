@@ -87,13 +87,14 @@ jobs:
           set -e
           pip install -q -r dev-support/test-waves/requirements.txt
 
-          WAVE_DATA_DIR="${RUNNER_TEMP}/wave-data"
-          mkdir -p "${WAVE_DATA_DIR}"
-
+          # Fetch wave file - returns path to either GHA artifact cache or committed fallback
           WAVE_FILE=$(python dev-support/test-waves/fetch-wave-files.py "${{ matrix.wave }}" "${{ github.base_ref }}")
-          cp "${WAVE_FILE}" "${WAVE_DATA_DIR}/"
 
-          echo "Wave data directory contents:"
+          # Use the directory containing the wave file directly
+          # For committed fallbacks, this is dev-support/test-waves/data/<branch>/
+          WAVE_DATA_DIR=$(dirname "${WAVE_FILE}")
+
+          echo "Wave data directory: ${WAVE_DATA_DIR}"
           ls -la "${WAVE_DATA_DIR}"
           echo "wave_data_dir=${WAVE_DATA_DIR}" >> "$GITHUB_OUTPUT"
 

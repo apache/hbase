@@ -1,0 +1,4 @@
+# Working directories
+output/
+.venv/
+__pycache__/
