@@ -434,6 +434,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     conf.set(WALPlayer.BULK_OUTPUT_CONF_KEY, bulkOutputPath.toString());
     conf.set(WALPlayer.INPUT_FILES_SEPARATOR_KEY, ";");
     conf.setBoolean(WALPlayer.MULTI_TABLES_SUPPORT, true);
+    conf.setBoolean(HFileOutputFormat2.SET_MAX_SEQ_ID_KEY, true);
     conf.set(JOB_NAME_CONF_KEY, jobname);
 
     boolean diskBasedSortingEnabledOriginalValue = HFileOutputFormat2.diskBasedSortingEnabled(conf);
