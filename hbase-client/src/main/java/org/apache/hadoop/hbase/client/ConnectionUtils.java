@@ -393,6 +393,13 @@ public final class ConnectionUtils {
     scanMetrics.addToCounter(ScanMetrics.REGIONS_SCANNED_METRIC_NAME, 1);
   }
 
+  static void incMillisBetweenNextsMetrics(ScanMetrics scanMetrics, long millis) {
+    if (scanMetrics == null) {
+      return;
+    }
+    scanMetrics.addToCounter(ScanMetrics.MILLIS_BETWEEN_NEXTS_METRIC_NAME, millis);
+  }
+
   /**
    * Connect the two futures, if the src future is done, then mark the dst future as done. And if
    * the dst future is done, then cancel the src future. This is used for timeline consistent read.
