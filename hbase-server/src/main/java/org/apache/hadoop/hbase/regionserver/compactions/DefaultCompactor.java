@@ -67,7 +67,13 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
     CompactionRequestImpl request) throws IOException {
     List<Path> newFiles = writer.getPaths();
     writer.appendMetadata(fd.maxSeqId, request.isAllFiles(), request.getFiles());
-    writer.close();
+    try {
+      writer.close();
+    } catch (IOException e) {
+      cleanupLeftoverFiles(newFiles);
+      // commitWriter rethrows IOException, unlike abortWriter which logs it without throwing
+      throw e;
+    }
     return newFiles;
   }
 
@@ -79,6 +85,11 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
     } catch (IOException e) {
       LOG.warn("Failed to close the writer after an unfinished compaction.", e);
     }
+    cleanupLeftoverFiles(leftoverFiles);
+  }
+
+  // Cleanup storefiles written when compaction fails
+  private void cleanupLeftoverFiles(List<Path> leftoverFiles) {
     try {
       for (Path path : leftoverFiles) {
         store.getFileSystem().delete(path, false);
