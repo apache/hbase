@@ -102,6 +102,7 @@ public class HMobStore extends HStore {
   // table, we need to find the original mob files by this table name. For details please see
   // cloning snapshot for mob files.
   private final byte[] refCellTags;
+  private StoreFileTracker mobStoreSFT = null;
 
   public HMobStore(final HRegion region, final ColumnFamilyDescriptor family,
     final Configuration confParam, boolean warmup) throws IOException {
@@ -273,7 +274,36 @@ public class HMobStore extends HStore {
     if (!getFileSystem().rename(sourceFile, dstPath)) {
       throw new IOException("Failed rename of " + sourceFile + " to " + dstPath);
     }
+
+    // LOG.info("MOB SFT Debug - Destination path: {}", dstPath);
+    // LOG.info("MOB SFT Debug - Tracker class: {}", mobStoreSFT.getClass().getName());
+    // mobStoreSFT.add(Collections.singleton(StoreFileInfo.createStoreFileInfoForHFile(conf,
+    // getFileSystem(), dstPath, true)));
   }
+
+  // private StoreFileTracker getMobStoreSFT() throws IOException {
+  // FileSystem fs = getFileSystem();
+  // HRegionFileSystem regionFS = (fs.exists(MobUtils.getMobRegionPath(conf,getTableName()))
+  // ? HRegionFileSystem.openRegionFromFileSystem(conf, fs, MobUtils.getMobTableDir(conf,
+  // getTableName()), MobUtils.getMobRegionInfo(getTableName()),
+  // false)
+  // : HRegionFileSystem.createRegionOnFileSystem(conf, fs, MobUtils.getMobTableDir(conf,
+  // getTableName()), MobUtils.getMobRegionInfo(getTableName())));
+  // StoreContext storeContext =
+  // StoreContext.getBuilder().withColumnFamilyDescriptor(getStoreContext().getFamily())
+  // .withRegionFileSystem(regionFS)
+  // .withFamilyStoreDirectoryPath(MobUtils.getMobFamilyPath(conf, getTableName(),
+  // getStoreContext().getFamily().getNameAsString()))
+  // .withColumnFamilyDescriptor(getStoreContext().getFamily())
+  // .build();
+  // StoreFileTracker sft = StoreFileTrackerFactory.create(conf, true,storeContext);
+  // // *** ADD DEBUG LOGGING ***
+  //
+  // LOG.info("MOB SFT Debug - Store context family dir: {}",
+  // storeContext.getFamilyStoreDirectoryPath());
+  // LOG.info("MOB SFT Debug - Region info: {}", storeContext.getRegionInfo());
+  // return sft;
+  // }
 
   /**
    * Validates a mob file by opening and closing it.
