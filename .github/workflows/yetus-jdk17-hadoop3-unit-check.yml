@@ -17,7 +17,7 @@
 
 # yamllint disable rule:line-length
 ---
-name: Yetus JDK17 Hadoop3 Check
+name: Yetus JDK17 Hadoop3 Unit Check
 
 "on":
   pull_request:
@@ -28,7 +28,7 @@ permissions:
   statuses: write
 
 jobs:
-  jdk17-hadoop3-check:
+  jdk17-hadoop3-unit-check:
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
@@ -109,14 +109,14 @@ jobs:
           tar --strip-components=1 -xzf apache-yetus-${{ env.YETUS_VERSION }}-bin.tar.gz
           rm apache-yetus-${{ env.YETUS_VERSION }}-bin.tar.gz
 
-      - name: Run Yetus JDK17 Hadoop3 Check
+      - name: Run Yetus JDK17 Hadoop3 Unit Check
         env:
           ARCHIVE_PATTERN_LIST: "TEST-*.xml,org.apache.h*.txt,*.dumpstream,*.dump"
           DOCKERFILE: "${{ github.workspace }}/src/dev-support/docker/Dockerfile"
           GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_USER: ${{ github.actor }}
-          PATCHDIR: "${{ github.workspace }}/yetus-jdk17-hadoop3-check/output"
-          PLUGINS: "compile,github,htmlout,javac,javadoc,maven,mvninstall,shadedjars,unit"
+          PATCHDIR: "${{ github.workspace }}/yetus-jdk17-hadoop3-unit-check/output"
+          PLUGINS: "github,htmlout,maven,unit"
           SET_JAVA_HOME: "/usr/lib/jvm/java-17"
           SOURCEDIR: "${{ github.workspace }}/src"
           TESTS_FILTER: "checkstyle,javac,javadoc,pylint,shellcheck,shelldocs,blanks,perlcritic,ruby-lint,rubocop"
@@ -141,6 +141,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: yetus-jdk17-hadoop3-check-${{ matrix.name }}
-          path: ${{ github.workspace }}/yetus-jdk17-hadoop3-check/output
+          name: yetus-jdk17-hadoop3-unit-check-${{ matrix.name }}
+          path: ${{ github.workspace }}/yetus-jdk17-hadoop3-unit-check/output
           retention-days: 7
