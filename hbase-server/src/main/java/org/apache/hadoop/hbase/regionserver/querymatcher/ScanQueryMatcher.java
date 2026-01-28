@@ -238,6 +238,25 @@ public abstract class ScanQueryMatcher implements ShipperListener {
    */
   public abstract MatchCode match(ExtendedCell cell) throws IOException;
 
+  /**
+   * Determines if the caller should do one of several things:
+   * <ul>
+   * <li>seek/skip to the next row (MatchCode.SEEK_NEXT_ROW)</li>
+   * <li>seek/skip to the next column (MatchCode.SEEK_NEXT_COL)</li>
+   * <li>include the current KeyValue (MatchCode.INCLUDE)</li>
+   * <li>ignore the current KeyValue (MatchCode.SKIP)</li>
+   * <li>got to the next row (MatchCode.DONE)</li>
+   * </ul>
+   * @param cell     KeyValue to check
+   * @param prevCell KeyValue checked previously
+   * @return The match code instance.
+   * @throws IOException in case there is an internal consistency problem caused by a data
+   *                     corruption.
+   */
+  public MatchCode match(ExtendedCell cell, ExtendedCell prevCell) throws IOException {
+    return match(cell);
+  }
+
   /** Returns the start key */
   public ExtendedCell getStartKey() {
     return startKey;
@@ -284,7 +303,8 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     // see HBASE-18471 for more details
     // see TestFromClientSide3#testScanAfterDeletingSpecifiedRow
     // see TestFromClientSide3#testScanAfterDeletingSpecifiedRowV2
-    if (cell.getQualifierLength() == 0) {
+    // But we can seek to next column if the cell is a type of DeleteFamily.
+    if (cell.getQualifierLength() == 0 && !PrivateCellUtil.isDeleteFamily(cell)) {
       ExtendedCell nextKey = PrivateCellUtil.createNextOnRowCol(cell);
       if (nextKey != cell) {
         return nextKey;
