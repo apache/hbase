@@ -22,6 +22,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -42,7 +46,9 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
+import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -503,6 +509,59 @@ public class TestRegionReplicaReplicationEndpoint {
       rl.close();
       tableToBeDisabled.close();
       HTU.deleteTableIfAny(toBeDisabledTable);
+      connection.close();
+    }
+  }
+
+  @Test
+  public void testNullTableDescriptorDoesNotCauseNPE() throws Exception {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    int regionReplication = 2;
+    HTableDescriptor htd = HTU.createTableDescriptor(tableName);
+    htd.setRegionReplication(regionReplication);
+    createOrEnableTableWithRetries(htd, true);
+
+    Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
+    Table table = connection.getTable(tableName);
+
+    try {
+      HTU.loadNumericRows(table, HBaseTestingUtility.fam1, 0, 100);
+
+      RegionLocator rl = connection.getRegionLocator(tableName);
+      HRegionLocation hrl = rl.getRegionLocation(HConstants.EMPTY_BYTE_ARRAY);
+      byte[] encodedRegionName = hrl.getRegionInfo().getEncodedNameAsBytes();
+      rl.close();
+
+      AtomicLong skippedEdits = new AtomicLong();
+      RegionReplicaReplicationEndpoint.RegionReplicaOutputSink sink =
+        mock(RegionReplicaReplicationEndpoint.RegionReplicaOutputSink.class);
+      when(sink.getSkippedEditsCounter()).thenReturn(skippedEdits);
+
+      TableDescriptors mockTableDescriptors = mock(TableDescriptors.class);
+      when(mockTableDescriptors.get(tableName)).thenReturn(null);
+
+      RegionLocations singleLocation = new RegionLocations(hrl);
+      ClusterConnection mockConnection = mock(ClusterConnection.class);
+      when(mockConnection.locateRegion(eq(tableName), any(byte[].class), anyBoolean(), anyBoolean(),
+        anyInt())).thenReturn(singleLocation);
+      when(mockConnection.getConfiguration()).thenReturn(HTU.getConfiguration());
+
+      RegionReplicaReplicationEndpoint.RegionReplicaSinkWriter sinkWriter =
+        new RegionReplicaReplicationEndpoint.RegionReplicaSinkWriter(sink, mockConnection,
+          Executors.newSingleThreadExecutor(), Integer.MAX_VALUE, mockTableDescriptors);
+
+      Cell cell = CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+        .setRow(Bytes.toBytes("testRow")).setFamily(HBaseTestingUtility.fam1)
+        .setValue(Bytes.toBytes("testValue")).setType(Type.Put).build();
+
+      Entry entry =
+        new Entry(new WALKeyImpl(encodedRegionName, tableName, 1), new WALEdit().add(cell));
+
+      sinkWriter.append(tableName, encodedRegionName, Bytes.toBytes("testRow"),
+        Lists.newArrayList(entry));
+
+    } finally {
+      table.close();
       connection.close();
     }
   }
