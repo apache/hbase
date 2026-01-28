@@ -647,7 +647,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         break;
       }
       LOG.info("Moving {} regions from {} to {} servers using {} threads .Ack Mode: {}",
-        regionsToMove.size(), this.hostname, regionServers.size(), this.maxthreads, ack);
+        regionsToMove.size(), server, regionServers.size(), this.maxthreads, ack);
 
       Optional<RegionInfo> metaRegion = getMetaRegionInfoIfToBeMoved(regionsToMove);
       if (metaRegion.isPresent()) {
@@ -871,7 +871,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     if (fileName != null) {
       List<String> servers = readServersFromFile(fileName);
       if (servers.isEmpty()) {
-        LOG.warn("No servers provided in the file: {}." + fileName);
+        LOG.warn("No servers provided in the file: {}.", fileName);
         return;
       }
       Iterator<ServerName> i = regionServers.iterator();
