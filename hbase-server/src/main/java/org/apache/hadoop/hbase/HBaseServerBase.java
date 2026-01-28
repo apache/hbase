@@ -21,6 +21,8 @@ import static org.apache.hadoop.hbase.ChoreService.CHORE_SERVICE_INITIAL_POOL_SI
 import static org.apache.hadoop.hbase.ChoreService.DEFAULT_CHORE_SERVICE_INITIAL_POOL_SIZE;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
+import static org.apache.hadoop.hbase.util.JvmPauseMonitor.PAUSE_MONITOR_ENABLE_DEFAULT;
+import static org.apache.hadoop.hbase.util.JvmPauseMonitor.PAUSE_MONITOR_ENABLE_KEY;
 
 import com.google.errorprone.annotations.RestrictedApi;
 import io.opentelemetry.api.trace.Span;
@@ -261,6 +263,10 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
       this.rpcServices = createRpcServices();
       useThisHostnameInstead = getUseThisHostnameInstead(conf);
       InetSocketAddress addr = rpcServices.getSocketAddress();
+
+      // disable the pause monitor in connection because we will create a pause
+      // monitor that reports metric to JvmPauseMonitorSource
+      this.conf.setBoolean(PAUSE_MONITOR_ENABLE_KEY, PAUSE_MONITOR_ENABLE_DEFAULT);
 
       // if use-ip is enabled, we will use ip to expose Master/RS service for client,
       // see HBASE-27304 for details.
