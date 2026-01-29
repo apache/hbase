@@ -21,7 +21,9 @@ import java.io.IOException;
 import java.util.Map;
 import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 
@@ -91,6 +93,21 @@ public class DelegatingHBaseRpcController implements HBaseRpcController {
   @Override
   public void setPriority(TableName tn) {
     delegate.setPriority(tn);
+  }
+
+  @Override
+  public void setPriority(int priority, @Nullable TableName tableName) {
+    delegate.setPriority(priority, tableName);
+  }
+
+  @Override
+  public boolean hasRegionInfo() {
+    return delegate.hasRegionInfo();
+  }
+
+  @Override
+  public RegionInfo getRegionInfo() {
+    return delegate.getRegionInfo();
   }
 
   @Override
