@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
@@ -54,14 +55,40 @@ public interface HBaseRpcController extends RpcController, ExtendedCellScannable
    * Set the priority for this operation.
    * @param priority Priority for this request; should fall roughly in the range
    *                 {@link HConstants#NORMAL_QOS} to {@link HConstants#HIGH_QOS}
+   * @deprecated Since 3.0.0, will be remove in 4.0.0. Use {@link #setPriority(int, TableName)}
+   *             instead.
    */
+  @Deprecated
   void setPriority(int priority);
 
   /**
    * Set the priority for this operation.
    * @param tn Set priority based off the table we are going against.
+   * @deprecated Since 3.0.0, will be remove in 4.0.0. Use {@link #setPriority(int, TableName)}
+   *             instead.
    */
+  @Deprecated
   void setPriority(final TableName tn);
+
+  /**
+   * Set the priority for this rpc request.
+   * <p>
+   * For keep compatibility, here we declare the default method where we call
+   * {@link #setPriority(int)} and then {@link #setPriority(TableName)}.
+   * <p>
+   * The default implementation in HBase follow the below rules:
+   * <ol>
+   * <li>If user set a priority explicitly, then just use it.</li>
+   * <li>For system table, use {@link HConstants#SYSTEMTABLE_QOS}.</li>
+   * <li>For other tables, use {@link HConstants#NORMAL_QOS}.</li>
+   * </ol>
+   * @param priority  the priority set by user, can be {@link HConstants#PRIORITY_UNSET}.
+   * @param tableName the table we operate on, can be null.
+   */
+  default void setPriority(int priority, @Nullable TableName tableName) {
+    setPriority(priority);
+    setPriority(tableName);
+  }
 
   /** Returns The priority of this request */
   int getPriority();
