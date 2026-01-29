@@ -131,7 +131,7 @@ public class TestCompactionInDeadRegionServer {
     HRegionServer regionSvr = UTIL.getRSForFirstRegionInTable(TABLE_NAME);
     HRegion region = regionSvr.getRegions(TABLE_NAME).get(0);
     String regName = region.getRegionInfo().getEncodedName();
-    List<HRegion> metaRegs = regionSvr.getRegions(TableName.META_TABLE_NAME);
+    List<HRegion> metaRegs = regionSvr.getRegions(UTIL.getConnection().getMetaTableName());
     if (metaRegs != null && !metaRegs.isEmpty()) {
       LOG.info("meta is on the same server: " + regionSvr);
       // when region is on same server as hbase:meta, reassigning meta would abort the server

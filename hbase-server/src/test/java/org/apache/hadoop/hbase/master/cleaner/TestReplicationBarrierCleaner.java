@@ -94,7 +94,7 @@ public class TestReplicationBarrierCleaner {
 
   @After
   public void tearDown() throws IOException {
-    try (Table table = UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
+    try (Table table = UTIL.getConnection().getMetaTable();
       ResultScanner scanner = table.getScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY)
         .addFamily(HConstants.REPLICATION_BARRIER_FAMILY).setFilter(new FirstKeyOnlyFilter()))) {
       for (;;) {
@@ -148,20 +148,20 @@ public class TestReplicationBarrierCleaner {
       put.addColumn(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER,
         put.getTimestamp() - barriers.length + i, Bytes.toBytes(barriers[i]));
     }
-    try (Table table = UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
+    try (Table table = UTIL.getConnection().getMetaTable()) {
       table.put(put);
     }
   }
 
   private void fillCatalogFamily(RegionInfo region) throws IOException {
-    try (Table table = UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
+    try (Table table = UTIL.getConnection().getMetaTable()) {
       table.put(new Put(region.getRegionName()).addColumn(HConstants.CATALOG_FAMILY,
         Bytes.toBytes("whatever"), Bytes.toBytes("whatever")));
     }
   }
 
   private void clearCatalogFamily(RegionInfo region) throws IOException {
-    try (Table table = UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
+    try (Table table = UTIL.getConnection().getMetaTable()) {
       table.delete(new Delete(region.getRegionName()).addFamily(HConstants.CATALOG_FAMILY));
     }
   }
@@ -281,7 +281,7 @@ public class TestReplicationBarrierCleaner {
     // No catalog family, then we should remove the whole row
     clearCatalogFamily(region);
     cleaner.chore();
-    try (Table table = UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
+    try (Table table = UTIL.getConnection().getMetaTable()) {
       assertFalse(table
         .exists(new Get(region.getRegionName()).addFamily(HConstants.REPLICATION_BARRIER_FAMILY)));
     }
@@ -303,7 +303,7 @@ public class TestReplicationBarrierCleaner {
     // There are no peers, and no catalog family for this region either, so we should remove the
     // barriers. And since there is no catalog family, after we delete the barrier family, the whole
     // row is deleted.
-    try (Table table = UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
+    try (Table table = UTIL.getConnection().getMetaTable()) {
       assertFalse(table.exists(new Get(region.getRegionName())));
     }
   }

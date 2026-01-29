@@ -69,6 +69,11 @@ class ShortCircuitConnectionRegistry implements ConnectionRegistry {
   }
 
   @Override
+  public CompletableFuture<org.apache.hadoop.hbase.TableName> getMetaTableName() {
+    return CompletableFuture.completedFuture(endpoint.getMetaTableName());
+  }
+
+  @Override
   public String getConnectionString() {
     return "short-circuit";
   }

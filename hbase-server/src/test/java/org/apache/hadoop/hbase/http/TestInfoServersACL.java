@@ -200,7 +200,7 @@ public class TestInfoServersACL {
       @Override
       public Void run() throws Exception {
         // Check the expected content is present in the http response
-        Pair<Integer, String> pair = getTablePage(TableName.META_TABLE_NAME);
+        Pair<Integer, String> pair = getTablePage(UTIL.getConnection().getMetaTableName());
         assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
         assertTrue("expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),
           pair.getSecond().contains(expectedAuthorizedContent));
@@ -213,7 +213,7 @@ public class TestInfoServersACL {
     nonAdmin.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        Pair<Integer, String> pair = getTablePage(TableName.META_TABLE_NAME);
+        Pair<Integer, String> pair = getTablePage(UTIL.getConnection().getMetaTableName());
         assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
         assertFalse(
           "should not find=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),

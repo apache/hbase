@@ -92,8 +92,9 @@ public class TestMetaTableIsolationBalancerConditional {
     admin.createTable(productTableDescriptor,
       BalancerConditionalsTestUtil.generateSplits(2 * NUM_SERVERS));
 
-    Set<TableName> tablesToBeSeparated = ImmutableSet.<TableName> builder()
-      .add(TableName.META_TABLE_NAME).add(QuotaUtil.QUOTA_TABLE_NAME).add(productTableName).build();
+    Set<TableName> tablesToBeSeparated =
+      ImmutableSet.<TableName> builder().add(TEST_UTIL.getConnection().getMetaTableName())
+        .add(QuotaUtil.QUOTA_TABLE_NAME).add(productTableName).build();
 
     // Pause the balancer
     admin.balancerSwitch(false, true);
@@ -146,8 +147,13 @@ public class TestMetaTableIsolationBalancerConditional {
   private static void validateRegionLocations(Map<TableName, Set<ServerName>> tableToServers,
     TableName productTableName, boolean shouldBeBalanced) {
     // Validate that the region assignments
-    ServerName metaServer =
-      tableToServers.get(TableName.META_TABLE_NAME).stream().findFirst().orElseThrow();
+    ServerName metaServer;
+    try {
+      metaServer = tableToServers.get(TEST_UTIL.getConnection().getMetaTableName()).stream()
+        .findFirst().orElseThrow();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
     ServerName quotaServer =
       tableToServers.get(QuotaUtil.QUOTA_TABLE_NAME).stream().findFirst().orElseThrow();
     Set<ServerName> productServers = tableToServers.get(productTableName);

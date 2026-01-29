@@ -122,7 +122,11 @@ public class TestTableProcedureWaitingQueueCleanup {
 
     @Override
     public TableName getTableName() {
-      return TableName.META_TABLE_NAME;
+      try {
+        return UTIL.getConnection().getMetaTableName();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     }
 
     @Override

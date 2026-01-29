@@ -75,8 +75,13 @@ public class InnerStoreCellComparator extends CellComparatorImpl {
    * @return CellComparator to use going off the {@code tableName} passed.
    */
   public static CellComparator getInnerStoreCellComparator(byte[] tableName) {
-    return Bytes.equals(tableName, TableName.META_TABLE_NAME.toBytes())
+    // Check if this is a meta table (hbase:meta or hbase:meta_*)
+    return isMetaTable(tableName)
       ? MetaCellComparator.META_COMPARATOR
       : InnerStoreCellComparator.INNER_STORE_COMPARATOR;
+  }
+
+  private static boolean isMetaTable(byte[] tableName) {
+    return Bytes.startsWith(tableName, Bytes.toBytes("hbase:meta"));
   }
 }

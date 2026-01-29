@@ -174,8 +174,10 @@ class SchemaLocking {
     addToLockedResources(lockedResources, regionLocks, Function.identity(),
       LockedResourceType.REGION);
     addToLockedResources(lockedResources, peerLocks, Function.identity(), LockedResourceType.PEER);
-    addToLockedResources(lockedResources, ImmutableMap.of(TableName.META_TABLE_NAME, metaLock),
-      tn -> tn.getNameAsString(), LockedResourceType.META);
+    // TODO: Get dynamic name from MasterServices
+    addToLockedResources(lockedResources,
+      ImmutableMap.of(TableName.valueOf("hbase", "meta"), metaLock), tn -> tn.getNameAsString(),
+      LockedResourceType.META);
     addToLockedResources(lockedResources, globalLocks, Function.identity(),
       LockedResourceType.GLOBAL);
     return lockedResources;
@@ -236,7 +238,9 @@ class SchemaLocking {
       .append("tableLocks", filterUnlocked(tableLocks))
       .append("regionLocks", filterUnlocked(regionLocks))
       .append("peerLocks", filterUnlocked(peerLocks))
-      .append("metaLocks", filterUnlocked(ImmutableMap.of(TableName.META_TABLE_NAME, metaLock)))
+      // TODO: Get dynamic name from MasterServices
+      .append("metaLocks",
+        filterUnlocked(ImmutableMap.of(TableName.valueOf("hbase", "meta"), metaLock)))
       .append("globalLocks", filterUnlocked(globalLocks)).build();
   }
 

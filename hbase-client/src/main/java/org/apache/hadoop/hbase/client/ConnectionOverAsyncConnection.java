@@ -89,6 +89,11 @@ class ConnectionOverAsyncConnection implements Connection {
   }
 
   @Override
+  public TableName getMetaTableName() {
+    return conn.getMetaTableName();
+  }
+
+  @Override
   public BufferedMutator getBufferedMutator(BufferedMutatorParams params) throws IOException {
     AsyncBufferedMutatorBuilder builder = conn.getBufferedMutatorBuilder(params.getTableName());
     if (params.getRpcTimeout() != BufferedMutatorParams.UNSET) {

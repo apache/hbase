@@ -2532,7 +2532,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     scan.setCaching(1);
     // Filter out any records
     scan.setFilter(new FilterList(new FirstKeyOnlyFilter(), new InclusiveStopFilter(new byte[0])));
-    try (Table table = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
+    try (Table table = TEST_UTIL.getConnection().getMetaTable()) {
       try (ResultScanner s = table.getScanner(scan)) {
         assertNull(s.next());
       }

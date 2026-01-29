@@ -97,7 +97,7 @@ public class TestMetaWithReplicasShutdownHandling extends MetaWithReplicasTestBa
     ServerName master = null;
     try (Connection c = ConnectionFactory.createConnection(util.getConfiguration())) {
       try (Table htable = util.createTable(TABLE, FAMILIES)) {
-        util.getAdmin().flush(TableName.META_TABLE_NAME);
+        util.getAdmin().flush(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable());
         Thread.sleep(
           conf.getInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 30000) * 6);
         List<RegionInfo> regions = MetaTableAccessor.getTableRegions(c, TABLE);
@@ -114,7 +114,7 @@ public class TestMetaWithReplicasShutdownHandling extends MetaWithReplicasTestBa
             Thread.sleep(10);
             hrl = MetaTableAccessor.getRegionLocation(c, regions.get(0));
           } while (primary.equals(hrl.getServerName()));
-          util.getAdmin().flush(TableName.META_TABLE_NAME);
+          util.getAdmin().flush(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable());
           Thread.sleep(
             conf.getInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 30000) * 3);
         }

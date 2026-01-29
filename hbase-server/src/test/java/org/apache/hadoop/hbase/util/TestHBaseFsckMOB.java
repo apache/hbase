@@ -84,7 +84,7 @@ public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
     admin = connection.getAdmin();
     admin.balancerSwitch(false, true);
 
-    TEST_UTIL.waitUntilAllRegionsAssigned(TableName.META_TABLE_NAME);
+    TEST_UTIL.waitUntilAllRegionsAssigned(connection.getMetaTableName());
   }
 
   @AfterClass
