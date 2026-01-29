@@ -92,6 +92,7 @@ public class TestCompactFromClient {
       AsyncConnectionImpl connection = mock(AsyncConnectionImpl.class)) {
       mockedMeta.when(() -> ClientMetaTableAccessor.getTableHRegionLocations(any(AsyncTable.class),
         any(TableName.class))).thenReturn(nullLocationsFuture);
+      when(connection.getMetaTableName()).thenReturn(TableName.valueOf("hbase:meta"));
       AsyncTable<AdvancedScanResultConsumer> metaTable = mock(AsyncTable.class);
       when(connection.getTable(connection.getMetaTableName())).thenReturn(metaTable);
 

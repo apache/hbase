@@ -115,6 +115,7 @@ public class TestSerialReplicationChecker {
     when(source.getReplicationQueueStorage()).thenReturn(QUEUE_STORAGE);
     conn = mock(Connection.class);
     when(conn.isClosed()).thenReturn(false);
+    when(conn.getMetaTableName()).thenReturn(UTIL.getConnection().getMetaTableName());
     doAnswer(new Answer<Table>() {
 
       @Override

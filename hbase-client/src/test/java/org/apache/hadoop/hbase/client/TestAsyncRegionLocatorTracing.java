@@ -85,7 +85,8 @@ public class TestAsyncRegionLocatorTracing {
 
   @Before
   public void setUp() throws IOException {
-    RegionInfo metaRegionInfo = RegionInfoBuilder.newBuilder(conn.getMetaTableName()).build();
+    RegionInfo metaRegionInfo =
+      RegionInfoBuilder.newBuilder(TableName.valueOf("hbase:meta")).build();
     locs = new RegionLocations(
       new HRegionLocation(metaRegionInfo,
         ServerName.valueOf("127.0.0.1", 12345, EnvironmentEdgeManager.currentTime())),

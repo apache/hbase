@@ -104,6 +104,11 @@ public class TestZooKeeperTableArchiveClient {
     public CompletableFuture<String> getClusterId() {
       return CompletableFuture.completedFuture("clusterId");
     }
+
+    @Override
+    public CompletableFuture<org.apache.hadoop.hbase.TableName> getMetaTableName() {
+      return CompletableFuture.completedFuture(org.apache.hadoop.hbase.TableName.META_TABLE_NAME);
+    }
   }
 
   /**
