@@ -17,13 +17,128 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
-import org.apache.yetus.audience.InterfaceAudience;
+import static org.apache.hadoop.hbase.HConstants.SYSTEM_KEY_FILE_PREFIX;
 
-/**
- * STUB IMPLEMENTATION - Feature not yet complete. This class will be fully implemented in
- * HBASE-29368 feature PR.
- */
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @InterfaceAudience.Private
-public class SystemKeyAccessor {
-  // Empty stub class - implementation in feature PR
+public class SystemKeyAccessor extends KeyManagementBase {
+  private static final Logger LOG = LoggerFactory.getLogger(SystemKeyAccessor.class);
+
+  private final FileSystem fs;
+  protected final Path systemKeyDir;
+
+  public SystemKeyAccessor(Server server) throws IOException {
+    this(server.getConfiguration(), server.getFileSystem());
+  }
+
+  public SystemKeyAccessor(Configuration configuration, FileSystem fs) throws IOException {
+    super(configuration);
+    this.systemKeyDir = CommonFSUtils.getSystemKeyDir(configuration);
+    this.fs = fs;
+  }
+
+  /**
+   * Return both the latest system key file and all system key files.
+   * @return a pair of the latest system key file and all system key files
+   * @throws IOException if there is an error getting the latest system key file or no cluster key
+   *                     is initialized yet.
+   */
+  public Pair<Path, List<Path>> getLatestSystemKeyFile() throws IOException {
+    assertKeyManagementEnabled();
+    List<Path> allClusterKeyFiles = getAllSystemKeyFiles();
+    if (allClusterKeyFiles.isEmpty()) {
+      throw new RuntimeException("No cluster key initialized yet");
+    }
+    int currentMaxSeqNum = SystemKeyAccessor.extractKeySequence(allClusterKeyFiles.get(0));
+    return new Pair<>(new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX + currentMaxSeqNum),
+      allClusterKeyFiles);
+  }
+
+  /**
+   * Return all available cluster key files and return them in the order of latest to oldest. If no
+   * cluster key files are available, then return an empty list. If key management is not enabled,
+   * then return null.
+   * @return a list of all available cluster key files
+   * @throws IOException if there is an error getting the cluster key files
+   */
+  public List<Path> getAllSystemKeyFiles() throws IOException {
+    assertKeyManagementEnabled();
+    LOG.info("Getting all system key files from: {} matching prefix: {}", systemKeyDir,
+      SYSTEM_KEY_FILE_PREFIX + "*");
+    Map<Integer, Path> clusterKeys = new TreeMap<>(Comparator.reverseOrder());
+    for (FileStatus st : fs.globStatus(new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX + "*"))) {
+      Path keyPath = st.getPath();
+      int seqNum = extractSystemKeySeqNum(keyPath);
+      clusterKeys.put(seqNum, keyPath);
+    }
+    return new ArrayList<>(clusterKeys.values());
+  }
+
+  public ManagedKeyData loadSystemKey(Path keyPath) throws IOException {
+    ManagedKeyProvider provider = getKeyProvider();
+    ManagedKeyData keyData = provider.unwrapKey(loadKeyMetadata(keyPath), null);
+    if (keyData == null) {
+      throw new RuntimeException("Failed to load system key from: " + keyPath);
+    }
+    return keyData;
+  }
+
+  @InterfaceAudience.Private
+  public static int extractSystemKeySeqNum(Path keyPath) throws IOException {
+    if (keyPath.getName().startsWith(SYSTEM_KEY_FILE_PREFIX)) {
+      try {
+        return Integer.parseInt(keyPath.getName().substring(SYSTEM_KEY_FILE_PREFIX.length()));
+      } catch (NumberFormatException e) {
+        LOG.error("Invalid file name for a cluster key: {}", keyPath, e);
+      }
+    }
+    throw new IOException("Couldn't parse key file name: " + keyPath.getName());
+  }
+
+  /**
+   * Extract the key sequence number from the cluster key file name.
+   * @param clusterKeyFile the path to the cluster key file
+   * @return The sequence or {@code -1} if not a valid sequence file.
+   * @throws IOException if the file name is not a valid sequence file
+   */
+  @InterfaceAudience.Private
+  public static int extractKeySequence(Path clusterKeyFile) throws IOException {
+    int keySeq = -1;
+    if (clusterKeyFile.getName().startsWith(SYSTEM_KEY_FILE_PREFIX)) {
+      String seqStr = clusterKeyFile.getName().substring(SYSTEM_KEY_FILE_PREFIX.length());
+      if (!seqStr.isEmpty()) {
+        try {
+          keySeq = Integer.parseInt(seqStr);
+        } catch (NumberFormatException e) {
+          throw new IOException("Invalid file name for a cluster key: " + clusterKeyFile, e);
+        }
+      }
+    }
+    return keySeq;
+  }
+
+  protected String loadKeyMetadata(Path keyPath) throws IOException {
+    try (FSDataInputStream fin = fs.open(keyPath)) {
+      return fin.readUTF();
+    }
+  }
 }
