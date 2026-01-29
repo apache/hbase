@@ -113,8 +113,9 @@ public class TestNamespacesInstanceResource {
   }
 
   @SuppressWarnings("unchecked")
-  private static <T> T fromXML(byte[] content) throws JAXBException {
-    return (T) context.createUnmarshaller().unmarshal(new ByteArrayInputStream(content));
+  private static <T> T fromXML(byte[] content, Class<T> clazz) throws JAXBException {
+    JAXBContext jaxbContext = JAXBContext.newInstance(clazz);
+    return (T) jaxbContext.createUnmarshaller().unmarshal(new ByteArrayInputStream(content));
   }
 
   private NamespaceDescriptor findNamespace(Admin admin, String namespaceName) throws IOException {
@@ -203,7 +204,7 @@ public class TestNamespacesInstanceResource {
 
     response = client.get(namespacePath, Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
-    NamespacesInstanceModel model = fromXML(response.getBody());
+    NamespacesInstanceModel model = fromXML(response.getBody(), NamespacesInstanceModel.class);
     checkNamespaceProperties(model.getProperties(), nsProperties);
 
     response = client.get(namespacePath, Constants.MIMETYPE_JSON);
@@ -223,7 +224,7 @@ public class TestNamespacesInstanceResource {
 
     response = client.get(namespacePath, Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
-    TableListModel tablemodel = fromXML(response.getBody());
+    TableListModel tablemodel = fromXML(response.getBody(), TableListModel.class);
     checkNamespaceTables(tablemodel.getTables(), nsTables);
 
     response = client.get(namespacePath, Constants.MIMETYPE_JSON);
