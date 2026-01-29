@@ -1625,8 +1625,8 @@ public class BucketCache implements BlockCache, HeapSize {
         BucketCacheProtos.BucketCacheEntry cacheEntry =
           BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in);
         if (cacheEntry == null) {
-          throw new IOException("Failed to parse cache entry from persistence file: "
-            + persistencePath);
+          throw new IOException(
+            "Failed to parse cache entry from persistence file: " + persistencePath);
         }
         parsePB(cacheEntry);
       } else if (Arrays.equals(pbuf, BucketProtoUtils.PB_MAGIC_V2)) {
