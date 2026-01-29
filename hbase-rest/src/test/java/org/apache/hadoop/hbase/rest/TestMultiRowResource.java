@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -25,10 +25,9 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Base64.Encoder;
-import java.util.Collection;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -46,23 +45,19 @@ import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.http.Header;
 import org.apache.http.message.BasicHeader;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 
-@Category({ RestTests.class, MediumTests.class })
-@RunWith(Parameterized.class)
+@Tag(RestTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: csrfEnabled = {0}")
 public class TestMultiRowResource {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultiRowResource.class);
 
   private static final TableName TABLE = TableName.valueOf("TestRowResource");
   private static final String CFA = "a";
@@ -85,20 +80,19 @@ public class TestMultiRowResource {
   private static Header extraHdr = null;
   private static boolean csrfEnabled = true;
 
-  @Parameterized.Parameters
-  public static Collection<Object[]> data() {
-    return HBaseCommonTestingUtil.BOOLEAN_PARAMETERIZED;
-  }
-
-  public TestMultiRowResource(Boolean csrf) {
+  public TestMultiRowResource(boolean csrf) {
     csrfEnabled = csrf;
   }
 
-  @BeforeClass
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(false), Arguments.of(true));
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
-    conf.setBoolean(RESTServer.REST_CSRF_ENABLED_KEY, csrfEnabled);
-    if (csrfEnabled) {
+    conf.setBoolean(RESTServer.REST_CSRF_ENABLED_KEY, TestMultiRowResource.csrfEnabled);
+    if (TestMultiRowResource.csrfEnabled) {
       conf.set(RESTServer.REST_CSRF_BROWSER_USERAGENTS_REGEX_KEY, ".*");
     }
     extraHdr = new BasicHeader(RESTServer.REST_CSRF_CUSTOM_HEADER_DEFAULT, "");
@@ -118,13 +112,13 @@ public class TestMultiRowResource {
     admin.createTable(tableDescriptorBuilder.build());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     REST_TEST_UTIL.shutdownServletContainer();
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @TestTemplate
   public void testMultiCellGetJSON() throws IOException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
     String row_6_url = "/" + TABLE + "/" + ROW_2 + "/" + COLUMN_2;
@@ -177,7 +171,7 @@ public class TestMultiRowResource {
   }
 
   // See https://issues.apache.org/jira/browse/HBASE-28174
-  @Test
+  @TestTemplate
   public void testMultiCellGetJSONB64() throws IOException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
     String row_6_url = "/" + TABLE + "/" + ROW_2 + "/" + COLUMN_2;
@@ -195,9 +189,9 @@ public class TestMultiRowResource {
     path.append("/");
     path.append(TABLE);
     path.append("/multiget/?row=");
-    path.append(encoder.encodeToString(ROW_1.getBytes("UTF-8")));
+    path.append(encoder.encodeToString(ROW_1.getBytes(StandardCharsets.UTF_8)));
     path.append("&row=");
-    path.append(encoder.encodeToString(ROW_2.getBytes("UTF-8")));
+    path.append(encoder.encodeToString(ROW_2.getBytes(StandardCharsets.UTF_8)));
     path.append("&e=b64"); // Specify encoding via query string
 
     Response response = client.get(path.toString(), Constants.MIMETYPE_JSON);
@@ -208,9 +202,9 @@ public class TestMultiRowResource {
     path.append("/");
     path.append(TABLE);
     path.append("/multiget/?row=");
-    path.append(encoder.encodeToString(ROW_1.getBytes("UTF-8")));
+    path.append(encoder.encodeToString(ROW_1.getBytes(StandardCharsets.UTF_8)));
     path.append("&row=");
-    path.append(encoder.encodeToString(ROW_2.getBytes("UTF-8")));
+    path.append(encoder.encodeToString(ROW_2.getBytes(StandardCharsets.UTF_8)));
 
     Header[] headers = new Header[] { new BasicHeader("Accept", Constants.MIMETYPE_JSON),
       new BasicHeader("Encoding", "b64") // Specify encoding via header
@@ -223,7 +217,7 @@ public class TestMultiRowResource {
     client.delete(row_6_url, extraHdr);
   }
 
-  @Test
+  @TestTemplate
   public void testMultiCellGetNoKeys() throws IOException {
     StringBuilder path = new StringBuilder();
     path.append("/");
@@ -234,7 +228,7 @@ public class TestMultiRowResource {
     assertEquals(404, response.getCode());
   }
 
-  @Test
+  @TestTemplate
   public void testMultiCellGetXML() throws IOException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
     String row_6_url = "/" + TABLE + "/" + ROW_2 + "/" + COLUMN_2;
@@ -258,7 +252,7 @@ public class TestMultiRowResource {
     client.delete(row_6_url, extraHdr);
   }
 
-  @Test
+  @TestTemplate
   public void testMultiCellGetWithColsJSON() throws IOException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
     String row_6_url = "/" + TABLE + "/" + ROW_2 + "/" + COLUMN_2;
@@ -291,7 +285,7 @@ public class TestMultiRowResource {
     client.delete(row_6_url, extraHdr);
   }
 
-  @Test
+  @TestTemplate
   public void testMultiCellGetJSONNotFound() throws IOException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
 
@@ -315,7 +309,7 @@ public class TestMultiRowResource {
     client.delete(row_5_url, extraHdr);
   }
 
-  @Test
+  @TestTemplate
   public void testMultiCellGetWithColsInQueryPathJSON() throws IOException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
     String row_6_url = "/" + TABLE + "/" + ROW_2 + "/" + COLUMN_2;
@@ -348,7 +342,7 @@ public class TestMultiRowResource {
     client.delete(row_6_url, extraHdr);
   }
 
-  @Test
+  @TestTemplate
   public void testMultiCellGetFilterJSON() throws IOException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
     String row_6_url = "/" + TABLE + "/" + ROW_2 + "/" + COLUMN_2;
@@ -413,5 +407,4 @@ public class TestMultiRowResource {
     client.delete(row_5_url, extraHdr);
     client.delete(row_6_url, extraHdr);
   }
-
 }

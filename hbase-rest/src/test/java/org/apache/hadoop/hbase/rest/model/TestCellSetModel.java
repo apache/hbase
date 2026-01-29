@@ -17,24 +17,20 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Iterator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RestTests.class, SmallTests.class })
+@Tag(RestTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCellSetModel extends TestModelBase<CellSetModel> {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCellSetModel.class);
 
   private static final byte[] ROW1 = Bytes.toBytes("testrow1");
   private static final byte[] COLUMN1 = Bytes.toBytes("testcolumn1");
@@ -50,12 +46,6 @@ public class TestCellSetModel extends TestModelBase<CellSetModel> {
 
   public TestCellSetModel() throws Exception {
     super(CellSetModel.class);
-    AS_XML = "<CellSet>" + "<Row key=\"dGVzdHJvdzE=\">"
-      + "<Cell timestamp=\"1245219839331\" column=\"dGVzdGNvbHVtbjE=\">" + "dGVzdHZhbHVlMQ==</Cell>"
-      + "</Row>" + "<Row key=\"dGVzdHJvdzE=\">"
-      + "<Cell timestamp=\"1245239813319\" column=\"dGVzdGNvbHVtbjI=\">" + "dGVzdHZhbHVlMg==</Cell>"
-      + "<Cell timestamp=\"1245393318192\" column=\"dGVzdGNvbHVtbjM=\">" + "dGVzdHZhbHVlMw==</Cell>"
-      + "</Row>" + "</CellSet>";
 
     AS_PB = "CiwKCHRlc3Ryb3cxEiASC3Rlc3Rjb2x1bW4xGOO6i+eeJCIKdGVzdHZhbHVlMQpOCgh0ZXN0cm93"
       + "MRIgEgt0ZXN0Y29sdW1uMhjHyc7wniQiCnRlc3R2YWx1ZTISIBILdGVzdGNvbHVtbjMYsOLnuZ8k"
@@ -121,18 +111,20 @@ public class TestCellSetModel extends TestModelBase<CellSetModel> {
   }
 
   @Override
+  @Test
   public void testBuildModel() throws Exception {
     checkModel(buildTestModel());
   }
 
   @Override
+  @Test
   public void testFromXML() throws Exception {
     checkModel(fromXML(AS_XML));
   }
 
   @Override
+  @Test
   public void testFromPB() throws Exception {
     checkModel(fromPB(AS_PB));
   }
-
 }
