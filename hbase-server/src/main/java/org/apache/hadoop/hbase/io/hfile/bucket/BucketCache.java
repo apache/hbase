@@ -1611,10 +1611,24 @@ public class BucketCache implements BlockCache, HeapSize {
       int pblen = ProtobufMagic.lengthOfPBMagic();
       byte[] pbuf = new byte[pblen];
       IOUtils.readFully(in, pbuf, 0, pblen);
+
+      // HBASE-29857: Validate that the persistence file has data after the magic bytes.
+      // A truncated or corrupted file may only contain magic bytes without actual cache data.
+      if (in.available() == 0) {
+        throw new IOException("Persistence file appears to be truncated or corrupted. "
+          + "File contains only magic bytes without cache data: " + persistencePath);
+      }
+
       if (ProtobufMagic.isPBMagicPrefix(pbuf)) {
         LOG.info("Reading old format of persistence.");
         // The old non-chunked version of backing map persistence.
-        parsePB(BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in));
+        BucketCacheProtos.BucketCacheEntry cacheEntry =
+          BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in);
+        if (cacheEntry == null) {
+          throw new IOException(
+            "Failed to parse cache entry from persistence file: " + persistencePath);
+        }
+        parsePB(cacheEntry);
       } else if (Arrays.equals(pbuf, BucketProtoUtils.PB_MAGIC_V2)) {
         // The new persistence format of chunked persistence.
         LOG.info("Reading new chunked format of persistence.");
@@ -1754,6 +1768,13 @@ public class BucketCache implements BlockCache, HeapSize {
     // Read the first chunk that has all the details.
     BucketCacheProtos.BucketCacheEntry cacheEntry =
       BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in);
+
+    // HBASE-29857: Handle case where persistence file is empty or corrupted.
+    // parseDelimitedFrom() returns null when there's no data to read.
+    if (cacheEntry == null) {
+      throw new IOException(
+        "Failed to read cache entry from persistence file (possibly empty or corrupted)");
+    }
 
     fullyCachedFiles.clear();
     fullyCachedFiles.putAll(BucketProtoUtils.fromPB(cacheEntry.getCachedFilesMap()));
