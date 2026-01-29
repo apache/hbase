@@ -104,7 +104,7 @@ public class TestSimpleRegionNormalizer {
 
   @Test
   public void testNoNormalizationForMetaTable() {
-    TableName testTable = masterServices.getConnection().getMetaTableName();
+    TableName testTable = TableName.valueOf("hbase:meta");
     TableDescriptor testMetaTd = TableDescriptorBuilder.newBuilder(testTable).build();
     List<RegionInfo> RegionInfo = new ArrayList<>();
     Map<byte[], Integer> regionSizes = new HashMap<>();

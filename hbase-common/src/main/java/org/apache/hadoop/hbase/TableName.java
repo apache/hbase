@@ -71,7 +71,7 @@ public final class TableName implements Comparable<TableName> {
 
   /** The hbase:meta table's name. */
   @Deprecated
-  public static TableName META_TABLE_NAME =
+  public static final TableName META_TABLE_NAME =
     valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
 
   /**
