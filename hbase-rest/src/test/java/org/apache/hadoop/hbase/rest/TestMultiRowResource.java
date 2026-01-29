@@ -189,9 +189,9 @@ public class TestMultiRowResource {
     path.append("/");
     path.append(TABLE);
     path.append("/multiget/?row=");
-    path.append(encoder.encodeToString(ROW_1.getBytes("UTF-8")));
+    path.append(encoder.encodeToString(ROW_1.getBytes(StandardCharsets.UTF_8)));
     path.append("&row=");
-    path.append(encoder.encodeToString(ROW_2.getBytes("UTF-8")));
+    path.append(encoder.encodeToString(ROW_2.getBytes(StandardCharsets.UTF_8)));
     path.append("&e=b64"); // Specify encoding via query string
 
     Response response = client.get(path.toString(), Constants.MIMETYPE_JSON);
@@ -202,9 +202,9 @@ public class TestMultiRowResource {
     path.append("/");
     path.append(TABLE);
     path.append("/multiget/?row=");
-    path.append(encoder.encodeToString(ROW_1.getBytes("UTF-8")));
+    path.append(encoder.encodeToString(ROW_1.getBytes(StandardCharsets.UTF_8)));
     path.append("&row=");
-    path.append(encoder.encodeToString(ROW_2.getBytes("UTF-8")));
+    path.append(encoder.encodeToString(ROW_2.getBytes(StandardCharsets.UTF_8)));
 
     Header[] headers = new Header[] { new BasicHeader("Accept", Constants.MIMETYPE_JSON),
       new BasicHeader("Encoding", "b64") // Specify encoding via header
