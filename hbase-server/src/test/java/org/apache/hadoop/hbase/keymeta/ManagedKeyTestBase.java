@@ -41,8 +41,6 @@ public class ManagedKeyTestBase {
       TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY,
         getKeyProviderClass().getName());
       TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "true");
-      TEST_UTIL.getConfiguration().set("hbase.coprocessor.master.classes",
-        KeymetaServiceEndpoint.class.getName());
     }
 
     // Start the minicluster if needed
