@@ -173,6 +173,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>dieter</id>
+      <name>Dieter De Paepe</name>
+      <email>dieter@apache.org</email>
+      <timezone>+1</timezone>
+    </developer>
+    <developer>
       <id>dimaspivak</id>
       <name>Dima Spivak</name>
       <email>dimaspivak@apache.org</email>
