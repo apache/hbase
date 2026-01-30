@@ -24,6 +24,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.Arrays;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -33,6 +34,7 @@ import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.ClassRule;
+import org.junit.After;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -47,6 +49,14 @@ public class TestCompressionTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCompressionTest.class);
 
+  @After
+  public void tearDown() throws Exception {
+    java.lang.reflect.Field field = CompressionTest.class.getDeclaredField("compressionTestResults");
+    field.setAccessible(true);
+    Object[] results = (Object[]) field.get(null);
+    Arrays.fill(results, null);
+  }
+  
   @Test
   public void testExceptionCaching() {
     // This test will fail if you run the tests with LZO compression available.
