@@ -112,7 +112,7 @@ This finishes installation. We go on with the configuration.
 	<li>Test your java installation by changing directories to your Java folder <code>CD /usr/local/<em>&lt;jre name&gt;</em></code> and issueing the command <code>./bin/java -version</code>. This should output your version of the chosen JRE.</li>
 </ol>
 </section>
-<section>
+<section name="SSH">
 <title>SSH</title>
 <p style="text-align: justify; ">Configuring <strong>SSH </strong>is quite elaborate, but primarily a question of launching it by default as a<strong> Windows service</strong>.</p>
 
@@ -193,7 +193,7 @@ If all previous configurations are working properly, we just need some tinkering
 </ol>
 </section>
 </section>
-<section>
+<section name="Testing">
 <title>Testing</title>
 <p>
 This should conclude the installation and configuration of Apache HBase on Windows using Cygwin. So it's time <strong>to test it</strong>.
