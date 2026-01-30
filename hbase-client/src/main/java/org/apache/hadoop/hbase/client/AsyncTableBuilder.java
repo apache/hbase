@@ -138,13 +138,22 @@ public interface AsyncTableBuilder<C extends ScanResultConsumerBase> {
   AsyncTableBuilder<C> setStartLogErrorsCnt(int startLogErrorsCnt);
 
   /**
-   * Set a request attribute
+   * Sets a request attribute. Ignored if a factory is set via
+   * {@link #setRequestAttributesFactory(RequestAttributesFactory)}.
+   * @param key   the attribute key
+   * @param value the attribute value
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. Please use
+   *             {@link #setRequestAttributesFactory(RequestAttributesFactory)} instead.
    */
+  @Deprecated
   AsyncTableBuilder<C> setRequestAttribute(String key, byte[] value);
 
   /**
-   * Set a factory for creating request attributes per request. This will be called with any
-   * attributes set by {@link #setRequestAttribute(String, byte[])}.
+   * Sets the factory for creating request attributes. Use {@link FixedRequestAttributesFactory} for
+   * attributes that do not change, or implement {@link RequestAttributesFactory} for dynamic
+   * attributes.
+   * @param requestAttributesFactory the factory to use
+   * @return this builder
    */
   default AsyncTableBuilder<C>
     setRequestAttributesFactory(RequestAttributesFactory requestAttributesFactory) {

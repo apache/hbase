@@ -21,27 +21,22 @@ import java.util.Map;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A factory for creating request attributes. This is called each time a new call is started,
- * allowing for dynamic attributes based on the current context or existing attributes.
+ * Factory for creating request attributes. Called each time a client call is started, allowing
+ * dynamic attributes per call. Useful for propagating {@link ThreadLocal} context as request
+ * attributes.
  * <p>
- * The {@link #create} method is guaranteed to be called on the same thread that initiates the
- * client call (e.g., {@link AsyncTable#get}, {@link AsyncTable#put}, {@link AsyncTable#scan},
- * etc.).
+ * For a fixed set of attributes that does not change, use {@link FixedRequestAttributesFactory}.
+ * @see AsyncTableBuilder#setRequestAttributesFactory(RequestAttributesFactory)
  */
 @InterfaceAudience.Public
 public interface RequestAttributesFactory {
 
   /**
-   * A factory that returns the input attributes unchanged.
-   */
-  RequestAttributesFactory PASSTHROUGH = (requestAttributes) -> requestAttributes;
-
-  /**
-   * Creates a new map of request attributes based on the existing attributes for the table.
+   * Creates request attributes for a client call (e.g., {@link AsyncTable#get},
+   * {@link AsyncTable#put}, {@link AsyncTable#scan}).
    * <p>
-   * This method is guaranteed to be called on the same thread that initiates the client call.
-   * @param requestAttributes The existing attributes configured on the table
-   * @return The new map of request attributes. Must not be null.
+   * Guaranteed to be called on the same thread that initiates the client call.
+   * @return the request attributes, must not be null
    */
-  Map<String, byte[]> create(Map<String, byte[]> requestAttributes);
+  Map<String, byte[]> create();
 }
