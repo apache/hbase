@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.io;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
+//import org.apache.hadoop.hbase.metrics.impl.MetricsRegionServerSourceImpl;
+import org.junit.After;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -34,9 +36,25 @@ public class TestMetricsIO {
 
   public MetricsAssertHelper HELPER = CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
+  private MetricsIO metrics;
+
+ @After
+  public void tearDown() throws Exception {
+    if (metrics != null) {
+     
+      Class<?> metricsSystemClass = Class.forName("org.apache.hadoop.metrics2.lib.DefaultMetricsSystem");
+      java.lang.reflect.Method shutdownMethod = metricsSystemClass.getMethod("shutdown");
+      shutdownMethod.invoke(null);
+      
+      java.lang.reflect.Method initializeMethod = metricsSystemClass.getMethod("initialize", String.class);
+      initializeMethod.invoke(null, "test");
+    }
+  }
+
+
   @Test
   public void testMetrics() {
-    MetricsIO metrics = new MetricsIO(new MetricsIOWrapper() {
+     metrics = new MetricsIO(new MetricsIOWrapper() {
       @Override
       public long getChecksumFailures() { return 40; }
     });
