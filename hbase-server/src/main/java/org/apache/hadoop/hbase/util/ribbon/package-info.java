@@ -46,6 +46,8 @@
  * </ul>
  *
  * @see <a href="https://arxiv.org/abs/2103.02515">Ribbon Filter Paper</a>
+ * @see <a href="https://github.com/FastFilter/fastfilter_cpp">Reference implementation by the paper
+ *      authors (Apache 2.0 licensed)</a>
  */
 @InterfaceAudience.Private
 package org.apache.hadoop.hbase.util.ribbon;
