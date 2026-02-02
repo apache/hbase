@@ -96,6 +96,12 @@ jobs:
           cd "${{ github.workspace }}"
           bash src/dev-support/jenkins_precommit_github_yetus.sh
 
+      - name: Publish Job Summary
+        if: always()
+        run: |
+          cd "${{ github.workspace }}"
+          python3 src/dev-support/yetus_console_to_md.py yetus-general-check/output/console.txt >> $GITHUB_STEP_SUMMARY
+
       - name: Publish Test Results
         if: always()
         uses: actions/upload-artifact@v4
