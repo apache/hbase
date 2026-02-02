@@ -185,23 +185,32 @@ public final class BloomFilterFactory {
   public static BloomFilterWriter createGeneralBloomAtWrite(Configuration conf,
     CacheConfig cacheConf, BloomType bloomType, BloomFilterImpl bloomImpl, HFile.Writer writer) {
     if (!isGeneralBloomEnabled(conf)) {
-      LOG.trace("Bloom filters are disabled by configuration for " + writer.getPath()
-        + (conf == null ? " (configuration is null)" : ""));
+      LOG.trace("Bloom filters are disabled by configuration for {}", writer.getPath());
       return null;
     } else if (bloomType == BloomType.NONE) {
       LOG.trace("Bloom filter is turned off for the column family");
       return null;
     }
 
-    // Check if Ribbon filter is requested
-    if (bloomImpl == BloomFilterImpl.RIBBON) {
-      return createRibbonFilterAtWrite(conf, cacheConf, bloomType, writer);
-    }
+    return switch (bloomImpl) {
+      case RIBBON -> createRibbonFilterAtWrite(conf, cacheConf, bloomType, writer);
+      default -> createTraditionalBloomFilterAtWrite(conf, cacheConf, bloomType, writer);
+    };
+  }
 
+  /**
+   * Creates a new traditional Bloom filter at the time of HStoreFile writing.
+   * @param conf      Configuration
+   * @param cacheConf Cache configuration
+   * @param bloomType The bloom type (ROW, ROWCOL, etc.)
+   * @param writer    The HFile writer
+   * @return The new Bloom filter writer
+   */
+  private static BloomFilterWriter createTraditionalBloomFilterAtWrite(Configuration conf,
+    CacheConfig cacheConf, BloomType bloomType, HFile.Writer writer) {
     float err = (float) getAdjustedErrorRate(conf, bloomType);
     int maxFold = conf.getInt(IO_STOREFILE_BLOOM_MAX_FOLD, MAX_ALLOWED_FOLD_FACTOR);
 
-    // Do we support compound bloom filters?
     // In case of compound Bloom filters we ignore the maxKeys hint.
     CompoundBloomFilterWriter bloomWriter = new CompoundBloomFilterWriter(getBloomBlockSize(conf),
       err, Hash.getHashType(conf), maxFold, cacheConf.shouldCacheBloomsOnWrite(),
@@ -257,17 +266,25 @@ public final class BloomFilterFactory {
   public static BloomFilterWriter createDeleteBloomAtWrite(Configuration conf,
     CacheConfig cacheConf, BloomFilterImpl bloomImpl, HFile.Writer writer) {
     if (!isDeleteFamilyBloomEnabled(conf)) {
-      LOG.info("Delete Bloom filters are disabled by configuration for " + writer.getPath()
-        + (conf == null ? " (configuration is null)" : ""));
+      LOG.info("Delete Bloom filters are disabled by configuration for {}", writer.getPath());
       return null;
     }
 
-    // Use Ribbon filter if the implementation is Ribbon
-    if (bloomImpl == BloomFilterImpl.RIBBON) {
-      return createDeleteRibbonAtWrite(conf, cacheConf, writer);
-    }
+    return switch (bloomImpl) {
+      case RIBBON -> createDeleteRibbonAtWrite(conf, cacheConf, writer);
+      default -> createTraditionalDeleteBloomAtWrite(conf, cacheConf, writer);
+    };
+  }
 
-    // Use traditional Bloom filter
+  /**
+   * Creates a new traditional Delete Family Bloom filter at the time of HStoreFile writing.
+   * @param conf      Configuration
+   * @param cacheConf Cache configuration
+   * @param writer    The HFile writer
+   * @return The new Bloom filter writer
+   */
+  private static BloomFilterWriter createTraditionalDeleteBloomAtWrite(Configuration conf,
+    CacheConfig cacheConf, HFile.Writer writer) {
     float err = getErrorRate(conf);
     int maxFold = getMaxFold(conf);
 
