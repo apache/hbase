@@ -70,19 +70,6 @@ create 'mytable', {NAME => 'cf', BLOOMFILTER => 'ROWPREFIX_FIXED_LENGTH',
                    CONFIGURATION => {'RowPrefixBloomFilter.prefix_length' => '10'}}
 ```
 
-#### Global Configuration
-
-A global default can be set in `hbase-site.xml`:
-
-```xml
-<property>
-  <name>io.storefile.bloom.filter.impl</name>
-  <value>RIBBON</value>  <!-- or BLOOM (default) -->
-</property>
-```
-
-When both global and per-table settings exist, the per-table setting takes precedence.
-
 Ribbon Filter uses existing Bloom Filter settings as-is:
 
 - `io.storefile.bloom.error.rate`: Target false positive rate (default: 0.01)

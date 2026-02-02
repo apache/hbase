@@ -436,20 +436,6 @@ You can enable Ribbon Filter by setting `BLOOMFILTER_IMPL` to `RIBBON`:
 hbase> create 'mytable',{NAME => 'colfam1', BLOOMFILTER => 'ROW', BLOOMFILTER_IMPL => 'RIBBON'}
 ----
 
-===== Configuring Global Default
-
-A global default can be set in _hbase-site.xml_ (case insensitive):
-
-[source,xml]
-----
-<property>
-  <name>io.storefile.bloom.filter.impl</name>
-  <value>ribbon</value>
-</property>
-----
-
-When both global and per-table settings exist, the per-table setting takes precedence.
-
 Ribbon Filter uses existing Bloom Filter settings. See <<bloom.server.config>> for details.
 
 [[schema.cf.blocksize]]

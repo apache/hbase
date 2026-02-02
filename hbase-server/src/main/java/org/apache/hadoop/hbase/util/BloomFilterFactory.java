@@ -22,8 +22,6 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.BloomFilterMetrics;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilter;
@@ -76,12 +74,6 @@ public final class BloomFilterFactory {
    * data blocks.
    */
   public static final String IO_STOREFILE_BLOOM_BLOCK_SIZE = "io.storefile.bloom.block.size";
-
-  /**
-   * Default filter implementation to use. Can be "BLOOM" or "RIBBON" (case insensitive). This
-   * serves as the default when a column family does not explicitly specify a filter implementation.
-   */
-  public static final String IO_STOREFILE_BLOOM_FILTER_IMPL = "io.storefile.bloom.filter.impl";
 
   /** Maximum number of times a Bloom filter can be "folded" if oversized */
   private static final int MAX_ALLOWED_FOLD_FACTOR = 7;
@@ -147,31 +139,6 @@ public final class BloomFilterFactory {
   /** Returns the compound Bloom filter block size from the configuration */
   public static int getBloomBlockSize(Configuration conf) {
     return conf.getInt(IO_STOREFILE_BLOOM_BLOCK_SIZE, 128 * 1024);
-  }
-
-  /**
-   * Returns the filter implementation for a column family. If the column family has an explicitly
-   * set filter implementation, that value is used. Otherwise, falls back to the global
-   * configuration default. The value is case insensitive. Defaults to BLOOM if not specified.
-   * @param conf   the configuration
-   * @param family the column family descriptor (may be null)
-   * @return the filter implementation to use
-   */
-  public static BloomFilterImpl getBloomFilterImpl(Configuration conf,
-    ColumnFamilyDescriptor family) {
-    // Check family-level setting first
-    if (family != null) {
-      String impl = family.getValue(ColumnFamilyDescriptorBuilder.BLOOMFILTER_IMPL);
-      if (impl != null) {
-        return BloomFilterImpl.valueOf(impl.toUpperCase());
-      }
-    }
-    // Fall back to global configuration
-    String impl = conf.get(IO_STOREFILE_BLOOM_FILTER_IMPL);
-    if (impl == null) {
-      return BloomFilterImpl.BLOOM;
-    }
-    return BloomFilterImpl.valueOf(impl.toUpperCase());
   }
 
   /**
