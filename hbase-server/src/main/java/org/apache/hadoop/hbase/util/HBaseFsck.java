@@ -663,7 +663,7 @@ public class HBaseFsck extends Configured implements Closeable {
       String errorMsg = connection.getMetaTableName() + " table is not consistent. ";
       if (shouldFixAssignments()) {
         errorMsg += "HBCK will try fixing it. Rerun once " + connection.getMetaTableName()
-          + " is back " + "to consistent state.";
+          + " is back to consistent state.";
       } else {
         errorMsg += "Run HBCK with proper fix options to fix " + connection.getMetaTableName()
           + " inconsistency.";

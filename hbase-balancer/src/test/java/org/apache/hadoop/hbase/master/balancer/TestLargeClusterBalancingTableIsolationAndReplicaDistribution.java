@@ -74,7 +74,7 @@ public class TestLargeClusterBalancingTableIsolationAndReplicaDistribution {
     for (int i = 0; i < NUM_REGIONS; i++) {
       TableName tableName;
       if (i < 1) {
-        tableName = TableName.valueOf("hbase", "meta");
+        tableName = TableName.META_TABLE_NAME;
       } else if (i < 10) {
         tableName = SYSTEM_TABLE_NAME;
       } else {
@@ -120,7 +120,7 @@ public class TestLargeClusterBalancingTableIsolationAndReplicaDistribution {
    */
   private boolean isMetaTableIsolated(BalancerClusterState cluster) {
 
-    return isTableIsolated(cluster, TableName.valueOf("hbase", "meta"), "Meta");
+    return isTableIsolated(cluster, TableName.META_TABLE_NAME, "Meta");
   }
 
   /**

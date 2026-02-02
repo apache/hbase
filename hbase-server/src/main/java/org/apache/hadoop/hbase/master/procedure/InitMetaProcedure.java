@@ -69,7 +69,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
   public TableName getTableName() {
     // Always returns default "hbase:meta" for now
     // Future: will support replica-specific names (e.g., "hbase:meta_replica1")
-    return TableName.valueOf("hbase", "meta");
+    return TableName.META_TABLE_NAME;
   }
 
   @Override
@@ -107,8 +107,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
         case INIT_META_WRITE_FS_LAYOUT:
           Configuration conf = env.getMasterConfiguration();
           Path rootDir = CommonFSUtils.getRootDir(conf);
-          TableDescriptor td =
-            writeFsLayout(rootDir, env, env.getMasterServices().getMetaTableName());
+          TableDescriptor td = writeFsLayout(rootDir, env, env.getMetaTableName());
           env.getMasterServices().getTableDescriptors().update(td, true);
           setNextState(InitMetaState.INIT_META_ASSIGN_META);
           return Flow.HAS_MORE_STATE;

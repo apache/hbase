@@ -35,7 +35,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -271,9 +270,7 @@ class ZKConnectionRegistry implements ConnectionRegistry {
    */
   @Override
   public CompletableFuture<TableName> getMetaTableName() {
-    return tracedFuture(
-      () -> CompletableFuture
-        .completedFuture(TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta")),
+    return tracedFuture(() -> CompletableFuture.completedFuture(TableName.META_TABLE_NAME),
       "ZKConnectionRegistry.getMetaTableName");
   }
 

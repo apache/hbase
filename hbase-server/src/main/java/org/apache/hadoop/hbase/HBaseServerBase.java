@@ -700,7 +700,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   protected abstract boolean clusterMode();
 
   protected TableName getDefaultMetaTableName() {
-    return TableName.valueOf("hbase", "meta");
+    return TableName.META_TABLE_NAME;
   }
 
   @Override

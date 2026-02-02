@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -69,7 +70,7 @@ class ShortCircuitConnectionRegistry implements ConnectionRegistry {
   }
 
   @Override
-  public CompletableFuture<org.apache.hadoop.hbase.TableName> getMetaTableName() {
+  public CompletableFuture<TableName> getMetaTableName() {
     return CompletableFuture.completedFuture(endpoint.getMetaTableName());
   }
 

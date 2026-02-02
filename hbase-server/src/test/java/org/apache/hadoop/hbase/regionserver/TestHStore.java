@@ -89,7 +89,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -1996,9 +1995,7 @@ public class TestHStore {
   public void testInMemoryCompactionTypeWithLowerCase() throws IOException, InterruptedException {
     Configuration conf = HBaseConfiguration.create();
     conf.set("hbase.systemtables.compacting.memstore.type", "eager");
-    init(name.getMethodName(), conf,
-      TableDescriptorBuilder.newBuilder(
-        TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME, "meta".getBytes())),
+    init(name.getMethodName(), conf, TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME),
       ColumnFamilyDescriptorBuilder.newBuilder(family)
         .setInMemoryCompaction(MemoryCompactionPolicy.NONE).build());
     assertTrue(((MemStoreCompactor) ((CompactingMemStore) store.memstore).compactor).toString()

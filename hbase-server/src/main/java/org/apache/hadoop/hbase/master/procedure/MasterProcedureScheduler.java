@@ -562,7 +562,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   // ============================================================================
   private MetaQueue getMetaQueue() {
     // For now, hardcode default. Future: pass metaTableName via constructor from Master
-    TableName metaTableName = TableName.valueOf("hbase", "meta");
+    TableName metaTableName = TableName.META_TABLE_NAME;
     MetaQueue node = AvlTree.get(metaMap, metaTableName, META_QUEUE_KEY_COMPARATOR);
     if (node != null) {
       return node;
@@ -1082,7 +1082,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       }
       waitProcedure(lock, procedure);
       // TODO: Get dynamic name from MasterServices
-      logLockedResource(LockedResourceType.META, "hbase:meta");
+      logLockedResource(LockedResourceType.META, TableName.META_TABLE_NAME.getNameAsString());
       return true;
     } finally {
       schedUnlock();

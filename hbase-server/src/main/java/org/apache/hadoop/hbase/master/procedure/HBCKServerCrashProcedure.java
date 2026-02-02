@@ -102,16 +102,14 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
       MetaTableAccessor.scanMetaForTableRegions(env.getMasterServices().getConnection(), visitor,
         null);
     } catch (IOException ioe) {
-      LOG.warn("Failed scan of {} for 'Unknown Servers'",
-        env.getMasterServices().getConnection().getMetaTableName(), ioe);
+      LOG.warn("Failed scan of {} for 'Unknown Servers'", env.getMetaTableName(), ioe);
       return ris;
     }
     // create the server state node too
     env.getAssignmentManager().getRegionStates().createServer(getServerName());
     LOG.info("Found {} mentions of {} in {} of OPEN/OPENING Regions: {}",
-      visitor.getReassigns().size(), getServerName(),
-      env.getMasterServices().getConnection().getMetaTableName(), visitor.getReassigns().stream()
-        .map(RegionInfo::getEncodedName).collect(Collectors.joining(",")));
+      visitor.getReassigns().size(), getServerName(), env.getMetaTableName(), visitor.getReassigns()
+        .stream().map(RegionInfo::getEncodedName).collect(Collectors.joining(",")));
     return visitor.getReassigns();
   }
 

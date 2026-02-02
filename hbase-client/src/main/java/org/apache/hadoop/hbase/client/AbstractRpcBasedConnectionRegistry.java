@@ -34,7 +34,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -262,7 +261,7 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
         if (resp.hasTableName() && !resp.getTableName().isEmpty()) {
           return TableName.valueOf(resp.getTableName());
         } else {
-          return TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
+          return TableName.META_TABLE_NAME;
         }
       }), getClass().getSimpleName() + ".getMetaTableName");
   }

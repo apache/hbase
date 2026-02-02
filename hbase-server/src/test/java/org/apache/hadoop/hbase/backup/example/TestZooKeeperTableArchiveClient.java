@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -106,8 +107,8 @@ public class TestZooKeeperTableArchiveClient {
     }
 
     @Override
-    public CompletableFuture<org.apache.hadoop.hbase.TableName> getMetaTableName() {
-      return CompletableFuture.completedFuture(org.apache.hadoop.hbase.TableName.META_TABLE_NAME);
+    public CompletableFuture<TableName> getMetaTableName() {
+      return CompletableFuture.completedFuture(TableName.META_TABLE_NAME);
     }
   }
 

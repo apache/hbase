@@ -95,8 +95,9 @@ public final class TableName implements Comparable<TableName> {
    * both the default meta table and read replica meta tables.
    */
   public static boolean isMetaTableName(final TableName tn) {
-    if (tn == null) return false;
-    if (!tn.getNamespaceAsString().equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
+    if (
+      tn == null || !tn.getNamespaceAsString().equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)
+    ) {
       return false;
     }
     String qualifier = tn.getQualifierAsString();

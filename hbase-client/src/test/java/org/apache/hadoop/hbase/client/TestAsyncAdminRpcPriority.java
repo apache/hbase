@@ -144,7 +144,7 @@ public class TestAsyncAdminRpcPriority {
       any());
     User user = UserProvider.instantiate(CONF).getCurrent();
     conn = new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF, user), "test",
-      TableName.valueOf("hbase:meta"), null, user) {
+      TableName.META_TABLE_NAME, null, user) {
 
       @Override
       CompletableFuture<MasterService.Interface> getMasterStub() {

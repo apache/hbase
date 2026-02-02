@@ -196,7 +196,7 @@ public class TestReplicationSource {
       assertTrue(wef.filter(e) == e);
       // Test system WAL edit.
       e = new WAL.Entry(new WALKeyImpl(HConstants.EMPTY_BYTE_ARRAY,
-        org.apache.hadoop.hbase.TableName.valueOf("hbase:meta"), -1, -1, uuid), we);
+        org.apache.hadoop.hbase.TableName.META_TABLE_NAME, -1, -1, uuid), we);
       assertNull(wef.filter(e));
     } finally {
       rs.terminate("Done");

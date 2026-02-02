@@ -99,7 +99,7 @@ public class TestFallbackToUseReplay {
       return null;
     }).when(stub).replay(any(), any(), any());
     CONN = new AsyncClusterConnectionImpl(CONF, mock(ConnectionRegistry.class), "test",
-      TableName.valueOf("hbase:meta"), null, User.getCurrent()) {
+      TableName.META_TABLE_NAME, null, User.getCurrent()) {
 
       @Override
       AsyncRegionLocator getLocator() {

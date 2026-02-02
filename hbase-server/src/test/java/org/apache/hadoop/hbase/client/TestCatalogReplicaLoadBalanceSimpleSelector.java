@@ -78,7 +78,7 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
 
     registry = ConnectionRegistryFactory.create(TEST_UTIL.getConfiguration(), User.getCurrent());
     CONN = new AsyncConnectionImpl(conf, registry, registry.getClusterId().get(),
-      TableName.valueOf("hbase:meta"), null, User.getCurrent());
+      TableName.META_TABLE_NAME, null, User.getCurrent());
   }
 
   @AfterClass

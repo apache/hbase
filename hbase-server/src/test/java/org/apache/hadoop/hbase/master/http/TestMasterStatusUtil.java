@@ -136,8 +136,7 @@ public class TestMasterStatusUtil {
     Map<String, TableDescriptor> mockTables = new HashMap<>();
     mockTables.put("foo", TableDescriptorBuilder.newBuilder(TableName.valueOf("foo")).build());
     mockTables.put("bar", TableDescriptorBuilder.newBuilder(TableName.valueOf("bar")).build());
-    mockTables.put("meta",
-      TableDescriptorBuilder.newBuilder(TableName.valueOf("hbase", "meta")).build());
+    mockTables.put("meta", TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).build());
 
     TableDescriptors tableDescriptors = Mockito.mock(TableDescriptors.class);
     Mockito.doReturn(tableDescriptors).when(master).getTableDescriptors();

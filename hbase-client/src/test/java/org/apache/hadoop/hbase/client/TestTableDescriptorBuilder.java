@@ -59,7 +59,7 @@ public class TestTableDescriptorBuilder {
   @Test(expected = IOException.class)
   public void testAddCoprocessorTwice() throws IOException {
     String cpName = "a.b.c.d";
-    TableDescriptorBuilder.newBuilder(TableName.valueOf("hbase:meta")).setCoprocessor(cpName)
+    TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).setCoprocessor(cpName)
       .setCoprocessor(cpName).build();
   }
 
@@ -67,7 +67,7 @@ public class TestTableDescriptorBuilder {
   public void testPb() throws DeserializationException, IOException {
     final int v = 123;
     TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf("hbase:meta")).setMaxFileSize(v)
+      TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).setMaxFileSize(v)
         .setDurability(Durability.ASYNC_WAL).setReadOnly(true).setRegionReplication(2).build();
 
     byte[] bytes = TableDescriptorBuilder.toByteArray(htd);

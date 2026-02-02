@@ -793,7 +793,7 @@ public class CellComparatorImpl implements CellComparator {
       : CellComparatorImpl.COMPARATOR;
   }
 
-  private static boolean isMetaTable(byte[] tableName) {
-    return Bytes.startsWith(tableName, Bytes.toBytes("hbase:meta"));
+  static boolean isMetaTable(byte[] tableName) {
+    return Bytes.startsWith(tableName, TableName.META_TABLE_NAME.getName());
   }
 }

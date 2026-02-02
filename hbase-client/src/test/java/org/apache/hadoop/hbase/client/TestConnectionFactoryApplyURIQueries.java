@@ -61,7 +61,7 @@ public class TestConnectionFactoryApplyURIQueries {
       .when(() -> ConnectionRegistryFactory.create(any(), any(), any())).thenReturn(registry);
     when(registry.getClusterId()).thenReturn(CompletableFuture.completedFuture("cluster"));
     when(registry.getMetaTableName())
-      .thenReturn(CompletableFuture.completedFuture(TableName.valueOf("hbase:meta")));
+      .thenReturn(CompletableFuture.completedFuture(TableName.META_TABLE_NAME));
   }
 
   @After

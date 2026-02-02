@@ -210,7 +210,7 @@ public class TestAsyncTableTracing {
     }).when(stub).get(any(HBaseRpcController.class), any(GetRequest.class), any());
     final User user = UserProvider.instantiate(CONF).getCurrent();
     conn = new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF, user), "test",
-      TableName.valueOf("hbase:meta"), null, user) {
+      TableName.META_TABLE_NAME, null, user) {
 
       @Override
       AsyncRegionLocator getLocator() {

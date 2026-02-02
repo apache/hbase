@@ -110,8 +110,8 @@ public class DisableTableProcedure extends AbstractStateMachineTableProcedure<Di
             env.getMasterServices().getTableDescriptors().get(tableName).hasGlobalReplicationScope()
           ) {
             MasterFileSystem fs = env.getMasterFileSystem();
-            try (BufferedMutator mutator = env.getMasterServices().getConnection()
-              .getBufferedMutator(env.getMasterServices().getConnection().getMetaTableName())) {
+            try (BufferedMutator mutator =
+              env.getMasterServices().getConnection().getBufferedMutator(env.getMetaTableName())) {
               for (RegionInfo region : env.getAssignmentManager().getRegionStates()
                 .getRegionsOfTable(tableName)) {
                 long maxSequenceId = WALSplitUtil.getMaxRegionSequenceId(
@@ -230,7 +230,7 @@ public class DisableTableProcedure extends AbstractStateMachineTableProcedure<Di
    */
   private boolean prepareDisable(final MasterProcedureEnv env) throws IOException {
     boolean canTableBeDisabled = true;
-    if (tableName.equals(env.getMasterServices().getConnection().getMetaTableName())) {
+    if (tableName.equals(env.getMetaTableName())) {
       setFailure("master-disable-table",
         new ConstraintException("Cannot disable " + this.tableName));
       canTableBeDisabled = false;

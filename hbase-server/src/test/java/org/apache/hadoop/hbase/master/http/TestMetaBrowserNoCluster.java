@@ -61,7 +61,7 @@ public class TestMetaBrowserNoCluster {
     final HttpServletRequest request = new MockRequestBuilder().build();
     final MetaBrowser metaBrowser = new MetaBrowser(connection, request);
 
-    assertEquals("hbase:meta", metaBrowser.getName());
+    assertEquals(TableName.META_TABLE_NAME.getNameAsString(), metaBrowser.getName());
     assertNull(metaBrowser.getScanLimit());
     assertNull(metaBrowser.getScanRegionState());
     assertNull(metaBrowser.getScanStart());

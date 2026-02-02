@@ -85,8 +85,7 @@ public class TestAsyncRegionLocatorTracing {
 
   @Before
   public void setUp() throws IOException {
-    RegionInfo metaRegionInfo =
-      RegionInfoBuilder.newBuilder(TableName.valueOf("hbase:meta")).build();
+    RegionInfo metaRegionInfo = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build();
     locs = new RegionLocations(
       new HRegionLocation(metaRegionInfo,
         ServerName.valueOf("127.0.0.1", 12345, EnvironmentEdgeManager.currentTime())),
@@ -101,7 +100,7 @@ public class TestAsyncRegionLocatorTracing {
       public CompletableFuture<RegionLocations> getMetaRegionLocations() {
         return CompletableFuture.completedFuture(locs);
       }
-    }, "test", TableName.valueOf("hbase:meta"), null, user);
+    }, "test", TableName.META_TABLE_NAME, null, user);
   }
 
   @After
