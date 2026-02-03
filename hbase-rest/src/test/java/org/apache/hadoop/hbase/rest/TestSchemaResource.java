@@ -225,7 +225,7 @@ public class TestSchemaResource {
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     model = new TableSchemaModel();
-    model.getObjectFromMessage(response.getBody());
+    model.getObjectFromMessage(response.getStream());
     testTableSchemaModel.checkModel(model, TABLE2);
 
     // retrieve the schema and validate it with alternate pbuf type
@@ -233,7 +233,7 @@ public class TestSchemaResource {
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF_IETF, response.getHeader("content-type"));
     model = new TableSchemaModel();
-    model.getObjectFromMessage(response.getBody());
+    model.getObjectFromMessage(response.getStream());
     testTableSchemaModel.checkModel(model, TABLE2);
 
     if (csrfEnabled) {

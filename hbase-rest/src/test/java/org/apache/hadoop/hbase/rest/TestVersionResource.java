@@ -152,13 +152,13 @@ public class TestVersionResource {
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     VersionModel model = new VersionModel();
-    model.getObjectFromMessage(response.getBody());
+    model.getObjectFromMessage(response.getStream());
     validate(model);
     response = client.get("/version", Constants.MIMETYPE_PROTOBUF_IETF);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF_IETF, response.getHeader("content-type"));
     model = new VersionModel();
-    model.getObjectFromMessage(response.getBody());
+    model.getObjectFromMessage(response.getStream());
     validate(model);
   }
 

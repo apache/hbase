@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.rest.client;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -37,6 +36,9 @@ import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.http.ProtocolVersion;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.message.BasicStatusLine;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -64,11 +66,11 @@ public class TestRemoteAdminRetries {
   @Before
   public void setup() throws Exception {
     client = mock(Client.class);
-    Response response = new Response(509);
-    when(client.get(anyString(), anyString())).thenReturn(response);
-    when(client.delete(anyString())).thenReturn(response);
-    when(client.put(anyString(), anyString(), any())).thenReturn(response);
-    when(client.post(anyString(), anyString(), any())).thenReturn(response);
+    CloseableHttpResponse response = mock(CloseableHttpResponse.class);
+    when(response.getStatusLine())
+      .thenReturn(new BasicStatusLine(new ProtocolVersion("Http", 1, 0), 509, "test"));
+
+    when(client.execute(any(), any())).thenReturn(response);
     Configuration configuration = TEST_UTIL.getConfiguration();
 
     configuration.setInt("hbase.rest.client.max.retries", RETRIES);
@@ -126,7 +128,7 @@ public class TestRemoteAdminRetries {
           .createTable(TableDescriptorBuilder.newBuilder(TableName.valueOf("TestTable")).build());
       }
     });
-    verify(client, times(RETRIES)).put(anyString(), anyString(), any());
+    verify(client, times(RETRIES)).execute(any(), any());
   }
 
   @Test
@@ -137,7 +139,7 @@ public class TestRemoteAdminRetries {
         remoteAdmin.deleteTable("TestTable");
       }
     });
-    verify(client, times(RETRIES)).delete(anyString());
+    verify(client, times(RETRIES)).execute(any(), any());
   }
 
   @Test
@@ -152,7 +154,7 @@ public class TestRemoteAdminRetries {
 
   private void testTimedOutGetCall(CallExecutor callExecutor) throws Exception {
     testTimedOutCall(callExecutor);
-    verify(client, times(RETRIES)).get(anyString(), anyString());
+    verify(client, times(RETRIES)).execute(any(), any());
   }
 
   private void testTimedOutCall(CallExecutor callExecutor) throws Exception {
