@@ -49,7 +49,6 @@ public class TestReadOnlyControllerRegionServerObserver {
     HBaseClassTestRule.forClass(TestReadOnlyControllerRegionServerObserver.class);
 
   RegionServerReadOnlyController regionServerReadOnlyController;
-  HBaseConfiguration readOnlyConf;
 
   // Region Server Coprocessor mocking variables
   ObserverContext<RegionServerCoprocessorEnvironment> ctx;
@@ -59,8 +58,6 @@ public class TestReadOnlyControllerRegionServerObserver {
   @Before
   public void setup() throws Exception {
     regionServerReadOnlyController = new RegionServerReadOnlyController();
-    readOnlyConf = new HBaseConfiguration();
-    readOnlyConf.setBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
 
     // mocking variables initialization
     ctx = mock(ObserverContext.class);
@@ -79,7 +76,7 @@ public class TestReadOnlyControllerRegionServerObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreRollWALWriterRequestReadOnlyException() throws IOException {
-    regionServerReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionServerReadOnlyController.setReadOnlyEnabled(true);
     regionServerReadOnlyController.preRollWALWriterRequest(ctx);
   }
 
@@ -90,7 +87,7 @@ public class TestReadOnlyControllerRegionServerObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreReplicationSinkBatchMutateReadOnlyException() throws IOException {
-    regionServerReadOnlyController.onConfigurationChange(readOnlyConf);
+regionServerReadOnlyController.setReadOnlyEnabled(true);
     regionServerReadOnlyController.preReplicationSinkBatchMutate(ctx, walEntry, mutation);
   }
 
@@ -101,7 +98,7 @@ public class TestReadOnlyControllerRegionServerObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreReplicateLogEntriesReadOnlyException() throws IOException {
-    regionServerReadOnlyController.onConfigurationChange(readOnlyConf);
+regionServerReadOnlyController.setReadOnlyEnabled(true);
     regionServerReadOnlyController.preReplicateLogEntries(ctx);
   }
 

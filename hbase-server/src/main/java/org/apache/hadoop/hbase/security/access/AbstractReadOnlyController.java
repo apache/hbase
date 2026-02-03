@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public abstract class AbstractReadOnlyController implements ConfigurationObserver, Coprocessor {
+public abstract class AbstractReadOnlyController implements Coprocessor {
   protected volatile boolean globalReadOnlyEnabled;
   private MasterServices masterServices;
   private static final Logger LOG = LoggerFactory.getLogger(AbstractReadOnlyController.class);
@@ -45,6 +45,18 @@ public abstract class AbstractReadOnlyController implements ConfigurationObserve
   protected void internalReadOnlyGuard() throws DoNotRetryIOException {
     if (this.globalReadOnlyEnabled) {
       throw new DoNotRetryIOException("Operation not allowed in Read-Only Mode");
+    }
+  }
+
+  public void setReadOnlyEnabled(boolean readOnlyEnabledFromConfig) {
+    if (this.globalReadOnlyEnabled != readOnlyEnabledFromConfig) {
+      this.globalReadOnlyEnabled = readOnlyEnabledFromConfig;
+      LOG.info("Updated {} readOnlyEnabled={}", this.getClass().getName(), readOnlyEnabledFromConfig);
+      if (this.masterServices != null) {
+        manageActiveClusterIdFile(readOnlyEnabledFromConfig);
+      } else {
+        LOG.debug("Global R/O flag changed, but not running on master");
+      }
     }
   }
 
@@ -58,9 +70,7 @@ public abstract class AbstractReadOnlyController implements ConfigurationObserve
         + "File system operations for read-only state will not work.");
     }
 
-    this.globalReadOnlyEnabled =
-      env.getConfiguration().getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+    setReadOnlyEnabled(env.getConfiguration().getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT));
   }
 
   @Override
@@ -98,22 +108,4 @@ public abstract class AbstractReadOnlyController implements ConfigurationObserve
         + "Flag will be updated, but file system state may be inconsistent.", e);
     }
   }
-
-  @Override
-  public void onConfigurationChange(Configuration conf) {
-    boolean maybeUpdatedConfValue = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
-    if (this.globalReadOnlyEnabled != maybeUpdatedConfValue) {
-      if (this.masterServices != null) {
-        manageActiveClusterIdFile(maybeUpdatedConfValue);
-      } else {
-        LOG.debug("Global R/O flag changed, but not running on master");
-      }
-
-      this.globalReadOnlyEnabled = maybeUpdatedConfValue;
-      LOG.info("Config {} has been dynamically changed to {}.",
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, this.globalReadOnlyEnabled);
-    }
-  }
-
 }

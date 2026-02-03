@@ -167,6 +167,10 @@ import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationObserver;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.BulkLoadReadOnlyController;
+import org.apache.hadoop.hbase.security.access.EndpointReadOnlyController;
+import org.apache.hadoop.hbase.security.access.MasterReadOnlyController;
+import org.apache.hadoop.hbase.security.access.RegionReadOnlyController;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.trace.TraceUtil;
@@ -885,6 +889,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       : this.htableDescriptor.getDurability();
 
     decorateRegionConfiguration(conf);
+    setReadOnlyConfigurations(this.conf);
     if (rsServices != null) {
       this.rsAccounting = this.rsServices.getRegionServerAccounting();
       // don't initialize coprocessors if not running within a regionserver
@@ -1289,6 +1294,50 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (getWalFileSystem().exists(getWALRegionDir())) {
       WALSplitUtil.writeRegionSequenceIdFile(getWalFileSystem(), getWALRegionDir(),
         mvcc.getReadPoint());
+    }
+  }
+
+  private void setReadOnlyConfigurations(Configuration conf) {
+    boolean readOnlyMode = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+
+    // Update the read only mode in region baseConf and conf object, so that when region is created/reopened, it can pick up the correct read only mode.
+    this.baseConf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyMode);
+    this.conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyMode);
+
+    // If readonly mode is enabled then we need to register the coprocessor for Region
+    if (readOnlyMode) {
+      String[] regionCoprocs = conf.getStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
+      final int length = null == regionCoprocs ? 0 : regionCoprocs.length;
+      String[] updatedCoprocs = new String[length + 3];
+      if (length > 0) {
+        System.arraycopy(regionCoprocs, 0, updatedCoprocs, 0, regionCoprocs.length);
+      }
+      updatedCoprocs[length] = RegionReadOnlyController.class.getName();
+      updatedCoprocs[length + 1] = BulkLoadReadOnlyController.class.getName();
+      updatedCoprocs[length + 2] = EndpointReadOnlyController.class.getName();
+      conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, updatedCoprocs);
+    }
+  }
+
+  private void updateRegionReadOnlyMode(Configuration conf) {
+    if (coprocessorHost == null) {
+      return;
+    }
+
+    final boolean readOnlyMode = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+    RegionReadOnlyController regionReadOnlyController = (RegionReadOnlyController) coprocessorHost.findCoprocessor(RegionReadOnlyController.class.getName());
+    BulkLoadReadOnlyController bulkLoadReadOnlyController = (BulkLoadReadOnlyController) coprocessorHost.findCoprocessor(BulkLoadReadOnlyController.class.getName());
+    EndpointReadOnlyController endpointReadOnlyController = (EndpointReadOnlyController) coprocessorHost.findCoprocessor(EndpointReadOnlyController.class.getName());
+    if (regionReadOnlyController != null) {
+      regionReadOnlyController.setReadOnlyEnabled(readOnlyMode);
+    }
+    if (bulkLoadReadOnlyController != null) {
+      bulkLoadReadOnlyController.setReadOnlyEnabled(readOnlyMode);
+    }
+    if (endpointReadOnlyController != null) {
+      endpointReadOnlyController.setReadOnlyEnabled(readOnlyMode);
     }
   }
 
@@ -8814,6 +8863,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public void onConfigurationChange(Configuration conf) {
     this.storeHotnessProtector.update(conf);
+    setReadOnlyConfigurations(conf);
+
     // update coprocessorHost if the configuration has changed.
     if (
       CoprocessorConfigurationUtil.checkConfigurationChange(getReadOnlyConfiguration(), conf,
@@ -8824,6 +8875,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       decorateRegionConfiguration(conf);
       this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
     }
+
+    // Update coprocessor's local variable for readonly mode after it is loaded with new configuration.
+    updateRegionReadOnlyMode(conf);
   }
 
   /**

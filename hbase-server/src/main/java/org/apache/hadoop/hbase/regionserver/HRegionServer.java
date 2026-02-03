@@ -158,6 +158,8 @@ import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.RegionReadOnlyController;
+import org.apache.hadoop.hbase.security.access.RegionServerReadOnlyController;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
@@ -825,6 +827,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     try {
       if (!isStopped() && !isAborted()) {
         installShutdownHook();
+
+        setReadOnlyConfigurations(this.conf);
+
         // Initialize the RegionServerCoprocessorHost now that our ephemeral
         // node was created, in case any coprocessors want to use ZooKeeper
         this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
@@ -1518,6 +1523,37 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   private void deleteMyEphemeralNode() throws KeeperException {
     ZKUtil.deleteNode(this.zooKeeper, getMyEphemeralNodePath());
+  }
+
+  private void setReadOnlyConfigurations(Configuration conf) {
+    boolean readOnlyMode = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+
+    // Update the read only mode in regionserver conf object, so that when region server is created, it can pick up the correct read only mode.
+    this.conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyMode);
+
+    // If readonly mode is enabled then we need to register the coprocessor for RegionServer
+    if (readOnlyMode) {
+      String[] rsCoprocs = conf.getStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
+      final int length = null == rsCoprocs ? 0 : rsCoprocs.length;
+      String[] updatedCoprocs = new String[length + 1];
+      if (length > 0) {
+        System.arraycopy(rsCoprocs, 0, updatedCoprocs, 0, rsCoprocs.length);
+      }
+      updatedCoprocs[length] = RegionServerReadOnlyController.class.getName();
+      conf.setStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, updatedCoprocs);
+    }
+  }
+
+  private void updateRegionServerReadOnlyMode(Configuration conf) {
+    if (rsHost == null) {
+      return;
+    }
+
+    RegionServerReadOnlyController regionServerReadOnlyController = (RegionServerReadOnlyController) rsHost.findCoprocessor(RegionServerReadOnlyController.class.getName());
+    if (regionServerReadOnlyController != null) {
+      regionServerReadOnlyController.setReadOnlyEnabled(conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT));
+    }
   }
 
   @Override
@@ -3480,6 +3516,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       LOG.warn("Failed to initialize SuperUsers on reloading of the configuration");
     }
 
+    setReadOnlyConfigurations(newConf);
+
     // update region server coprocessor if the configuration has changed.
     if (
       CoprocessorConfigurationUtil.checkConfigurationChange(getConfiguration(), newConf,
@@ -3488,6 +3526,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       LOG.info("Update region server coprocessors because the configuration has changed");
       this.rsHost = new RegionServerCoprocessorHost(this, newConf);
     }
+
+    // Update coprocessor's local variable for readonly mode after it is loaded with new configuration.
+    updateRegionServerReadOnlyMode(newConf);
   }
 
   @Override

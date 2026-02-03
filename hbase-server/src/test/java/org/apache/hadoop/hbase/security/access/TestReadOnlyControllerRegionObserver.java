@@ -77,7 +77,6 @@ public class TestReadOnlyControllerRegionObserver {
     HBaseClassTestRule.forClass(TestReadOnlyControllerRegionObserver.class);
 
   RegionReadOnlyController regionReadOnlyController;
-  HBaseConfiguration readOnlyConf;
 
   // Region Coprocessor mocking variables
   ObserverContext<RegionCoprocessorEnvironment> c, ctx;
@@ -117,8 +116,6 @@ public class TestReadOnlyControllerRegionObserver {
   @Before
   public void setup() throws Exception {
     regionReadOnlyController = new RegionReadOnlyController();
-    readOnlyConf = new HBaseConfiguration();
-    readOnlyConf.setBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
 
     // mocking variables initialization
     c = mock(ObserverContext.class);
@@ -183,7 +180,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreFlushV1ReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preFlush(c, flushLifeCycleTracker);
   }
 
@@ -194,7 +191,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreFlushV1ReadOnlyMetaNoException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     mockOperationForMetaTable();
     regionReadOnlyController.preFlush(c, flushLifeCycleTracker);
   }
@@ -207,7 +204,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreFlushV2ReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preFlush(c, store, scanner, flushLifeCycleTracker);
   }
 
@@ -218,7 +215,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreFlushV2ReadOnlyMetaNoException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     mockOperationForMetaTable();
     regionReadOnlyController.preFlush(c, store, scanner, flushLifeCycleTracker);
   }
@@ -231,7 +228,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreFlushScannerOpenReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
   }
 
@@ -242,7 +239,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreFlushScannerOpenReadOnlyMetaNoException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     mockOperationForMetaTable();
     regionReadOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
   }
@@ -255,7 +252,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreMemStoreCompactionReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preMemStoreCompaction(c, store);
   }
 
@@ -266,7 +263,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreMemStoreCompactionCompactScannerOpenReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preMemStoreCompactionCompactScannerOpen(c, store, options);
   }
 
@@ -277,7 +274,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreMemStoreCompactionCompactReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preMemStoreCompactionCompact(c, store, scanner);
   }
 
@@ -288,7 +285,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCompactSelectionReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preCompactSelection(c, store, candidates, compactionLifeCycleTracker);
   }
 
@@ -299,7 +296,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreCompactSelectionReadOnlyMetaNoException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     mockOperationForMetaTable();
     regionReadOnlyController.preCompactSelection(c, store, candidates, compactionLifeCycleTracker);
   }
@@ -312,7 +309,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCompactScannerOpenReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preCompactScannerOpen(c, store, scanType, options,
       compactionLifeCycleTracker, compactionRequest);
   }
@@ -325,7 +322,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreCompactScannerOpenReadOnlyMetaNoException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     mockOperationForMetaTable();
     regionReadOnlyController.preCompactScannerOpen(c, store, scanType, options,
       compactionLifeCycleTracker, compactionRequest);
@@ -340,7 +337,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCompactReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preCompact(c, store, scanner, scanType, compactionLifeCycleTracker,
       compactionRequest);
   }
@@ -353,7 +350,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreCompactReadOnlyMetaNoException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     mockOperationForMetaTable();
     regionReadOnlyController.preCompact(c, store, scanner, scanType, compactionLifeCycleTracker,
       compactionRequest);
@@ -368,7 +365,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPrePutV1ReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.prePut(c, put, edit);
   }
 
@@ -379,7 +376,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPrePutV1ReadOnlyMetaNoException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     mockOperationForMetaTable();
     regionReadOnlyController.prePut(c, put, edit);
   }
@@ -392,7 +389,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPrePutV2ReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.prePut(c, put, edit, durability);
   }
 
@@ -403,7 +400,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPrePutV2ReadOnlyMetaNoException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     mockOperationForMetaTable();
     regionReadOnlyController.prePut(c, put, edit, durability);
   }
@@ -416,7 +413,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreDeleteV1ReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preDelete(c, delete, edit);
   }
 
@@ -427,7 +424,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreDeleteV1ReadOnlyMetaNoException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     mockOperationForMetaTable();
     regionReadOnlyController.preDelete(c, delete, edit);
   }
@@ -440,7 +437,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreDeleteV2ReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preDelete(c, delete, edit, durability);
   }
 
@@ -451,7 +448,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreDeleteV2ReadOnlyMetaNoException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     mockOperationForMetaTable();
     regionReadOnlyController.preDelete(c, delete, edit, durability);
   }
@@ -464,7 +461,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreBatchMutateReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preBatchMutate(c, miniBatchOp);
   }
 
@@ -475,7 +472,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreBatchMutateReadOnlyMetaNoException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     mockOperationForMetaTable();
     regionReadOnlyController.preBatchMutate(c, miniBatchOp);
   }
@@ -488,7 +485,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndPutV1ReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preCheckAndPut(c, row, family, qualifier, op, comparator, put, result);
   }
 
@@ -499,7 +496,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreCheckAndPutV1ReadOnlyMetaNoException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     mockOperationForMetaTable();
     regionReadOnlyController.preCheckAndPut(c, row, family, qualifier, op, comparator, put, result);
   }
@@ -512,7 +509,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndPutV2ReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preCheckAndPut(c, row, filter, put, result);
   }
 
@@ -523,7 +520,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreCheckAndPutV2ReadOnlyMetaNoException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     mockOperationForMetaTable();
     regionReadOnlyController.preCheckAndPut(c, row, filter, put, result);
   }
@@ -536,7 +533,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndPutAfterRowLockV1ReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, family, qualifier, op, comparator,
       put, result);
   }
@@ -549,7 +546,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreCheckAndPutAfterRowLockV1ReadOnlyMetaNoException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     mockOperationForMetaTable();
     regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, family, qualifier, op, comparator,
       put, result);
@@ -564,7 +561,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndPutAfterRowLockV2ReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
   }
 
@@ -575,7 +572,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreCheckAndPutAfterRowLockV2ReadOnlyMetaNoException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     mockOperationForMetaTable();
     regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
   }
@@ -588,7 +585,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndDeleteV1ReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete,
       result);
   }
@@ -601,7 +598,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreCheckAndDeleteV1ReadOnlyMetaNoException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     mockOperationForMetaTable();
     regionReadOnlyController.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete,
       result);
@@ -616,7 +613,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndDeleteV2ReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preCheckAndDelete(c, row, filter, delete, result);
   }
 
@@ -627,7 +624,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreCheckAndDeleteV2ReadOnlyMetaNoException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     mockOperationForMetaTable();
     regionReadOnlyController.preCheckAndDelete(c, row, filter, delete, result);
   }
@@ -640,7 +637,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndDeleteAfterRowLockV1ReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op,
       comparator, delete, result);
   }
@@ -653,7 +650,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreCheckAndDeleteAfterRowLockV1ReadOnlyMetaNoException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     mockOperationForMetaTable();
     regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op,
       comparator, delete, result);
@@ -668,7 +665,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndDeleteAfterRowLockV2ReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
   }
 
@@ -679,7 +676,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreCheckAndDeleteAfterRowLockV2ReadOnlyMetaNoException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     mockOperationForMetaTable();
     regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
   }
@@ -692,7 +689,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndMutateReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preCheckAndMutate(c, checkAndMutate, checkAndMutateResult);
   }
 
@@ -703,7 +700,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndMutateAfterRowLockReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preCheckAndMutateAfterRowLock(c, checkAndMutate, checkAndMutateResult);
   }
 
@@ -714,7 +711,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreAppendV1ReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preAppend(c, append);
   }
 
@@ -725,7 +722,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreAppendV2ReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preAppend(c, append, edit);
   }
 
@@ -736,7 +733,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreAppendAfterRowLockReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preAppendAfterRowLock(c, append);
   }
 
@@ -747,7 +744,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreIncrementV1ReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preIncrement(c, increment);
   }
 
@@ -758,7 +755,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreIncrementV2ReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preIncrement(c, increment, edit);
   }
 
@@ -769,7 +766,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreIncrementAfterRowLockReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preIncrementAfterRowLock(c, increment);
   }
 
@@ -780,7 +777,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreReplayWALsReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preReplayWALs(ctx, info, edits);
   }
 
@@ -791,7 +788,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreBulkLoadHFileReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preBulkLoadHFile(ctx, familyPaths);
   }
 
@@ -802,7 +799,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCommitStoreFileReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preCommitStoreFile(ctx, family, pairs);
   }
 
@@ -813,7 +810,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreWALAppendReadOnlyException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     regionReadOnlyController.preWALAppend(ctx, key, edit);
   }
 
@@ -824,7 +821,7 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test
   public void testPreWALAppendReadOnlyMetaNoException() throws IOException {
-    regionReadOnlyController.onConfigurationChange(readOnlyConf);
+    regionReadOnlyController.setReadOnlyEnabled(true);
     when(key.getTableName()).thenReturn(TableName.META_TABLE_NAME);
     regionReadOnlyController.preWALAppend(ctx, key, edit);
   }
