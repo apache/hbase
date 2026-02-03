@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.io.crypto.tls.X509TestContext;
 import org.apache.hadoop.hbase.io.crypto.tls.X509TestContextProvider;
 import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -53,7 +53,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.provider.Arguments;
 
 @Tag(RPCTests.TAG)
-@Tag(MediumTests.TAG)
+@Tag(LargeTests.TAG)
 @HBaseParameterizedTestTemplate(name = "{index}: rpcServerImpl={0}, caKeyType={1},"
   + " certKeyType={2}, keyPassword={3}, acceptPlainText={4}, clientTlsEnabled={5}")
 public class TestNettyTlsIPC extends AbstractTestIPC {

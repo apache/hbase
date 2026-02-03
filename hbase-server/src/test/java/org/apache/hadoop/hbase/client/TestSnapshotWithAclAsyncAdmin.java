@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Category({ ClientTests.class, LargeTests.class })
 public class TestSnapshotWithAclAsyncAdmin extends SnapshotWithAclTestBase {
 
   @ClassRule

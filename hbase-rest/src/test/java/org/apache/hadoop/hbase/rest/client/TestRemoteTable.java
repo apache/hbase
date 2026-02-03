@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.rest.HBaseRESTTestingUtility;
 import org.apache.hadoop.hbase.rest.RESTServlet;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -59,7 +59,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 @Tag(RestTests.TAG)
-@Tag(MediumTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRemoteTable {
 
   // Verify that invalid URL characters and arbitrary bytes are escaped when
