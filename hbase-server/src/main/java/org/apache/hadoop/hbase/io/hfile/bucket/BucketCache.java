@@ -1607,7 +1607,13 @@ public class BucketCache implements BlockCache, HeapSize {
       if (ProtobufMagic.isPBMagicPrefix(pbuf)) {
         LOG.info("Reading old format of persistence.");
         // The old non-chunked version of backing map persistence.
-        parsePB(BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in));
+        BucketCacheProtos.BucketCacheEntry cacheEntry =
+          BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in);
+        if (cacheEntry == null) {
+          throw new IOException(
+            "Failed to parse cache entry from persistence file: " + persistencePath);
+        }
+        parsePB(cacheEntry);
       } else if (Arrays.equals(pbuf, BucketProtoUtils.PB_MAGIC_V2)) {
         // The new persistence format of chunked persistence.
         LOG.info("Reading new chunked format of persistence.");
@@ -1747,6 +1753,13 @@ public class BucketCache implements BlockCache, HeapSize {
     // Read the first chunk that has all the details.
     BucketCacheProtos.BucketCacheEntry cacheEntry =
       BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in);
+
+    // HBASE-29857: Handle case where persistence file is empty.
+    // parseDelimitedFrom() returns null when there's no data to read.
+    // Note: Corrupted files would throw InvalidProtocolBufferException (subclass of IOException).
+    if (cacheEntry == null) {
+      throw new IOException("Failed to read cache entry from persistence file (file is empty)");
+    }
 
     fullyCachedFiles.clear();
     fullyCachedFiles.putAll(BucketProtoUtils.fromPB(cacheEntry.getCachedFilesMap()));
