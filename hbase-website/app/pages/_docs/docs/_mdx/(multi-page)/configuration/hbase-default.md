@@ -10,7 +10,7 @@ description: "Complete reference of all HBase configuration properties with desc
 
 #### `hbase.rootdir` [!toc]
 
-**Description:** The directory shared by region servers and into which HBase persists.  The URL should be 'fully-qualified' to include the filesystem scheme.  For example, to specify the HDFS directory '/hbase' where the HDFS instance's namenode is running at namenode.example.org on port 9000, set this value to: hdfs://namenode.example.org:9000/hbase.  By default, we write to whatever ${hbase.tmp.dir} is set too -- usually /tmp -- so change this configuration or else all data will be lost on machine restart.  
+**Description:** The directory shared by region servers and into which HBase persists.  The URL should be 'fully-qualified' to include the filesystem scheme.  For example, to specify the HDFS directory '/hbase' where the HDFS instance's namenode is running at namenode.example.org on port 9000, set this value to: hdfs://namenode.example.org:9000/hbase.  By default, we write to whatever \${hbase.tmp.dir} is set too -- usually /tmp -- so change this configuration or else all data will be lost on machine restart.  
 **Default:** `${hbase.tmp.dir}/hbase`
 
 #### `hbase.cluster.distributed` [!toc]

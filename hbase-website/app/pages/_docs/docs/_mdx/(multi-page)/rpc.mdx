@@ -84,18 +84,18 @@ The CellBlock is optionally used ferrying the bulk of the RPC data: i.e. Cells/K
 
 #### Request Parts
 
-**`<Total Length>`**  
+`<Total Length>`  
 The request is prefaced by an int that holds the total length of what follows.
 
-**`<Protobuf RequestHeader Message>`**  
+`<Protobuf RequestHeader Message>`  
 Will have call.id, trace.id, and method name, etc.
 including optional Metadata on the Cell block IFF one is following.
 Data is protobuf'd inline in this pb Message or optionally comes in the following CellBlock
 
-**`<Protobuf Param Message>`**  
+`<Protobuf Param Message>`  
 If the method being invoked is getRegionInfo, if you study the Service descriptor for the client to regionserver protocol, you will find that the request sends a GetRegionInfoRequest protobuf Message param in this position.
 
-**`<CellBlock>`**  
+`<CellBlock>`  
 An encoded and optionally compressed Cell block.
 
 ### Response

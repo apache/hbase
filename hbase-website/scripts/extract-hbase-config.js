@@ -91,11 +91,56 @@ export function formatDescription(description) {
   }
   
   // Remove excessive whitespace and newlines, but preserve paragraph breaks
-  return description
+  const normalized = description
     .split('\n')
     .map(line => line.trim())
     .filter(line => line.length > 0)
     .join(' ');
+  return escapeUnwrappedDollars(normalized);
+}
+
+/**
+ * Escapes $ characters unless they are inside inline or fenced code blocks
+ * @param {string} text - The text to escape
+ * @returns {string} Escaped text
+ */
+export function escapeUnwrappedDollars(text) {
+  let result = '';
+  let i = 0;
+  let inInlineCode = false;
+  let inFencedCode = false;
+
+  while (i < text.length) {
+    if (text.startsWith('```', i)) {
+      inFencedCode = !inFencedCode;
+      result += '```';
+      i += 3;
+      continue;
+    }
+
+    const char = text[i];
+
+    if (!inFencedCode && char === '`') {
+      inInlineCode = !inInlineCode;
+      result += char;
+      i += 1;
+      continue;
+    }
+
+    if (!inInlineCode && !inFencedCode && char === '$') {
+      const prevChar = i > 0 ? text[i - 1] : '';
+      if (prevChar !== '\\') {
+        result += '\\$';
+        i += 1;
+        continue;
+      }
+    }
+
+    result += char;
+    i += 1;
+  }
+
+  return result;
 }
 
 /**
