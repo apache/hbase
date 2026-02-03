@@ -586,13 +586,13 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
           // For isolating hbase:meta, it should move explicitly in Ack mode,
           // hence the forceMoveRegionByAck = true.
           if (!metaSeverName.equals(server)) {
-            LOG.info("Region of hbase:meta " + metaRegionInfo.getEncodedName() + " is on server "
-              + metaSeverName + " moving to " + server);
+            LOG.info("Region of {} {} is on server {} moving to {}", conn.getMetaTableName(),
+              metaRegionInfo.getEncodedName(), metaSeverName, server);
             submitRegionMovesWhileUnloading(metaSeverName, Collections.singletonList(server),
               movedRegions, Collections.singletonList(metaRegionInfo), true);
           } else {
-            LOG.info("Region of hbase:meta " + metaRegionInfo.getEncodedName() + " already exists"
-              + " on server : " + server);
+            LOG.info("Region of {} {} already exists on server: {}", conn.getMetaTableName(),
+              metaRegionInfo.getEncodedName(), server);
           }
           isolateRegionInfoList.add(RegionInfoBuilder.FIRST_META_REGIONINFO);
         }

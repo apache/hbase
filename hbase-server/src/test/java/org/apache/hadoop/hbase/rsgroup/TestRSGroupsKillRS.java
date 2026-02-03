@@ -246,10 +246,10 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
 
     // move hbase:meta to meta_group
     Set<TableName> toAddTables = new HashSet<>();
-    toAddTables.add(TableName.META_TABLE_NAME);
+    toAddTables.add(TEST_UTIL.getConnection().getMetaTableName());
     ADMIN.setRSGroup(toAddTables, groupName);
     assertTrue(ADMIN.getConfiguredNamespacesAndTablesInRSGroup(groupName).getSecond()
-      .contains(TableName.META_TABLE_NAME));
+      .contains(TEST_UTIL.getConnection().getMetaTableName()));
 
     // restart the regionserver in meta_group, and lower its version
     String originVersion = "";

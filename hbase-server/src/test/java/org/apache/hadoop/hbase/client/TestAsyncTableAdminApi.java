@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -73,14 +72,16 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
   static TableState.State getStateFromMeta(TableName table) throws Exception {
     Optional<TableState> state = ClientMetaTableAccessor
-      .getTableState(ASYNC_CONN.getTable(TableName.META_TABLE_NAME), table).get();
+      .getTableState(ASYNC_CONN.getTable(TEST_UTIL.getConnection().getMetaTableName()), table)
+      .get();
     assertTrue(state.isPresent());
     return state.get().getState();
   }
 
   @Test
   public void testCreateTableNumberOfRegions() throws Exception {
-    AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
+    AsyncTable<AdvancedScanResultConsumer> metaTable =
+      ASYNC_CONN.getTable(TEST_UTIL.getConnection().getMetaTableName());
 
     createTableWithDefaultConf(tableName);
     List<HRegionLocation> regionLocations =
@@ -128,7 +129,8 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     boolean tableAvailable = admin.isTableAvailable(tableName).get();
     assertTrue("Table should be created with splitKyes + 1 rows in META", tableAvailable);
 
-    AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
+    AsyncTable<AdvancedScanResultConsumer> metaTable =
+      ASYNC_CONN.getTable(TEST_UTIL.getConnection().getMetaTableName());
     List<HRegionLocation> regions =
       ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
     Iterator<HRegionLocation> hris = regions.iterator();

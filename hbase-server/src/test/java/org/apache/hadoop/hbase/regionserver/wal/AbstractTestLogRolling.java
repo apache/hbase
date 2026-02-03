@@ -338,7 +338,7 @@ public abstract class AbstractTestLogRolling {
   public void testCompactionRecordDoesntBlockRolling() throws Exception {
 
     // When the hbase:meta table can be opened, the region servers are running
-    try (Table t = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
+    try (Table t = TEST_UTIL.getConnection().getMetaTable();
       Table table = createTestTable(getName())) {
 
       server = TEST_UTIL.getRSForFirstRegionInTable(table.getName());

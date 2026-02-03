@@ -89,8 +89,8 @@ public class TestClientSideRegionScanner {
     conf = TEST_UTIL.getConfiguration();
     rootDir = TEST_UTIL.getDefaultRootDirPath();
     fs = TEST_UTIL.getTestFileSystem();
-    htd = TEST_UTIL.getAdmin().getDescriptor(TableName.META_TABLE_NAME);
-    hri = TEST_UTIL.getAdmin().getRegions(TableName.META_TABLE_NAME).get(0);
+    htd = TEST_UTIL.getAdmin().getDescriptor(TEST_UTIL.getConnection().getMetaTableName());
+    hri = TEST_UTIL.getAdmin().getRegions(TEST_UTIL.getConnection().getMetaTableName()).get(0);
     scan = new Scan();
   }
 
@@ -200,7 +200,7 @@ public class TestClientSideRegionScanner {
     Configuration copyConf = new Configuration(conf);
     Scan scan = new Scan();
     scan.setScanMetricsEnabled(true);
-    TEST_UTIL.getAdmin().flush(TableName.META_TABLE_NAME);
+    TEST_UTIL.getAdmin().flush(TEST_UTIL.getConnection().getMetaTableName());
     try (ClientSideRegionScanner clientSideRegionScanner =
       new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, scanMetrics)) {
       clientSideRegionScanner.next();
@@ -229,7 +229,7 @@ public class TestClientSideRegionScanner {
     Configuration copyConf = new Configuration(conf);
     Scan scan = new Scan();
     scan.setEnableScanMetricsByRegion(true);
-    TEST_UTIL.getAdmin().flush(TableName.META_TABLE_NAME);
+    TEST_UTIL.getAdmin().flush(TEST_UTIL.getConnection().getMetaTableName());
     try (ClientSideRegionScanner clientSideRegionScanner =
       new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, scanMetrics)) {
       clientSideRegionScanner.next();

@@ -167,7 +167,8 @@ public class TestRollbackSCP {
 
   @Test
   public void testFailAndRollback() throws Exception {
-    HRegionServer rsWithMeta = UTIL.getRSForFirstRegionInTable(TableName.META_TABLE_NAME);
+    HRegionServer rsWithMeta =
+      UTIL.getRSForFirstRegionInTable(UTIL.getConnection().getMetaTableName());
     UTIL.getMiniHBaseCluster().killRegionServer(rsWithMeta.getServerName());
     UTIL.waitFor(15000, () -> getSCPForServer(rsWithMeta.getServerName()) != null);
     ServerCrashProcedure scp = getSCPForServer(rsWithMeta.getServerName());

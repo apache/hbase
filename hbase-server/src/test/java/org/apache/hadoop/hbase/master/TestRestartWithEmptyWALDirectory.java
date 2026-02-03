@@ -80,7 +80,7 @@ public class TestRestartWithEmptyWALDirectory {
       table.put(new Put(row).addColumn(FAMILY, QUALIFIER, row));
     }
     // flush all in memory data
-    UTIL.flush(TableName.META_TABLE_NAME);
+    UTIL.flush(UTIL.getConnection().getMetaTableName());
     UTIL.flush(NAME);
 
     // stop master first, so when stopping region server, we will not schedule a SCP.

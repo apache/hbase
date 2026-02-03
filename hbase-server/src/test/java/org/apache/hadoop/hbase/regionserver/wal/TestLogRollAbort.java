@@ -162,7 +162,7 @@ public class TestLogRollAbort {
     LOG.info("Starting testRSAbortWithUnflushedEdits()");
 
     // When the hbase:meta table can be opened, the region servers are running
-    TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME).close();
+    TEST_UTIL.getConnection().getMetaTable().close();
 
     // Create the test table and open it
     TableName tableName = TableName.valueOf(this.getClass().getSimpleName());

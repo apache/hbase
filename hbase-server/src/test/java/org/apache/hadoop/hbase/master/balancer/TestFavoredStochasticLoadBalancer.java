@@ -161,7 +161,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
 
     LoadBalancer balancer = master.getLoadBalancer();
     List<RegionInfo> regions = admin.getRegions(tableName);
-    regions.addAll(admin.getRegions(TableName.META_TABLE_NAME));
+    regions.addAll(admin.getRegions(TEST_UTIL.getConnection().getMetaTableName()));
     List<ServerName> servers = Lists.newArrayList(
       admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().keySet());
     Map<ServerName, List<RegionInfo>> map = balancer.roundRobinAssignment(regions, servers);

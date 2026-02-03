@@ -87,7 +87,7 @@ public class TestMetaCache {
     conf.setStrings(HConstants.REGION_SERVER_IMPL, RegionServerWithFakeRpcServices.class.getName());
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.getHBaseCluster().waitForActiveAndReadyMaster();
-    TEST_UTIL.waitUntilAllRegionsAssigned(TableName.META_TABLE_NAME);
+    TEST_UTIL.waitUntilAllRegionsAssigned(TEST_UTIL.getConnection().getMetaTableName());
     badRS = TEST_UTIL.getHBaseCluster().getRegionServer(0);
     assertTrue(badRS.getRSRpcServices() instanceof FakeRSRpcServices);
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TABLE_NAME)

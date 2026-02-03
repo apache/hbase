@@ -301,7 +301,7 @@ public class TestMasterTransitions {
    */
   private static int addToEachStartKey(final int expected) throws IOException {
     Table t = TEST_UTIL.getConnection().getTable(TABLENAME);
-    Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
+    Table meta = TEST_UTIL.getConnection().getMetaTable();
     int rows = 0;
     Scan scan = new Scan();
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);

@@ -198,7 +198,8 @@ public class BaseTestHBaseFsck {
         }
 
         if (metaRow) {
-          try (Table meta = connection.getTable(TableName.META_TABLE_NAME, tableExecutorService)) {
+          try (Table meta = connection.getTable(TEST_UTIL.getConnection().getMetaTableName(),
+            tableExecutorService)) {
             Delete delete = new Delete(deleteRow);
             meta.delete(delete);
           }
@@ -510,8 +511,9 @@ public class BaseTestHBaseFsck {
 
   protected void deleteMetaRegion(Configuration conf, boolean unassign, boolean hdfs,
     boolean regionInfoOnly) throws IOException, InterruptedException {
-    HRegionLocation metaLocation = connection.getRegionLocator(TableName.META_TABLE_NAME)
-      .getRegionLocation(HConstants.EMPTY_START_ROW);
+    HRegionLocation metaLocation =
+      connection.getRegionLocator(TEST_UTIL.getConnection().getMetaTableName())
+        .getRegionLocation(HConstants.EMPTY_START_ROW);
     ServerName hsa = metaLocation.getServerName();
     RegionInfo hri = metaLocation.getRegion();
     if (unassign) {
@@ -526,7 +528,8 @@ public class BaseTestHBaseFsck {
       Path rootDir = CommonFSUtils.getRootDir(conf);
       FileSystem fs = rootDir.getFileSystem(conf);
       Path p =
-        new Path(rootDir + "/" + TableName.META_TABLE_NAME.getNameAsString(), hri.getEncodedName());
+        new Path(rootDir + "/" + TEST_UTIL.getConnection().getMetaTableName().getNameAsString(),
+          hri.getEncodedName());
       Path hriPath = new Path(p, HRegionFileSystem.REGION_INFO_FILE);
       fs.delete(hriPath, true);
     }
@@ -536,7 +539,8 @@ public class BaseTestHBaseFsck {
       Path rootDir = CommonFSUtils.getRootDir(conf);
       FileSystem fs = rootDir.getFileSystem(conf);
       Path p =
-        new Path(rootDir + "/" + TableName.META_TABLE_NAME.getNameAsString(), hri.getEncodedName());
+        new Path(rootDir + "/" + TEST_UTIL.getConnection().getMetaTableName().getNameAsString(),
+          hri.getEncodedName());
       HBaseFsck.debugLsr(conf, p);
       boolean success = fs.delete(p, true);
       LOG.info("Deleted " + p + " sucessfully? " + success);

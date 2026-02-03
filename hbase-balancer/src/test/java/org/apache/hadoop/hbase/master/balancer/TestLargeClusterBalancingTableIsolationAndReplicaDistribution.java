@@ -119,6 +119,7 @@ public class TestLargeClusterBalancingTableIsolationAndReplicaDistribution {
    * Validates whether all meta table regions are isolated.
    */
   private boolean isMetaTableIsolated(BalancerClusterState cluster) {
+
     return isTableIsolated(cluster, TableName.META_TABLE_NAME, "Meta");
   }
 

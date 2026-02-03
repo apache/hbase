@@ -322,7 +322,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
       fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()) > 1);
     LOG.info("Replication=" + fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
     // When the hbase:meta table can be opened, the region servers are running
-    Table t = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
+    Table t = TEST_UTIL.getConnection().getMetaTable();
     try {
       this.server = cluster.getRegionServer(0);
 

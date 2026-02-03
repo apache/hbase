@@ -96,12 +96,13 @@ public class TestRegionServerNoMaster {
     throws IOException, InterruptedException {
     // cache meta location, so we will not go to master to lookup meta region location
     for (JVMClusterUtil.RegionServerThread t : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
-      try (RegionLocator locator =
-        t.getRegionServer().getConnection().getRegionLocator(TableName.META_TABLE_NAME)) {
+      try (RegionLocator locator = t.getRegionServer().getConnection()
+        .getRegionLocator(HTU.getConnection().getMetaTableName())) {
         locator.getAllRegionLocations();
       }
     }
-    try (RegionLocator locator = HTU.getConnection().getRegionLocator(TableName.META_TABLE_NAME)) {
+    try (RegionLocator locator =
+      HTU.getConnection().getRegionLocator(HTU.getConnection().getMetaTableName())) {
       locator.getAllRegionLocations();
     }
     // Stop master

@@ -429,7 +429,7 @@ public class TestEndToEndSplitTransaction {
     log("blocking until region is split:" + Bytes.toStringBinary(regionName));
     RegionInfo daughterA = null, daughterB = null;
     try (Connection conn = ConnectionFactory.createConnection(conf);
-      Table metaTable = conn.getTable(TableName.META_TABLE_NAME)) {
+      Table metaTable = conn.getTable(TEST_UTIL.getConnection().getMetaTableName())) {
       Result result = null;
       RegionInfo region = null;
       while ((EnvironmentEdgeManager.currentTime() - start) < timeout) {

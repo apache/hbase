@@ -787,8 +787,13 @@ public class CellComparatorImpl implements CellComparator {
    */
   public static CellComparator getCellComparator(byte[] tableName) {
     // FYI, TableName.toBytes does not create an array; just returns existing array pointer.
-    return Bytes.equals(tableName, TableName.META_TABLE_NAME.toBytes())
+    // Check if this is a meta table (hbase:meta or hbase:meta_*)
+    return isMetaTable(tableName)
       ? MetaCellComparator.META_COMPARATOR
       : CellComparatorImpl.COMPARATOR;
+  }
+
+  static boolean isMetaTable(byte[] tableName) {
+    return Bytes.startsWith(tableName, TableName.META_TABLE_NAME.getName());
   }
 }

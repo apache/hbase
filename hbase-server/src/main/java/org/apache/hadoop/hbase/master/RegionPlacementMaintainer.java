@@ -605,7 +605,7 @@ public class RegionPlacementMaintainer implements Closeable {
    */
   public void updateAssignmentPlanToMeta(FavoredNodesPlan plan) throws IOException {
     try {
-      LOG.info("Start to update the hbase:meta with the new assignment plan");
+      LOG.info("Started updating {} with the new assignment plan", connection.getMetaTableName());
       Map<String, List<ServerName>> assignmentMap = plan.getAssignmentMap();
       Map<RegionInfo, List<ServerName>> planToUpdate = new HashMap<>(assignmentMap.size());
       Map<String, RegionInfo> regionToRegionInfoMap =
@@ -690,14 +690,14 @@ public class RegionPlacementMaintainer implements Closeable {
   }
 
   public void updateAssignmentPlan(FavoredNodesPlan plan) throws IOException {
-    LOG.info("Start to update the new assignment plan for the hbase:meta table and"
-      + " the region servers");
+    LOG.info("Started updating the new assignment plan for {} and the region servers",
+      connection.getMetaTableName());
     // Update the new assignment plan to META
     updateAssignmentPlanToMeta(plan);
     // Update the new assignment plan to Region Servers
     updateAssignmentPlanToRegionServers(plan);
-    LOG.info("Finish to update the new assignment plan for the hbase:meta table and"
-      + " the region servers");
+    LOG.info("Finished updating the new assignment plan for {} and the region servers",
+      connection.getMetaTableName());
   }
 
   /**

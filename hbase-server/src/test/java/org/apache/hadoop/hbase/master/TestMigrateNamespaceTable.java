@@ -77,7 +77,11 @@ public class TestMigrateNamespaceTable {
 
     @Override
     public TableName getTableName() {
-      return TableName.META_TABLE_NAME;
+      try {
+        return UTIL.getConnection().getMetaTableName();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     }
 
     @Override
@@ -154,7 +158,7 @@ public class TestMigrateNamespaceTable {
   private void removeNamespaceFamily() throws IOException {
     FileSystem fs = UTIL.getTestFileSystem();
     Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
-    Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.META_TABLE_NAME);
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, UTIL.getConnection().getMetaTableName());
     TableDescriptor metaTableDesc = FSTableDescriptors.getTableDescriptorFromFs(fs, tableDir);
     TableDescriptor noNsMetaTableDesc = TableDescriptorBuilder.newBuilder(metaTableDesc)
       .removeColumnFamily(HConstants.NAMESPACE_FAMILY).build();

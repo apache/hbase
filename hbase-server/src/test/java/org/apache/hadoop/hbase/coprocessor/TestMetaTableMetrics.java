@@ -169,7 +169,7 @@ public class TestMetaTableMetrics {
   @Test
   public void testConcurrentAccess() {
     try {
-      tablename = Bytes.toBytes("hbase:meta");
+      tablename = TableName.META_TABLE_NAME.getName();
       int numRows = 3000;
       int numRowsInTableBefore = UTIL.countRows(TableName.valueOf(tablename));
       putData(numRows);
