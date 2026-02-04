@@ -62,9 +62,11 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: "npm run dev",
+    command: process.env.PW_EXPORT_PDF
+      ? "CHOKIDAR_USEPOLLING=1 CHOKIDAR_INTERVAL=1000 npm run dev -- --host 127.0.0.1 --port 5173 --strictPort"
+      : "npm run dev",
     url: "http://localhost:5173",
     reuseExistingServer: !process.env.CI,
-    timeout: 120000
+    timeout: 60000
   }
 });

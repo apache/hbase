@@ -1,0 +1,152 @@
+//
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+import { test } from "@playwright/test";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { PDFDocument, rgb } from "pdf-lib";
+import { fileNameVariants } from "../app/lib/export-pdf";
+
+const outDir = "public/books";
+const marginInches = 0.4;
+const xMargin = marginInches * 72;
+const yMargin = marginInches * 72;
+const darkMarginColor = rgb(15 / 255, 15 / 255, 15 / 255);
+
+const variants = [
+  { name: fileNameVariants.light, theme: "light" },
+  { name: fileNameVariants.dark, theme: "dark" }
+];
+
+async function applyDarkMargins(pdfPath: string) {
+  const pdfBytes = await fs.readFile(pdfPath);
+  const pdfDoc = await PDFDocument.load(pdfBytes);
+
+  for (const page of pdfDoc.getPages()) {
+    const { width, height } = page.getSize();
+
+    // Left margin
+    page.drawRectangle({
+      x: 0,
+      y: 0,
+      width: xMargin,
+      height,
+      color: darkMarginColor,
+      borderWidth: 0
+    });
+
+    // Right margin
+    page.drawRectangle({
+      x: width - xMargin,
+      y: 0,
+      width: xMargin,
+      height,
+      color: darkMarginColor,
+      borderWidth: 0
+    });
+
+    // Top margin
+    page.drawRectangle({
+      x: 0,
+      y: height - yMargin,
+      width,
+      height: yMargin,
+      color: darkMarginColor,
+      borderWidth: 0
+    });
+
+    // Bottom margin
+    page.drawRectangle({
+      x: 0,
+      y: 0,
+      width,
+      height: yMargin,
+      color: darkMarginColor,
+      borderWidth: 0
+    });
+  }
+
+  await fs.writeFile(pdfPath, await pdfDoc.save());
+}
+
+test("export documentation pdfs", async ({ browser, browserName }) => {
+  test.skip(browserName !== "chromium", "PDF export only supported in Chromium.");
+  test.setTimeout(3 * 60 * 1000);
+
+  await fs.mkdir(outDir, { recursive: true });
+
+  for (const variant of variants) {
+    const page = await browser.newPage();
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => {
+      pageErrors.push(error.message);
+    });
+    page.on("console", (message) => {
+      if (message.type() === "error") {
+        pageErrors.push(message.text());
+      }
+    });
+    await page.addInitScript((theme) => {
+      localStorage.setItem("theme", theme);
+    }, variant.theme);
+
+    await page.goto("/docs/single-page", { waitUntil: "networkidle" });
+
+    await page.evaluate((theme) => {
+      localStorage.setItem("theme", theme);
+      document.documentElement.classList.remove("light", "dark");
+      document.documentElement.classList.add(theme);
+    }, variant.theme);
+
+    await page.waitForFunction(
+      `document.documentElement.classList.contains(${JSON.stringify(variant.theme)})`,
+      { timeout: 10000 }
+    );
+
+    const errorBoundaryVisible = await page
+      .locator("main")
+      .filter({ hasText: "Oops!" })
+      .isVisible()
+      .catch(() => false);
+    if (errorBoundaryVisible || pageErrors.length > 0) {
+      throw new Error(
+        `Export page failed for theme "${variant.theme}".\n` +
+          `Errors: ${pageErrors.join(" | ") || "Unknown error"}`
+      );
+    }
+
+    const pdfPath = path.join(outDir, variant.name);
+    await page.pdf({
+      path: pdfPath,
+      format: "A4",
+      margin: {
+        top: `${marginInches}in`,
+        right: `${marginInches}in`,
+        bottom: `${marginInches}in`,
+        left: `${marginInches}in`
+      },
+      printBackground: true
+    });
+
+    await page.close();
+
+    if (variant.theme === "dark") {
+      await applyDarkMargins(pdfPath);
+    }
+  }
+});
