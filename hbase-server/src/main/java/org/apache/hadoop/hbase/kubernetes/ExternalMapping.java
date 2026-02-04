@@ -56,15 +56,19 @@ public class ExternalMapping implements Closeable {
     }
 
     mappingPath = Paths.get(mappingFile);
+    Path parent = mappingPath.getParent();
 
-    read();
+    if (parent == null) {
+      throw new IOException("Mapping file '" + mappingPath + "' must be absolute.");
+    }
 
     watchService = mappingPath.getFileSystem().newWatchService();
 
     try {
-      Path parent = mappingPath.getParent();
       watchKey = parent.register(watchService, StandardWatchEventKinds.ENTRY_CREATE,
         StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY);
+
+      read();
     } catch (Throwable e) {
       watchService.close();
       throw e;
@@ -94,6 +98,10 @@ public class ExternalMapping implements Closeable {
 
     for (WatchEvent<?> event : watchKey.pollEvents()) {
       Path path = (Path) event.context();
+
+      if (path == null) {
+        continue;
+      }
 
       if (mappingPath.getFileName().equals(path.getFileName())) {
         changed = true;
