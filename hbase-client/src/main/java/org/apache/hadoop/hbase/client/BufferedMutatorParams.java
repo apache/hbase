@@ -17,14 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
  * Parameters for instantiating a {@link BufferedMutator}.
@@ -44,7 +40,8 @@ public class BufferedMutatorParams implements Cloneable {
   private int rpcTimeout = UNSET;
   private int operationTimeout = UNSET;
   private int maxMutations = UNSET;
-  protected Map<String, byte[]> requestAttributes = Collections.emptyMap();
+  protected FixedRequestAttributesFactory.Builder fixedRequestAttributesFactoryBuilder = null;
+  protected RequestAttributesFactory requestAttributesFactory = null;
   private BufferedMutator.ExceptionListener listener = new BufferedMutator.ExceptionListener() {
     @Override
     public void onException(RetriesExhaustedWithDetailsException exception,
@@ -109,16 +106,55 @@ public class BufferedMutatorParams implements Cloneable {
     return maxMutations;
   }
 
+  /**
+   * Sets a request attribute. Ignored if a factory is set via
+   * {@link #setRequestAttributesFactory(RequestAttributesFactory)}.
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. Please use
+   *             {@link #setRequestAttributesFactory(RequestAttributesFactory)} instead.
+   */
+  @Deprecated
   public BufferedMutatorParams setRequestAttribute(String key, byte[] value) {
-    if (requestAttributes.isEmpty()) {
-      requestAttributes = new HashMap<>();
+    if (fixedRequestAttributesFactoryBuilder == null) {
+      fixedRequestAttributesFactoryBuilder = FixedRequestAttributesFactory.newBuilder();
     }
-    requestAttributes.put(key, value);
+    fixedRequestAttributesFactoryBuilder.setAttribute(key, value);
     return this;
   }
 
+  /**
+   * Returns *only* the request attributes added by {@link #setRequestAttribute(String, byte[])}.
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. Please use
+   *             {@link #getRequestAttributesFactory()} instead.
+   */
   public Map<String, byte[]> getRequestAttributes() {
-    return requestAttributes;
+    if (fixedRequestAttributesFactoryBuilder == null) {
+      return null;
+    }
+    return fixedRequestAttributesFactoryBuilder.getAttributes();
+  }
+
+  /**
+   * Sets the factory for creating request attributes. Use {@link FixedRequestAttributesFactory} for
+   * attributes that do not change, or implement {@link RequestAttributesFactory} for dynamic
+   * attributes.
+   */
+  public BufferedMutatorParams
+    setRequestAttributesFactory(RequestAttributesFactory requestAttributesFactory) {
+    this.requestAttributesFactory = requestAttributesFactory;
+    return this;
+  }
+
+  /**
+   * Returns the request attributes factory.
+   */
+  public RequestAttributesFactory getRequestAttributesFactory() {
+    if (requestAttributesFactory != null) {
+      return requestAttributesFactory;
+    } else if (fixedRequestAttributesFactoryBuilder != null) {
+      return fixedRequestAttributesFactoryBuilder.build();
+    } else {
+      return FixedRequestAttributesFactory.EMPTY;
+    }
   }
 
   /**
@@ -243,7 +279,12 @@ public class BufferedMutatorParams implements Cloneable {
     clone.writeBufferPeriodicFlushTimerTickMs = this.writeBufferPeriodicFlushTimerTickMs;
     clone.maxKeyValueSize = this.maxKeyValueSize;
     clone.maxMutations = this.maxMutations;
-    clone.requestAttributes = Maps.newHashMap(this.requestAttributes);
+    clone.requestAttributesFactory = this.requestAttributesFactory;
+    if (fixedRequestAttributesFactoryBuilder != null) {
+      clone.fixedRequestAttributesFactoryBuilder = FixedRequestAttributesFactory.newBuilder();
+      fixedRequestAttributesFactoryBuilder.getAttributes()
+        .forEach(clone.fixedRequestAttributesFactoryBuilder::setAttribute);
+    }
     clone.pool = this.pool;
     clone.listener = this.listener;
     clone.implementationClassName = this.implementationClassName;

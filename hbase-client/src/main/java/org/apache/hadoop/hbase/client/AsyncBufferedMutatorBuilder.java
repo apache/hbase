@@ -40,14 +40,31 @@ public interface AsyncBufferedMutatorBuilder {
   AsyncBufferedMutatorBuilder setRpcTimeout(long timeout, TimeUnit unit);
 
   /**
-   * Set a rpc request attribute.
+   * Sets a request attribute. Ignored if a factory is set via
+   * {@link #setRequestAttributesFactory(RequestAttributesFactory)}.
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. Please use
+   *             {@link #setRequestAttributesFactory(RequestAttributesFactory)} instead.
    */
+  @Deprecated
   AsyncBufferedMutatorBuilder setRequestAttribute(String key, byte[] value);
 
   /**
-   * Set multiple rpc request attributes.
+   * Sets multiple request attributes. Ignored if a factory is set via
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. Please use
+   *             {@link #setRequestAttributesFactory(RequestAttributesFactory)} instead.
    */
+  @Deprecated
   AsyncBufferedMutatorBuilder setRequestAttributes(Map<String, byte[]> requestAttributes);
+
+  /**
+   * Sets the factory for creating request attributes. Use {@link FixedRequestAttributesFactory} for
+   * attributes that do not change, or implement {@link RequestAttributesFactory} for dynamic
+   * attributes.
+   */
+  default AsyncBufferedMutatorBuilder
+    setRequestAttributesFactory(RequestAttributesFactory requestAttributesFactory) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
 
   /**
    * Set the base pause time for retrying. We use an exponential policy to generate sleep time when

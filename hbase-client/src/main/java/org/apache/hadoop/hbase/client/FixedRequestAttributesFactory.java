@@ -18,13 +18,13 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A {@link RequestAttributesFactory} that returns a fixed set of attributes for every call. Use
- * this when attributes do not need to change for the lifetime of the {@link AsyncTable}.
+ * this when attributes are fixed and do not change.
  * @see AsyncTableBuilder#setRequestAttributesFactory(RequestAttributesFactory)
  */
 @InterfaceAudience.Public
@@ -39,7 +39,7 @@ public final class FixedRequestAttributesFactory implements RequestAttributesFac
    * Builder for creating {@link FixedRequestAttributesFactory} instances.
    */
   public static final class Builder {
-    private final Map<String, byte[]> requestAttributes = new HashMap<>();
+    private final Map<String, byte[]> requestAttributes = new LinkedHashMap<>();
 
     /**
      * Sets a request attribute. If value is null, the attribute is removed.
@@ -57,11 +57,18 @@ public final class FixedRequestAttributesFactory implements RequestAttributesFac
     }
 
     /**
+     * Gets the accumulated request attributes.
+     */
+    public Map<String, byte[]> getAttributes() {
+      return Collections.unmodifiableMap(requestAttributes);
+    }
+
+    /**
      * Builds a {@link FixedRequestAttributesFactory} with the configured attributes.
      * @return the factory
      */
     public FixedRequestAttributesFactory build() {
-      return new FixedRequestAttributesFactory(requestAttributes);
+      return new FixedRequestAttributesFactory(new LinkedHashMap<>(requestAttributes));
     }
   }
 
@@ -76,7 +83,7 @@ public final class FixedRequestAttributesFactory implements RequestAttributesFac
   private final Map<String, byte[]> requestAttributes;
 
   private FixedRequestAttributesFactory(Map<String, byte[]> requestAttributes) {
-    this.requestAttributes = Map.copyOf(requestAttributes);
+    this.requestAttributes = Collections.unmodifiableMap(requestAttributes);
   }
 
   @Override

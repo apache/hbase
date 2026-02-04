@@ -129,8 +129,7 @@ abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
   @Override
   public AsyncTableBuilder<C> setRequestAttribute(String key, byte[] value) {
     if (fixedRequestAttributesFactoryBuilder == null) {
-      fixedRequestAttributesFactoryBuilder =
-        FixedRequestAttributesFactory.newBuilder();
+      fixedRequestAttributesFactoryBuilder = FixedRequestAttributesFactory.newBuilder();
     }
     fixedRequestAttributesFactoryBuilder.setAttribute(key, value);
     return this;
@@ -143,7 +142,7 @@ abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
     return this;
   }
 
-  protected RequestAttributesFactory buildRequestAttributesFactory() {
+  RequestAttributesFactory getRequestAttributesFactory() {
     if (requestAttributesFactory != null) {
       return requestAttributesFactory;
     } else if (fixedRequestAttributesFactoryBuilder != null) {

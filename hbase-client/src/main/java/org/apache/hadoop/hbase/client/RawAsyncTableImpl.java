@@ -149,7 +149,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
       ? conn.connConf.getMetaScannerCaching()
       : conn.connConf.getScannerCaching();
     this.defaultScannerMaxResultSize = conn.connConf.getScannerMaxResultSize();
-    this.requestAttributesFactory = builder.buildRequestAttributesFactory();
+    this.requestAttributesFactory = builder.getRequestAttributesFactory();
   }
 
   @Override
