@@ -71,7 +71,7 @@ public class TestVerifyCellsReplicationEndpoint {
   public static final class EndpointForTest extends VerifyWALEntriesReplicationEndpoint {
 
     @Override
-    public ReplicationResult replicate(ReplicateContext replicateContext) {
+    public boolean replicate(ReplicateContext replicateContext) {
       LOG.info(replicateContext.getEntries().toString());
       replicateContext.entries.stream().map(WAL.Entry::getEdit).map(WALEdit::getCells)
         .forEachOrdered(CELLS::addAll);

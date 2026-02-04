@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationQueueData;
 import org.apache.hadoop.hbase.replication.ReplicationQueueId;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
-import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.replication.SystemTableWALEntryFilter;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -864,33 +863,5 @@ public class ReplicationSource implements ReplicationSourceInterface {
   // Visible for testing purpose
   public long getTotalReplicatedEdits() {
     return totalReplicatedEdits.get();
-  }
-
-  @Override
-  public void logPositionAndCleanOldLogs(WALEntryBatch entryBatch, ReplicationResult replicated) {
-    String walName = entryBatch.getLastWalPath().getName();
-    String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(walName);
-
-    synchronized (lastEntryBatch) { // Synchronize addition and processing
-      lastEntryBatch.put(walPrefix, entryBatch);
-
-      if (replicated == ReplicationResult.COMMITTED) {
-        processAndClearEntries();
-      }
-    }
-  }
-
-  public void persistOffsets() {
-    synchronized (lastEntryBatch) {
-      processAndClearEntries();
-    }
-  }
-
-  private void processAndClearEntries() {
-    // Process all entries
-    lastEntryBatch
-      .forEach((prefix, batch) -> getSourceManager().logPositionAndCleanOldLogs(this, batch));
-    // Clear all processed entries
-    lastEntryBatch.clear();
   }
 }
