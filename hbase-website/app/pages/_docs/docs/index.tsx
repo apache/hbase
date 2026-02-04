@@ -35,6 +35,7 @@ import { Card, Cards } from "fumadocs-ui/components/card";
 import { Step, Steps } from "fumadocs-ui/components/steps";
 import { Link } from "@/components/link";
 import type { MDXComponents } from "mdx/types";
+import type { TOCItemType } from "fumadocs-core/toc";
 
 // Extend default MDX components to include Steps globally
 // Note: We'll override the 'a' component in the renderer to handle route-specific logic
@@ -156,10 +157,52 @@ const renderer = toClientRenderer(
       a: CustomLink
     };
 
+    const renderPdfTocItems = (items: TOCItemType[]) => {
+      const groups: { parent: TOCItemType; children: TOCItemType[] }[] = [];
+      let current: { parent: TOCItemType; children: TOCItemType[] } | null = null;
+      for (const item of items) {
+        if (item.depth === 1) {
+          current = { parent: item, children: [] };
+          groups.push(current);
+        } else {
+          if (current) current.children.push(item);
+        }
+      }
+
+      return (
+        <ol className="mt-3 list-decimal space-y-1 pl-6">
+          {groups.map(({ parent, children }) => (
+            <li key={parent.url}>
+              <a href={parent.url}>{parent.title}</a>
+
+              {children.length > 0 && (
+                <ol className="text-fd-foreground/70 mt-1 list-inside list-decimal space-y-1 text-sm">
+                  {children.map((child) => (
+                    <li key={child.url}>
+                      <a href={child.url}>{child.title}</a>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </li>
+          ))}
+        </ol>
+      );
+    };
+    const printToc = isSinglePage
+      ? toc.filter((item: any) => item.depth === 1 || item.depth === 2)
+      : toc;
+
     return (
       <FumaDocsPage toc={filteredToc} tableOfContent={{ style: "clerk" }}>
         <title>{frontmatter.title}</title>
         <meta name="description" content={frontmatter.description} />
+        {isSinglePage && printToc.length > 0 && (
+          <nav className="1print-only" aria-label="Table of contents">
+            <h2 className="text-2xl font-semibold tracking-wide">Table of Contents</h2>
+            {renderPdfTocItems(printToc)}
+          </nav>
+        )}
         <FumaDocsTitle>{frontmatter.title}</FumaDocsTitle>
         <FumaDocsDescription>{frontmatter.description}</FumaDocsDescription>
         <FumaDocsBody>
