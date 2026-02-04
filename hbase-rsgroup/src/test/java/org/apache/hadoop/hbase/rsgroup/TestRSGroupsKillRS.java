@@ -58,7 +58,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Category({ LargeTests.class })
+@Category(LargeTests.class)
 public class TestRSGroupsKillRS extends TestRSGroupsBase {
 
   @ClassRule
