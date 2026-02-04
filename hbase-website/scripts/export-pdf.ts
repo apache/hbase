@@ -26,14 +26,16 @@ import puppeteer from "puppeteer";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { PDFDocument, rgb } from "pdf-lib";
+import { fileNameVariants } from "@/lib/export-pdf";
 
 const browser = await puppeteer.launch();
 const outDir = "public/books";
 // The path
 const urls = ["/docs/single-page"];
+
 const variants = [
-  { name: "", theme: "light" },
-  { name: "-dark-mode", theme: "dark" }
+  { name: fileNameVariants.light, theme: "light" },
+  { name: fileNameVariants.dark, theme: "dark" }
 ];
 
 async function applyDarkBackground(pdfPath: string) {
@@ -114,7 +116,7 @@ async function exportPdf(pathname: string, variant: (typeof variants)[number]) {
   );
 
   await page.pdf({
-    path: path.join(outDir, `documentation${variant.name}.pdf`),
+    path: path.join(outDir, variant.name),
     format: "A4",
     margin: {
       top: "0.4in",
@@ -126,7 +128,7 @@ async function exportPdf(pathname: string, variant: (typeof variants)[number]) {
   });
 
   if (variant.theme === "dark") {
-    await applyDarkBackground(path.join(outDir, `documentation${variant.name}.pdf`));
+    await applyDarkBackground(path.join(outDir, variant.name));
   }
 
   console.log(`${variant.theme} theme PDF generated successfully for ${pathname}`);

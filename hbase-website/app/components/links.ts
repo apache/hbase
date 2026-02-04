@@ -16,6 +16,8 @@
 // limitations under the License.
 //
 
+import { fileNameVariants } from "@/lib/export-pdf";
+
 interface LinkType {
   label: string;
   to: string;
@@ -73,7 +75,13 @@ export const documentationLinks: (LinkType | NestedLinkType)[] = [
   },
   {
     label: "Reference Guide (PDF)",
-    to: "https://hbase.apache.org/apache_hbase_reference_guide.pdf"
+    to: `/books/${fileNameVariants.light}`,
+    external: true
+  },
+  {
+    label: "Reference Guide (Dark PDF)",
+    to: `/books/${fileNameVariants.dark}`,
+    external: true
   },
   {
     label: "中文参考指南(单页)",

@@ -23,7 +23,7 @@
     "test:e2e:debug": "playwright test --debug",
     "extract-developers": "node scripts/extract-developers.js",
     "extract-hbase-config": "node scripts/extract-hbase-config.js",
-    "export-pdf": "node scripts/export-pdf.ts",
+    "export-pdf": "tsx scripts/export-pdf.ts",
     "ci": "npm run lint && npm run typecheck && npm run extract-developers && npm run extract-hbase-config && npm run export-pdf && npm run test:unit:run && npm run test:e2e && npm run build"
   },
   "dependencies": {
