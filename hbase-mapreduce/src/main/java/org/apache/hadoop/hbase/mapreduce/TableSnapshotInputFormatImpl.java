@@ -153,12 +153,6 @@ public class TableSnapshotInputFormatImpl {
     public InputSplit() {
     }
 
-    @Deprecated
-    public InputSplit(TableDescriptor htd, RegionInfo regionInfo, List<String> locations, Scan scan,
-      Path restoreDir) {
-      this(htd, regionInfo, locations, scan, restoreDir, 1);
-    }
-
     public InputSplit(TableDescriptor htd, RegionInfo regionInfo, List<String> locations, Scan scan,
       Path restoreDir, long length) {
       this.htd = htd;
