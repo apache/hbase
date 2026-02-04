@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -24,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -47,7 +49,6 @@ public class TestMobCompactFromClient {
   private static final String FAMILY = "info";
   private static final String MOB_FAMILY = "mob_info";
   private static final String QUALIFIER = "q";
-  private static final long TIMEOUT = 5000;
 
   private static Admin admin;
 
@@ -100,9 +101,8 @@ public class TestMobCompactFromClient {
       assertEquals(5, store2.getStorefilesCount());
 
       admin.compact(tableName, Bytes.toBytes(MOB_FAMILY), CompactType.MOB);
-      Thread.sleep(1000);
-      TEST_UTIL.waitFor(TIMEOUT,
-        () -> admin.getCompactionState(tableName, CompactType.MOB) == CompactionState.NONE);
+      await().pollDelay(Duration.ofSeconds(1)).atMost(Duration.ofSeconds(5))
+        .until(() -> admin.getCompactionState(tableName, CompactType.MOB) == CompactionState.NONE);
       assertEquals(CompactionState.NONE, admin.getCompactionState(tableName, CompactType.MOB));
 
       int store1fileCount = store1.getStorefilesCount();
@@ -122,9 +122,8 @@ public class TestMobCompactFromClient {
       assertEquals(store2fileCount + 5, store2.getStorefilesCount());
 
       admin.compact(tableName, CompactType.MOB);
-      Thread.sleep(1000);
-      TEST_UTIL.waitFor(TIMEOUT,
-        () -> admin.getCompactionState(tableName, CompactType.MOB) == CompactionState.NONE);
+      await().pollDelay(Duration.ofSeconds(1)).atMost(Duration.ofSeconds(5))
+        .until(() -> admin.getCompactionState(tableName, CompactType.MOB) == CompactionState.NONE);
       assertEquals(CompactionState.NONE, admin.getCompactionState(tableName, CompactType.MOB));
 
       assertTrue(store1.getStorefilesCount() < (store1fileCount + 5));
@@ -169,9 +168,8 @@ public class TestMobCompactFromClient {
       assertEquals(5, store2.getStorefilesCount());
 
       admin.majorCompact(tableName, CompactType.MOB);
-      Thread.sleep(1000);
-      TEST_UTIL.waitFor(TIMEOUT,
-        () -> admin.getCompactionState(tableName, CompactType.MOB) == CompactionState.NONE);
+      await().pollDelay(Duration.ofSeconds(1)).atMost(Duration.ofSeconds(5))
+        .until(() -> admin.getCompactionState(tableName, CompactType.MOB) == CompactionState.NONE);
       assertEquals(CompactionState.NONE, admin.getCompactionState(tableName, CompactType.MOB));
 
       assertEquals(1, store1.getStorefilesCount());
@@ -189,9 +187,8 @@ public class TestMobCompactFromClient {
       assertEquals(10, store2.getStorefilesCount());
 
       admin.compact(tableName, CompactType.MOB);
-      Thread.sleep(1000);
-      TEST_UTIL.waitFor(TIMEOUT,
-        () -> admin.getCompactionState(tableName, CompactType.MOB) == CompactionState.NONE);
+      await().pollDelay(Duration.ofSeconds(1)).atMost(Duration.ofSeconds(5))
+        .until(() -> admin.getCompactionState(tableName, CompactType.MOB) == CompactionState.NONE);
       assertEquals(CompactionState.NONE, admin.getCompactionState(tableName, CompactType.MOB));
 
       assertEquals(1, store1.getStorefilesCount());
