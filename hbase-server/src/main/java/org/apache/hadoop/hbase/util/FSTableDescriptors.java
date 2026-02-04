@@ -236,7 +236,7 @@ public class FSTableDescriptors implements TableDescriptors {
         cachehits++;
         return cachedtdm;
       }
-      // we do not need to go to fs any more
+      // we do not need to go to the fs anymore
       if (fsvisited) {
         return null;
       }
@@ -669,8 +669,8 @@ public class FSTableDescriptors implements TableDescriptors {
    * @param htd           description of the table to write
    * @param forceCreation if <tt>true</tt>,then even if previous table descriptor is present it will
    *                      be overwritten
-   * @return <tt>true</tt> if the we successfully created the file, <tt>false</tt> if the file
-   *         already exists and we weren't forcing the descriptor creation.
+   * @return <tt>true</tt> if we successfully created the file, <tt>false</tt> if the file already
+   *         exists, and we weren't forcing the descriptor creation.
    * @throws IOException if a filesystem error occurs
    */
   public boolean createTableDescriptorForTableDirectory(Path tableDir, TableDescriptor htd,
@@ -689,8 +689,8 @@ public class FSTableDescriptors implements TableDescriptors {
    * @param htd           description of the table to write
    * @param forceCreation if <tt>true</tt>,then even if previous table descriptor is present it will
    *                      be overwritten
-   * @return <tt>true</tt> if the we successfully created the file, <tt>false</tt> if the file
-   *         already exists and we weren't forcing the descriptor creation.
+   * @return <tt>true</tt> if we successfully created the file, <tt>false</tt> if the file already
+   *         exists, and we weren't forcing the descriptor creation.
    * @throws IOException if a filesystem error occurs
    */
   public static boolean createTableDescriptorForTableDirectory(FileSystem fs, Path tableDir,
