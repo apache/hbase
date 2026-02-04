@@ -170,13 +170,13 @@ const renderer = toClientRenderer(
       }
 
       return (
-        <ol className="mt-3 list-decimal space-y-1 pl-6">
+        <ol className="mt-3 space-y-1 font-medium">
           {groups.map(({ parent, children }) => (
             <li key={parent.url}>
               <a href={parent.url}>{parent.title}</a>
 
               {children.length > 0 && (
-                <ol className="text-fd-foreground/70 mt-1 list-inside list-decimal space-y-1 text-sm">
+                <ol className="mt-1 list-inside list-decimal space-y-1 pl-2">
                   {children.map((child) => (
                     <li key={child.url}>
                       <a href={child.url}>{child.title}</a>
@@ -197,12 +197,32 @@ const renderer = toClientRenderer(
       <FumaDocsPage toc={filteredToc} tableOfContent={{ style: "clerk" }}>
         <title>{frontmatter.title}</title>
         <meta name="description" content={frontmatter.description} />
+
+        {/* Only for printing PDF book */}
+        {isSinglePage && (
+          <section className="print-only mt-40 flex break-after-page flex-col items-center justify-center gap-6 text-center">
+            <img
+              src="/images/large-logo.svg"
+              alt="Apache HBase logo"
+              className="mx-auto block h-24 w-auto dark:hidden"
+            />
+            <img
+              src="/images/dark-theme-large-logo.svg"
+              alt="Apache HBase logo"
+              className="mx-auto hidden h-24 w-auto dark:block"
+            />
+            <h1 className="text-4xl font-semibold tracking-wide">Apache HBase® Reference Guide</h1>
+            <p className="text-fd-muted-foreground text-base">Apache HBase Team</p>
+          </section>
+        )}
         {isSinglePage && printToc.length > 0 && (
-          <nav className="1print-only" aria-label="Table of contents">
-            <h2 className="text-2xl font-semibold tracking-wide">Table of Contents</h2>
+          <nav className="print-only break-after-page" aria-label="Table of contents">
+            <h2 className="text-2xl font-semibold tracking-wide">Contents</h2>
             {renderPdfTocItems(printToc)}
           </nav>
         )}
+        {/* End of block */}
+
         <FumaDocsTitle>{frontmatter.title}</FumaDocsTitle>
         <FumaDocsDescription>{frontmatter.description}</FumaDocsDescription>
         <FumaDocsBody>
