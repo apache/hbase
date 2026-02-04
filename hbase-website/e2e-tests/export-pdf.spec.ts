@@ -19,7 +19,7 @@
 import { test } from "@playwright/test";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { PDFDocument, rgb } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { fileNameVariants } from "../app/lib/export-pdf";
 
 const outDir = "public/books";
@@ -36,8 +36,10 @@ const variants = [
 async function applyDarkMargins(pdfPath: string) {
   const pdfBytes = await fs.readFile(pdfPath);
   const pdfDoc = await PDFDocument.load(pdfBytes);
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-  for (const page of pdfDoc.getPages()) {
+  const pages = pdfDoc.getPages();
+  pages.forEach((page, index) => {
     const { width, height } = page.getSize();
 
     // Left margin
@@ -79,7 +81,24 @@ async function applyDarkMargins(pdfPath: string) {
       color: darkMarginColor,
       borderWidth: 0
     });
-  }
+
+    // Adding page number
+    const fontSize = 12;
+    const pageNumberColor = rgb(203 / 255, 203 / 255, 203 / 255);
+    const pageLabel = String(index + 1);
+    const textWidth = font.widthOfTextAtSize(pageLabel, fontSize);
+    const paddingX = 28;
+    const paddingY = 10;
+    const x = width - xMargin + (xMargin - textWidth) - paddingX;
+    const y = paddingY;
+    page.drawText(pageLabel, {
+      x,
+      y,
+      size: fontSize,
+      font,
+      color: pageNumberColor
+    });
+  });
 
   await fs.writeFile(pdfPath, await pdfDoc.save());
 }
