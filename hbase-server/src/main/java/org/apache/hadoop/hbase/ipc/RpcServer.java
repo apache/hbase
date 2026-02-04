@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
@@ -461,19 +462,18 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       int processingTime = (int) (endTime - startTime);
       int qTime = (int) (startTime - receiveTime);
       int totalTime = (int) (endTime - receiveTime);
+      long fsReadTime = ThreadLocalServerSideScanMetrics.getFsReadTimeCounter().get();
       if (LOG.isTraceEnabled()) {
         LOG.trace(
           "{}, response: {}, receiveTime: {}, queueTime: {}, processingTime: {}, "
             + "totalTime: {}, fsReadTime: {}",
           CurCall.get().toString(), TextFormat.shortDebugString(result),
-          CurCall.get().getReceiveTime(), qTime, processingTime, totalTime,
-          CurCall.get().getFsReadTime());
+          CurCall.get().getReceiveTime(), qTime, processingTime, totalTime, fsReadTime);
       }
       // Use the raw request call size for now.
       long requestSize = call.getSize();
       long responseSize = result.getSerializedSize();
       long responseBlockSize = call.getBlockBytesScanned();
-      long fsReadTime = call.getFsReadTime();
       if (call.isClientCellBlockSupported()) {
         // Include the payload size in HBaseRpcController
         responseSize += call.getResponseCellSize();

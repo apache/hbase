@@ -22,10 +22,12 @@ under the License.
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
     <title>Apache HBase® Home</title>
-    <link rel="shortcut icon" href="/images/favicon.ico" />
   </properties>
 
   <body>
+    <p align="center">
+      <img src="images/hbase_logo_with_orca_large.png" alt="Apache HBase logo" class="img-fluid"/>
+    </p>
     <section name="Welcome to Apache HBase®">
       <p><a href="https://www.apache.org/">Apache</a> HBase<sup>®</sup> is the <a href="https://hadoop.apache.org/">Hadoop</a> database, a distributed, scalable, big data store.</p>
       <p>Use Apache HBase<sup>®</sup> when you need random, realtime read/write access to your Big Data.

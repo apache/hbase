@@ -139,6 +139,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RegionSpecifierAndState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RollAllWALWritersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
@@ -858,6 +859,11 @@ public final class RequestConverter {
    */
   public static RollWALWriterRequest buildRollWALWriterRequest() {
     return RollWALWriterRequest.getDefaultInstance();
+  }
+
+  public static RollAllWALWritersRequest buildRollAllWALWritersRequest(long nonceGroup,
+    long nonce) {
+    return RollAllWALWritersRequest.newBuilder().setNonceGroup(nonceGroup).setNonce(nonce).build();
   }
 
   /**

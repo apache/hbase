@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.BackupRequest;
 import org.apache.hadoop.hbase.backup.BackupRestoreFactory;
 import org.apache.hadoop.hbase.backup.BackupType;
-import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -204,7 +203,7 @@ public class FullTableBackupClient extends TableBackupClient {
 
   private void handleNonContinuousBackup(Admin admin) throws IOException {
     initializeBackupStartCode(backupManager);
-    performLogRoll(admin);
+    performLogRoll();
     performBackupSnapshots(admin);
     backupManager.addIncrementalBackupTableSet(backupInfo.getTables());
 
@@ -228,18 +227,14 @@ public class FullTableBackupClient extends TableBackupClient {
     }
   }
 
-  private void performLogRoll(Admin admin) throws IOException {
+  private void performLogRoll() throws IOException {
     // We roll log here before we do the snapshot. It is possible there is duplicate data
     // in the log that is already in the snapshot. But if we do it after the snapshot, we
     // could have data loss.
     // A better approach is to do the roll log on each RS in the same global procedure as
     // the snapshot.
     LOG.info("Execute roll log procedure for full backup ...");
-    Map<String, String> props = new HashMap<>();
-    props.put("backupRoot", backupInfo.getBackupRootDir());
-    admin.execProcedure(LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_SIGNATURE,
-      LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_NAME, props);
-
+    BackupUtils.logRoll(conn, backupInfo.getBackupRootDir(), conf);
     newTimestamps = backupManager.readRegionServerLastLogRollResult();
   }
 

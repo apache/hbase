@@ -188,7 +188,8 @@ public class TestServerRemoteProcedure {
     }
 
     @Override
-    public synchronized void remoteOperationCompleted(MasterProcedureEnv env) {
+    public synchronized void remoteOperationCompleted(MasterProcedureEnv env,
+      byte[] remoteResultData) {
       complete(env, null);
     }
 

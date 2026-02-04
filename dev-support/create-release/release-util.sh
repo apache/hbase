@@ -969,7 +969,7 @@ function get_hadoop3_version() {
 # case spotless:check failure, so we should run spotless:apply before committing
 function maven_spotless_apply() {
   # our spotless plugin version requires at least java 11 to run, so we use java 17 here
-  JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64" "${MVN[@]}" spotless:apply
+  JAVA_HOME="${JAVA17_HOME}" "${MVN[@]}" spotless:apply
 }
 
 function git_add_poms() {

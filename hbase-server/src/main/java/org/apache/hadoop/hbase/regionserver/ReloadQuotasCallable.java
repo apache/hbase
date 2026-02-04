@@ -29,9 +29,10 @@ public class ReloadQuotasCallable extends BaseRSProcedureCallable {
   private static final Logger LOG = LoggerFactory.getLogger(ReloadQuotasCallable.class);
 
   @Override
-  protected void doCall() throws Exception {
+  protected byte[] doCall() throws Exception {
     LOG.info("Reloading quotas");
     rs.getRegionServerRpcQuotaManager().reload();
+    return null;
   }
 
   @Override

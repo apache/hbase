@@ -149,7 +149,7 @@ public class FlushRegionProcedure extends Procedure<MasterProcedureEnv>
   }
 
   @Override
-  public void remoteOperationCompleted(MasterProcedureEnv env) {
+  public void remoteOperationCompleted(MasterProcedureEnv env, byte[] remoteResultData) {
     complete(env, null);
   }
 

@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
@@ -70,17 +71,17 @@ public class TestBackupMerge extends TestBackupBase {
 
     // #2 - insert some data to table1
     Table t1 = insertIntoTable(conn, table1, famName, 1, ADD_ROWS);
-    LOG.debug("writing " + ADD_ROWS + " rows to " + table1);
+    LOG.debug("writing {} rows to {}", ADD_ROWS, table1);
 
-    Assert.assertEquals(TEST_UTIL.countRows(t1), NB_ROWS_IN_BATCH + ADD_ROWS);
+    Assert.assertEquals(HBaseTestingUtil.countRows(t1), NB_ROWS_IN_BATCH + ADD_ROWS);
     t1.close();
-    LOG.debug("written " + ADD_ROWS + " rows to " + table1);
+    LOG.debug("written {} rows to {}", ADD_ROWS, table1);
 
     Table t2 = insertIntoTable(conn, table2, famName, 1, ADD_ROWS);
 
-    Assert.assertEquals(TEST_UTIL.countRows(t2), NB_ROWS_IN_BATCH + ADD_ROWS);
+    Assert.assertEquals(HBaseTestingUtil.countRows(t2), NB_ROWS_IN_BATCH + ADD_ROWS);
     t2.close();
-    LOG.debug("written " + ADD_ROWS + " rows to " + table2);
+    LOG.debug("written {} rows to {}", ADD_ROWS, table2);
 
     // #3 - incremental backup for multiple tables
     tables = Lists.newArrayList(table1, table2);
@@ -112,15 +113,15 @@ public class TestBackupMerge extends TestBackupBase {
       tablesRestoreIncMultiple, tablesMapIncMultiple, true));
 
     Table hTable = conn.getTable(table1_restore);
-    LOG.debug("After incremental restore: " + hTable.getDescriptor());
-    int countRows = TEST_UTIL.countRows(hTable, famName);
-    LOG.debug("f1 has " + countRows + " rows");
+    LOG.debug("After incremental restore: {}", hTable.getDescriptor());
+    int countRows = HBaseTestingUtil.countRows(hTable, famName);
+    LOG.debug("f1 has {} rows", countRows);
     Assert.assertEquals(NB_ROWS_IN_BATCH + 2 * ADD_ROWS, countRows);
 
     hTable.close();
 
     hTable = conn.getTable(table2_restore);
-    Assert.assertEquals(TEST_UTIL.countRows(hTable), NB_ROWS_IN_BATCH + 2 * ADD_ROWS);
+    Assert.assertEquals(HBaseTestingUtil.countRows(hTable), NB_ROWS_IN_BATCH + 2 * ADD_ROWS);
     hTable.close();
 
     admin.close();

@@ -376,7 +376,7 @@ public class TableReplicationQueueStorage implements ReplicationQueueStorage {
         table.delete(new Delete(result.getRow()));
       }
     } catch (IOException e) {
-      throw new ReplicationException("failed to listAllQueueIds, peerId=" + peerId, e);
+      throw new ReplicationException("failed to removeAllQueues, peerId=" + peerId, e);
     }
   }
 

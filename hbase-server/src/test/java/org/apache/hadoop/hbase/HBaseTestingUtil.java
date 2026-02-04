@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.net.BindException;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -100,6 +99,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -110,6 +110,7 @@ import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -136,7 +137,6 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -152,7 +152,6 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
-import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -2295,6 +2294,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Starts a <code>MiniMRCluster</code> with a default number of <code>TaskTracker</code>'s.
+   * MiniMRCluster caches hadoop.log.dir when first started. It is not possible to start multiple
+   * MiniMRCluster instances with different log dirs.
    * @throws IOException When starting the cluster fails.
    */
   public MiniMRCluster startMiniMapReduceCluster() throws IOException {
@@ -2306,34 +2307,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Tasktracker has a bug where changing the hadoop.log.dir system property will not change its
-   * internal static LOG_DIR variable.
-   */
-  private void forceChangeTaskLogDir() {
-    Field logDirField;
-    try {
-      logDirField = TaskLog.class.getDeclaredField("LOG_DIR");
-      logDirField.setAccessible(true);
-
-      Field modifiersField = ReflectionUtils.getModifiersField();
-      modifiersField.setAccessible(true);
-      modifiersField.setInt(logDirField, logDirField.getModifiers() & ~Modifier.FINAL);
-
-      logDirField.set(null, new File(hadoopLogDir, "userlogs"));
-    } catch (SecurityException e) {
-      throw new RuntimeException(e);
-    } catch (NoSuchFieldException e) {
-      throw new RuntimeException(e);
-    } catch (IllegalArgumentException e) {
-      throw new RuntimeException(e);
-    } catch (IllegalAccessException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  /**
    * Starts a <code>MiniMRCluster</code>. Call {@link #setFileSystemURI(String)} to use a different
-   * filesystem.
+   * filesystem. MiniMRCluster caches hadoop.log.dir when first started. It is not possible to start
+   * multiple MiniMRCluster instances with different log dirs.
    * @param servers The number of <code>TaskTracker</code>'s to start.
    * @throws IOException When starting the cluster fails.
    */
@@ -2344,8 +2320,6 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     LOG.info("Starting mini mapreduce cluster...");
     setupClusterTestDir();
     createDirsAndSetProperties();
-
-    forceChangeTaskLogDir();
 
     //// hadoop2 specific settings
     // Tests were failing because this process used 6GB of virtual memory and was getting killed.
@@ -3749,5 +3723,23 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       }
       throw e;
     }
+  }
+
+  public void createRegionDir(RegionInfo hri) throws IOException {
+    Path rootDir = getDataTestDir();
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, hri.getTable());
+    Path regionDir = new Path(tableDir, hri.getEncodedName());
+    FileSystem fs = getTestFileSystem();
+    if (!fs.exists(regionDir)) {
+      fs.mkdirs(regionDir);
+    }
+  }
+
+  public void createRegionDir(RegionInfo regionInfo, MasterFileSystem masterFileSystem)
+    throws IOException {
+    Path tableDir =
+      CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(conf), regionInfo.getTable());
+    HRegionFileSystem.createRegionOnFileSystem(conf, masterFileSystem.getFileSystem(), tableDir,
+      regionInfo);
   }
 }

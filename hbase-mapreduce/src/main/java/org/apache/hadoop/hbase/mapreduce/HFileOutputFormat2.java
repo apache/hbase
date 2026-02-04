@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.regionserver.HStoreFile.EXCLUDE_FROM_MINOR
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_KEY;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
@@ -50,6 +51,7 @@ import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -82,6 +84,7 @@ import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
@@ -169,6 +172,11 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
   public static final String EXTENDED_CELL_SERIALIZATION_ENABLED_KEY =
     "hbase.mapreduce.hfileoutputformat.extendedcell.enabled";
   static final boolean EXTENDED_CELL_SERIALIZATION_ENABLED_DEFULT = false;
+
+  @InterfaceAudience.Private
+  public static final String DISK_BASED_SORTING_ENABLED_KEY =
+    "hbase.mapreduce.hfileoutputformat.disk.based.sorting.enabled";
+  private static final boolean DISK_BASED_SORTING_ENABLED_DEFAULT = false;
 
   public static final String REMOTE_CLUSTER_CONF_PREFIX = "hbase.hfileoutputformat.remote.cluster.";
   public static final String REMOTE_CLUSTER_ZOOKEEPER_QUORUM_CONF_KEY =
@@ -547,12 +555,19 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
 
     // Write the actual file
     FileSystem fs = partitionsPath.getFileSystem(conf);
-    SequenceFile.Writer writer = SequenceFile.createWriter(fs, conf, partitionsPath,
-      ImmutableBytesWritable.class, NullWritable.class);
+    boolean diskBasedSortingEnabled = diskBasedSortingEnabled(conf);
+    Class<? extends Writable> keyClass =
+      diskBasedSortingEnabled ? KeyOnlyCellComparable.class : ImmutableBytesWritable.class;
+    SequenceFile.Writer writer =
+      SequenceFile.createWriter(fs, conf, partitionsPath, keyClass, NullWritable.class);
 
     try {
       for (ImmutableBytesWritable startKey : sorted) {
-        writer.append(startKey, NullWritable.get());
+        Writable writable = diskBasedSortingEnabled
+          ? new KeyOnlyCellComparable(KeyValueUtil.createFirstOnRow(startKey.get()))
+          : startKey;
+
+        writer.append(writable, NullWritable.get());
       }
     } finally {
       writer.close();
@@ -576,7 +591,7 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
   public static void configureIncrementalLoad(Job job, Table table, RegionLocator regionLocator)
     throws IOException {
     configureIncrementalLoad(job, table.getDescriptor(), regionLocator);
-    configureRemoteCluster(job, table.getConfiguration());
+    configureForRemoteCluster(job, table.getConfiguration());
   }
 
   /**
@@ -599,6 +614,10 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
     configureIncrementalLoad(job, singleTableInfo, HFileOutputFormat2.class);
   }
 
+  public static boolean diskBasedSortingEnabled(Configuration conf) {
+    return conf.getBoolean(DISK_BASED_SORTING_ENABLED_KEY, DISK_BASED_SORTING_ENABLED_DEFAULT);
+  }
+
   static void configureIncrementalLoad(Job job, List<TableInfo> multiTableInfo,
     Class<? extends OutputFormat<?, ?>> cls) throws IOException {
     Configuration conf = job.getConfiguration();
@@ -617,7 +636,13 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
     // Based on the configured map output class, set the correct reducer to properly
     // sort the incoming values.
     // TODO it would be nice to pick one or the other of these formats.
-    if (
+    boolean diskBasedSorting = diskBasedSortingEnabled(conf);
+
+    if (diskBasedSorting) {
+      job.setMapOutputKeyClass(KeyOnlyCellComparable.class);
+      job.setSortComparatorClass(KeyOnlyCellComparable.KeyOnlyCellComparator.class);
+      job.setReducerClass(PreSortedCellsReducer.class);
+    } else if (
       KeyValue.class.equals(job.getMapOutputValueClass())
         || MapReduceExtendedCell.class.equals(job.getMapOutputValueClass())
     ) {
@@ -752,8 +777,34 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
    * @see #REMOTE_CLUSTER_ZOOKEEPER_QUORUM_CONF_KEY
    * @see #REMOTE_CLUSTER_ZOOKEEPER_CLIENT_PORT_CONF_KEY
    * @see #REMOTE_CLUSTER_ZOOKEEPER_ZNODE_PARENT_CONF_KEY
+   * @deprecated As of release 2.6.4, this will be removed in HBase 4.0.0 Use
+   *             {@link #configureForRemoteCluster(Job, Configuration)} instead.
    */
-  public static void configureRemoteCluster(Job job, Configuration clusterConf) throws IOException {
+  @Deprecated
+  public static void configureRemoteCluster(Job job, Configuration clusterConf) {
+    try {
+      configureForRemoteCluster(job, clusterConf);
+    } catch (IOException e) {
+      LOG.error("Configure remote cluster error.", e);
+      throw new UncheckedIOException("Configure remote cluster error.", e);
+    }
+  }
+
+  /**
+   * Configure HBase cluster key for remote cluster to load region location for locality-sensitive
+   * if it's enabled. It's not necessary to call this method explicitly when the cluster key for
+   * HBase cluster to be used to load region location is configured in the job configuration. Call
+   * this method when another HBase cluster key is configured in the job configuration. For example,
+   * you should call when you load data from HBase cluster A using {@link TableInputFormat} and
+   * generate hfiles for HBase cluster B. Otherwise, HFileOutputFormat2 fetch location from cluster
+   * A and locality-sensitive won't working correctly. If authentication is enabled, it obtains the
+   * token for the specific cluster.
+   * @param job         which has configuration to be updated
+   * @param clusterConf which contains cluster key of the HBase cluster to be locality-sensitive
+   * @throws IOException Exception while initializing cluster credentials
+   */
+  public static void configureForRemoteCluster(Job job, Configuration clusterConf)
+    throws IOException {
     Configuration conf = job.getConfiguration();
 
     if (!conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {

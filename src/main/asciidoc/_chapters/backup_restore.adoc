@@ -341,6 +341,12 @@ This command restores two tables of an incremental backup image. In this example
 • `backupId_1467823988425` is the backup ID.
 • `mytable1` and `mytable2` are the names of tables in the backup image to be restored.
 
+[NOTE]
+====
+If the namespace of a table being restored does not exist in the target environment, it will be automatically created during the restore operation.
+link:https://issues.apache.org/jira/browse/HBASE-25707[HBASE-25707]
+====
+
 // hbase backup merge
 
 [[br.merge.backup]]
@@ -578,33 +584,60 @@ $ hbase backup describe backupId_1467823988425
 // hbase backup delete
 
 [[br.delete.backup]]
-=== Deleting a Backup Image
+=== Deleting Backup Images
 
-This command can be used to delete a backup image which is no longer needed.
+The `hbase backup delete` command deletes backup images that are no longer needed.
+
+[[br.delete.backup.syntax]]
+==== Syntax
 
 [source]
 ----
-$ hbase backup delete <backup_id>
+$ hbase backup delete -l <backup_id1,backup_id2,...>
+$ hbase backup delete -k <days>
 ----
-
-[[br.delete.backup.positional.cli.arguments]]
-==== Positional Command-Line Arguments
-
-_backup_id_::
-  The ID to the backup image which should be deleted.
 
 [[br.delete.backup.named.cli.arguments]]
 ==== Named Command-Line Arguments
 
-None.
+_-l <backup_id1,backup_id2,...>_::
+Comma-separated list of backup IDs to delete.
+
+_-k <days>_::
+Deletes all backup images completed more than the specified number of days ago.
+
+NOTE: These options are **mutually exclusive**. Only one of `-l` or `-k` may be used at a time.
 
 [[br.delete.backup.example]]
-==== Example usage
+==== Example Usage
+
+Delete specific backup images by ID:
 
 [source]
 ----
-$ hbase backup delete backupId_1467823988425
+$ hbase backup delete -l backupId_1467823988425,backupId_1467824989999
 ----
+
+Delete all backup images older than 30 days:
+
+[source]
+----
+$ hbase backup delete -k 30
+----
+
+[CAUTION]
+====
+* Deleting a backup may affect all following incremental backups (in the same backup root) up to 
+  the next full backup. For example, if you take a full backup every 2 weeks and 
+  daily incremental backups, running `hbase backup delete -k 7` when the full backup is older than 
+  7 days will effectively remove the data for all subsequent incremental backups.
+  The backup IDs may still be listed, but their data will be gone.
+
+* If the most recent backup is an incremental backup and you delete it, 
+  you should run a **full backup** next.
+  Running another incremental backup immediately after may result in missing data in the 
+  backup image. (See link:https://issues.apache.org/jira/browse/HBASE-28084[HBASE-28084])
+====
 
 // hbase backup repair
 
@@ -804,16 +837,28 @@ providing a comparable level of security. This is a manual step which users *mus
 [[br.technical.details]]
 == Technical Details of Incremental Backup and Restore
 
-HBase incremental backups enable more efficient capture of HBase table images than previous attempts at serial backup and restore
-solutions, such as those that only used HBase Export and Import APIs. Incremental backups use Write Ahead Logs (WALs) to capture
-the data changes since the previous backup was created. A WAL roll (create new WALs) is executed across all RegionServers to track
-the WALs that need to be in the backup.
+HBase incremental backups enable more efficient capture of HBase table images than previous attempts 
+at serial backup and restore solutions, such as those that only used HBase Export and Import APIs.
+Incremental backups use Write Ahead Logs (WALs) to capture the data changes since the 
+previous backup was created. A WAL roll (create new WALs) is executed across all RegionServers 
+to track the WALs that need to be in the backup.
+In addition to WALs, incremental backups also track bulk-loaded HFiles for tables under backup.
 
-After the incremental backup image is created, the source backup files usually are on same node as the data source. A process similar
-to the DistCp (distributed copy) tool is used to move the source backup files to the target file systems. When a table restore operation
-starts, a two-step process is initiated. First, the full backup is restored from the full backup image. Second, all WAL files from
-incremental backups between the last full backup and the incremental backup being restored are converted to HFiles, which the HBase
-Bulk Load utility automatically imports as restored data in the table.
+Incremental backup gathers all WAL files generated since the last backup from the source cluster,
+converts them to HFiles in a `.tmp` directory under the `BACKUP_ROOT`, and then moves these 
+HFiles to their final location under the backup root directory to form the backup image.
+It also reads bulk load records from the backup system table, forms the paths for the corresponding 
+bulk-loaded HFiles, and copies those files to the backup destination.
+Bulk-loaded files are preserved (not deleted by cleaner chores) until they've been included in a 
+backup (for each backup root).
+A process similar to the DistCp (distributed copy) tool is used to move the backup files to the 
+target file system.
+
+When a table restore operation starts, a two-step process is initiated. 
+First, the full backup is restored from the full backup image.
+Second, all HFiles from incremental backups between the last full backup and the incremental backup 
+being restored (including bulk-loaded HFiles) are bulk loaded into the table using the 
+HBase Bulk Load utility.
 
 You can only restore on a live HBase cluster because the data must be redistributed to complete the restore operation successfully.
 
@@ -872,8 +917,9 @@ data at the full 80MB/s and `-w` is used to limit the job from spawning 16 worke
 
 Like we did for full backups, we have to understand the incremental backup process to approximate its runtime and cost.
 
-* Identify new write-ahead logs since last full or incremental backup: negligible. Apriori knowledge from the backup system table(s).
+* Identify new write-ahead logs since the last full or incremental backup: negligible. Apriori knowledge from the backup system table(s).
 * Read, filter, and write "minimized" HFiles equivalent to the WALs: dominated by the speed of writing data. Relative to write speed of HDFS.
+* Read bulk load records from the backup system table, form the paths for bulk-loaded HFiles, and copy them to the backup destination.
 * DistCp the HFiles to the destination: <<br.export.snapshot.cost,see above>>.
 
 For the second step, the dominating cost of this operation would be the re-writing the data (under the assumption that a majority of the

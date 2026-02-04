@@ -62,6 +62,11 @@ public interface ServerProcedureInterface {
      * Re-read the hbase:quotas table and update {@link QuotaCache}.
      */
     RELOAD_QUOTAS,
+
+    /**
+     * send roll log request to region server and handle the response
+     */
+    LOG_ROLL
   }
 
   /** Returns Name of this server instance. */

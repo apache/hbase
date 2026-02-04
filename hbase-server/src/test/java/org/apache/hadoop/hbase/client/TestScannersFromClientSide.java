@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.RPC_CODEC_CONF_KEY;
-import static org.apache.hadoop.hbase.client.TestFromClientSide3.generateHugeValue;
+import static org.apache.hadoop.hbase.client.FromClientSide3TestBase.generateHugeValue;
 import static org.apache.hadoop.hbase.ipc.RpcClient.DEFAULT_CODEC_CLASS;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;

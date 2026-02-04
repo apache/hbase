@@ -919,16 +919,6 @@ public class TestNamedQueueRecorder {
       @Override
       public void incrementResponseExceptionSize(long exceptionSize) {
       }
-
-      @Override
-      public void updateFsReadTime(long latencyMillis) {
-
-      }
-
-      @Override
-      public long getFsReadTime() {
-        return 0;
-      }
     };
     return rpcCall;
   }

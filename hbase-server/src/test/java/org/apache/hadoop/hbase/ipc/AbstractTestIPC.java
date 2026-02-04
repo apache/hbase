@@ -581,6 +581,8 @@ public abstract class AbstractTestIPC {
         everyItem(allOf(hasStatusWithCode(StatusCode.OK),
           hasTraceId(traceRule.getSpans().iterator().next().getTraceId()),
           hasDuration(greaterThanOrEqualTo(Duration.ofMillis(100L))))));
+    } finally {
+      rpcServer.stop();
     }
   }
 
@@ -609,6 +611,8 @@ public abstract class AbstractTestIPC {
       assertFalse("no spans provided", traceRule.getSpans().isEmpty());
       assertThat(traceRule.getSpans(), everyItem(allOf(hasStatusWithCode(StatusCode.ERROR),
         hasTraceId(traceRule.getSpans().iterator().next().getTraceId()))));
+    } finally {
+      rpcServer.stop();
     }
   }
 
@@ -670,6 +674,8 @@ public abstract class AbstractTestIPC {
       GetConnectionRegistryResponse resp =
         stub.getConnectionRegistry(null, GetConnectionRegistryRequest.getDefaultInstance());
       assertEquals(clusterId, resp.getClusterId());
+    } finally {
+      rpcServer.stop();
     }
   }
 
@@ -701,6 +707,8 @@ public abstract class AbstractTestIPC {
       assertEquals(FatalConnectionException.class.getName(),
         ((RemoteException) pcrc.getFailed()).getClassName());
       assertThat(pcrc.getFailed().getMessage(), startsWith("Expected HEADER="));
+    } finally {
+      rpcServer.stop();
     }
   }
 }

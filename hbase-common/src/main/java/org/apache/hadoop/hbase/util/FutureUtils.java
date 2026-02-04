@@ -65,7 +65,7 @@ public final class FutureUtils {
       try {
         // See this post on stack overflow(shorten since the url is too long),
         // https://s.apache.org/completionexception
-        // For a chain of CompleableFuture, only the first child CompletableFuture can get the
+        // For a chain of CompletableFuture, only the first child CompletableFuture can get the
         // original exception, others will get a CompletionException, which wraps the original
         // exception. So here we unwrap it before passing it to the callback action.
         action.accept(resp, unwrapCompletionException(error));

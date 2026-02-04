@@ -117,7 +117,7 @@ public class BucketEntry implements HBaseReferenceCounted {
     this.onDiskSizeWithHeader = onDiskSizeWithHeader;
     this.accessCounter = accessCounter;
     this.cachedTime = cachedTime;
-    this.priority = inMemory ? BlockPriority.MEMORY : BlockPriority.MULTI;
+    this.priority = inMemory ? BlockPriority.MEMORY : BlockPriority.SINGLE;
     this.refCnt = RefCnt.create(createRecycler.apply(this));
     this.markedAsEvicted = new AtomicBoolean(false);
     this.allocator = allocator;

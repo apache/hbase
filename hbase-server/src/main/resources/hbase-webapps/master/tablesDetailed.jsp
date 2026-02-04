@@ -21,10 +21,9 @@
          import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
          import="java.util.ArrayList"
          import="java.util.List"
-%>
-<%@ page import="org.apache.hadoop.hbase.client.TableDescriptor" %>
-<%@ page import="org.apache.hadoop.hbase.master.HMaster" %>
-<%@ page import="org.apache.hadoop.hbase.tmpl.master.MasterStatusTmplImpl" %>
+         import="org.apache.hadoop.hbase.client.TableDescriptor"
+         import="org.apache.hadoop.hbase.master.HMaster"
+         import="org.apache.hadoop.hbase.master.http.MasterStatusUtil" %>
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   pageContext.setAttribute("pageTitle", "HBase Master: " + master.getServerName());
@@ -41,7 +40,7 @@
   </div>
 
   <% List<TableDescriptor> tables = new ArrayList<TableDescriptor>();
-     String errorMessage = MasterStatusTmplImpl.getUserTables(master, tables);
+     String errorMessage = MasterStatusUtil.getUserTables(master, tables);
   if (tables.size() == 0 && errorMessage != null) { %>
   <p> <%= errorMessage %> </p>
   <% }

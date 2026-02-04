@@ -32,4 +32,5 @@ package org.apache.hadoop.hbase.testclassification;
  * @see IntegrationTests
  */
 public interface MediumTests {
+  public static final String TAG = "org.apache.hadoop.hbase.testclassification.MediumTests";
 }

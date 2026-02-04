@@ -526,6 +526,11 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     admin.rollWALWriter(serverName);
   }
 
+  @Override
+  public Map<ServerName, Long> rollAllWALWriters() throws IOException {
+    return admin.rollAllWALWriters();
+  }
+
   public CompactionState getCompactionState(TableName tableName) throws IOException {
     return admin.getCompactionState(tableName);
   }
@@ -977,6 +982,11 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   @Override
   public List<String> getCachedFilesList(ServerName serverName) throws IOException {
     return admin.getCachedFilesList(serverName);
+  }
+
+  @Override
+  public void restoreBackupSystemTable(String snapshotName) throws IOException {
+    admin.restoreBackupSystemTable(snapshotName);
   }
 
   @Override

@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
+import org.apache.hadoop.hbase.io.hfile.BlockPriority;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils.HFileBlockPair;
@@ -1114,5 +1115,14 @@ public class TestBucketCache {
     assertEquals(20, bucketCache.getBackingMap().size());
     bucketCache.freeSpace("test");
     return bucketCache;
+  }
+
+  @Test
+  public void testBlockPriority() throws Exception {
+    HFileBlockPair block = CacheTestUtils.generateHFileBlocks(BLOCK_SIZE, 1)[0];
+    cacheAndWaitUntilFlushedToBucket(cache, block.getBlockName(), block.getBlock(), true);
+    assertEquals(cache.backingMap.get(block.getBlockName()).getPriority(), BlockPriority.SINGLE);
+    cache.getBlock(block.getBlockName(), true, false, true);
+    assertEquals(cache.backingMap.get(block.getBlockName()).getPriority(), BlockPriority.MULTI);
   }
 }
