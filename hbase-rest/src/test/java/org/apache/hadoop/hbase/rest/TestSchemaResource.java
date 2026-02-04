@@ -17,19 +17,18 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.util.Collection;
+import java.util.stream.Stream;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -44,21 +43,17 @@ import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.http.Header;
 import org.apache.http.message.BasicHeader;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
-@Category({ RestTests.class, MediumTests.class })
-@RunWith(Parameterized.class)
+@Tag(RestTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: csrfEnabled = {0}")
 public class TestSchemaResource {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSchemaResource.class);
 
   private static String TABLE1 = "TestSchemaResource1";
   private static String TABLE2 = "TestSchemaResource2";
@@ -73,16 +68,15 @@ public class TestSchemaResource {
 
   private static boolean csrfEnabled = true;
 
-  @Parameterized.Parameters
-  public static Collection<Object[]> parameters() {
-    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
-  }
-
-  public TestSchemaResource(Boolean csrf) {
+  public TestSchemaResource(boolean csrf) {
     csrfEnabled = csrf;
   }
 
-  @BeforeClass
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(false), Arguments.of(true));
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(RESTServer.REST_CSRF_ENABLED_KEY, csrfEnabled);
@@ -97,13 +91,13 @@ public class TestSchemaResource {
     context = JAXBContext.newInstance(ColumnSchemaModel.class, TableSchemaModel.class);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     REST_TEST_UTIL.shutdownServletContainer();
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
 
@@ -129,15 +123,15 @@ public class TestSchemaResource {
       .unmarshal(new ByteArrayInputStream(content));
   }
 
-  @Test
+  @TestTemplate
   public void testTableCreateAndDeleteXML() throws IOException, JAXBException {
     String schemaPath = "/" + TABLE1 + "/schema";
     TableSchemaModel model;
     Response response;
 
     Admin admin = TEST_UTIL.getAdmin();
-    assertFalse("Table " + TABLE1 + " should not exist",
-      admin.tableExists(TableName.valueOf(TABLE1)));
+    assertFalse(admin.tableExists(TableName.valueOf(TABLE1)),
+      "Table " + TABLE1 + " should not exist");
 
     // create the table
     model = testTableSchemaModel.buildTestModel(TABLE1);
@@ -149,8 +143,8 @@ public class TestSchemaResource {
     }
 
     response = client.put(schemaPath, Constants.MIMETYPE_XML, toXML(model), extraHdr);
-    assertEquals("put failed with csrf " + (csrfEnabled ? "enabled" : "disabled"), 201,
-      response.getCode());
+    assertEquals(201, response.getCode(),
+      "put failed with csrf " + (csrfEnabled ? "enabled" : "disabled"));
 
     // recall the same put operation but in read-only mode
     conf.set("hbase.rest.readonly", "true");
@@ -190,7 +184,7 @@ public class TestSchemaResource {
     assertFalse(admin.tableExists(TableName.valueOf(TABLE1)));
   }
 
-  @Test
+  @TestTemplate
   public void testTableCreateAndDeletePB() throws IOException {
     String schemaPath = "/" + TABLE2 + "/schema";
     TableSchemaModel model;
@@ -210,8 +204,8 @@ public class TestSchemaResource {
     }
     response =
       client.put(schemaPath, Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput(), extraHdr);
-    assertEquals("put failed with csrf " + (csrfEnabled ? "enabled" : "disabled"), 201,
-      response.getCode());
+    assertEquals(201, response.getCode(),
+      "put failed with csrf " + (csrfEnabled ? "enabled" : "disabled"));
 
     // recall the same put operation but in read-only mode
     conf.set("hbase.rest.readonly", "true");
