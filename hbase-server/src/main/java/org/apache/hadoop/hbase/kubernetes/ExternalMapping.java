@@ -71,7 +71,8 @@ public class ExternalMapping implements Closeable {
     }
   }
 
-  @RestrictedApi(explanation = "Should only be called in tests")
+  @RestrictedApi(explanation = "Should only be called in tests",
+      allowedOnPath = ".*/TestExternalMapping.java")
   protected WatchService getWatchService() {
     return watchService;
   }
