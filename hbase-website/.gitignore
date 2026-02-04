@@ -33,6 +33,7 @@ lerna-debug.log*
 
 # Generated files
 /app/pages/team/developers.json
+/public/books/**
 
 # Playwright
 node_modules/

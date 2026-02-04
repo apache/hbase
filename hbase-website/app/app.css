@@ -208,6 +208,7 @@
     display: none !important;
   }
 
+
   /* Every major section starts on a new page */
   h1:not(:first-of-type) {
     break-before: page;
