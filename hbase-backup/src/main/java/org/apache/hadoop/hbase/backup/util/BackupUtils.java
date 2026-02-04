@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.net.URLDecoder;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -1047,6 +1048,7 @@ public final class BackupUtils {
 
     List<String> validDirs = new ArrayList<>();
     SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+    dateFormat.setTimeZone(TimeZone.getTimeZone(ZoneOffset.UTC));
 
     for (FileStatus dayDir : dayDirs) {
       if (!dayDir.isDirectory()) {
