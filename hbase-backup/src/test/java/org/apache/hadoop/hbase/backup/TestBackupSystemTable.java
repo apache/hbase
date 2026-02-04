@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -56,7 +56,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test cases for backup system table API
  */
-@Category(MediumTests.class)
+@Category(LargeTests.class)
 public class TestBackupSystemTable {
 
   @ClassRule
