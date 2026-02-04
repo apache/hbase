@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.http.Header;
@@ -46,7 +46,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ RestTests.class, MediumTests.class })
+@Category({ RestTests.class, LargeTests.class })
 public class TestGetAndPutResource extends RowResourceBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
