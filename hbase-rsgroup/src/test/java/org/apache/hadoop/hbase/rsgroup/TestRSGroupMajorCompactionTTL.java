@@ -30,14 +30,17 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.compaction.TestMajorCompactorTTL;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
+@Category(LargeTests.class)
 public class TestRSGroupMajorCompactionTTL extends TestMajorCompactorTTL {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
