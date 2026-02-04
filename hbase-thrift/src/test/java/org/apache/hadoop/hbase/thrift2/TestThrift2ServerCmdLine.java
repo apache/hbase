@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.function.Supplier;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.thrift.ImplType;
 import org.apache.hadoop.hbase.thrift.TestThriftServerCmdLine;
 import org.apache.hadoop.hbase.thrift.ThriftServer;
@@ -41,7 +41,7 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-@Category({ ClientTests.class, MediumTests.class })
+@Category({ ClientTests.class, LargeTests.class })
 public class TestThrift2ServerCmdLine extends TestThriftServerCmdLine {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =

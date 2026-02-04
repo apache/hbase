@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.DummyRegion
 import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyService;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Category({ CoprocessorTests.class, LargeTests.class })
 public class TestRegionServerCoprocessorEndpoint {
 
   @ClassRule

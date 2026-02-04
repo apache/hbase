@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.http.Header;
@@ -45,7 +45,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 @Tag(RestTests.TAG)
-@Tag(MediumTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestGetAndPutResource extends RowResourceBase {
 
   private static final MetricsAssertHelper METRICS_ASSERT =

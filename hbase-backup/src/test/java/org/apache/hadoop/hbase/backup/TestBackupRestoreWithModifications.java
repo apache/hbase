@@ -54,7 +54,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testing.TestingHBaseCluster;
 import org.apache.hadoop.hbase.testing.TestingHBaseClusterOption;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
@@ -70,7 +70,7 @@ import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(MediumTests.class)
+@Category(LargeTests.class)
 @RunWith(Parameterized.class)
 public class TestBackupRestoreWithModifications {
 

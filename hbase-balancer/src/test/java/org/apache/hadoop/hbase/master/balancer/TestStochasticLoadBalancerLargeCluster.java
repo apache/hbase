@@ -19,13 +19,13 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import java.time.Duration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Category({ MasterTests.class, LargeTests.class })
 public class TestStochasticLoadBalancerLargeCluster extends StochasticBalancerTestBase {
 
   @ClassRule
