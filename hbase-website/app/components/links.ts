@@ -16,7 +16,7 @@
 // limitations under the License.
 //
 
-import { fileNameVariants } from "@/lib/export-pdf";
+import { fileNameVariants } from "@/lib/export-pdf-types";
 
 interface LinkType {
   label: string;
@@ -112,7 +112,7 @@ export const documentationLinks: (LinkType | NestedLinkType)[] = [
       },
       {
         label: "Video/Presentations",
-        to: "https://hbase.apache.org/book.html#other.info"
+        to: "/docs/other-info"
       },
       {
         label: "ACID Semantics",
@@ -120,11 +120,11 @@ export const documentationLinks: (LinkType | NestedLinkType)[] = [
       },
       {
         label: "Bulk Loads",
-        to: "https://hbase.apache.org/book.html#arch.bulk.load"
+        to: "/docs/architecture/bulk-loading"
       },
       {
         label: "Metrics",
-        to: "https://hbase.apache.org/book.html#hbase_metrics"
+        to: "/docs/operational-management/metrics-and-monitoring"
       }
     ]
   }

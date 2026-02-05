@@ -16,6 +16,7 @@
 // limitations under the License.
 //
 
+import { GettingStartedSection } from "@/components/getting-started";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNavbar } from "@/components/site-navbar";
 import { Outlet } from "react-router";
@@ -25,6 +26,7 @@ export default function LandingLayout() {
     <>
       <SiteNavbar />
       <Outlet />
+      <GettingStartedSection />
       <SiteFooter />
     </>
   );

@@ -29,7 +29,7 @@ export function TeamPage() {
   return (
     <div className="container mx-auto px-4 py-12">
       <article className="prose prose-slate dark:prose-invert max-w-none">
-        <h1 className="my-12 text-center text-4xl font-semibold tracking-tight text-balance md:text-6xl">
+        <h1 className="!my-12 text-center text-4xl font-semibold tracking-tight text-balance md:text-6xl">
           The Team
         </h1>
 
@@ -56,7 +56,7 @@ export function TeamPage() {
         </p>
 
         <div className="border-border my-8 w-full overflow-x-auto rounded-lg border">
-          <table className="w-full table-fixed border-collapse text-sm">
+          <table className="w-full table-fixed border-collapse mt-0 mb-0 text-sm">
             <thead className="bg-muted">
               <tr className="border-border border-b">
                 <th className="px-4 py-3 text-left font-semibold">Id</th>

@@ -20,7 +20,6 @@ import { Hero } from "@/pages/_landing/home/hero";
 import { FeaturesSection } from "@/pages/_landing/home/features";
 import { CommunitySection } from "@/pages/_landing/home/community";
 import { UseCasesSection } from "@/pages/_landing/home/use-cases";
-import { GettingStartedSection } from "@/components/getting-started";
 
 export function HomePage() {
   return (
@@ -29,7 +28,6 @@ export function HomePage() {
       <FeaturesSection />
       <UseCasesSection />
       <CommunitySection />
-      <GettingStartedSection />
     </>
   );
 }

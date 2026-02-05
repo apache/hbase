@@ -20,7 +20,7 @@ import { test } from "@playwright/test";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { fileNameVariants } from "../app/lib/export-pdf";
+import { fileNameVariants } from "../app/lib/export-pdf-types";
 
 const outDir = "public/books";
 const marginInches = 0.4;

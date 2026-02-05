@@ -27,7 +27,7 @@ export function getMDXComponents(overrides?: MDXComponents): MDXComponents {
     ...defaultMdxComponents,
     h1: (props) => (
       <h1
-        className="my-12 text-center text-4xl font-semibold tracking-tight text-balance md:text-6xl"
+        className="mb-12 text-center text-4xl font-semibold tracking-tight text-balance md:text-6xl"
         {...props}
       />
     ),

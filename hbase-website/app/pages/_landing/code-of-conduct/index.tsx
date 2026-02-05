@@ -20,5 +20,5 @@ import { MdLayout } from "@/components/mdx-components";
 import Content from "./content.md";
 
 export function CodeOfConductPage() {
-  return <MdLayout Content={Content} />;
+  return <MdLayout Content={Content} className="mt-12" />;
 }
