@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.rest.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,7 +30,6 @@ import java.util.Iterator;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -51,19 +50,16 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.http.Header;
 import org.apache.http.message.BasicHeader;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RestTests.class, LargeTests.class })
+@Tag(RestTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRemoteTable {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRemoteTable.class);
 
   // Verify that invalid URL characters and arbitrary bytes are escaped when
   // constructing REST URLs per HBASE-7621. RemoteHTable should support row keys
@@ -104,13 +100,13 @@ public class TestRemoteTable {
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
   private RemoteHTable remoteTable;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
   }
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     if (admin.tableExists(TABLE)) {
@@ -140,12 +136,12 @@ public class TestRemoteTable {
         TEST_UTIL.getConfiguration(), TABLE.toBytes());
   }
 
-  @After
+  @AfterEach
   public void after() throws Exception {
     remoteTable.close();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     REST_TEST_UTIL.shutdownServletContainer();
     TEST_UTIL.shutdownMiniCluster();
@@ -707,5 +703,4 @@ public class TestRemoteTable {
     }
     assertEquals(5, counter);
   }
-
 }

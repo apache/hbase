@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
@@ -32,7 +32,6 @@ import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -72,19 +71,16 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RestTests.class, MediumTests.class })
+@Tag(RestTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestScannersWithFilters {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestScannersWithFilters.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestScannersWithFilters.class);
 
@@ -119,7 +115,7 @@ public class TestScannersWithFilters {
   private static long numRows = (long) ROWS_ONE.length + ROWS_TWO.length;
   private static long colsPerRow = (long) FAMILIES.length * QUALIFIERS_ONE.length;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
     REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
@@ -204,7 +200,7 @@ public class TestScannersWithFilters {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     REST_TEST_UTIL.shutdownServletContainer();
     TEST_UTIL.shutdownMiniCluster();
@@ -230,13 +226,12 @@ public class TestScannersWithFilters {
       (CellSetModel) unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
 
     int rows = cells.getRows().size();
-    assertEquals(
-      "Unexpected number of rows! Expected " + expectedRows + " total but scanned " + rows,
-      expectedRows, rows);
+    assertEquals(expectedRows, rows,
+      "Unexpected number of rows! Expected " + expectedRows + " total but scanned " + rows);
     for (RowModel row : cells.getRows()) {
       int count = row.getCells().size();
-      assertEquals("Expected " + expectedKeys + " keys per row but " + "returned " + count,
-        expectedKeys, count);
+      assertEquals(expectedKeys, count,
+        "Expected " + expectedKeys + " keys per row but " + "returned " + count);
     }
 
     // delete the scanner
@@ -282,18 +277,18 @@ public class TestScannersWithFilters {
         break;
       }
 
-      assertTrue("Scanned too many keys! Only expected " + kvs.length
-        + " total but already scanned " + (cells.size() + idx), kvs.length >= idx + cells.size());
+      assertTrue(kvs.length >= idx + cells.size(), "Scanned too many keys! Only expected "
+        + kvs.length + " total but already scanned " + (cells.size() + idx));
       for (CellModel cell : cells) {
-        assertTrue("Row mismatch", Bytes.equals(rowModel.getKey(), CellUtil.cloneRow(kvs[idx])));
+        assertTrue(Bytes.equals(rowModel.getKey(), CellUtil.cloneRow(kvs[idx])), "Row mismatch");
         byte[][] split = CellUtil.parseColumn(cell.getColumn());
-        assertTrue("Family mismatch", Bytes.equals(split[0], CellUtil.cloneFamily(kvs[idx])));
-        assertTrue("Qualifier mismatch", Bytes.equals(split[1], CellUtil.cloneQualifier(kvs[idx])));
-        assertTrue("Value mismatch", Bytes.equals(cell.getValue(), CellUtil.cloneValue(kvs[idx])));
+        assertTrue(Bytes.equals(split[0], CellUtil.cloneFamily(kvs[idx])), "Family mismatch");
+        assertTrue(Bytes.equals(split[1], CellUtil.cloneQualifier(kvs[idx])), "Qualifier mismatch");
+        assertTrue(Bytes.equals(cell.getValue(), CellUtil.cloneValue(kvs[idx])), "Value mismatch");
         idx++;
       }
     }
-    assertEquals("Expected " + kvs.length + " total keys but scanned " + idx, kvs.length, idx);
+    assertEquals(kvs.length, idx, "Expected " + kvs.length + " total keys but scanned " + idx);
   }
 
   private static void verifyScanNoEarlyOut(Scan s, long expectedRows, long expectedKeys)
@@ -334,12 +329,12 @@ public class TestScannersWithFilters {
         break;
       }
 
-      assertTrue("Scanned too many rows! Only expected " + expectedRows
-        + " total but already scanned " + (j + 1), expectedRows > j);
-      assertEquals("Expected " + expectedKeys + " keys per row but " + "returned " + cells.size(),
-        expectedKeys, cells.size());
+      assertTrue(expectedRows > j, "Scanned too many rows! Only expected " + expectedRows
+        + " total but already scanned " + (j + 1));
+      assertEquals(expectedKeys, cells.size(),
+        "Expected " + expectedKeys + " keys per row but " + "returned " + cells.size());
     }
-    assertEquals("Expected " + expectedRows + " rows but scanned " + j + " rows", expectedRows, j);
+    assertEquals(expectedRows, j, "Expected " + expectedRows + " rows but scanned " + j + " rows");
   }
 
   @Test

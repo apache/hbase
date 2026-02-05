@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayInputStream;
@@ -45,10 +45,10 @@ import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.http.Header;
 import org.apache.http.message.BasicHeader;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 
 import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
@@ -83,7 +83,7 @@ public class RowResourceBase {
   protected static Configuration conf;
   protected static ObjectMapper jsonMapper;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniCluster(3);
@@ -96,13 +96,13 @@ public class RowResourceBase {
     client = new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort()));
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     REST_TEST_UTIL.shutdownServletContainer();
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void beforeMethod() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     if (admin.tableExists(TABLE_NAME)) {
@@ -114,7 +114,7 @@ public class RowResourceBase {
     admin.createTable(htd);
   }
 
-  @After
+  @AfterEach
   public void afterMethod() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     if (admin.tableExists(TABLE_NAME)) {
