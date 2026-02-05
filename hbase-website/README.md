@@ -40,12 +40,13 @@ The official website for Apache HBase, built with modern web technologies to pro
 
 ## Content Editing
 
-Most pages (except the home page) store content in **Markdown (`.md`)** or **JSON (`.json`)** files located in `app/pages/[page-name]/`. This makes it easy to update content without touching code.
+Most landing pages store content in **Markdown (`.md`)** or **JSON (`.json`)** files located in `app/pages/_landing/[page-name]/`. Docs content lives under `app/pages/_docs/` and is authored in MDX.
 
 **Examples:**
-- `app/pages/team/content.md` - Markdown content for team page
-- `app/pages/powered-by-hbase/companies.json` - JSON data for companies
-- `app/pages/news/events.json` - JSON data for news/events
+- `app/pages/_landing/team/content.md` - Markdown content for team page
+- `app/pages/_landing/powered-by-hbase/companies.json` - JSON data for companies
+- `app/pages/_landing/news/events.json` - JSON data for news/events
+- `app/pages/_docs/docs/_mdx/(multi-page)/...` - MDX content for documentation
 
 ---
 
@@ -73,6 +74,13 @@ This website uses modern web technologies. Here's what each one does (with Java 
   - Provides server-side rendering for better performance and SEO
   - Enables progressive enhancement (see below)
   - [Documentation](https://reactrouter.com/)
+
+#### Documentation Framework
+- **Fumadocs** - Documentation framework used for the docs section
+  - Provides MDX-based docs structure and navigation
+  - Lives alongside the landing pages in the same React Router app
+  - Supports multi-page and single-page docs from the same MDX sources
+  - [Documentation](https://fumadocs.com/)
 
 #### Progressive Enhancement
 
@@ -119,37 +127,44 @@ The project follows a clear directory structure with separation of concerns:
 
 ```
 my-react-router-app/
-├── app/                          # Application source code
-│   ├── ui/                       # Reusable UI components (no business logic)
-│   │   ├── button.tsx            # Generic button component
-│   │   ├── card.tsx              # Card container component
-│   │   └── ...                   # Other UI primitives
+├── app/                               # Application source code
+│   ├── ui/                            # Reusable UI components (no business logic)
+│   │   ├── button.tsx                 # Generic button component
+│   │   ├── card.tsx                   # Card container component
+│   │   └── ...                        # Other UI primitives
 │   │
-│   ├── components/               # Reusable components WITH business logic
-│   │   ├── site-navbar.tsx       # Website navigation bar
-│   │   ├── site-footer.tsx       # Website footer
-│   │   ├── theme-toggle.tsx      # Dark/light mode toggle
-│   │   └── markdown-layout.tsx   # Layout for markdown content pages
+│   ├── components/                    # Reusable components WITH business logic
+│   │   ├── site-navbar.tsx            # Website navigation bar
+│   │   ├── site-footer.tsx            # Website footer
+│   │   ├── theme-toggle.tsx           # Dark/light mode toggle
+│   │   └── markdown-layout.tsx        # Layout for markdown content pages
 │   │
-│   ├── pages/                    # Complete pages (composed of ui + components)
-│   │   ├── home/                 # Home page
-│   │   │   ├── index.tsx         # Main page component (exported)
-│   │   │   ├── hero.tsx          # Hero section (not exported)
-│   │   │   ├── features.tsx      # Features section (not exported)
+│   ├── pages/                         # Complete pages (composed of ui + components)
+│   │   ├── _landing/                  # Landing pages + layout
+│   │   │   ├── home/                  # Home page
+│   │   │   │   ├── index.tsx          # Main page component (exported)
+│   │   │   │   ├── hero.tsx           # Hero section (not exported)
+│   │   │   │   ├── features.tsx       # Features section (not exported)
+│   │   │   │   └── ...
+│   │   │   ├── team/                  # Landing page content
+│   │   │   └── ...
+│   │   ├── _docs/                     # Documentation (Fumadocs)
+│   │   │   ├── docs/                  # MDX content and structure
+│   │   │   ├── docs-layout.tsx        # Fumadocs layout wrapper
 │   │   │   └── ...
 │   │
-│   ├── routes/                   # Route definitions and metadata
-│   │   ├── home.tsx              # Home route configuration
-│   │   ├── team.tsx              # Team route configuration
+│   ├── routes/                        # Route definitions and metadata
+│   │   ├── home.tsx                   # Home route configuration
+│   │   ├── team.tsx                   # Team route configuration
 │   │   └── ...
 │   │
-│   ├── lib/                      # Utility functions and integrations
-│   │   ├── utils.ts              # Helper functions
-│   │   └── theme-provider.tsx    # Theme management
+│   ├── lib/                           # Utility functions and integrations
+│   │   ├── utils.ts                   # Helper functions
+│   │   └── theme-provider.tsx         # Theme management
 │   │
-│   ├── routes.ts                 # Main routing configuration
-│   ├── root.tsx                  # Root layout component
-│   └── app.css                   # Global styles
+│   ├── routes.ts                      # Main routing configuration
+│   ├── root.tsx                       # Root layout component
+│   └── app.css                        # Global styles
 │
 ├── build/                        # Generated files (DO NOT EDIT)
 │   ├── client/                   # Browser-side assets
@@ -187,6 +202,15 @@ my-react-router-app/
 4. **Routes (`/routes`)**: Define routing and metadata
    - Maps URLs to pages
    - Sets page titles, meta tags, etc.
+
+5. **Two Layout Systems in One App**:
+   - **Landing pages** live under `app/pages/_landing/` and use the landing layout.
+   - **Docs pages** live under `app/pages/_docs/` and use Fumadocs layouts.
+   - Both are part of the same React Router application, but render with different layouts and visual styles.
+
+6. **Documentation Versions**:
+   - **Multi-page docs** live under `app/pages/_docs/docs/_mdx/(multi-page)/` and are the source of truth.
+   - **Single-page docs** live under `app/pages/_docs/docs/_mdx/single-page/` and import content from the multi-page docs.
 
 #### Important Conventions
 
@@ -274,6 +298,11 @@ This starts a local development server with:
 3. Create route file in `app/routes/my-new-page.tsx`
 4. Register route in `app/routes.ts`
 
+**Add a new documentation page:**
+1. Create a new `.mdx` file in `app/pages/_docs/docs/_mdx/(multi-page)/` (for example `my-topic.mdx`).
+2. Add the new file to the relevant `meta.json` in the same section folder so it appears in navigation.
+3. Import the page into `app/pages/_docs/docs/_mdx/single-page/index.mdx` and add an `#` header so it renders in the single-page docs.
+
 **Update content:**
 - Edit the appropriate `.md` or `.json` file
 - Changes appear automatically
@@ -295,6 +324,20 @@ npm run lint:fix
 ### Testing
 
 The project uses [Vitest](https://vitest.dev/) and [Playwright](http://playwright.dev/) for testing. Vitest is for unit testing, while Playwright is for e2e testing.
+
+#### Export Documentation PDF
+
+The docs PDF export is implemented as a Playwright e2e test in `e2e-tests/export-pdf.spec.ts`. It runs during `npm run ci` and generates static PDF assets for the documentation by rendering the single-page docs in both light and dark themes (HTML → PDF).
+
+The export quality depends heavily on the `@media print` styles defined in `app/app.css`, which control layout, pagination, and print-only behavior.
+
+There is also a dedicated command you can run manually when needed:
+
+```bash
+npm run export-pdf
+```
+
+This command is not part of the CI pipeline and does not run automatically unless invoked directly.
 
 **Run tests:**
 ```bash
@@ -369,7 +412,7 @@ When you run the Maven build, it automatically:
    - `npm run lint` - ESLint code quality checks
    - `npm run typecheck` - TypeScript type checking
    - `npm run extract-developers` - Extract developers from parent pom.xml
-   - `npm run extract-hbase-config` - Extract data from `hbase-default.xml` to `app/pages/documentation/hbase-default.md`
+   - `npm run extract-hbase-config` - Extract data from `hbase-default.xml` to `app/pages/_docs/docs/_mdx/(multi-page)/configuration/hbase-default.md`
    - `npm run test:unit:run` - Vitest unit tests
    - `npm run test:e2e` - Playwright e2e tests
    - `npm run build` - Production build
