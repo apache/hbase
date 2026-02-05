@@ -51,7 +51,7 @@ export function Hero() {
               <Link to="/downloads">Download HBase</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link to="https://hbase.apache.org/book.html">Read Documentation</Link>
+              <Link to="/doc">Read Documentation</Link>
             </Button>
           </div>
         </div>

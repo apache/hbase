@@ -70,7 +70,7 @@ export function CommunitySection() {
             </li>
             <li id="security" className="relative p-0">
               <Link
-                to="https://hbase.apache.org/book.html#security"
+                to="/docs/security"
                 className="border-border/60 bg-background hover:border-primary focus-visible:ring-primary block rounded-lg border p-4 transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
                 <span className="text-foreground font-medium">Security</span>
