@@ -20,13 +20,9 @@ package org.apache.hadoop.hbase.security.access;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
@@ -38,7 +34,6 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
@@ -59,52 +54,19 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @CoreCoprocessor
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class RegionReadOnlyController
-  implements RegionCoprocessor, RegionObserver, ConfigurationObserver {
-
-  private static final Logger LOG = LoggerFactory.getLogger(RegionReadOnlyController.class);
-  private volatile boolean globalReadOnlyEnabled;
-
-  private void internalReadOnlyGuard() throws DoNotRetryIOException {
-    if (this.globalReadOnlyEnabled) {
-      throw new DoNotRetryIOException("Operation not allowed in Read-Only Mode");
-    }
-  }
+public class RegionReadOnlyController extends AbstractReadOnlyController
+  implements RegionCoprocessor, RegionObserver {
 
   private boolean isOnMeta(final ObserverContext<? extends RegionCoprocessorEnvironment> c) {
     return TableName.isMetaTableName(c.getEnvironment().getRegionInfo().getTable());
   }
 
   @Override
-  public void start(CoprocessorEnvironment env) throws IOException {
-    this.globalReadOnlyEnabled =
-      env.getConfiguration().getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
-  }
-
-  @Override
-  public void stop(CoprocessorEnvironment env) {
-  }
-
-  @Override
   public Optional<RegionObserver> getRegionObserver() {
     return Optional.of(this);
-  }
-
-  @Override
-  public void onConfigurationChange(Configuration conf) {
-    boolean maybeUpdatedConfValue = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
-    if (this.globalReadOnlyEnabled != maybeUpdatedConfValue) {
-      this.globalReadOnlyEnabled = maybeUpdatedConfValue;
-      LOG.info("Config {} has been dynamically changed to {}.",
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, this.globalReadOnlyEnabled);
-    }
   }
 
   @Override

@@ -22,13 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.BalanceRequest;
@@ -36,104 +30,28 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.GlobalQuotaSettings;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @CoreCoprocessor
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class MasterReadOnlyController
-  implements MasterCoprocessor, MasterObserver, ConfigurationObserver {
+public class MasterReadOnlyController extends AbstractReadOnlyController
+  implements MasterCoprocessor, MasterObserver {
 
   private static final Logger LOG = LoggerFactory.getLogger(MasterReadOnlyController.class);
 
   private MasterServices masterServices;
-  private volatile boolean globalReadOnlyEnabled;
-
-  private void internalReadOnlyGuard() throws DoNotRetryIOException {
-    if (this.globalReadOnlyEnabled) {
-      throw new DoNotRetryIOException("Operation not allowed in Read-Only Mode");
-    }
-  }
-
-  @Override
-  public void start(CoprocessorEnvironment env) throws IOException {
-    if (env instanceof MasterCoprocessorEnvironment) {
-      this.masterServices = ((MasterCoprocessorEnvironment) env).getMasterServices();
-      LOG.info("ReadOnlyController obtained MasterServices reference from start().");
-    } else {
-      LOG.debug("ReadOnlyController loaded in a non-Master environment. "
-        + "File system operations for read-only state will not work.");
-    }
-    this.globalReadOnlyEnabled =
-      env.getConfiguration().getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
-  }
-
-  @Override
-  public void stop(CoprocessorEnvironment env) {
-  }
-
-  @Override
-  public void onConfigurationChange(Configuration conf) {
-    boolean maybeUpdatedConfValue = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
-    if (this.globalReadOnlyEnabled != maybeUpdatedConfValue) {
-      if (this.masterServices != null) {
-        manageActiveClusterIdFile(maybeUpdatedConfValue);
-      } else {
-        LOG.debug("Global R/O flag changed, but not running on master");
-      }
-      this.globalReadOnlyEnabled = maybeUpdatedConfValue;
-      LOG.info("Config {} has been dynamically changed to {}.",
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, this.globalReadOnlyEnabled);
-    }
-  }
-
-  private void manageActiveClusterIdFile(boolean newValue) {
-    MasterFileSystem mfs = this.masterServices.getMasterFileSystem();
-    FileSystem fs = mfs.getFileSystem();
-    Path rootDir = mfs.getRootDir();
-    Path activeClusterFile = new Path(rootDir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
-
-    try {
-      if (newValue) {
-        // ENABLING READ-ONLY (false -> true), delete the active cluster file.
-        LOG.debug("Global read-only mode is being ENABLED. Deleting active cluster file: {}",
-          activeClusterFile);
-        try {
-          fs.delete(activeClusterFile, false);
-          LOG.info("Successfully deleted active cluster file: {}", activeClusterFile);
-        } catch (IOException e) {
-          LOG.error(
-            "Failed to delete active cluster file: {}. "
-              + "Read-only flag will be updated, but file system state is inconsistent.",
-            activeClusterFile);
-        }
-      } else {
-        // DISABLING READ-ONLY (true -> false), create the active cluster file id file
-        int wait = mfs.getConfiguration().getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
-        FSUtils.setActiveClusterSuffix(fs, rootDir, mfs.getSuffixFileDataToWrite(), wait);
-      }
-    } catch (IOException e) {
-      // We still update the flag, but log that the operation failed.
-      LOG.error("Failed to perform file operation for read-only switch. "
-        + "Flag will be updated, but file system state may be inconsistent.", e);
-    }
-  }
 
   @Override
   public Optional<MasterObserver> getMasterObserver() {

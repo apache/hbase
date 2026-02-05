@@ -19,61 +19,25 @@ package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
 import java.util.Optional;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 @CoreCoprocessor
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class RegionServerReadOnlyController
-  implements RegionServerObserver, RegionServerCoprocessor, ConfigurationObserver {
-
-  private static final Logger LOG = LoggerFactory.getLogger(RegionServerReadOnlyController.class);
-  private volatile boolean globalReadOnlyEnabled;
-
-  private void internalReadOnlyGuard() throws DoNotRetryIOException {
-    if (this.globalReadOnlyEnabled) {
-      throw new DoNotRetryIOException("Operation not allowed in Read-Only Mode");
-    }
-  }
-
-  @Override
-  public void start(CoprocessorEnvironment env) throws IOException {
-    this.globalReadOnlyEnabled =
-      env.getConfiguration().getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
-  }
-
-  @Override
-  public void stop(CoprocessorEnvironment env) {
-  }
+public class RegionServerReadOnlyController extends AbstractReadOnlyController
+  implements RegionServerObserver, RegionServerCoprocessor {
 
   @Override
   public Optional<RegionServerObserver> getRegionServerObserver() {
     return Optional.of(this);
-  }
-
-  @Override
-  public void onConfigurationChange(Configuration conf) {
-    boolean maybeUpdatedConfValue = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
-    this.globalReadOnlyEnabled = maybeUpdatedConfValue;
-    LOG.info("Config {} has been dynamically changed to {}.",
-      HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, this.globalReadOnlyEnabled);
   }
 
   @Override
