@@ -22,6 +22,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -87,6 +88,11 @@ public abstract class AsyncFSTestBase {
     createDirAndSetProperty("dfs.journalnode.edits.dir");
     createDirAndSetProperty("dfs.provided.aliasmap.inmemory.leveldb.dir");
     createDirAndSetProperty("fs.s3a.committer.staging.tmp.path");
+
+    // disable metrics logger since it depend on commons-logging internal classes and we do not want
+    // commons-logging on our classpath
+    UTIL.getConfiguration().setInt(DFSConfigKeys.DFS_NAMENODE_METRICS_LOGGER_PERIOD_SECONDS_KEY, 0);
+    UTIL.getConfiguration().setInt(DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_KEY, 0);
   }
 
   protected static void startMiniDFSCluster(int servers) throws IOException {
