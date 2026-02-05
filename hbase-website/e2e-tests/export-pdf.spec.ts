@@ -33,71 +33,86 @@ const variants = [
   { name: fileNameVariants.dark, theme: "dark" }
 ];
 
-async function applyDarkMargins(pdfPath: string) {
+async function postProcess(pdfPath: string, darkMode?: boolean) {
   const pdfBytes = await fs.readFile(pdfPath);
   const pdfDoc = await PDFDocument.load(pdfBytes);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
+  let pageCount = 1;
+  let startPageCount = false;
   const pages = pdfDoc.getPages();
   pages.forEach((page, index) => {
     const { width, height } = page.getSize();
 
-    // Left margin
-    page.drawRectangle({
-      x: 0,
-      y: 0,
-      width: xMargin,
-      height,
-      color: darkMarginColor,
-      borderWidth: 0
-    });
+    // Margins are white by default, so we're repainting them to black for the dark mode pdf
+    if (darkMode) {
+      // Left margin
+      page.drawRectangle({
+        x: 0,
+        y: 0,
+        width: xMargin,
+        height,
+        color: darkMarginColor,
+        borderWidth: 0
+      });
 
-    // Right margin
-    page.drawRectangle({
-      x: width - xMargin,
-      y: 0,
-      width: xMargin,
-      height,
-      color: darkMarginColor,
-      borderWidth: 0
-    });
+      // Right margin
+      page.drawRectangle({
+        x: width - xMargin,
+        y: 0,
+        width: xMargin,
+        height,
+        color: darkMarginColor,
+        borderWidth: 0
+      });
 
-    // Top margin
-    page.drawRectangle({
-      x: 0,
-      y: height - yMargin,
-      width,
-      height: yMargin,
-      color: darkMarginColor,
-      borderWidth: 0
-    });
+      // Top margin
+      page.drawRectangle({
+        x: 0,
+        y: height - yMargin,
+        width,
+        height: yMargin,
+        color: darkMarginColor,
+        borderWidth: 0
+      });
 
-    // Bottom margin
-    page.drawRectangle({
-      x: 0,
-      y: 0,
-      width,
-      height: yMargin,
-      color: darkMarginColor,
-      borderWidth: 0
-    });
+      // Bottom margin
+      page.drawRectangle({
+        x: 0,
+        y: 0,
+        width,
+        height: yMargin,
+        color: darkMarginColor,
+        borderWidth: 0
+      });
+    }
 
-    // Adding page number
-    const fontSize = 12;
-    const pageNumberColor = rgb(203 / 255, 203 / 255, 203 / 255);
-    const pageLabel = String(index + 1);
-    const textWidth = font.widthOfTextAtSize(pageLabel, fontSize);
-    const paddingX = 28;
-    const paddingY = 10;
-    const x = width - xMargin + (xMargin - textWidth) - paddingX;
-    const y = paddingY;
-    page.drawText(pageLabel, {
-      x,
-      y,
-      size: fontSize,
-      font,
-      color: pageNumberColor
-    });
+    // TODO: Find a better solution, currently we just hardcoding a page we start counting page numbers from.
+    if (!startPageCount && index === 16) {
+      startPageCount = true;
+    }
+
+    if (startPageCount) {
+      // Adding page number
+      const fontSize = 12;
+      const pageNumberColor = darkMode
+        ? rgb(203 / 255, 203 / 255, 203 / 255)
+        : rgb(34 / 255, 34 / 255, 34 / 255);
+      const pageLabel = String(pageCount);
+      const textWidth = font.widthOfTextAtSize(pageLabel, fontSize);
+      const paddingX = 28;
+      const paddingY = 10;
+      const x = width - xMargin + (xMargin - textWidth) - paddingX;
+      const y = paddingY;
+      page.drawText(pageLabel, {
+        x,
+        y,
+        size: fontSize,
+        font,
+        color: pageNumberColor
+      });
+      pageCount++;
+    }
   });
 
   await fs.writeFile(pdfPath, await pdfDoc.save());
@@ -164,8 +179,6 @@ test("export documentation pdfs", async ({ browser, browserName }) => {
 
     await page.close();
 
-    if (variant.theme === "dark") {
-      await applyDarkMargins(pdfPath);
-    }
+    await postProcess(pdfPath, variant.theme === "dark");
   }
 });

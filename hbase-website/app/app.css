@@ -189,9 +189,6 @@
 @media print {
   @page {
     size: A4;
-    @bottom-right {
-      content: counter(page); /* Automatic Page Numbering */
-    }
   }
 
   /* Utility classes */
