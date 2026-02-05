@@ -56,7 +56,7 @@ export function TeamPage() {
         </p>
 
         <div className="border-border my-8 w-full overflow-x-auto rounded-lg border">
-          <table className="w-full table-fixed border-collapse mt-0 mb-0 text-sm">
+          <table className="mt-0 mb-0 w-full table-fixed border-collapse text-sm">
             <thead className="bg-muted">
               <tr className="border-border border-b">
                 <th className="px-4 py-3 text-left font-semibold">Id</th>
