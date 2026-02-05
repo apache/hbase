@@ -95,7 +95,8 @@ export function formatDescription(description) {
     .split('\n')
     .map(line => line.trim())
     .filter(line => line.length > 0)
-    .join(' ');
+    .join(' ')
+    .replace(/\s+/g, ' ');
   return escapeUnwrappedDollars(normalized);
 }
 

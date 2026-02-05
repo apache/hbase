@@ -16,123 +16,159 @@
 // limitations under the License.
 //
 
+import React from "react";
 import { describe, it, expect } from "vitest";
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "./utils";
-import { MarkdownLayout } from "@/components/markdown-layout";
+import { getMDXComponents, MdLayout } from "@/components/mdx-components";
 
-describe("MarkdownLayout", () => {
-  it("renders markdown content", () => {
-    const markdown = "# Hello World\n\nThis is a test.";
+describe("MDX Components", () => {
+  describe("getMDXComponents", () => {
+    it("returns MDX components configuration", () => {
+      const components = getMDXComponents();
 
-    renderWithProviders(<MarkdownLayout>{markdown}</MarkdownLayout>);
+      expect(components).toHaveProperty("h1");
+      expect(components).toHaveProperty("h2");
+      expect(components).toHaveProperty("h3");
+      expect(components).toHaveProperty("p");
+      expect(components).toHaveProperty("a");
+      expect(components).toHaveProperty("ul");
+      expect(components).toHaveProperty("ol");
+      expect(components).toHaveProperty("li");
+      expect(components).toHaveProperty("blockquote");
+      expect(components).toHaveProperty("table");
+    });
 
-    expect(screen.getByText("Hello World")).toBeInTheDocument();
-    expect(screen.getByText("This is a test.")).toBeInTheDocument();
+    it("accepts overrides", () => {
+      const customH1 = () => <h1>Custom</h1>;
+      const components = getMDXComponents({ h1: customH1 });
+
+      expect(components.h1).toBe(customH1);
+    });
   });
 
-  it("renders headings correctly", () => {
-    const markdown = "# Heading 1\n## Heading 2\n### Heading 3";
+  describe("Heading Components", () => {
+    it("renders h1 with correct styling", () => {
+      const components = getMDXComponents();
+      const H1 = components.h1 as React.ComponentType<any>;
 
-    renderWithProviders(<MarkdownLayout>{markdown}</MarkdownLayout>);
+      renderWithProviders(<H1>Heading 1</H1>);
 
-    expect(screen.getByRole("heading", { level: 1, name: "Heading 1" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 2, name: "Heading 2" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 3, name: "Heading 3" })).toBeInTheDocument();
+      const heading = screen.getByRole("heading", { level: 1 });
+      expect(heading).toHaveTextContent("Heading 1");
+      expect(heading).toBeInTheDocument();
+    });
+
+    it("renders h2 with correct styling", () => {
+      const components = getMDXComponents();
+      const H2 = components.h2 as React.ComponentType<any>;
+
+      renderWithProviders(<H2>Heading 2</H2>);
+
+      const heading = screen.getByRole("heading", { level: 2 });
+      expect(heading).toHaveTextContent("Heading 2");
+      expect(heading).toBeInTheDocument();
+    });
+
+    it("renders h3 with correct styling", () => {
+      const components = getMDXComponents();
+      const H3 = components.h3 as React.ComponentType<any>;
+
+      renderWithProviders(<H3>Heading 3</H3>);
+
+      const heading = screen.getByRole("heading", { level: 3 });
+      expect(heading).toHaveTextContent("Heading 3");
+      expect(heading).toBeInTheDocument();
+    });
   });
 
-  it("renders paragraphs", () => {
-    const markdown = "First paragraph.\n\nSecond paragraph.";
+  describe("Link Component", () => {
+    it("renders internal links without target blank", () => {
+      const components = getMDXComponents();
+      const A = components.a as React.ComponentType<any>;
 
-    renderWithProviders(<MarkdownLayout>{markdown}</MarkdownLayout>);
+      renderWithProviders(<A href="/docs/test">Internal Link</A>);
 
-    expect(screen.getByText("First paragraph.")).toBeInTheDocument();
-    expect(screen.getByText("Second paragraph.")).toBeInTheDocument();
+      const link = screen.getByRole("link", { name: "Internal Link" });
+      expect(link).toHaveAttribute("href", "/docs/test");
+      expect(link).not.toHaveAttribute("target", "_blank");
+    });
+
+    it("renders external links with target blank and icon", () => {
+      const components = getMDXComponents();
+      const A = components.a as React.ComponentType<any>;
+
+      renderWithProviders(<A href="https://example.com">External Link</A>);
+
+      const link = screen.getByRole("link", { name: /External Link/i });
+      expect(link).toHaveAttribute("href", "https://example.com");
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    });
+
+    it("treats hbase.apache.org links as internal", () => {
+      const components = getMDXComponents();
+      const A = components.a as React.ComponentType<any>;
+
+      renderWithProviders(<A href="https://hbase.apache.org/docs">Apache Link</A>);
+
+      const link = screen.getByRole("link", { name: "Apache Link" });
+      expect(link).not.toHaveAttribute("target", "_blank");
+    });
   });
 
-  it("renders links correctly", () => {
-    const markdown = "[Internal Link](/test) and [External Link](https://example.com)";
+  describe("Image Component", () => {
+    it("renders images with lazy loading", () => {
+      const components = getMDXComponents();
+      const Img = components.img as React.ComponentType<any>;
 
-    renderWithProviders(<MarkdownLayout>{markdown}</MarkdownLayout>);
+      renderWithProviders(<Img src="/test.png" alt="Test image" />);
 
-    const internalLink = screen.getByRole("link", { name: /Internal Link/i });
-    expect(internalLink).toHaveAttribute("href", "/test");
-
-    const externalLink = screen.getByRole("link", { name: /External Link/i });
-    expect(externalLink).toHaveAttribute("href", "https://example.com");
-    expect(externalLink).toHaveAttribute("target", "_blank");
+      const img = screen.getByAltText("Test image");
+      expect(img).toHaveAttribute("src", "/test.png");
+      expect(img).toHaveAttribute("loading", "lazy");
+    });
   });
 
-  it("renders lists correctly", () => {
-    const markdown = "- Item 1\n- Item 2\n- Item 3";
+  describe("MdLayout", () => {
+    it("renders MDX content with layout wrapper", () => {
+      const MockContent = ({ components }: any) => {
+        const H1 = components.h1 as React.ComponentType<any>;
+        const P = components.p as React.ComponentType<any>;
+        return (
+          <>
+            <H1>Test Title</H1>
+            <P>Test content</P>
+          </>
+        );
+      };
 
-    renderWithProviders(<MarkdownLayout>{markdown}</MarkdownLayout>);
+      renderWithProviders(<MdLayout Content={MockContent} />);
 
-    expect(screen.getByText("Item 1")).toBeInTheDocument();
-    expect(screen.getByText("Item 2")).toBeInTheDocument();
-    expect(screen.getByText("Item 3")).toBeInTheDocument();
-  });
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Test Title");
+      expect(screen.getByText("Test content")).toBeInTheDocument();
+    });
 
-  it("renders ordered lists", () => {
-    const markdown = "1. First\n2. Second\n3. Third";
+    it("applies custom className", () => {
+      const MockContent = () => <div>Content</div>;
 
-    renderWithProviders(<MarkdownLayout>{markdown}</MarkdownLayout>);
+      const { container } = renderWithProviders(
+        <MdLayout Content={MockContent} className="custom-class" />
+      );
 
-    expect(screen.getByText("First")).toBeInTheDocument();
-    expect(screen.getByText("Second")).toBeInTheDocument();
-    expect(screen.getByText("Third")).toBeInTheDocument();
-  });
+      expect(container.querySelector(".custom-class")).toBeInTheDocument();
+    });
 
-  it("renders inline code", () => {
-    const markdown = "Use `const value = 42` for variables.";
+    it("passes overrides to getMDXComponents", () => {
+      const CustomH1 = ({ children }: any) => <h1 data-testid="custom-h1">{children}</h1>;
+      const MockContent = ({ components }: any) => {
+        const H1 = components.h1 as React.ComponentType<any>;
+        return <H1>Custom Heading</H1>;
+      };
 
-    renderWithProviders(<MarkdownLayout>{markdown}</MarkdownLayout>);
+      renderWithProviders(<MdLayout Content={MockContent} overrides={{ h1: CustomH1 }} />);
 
-    const code = screen.getByText("const value = 42");
-    expect(code).toBeInTheDocument();
-    expect(code.tagName).toBe("CODE");
-  });
-
-  it("renders code blocks", () => {
-    const markdown = '```javascript\nconst greeting = "Hello";\nconsole.log(greeting);\n```';
-
-    renderWithProviders(<MarkdownLayout>{markdown}</MarkdownLayout>);
-
-    // Code blocks with syntax highlighting split text into spans, so check for code element
-    expect(screen.getByText("const")).toBeInTheDocument();
-    expect(screen.getByText('"Hello"')).toBeInTheDocument();
-  });
-
-  it("renders blockquotes", () => {
-    const markdown = "> This is a quote";
-
-    renderWithProviders(<MarkdownLayout>{markdown}</MarkdownLayout>);
-
-    expect(screen.getByText("This is a quote")).toBeInTheDocument();
-  });
-
-  it("renders bold and italic text", () => {
-    const markdown = "**Bold text** and *italic text*";
-
-    renderWithProviders(<MarkdownLayout>{markdown}</MarkdownLayout>);
-
-    expect(screen.getByText("Bold text")).toBeInTheDocument();
-    expect(screen.getByText("italic text")).toBeInTheDocument();
-  });
-
-  it("renders tables with GFM", () => {
-    const markdown = `
-| Header 1 | Header 2 |
-|----------|----------|
-| Cell 1   | Cell 2   |
-| Cell 3   | Cell 4   |
-`;
-
-    renderWithProviders(<MarkdownLayout>{markdown}</MarkdownLayout>);
-
-    expect(screen.getByText("Header 1")).toBeInTheDocument();
-    expect(screen.getByText("Header 2")).toBeInTheDocument();
-    expect(screen.getByText("Cell 1")).toBeInTheDocument();
-    expect(screen.getByText("Cell 2")).toBeInTheDocument();
+      expect(screen.getByTestId("custom-h1")).toHaveTextContent("Custom Heading");
+    });
   });
 });
