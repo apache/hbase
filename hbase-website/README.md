@@ -230,7 +230,7 @@ npm install
 
 This downloads all required packages from npm (similar to Maven Central).
 
-#### 2. Generate Developers Data
+#### 2. Generate Developers and Config Data
 
 **Important:** Before starting the development server, generate the `developers.json` file from the root `pom.xml`:
 
@@ -239,6 +239,14 @@ npm run extract-developers
 ```
 
 This extracts the developer information from the parent `pom.xml` file and creates `app/pages/team/developers.json`, which is required for the Team page to work properly. Re-run this command whenever the developers section in `pom.xml` changes. The output json is ignored by git, and this command also runs at a build time, so there is no need to `git commit` the generated file.
+
+**Important:** Generate the HBase configuration markdown before starting the development server:
+
+```bash
+npm run extract-hbase-config
+```
+
+This extracts data from `hbase-default.xml` and creates `app/pages/_docs/docs/_mdx/(multi-page)/configuration/hbase-default.md`, which is required for the documentation page to work properly. Re-run this command whenever `hbase-default.xml` changes. The generated markdown is ignored by git, and this command also runs at build time, so there is no need to `git commit` the generated file.
 
 #### 3. Start Development Server
 
@@ -361,7 +369,7 @@ When you run the Maven build, it automatically:
    - `npm run lint` - ESLint code quality checks
    - `npm run typecheck` - TypeScript type checking
    - `npm run extract-developers` - Extract developers from parent pom.xml
-   - `npm run extract-hbase-config` - Extract data from `hbase-default.xml` for the documentation
+   - `npm run extract-hbase-config` - Extract data from `hbase-default.xml` to `app/pages/documentation/hbase-default.md`
    - `npm run test:unit:run` - Vitest unit tests
    - `npm run test:e2e` - Playwright e2e tests
    - `npm run build` - Production build
