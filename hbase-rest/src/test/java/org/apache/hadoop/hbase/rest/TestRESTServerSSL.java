@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -25,7 +26,6 @@ import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.hbase.rest.client.Client;
@@ -33,22 +33,19 @@ import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.Response;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.apache.http.client.ClientProtocolException;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RestTests.class, MediumTests.class })
+@Tag(RestTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRESTServerSSL {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRESTServerSSL.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRESTServerSSL.class);
 
@@ -75,7 +72,7 @@ public class TestRESTServerSSL {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     initializeAlgorithmId();
     keyDir = initKeystoreDir();
@@ -94,14 +91,14 @@ public class TestRESTServerSSL {
     TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     // this will also delete the generated test keystore / teststore files,
     // as we were placing them under the dataTestDir used by the minicluster
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void beforeEachTest() {
     conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.set(Constants.REST_SSL_ENABLED, "true");
@@ -110,7 +107,7 @@ public class TestRESTServerSSL {
     conf.set(Constants.REST_SSL_TRUSTSTORE_PASSWORD, TRUST_STORE_PASSWORD);
   }
 
-  @After
+  @AfterEach
   public void tearDownAfterTest() {
     REST_TEST_UTIL.shutdownServletContainer();
   }
@@ -129,14 +126,14 @@ public class TestRESTServerSSL {
       response.getHeader("Content-Security-Policy"));
   }
 
-  @Test(expected = org.apache.http.client.ClientProtocolException.class)
+  @Test
   public void testNonSslClientDenied() throws Exception {
     startRESTServerWithDefaultKeystoreType();
 
     Cluster localCluster = new Cluster().add("localhost", REST_TEST_UTIL.getServletPort());
     Client nonSslClient = new Client(localCluster, false);
 
-    nonSslClient.get("/version");
+    assertThrows(ClientProtocolException.class, () -> nonSslClient.get("/version"));
   }
 
   @Test
@@ -214,5 +211,4 @@ public class TestRESTServerSSL {
     sslClient = new Client(localCluster, getTruststoreFilePath(storeType),
       Optional.of(TRUST_STORE_PASSWORD), Optional.of(storeType));
   }
-
 }
