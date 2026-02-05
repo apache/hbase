@@ -47,8 +47,6 @@ Most pages (except the home page) store content in **Markdown (`.md`)** or **JSO
 - `app/pages/powered-by-hbase/companies.json` - JSON data for companies
 - `app/pages/news/events.json` - JSON data for news/events
 
-Edit these files with any text editor, then run `npm run build` to regenerate the site.
-
 ---
 
 ## Development
@@ -94,18 +92,12 @@ This approach ensures the website works for all users, regardless of their brows
 
 #### UI Components
 - **shadcn/ui** - Pre-built, accessible UI components
-  - Built on top of Radix UI primitives
   - Similar to a component library like PrimeFaces or Vaadin in Java
   - Provides buttons, cards, navigation menus, etc.
   - [Documentation](https://ui.shadcn.com/)
 
-- **Radix UI** - Low-level, accessible UI primitives
-  - The foundation that shadcn/ui builds upon
-  - Handles complex accessibility (ARIA) requirements automatically
-  - Think of it as the "Spring Framework" for UI components
-
 #### Styling
-- **TailwindCSS** - Utility-first CSS framework
+- **TailwindCSS** - Utility-first CSS framework, aka Bootstrap on steroids
   - Instead of writing CSS files, you apply classes directly in components
   - Example: `className="text-blue-500 font-bold"` makes blue, bold text
 
@@ -115,7 +107,7 @@ This approach ensures the website works for all users, regardless of their brows
   - Catches errors at compile-time instead of runtime
   - Provides autocomplete and better IDE support
 
-- **ESLint + Prettier** - Code linting and formatting (like Checkstyle + google-java-format)
+- **ESLint + Prettier** - Code linting and formatting (like Checkstyle)
   - ESLint analyzes code for potential errors and enforces coding standards
   - Prettier handles automatic code formatting (spacing, indentation, etc.)
   - Integrated together: `npm run lint:fix` handles both linting and formatting
@@ -145,10 +137,6 @@ my-react-router-app/
 │   │   │   ├── hero.tsx          # Hero section (not exported)
 │   │   │   ├── features.tsx      # Features section (not exported)
 │   │   │   └── ...
-│   │   ├── team/                 # Team page
-│   │   │   ├── index.tsx         # Main page component (exported)
-│   │   │   └── content.md        # Markdown content
-│   │   └── ...
 │   │
 │   ├── routes/                   # Route definitions and metadata
 │   │   ├── home.tsx              # Home route configuration
@@ -168,11 +156,11 @@ my-react-router-app/
 │   │   ├── index.html            # HTML files for each page
 │   │   ├── assets/               # JavaScript, CSS bundles
 │   │   └── images/               # Optimized images
-│   └── server/                   # Server-side code (if using SSR)
 │
 ├── public/                       # Static files (copied as-is to build/)
 │   ├── favicon.ico               # Website icon
-│   └── images/                   # Images and other static assets
+│   ├── images/                   # Image assets
+|   └── ...
 │
 ├── node_modules/                 # Dependencies (like Maven's .m2 directory)
 ├── package.json                  # Project metadata and dependencies (like pom.xml)
@@ -250,7 +238,7 @@ This downloads all required packages from npm (similar to Maven Central).
 npm run extract-developers
 ```
 
-This extracts the developer information from the parent `pom.xml` file and creates `app/pages/team/developers.json`, which is required for the Team page to work properly. Re-run this command whenever the developers section in `pom.xml` changes.
+This extracts the developer information from the parent `pom.xml` file and creates `app/pages/team/developers.json`, which is required for the Team page to work properly. Re-run this command whenever the developers section in `pom.xml` changes. The output json is ignored by git, and this command also runs at a build time, so there is no need to `git commit` the generated file.
 
 #### 3. Start Development Server
 
@@ -268,7 +256,7 @@ This starts a local development server with:
 
 1. **Edit code** in the `app/` directory
 2. **Save the file** - changes appear automatically in the browser
-3. **Check for errors** in the terminal where `npm run dev` is running
+3. **Check for errors** in the terminal where `npm run dev` is running and in browser console
 
 #### Common Tasks
 
@@ -298,25 +286,25 @@ npm run lint:fix
 
 ### Testing
 
-The project uses [Vitest](https://vitest.dev/) for testing React components.
+The project uses [Vitest](https://vitest.dev/) and [Playwright](http://playwright.dev/) for testing. Vitest is for unit testing, while Playwright is for e2e testing.
 
 **Run tests:**
 ```bash
-# Run tests in watch mode (for development)
+# Run all tests
 npm test
 
-# Run tests once (for CI/CD)
+# Run unit tests once (for CI/CD)
 npm run test:run
 
-# Run tests with UI
+# Run unit tests with UI
 npm run test:ui
-```
 
-**Test coverage includes:**
-- Home Page - Hero section, buttons, features, use cases, community sections
-- Theme Toggle - Light/dark mode switching
-- Navigation - Navbar, dropdown menus, links
-- Markdown Rendering - Headings, lists, code blocks, tables, links
+# Run e2e tests
+npm run test:e2e
+
+# Run e2e tests with UI
+npm run test:e2e:ui
+```
 
 **Writing new tests:**
 
@@ -334,6 +322,8 @@ describe('MyComponent', () => {
 })
 ```
 
+### Building for Production
+
 **CI/CD Workflow:**
 
 Before merging or deploying, run the full CI pipeline:
@@ -342,49 +332,9 @@ Before merging or deploying, run the full CI pipeline:
 npm run ci
 ```
 
-This command runs all quality checks and builds the project:
-1. `npm run lint` - Check linting
-2. `npm run typecheck` - Check types
-3. `npm run test:run` - Run tests
-4. `npm run build` - Build for production
+This command runs all quality checks and builds the project. All checks must pass before code is considered ready.
 
-All checks must pass before code is considered ready for deployment.
-
-**CI/CD Pipeline Example:**
-```yaml
-# Example for GitHub Actions, GitLab CI, etc.
-- npm run ci  # Runs all checks and build
-```
-
-### Building for Production
-
-Create an optimized production build:
-
-```bash
-npm run build
-```
-
-This command:
-1. Compiles TypeScript to JavaScript
-2. Bundles and minifies all code
-3. Optimizes images and assets
-4. Generates static HTML files
-5. Outputs everything to `build/` directory
-
-**Generated files location:**
-```
-build/
-├── client/           # Everything needed for the website
-│   ├── *.html        # Pre-rendered HTML pages
-│   ├── assets/       # Optimized JavaScript and CSS
-│   │   ├── *.js      # JavaScript bundles (minified)
-│   │   ├── *.css     # Stylesheets (minified)
-│   │   └── manifest-*.js  # Asset manifest
-│   └── images/       # Optimized images
-└── server/           # Server-side code (if applicable)
-```
-
-The `build/client/` directory contains everything needed to deploy the website to any static file host.
+Generated files are located under the `build/` directory.
 
 ### Maven Integration
 
@@ -410,7 +360,10 @@ When you run the Maven build, it automatically:
 4. **Runs `npm run ci`** which executes:
    - `npm run lint` - ESLint code quality checks
    - `npm run typecheck` - TypeScript type checking
-   - `npm run test:run` - Vitest unit tests
+   - `npm run extract-developers` - Extract developers from parent pom.xml
+   - `npm run extract-hbase-config` - Extract data from `hbase-default.xml` for the documentation
+   - `npm run test:unit:run` - Vitest unit tests
+   - `npm run test:e2e` - Playwright e2e tests
    - `npm run build` - Production build
 
 5. **Build Output**: Generated files are in `build/` directory
@@ -444,158 +397,7 @@ If you want to build HBase but skip the website:
 mvn clean install -DskipSite
 ```
 
-**Validate Configuration Only:**
-
-To verify the Maven configuration without building:
-
-```bash
-cd hbase-website
-mvn validate
-```
-
-#### Maven Lifecycle Phases
-
-The frontend-maven-plugin binds to these Maven phases:
-
-- **generate-resources**: Installs Node.js/npm and runs `npm install`
-- **compile**: Runs `npm run ci` (lint, typecheck, test, build)
-
-#### Build Artifacts
-
-After a successful Maven build, you'll find:
-
-```
-hbase-website/
-├── build/                    # Production build output
-│   ├── client/               # Static website files
-│   └── server/               # Server-side code (if applicable)
-├── node_modules/             # npm dependencies (gitignored)
-├── target/                   # Maven build directory (gitignored)
-│   └── node/                 # Installed Node.js/npm (gitignored)
-└── ...
-```
-
-#### Integration with CI/CD
-
-The Maven configuration ensures consistent builds across different environments:
-
-- **Local Development**: Developers can build with `mvn clean install`
-- **CI/CD Pipelines**: Automated builds work out-of-the-box with Maven
-- **No Manual Steps**: No need to manually run `npm install` or `npm run ci`
-
-#### Maven Troubleshooting
-
-**Build Fails During npm install:**
-
-```bash
-# Clean and rebuild
-cd hbase-website
-mvn clean install
-```
-
-**Build Fails During npm run ci:**
-
-This usually indicates:
-- ESLint errors (code quality issues)
-- TypeScript type errors
-- Failing unit tests
-- Build configuration issues
-
-To diagnose, run the commands directly:
-```bash
-cd hbase-website
-npm install
-npm run lint      # Check linting
-npm run typecheck # Check types
-npm run test:run  # Check tests
-npm run build     # Check build
-```
-
-Fix any errors and try the Maven build again.
-
-**Clean Everything:**
-
-To completely reset the build environment, use Maven's clean phase which automatically removes `build/` and `node_modules/`:
-
-```bash
-cd hbase-website
-mvn clean install
-```
-
-This will:
-- Remove `build/` directory
-- Remove `node_modules/` directory
-- Remove `target/` directory
-- Reinstall Node.js and npm
-- Install all dependencies fresh
-- Run the full build pipeline
-
-For a manual clean (if needed):
-```bash
-cd hbase-website
-rm -rf node_modules/ build/ target/ .react-router/
-mvn clean install
-```
-
-#### Configuration Files
-
-- **pom.xml**: Maven configuration using frontend-maven-plugin
-- **package.json**: npm scripts and dependencies
-- **.gitignore**: Excludes `target/`, `node/`, `node_modules/`, `build/`
-
-#### Benefits
-
-✅ **Consistent Builds**: Same build process everywhere (local, CI, production)
-✅ **No Manual Steps**: Maven handles everything automatically
-✅ **Isolated Node.js**: Doesn't interfere with system Node installation
-✅ **Skip Option**: Can skip website build with `-DskipSite`
-✅ **Standalone**: Can build website separately with `-pl hbase-website`
-✅ **Quality Checks**: Runs linting, type checking, and tests before building
-
-#### For HBase Developers
-
-If you're working on HBase but not the website:
-
-```bash
-# Skip website build to save time
-mvn clean install -DskipSite
-```
-
-If you're working on the website:
-
-```bash
-# Use npm for faster development iteration
-cd hbase-website
-npm install
-npm run dev      # Start dev server with hot reload
-
-# Or use Maven for full CI pipeline
-mvn clean install
-```
-
 ### Deployment
-
-#### Docker Deployment (most likely won't use in production)
-
-Build and run using Docker:
-
-```bash
-# Build the Docker image
-docker build -t hbase-website .
-
-# Run the container
-docker run -p 3000:3000 hbase-website
-```
-
-The website will be available at `http://localhost:3000`.
-
-**Deploy to any platform supporting Docker:**
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
 
 #### Static Hosting
 
@@ -632,29 +434,18 @@ lsof -ti:5173 | xargs kill -9
 
 1. **Clear generated files:**
    ```bash
-   rm -rf build/ node_modules/.vite
+   rm -rf build/ node_modules/ .vite/ .react-router/ .source/
    ```
 
 2. **Reinstall dependencies:**
    ```bash
-   rm -rf node_modules/
-   npm install
+   npm i
    ```
 
 3. **Try building again:**
    ```bash
    npm run build
    ```
-
-#### Need to Clean Everything
-
-Nuclear option - removes all generated files:
-
-```bash
-rm -rf node_modules/ build/ .react-router/
-npm install
-npm run build
-```
 
 ---
 
