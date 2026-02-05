@@ -200,19 +200,23 @@ const renderer = toClientRenderer(
 
         {/* Only for printing PDF book */}
         {isSinglePage && (
-          <section className="print-only mt-40 flex break-after-page flex-col items-center justify-center gap-6 text-center">
-            <img
-              src="/images/large-logo.svg"
-              alt="Apache HBase logo"
-              className="mx-auto block h-24 w-auto dark:hidden"
-            />
-            <img
-              src="/images/dark-theme-large-logo.svg"
-              alt="Apache HBase logo"
-              className="mx-auto hidden h-24 w-auto dark:block"
-            />
-            <h1 className="text-4xl font-semibold tracking-wide">Apache HBase® Reference Guide</h1>
-            <p className="text-fd-muted-foreground text-base">Apache HBase Team</p>
+          <section className="print-only">
+            <div className="mt-40 flex break-after-page flex-col items-center justify-center gap-6 text-center">
+              <img
+                src="/images/large-logo.svg"
+                alt="Apache HBase logo"
+                className="mx-auto block h-24 w-auto dark:hidden"
+              />
+              <img
+                src="/images/dark-theme-large-logo.svg"
+                alt="Apache HBase logo"
+                className="mx-auto hidden h-24 w-auto dark:block"
+              />
+              <h1 className="text-4xl font-semibold tracking-wide">
+                Apache HBase® Reference Guide
+              </h1>
+              <p className="text-fd-muted-foreground text-base">Apache HBase Team</p>
+            </div>
           </section>
         )}
         {isSinglePage && printToc.length > 0 && (
@@ -223,8 +227,10 @@ const renderer = toClientRenderer(
         )}
         {/* End of block */}
 
-        <FumaDocsTitle>{frontmatter.title}</FumaDocsTitle>
-        <FumaDocsDescription>{frontmatter.description}</FumaDocsDescription>
+        <div className="no-print">
+          <FumaDocsTitle>{frontmatter.title}</FumaDocsTitle>
+          <FumaDocsDescription>{frontmatter.description}</FumaDocsDescription>
+        </div>
         <FumaDocsBody>
           <Mdx components={mdxComponents} />
           {route !== undefined && isGrouppedRoute && (

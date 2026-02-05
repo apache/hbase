@@ -25,9 +25,6 @@
   className: prose-original;
 }
 
-@theme {
-}
-
 @custom-variant dark (&:is(.dark *));
 @custom-variant js (&:is(.js *));
 
@@ -197,6 +194,14 @@
     }
   }
 
+  /* Utility classes */
+  .print-only {
+    display: block !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+
   /* Hide layout elements */
   #nd-docs-layout {
     --fd-sidebar-width: 0px !important;
@@ -210,10 +215,6 @@
   /* Hide copy button in the code blocks */
   figure > div > button {
     display: none !important;
-  }
-
-  .print-only {
-    display: block !important;
   }
 
   /* Every major section starts on a new page */
