@@ -20,5 +20,5 @@ import { MdLayout } from "@/components/mdx-components";
 import Content from "./content.md";
 
 export function MailingListsPage() {
-  return <MdLayout Content={Content} className="mt-12" />;
+  return <MdLayout Content={Content} className="mt-12 mb-12" />;
 }

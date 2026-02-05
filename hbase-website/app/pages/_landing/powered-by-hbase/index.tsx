@@ -27,7 +27,7 @@ interface Company {
 
 export function PoweredByHBasePage() {
   return (
-    <div className="container mx-auto px-4 py-12">
+    <div className="container mx-auto mb-12 px-4 py-12">
       <article className="mx-auto">
         <h1 className="my-12 text-center text-4xl font-semibold tracking-tight text-balance md:text-6xl">
           Powered By Apache HBase™
