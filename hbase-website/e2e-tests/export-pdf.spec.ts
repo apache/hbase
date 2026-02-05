@@ -16,7 +16,7 @@
 // limitations under the License.
 //
 
-import { test } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
@@ -180,5 +180,53 @@ test("export documentation pdfs", async ({ browser, browserName }) => {
     await page.close();
 
     await postProcess(pdfPath, variant.theme === "dark");
+
+    // Verify PDF was created
+    const pdfExists = await fs
+      .access(pdfPath)
+      .then(() => true)
+      .catch(() => false);
+    expect(pdfExists).toBe(true);
+
+    // Verify PDF is not empty and has valid structure
+    const pdfFileBytes = await fs.readFile(pdfPath);
+    expect(pdfFileBytes.length).toBeGreaterThan(1000); // At least 1KB
+
+    // Verify PDF can be loaded and has pages
+    const verifyDoc = await PDFDocument.load(pdfFileBytes);
+    const pageCount = verifyDoc.getPageCount();
+    expect(pageCount).toBeGreaterThan(10); // Should have at least 10 pages
+
+    console.log(
+      `✓ ${variant.theme} theme PDF generated successfully (${pageCount} pages, ${(pdfFileBytes.length / 1024 / 1024).toFixed(2)} MB)`
+    );
   }
+
+  // Verify both variants were generated
+  const lightPdfPath = path.join(outDir, fileNameVariants.light);
+  const darkPdfPath = path.join(outDir, fileNameVariants.dark);
+
+  const lightExists = await fs
+    .access(lightPdfPath)
+    .then(() => true)
+    .catch(() => false);
+  const darkExists = await fs
+    .access(darkPdfPath)
+    .then(() => true)
+    .catch(() => false);
+
+  expect(lightExists).toBe(true);
+  expect(darkExists).toBe(true);
+
+  // Verify both PDFs have similar page counts
+  const lightDoc = await PDFDocument.load(await fs.readFile(lightPdfPath));
+  const darkDoc = await PDFDocument.load(await fs.readFile(darkPdfPath));
+  const lightPages = lightDoc.getPageCount();
+  const darkPages = darkDoc.getPageCount();
+
+  expect(lightPages - darkPages).toBe(0);
+
+  console.log(`\n✅ All PDF exports validated successfully!`);
+  console.log(`   Light: ${lightPages} pages`);
+  console.log(`   Dark:  ${darkPages} pages`);
 });
