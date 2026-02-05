@@ -43,6 +43,7 @@ The official website for Apache HBase, built with modern web technologies to pro
 Most landing pages store content in **Markdown (`.md`)** or **JSON (`.json`)** files located in `app/pages/_landing/[page-name]/`. Docs content lives under `app/pages/_docs/` and is authored in MDX.
 
 **Examples:**
+
 - `app/pages/_landing/team/content.md` - Markdown content for team page
 - `app/pages/_landing/powered-by-hbase/companies.json` - JSON data for companies
 - `app/pages/_landing/news/events.json` - JSON data for news/events
@@ -69,6 +70,7 @@ Before you begin, ensure you have the following installed:
 This website uses modern web technologies. Here's what each one does (with Java analogies):
 
 #### Core Framework
+
 - **React Router** - Full-stack web framework with Server-Side Generation (SSG)
   - Handles routing (like Spring MVC controllers)
   - Provides server-side rendering for better performance and SEO
@@ -76,6 +78,7 @@ This website uses modern web technologies. Here's what each one does (with Java 
   - [Documentation](https://reactrouter.com/)
 
 #### Documentation Framework
+
 - **Fumadocs** - Documentation framework used for the docs section
   - Provides MDX-based docs structure and navigation
   - Lives alongside the landing pages in the same React Router app
@@ -99,17 +102,20 @@ The website uses **progressive enhancement** ([learn more](https://reactrouter.c
 This approach ensures the website works for all users, regardless of their browser capabilities or connection speed.
 
 #### UI Components
+
 - **shadcn/ui** - Pre-built, accessible UI components
   - Similar to a component library like PrimeFaces or Vaadin in Java
   - Provides buttons, cards, navigation menus, etc.
   - [Documentation](https://ui.shadcn.com/)
 
 #### Styling
+
 - **TailwindCSS** - Utility-first CSS framework, aka Bootstrap on steroids
   - Instead of writing CSS files, you apply classes directly in components
   - Example: `className="text-blue-500 font-bold"` makes blue, bold text
 
 #### Code Quality Tools
+
 - **TypeScript** - Typed superset of JavaScript
   - Similar to Java's type system
   - Catches errors at compile-time instead of runtime
@@ -279,6 +285,7 @@ npm run dev
 ```
 
 This starts a local development server with:
+
 - **Hot Module Replacement (HMR)**: Code changes appear instantly without full page reload
 - **Live at**: `http://localhost:5173`
 
@@ -293,30 +300,36 @@ This starts a local development server with:
 #### Common Tasks
 
 **Add a new page:**
+
 1. Create directory in `app/pages/my-new-page/`
 2. Create `index.tsx` in that directory
 3. Create route file in `app/routes/my-new-page.tsx`
 4. Register route in `app/routes.ts`
 
 **Add a new documentation page:**
+
 1. Create a new `.mdx` file in `app/pages/_docs/docs/_mdx/(multi-page)/` (for example `my-topic.mdx`).
 2. Add the new file to the relevant `meta.json` in the same section folder so it appears in navigation.
 3. Import the page into `app/pages/_docs/docs/_mdx/single-page/index.mdx` and add an `#` header so it renders in the single-page docs.
 
 **Update content:**
+
 - Edit the appropriate `.md` or `.json` file
 - Changes appear automatically
 
 **Add a UI component:**
+
 - Check if shadcn/ui has what you need first
 - Only create custom components if necessary
 
 **Check code quality:**
+
 ```bash
 npm run lint
 ```
 
 **Fix linting and formatting issues:**
+
 ```bash
 npm run lint:fix
 ```
@@ -340,6 +353,7 @@ npm run export-pdf
 This command is not part of the CI pipeline and does not run automatically unless invoked directly.
 
 **Run tests:**
+
 ```bash
 # Run all tests
 npm test
@@ -422,6 +436,7 @@ When you run the Maven build, it automatically:
 #### Maven Commands
 
 **Build Website with Full HBase Build:**
+
 ```bash
 # From HBase root directory
 mvn clean install
@@ -430,6 +445,7 @@ mvn clean install
 The website will be built automatically as part of the full build.
 
 **Build Website Only:**
+
 ```bash
 # Option 1: From HBase root directory
 mvn clean install -pl hbase-website
@@ -484,11 +500,13 @@ lsof -ti:5173 | xargs kill -9
 #### Build Fails
 
 1. **Clear generated files:**
+
    ```bash
    rm -rf build/ node_modules/ .vite/ .react-router/ .source/
    ```
 
 2. **Reinstall dependencies:**
+
    ```bash
    npm i
    ```

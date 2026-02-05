@@ -118,7 +118,7 @@ For more information, see the [client architecture](/docs/architecture/client) o
 
 ## Footnotes
 
-[1] A consistent view is not guaranteed intra-row scanning -- i.e. fetching a portion of a row in one RPC then going back to fetch another portion of the row in a subsequent RPC. Intra-row scanning happens when you set a limit on how many values to return per Scan#next (See [Scan#setBatch(int)](http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html#setBatch(int))).
+[1] A consistent view is not guaranteed intra-row scanning -- i.e. fetching a portion of a row in one RPC then going back to fetch another portion of the row in a subsequent RPC. Intra-row scanning happens when you set a limit on how many values to return per Scan#next (See [Scan#setBatch(int)](<http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html#setBatch(int)>)).
 
 [2] In the context of Apache HBase, "durably on disk" implies an hflush() call on the transaction log. This does not actually imply an fsync() to magnetic media, but rather just that the data has been written to the OS cache on all replicas of the log. In the case of a full datacenter power loss, it is possible that the edits are not truly durable.
 
