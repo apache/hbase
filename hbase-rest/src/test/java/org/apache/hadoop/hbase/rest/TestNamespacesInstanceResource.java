@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayInputStream;
@@ -34,7 +34,6 @@ import java.util.Map;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -52,30 +51,27 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.http.Header;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 
-@Category({ RestTests.class, MediumTests.class })
+@Tag(RestTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestNamespacesInstanceResource {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNamespacesInstanceResource.class);
 
-  private static String NAMESPACE1 = "TestNamespacesInstanceResource1";
-  private static Map<String, String> NAMESPACE1_PROPS = new HashMap<>();
-  private static String NAMESPACE2 = "TestNamespacesInstanceResource2";
-  private static Map<String, String> NAMESPACE2_PROPS = new HashMap<>();
-  private static String NAMESPACE3 = "TestNamespacesInstanceResource3";
-  private static Map<String, String> NAMESPACE3_PROPS = new HashMap<>();
-  private static String NAMESPACE4 = "TestNamespacesInstanceResource4";
-  private static Map<String, String> NAMESPACE4_PROPS = new HashMap<>();
+  private static final String NAMESPACE1 = "TestNamespacesInstanceResource1";
+  private static final Map<String, String> NAMESPACE1_PROPS = new HashMap<>();
+  private static final String NAMESPACE2 = "TestNamespacesInstanceResource2";
+  private static final Map<String, String> NAMESPACE2_PROPS = new HashMap<>();
+  private static final String NAMESPACE3 = "TestNamespacesInstanceResource3";
+  private static final Map<String, String> NAMESPACE3_PROPS = new HashMap<>();
+  private static final String NAMESPACE4 = "TestNamespacesInstanceResource4";
+  private static final Map<String, String> NAMESPACE4_PROPS = new HashMap<>();
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
@@ -85,7 +81,7 @@ public class TestNamespacesInstanceResource {
   private static TestNamespacesInstanceModel testNamespacesInstanceModel;
   protected static ObjectMapper jsonMapper;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniCluster();
@@ -103,7 +99,7 @@ public class TestNamespacesInstanceResource {
     NAMESPACE4_PROPS.put("key4b", "value4b");
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     REST_TEST_UTIL.shutdownServletContainer();
     TEST_UTIL.shutdownMiniCluster();
@@ -116,8 +112,9 @@ public class TestNamespacesInstanceResource {
   }
 
   @SuppressWarnings("unchecked")
-  private static <T> T fromXML(byte[] content) throws JAXBException {
-    return (T) context.createUnmarshaller().unmarshal(new ByteArrayInputStream(content));
+  private static <T> T fromXML(byte[] content, Class<T> clazz) throws JAXBException {
+    JAXBContext jaxbContext = JAXBContext.newInstance(clazz);
+    return (T) jaxbContext.createUnmarshaller().unmarshal(new ByteArrayInputStream(content));
   }
 
   private NamespaceDescriptor findNamespace(Admin admin, String namespaceName) throws IOException {
@@ -136,7 +133,7 @@ public class TestNamespacesInstanceResource {
 
   private void checkNamespaceProperties(Map<String, String> namespaceProps,
     Map<String, String> testProps) {
-    assertTrue(namespaceProps.size() == testProps.size());
+    assertEquals(namespaceProps.size(), testProps.size());
     for (String key : testProps.keySet()) {
       assertEquals(testProps.get(key), namespaceProps.get(key));
     }
@@ -205,7 +202,7 @@ public class TestNamespacesInstanceResource {
 
     response = client.get(namespacePath, Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
-    NamespacesInstanceModel model = fromXML(response.getBody());
+    NamespacesInstanceModel model = fromXML(response.getBody(), NamespacesInstanceModel.class);
     checkNamespaceProperties(model.getProperties(), nsProperties);
 
     response = client.get(namespacePath, Constants.MIMETYPE_JSON);
@@ -225,7 +222,7 @@ public class TestNamespacesInstanceResource {
 
     response = client.get(namespacePath, Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
-    TableListModel tablemodel = fromXML(response.getBody());
+    TableListModel tablemodel = fromXML(response.getBody(), TableListModel.class);
     checkNamespaceTables(tablemodel.getTables(), nsTables);
 
     response = client.get(namespacePath, Constants.MIMETYPE_JSON);
@@ -245,7 +242,7 @@ public class TestNamespacesInstanceResource {
     assertEquals(503, response.getCode());
   }
 
-  @Ignore("HBASE-19210")
+  @Disabled("HBASE-19210")
   @Test
   public void testInvalidNamespacePostsAndPuts() throws IOException, JAXBException {
     String namespacePath1 = "/namespaces/" + NAMESPACE1;

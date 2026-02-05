@@ -48,7 +48,7 @@ public class DummyFilter implements Filter {
 
       String path = request.getRequestURI();
       LOG.info(path);
-      if (path.indexOf("/status/cluster") >= 0) {
+      if (path.contains("/status/cluster")) {
         LOG.info("Blocking cluster status request");
         response.sendError(HttpServletResponse.SC_NOT_FOUND, "Cluster status cannot be requested.");
       } else {
@@ -60,5 +60,4 @@ public class DummyFilter implements Filter {
   @Override
   public void init(FilterConfig filterChain) throws ServletException {
   }
-
 }
