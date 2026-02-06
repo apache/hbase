@@ -26,6 +26,10 @@ public interface BlockIndexChunk {
 
   List<byte[]> getBlockKeys();
 
+  List<Long> getBlockOffsets();
+
+  List<Integer> getOnDiskDataSizes();
+
   List<Integer> getSecondaryIndexOffsetMarks();
 
   int getEntryBySubEntry(long k);
