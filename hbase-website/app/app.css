@@ -276,4 +276,12 @@
     /* If it breaks, ensure at least 3 lines move to the next page */
     widows: 3;
   }
+
+  /* Remove the height restriction and scrolling from the code blocks */
+  figure .fd-scroll-container.max-h-\[600px\] {
+    max-height: none !important;
+    overflow: visible !important;
+    height: auto !important;
+    display: block !important;
+  }
 }
