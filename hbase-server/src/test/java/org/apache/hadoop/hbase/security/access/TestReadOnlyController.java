@@ -65,7 +65,6 @@ public class TestReadOnlyController {
     HBaseClassTestRule.forClass(TestReadOnlyController.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReadOnlyController.class);
-  private static final String READ_ONLY_CONTROLLER_NAME = ReadOnlyController.class.getName();
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final TableName TEST_TABLE = TableName.valueOf("read_only_test_table");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("read_only_table_col_fam");
@@ -95,9 +94,13 @@ public class TestReadOnlyController {
     conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, false);
 
     // Add ReadOnlyController coprocessors to the master, region server, and regions
-    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, READ_ONLY_CONTROLLER_NAME);
-    conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, READ_ONLY_CONTROLLER_NAME);
-    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, READ_ONLY_CONTROLLER_NAME);
+    TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      MasterReadOnlyController.class.getName());
+    TEST_UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+      String.join(",", RegionReadOnlyController.class.getName(),
+        BulkLoadReadOnlyController.class.getName(), EndpointReadOnlyController.class.getName()));
+    TEST_UTIL.getConfiguration().set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
+      RegionServerReadOnlyController.class.getName());
 
     try {
       // Start the test cluster
