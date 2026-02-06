@@ -336,26 +336,6 @@ public class BackupManager implements Closeable {
   }
 
   /**
-   * Read the last backup start code (timestamp) of last successful backup. Will return null if
-   * there is no startcode stored in backup system table or the value is of length 0. These two
-   * cases indicate there is no successful backup completed so far.
-   * @return the timestamp of a last successful backup
-   * @throws IOException exception
-   */
-  public String readBackupStartCode() throws IOException {
-    return systemTable.readBackupStartCode(backupInfo.getBackupRootDir());
-  }
-
-  /**
-   * Write the start code (timestamp) to backup system table. If passed in null, then write 0 byte.
-   * @param startCode start code
-   * @throws IOException exception
-   */
-  public void writeBackupStartCode(Long startCode) throws IOException {
-    systemTable.writeBackupStartCode(startCode, backupInfo.getBackupRootDir());
-  }
-
-  /**
    * Get the RS log information after the last log roll from backup system table.
    * @return RS log info
    * @throws IOException exception
