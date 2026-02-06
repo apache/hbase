@@ -459,48 +459,6 @@ public final class BackupSystemTable implements Closeable {
   }
 
   /**
-   * Read the last backup start code (timestamp) of last successful backup. Will return null if
-   * there is no start code stored on hbase or the value is of length 0. These two cases indicate
-   * there is no successful backup completed so far.
-   * @param backupRoot directory path to backup destination
-   * @return the timestamp of last successful backup
-   * @throws IOException exception
-   */
-  public String readBackupStartCode(String backupRoot) throws IOException {
-    LOG.trace("read backup start code from backup system table");
-
-    try (Table table = connection.getTable(tableName)) {
-      Get get = createGetForStartCode(backupRoot);
-      Result res = table.get(get);
-      if (res.isEmpty()) {
-        return null;
-      }
-      Cell cell = res.listCells().get(0);
-      byte[] val = CellUtil.cloneValue(cell);
-      if (val.length == 0) {
-        return null;
-      }
-      return new String(val, StandardCharsets.UTF_8);
-    }
-  }
-
-  /**
-   * Write the start code (timestamp) to backup system table. If passed in null, then write 0 byte.
-   * @param startCode  start code
-   * @param backupRoot root directory path to backup
-   * @throws IOException exception
-   */
-  public void writeBackupStartCode(Long startCode, String backupRoot) throws IOException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("write backup start code to backup system table " + startCode);
-    }
-    try (Table table = connection.getTable(tableName)) {
-      Put put = createPutForStartCode(startCode.toString(), backupRoot);
-      table.put(put);
-    }
-  }
-
-  /**
    * Exclusive operations are: create, delete, merge
    * @throws IOException if a table operation fails or an active backup exclusive operation is
    *                     already underway
@@ -1115,29 +1073,6 @@ public final class BackupSystemTable implements Closeable {
     res.advance();
     Cell cell = res.current();
     return cellToBackupInfo(cell);
-  }
-
-  /**
-   * Creates Get operation to retrieve start code from backup system table
-   * @return get operation
-   * @throws IOException exception
-   */
-  private Get createGetForStartCode(String rootPath) throws IOException {
-    Get get = new Get(rowkey(START_CODE_ROW, rootPath));
-    get.addFamily(BackupSystemTable.META_FAMILY);
-    get.readVersions(1);
-    return get;
-  }
-
-  /**
-   * Creates Put operation to store start code to backup system table
-   * @return put operation
-   */
-  private Put createPutForStartCode(String startCode, String rootPath) {
-    Put put = new Put(rowkey(START_CODE_ROW, rootPath));
-    put.addColumn(BackupSystemTable.META_FAMILY, Bytes.toBytes("startcode"),
-      Bytes.toBytes(startCode));
-    return put;
   }
 
   /**
