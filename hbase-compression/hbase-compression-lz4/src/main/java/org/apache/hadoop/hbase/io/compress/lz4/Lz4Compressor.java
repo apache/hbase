@@ -39,11 +39,13 @@ public class Lz4Compressor implements CanReinit, Compressor {
   protected boolean finish, finished;
   protected long bytesRead, bytesWritten;
 
+  private final boolean useNative = Lz4Native.available();
+
   Lz4Compressor(int bufferSize) {
     compressor = LZ4Factory.fastestInstance().fastCompressor();
     this.bufferSize = bufferSize;
-    this.inBuf = ByteBuffer.allocate(bufferSize);
-    this.outBuf = ByteBuffer.allocate(bufferSize);
+    this.inBuf = ByteBuffer.allocateDirect(bufferSize);
+    this.outBuf = ByteBuffer.allocateDirect(bufferSize);
     this.outBuf.position(bufferSize);
   }
 
@@ -61,37 +63,58 @@ public class Lz4Compressor implements CanReinit, Compressor {
       if (inBuf.position() > 0) {
         inBuf.flip();
         int uncompressed = inBuf.remaining();
-        int needed = maxCompressedLength(uncompressed);
-        // Can we decompress directly into the provided array?
-        ByteBuffer writeBuffer;
-        boolean direct = false;
-        if (len <= needed) {
-          writeBuffer = ByteBuffer.wrap(b, off, len);
-          direct = true;
-        } else {
-          // If we don't have enough capacity in our currently allocated output buffer,
-          // allocate a new one which does.
+
+        if (useNative && inBuf.isDirect() && outBuf.isDirect()) {
+          // 如果你现在用的是 heap ByteBuffer，改成 direct 分配（见 reset/reinit 部分）
+          int needed = Lz4Native.maxCompressedLength(uncompressed);
           if (outBuf.capacity() < needed) {
-            needed = CompressionUtil.roundInt2(needed);
-            outBuf = ByteBuffer.allocate(needed);
+            needed = org.apache.hadoop.hbase.io.compress.CompressionUtil.roundInt2(needed);
+            outBuf = ByteBuffer.allocateDirect(needed);
           } else {
             outBuf.clear();
           }
-          writeBuffer = outBuf;
-        }
-        final int oldPos = writeBuffer.position();
-        compressor.compress(inBuf, writeBuffer);
-        final int written = writeBuffer.position() - oldPos;
-        bytesWritten += written;
-        inBuf.clear();
-        finished = true;
-        if (!direct) {
-          outBuf.flip();
+          int written = Lz4Native.compressDirect(inBuf, inBuf.position(), uncompressed,
+              outBuf, outBuf.position(), outBuf.remaining());
+          if (written < 0)
+            throw new IOException("LZ4 native compress failed: " + written);
+          bytesWritten += written;
+          inBuf.clear();
+          finished = true;
+          outBuf.limit(outBuf.position() + written);
           int n = Math.min(written, len);
           outBuf.get(b, off, n);
           return n;
         } else {
-          return written;
+          // 走原 lz4-java 路径
+          int needed = maxCompressedLength(uncompressed);
+          ByteBuffer writeBuffer;
+          boolean direct = false;
+          if (len <= needed) {
+            writeBuffer = ByteBuffer.wrap(b, off, len);
+            direct = true;
+          } else {
+            if (outBuf.capacity() < needed) {
+              needed = org.apache.hadoop.hbase.io.compress.CompressionUtil.roundInt2(needed);
+              outBuf = ByteBuffer.allocate(needed);
+            } else {
+              outBuf.clear();
+            }
+            writeBuffer = outBuf;
+          }
+          final int oldPos = writeBuffer.position();
+          compressor.compress(inBuf, writeBuffer);
+          final int written = writeBuffer.position() - oldPos;
+          bytesWritten += written;
+          inBuf.clear();
+          finished = true;
+          if (!direct) {
+            outBuf.flip();
+            int n = Math.min(written, len);
+            outBuf.get(b, off, n);
+            return n;
+          } else {
+            return written;
+          }
         }
       } else {
         finished = true;
@@ -136,8 +159,8 @@ public class Lz4Compressor implements CanReinit, Compressor {
       int newBufferSize = Lz4Codec.getBufferSize(conf);
       if (bufferSize != newBufferSize) {
         bufferSize = newBufferSize;
-        this.inBuf = ByteBuffer.allocate(bufferSize);
-        this.outBuf = ByteBuffer.allocate(bufferSize);
+        this.inBuf = ByteBuffer.allocateDirect(bufferSize);
+        this.outBuf = ByteBuffer.allocateDirect(bufferSize);
       }
     }
     reset();
@@ -162,7 +185,8 @@ public class Lz4Compressor implements CanReinit, Compressor {
   @Override
   public void setInput(byte[] b, int off, int len) {
     if (inBuf.remaining() < len) {
-      // Get a new buffer that can accomodate the accumulated input plus the additional
+      // Get a new buffer that can accomodate the accumulated input plus the
+      // additional
       // input that would cause a buffer overflow without reallocation.
       // This condition should be fortunately rare, because it is expensive.
       int needed = CompressionUtil.roundInt2(inBuf.capacity() + len);
