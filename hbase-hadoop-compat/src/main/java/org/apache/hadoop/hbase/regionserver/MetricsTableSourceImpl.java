@@ -287,6 +287,10 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
             MetricsRegionServerSource.FILTERED_READ_REQUEST_COUNT_DESC),
           tableWrapperAgg.getFilteredReadRequestCount(tableName.getNameAsString()));
         mrb.addCounter(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.DELETED_READ_REQUEST_COUNT,
+            MetricsRegionServerSource.DELETED_READ_REQUEST_COUNT_DESC),
+          tableWrapperAgg.getDeletedReadRequestCount(tableName.getNameAsString()));
+        mrb.addCounter(
           Interns.info(tableNamePrefix + MetricsRegionServerSource.WRITE_REQUEST_COUNT,
             MetricsRegionServerSource.WRITE_REQUEST_COUNT_DESC),
           tableWrapperAgg.getWriteRequestCount(tableName.getNameAsString()));
