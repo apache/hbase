@@ -284,7 +284,7 @@ public class TestMetricsRegionServer {
     Configuration conf = new Configuration();
     conf.setLong(JvmPauseMonitor.INFO_THRESHOLD_KEY, 1000L);
     conf.setLong(JvmPauseMonitor.WARN_THRESHOLD_KEY, 10000L);
-    JvmPauseMonitor monitor = new JvmPauseMonitor(conf, serverSource);
+    JvmPauseMonitor monitor = JvmPauseMonitor.getInstance(conf, serverSource);
     monitor.updateMetrics(1500, false);
     HELPER.assertCounter("pauseInfoThresholdExceeded", 1, serverSource);
     HELPER.assertCounter("pauseWarnThresholdExceeded", 0, serverSource);
