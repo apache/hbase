@@ -40,4 +40,13 @@ public class TestTableInputFormatScanEmptyToEmpty extends TestTableInputFormatSc
     throws IOException, InterruptedException, ClassNotFoundException {
     testScan(null, null, null);
   }
+
+  /**
+   * Tests a MR reverse scan using specific start and stop rows.
+   */
+  @Test
+  public void testReverseScanEmptyToEmpty()
+    throws IOException, InterruptedException, ClassNotFoundException {
+    testReverseScan(null, null, null);
+  }
 }
