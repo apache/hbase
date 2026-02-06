@@ -175,7 +175,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   /** An internal constructor. */
   private StoreScanner(HStore store, Scan scan, ScanInfo scanInfo, int numColumns, long readPt,
-    boolean cacheBlocks, ScanType scanType) {
+    boolean cacheBlocks, ScanType scanType, Long timeStampOrigin) {
     this.readPt = readPt;
     this.store = store;
     this.cacheBlocks = cacheBlocks;
@@ -184,7 +184,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     explicitColumnQuery = numColumns > 0;
     this.scan = scan;
     this.now = EnvironmentEdgeManager.currentTime();
-    this.oldestUnexpiredTS = scan.isRaw() ? 0L : now - scanInfo.getTtl();
+    if (timeStampOrigin == null) {
+      this.oldestUnexpiredTS = scan.isRaw() ? 0L : now - scanInfo.getTtl();
+    } else {
+      this.oldestUnexpiredTS = timeStampOrigin - scanInfo.getTtl();
+    }
     this.minVersions = scanInfo.getMinVersions();
 
     // We look up row-column Bloom filters for multi-column queries as part of
@@ -228,6 +232,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         this.executor = rsService.getExecutorService();
       }
     }
+  }
+  
+  private StoreScanner(HStore store, Scan scan, ScanInfo scanInfo, int numColumns, long readPt,
+    boolean cacheBlocks, ScanType scanType) {
+    this(store, scan, scanInfo, numColumns, readPt, cacheBlocks, scanType, null);
   }
 
   private void addCurrentScanners(List<? extends KeyValueScanner> scanners) {
@@ -375,6 +384,17 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       this.matcher = CompactionScanQueryMatcher.create(scanInfo, scanType, Long.MAX_VALUE,
         PrivateConstants.OLDEST_TIMESTAMP, oldestUnexpiredTS, now, null, null, null);
     }
+    seekAllScanner(scanInfo, scanners);
+  }
+
+  // Almost the same as below except for settting the start time of oldestUnexpiredTS
+  StoreScanner(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
+    List<? extends KeyValueScanner> scanners, Long timeStampOrigin) throws IOException {
+    // 0 is passed as readpoint because the test bypasses Store
+    this(null, scan, scanInfo, columns != null ? columns.size() : 0, 0L,
+      scan.getCacheBlocks(), ScanType.USER_SCAN, timeStampOrigin);
+    this.matcher =
+      UserScanQueryMatcher.create(scan, scanInfo, columns, oldestUnexpiredTS, now, null);
     seekAllScanner(scanInfo, scanners);
   }
 
