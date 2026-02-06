@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.backup.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
@@ -27,7 +28,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
@@ -59,23 +59,11 @@ public class IncrementalBackupManager extends BackupManager {
   public Map<String, Long> getIncrBackupLogFileMap() throws IOException {
     List<String> logList;
     Map<String, Long> newTimestamps;
-    Map<String, Long> previousTimestampMins;
+    Map<String, Long> previousTimestampMins =
+      BackupUtils.getRSLogTimestampMins(readLogTimestampMap());
 
-    String savedStartCode = readBackupStartCode();
-
-    // key: tableName
-    // value: <RegionServer,PreviousTimeStamp>
-    Map<TableName, Map<String, Long>> previousTimestampMap = readLogTimestampMap();
-
-    previousTimestampMins = BackupUtils.getRSLogTimestampMins(previousTimestampMap);
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("StartCode " + savedStartCode + "for backupID " + backupInfo.getBackupId());
-    }
     // get all new log files from .logs and .oldlogs after last TS and before new timestamp
-    if (
-      savedStartCode == null || previousTimestampMins == null || previousTimestampMins.isEmpty()
-    ) {
+    if (previousTimestampMins.isEmpty()) {
       throw new IOException("Cannot read any previous back up timestamps from backup system table. "
         + "In order to create an incremental backup, at least one full backup is needed.");
     }
@@ -85,7 +73,7 @@ public class IncrementalBackupManager extends BackupManager {
 
     newTimestamps = readRegionServerLastLogRollResult();
 
-    logList = getLogFilesForNewBackup(previousTimestampMins, newTimestamps, conf, savedStartCode);
+    logList = getLogFilesForNewBackup(previousTimestampMins, newTimestamps, conf);
     logList = excludeProcV2WALs(logList);
     backupInfo.setIncrBackupFileList(logList);
 
@@ -113,16 +101,15 @@ public class IncrementalBackupManager extends BackupManager {
    * @param olderTimestamps  the timestamp for each region server of the last backup.
    * @param newestTimestamps the timestamp for each region server that the backup should lead to.
    * @param conf             the Hadoop and Hbase configuration
-   * @param savedStartCode   the startcode (timestamp) of last successful backup.
    * @return a list of log files to be backed up
    * @throws IOException exception
    */
   private List<String> getLogFilesForNewBackup(Map<String, Long> olderTimestamps,
-    Map<String, Long> newestTimestamps, Configuration conf, String savedStartCode)
-    throws IOException {
+    Map<String, Long> newestTimestamps, Configuration conf) throws IOException {
     LOG.debug("In getLogFilesForNewBackup()\n" + "olderTimestamps: " + olderTimestamps
       + "\n newestTimestamps: " + newestTimestamps);
 
+    long prevBackupStartTs = Collections.min(olderTimestamps.values());
     Path walRootDir = CommonFSUtils.getWALRootDir(conf);
     Path logDir = new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME);
     Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
@@ -219,7 +206,7 @@ public class IncrementalBackupManager extends BackupManager {
        * our last backup.
        */
       if (oldTimeStamp == null) {
-        if (currentLogTS < Long.parseLong(savedStartCode)) {
+        if (currentLogTS < prevBackupStartTs) {
           // This log file is really old, its region server was before our last backup.
           continue;
         } else {

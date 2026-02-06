@@ -133,17 +133,7 @@ public class FullTableBackupClient extends TableBackupClient {
     try (Admin admin = conn.getAdmin()) {
       // Begin BACKUP
       beginBackup(backupManager, backupInfo);
-      String savedStartCode;
-      boolean firstBackup;
-      // do snapshot for full table backup
 
-      savedStartCode = backupManager.readBackupStartCode();
-      firstBackup = savedStartCode == null || Long.parseLong(savedStartCode) == 0L;
-      if (firstBackup) {
-        // This is our first backup. Let's put some marker to system table so that we can hold the
-        // logs while we do the backup.
-        backupManager.writeBackupStartCode(0L);
-      }
       // We roll log here before we do the snapshot. It is possible there is duplicate data
       // in the log that is already in the snapshot. But if we do it after the snapshot, we
       // could have data loss.
@@ -188,15 +178,11 @@ public class FullTableBackupClient extends TableBackupClient {
       Map<TableName, Map<String, Long>> newTableSetTimestampMap =
         backupManager.readLogTimestampMap();
 
-      backupInfo.setTableSetTimestampMap(newTableSetTimestampMap);
-      Long newStartCode =
-        BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(newTableSetTimestampMap));
-      backupManager.writeBackupStartCode(newStartCode);
-
       backupManager
         .deleteBulkLoadedRows(bulkLoadsToDelete.stream().map(BulkLoad::getRowKey).toList());
 
       // backup complete
+      backupInfo.setTableSetTimestampMap(newTableSetTimestampMap);
       completeBackup(conn, backupInfo, BackupType.FULL, conf);
     } catch (Exception e) {
       failBackup(conn, backupInfo, backupManager, e, "Unexpected BackupException : ",

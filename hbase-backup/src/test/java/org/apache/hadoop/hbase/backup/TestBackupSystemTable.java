@@ -107,15 +107,6 @@ public class TestBackupSystemTable {
     cleanBackupTable();
   }
 
-  @Test
-  public void testWriteReadBackupStartCode() throws IOException {
-    long code = 100L;
-    table.writeBackupStartCode(code, "root");
-    String readCode = table.readBackupStartCode("root");
-    assertEquals(code, Long.parseLong(readCode));
-    cleanBackupTable();
-  }
-
   private void cleanBackupTable() throws IOException {
     Admin admin = UTIL.getAdmin();
     admin.disableTable(BackupSystemTable.getTableName(conf));

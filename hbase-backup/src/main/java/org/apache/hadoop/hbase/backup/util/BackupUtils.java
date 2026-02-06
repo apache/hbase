@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeSet;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -92,30 +93,8 @@ public final class BackupUtils {
    */
   public static Map<String, Long>
     getRSLogTimestampMins(Map<TableName, Map<String, Long>> rsLogTimestampMap) {
-    if (rsLogTimestampMap == null || rsLogTimestampMap.isEmpty()) {
-      return null;
-    }
-
-    HashMap<String, Long> rsLogTimestampMins = new HashMap<>();
-    HashMap<String, HashMap<TableName, Long>> rsLogTimestampMapByRS = new HashMap<>();
-
-    for (Entry<TableName, Map<String, Long>> tableEntry : rsLogTimestampMap.entrySet()) {
-      TableName table = tableEntry.getKey();
-      Map<String, Long> rsLogTimestamp = tableEntry.getValue();
-      for (Entry<String, Long> rsEntry : rsLogTimestamp.entrySet()) {
-        String rs = rsEntry.getKey();
-        Long ts = rsEntry.getValue();
-        rsLogTimestampMapByRS.putIfAbsent(rs, new HashMap<>());
-        rsLogTimestampMapByRS.get(rs).put(table, ts);
-      }
-    }
-
-    for (Entry<String, HashMap<TableName, Long>> entry : rsLogTimestampMapByRS.entrySet()) {
-      String rs = entry.getKey();
-      rsLogTimestampMins.put(rs, BackupUtils.getMinValue(entry.getValue()));
-    }
-
-    return rsLogTimestampMins;
+    return rsLogTimestampMap.values().stream().flatMap(map -> map.entrySet().stream())
+      .collect(Collectors.toMap(Entry::getKey, Entry::getValue, Math::min));
   }
 
   /**
@@ -341,22 +320,6 @@ public final class BackupUtils {
     } else {
       LOG.info("Backup root dir " + backupRootPath + " does not exist. Will be created.");
     }
-  }
-
-  /**
-   * Get the min value for all the Values a map.
-   * @param map map
-   * @return the min value
-   */
-  public static <T> Long getMinValue(Map<T, Long> map) {
-    Long minTimestamp = null;
-    if (map != null) {
-      ArrayList<Long> timestampList = new ArrayList<>(map.values());
-      Collections.sort(timestampList);
-      // The min among all the RS log timestamps will be kept in backup system table table.
-      minTimestamp = timestampList.get(0);
-    }
-    return minTimestamp;
   }
 
   /**
