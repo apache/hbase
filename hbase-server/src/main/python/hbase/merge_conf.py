@@ -123,7 +123,7 @@ class MergeConfTool:
         return self.whole_text(self.only_element(tag_name))
 
     def fatal(self, msg):
-        print >> sys.stderr, msg
+        print(msg, file=sys.stderr)
         sys.exit(1)
 
     def only_element(self, tag_name):
