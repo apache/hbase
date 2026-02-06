@@ -22,7 +22,7 @@ Convert Apache Yetus console output to Markdown format.
 import re
 import sys
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 
 # Vote to emoji mapping
@@ -170,6 +170,72 @@ def process_first_table(lines: List[str], start_idx: int) -> Tuple[List[str], in
     return content, i
 
 
+# TODO: Yetus should support this natively, but docker integration with job summaries doesn't seem
+#       to work out of the box.
+def extract_failed_tests_from_unit_files(output_dir: Path) -> List[Tuple[str, List[str]]]:
+    """
+    Extract failed test names from patch-unit-*.txt files.
+
+    Parses Maven surefire output to find lines like:
+    [ERROR] org.apache.hadoop.hbase.types.TestPBCell.testRoundTrip
+
+    Returns:
+        List of (module_name, [failed_test_names]) tuples
+    """
+    results = []
+
+    for unit_file in output_dir.glob('patch-unit-*.txt'):
+        module_name = unit_file.stem.replace('patch-unit-', '')
+        failed_tests = set()
+
+        with open(unit_file, 'r') as f:
+            in_failures_section = False
+            for line in f:
+                stripped = line.strip()
+
+                if stripped == '[ERROR] Failures:':
+                    in_failures_section = True
+                    continue
+
+                if in_failures_section:
+                    if stripped.startswith('[ERROR]') and not stripped.startswith('[ERROR]   Run'):
+                        test_name = stripped.replace('[ERROR] ', '').strip()
+                        if test_name and '.' in test_name:
+                            failed_tests.add(test_name)
+                    elif stripped.startswith('[INFO]') or not stripped:
+                        in_failures_section = False
+
+        if failed_tests:
+            results.append((module_name, sorted(failed_tests)))
+
+    return results
+
+
+def format_failed_tests_section(failed_tests: List[Tuple[str, List[str]]]) -> List[str]:
+    """
+    Format failed tests into markdown.
+
+    Args:
+        failed_tests: List of (module_name, [test_names]) tuples
+
+    Returns:
+        List of markdown lines
+    """
+    if not failed_tests:
+        return []
+
+    content = []
+    content.append('\n## ❌ Failed Tests\n\n')
+    content.append('| Module | Failed Tests |\n')
+    content.append('|--------|-------------|\n')
+
+    for module_name, tests in failed_tests:
+        tests_str = ', '.join(tests)
+        content.append(f'| {module_name} | {tests_str} |\n')
+
+    return content
+
+
 def process_second_table(lines: List[str], start_idx: int) -> Tuple[List[str], int]:
     """
     Process the second table (Subsystem, Report/Notes).
@@ -206,13 +272,17 @@ def process_second_table(lines: List[str], start_idx: int) -> Tuple[List[str], i
     return content, i
 
 
-def convert_console_to_markdown(input_file: str, output_file: str | None = None) -> str:
+def convert_console_to_markdown(input_file: str, output_file: Optional[str] = None) -> str:
     """Convert console to Markdown format."""
+    input_path = Path(input_file)
+    output_dir = input_path.parent
+
     with open(input_file, 'r') as f:
         lines = f.readlines()
 
     content = []
     i = 0
+    added_failed_tests = False
 
     while i < len(lines):
         line = lines[i]
@@ -233,6 +303,12 @@ def convert_console_to_markdown(input_file: str, output_file: str | None = None)
         if '| Vote |' in line and 'Subsystem' in line:
             table_content, i = process_first_table(lines, i + 1)
             content.extend(table_content)
+
+            # Extract and add failed tests from patch-unit-*.txt files
+            if not added_failed_tests:
+                failed_tests = extract_failed_tests_from_unit_files(output_dir)
+                content.extend(format_failed_tests_section(failed_tests))
+                added_failed_tests = True
             continue
 
         # Detect second table start
