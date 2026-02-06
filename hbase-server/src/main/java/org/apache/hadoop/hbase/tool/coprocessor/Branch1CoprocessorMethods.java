@@ -364,6 +364,12 @@ public class Branch1CoprocessorMethods extends CoprocessorMethods {
     addMethod("postMoveServers", "org.apache.hadoop.hbase.coprocessor.ObserverContext",
       "java.util.Set", "java.lang.String");
 
+    addMethod("preMoveAllServers", "org.apache.hadoop.hbase.coprocessor.ObserverContext",
+      "java.lang.String", "java.lang.String");
+
+    addMethod("postMoveAllServers", "org.apache.hadoop.hbase.coprocessor.ObserverContext",
+      "java.lang.String", "java.lang.String");
+
     addMethod("preMoveTables", "org.apache.hadoop.hbase.coprocessor.ObserverContext",
       "java.util.Set", "java.lang.String");
 
