@@ -136,9 +136,9 @@ module Hbase
     # Requests to compact all regions on the regionserver
     def compact_regionserver(servername, major = false)
       if major
-        @admin.majorCompactRegionServer(ServerName.valueOf(servername))
+        @admin.majorCompactRegionServer(ServerName.parseServerName(servername))
       else
-        @admin.compactRegionServer(ServerName.valueOf(servername))
+        @admin.compactRegionServer(ServerName.parseServerName(servername))
       end
     end
 
@@ -1642,7 +1642,7 @@ module Hbase
       else
         raise(ArgumentError, "Unknown queue name #{queue_name}")
       end
-      @admin.clearCompactionQueues(ServerName.valueOf(server_name), queues)
+      @admin.clearCompactionQueues(ServerName.parseServerName(server_name), queues)
     end
 
     #----------------------------------------------------------------------------------------------
