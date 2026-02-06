@@ -99,7 +99,13 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
       long expectedSleep;
       try {
         // bad cache entries are cleared in the call to RetryingCallable#throwable() in catch block
-        callable.prepare(tries != 0);
+        Throwable t = null;
+        if (exceptions != null && !exceptions.isEmpty()) {
+          t = exceptions.get(exceptions.size() - 1).getThrowable();
+        }
+        if (!(t instanceof RpcThrottlingException)) {
+          callable.prepare(tries != 0);
+        }
         interceptor.intercept(context.prepare(callable, tries));
         return callable.call(getTimeout(callTimeout));
       } catch (PreemptiveFastFailException e) {
