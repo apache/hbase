@@ -136,6 +136,26 @@ public interface TestingHBaseCluster {
   List<ServerName> getRegionServerAddresses();
 
   /**
+   * Get the web UI address of the active master if there is one.
+   */
+  Optional<String> getActiveMasterInfoAddress();
+
+  /**
+   * Get the web UI address of the active NameNode if there is one.
+   */
+  Optional<String> getActiveNameNodeInfoAddress();
+
+  /**
+   * Get the 'hbase.zookeeper.quorum' configuration value for the ZooKeeper cluster.
+   */
+  Optional<String> getZooKeeperQuorum();
+
+  /**
+   * Get the list of master addresses.
+   */
+  List<String> getMasterAddresses();
+
+  /**
    * Get the server side {@link Region} interface for the specific region.
    * <p/>
    * This is used for CPs to test something which can only be accessed at server side, such as tags.
