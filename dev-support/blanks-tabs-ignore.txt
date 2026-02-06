@@ -20,7 +20,7 @@
 .*/gen-cpp/.*
 .*/gen-perl/.*
 .*/gen-php/.*
-.*/gen-py/.*
+.*/gen_py/.*
 .*/gen-rb/.*
 # we have tabs in asciidoc, not sure whether it is OK to replace them with spaces
 src/main/asciidoc/.*
