@@ -17,41 +17,33 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.security.Permission;
-
 /**
- * class for masquerading System.exit(int). Use for test main method with System.exit(int ) usage:
- * new LauncherSecurityManager(); try { CellCounter.main(args); fail("should be exception"); } catch
- * (SecurityException e) { assert(.,e.getExitCode()); }
+ * Class for intercepting ExitHandler.getInstance().exit(int) calls. Use for testing main methods
+ * with ExitHandler.getInstance().exit(int). Usage:
+ *
+ * <pre>
+ * ExitHandler originalHandler = ExitHandler.getInstance();
+ * LauncherExitHandler launcherExitHandler = new LauncherExitHandler();
+ * ExitHandler.setInstance(launcherExitHandler);
+ * try {
+ *   CellCounter.main(args);
+ *   fail("should be exception");
+ * } catch (SecurityException e) {
+ *   assertEquals(expectedExitCode, launcherExitHandler.getExitCode());
+ * }
+ * ExitHandler.setInstance(originalHandler);
+ * </pre>
  */
-public class LauncherSecurityManager extends SecurityManager {
-
+public class LauncherExitHandler extends ExitHandler {
   private int exitCode;
-  private SecurityManager securityManager;
 
-  public LauncherSecurityManager() {
+  public LauncherExitHandler() {
     reset();
   }
 
   @Override
-  public void checkPermission(Permission perm, Object context) {
-    if (securityManager != null) {
-      // check everything with the original SecurityManager
-      securityManager.checkPermission(perm, context);
-    }
-  }
-
-  @Override
-  public void checkPermission(Permission perm) {
-    if (securityManager != null) {
-      // check everything with the original SecurityManager
-      securityManager.checkPermission(perm);
-    }
-  }
-
-  @Override
-  public void checkExit(int status) throws SecurityException {
-    exitCode = status;
+  public void exit(int status) throws SecurityException {
+    this.exitCode = status;
     throw new SecurityException("Intercepted System.exit(" + status + ")");
   }
 

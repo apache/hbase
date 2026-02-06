@@ -110,13 +110,13 @@ public class Random64 {
 
       if (longSet.contains(randLong)) {
         System.err.println("Conflict! count=" + cnt);
-        System.exit(1);
+        ExitHandler.getInstance().exit(1);
       }
 
       if (cnt % precision == 0) {
         if (!longSet.add(randLong)) {
           System.err.println("Conflict! count=" + cnt);
-          System.exit(1);
+          ExitHandler.getInstance().exit(1);
         }
 
         if (cnt % reportPeriod == 0) {

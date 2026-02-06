@@ -97,6 +97,7 @@ import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -2286,7 +2287,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   public static void main(String[] args) throws IOException {
     if (args.length < 2) {
       usage();
-      System.exit(-1);
+      ExitHandler.getInstance().exit(-1);
     }
     // either dump using the WALPrettyPrinter or split, depending on args
     if (args[0].compareTo("--dump") == 0) {
@@ -2295,7 +2296,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       LOG.error(HBaseMarkers.FATAL, "Please use the WALPerformanceEvaluation tool instead. i.e.:");
       LOG.error(HBaseMarkers.FATAL,
         "\thbase org.apache.hadoop.hbase.wal.WALPerformanceEvaluation --iterations " + args[1]);
-      System.exit(-1);
+      ExitHandler.getInstance().exit(-1);
     } else if (args[0].compareTo("--split") == 0) {
       Configuration conf = HBaseConfiguration.create();
       for (int i = 1; i < args.length; i++) {
@@ -2305,12 +2306,12 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
           split(conf, logPath);
         } catch (IOException t) {
           t.printStackTrace(System.err);
-          System.exit(-1);
+          ExitHandler.getInstance().exit(-1);
         }
       }
     } else {
       usage();
-      System.exit(-1);
+      ExitHandler.getInstance().exit(-1);
     }
   }
 }
