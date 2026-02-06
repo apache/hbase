@@ -93,6 +93,8 @@ jobs:
           DOCKERFILE: "${{ github.workspace }}/src/dev-support/docker/Dockerfile"
           GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_USER: ${{ github.actor }}
+          HADOOP_PROFILE: "3.0"
+          JAVA8_HOME: "/usr/lib/jvm/java-8"
           PATCHDIR: "${{ github.workspace }}/yetus-jdk17-hadoop3-unit-check/output"
           PLUGINS: "github,htmlout,maven,unit"
           SET_JAVA_HOME: "/usr/lib/jvm/java-17"
@@ -107,6 +109,7 @@ jobs:
           SUREFIRE_FIRST_PART_FORK_COUNT: "1.0C"
           SUREFIRE_SECOND_PART_FORK_COUNT: "0.5C"
           BRANCH_NAME: "${{ github.base_ref }}"
+          CHANGE_TARGET: "${{ github.base_ref }}"
           SKIP_ERRORPRONE: 'true'
           DEBUG: 'true'
           TEST_PROFILE: ${{ matrix.test_profile }}

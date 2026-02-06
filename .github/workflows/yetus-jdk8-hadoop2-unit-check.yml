@@ -17,7 +17,7 @@
 
 # yamllint disable rule:line-length
 ---
-name: Yetus JDK17 Hadoop3 Compile Check
+name: Yetus JDK8 Hadoop2 Unit Check
 
 "on":
   pull_request:
@@ -28,9 +28,28 @@ permissions:
   statuses: write
 
 jobs:
-  jdk17-hadoop3-compile-check:
+  jdk8-hadoop2-unit-check:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 360
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: "small"
+            test_profile: "runSmallTests"
+          - name: "medium"
+            test_profile: "runMediumTests"
+          # Large tests split alphabetically by class name (after "Test" prefix)
+          # Wave 1: Test[A-H]*, Wave 2: Test[I-R]*, Wave 3: Test[S-Z]*
+          - name: "large-wave-1"
+            test_profile: "runLargeTests-wave1"
+          - name: "large-wave-2"
+            test_profile: "runLargeTests-wave2"
+          - name: "large-wave-3"
+            test_profile: "runLargeTests-wave3"
+
+    name: ${{ matrix.name }}
 
     env:
       YETUS_VERSION: '0.15.0'
@@ -42,10 +61,10 @@ jobs:
           path: src
           fetch-depth: 0
 
-      - name: Set up JDK 17
+      - name: Set up JDK 8
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '8'
           distribution: 'temurin'
 
       - name: Maven cache
@@ -68,28 +87,31 @@ jobs:
           tar --strip-components=1 -xzf apache-yetus-${{ env.YETUS_VERSION }}-bin.tar.gz
           rm apache-yetus-${{ env.YETUS_VERSION }}-bin.tar.gz
 
-      - name: Run Yetus JDK17 Hadoop3 Compile Check
+      - name: Run Yetus JDK8 Hadoop2 Unit Check
         env:
           ARCHIVE_PATTERN_LIST: "TEST-*.xml,org.apache.h*.txt,*.dumpstream,*.dump"
           DOCKERFILE: "${{ github.workspace }}/src/dev-support/docker/Dockerfile"
           GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_USER: ${{ github.actor }}
-          HADOOP_PROFILE: "3.0"
           JAVA8_HOME: "/usr/lib/jvm/java-8"
-          PATCHDIR: "${{ github.workspace }}/yetus-jdk17-hadoop3-compile-check/output"
-          PLUGINS: "compile,github,htmlout,javac,javadoc,maven,mvninstall,shadedjars"
-          SET_JAVA_HOME: "/usr/lib/jvm/java-17"
+          PATCHDIR: "${{ github.workspace }}/yetus-jdk8-hadoop2-unit-check/output"
+          PLUGINS: "github,htmlout,maven,unit"
+          SET_JAVA_HOME: "/usr/lib/jvm/java-8"
           SOURCEDIR: "${{ github.workspace }}/src"
-          TESTS_FILTER: "javac,javadoc"
+          TESTS_FILTER: "mvninstall"
           YETUSDIR: "${{ github.workspace }}/yetus"
           AUTHOR_IGNORE_LIST: "src/main/asciidoc/_chapters/developer.adoc"
           BLANKS_EOL_IGNORE_FILE: "dev-support/blanks-eol-ignore.txt"
           BLANKS_TABS_IGNORE_FILE: "dev-support/blanks-tabs-ignore.txt"
+          EXCLUDE_TESTS_URL: "https://ci-hbase.apache.org/job/HBase-Find-Flaky-Tests/job/${{ github.base_ref }}/lastSuccessfulBuild/artifact/output/excludes"
           BUILD_THREAD: "4"
+          SUREFIRE_FIRST_PART_FORK_COUNT: "1.0C"
+          SUREFIRE_SECOND_PART_FORK_COUNT: "0.5C"
           BRANCH_NAME: "${{ github.base_ref }}"
           CHANGE_TARGET: "${{ github.base_ref }}"
           SKIP_ERRORPRONE: 'true'
           DEBUG: 'true'
+          TEST_PROFILE: ${{ matrix.test_profile }}
         run: |
           cd "${{ github.workspace }}"
           bash src/dev-support/jenkins_precommit_github_yetus.sh
@@ -98,12 +120,12 @@ jobs:
         if: always()
         run: |
           cd "${{ github.workspace }}"
-          python3 src/dev-support/yetus_console_to_md.py yetus-jdk17-hadoop3-compile-check/output/console.txt >> $GITHUB_STEP_SUMMARY
+          python3 src/dev-support/yetus_console_to_md.py yetus-jdk8-hadoop2-unit-check/output/console.txt >> $GITHUB_STEP_SUMMARY
 
-      - name: Publish Results
+      - name: Publish Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: yetus-jdk17-hadoop3-compile-check-output
-          path: ${{ github.workspace }}/yetus-jdk17-hadoop3-compile-check/output
+          name: yetus-jdk8-hadoop2-unit-check-${{ matrix.name }}
+          path: ${{ github.workspace }}/yetus-jdk8-hadoop2-unit-check/output
           retention-days: 7
