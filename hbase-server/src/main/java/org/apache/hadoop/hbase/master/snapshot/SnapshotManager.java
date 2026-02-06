@@ -1255,6 +1255,11 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     } catch (IOException e) {
       LOG.error("stop ProcedureCoordinator error", e);
     }
+    // Unregister the WorkerAssigner from ServerManager to prevent NPE during shutdown
+    // when serverAdded() is called after procedureExecutor is set to null
+    if (verifyWorkerAssigner != null) {
+      verifyWorkerAssigner.stop();
+    }
   }
 
   @Override
