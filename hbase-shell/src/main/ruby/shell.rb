@@ -329,6 +329,29 @@ For more on the HBase Shell, see http://hbase.apache.org/book.html
     end
 
     ##
+    # Read from an instance of Ruby's IO class and evaluate each line within the shell's workspace
+    #
+    # Unlike Ruby's require or load, this method allows us to execute code with a custom binding. In
+    # this case, we are using the binding constructed with all the HBase shell constants and
+    # methods.
+    #
+    # @param [IO] io instance of Ruby's IO (or subclass like File) to read script from
+    # @param [String] filename to print in tracebacks
+    def eval_io(io, filename = 'stdin')
+      require 'irb/ruby-lex'
+      # Mixing HBaseIOExtensions into IO allows us to pass IO objects to RubyLex.
+      IO.include HBaseIOExtensions
+
+      workspace = get_workspace
+      scanner = RubyLex.new
+      scanner.set_input(io)
+
+      scanner.each_top_level_statement do |statement, linenum|
+        puts(workspace.evaluate(nil, statement, filename, linenum))
+      end
+      nil
+    end
+    ##
     # Runs a block and logs exception from both Ruby and Java, optionally discarding the traceback
     #
     # @param [Boolean] hide_traceback if true, Exceptions will be converted to
