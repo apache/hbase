@@ -16,7 +16,7 @@
 // limitations under the License.
 //
 
-import { fileNameVariants } from "@/lib/export-pdf-types";
+import { fileNameVariants } from "@/lib/export-pdf/export-pdf-types";
 
 interface LinkType {
   label: string;

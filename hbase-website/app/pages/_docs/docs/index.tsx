@@ -36,6 +36,7 @@ import { Step, Steps } from "fumadocs-ui/components/steps";
 import { Link } from "@/components/link";
 import type { MDXComponents } from "mdx/types";
 import type { TOCItemType } from "fumadocs-core/toc";
+import hbaseVersion from "@/lib/export-pdf/hbase-version.json";
 
 // Extend default MDX components to include Steps globally
 // Note: We'll override the 'a' component in the renderer to handle route-specific logic
@@ -215,6 +216,7 @@ const renderer = toClientRenderer(
               <h1 className="text-4xl font-semibold tracking-wide">
                 Apache HBase® Reference Guide
               </h1>
+              <p className="text-fd-muted-foreground text-sm">Version {hbaseVersion.version}</p>
               <p className="text-fd-muted-foreground text-base">Apache HBase Team</p>
             </div>
           </section>

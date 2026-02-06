@@ -37,6 +37,7 @@ lerna-debug.log*
 # Generated files
 /app/pages/team/developers.json
 /app/pages/_docs/docs/_mdx/(multi-page)/configuration/hbase-default.md
+/app/lib/export-pdf/hbase-version.json
 /public/books/**
 
 # Playwright

@@ -278,6 +278,14 @@ npm run extract-hbase-config
 
 This extracts data from `hbase-default.xml` and creates `app/pages/_docs/docs/_mdx/(multi-page)/configuration/hbase-default.md`, which is required for the documentation page to work properly. Re-run this command whenever `hbase-default.xml` changes. The generated markdown is ignored by git, and this command also runs at build time, so there is no need to `git commit` the generated file.
 
+**Important:** Generate the HBase version metadata before starting the development server:
+
+```bash
+npm run extract-hbase-version
+```
+
+This extracts the `<revision>` value from the root `pom.xml` and creates `app/lib/export-pdf/hbase-version.json`, which is used on the docs PDF cover. Re-run this command whenever the root `pom.xml` version changes. The generated json is ignored by git, and this command also runs at build time, so there is no need to `git commit` the generated file.
+
 #### 3. Start Development Server
 
 ```bash
@@ -427,6 +435,7 @@ When you run the Maven build, it automatically:
    - `npm run typecheck` - TypeScript type checking
    - `npm run extract-developers` - Extract developers from parent pom.xml
    - `npm run extract-hbase-config` - Extract data from `hbase-default.xml` to `app/pages/_docs/docs/_mdx/(multi-page)/configuration/hbase-default.md`
+   - `npm run extract-hbase-version` - Extract version from root `pom.xml` to `app/lib/export-pdf/hbase-version.json`
    - `npm run test:unit:run` - Vitest unit tests
    - `npm run test:e2e` - Playwright e2e tests
    - `npm run build` - Production build

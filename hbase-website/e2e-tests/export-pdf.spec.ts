@@ -20,7 +20,7 @@ import { test, expect } from "@playwright/test";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { fileNameVariants } from "../app/lib/export-pdf-types";
+import { fileNameVariants } from "../app/lib/export-pdf/export-pdf-types";
 
 const outDir = "public/books";
 const marginInches = 0.4;
@@ -32,6 +32,19 @@ const variants = [
   { name: fileNameVariants.light, theme: "light" },
   { name: fileNameVariants.dark, theme: "dark" }
 ];
+
+async function loadHBaseVersion() {
+  const versionUrl = new URL("../app/lib/export-pdf/hbase-version.json", import.meta.url);
+  try {
+    const raw = await fs.readFile(versionUrl, "utf-8");
+    const parsed = JSON.parse(raw);
+    return parsed?.version;
+  } catch {
+    throw new Error(
+      "Missing app/lib/export-pdf/hbase-version.json. Run `npm run extract-hbase-version` first."
+    );
+  }
+}
 
 async function postProcess(pdfPath: string, darkMode?: boolean) {
   const pdfBytes = await fs.readFile(pdfPath);
@@ -123,6 +136,7 @@ test("export documentation pdfs", async ({ browser, browserName }) => {
   test.setTimeout(3 * 60 * 1000);
 
   await fs.mkdir(outDir, { recursive: true });
+  const hbaseVersion = await loadHBaseVersion();
 
   for (const variant of variants) {
     const page = await browser.newPage();
@@ -151,6 +165,10 @@ test("export documentation pdfs", async ({ browser, browserName }) => {
       `document.documentElement.classList.contains(${JSON.stringify(variant.theme)})`,
       { timeout: 10000 }
     );
+
+    await expect(
+      page.locator("section.print-only").filter({ hasText: `Version ${hbaseVersion}` })
+    ).toBeAttached();
 
     const errorBoundaryVisible = await page
       .locator("main")

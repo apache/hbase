@@ -87,17 +87,6 @@
               <arguments>install</arguments>
             </configuration>
           </execution>
-          <!-- Extract developers from parent pom.xml -->
-          <execution>
-            <id>extract-developers</id>
-            <goals>
-              <goal>npm</goal>
-            </goals>
-            <phase>generate-resources</phase>
-            <configuration>
-              <arguments>run extract-developers</arguments>
-            </configuration>
-          </execution>
           <!-- Run npm run ci -->
           <execution>
             <id>npm-run-ci</id>
