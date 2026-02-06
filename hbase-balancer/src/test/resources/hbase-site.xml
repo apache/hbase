@@ -1,4 +1,8 @@
-/*
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+/**
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,25 +19,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.balancer;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-
-public class StochasticBalancerTestBase2 extends StochasticBalancerTestBase {
-
-  @BeforeEach
-  public void before() {
-    conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 2000000L);
-    conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
-    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 3 * 60 * 1000L);
-    conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.05f);
-    loadBalancer.onConfigurationChange(conf);
-  }
-
-  @AfterEach
-  public void after() {
-    // reset config to make sure balancer run
-    loadBalancer.onConfigurationChange(conf);
-  }
-}
+-->
+<configuration>
+  <property>
+    <name>hbase.defaults.for.version.skip</name>
+    <value>true</value>
+  </property>
+</configuration>

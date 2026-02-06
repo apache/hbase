@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -35,19 +34,15 @@ import org.apache.hadoop.hbase.master.balancer.BalancerTestBase.MockMapping;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.net.DNSToSwitchMapping;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MediumTests.class, MasterTests.class })
+@Tag(MediumTests.TAG)
+@Tag(MasterTests.TAG)
 public class TestLargeClusterBalancingMetaTableIsolation {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLargeClusterBalancingMetaTableIsolation.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestLargeClusterBalancingMetaTableIsolation.class);
@@ -60,7 +55,7 @@ public class TestLargeClusterBalancingMetaTableIsolation {
   private static final ServerName[] servers = new ServerName[NUM_SERVERS];
   private static final Map<ServerName, List<RegionInfo>> serverToRegions = new HashMap<>();
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() {
     // Initialize servers
     for (int i = 0; i < NUM_SERVERS; i++) {
@@ -100,5 +95,4 @@ public class TestLargeClusterBalancingMetaTableIsolation {
   private boolean isMetaTableIsolated(BalancerClusterState cluster) {
     return isTableIsolated(cluster, TableName.META_TABLE_NAME, "Meta");
   }
-
 }

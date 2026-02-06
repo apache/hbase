@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -35,30 +34,24 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.net.DNSToSwitchMapping;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Test the load balancer that is created by default.
- */
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestSimpleLoadBalancer extends BalancerTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSimpleLoadBalancer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSimpleLoadBalancer.class);
 
   private static SimpleLoadBalancer loadBalancer;
+  private String methodName;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeAllTests() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
@@ -68,10 +61,12 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
     loadBalancer.initialize();
   }
 
-  int[] mockUniformCluster = new int[] { 5, 5, 5, 5, 5, 0 };
+  @BeforeEach
+  public void beforeEach(TestInfo testInfo) {
+    methodName = testInfo.getTestMethod().get().getName();
+  }
 
-  @Rule
-  public TestName name = new TestName();
+  int[] mockUniformCluster = new int[] { 5, 5, 5, 5, 5, 0 };
 
   /**
    * Test the load balancing algorithm. Invariant is that all servers should be hosting either
@@ -83,7 +78,7 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
     for (int[] mockCluster : clusterStateMocks) {
       Map<ServerName, List<RegionInfo>> clusterServers = mockClusterServers(mockCluster, 30);
       List<ServerAndLoad> clusterList = convertToList(clusterServers);
-      clusterLoad.put(TableName.valueOf(name.getMethodName()), clusterServers);
+      clusterLoad.put(TableName.valueOf(methodName), clusterServers);
       HashMap<TableName, TreeMap<ServerName, List<RegionInfo>>> result =
         mockClusterServersWithTables(clusterServers);
       loadBalancer.setClusterLoad(clusterLoad);
@@ -130,7 +125,7 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
     Map<ServerName, List<RegionInfo>> clusterServers =
       mockUniformClusterServers(mockUniformCluster);
     List<ServerAndLoad> clusterList = convertToList(clusterServers);
-    clusterLoad.put(TableName.valueOf(name.getMethodName()), clusterServers);
+    clusterLoad.put(TableName.valueOf(methodName), clusterServers);
     // use overall can achieve both table and cluster level balance
     HashMap<TableName, TreeMap<ServerName, List<RegionInfo>>> LoadOfAllTable =
       mockClusterServersWithTables(clusterServers);
@@ -178,5 +173,4 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
       assertEquals(6, serverAndLoad.getLoad());
     }
   }
-
 }
