@@ -435,14 +435,15 @@ public class TestPrefetch {
     HRegionFileSystem dstRegionFs = HRegionFileSystem.createRegionOnFileSystem(testConf, fs,
       CommonFSUtils.getTableDir(testDir, dstHri.getTable()), dstHri);
     Path dstPath = new Path(regionFs.getTableDir(), new Path(dstHri.getRegionNameAsString(), "cf"));
-    HFileLink.create(testConf, this.fs, dstPath, hri, storeFilePath.getName());
-    Path linkFilePath =
-      new Path(dstPath, HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
-
     StoreFileTracker sft = StoreFileTrackerFactory.create(testConf, false,
       StoreContext.getBuilder()
         .withFamilyStoreDirectoryPath(new Path(dstRegionFs.getRegionDir(), "cf"))
+        .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of("cf"))
         .withRegionFileSystem(dstRegionFs).build());
+    sft.createHFileLink(hri.getTable(), hri.getEncodedName(), storeFilePath.getName(), true);
+    Path linkFilePath =
+      new Path(dstPath, HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
+
     // Try to open store file from link
     StoreFileInfo storeFileInfo = sft.getStoreFileInfo(linkFilePath, true);
     HStoreFile hsf = new HStoreFile(storeFileInfo, BloomType.NONE, cacheConf);
