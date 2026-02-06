@@ -47,7 +47,11 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.security.access.ReadOnlyController;
+import org.apache.hadoop.hbase.security.access.BulkLoadReadOnlyController;
+import org.apache.hadoop.hbase.security.access.EndpointReadOnlyController;
+import org.apache.hadoop.hbase.security.access.MasterReadOnlyController;
+import org.apache.hadoop.hbase.security.access.RegionReadOnlyController;
+import org.apache.hadoop.hbase.security.access.RegionServerReadOnlyController;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -73,13 +77,14 @@ public class TestRefreshMetaProcedureIntegration {
 
   @Before
   public void setup() throws Exception {
-    // Configure the cluster with ReadOnlyController
+    // Configure the cluster with ReadOnlyControllers
     TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-      ReadOnlyController.class.getName());
-    TEST_UTIL.getConfiguration().set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
-      ReadOnlyController.class.getName());
+      MasterReadOnlyController.class.getName());
     TEST_UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-      ReadOnlyController.class.getName());
+      String.join(",", RegionReadOnlyController.class.getName(),
+        BulkLoadReadOnlyController.class.getName(), EndpointReadOnlyController.class.getName()));
+    TEST_UTIL.getConfiguration().set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
+      RegionServerReadOnlyController.class.getName());
 
     // Start in active mode
     TEST_UTIL.getConfiguration().setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, false);
