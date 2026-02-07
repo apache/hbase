@@ -19,9 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -53,7 +50,9 @@ abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
 
   protected int startLogErrorsCnt;
 
-  protected Map<String, byte[]> requestAttributes = Collections.emptyMap();
+  protected FixedRequestAttributesFactory.Builder fixedRequestAttributesFactoryBuilder = null;
+
+  protected RequestAttributesFactory requestAttributesFactory = null;
 
   AsyncTableBuilderBase(TableName tableName, AsyncConnectionConfiguration connConf) {
     this.tableName = tableName;
@@ -129,10 +128,27 @@ abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
 
   @Override
   public AsyncTableBuilder<C> setRequestAttribute(String key, byte[] value) {
-    if (requestAttributes.isEmpty()) {
-      requestAttributes = new HashMap<>();
+    if (fixedRequestAttributesFactoryBuilder == null) {
+      fixedRequestAttributesFactoryBuilder = FixedRequestAttributesFactory.newBuilder();
     }
-    requestAttributes.put(key, value);
+    fixedRequestAttributesFactoryBuilder.setAttribute(key, value);
     return this;
+  }
+
+  @Override
+  public AsyncTableBuilder<C>
+    setRequestAttributesFactory(RequestAttributesFactory requestAttributesFactory) {
+    this.requestAttributesFactory = requestAttributesFactory;
+    return this;
+  }
+
+  RequestAttributesFactory getRequestAttributesFactory() {
+    if (requestAttributesFactory != null) {
+      return requestAttributesFactory;
+    } else if (fixedRequestAttributesFactoryBuilder != null) {
+      return fixedRequestAttributesFactoryBuilder.build();
+    } else {
+      return FixedRequestAttributesFactory.EMPTY;
+    }
   }
 }
