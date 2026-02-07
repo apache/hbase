@@ -333,8 +333,9 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       if (evt instanceof IdleStateEvent) {
         IdleStateEvent e = (IdleStateEvent) evt;
         if (e.state() == READER_IDLE) {
-          failed(ctx.channel(),
-            () -> new IOException("Timeout(" + timeoutMs + "ms) waiting for response"));
+          failed(ctx.channel(), () -> new IOException(
+            "Timeout(" + timeoutMs + "ms) waiting for response from datanode " + ctx.channel()
+              .remoteAddress()));
         } else if (e.state() == WRITER_IDLE) {
           PacketHeader heartbeat = new PacketHeader(4, 0, HEART_BEAT_SEQNO, false, 0, false);
           int len = heartbeat.getSerializedSize();
