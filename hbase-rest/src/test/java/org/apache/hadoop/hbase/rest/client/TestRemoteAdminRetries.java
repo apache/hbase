@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.rest.client;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -29,7 +29,6 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -37,20 +36,16 @@ import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests {@link RemoteAdmin} retries.
  */
-@Category({ RestTests.class, SmallTests.class })
+@Tag(RestTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestRemoteAdminRetries {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRemoteAdminRetries.class);
 
   private static final int SLEEP_TIME = 50;
   private static final int RETRIES = 3;
@@ -61,7 +56,7 @@ public class TestRemoteAdminRetries {
   private RemoteAdmin remoteAdmin;
   private Client client;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     client = mock(Client.class);
     Response response = new Response(509);
@@ -166,8 +161,7 @@ public class TestRemoteAdminRetries {
     assertTrue((EnvironmentEdgeManager.currentTime() - start) > MAX_TIME);
   }
 
-  private static interface CallExecutor {
+  private interface CallExecutor {
     void run() throws Exception;
   }
-
 }

@@ -173,6 +173,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>dieter</id>
+      <name>Dieter De Paepe</name>
+      <email>dieter@apache.org</email>
+      <timezone>+1</timezone>
+    </developer>
+    <developer>
       <id>dimaspivak</id>
       <name>Dima Spivak</name>
       <email>dimaspivak@apache.org</email>
@@ -3441,6 +3447,11 @@
                   <artifactId>jsr305</artifactId>
                   <version>3.0.2</version>
                 </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.osgi</groupId>
+                  <artifactId>osgi.annotation</artifactId>
+                  <version>8.1.0</version>
+                </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
             </configuration>
@@ -3491,6 +3502,11 @@
                   <groupId>com.google.code.findbugs</groupId>
                   <artifactId>jsr305</artifactId>
                   <version>3.0.2</version>
+                </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.osgi</groupId>
+                  <artifactId>osgi.annotation</artifactId>
+                  <version>8.1.0</version>
                 </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
@@ -3551,6 +3567,11 @@
                   <artifactId>jsr305</artifactId>
                   <version>3.0.2</version>
                 </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.osgi</groupId>
+                  <artifactId>osgi.annotation</artifactId>
+                  <version>8.1.0</version>
+                </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
             </configuration>
@@ -3608,6 +3629,11 @@
                   <groupId>com.google.code.findbugs</groupId>
                   <artifactId>jsr305</artifactId>
                   <version>3.0.2</version>
+                </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.osgi</groupId>
+                  <artifactId>osgi.annotation</artifactId>
+                  <version>8.1.0</version>
                 </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
@@ -4583,6 +4609,91 @@
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
         <surefire.secondPartGroups/>
       </properties>
+    </profile>
+    <profile>
+      <!--
+        Wave profiles for partitioning Large tests across parallel CI jobs.
+        Tests are split alphabetically by class name (after "Test" prefix):
+          Wave 1: Test[A-H]* classes
+          Wave 2: Test[I-R]* classes
+          Wave 3: Test[S-Z]* classes
+
+        Flaky test exclusion is handled separately via -Dtest.exclude.pattern
+        which is set by hbase-personality.sh from EXCLUDE_TESTS_URL.
+      -->
+      <id>runLargeTests-wave1</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
+        <surefire.secondPartGroups/>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>%regex[(?i).*/test[a-h].*]</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>runLargeTests-wave2</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
+        <surefire.secondPartGroups/>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>%regex[(?i).*/test[i-r].*]</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>runLargeTests-wave3</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
+        <surefire.secondPartGroups/>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>%regex[(?i).*/test[s-z].*]</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
     <profile>
       <!-- Use it to launch small & medium tests -->

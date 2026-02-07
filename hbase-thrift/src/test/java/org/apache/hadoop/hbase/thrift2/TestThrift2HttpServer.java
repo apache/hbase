@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.function.Supplier;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.thrift.TestThriftHttpServer;
 import org.apache.hadoop.hbase.thrift.ThriftServer;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
@@ -36,7 +36,7 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-@Category({ ClientTests.class, MediumTests.class })
+@Category({ ClientTests.class, LargeTests.class })
 public class TestThrift2HttpServer extends TestThriftHttpServer {
   private static final String TABLENAME = "TestThrift2HttpServerTable";
 

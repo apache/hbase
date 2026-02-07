@@ -17,24 +17,19 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import javax.xml.bind.JAXBException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.rest.client.Response;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RestTests.class, MediumTests.class })
+@Tag(RestTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestDeleteRow extends RowResourceBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDeleteRow.class);
 
   @Test
   public void testDeleteNonExistentColumn() throws Exception {

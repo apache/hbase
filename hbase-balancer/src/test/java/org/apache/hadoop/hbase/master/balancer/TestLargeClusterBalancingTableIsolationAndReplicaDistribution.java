@@ -33,8 +33,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.balancer.BalancerTestBase.MockMapping;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -43,7 +43,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MediumTests.class, MasterTests.class })
+@Category({ MasterTests.class, LargeTests.class })
 public class TestLargeClusterBalancingTableIsolationAndReplicaDistribution {
 
   @ClassRule

@@ -24,7 +24,7 @@ import static org.junit.Assert.assertNull;
 import java.io.IOException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
@@ -41,7 +41,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 /**
  * Test whether moved region cache is correct
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Category({ MiscTests.class, LargeTests.class })
 public class TestMovedRegionCache {
 
   @ClassRule

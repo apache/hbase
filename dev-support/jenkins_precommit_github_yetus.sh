@@ -133,8 +133,8 @@ if [[ "${SKIP_ERRORPRONE}" = "true" ]]; then
   # skip error prone
   YETUS_ARGS+=("--skip-errorprone")
 fi
-# effectively treat dev-support as a custom maven module
-YETUS_ARGS+=("--skip-dirs=dev-support")
+# Exclude non-code directories from module detection to avoid triggering full builds
+YETUS_ARGS+=("--skip-dirs=dev-support,.github,bin,conf")
 # For testing with specific hadoop version. Activates corresponding profile in maven runs.
 if [[ -n "${HADOOP_PROFILE}" ]]; then
   # Master has only Hadoop3 support. We don't need to activate any profile.
@@ -166,6 +166,10 @@ if [[ -n "${SUREFIRE_SECOND_PART_FORK_COUNT}" ]]; then
 fi
 if [[ -n "${JAVA8_HOME}" ]]; then
   YETUS_ARGS+=("--java8-home=${JAVA8_HOME}")
+fi
+# Test profile for running specific test categories (e.g., runDevTests, runLargeTests-wave1)
+if [[ -n "${TEST_PROFILE}" ]]; then
+  YETUS_ARGS+=("--test-profile=${TEST_PROFILE}")
 fi
 
 echo "Launching yetus with command line:"

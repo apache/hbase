@@ -60,7 +60,7 @@ import org.apache.hadoop.hbase.filter.ColumnValueFilter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.thrift.Constants;
 import org.apache.hadoop.hbase.thrift2.client.ThriftConnection;
@@ -74,7 +74,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RestTests.class, MediumTests.class })
+@Category({ RestTests.class, LargeTests.class })
 
 public class TestThriftConnection {
   private static final Logger LOG = LoggerFactory.getLogger(TestThriftConnection.class);

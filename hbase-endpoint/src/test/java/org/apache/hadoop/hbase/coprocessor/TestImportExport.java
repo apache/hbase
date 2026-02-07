@@ -19,14 +19,14 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ MediumTests.class })
+@Category(LargeTests.class)
 public class TestImportExport extends org.apache.hadoop.hbase.mapreduce.TestImportExport {
 
   @ClassRule

@@ -20,9 +20,10 @@ package org.apache.hadoop.hbase.ipc;
 import static org.apache.hadoop.hbase.ipc.RWQueueRpcExecutor.CALL_QUEUE_READ_SHARE_CONF_KEY;
 import static org.apache.hadoop.hbase.ipc.RWQueueRpcExecutor.CALL_QUEUE_SCAN_SHARE_CONF_KEY;
 import static org.apache.hadoop.hbase.ipc.RpcExecutor.CALL_QUEUE_HANDLER_FACTOR_CONF_KEY;
+import static org.apache.hadoop.hbase.ipc.RpcExecutor.DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
 
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -61,8 +62,9 @@ public class TestRWQueueRpcExecutor {
   @Test
   public void itProvidesCorrectQueuesToBalancers() throws InterruptedException {
     PriorityFunction qosFunction = mock(PriorityFunction.class);
-    RWQueueRpcExecutor executor =
-      new RWQueueRpcExecutor(testName.getMethodName(), 100, 100, qosFunction, conf, null);
+    int softQueueLimit = 100;
+    RWQueueRpcExecutor executor = new RWQueueRpcExecutor(testName.getMethodName(), 100,
+      softQueueLimit, qosFunction, conf, null);
 
     QueueBalancer readBalancer = executor.getReadBalancer();
     QueueBalancer writeBalancer = executor.getWriteBalancer();
@@ -79,6 +81,11 @@ public class TestRWQueueRpcExecutor {
     assertEquals(25, readQueues.size());
     assertEquals(50, writeQueues.size());
     assertEquals(25, scanQueues.size());
+    assertEquals("Soft limit is not applied properly", softQueueLimit, executor.currentQueueLimit);
+    // Hard Limit is applied as the max capacity of the queue
+    int hardQueueLimit = readQueues.get(0).remainingCapacity() + readQueues.get(0).size();
+    assertEquals("Default hard limit should be applied ", DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT,
+      hardQueueLimit);
 
     verifyDistinct(readQueues, writeQueues, scanQueues);
     verifyDistinct(writeQueues, readQueues, scanQueues);
