@@ -42,6 +42,8 @@ The official website for Apache HBase, built with modern web technologies to pro
 
 Most landing pages store content in **Markdown (`.md`)** or **JSON (`.json`)** files located in `app/pages/_landing/[page-name]/`. Docs content lives under `app/pages/_docs/` and is authored in MDX.
 
+Legacy documentation is preserved for those users who have old bookmarked links and notes: the old book lives at `/public/book.html`, and its static assets are in `public/old-book-static-files/`.
+
 **Examples:**
 
 - `app/pages/_landing/team/content.md` - Markdown content for team page
