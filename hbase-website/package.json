@@ -25,7 +25,7 @@
     "extract-hbase-config": "node scripts/extract-hbase-config.js",
     "extract-hbase-version": "node scripts/extract-hbase-version.js",
     "export-pdf": "playwright test e2e-tests/export-pdf.spec.ts --project=chromium --workers=1",
-    "ci": "npm run lint && npm run typecheck && npm run extract-developers && npm run extract-hbase-config && npm run extract-hbase-version && npm run test:unit:run && npm run test:e2e && npm run build"
+    "ci": "npx playwright install && npm run lint && npm run typecheck && npm run extract-developers && npm run extract-hbase-config && npm run extract-hbase-version && npm run test:unit:run && npm run test:e2e && npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
