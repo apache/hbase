@@ -1527,11 +1527,12 @@ public class TableDescriptorBuilder {
     }
 
     @Override
-    public boolean isRowCacheEnabled() {
-      return getOrDefault(ROW_CACHE_ENABLED_KEY, Boolean::valueOf, DEFAULT_ROW_CACHE_ENABLED);
+    public Boolean getRowCacheEnabled() {
+      Bytes value = getValue(ROW_CACHE_ENABLED_KEY);
+      return value == null ? null : Boolean.valueOf(Bytes.toString(value.get()));
     }
 
-    private ModifyableTableDescriptor setRowCacheEnabled(boolean enabled) {
+    public ModifyableTableDescriptor setRowCacheEnabled(boolean enabled) {
       return setValue(ROW_CACHE_ENABLED_KEY, Boolean.toString(enabled));
     }
   }

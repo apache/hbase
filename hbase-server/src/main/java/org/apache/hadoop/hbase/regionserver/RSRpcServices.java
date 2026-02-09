@@ -355,11 +355,6 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     "hbase.regionserver.bootstrap.nodes.executorService";
 
   /**
-   * The row cache service
-   */
-  private final RowCacheService rowCacheService = new RowCacheService(getConfiguration());
-
-  /**
    * An Rpc callback for closing a RegionScanner.
    */
   private static final class RegionScannerCloseCallBack implements RpcCallback {
@@ -673,7 +668,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
           result = region.getCoprocessorHost().preCheckAndMutate(checkAndMutate);
         }
         if (result == null) {
-          result = rowCacheService.checkAndMutate(region, checkAndMutate, nonceGroup, nonce);
+          result = region.checkAndMutate(checkAndMutate, nonceGroup, nonce);
           if (region.getCoprocessorHost() != null) {
             result = region.getCoprocessorHost().postCheckAndMutate(checkAndMutate, result);
           }
@@ -1025,8 +1020,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         Arrays.sort(mArray, (v1, v2) -> Row.COMPARATOR.compare(v1, v2));
       }
 
-      OperationStatus[] codes =
-        rowCacheService.batchMutate(region, mArray, atomic, nonceGroup, nonce);
+      OperationStatus[] codes = region.batchMutate(mArray, atomic, nonceGroup, nonce);
 
       // When atomic is true, it indicates that the mutateRow API or the batch API with
       // RowMutations is called. In this case, we need to merge the results of the
@@ -2342,7 +2336,19 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   @Override
   public BulkLoadHFileResponse bulkLoadHFile(final RpcController controller,
     final BulkLoadHFileRequest request) throws ServiceException {
-    return rowCacheService.bulkLoadHFile(this, request);
+    HRegion region;
+    try {
+      region = getRegion(request.getRegion());
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+
+    if (!region.isRowCacheEnabled()) {
+      return bulkLoadHFileInternal(request);
+    }
+
+    // TODO: implement row cache logic for bulk load
+    return bulkLoadHFileInternal(request);
   }
 
   BulkLoadHFileResponse bulkLoadHFileInternal(final BulkLoadHFileRequest request)
@@ -2603,7 +2609,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     RegionScannerImpl scanner = null;
     long blockBytesScannedBefore = context.getBlockBytesScanned();
     try {
-      scanner = rowCacheService.getScanner(region, scan, results);
+      scanner = region.getScannerWithResults(scan, results);
     } finally {
       if (scanner != null) {
         if (closeCallBack == null) {
@@ -3012,10 +3018,33 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
           builder.setMetrics(ProtobufUtil.toQueryMetrics(result.getMetrics()));
         }
       } else {
-        Result r = rowCacheService.mutate(this, region, mutation, quota, cellScanner, nonceGroup,
-          spaceQuotaEnforcement, context);
-        if (r == Result.EMPTY_RESULT) {
-          builder.setProcessed(true);
+        Result r = null;
+        Boolean processed = null;
+        MutationType type = mutation.getMutateType();
+        switch (type) {
+          case APPEND:
+            // TODO: this doesn't actually check anything.
+            r = append(region, quota, mutation, cellScanner, nonceGroup, spaceQuotaEnforcement,
+              context);
+            break;
+          case INCREMENT:
+            // TODO: this doesn't actually check anything.
+            r = increment(region, quota, mutation, cellScanner, nonceGroup, spaceQuotaEnforcement,
+              context);
+            break;
+          case PUT:
+            put(region, quota, mutation, cellScanner, spaceQuotaEnforcement);
+            processed = Boolean.TRUE;
+            break;
+          case DELETE:
+            delete(region, quota, mutation, cellScanner, spaceQuotaEnforcement);
+            processed = Boolean.TRUE;
+            break;
+          default:
+            throw new DoNotRetryIOException("Unsupported mutate type: " + type.name());
+        }
+        if (processed != null) {
+          builder.setProcessed(processed);
         }
         boolean clientCellBlockSupported = isClientCellBlockSupport(context);
         addResult(builder, r, controller, clientCellBlockSupported);
@@ -3032,29 +3061,6 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         quota.close();
       }
     }
-  }
-
-  Result mutateInternal(MutationProto mutation, HRegion region, OperationQuota quota,
-    CellScanner cellScanner, long nonceGroup, ActivePolicyEnforcement spaceQuotaEnforcement,
-    RpcCallContext context) throws IOException {
-    MutationType type = mutation.getMutateType();
-    return switch (type) {
-      case APPEND ->
-          // TODO: this doesn't actually check anything.
-          append(region, quota, mutation, cellScanner, nonceGroup, spaceQuotaEnforcement, context);
-      case INCREMENT ->
-          // TODO: this doesn't actually check anything.
-          increment(region, quota, mutation, cellScanner, nonceGroup, spaceQuotaEnforcement,
-            context);
-      case PUT -> {
-        put(region, quota, mutation, cellScanner, spaceQuotaEnforcement);
-        yield Result.EMPTY_RESULT;
-      }
-      case DELETE -> {
-        delete(region, quota, mutation, cellScanner, spaceQuotaEnforcement);
-        yield Result.EMPTY_RESULT;
-      }
-    };
   }
 
   private void put(HRegion region, OperationQuota quota, MutationProto mutation,
@@ -3105,7 +3111,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       result = region.getCoprocessorHost().preCheckAndMutate(checkAndMutate);
     }
     if (result == null) {
-      result = rowCacheService.checkAndMutate(region, checkAndMutate, nonceGroup, nonce);
+      result = region.checkAndMutate(checkAndMutate, nonceGroup, nonce);
       if (region.getCoprocessorHost() != null) {
         result = region.getCoprocessorHost().postCheckAndMutate(checkAndMutate, result);
       }
@@ -4088,10 +4094,5 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       getRpcQuotaManager().checkScanQuota(region, request, maxScannerResultSize, 0L, 0L);
     Pair<String, RegionScannerHolder> pair = newRegionScanner(request, region, builder);
     return new RegionScannerContext(pair.getFirst(), pair.getSecond(), quota);
-  }
-
-  // For testing only
-  public RowCacheService getRowCacheService() {
-    return rowCacheService;
   }
 }

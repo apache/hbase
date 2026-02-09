@@ -440,6 +440,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final AtomicLong rowCacheSeqNum = new AtomicLong(HConstants.NO_SEQNUM);
 
   /**
+   * The setting for whether to enable row cache for this region.
+   */
+  private final boolean isRowCacheEnabled;
+
+  /**
    * The default setting for whether to enable on-demand CF loading for scan requests to this
    * region. Requests can override it.
    */
@@ -935,6 +940,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     minBlockSizeBytes = Arrays.stream(this.htableDescriptor.getColumnFamilies())
       .mapToInt(ColumnFamilyDescriptor::getBlocksize).min().orElse(HConstants.DEFAULT_BLOCKSIZE);
+
+    this.isRowCacheEnabled = determineRowCacheEnabled();
+  }
+
+  boolean determineRowCacheEnabled() {
+    Boolean fromDescriptor = htableDescriptor.getRowCacheEnabled();
+    // The setting from TableDescriptor has higher priority than the global configuration
+    return fromDescriptor != null
+      ? fromDescriptor
+      : conf.getBoolean(HConstants.ROW_CACHE_ENABLED_KEY, HConstants.ROW_CACHE_ENABLED_DEFAULT);
   }
 
   private void setHTableSpecificConf() {
@@ -3242,6 +3257,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return getScanner(scan, null);
   }
 
+  RegionScannerImpl getScannerWithResults(Scan scan, List<Cell> results) throws IOException {
+    return getRowCacheService().getScanner(this, scan, results);
+  }
+
   @Override
   public RegionScannerImpl getScanner(Scan scan, List<KeyValueScanner> additionalScanners)
     throws IOException {
@@ -4781,9 +4800,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   OperationStatus[] batchMutate(Mutation[] mutations, boolean atomic) throws IOException {
-    return TraceUtil.trace(
-      () -> batchMutate(mutations, atomic, HConstants.NO_NONCE, HConstants.NO_NONCE),
-      () -> createRegionSpan("Region.batchMutate"));
+    OperationStatus[] operationStatuses =
+      getRowCacheService().mutateWithRowCacheBarrier(this, Arrays.asList(mutations),
+        () -> this.batchMutate(mutations, atomic, HConstants.NO_NONCE, HConstants.NO_NONCE));
+    return TraceUtil.trace(() -> operationStatuses, () -> createRegionSpan("Region.batchMutate"));
   }
 
   /**
@@ -5068,7 +5088,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   public CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate, long nonceGroup,
     long nonce) throws IOException {
-    return TraceUtil.trace(() -> checkAndMutateInternal(checkAndMutate, nonceGroup, nonce),
+    CheckAndMutateResult checkAndMutateResult = getRowCacheService().mutateWithRowCacheBarrier(this,
+      checkAndMutate.getRow(), () -> this.checkAndMutate(checkAndMutate, nonceGroup, nonce));
+    return TraceUtil.trace(() -> checkAndMutateResult,
       () -> createRegionSpan("Region.checkAndMutate"));
   }
 
@@ -5267,6 +5289,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private OperationStatus mutate(Mutation mutation, boolean atomic, long nonceGroup, long nonce)
     throws IOException {
+    return getRowCacheService().mutateWithRowCacheBarrier(this, mutation.getRow(),
+      () -> this.mutateInternal(mutation, atomic, nonceGroup, nonce));
+  }
+
+  private OperationStatus mutateInternal(Mutation mutation, boolean atomic, long nonceGroup,
+    long nonce) throws IOException {
     OperationStatus[] status =
       this.batchMutate(new Mutation[] { mutation }, atomic, nonceGroup, nonce);
     if (status[0].getOperationStatusCode().equals(OperationStatusCode.SANITY_CHECK_FAILURE)) {
@@ -8720,6 +8748,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return this.rowCacheSeqNum.get();
   }
 
+  @Override
+  public boolean isRowCacheEnabled() {
+    return isRowCacheEnabled;
+  }
+
   /**
    * This is used to invalidate the row cache of the bulk-loaded region.
    */
@@ -8997,5 +9030,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       allowedOnPath = ".*/src/test/.*")
   boolean isReadsEnabled() {
     return this.writestate.readsEnabled;
+  }
+
+  private RowCacheService getRowCacheService() {
+    return getRegionServerServices().getRowCacheService();
   }
 }
