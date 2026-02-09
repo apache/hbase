@@ -42,6 +42,9 @@ import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Test the load balancer that is created by default.
+ */
 @Tag(MasterTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestSimpleLoadBalancer extends BalancerTestBase {
