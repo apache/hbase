@@ -137,8 +137,8 @@ public class TestAsyncAdminRpcPriority {
     }).when(adminStub).stopServer(any(HBaseRpcController.class), any(StopServerRequest.class),
       any());
     User user = UserProvider.instantiate(CONF).getCurrent();
-    conn = new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF, user), "test", null,
-      user) {
+    conn = new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF, user), "test",
+      TableName.META_TABLE_NAME, null, user) {
 
       @Override
       CompletableFuture<MasterService.Interface> getMasterStub() {
@@ -187,7 +187,7 @@ public class TestAsyncAdminRpcPriority {
   // that we pass the correct priority
   @Test
   public void testCreateMetaTable() {
-    conn.getAdmin().createTable(TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME)
+    conn.getAdmin().createTable(TableDescriptorBuilder.newBuilder(conn.getMetaTableName())
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build()).join();
     verify(masterStub, times(1)).createTable(assertPriority(SYSTEMTABLE_QOS),
       any(CreateTableRequest.class), any());

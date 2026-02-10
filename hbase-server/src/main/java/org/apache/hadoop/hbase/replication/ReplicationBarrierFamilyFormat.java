@@ -192,7 +192,7 @@ public final class ReplicationBarrierFamilyFormat {
       .addColumn(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)
       .addFamily(HConstants.REPLICATION_BARRIER_FAMILY).readAllVersions().setReversed(true)
       .setCaching(10);
-    try (Table table = conn.getTable(TableName.META_TABLE_NAME);
+    try (Table table = conn.getTable(conn.getMetaTableName());
       ResultScanner scanner = table.getScanner(scan)) {
       for (Result result;;) {
         result = scanner.next();
@@ -215,7 +215,7 @@ public final class ReplicationBarrierFamilyFormat {
 
   public static long[] getReplicationBarriers(Connection conn, byte[] regionName)
     throws IOException {
-    try (Table table = conn.getTable(TableName.META_TABLE_NAME)) {
+    try (Table table = conn.getTable(conn.getMetaTableName())) {
       Result result = table.get(new Get(regionName)
         .addColumn(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER)
         .readAllVersions());

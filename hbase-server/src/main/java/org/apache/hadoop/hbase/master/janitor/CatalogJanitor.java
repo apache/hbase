@@ -105,7 +105,8 @@ public class CatalogJanitor extends ScheduledChore {
         scan();
       }
     } catch (IOException e) {
-      LOG.warn("Failed initial janitorial scan of hbase:meta table", e);
+      LOG.warn("Failed initial janitorial scan of {} table",
+        services.getConnection().getMetaTableName(), e);
       return false;
     }
     return true;
@@ -145,7 +146,8 @@ public class CatalogJanitor extends ScheduledChore {
           + this.services.getServerManager().isClusterShutdown());
       }
     } catch (IOException e) {
-      LOG.warn("Failed janitorial scan of hbase:meta table", e);
+      LOG.warn("Failed janitorial scan of {} table", services.getConnection().getMetaTableName(),
+        e);
     }
   }
 
@@ -484,7 +486,7 @@ public class CatalogJanitor extends ScheduledChore {
        */
       Get g = new Get(Bytes.toBytes("t2,40,1564119846424.1db8c57d64e0733e0f027aaeae7a0bf0."));
       g.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-      try (Table t = connection.getTable(TableName.META_TABLE_NAME)) {
+      try (Table t = connection.getTable(connection.getMetaTableName())) {
         Result r = t.get(g);
         byte[] row = g.getRow();
         row[row.length - 2] <<= row[row.length - 2];

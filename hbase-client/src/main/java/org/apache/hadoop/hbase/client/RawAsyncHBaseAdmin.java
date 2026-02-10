@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.HIGH_QOS;
-import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import static org.apache.hadoop.hbase.util.FutureUtils.unwrapCompletionException;
 
@@ -405,7 +404,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     AsyncAdminBuilderBase builder) {
     this.connection = connection;
     this.retryTimer = retryTimer;
-    this.metaTable = connection.getTable(META_TABLE_NAME);
+    this.metaTable = connection.getTable(connection.getMetaTableName());
     this.rpcTimeoutNs = builder.rpcTimeoutNs;
     this.operationTimeoutNs = builder.operationTimeoutNs;
     this.pauseNs = builder.pauseNs;
@@ -1012,7 +1011,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<List<RegionInfo>> getRegions(TableName tableName) {
-    if (tableName.equals(META_TABLE_NAME)) {
+    if (tableName.equals(connection.getMetaTableName())) {
       return connection.registry.getMetaRegionLocations()
         .thenApply(locs -> Stream.of(locs.getRegionLocations()).map(HRegionLocation::getRegion)
           .collect(Collectors.toList()));
@@ -1303,7 +1302,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
    * List all region locations for the specific table.
    */
   private CompletableFuture<List<HRegionLocation>> getTableHRegionLocations(TableName tableName) {
-    if (TableName.META_TABLE_NAME.equals(tableName)) {
+    if (connection.getMetaTableName().equals(tableName)) {
       CompletableFuture<List<HRegionLocation>> future = new CompletableFuture<>();
       addListener(connection.registry.getMetaRegionLocations(), (metaRegions, err) -> {
         if (err != null) {
