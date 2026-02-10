@@ -179,9 +179,30 @@ class DefaultStoreFileManager implements StoreFileManager {
     // Let a background thread close the actual reader on these compacted files and also
     // ensure to evict the blocks from block cache so that they are no longer in
     // cache
-    newCompactedfiles.forEach(HStoreFile::markCompactedAway);
-    compactedfiles = ImmutableList.sortedCopyOf(storeFileComparator,
-      Iterables.concat(compactedfiles, newCompactedfiles));
+    List<HStoreFile> filesToClose = new ArrayList<>(newCompactedfiles);
+    try {
+      HStoreFile.increaseStoreFilesRefeCount(newCompactedfiles);
+      newCompactedfiles.forEach(hStoreFile -> {
+        StoreFileReader reader = hStoreFile.getReader();
+        try {
+          if (reader == null) {
+            hStoreFile.initReader();
+          } else {
+            filesToClose.remove(hStoreFile);
+          }
+        } catch (IOException e) {
+          LOG.warn("Couldn't initialize reader for " + hStoreFile, e);
+          throw new RuntimeException(e);
+        } finally {
+          hStoreFile.markCompactedAway();
+        }
+      });
+      compactedfiles = ImmutableList.sortedCopyOf(storeFileComparator,
+        Iterables.concat(compactedfiles, newCompactedfiles));
+    } finally {
+      HStoreFile.decreaseStoreFilesRefeCount(newCompactedfiles);
+      filesToClose.forEach(HStoreFile::closeStoreFile);
+    }
   }
 
   @Override
