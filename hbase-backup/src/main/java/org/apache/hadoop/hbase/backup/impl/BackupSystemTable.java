@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupInfo.withRoot;
+import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
+import static org.apache.hadoop.hbase.backup.BackupInfo.withType;
+
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
@@ -26,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -36,7 +41,9 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -54,7 +61,6 @@ import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.BackupType;
-import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -592,123 +598,26 @@ public final class BackupSystemTable implements Closeable {
   }
 
   /**
-   * Get all completed backup information (in desc order by time)
-   * @param onlyCompleted true, if only successfully completed sessions
-   * @return history info of BackupCompleteData
-   * @throws IOException exception
+   * Get all backup information passing the given filters, ordered by descending start time. I.e.
+   * from newest to oldest.
    */
-  public ArrayList<BackupInfo> getBackupHistory(boolean onlyCompleted) throws IOException {
+  public List<BackupInfo> getBackupHistory(BackupInfo.Filter... toInclude) throws IOException {
     LOG.trace("get backup history from backup system table");
 
-    BackupState state = onlyCompleted ? BackupState.COMPLETE : BackupState.ANY;
-    ArrayList<BackupInfo> list = getBackupInfos(state);
-    return BackupUtils.sortHistoryListDesc(list);
+    List<BackupInfo> list = getBackupInfos(toInclude);
+    list.sort(Comparator.comparing(BackupInfo::getStartTs).reversed());
+    return list;
   }
 
   /**
-   * Get all backups history
-   * @return list of backup info
-   * @throws IOException if getting the backup history fails
-   */
-  public List<BackupInfo> getBackupHistory() throws IOException {
-    return getBackupHistory(false);
-  }
-
-  /**
-   * Get first n backup history records
-   * @param n number of records, if n== -1 - max number is ignored
-   * @return list of records
-   * @throws IOException if getting the backup history fails
-   */
-  public List<BackupInfo> getHistory(int n) throws IOException {
-    List<BackupInfo> history = getBackupHistory();
-    if (n == -1 || history.size() <= n) {
-      return history;
-    }
-    return Collections.unmodifiableList(history.subList(0, n));
-  }
-
-  /**
-   * Get backup history records filtered by list of filters.
-   * @param n       max number of records, if n == -1 , then max number is ignored
-   * @param filters list of filters
-   * @return backup records
-   * @throws IOException if getting the backup history fails
-   */
-  public List<BackupInfo> getBackupHistory(int n, BackupInfo.Filter... filters) throws IOException {
-    if (filters.length == 0) {
-      return getHistory(n);
-    }
-
-    List<BackupInfo> history = getBackupHistory();
-    List<BackupInfo> result = new ArrayList<>();
-    for (BackupInfo bi : history) {
-      if (n >= 0 && result.size() == n) {
-        break;
-      }
-
-      boolean passed = true;
-      for (int i = 0; i < filters.length; i++) {
-        if (!filters[i].apply(bi)) {
-          passed = false;
-          break;
-        }
-      }
-      if (passed) {
-        result.add(bi);
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Retrieve all table names that are part of any known backup
+   * Retrieve all table names that are part of any known completed backup
    */
   public Set<TableName> getTablesIncludedInBackups() throws IOException {
-    Set<TableName> names = new HashSet<>();
-    List<BackupInfo> infos = getBackupHistory(true);
-    for (BackupInfo info : infos) {
-      // Incremental backups have the same tables as the preceding full backups
-      if (info.getType() == BackupType.FULL) {
-        names.addAll(info.getTableNames());
-      }
-    }
-    return names;
-  }
-
-  /**
-   * Get history for backup destination
-   * @param backupRoot backup destination path
-   * @return List of backup info
-   * @throws IOException if getting the backup history fails
-   */
-  public List<BackupInfo> getBackupHistory(String backupRoot) throws IOException {
-    ArrayList<BackupInfo> history = getBackupHistory(false);
-    for (Iterator<BackupInfo> iterator = history.iterator(); iterator.hasNext();) {
-      BackupInfo info = iterator.next();
-      if (!backupRoot.equals(info.getBackupRootDir())) {
-        iterator.remove();
-      }
-    }
-    return history;
-  }
-
-  /**
-   * Get history for a table
-   * @param name table name
-   * @return history for a table
-   * @throws IOException if getting the backup history fails
-   */
-  public List<BackupInfo> getBackupHistoryForTable(TableName name) throws IOException {
-    List<BackupInfo> history = getBackupHistory();
-    List<BackupInfo> tableHistory = new ArrayList<>();
-    for (BackupInfo info : history) {
-      List<TableName> tables = info.getTableNames();
-      if (tables.contains(name)) {
-        tableHistory.add(info);
-      }
-    }
-    return tableHistory;
+    // Incremental backups have the same tables as the preceding full backups
+    List<BackupInfo> infos =
+      getBackupInfos(withState(BackupState.COMPLETE), withType(BackupType.FULL));
+    return infos.stream().flatMap(info -> info.getTableNames().stream())
+      .collect(Collectors.toSet());
   }
 
   /**
@@ -722,7 +631,7 @@ public final class BackupSystemTable implements Closeable {
    */
   public Map<TableName, List<BackupInfo>> getBackupHistoryForTableSet(Set<TableName> set,
     String backupRoot) throws IOException {
-    List<BackupInfo> history = getBackupHistory(backupRoot);
+    List<BackupInfo> history = getBackupHistory(withRoot(backupRoot));
     Map<TableName, List<BackupInfo>> tableHistoryMap = new HashMap<>();
     for (BackupInfo info : history) {
       List<TableName> tables = info.getTableNames();
@@ -738,16 +647,27 @@ public final class BackupSystemTable implements Closeable {
   }
 
   /**
-   * Get all backup sessions with a given state (in descending order by time)
-   * @param state backup session state
-   * @return history info of backup info objects
-   * @throws IOException exception
+   * Get all backup infos passing the given filters (ordered by ascending backup id)
    */
-  public ArrayList<BackupInfo> getBackupInfos(BackupState state) throws IOException {
+  public List<BackupInfo> getBackupInfos(BackupInfo.Filter... toInclude) throws IOException {
+    return getBackupInfos(Integer.MAX_VALUE, toInclude);
+  }
+
+  /**
+   * Get the first n backup infos passing the given filters (ordered by ascending backup id)
+   */
+  public List<BackupInfo> getBackupInfos(int n, BackupInfo.Filter... toInclude) throws IOException {
     LOG.trace("get backup infos from backup system table");
 
+    if (n <= 0) {
+      return Collections.emptyList();
+    }
+
+    Predicate<BackupInfo> combinedPredicate = Stream.of(toInclude)
+      .map(filter -> (Predicate<BackupInfo>) filter).reduce(Predicate::and).orElse(x -> true);
+
     Scan scan = createScanForBackupHistory();
-    ArrayList<BackupInfo> list = new ArrayList<>();
+    List<BackupInfo> list = new ArrayList<>();
 
     try (Table table = connection.getTable(tableName);
       ResultScanner scanner = table.getScanner(scan)) {
@@ -755,10 +675,12 @@ public final class BackupSystemTable implements Closeable {
       while ((res = scanner.next()) != null) {
         res.advance();
         BackupInfo context = cellToBackupInfo(res.current());
-        if (state != BackupState.ANY && context.getState() != state) {
-          continue;
+        if (combinedPredicate.test(context)) {
+          list.add(context);
+          if (list.size() == n) {
+            break;
+          }
         }
-        list.add(context);
       }
       return list;
     }

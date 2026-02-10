@@ -304,9 +304,9 @@ function personality_file_tests
      [[ ${filename} =~ src/main/xslt ]]; then
     yetus_debug "Skipping builtin yetus checks for ${filename}. refguide test should pick it up."
   else
-    # If we change our asciidoc, rebuild mvnsite
+    # If we change our asciidoc or our site rebuild mvnsite
     if [[ ${BUILDTOOL} = maven ]]; then
-      if [[ ${filename} =~ src/site || ${filename} =~ src/main/asciidoc ]]; then
+      if [[ ${filename} =~ src/site || ${filename} =~ src/main/asciidoc || ${filename} =~ hbase-website ]]; then
         yetus_debug "tests/mvnsite: ${filename}"
         add_test mvnsite
       fi
@@ -330,6 +330,9 @@ function personality_file_tests
 ## @audience     private
 ## @stability    evolving
 ## @param        name of variable to set with maven arguments
+# NOTE: INCLUDE_TESTS_URL uses -Dtest= which conflicts with pom.xml <include> patterns.
+#       Do not use INCLUDE_TESTS_URL with profiles that define their own <include> patterns
+#       (e.g., runLargeTests-wave1, runLargeTests-wave2, runLargeTests-wave3).
 function get_include_exclude_tests_arg
 {
   local  __resultvar=$1
@@ -852,6 +855,7 @@ function spotless_rebuild
 {
   local repostatus=$1
   local logfile="${PATCH_DIR}/${repostatus}-spotless.txt"
+  local linecommentsfile="${PATCH_DIR}/${repostatus}-spotless-linecomments.txt"
 
   if ! verify_needed_test spotless; then
     return 0
@@ -869,12 +873,27 @@ function spotless_rebuild
 
   count=$(${GREP} -c '\[ERROR\]' "${logfile}")
   if [[ ${count} -gt 0 ]]; then
-    add_vote_table -1 spotless "${repostatus} has ${count} errors when running spotless:check, run spotless:apply to fix."
-    add_footer_table spotless "@@BASE@@/${repostatus}-spotless.txt"
+    # Generate file-level annotations for GitHub Actions
+    if [[ -n "${BUGLINECOMMENTS}" ]]; then
+      # Extract files with violations: lines like "[ERROR]     src/path/to/file.java"
+      # with leading whitespace after [ERROR]
+      ${GREP} '^\[ERROR\][[:space:]]\+[^[:space:]]' "${logfile}" \
+        | ${SED} 's/^\[ERROR\][[:space:]]*//g' \
+        | while read -r file; do
+            echo "${file}:1:Spotless formatting required, run mvn spotless:apply"
+          done > "${linecommentsfile}"
+      if [[ -s "${linecommentsfile}" ]]; then
+        bugsystem_linecomments_queue spotless "${linecommentsfile}"
+      fi
+    fi
+
+    add_vote_table_v2 -1 spotless \
+      "@@BASE@@/${repostatus}-spotless.txt" \
+      "${repostatus} has ${count} errors when running spotless:check, run spotless:apply to fix."
     return 1
   fi
 
-  add_vote_table +1 spotless "${repostatus} has no errors when running spotless:check."
+  add_vote_table_v2 +1 spotless "" "${repostatus} has no errors when running spotless:check."
   return 0
 }
 

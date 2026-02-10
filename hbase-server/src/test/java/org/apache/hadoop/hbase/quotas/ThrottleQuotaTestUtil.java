@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
 public final class ThrottleQuotaTestUtil {
 
   private final static Logger LOG = LoggerFactory.getLogger(ThrottleQuotaTestUtil.class);
-  private static ManualEnvironmentEdge envEdge = new ManualEnvironmentEdge();
+  static ManualEnvironmentEdge envEdge = new ManualEnvironmentEdge();
   private final static int REFRESH_TIME = 30 * 60000;
   static {
     envEdge.setValue(EnvironmentEdgeManager.currentTime());

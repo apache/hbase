@@ -58,7 +58,7 @@ import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
@@ -77,7 +77,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  * A client-side test, mostly testing scanners with various parameters. Parameterized on different
  * registry implementations.
  */
-@Category({ MediumTests.class, ClientTests.class })
+@Category({ ClientTests.class, LargeTests.class })
 @RunWith(Parameterized.class)
 public class TestScannersFromClientSide {
 

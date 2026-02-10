@@ -26,12 +26,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
@@ -53,7 +53,7 @@ public class MasterRegionTestBase {
 
   protected DirScanPool logCleanerPool;
 
-  protected Server server;
+  protected MasterServices server;
 
   protected static byte[] CF1 = Bytes.toBytes("f1");
 
@@ -96,7 +96,7 @@ public class MasterRegionTestBase {
     choreService = new ChoreService(getClass().getSimpleName());
     hfileCleanerPool = DirScanPool.getHFileCleanerScanPool(conf);
     logCleanerPool = DirScanPool.getLogCleanerScanPool(conf);
-    server = mock(Server.class);
+    server = mock(MasterServices.class);
     when(server.getConfiguration()).thenReturn(conf);
     when(server.getServerName())
       .thenReturn(ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime()));

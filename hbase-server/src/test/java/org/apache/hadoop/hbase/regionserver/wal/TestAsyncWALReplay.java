@@ -70,9 +70,11 @@ public class TestAsyncWALReplay extends AbstractTestWALReplay {
 
   @Override
   protected WAL createWAL(Configuration c, Path hbaseRootDir, String logName) throws IOException {
-    AsyncFSWAL wal = new AsyncFSWAL(FileSystem.get(c), null, hbaseRootDir, logName,
-      HConstants.HREGION_OLDLOGDIR_NAME, c, null, true, null, null, null, null, GROUP,
-      CHANNEL_CLASS, StreamSlowMonitor.create(c, "monitor"));
+    FileSystem fs = hbaseRootDir.getFileSystem(c);
+    fs.mkdirs(new Path(hbaseRootDir, logName));
+    AsyncFSWAL wal =
+      new AsyncFSWAL(fs, null, hbaseRootDir, logName, HConstants.HREGION_OLDLOGDIR_NAME, c, null,
+        true, null, null, null, null, GROUP, CHANNEL_CLASS, StreamSlowMonitor.create(c, "monitor"));
     wal.init();
     return wal;
   }

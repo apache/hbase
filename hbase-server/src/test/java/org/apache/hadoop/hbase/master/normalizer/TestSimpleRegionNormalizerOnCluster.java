@@ -58,8 +58,8 @@ import org.apache.hadoop.hbase.namespace.TestNamespaceAuditor;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
 import org.hamcrest.Matcher;
@@ -78,7 +78,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Testing {@link SimpleRegionNormalizer} on minicluster.
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Category({ MasterTests.class, LargeTests.class })
 public class TestSimpleRegionNormalizerOnCluster {
   private static final Logger LOG =
     LoggerFactory.getLogger(TestSimpleRegionNormalizerOnCluster.class);

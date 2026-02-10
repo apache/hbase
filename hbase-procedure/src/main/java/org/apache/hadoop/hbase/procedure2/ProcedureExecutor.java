@@ -1975,6 +1975,7 @@ public class ProcedureExecutor<TEnvironment> {
       subproc.setParentProcId(procedure.getProcId());
       subproc.setRootProcId(rootProcId);
       subproc.setProcId(nextProcId());
+      subproc.setCriticalSystemTable(procedure.isCriticalSystemTable());
       procStack.addSubProcedure(subproc);
     }
 

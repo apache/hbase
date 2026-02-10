@@ -554,10 +554,12 @@ public final class HFile {
     boolean primaryReplicaReader, Configuration conf) throws IOException {
     Preconditions.checkNotNull(cacheConf, "Cannot create Reader with null CacheConf");
     FSDataInputStreamWrapper stream = new FSDataInputStreamWrapper(fs, path);
+    // Key management not yet implemented in precursor PR
     ReaderContext context =
       new ReaderContextBuilder().withFilePath(path).withInputStreamWrapper(stream)
         .withFileSize(fs.getFileStatus(path).getLen()).withFileSystem(stream.getHfs())
-        .withPrimaryReplicaReader(primaryReplicaReader).withReaderType(ReaderType.PREAD).build();
+        .withPrimaryReplicaReader(primaryReplicaReader).withReaderType(ReaderType.PREAD)
+        .withManagedKeyDataCache(null).withSystemKeyCache(null).build();
     HFileInfo fileInfo = new HFileInfo(context, conf);
     Reader reader = createReader(context, fileInfo, cacheConf, conf);
     fileInfo.initMetaAndIndex(reader);

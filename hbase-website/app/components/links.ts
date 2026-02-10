@@ -63,6 +63,11 @@ export const projectLinks: LinkType[] = [
     to: "/code-of-conduct"
   },
   {
+    label: "Export Control",
+    to: "/export-control"
+  },
+
+  {
     label: "Other Resources",
     to: "/other-resources"
   }
@@ -105,11 +110,6 @@ export const documentationLinks: (LinkType | NestedLinkType)[] = [
   {
     label: "Resources",
     links: [
-      {
-        label: "Wiki",
-        to: "https://cwiki.apache.org/confluence/display/HADOOP2/Hbase",
-        external: true
-      },
       {
         label: "Video/Presentations",
         to: "/docs/other-info"

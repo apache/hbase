@@ -413,13 +413,28 @@ Generated files are located under the `build/` directory.
 
 ### Maven Integration
 
-The website is integrated with the Apache HBase Maven build system using the `frontend-maven-plugin`. This allows the website to be built as part of the main HBase build or separately using Maven commands.
+The website is integrated with the Apache HBase Maven build system using the `frontend-maven-plugin`. The website is configured to build **only during site generation** (`mvn site`) and will not build during regular Maven lifecycle phases like `mvn clean install`.
 
-#### What Gets Executed
+#### When the Website Builds
 
-When you run the Maven build, it automatically:
+The website build is triggered **only** when you run:
 
-1. **Cleans previous build artifacts** (when using `mvn clean`)
+```bash
+mvn site
+```
+
+The website will **NOT** build during regular commands like:
+- `mvn clean install`
+- `mvn package`
+- `mvn compile`
+
+This keeps regular HBase builds fast while still allowing the website to be generated when needed.
+
+#### What Gets Executed During `mvn site`
+
+When you run `mvn site`, the website module automatically:
+
+1. **Cleans previous build artifacts**
    - Removes `build/` directory
    - Removes `node_modules/` directory
    - Ensures a fresh build environment
@@ -432,7 +447,11 @@ When you run the Maven build, it automatically:
    - Reads from `package.json`
    - Installs to `node_modules/`
 
-4. **Runs `npm run ci`** which executes:
+4. **Extracts developers data** from the parent `pom.xml`
+   - Creates `app/pages/team/developers.json`
+   - Required for the Team page
+
+5. **Runs `npm run ci`** which executes:
    - `npm run lint` - ESLint code quality checks
    - `npm run typecheck` - TypeScript type checking
    - `npm run extract-developers` - Extract developers from parent pom.xml
@@ -442,26 +461,28 @@ When you run the Maven build, it automatically:
    - `npm run test:e2e` - Playwright e2e tests
    - `npm run build` - Production build
 
-5. **Build Output**: Generated files are in `build/` directory
+6. **Build Output**: Generated files are in `build/` directory
 
 #### Maven Commands
 
-**Build Website with Full HBase Build:**
-
+**Build HBase WITHOUT the Website (default):**
 ```bash
 # From HBase root directory
 mvn clean install
 ```
 
-The website will be built automatically as part of the full build.
+**Build the Website:**
+```bash
+# From HBase root or hbase-website directory
+mvn site
+```
+
+This generates the full HBase website including documentation and the React-based website.
 
 **Build Website Only:**
 
 ```bash
-# Option 1: From HBase root directory
-mvn clean install -pl hbase-website
-
-# Option 2: From hbase-website directory
+# From hbase-website directory
 cd hbase-website
 mvn clean install
 ```
@@ -484,8 +505,6 @@ Since this site uses Static Site Generation (SSG), you can deploy the `build/cli
 - **Apache HTTP Server**: Copy `build/client/` contents to your web root
 - **Nginx**: Copy `build/client/` contents to your web root
 - **GitHub Pages**: Push `build/client/` to `gh-pages` branch
-- **Netlify/Vercel**: Connect your repository for automatic deployments
-- **AWS S3 + CloudFront**: Upload `build/client/` to S3 bucket
 
 ### Troubleshooting
 

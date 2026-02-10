@@ -751,6 +751,16 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public Future<Void> reopenTableRegionsAsync(TableName tableName) {
+    throw new NotImplementedException("reopenTableRegionsAsync not supported in ThriftAdmin");
+  }
+
+  @Override
+  public Future<Void> reopenTableRegionsAsync(TableName tableName, List<RegionInfo> regions) {
+    throw new NotImplementedException("reopenTableRegionsAsync not supported in ThriftAdmin");
+  }
+
+  @Override
   public void shutdown() {
     throw new NotImplementedException("shutdown not supported in ThriftAdmin");
 

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -25,10 +26,16 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
+import java.util.zip.CRC32;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
  * TableDescriptor contains the details about an HBase table such as the descriptors of all the
@@ -38,6 +45,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public interface TableDescriptor {
+
+  Logger LOG = LoggerFactory.getLogger(TableDescriptor.class);
 
   @InterfaceAudience.Private
   Comparator<TableDescriptor> COMPARATOR = getComparator(ColumnFamilyDescriptor.COMPARATOR);
@@ -315,5 +324,23 @@ public interface TableDescriptor {
       return enabled;
     }
     return !enabled;
+  }
+
+  /**
+   * Computes a CRC32 hash of the table descriptor's protobuf representation. This hash can be used
+   * to detect changes in the table descriptor configuration.
+   * @return A hex string representation of the CRC32 hash, or "UNKNOWN" if computation fails
+   */
+  default String getDescriptorHash() {
+    try {
+      HBaseProtos.TableSchema tableSchema = ProtobufUtil.toTableSchema(this);
+      ByteBuffer byteBuffer = ByteBuffer.wrap(tableSchema.toByteArray());
+      CRC32 crc32 = new CRC32();
+      crc32.update(byteBuffer);
+      return Long.toHexString(crc32.getValue());
+    } catch (Exception e) {
+      LOG.error("Failed to compute table descriptor hash for table {}", getTableName(), e);
+      return "UNKNOWN";
+    }
   }
 }

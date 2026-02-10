@@ -63,7 +63,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
 
     // open region from the snapshot directory
     region = HRegion.newHRegion(CommonFSUtils.getTableDir(rootDir, htd.getTableName()), null, fs,
-      conf, hri, htd, null);
+      conf, hri, htd, null, null);
     region.setRestoredRegion(true);
     // non RS process does not have a block cache, and this a client side scanner,
     // create one for MapReduce jobs to cache the INDEX block by setting to use

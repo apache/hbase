@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -68,7 +68,7 @@ import org.junit.runners.Parameterized;
  * historical files are generated only when historical file generation is enabled (by the config
  * hbase.enable.historical.compaction.files).
  */
-@Category({ MediumTests.class, RegionServerTests.class })
+@Category({ RegionServerTests.class, LargeTests.class })
 @RunWith(Parameterized.class)
 public class TestStoreFileWriter {
   @ClassRule

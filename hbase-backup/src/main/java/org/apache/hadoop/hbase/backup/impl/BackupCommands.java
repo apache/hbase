@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BACKUP_LIST_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH_DESC;
@@ -153,7 +154,7 @@ public final class BackupCommands {
       if (requiresNoActiveSession()) {
         // Check active session
         try (BackupSystemTable table = new BackupSystemTable(conn)) {
-          List<BackupInfo> sessions = table.getBackupInfos(BackupState.RUNNING);
+          List<BackupInfo> sessions = table.getBackupInfos(withState(BackupState.RUNNING));
 
           if (sessions.size() > 0) {
             System.err.println("Found backup session in a RUNNING state: ");
@@ -528,7 +529,7 @@ public final class BackupCommands {
         if (backupId != null) {
           info = sysTable.readBackupInfo(backupId);
         } else {
-          List<BackupInfo> infos = sysTable.getBackupInfos(BackupState.RUNNING);
+          List<BackupInfo> infos = sysTable.getBackupInfos(withState(BackupState.RUNNING));
           if (infos != null && infos.size() > 0) {
             info = infos.get(0);
             backupId = info.getBackupId();
@@ -594,18 +595,15 @@ public final class BackupCommands {
         throw new IOException(value + " is not an integer number");
       }
       final long fdays = days;
-      BackupInfo.Filter dateFilter = new BackupInfo.Filter() {
-        @Override
-        public boolean apply(BackupInfo info) {
-          long currentTime = EnvironmentEdgeManager.currentTime();
-          long maxTsToDelete = currentTime - fdays * 24 * 3600 * 1000;
-          return info.getCompleteTs() <= maxTsToDelete;
-        }
+      BackupInfo.Filter dateFilter = info -> {
+        long currentTime = EnvironmentEdgeManager.currentTime();
+        long maxTsToDelete = currentTime - fdays * 24 * 3600 * 1000;
+        return info.getCompleteTs() <= maxTsToDelete;
       };
       List<BackupInfo> history = null;
       try (final BackupSystemTable sysTable = new BackupSystemTable(conn);
         BackupAdminImpl admin = new BackupAdminImpl(conn)) {
-        history = sysTable.getBackupHistory(-1, dateFilter);
+        history = sysTable.getBackupHistory(dateFilter);
         String[] backupIds = convertToBackupIds(history);
         int deleted = admin.deleteBackups(backupIds);
         System.out.println("Deleted " + deleted + " backups. Total older than " + days + " days: "
@@ -679,7 +677,7 @@ public final class BackupCommands {
         final BackupSystemTable sysTable = new BackupSystemTable(conn)) {
         // Failed backup
         BackupInfo backupInfo;
-        List<BackupInfo> list = sysTable.getBackupInfos(BackupState.RUNNING);
+        List<BackupInfo> list = sysTable.getBackupInfos(withState(BackupState.RUNNING));
         if (list.size() == 0) {
           // No failed sessions found
           System.out.println("REPAIR status: no failed sessions found."
@@ -860,27 +858,21 @@ public final class BackupCommands {
       int n = parseHistoryLength();
       final TableName tableName = getTableName();
       final String setName = getTableSetName();
-      BackupInfo.Filter tableNameFilter = new BackupInfo.Filter() {
-        @Override
-        public boolean apply(BackupInfo info) {
-          if (tableName == null) {
-            return true;
-          }
-
-          List<TableName> names = info.getTableNames();
-          return names.contains(tableName);
+      BackupInfo.Filter tableNameFilter = info -> {
+        if (tableName == null) {
+          return true;
         }
+
+        List<TableName> names = info.getTableNames();
+        return names.contains(tableName);
       };
-      BackupInfo.Filter tableSetFilter = new BackupInfo.Filter() {
-        @Override
-        public boolean apply(BackupInfo info) {
-          if (setName == null) {
-            return true;
-          }
-
-          String backupId = info.getBackupId();
-          return backupId.startsWith(setName);
+      BackupInfo.Filter tableSetFilter = info -> {
+        if (setName == null) {
+          return true;
         }
+
+        String backupId = info.getBackupId();
+        return backupId.startsWith(setName);
       };
       Path backupRootPath = getBackupRootPath();
       List<BackupInfo> history;
@@ -888,7 +880,8 @@ public final class BackupCommands {
         // Load from backup system table
         super.execute();
         try (final BackupSystemTable sysTable = new BackupSystemTable(conn)) {
-          history = sysTable.getBackupHistory(n, tableNameFilter, tableSetFilter);
+          history = sysTable.getBackupHistory(tableNameFilter, tableSetFilter);
+          history = history.subList(0, Math.min(n, history.size()));
         }
       } else {
         // load from backup FS

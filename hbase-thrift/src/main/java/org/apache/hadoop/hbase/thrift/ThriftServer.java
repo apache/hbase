@@ -353,7 +353,7 @@ public class ThriftServer extends Configured implements Tool {
         + "To shutdown the thrift server run 'hbase-daemon.sh stop "
         + "thrift' or send a kill signal to the thrift server pid",
       true);
-    throw new ExitCodeException(exitCode, "");
+    System.exit(exitCode);
   }
 
   /**
@@ -778,7 +778,7 @@ public class ThriftServer extends Configured implements Tool {
     CommandLine cmd = parser.parse(options, args);
 
     if (cmd.hasOption("help")) {
-      printUsageAndExit(options, 1);
+      printUsageAndExit(options, 0);
     }
     parseCommandLine(cmd, options);
   }

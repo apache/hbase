@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import static org.apache.hadoop.hbase.master.balancer.CandidateGeneratorTestUtil.createMockBalancerClusterState;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayDeque;
@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Size;
@@ -39,17 +38,13 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestStoreFileTableSkewCostFunction {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStoreFileTableSkewCostFunction.class);
 
   private static final TableName DEFAULT_TABLE = TableName.valueOf("testTable");
   private static final Map<Long, Integer> REGION_TO_STORE_FILE_SIZE_MB = new HashMap<>();
@@ -80,7 +75,7 @@ public class TestStoreFileTableSkewCostFunction {
     double cost = costFunction.cost();
 
     // Expect zero cost since all regions (from the same table) are balanced.
-    assertEquals("Uniform distribution should yield zero cost", 0.0, cost, 1e-6);
+    assertEquals(0.0, cost, 1e-6, "Uniform distribution should yield zero cost");
   }
 
   /**
@@ -110,7 +105,7 @@ public class TestStoreFileTableSkewCostFunction {
     double cost = costFunction.cost();
 
     // Expect a positive cost because the distribution is skewed.
-    assertTrue("Skewed distribution should yield a positive cost", cost > 0.0);
+    assertTrue(cost > 0.0, "Skewed distribution should yield a positive cost");
   }
 
   /**
@@ -129,7 +124,7 @@ public class TestStoreFileTableSkewCostFunction {
     double cost = costFunction.cost();
 
     // Expect zero cost when there is no load.
-    assertEquals("Empty distribution should yield zero cost", 0.0, cost, 1e-6);
+    assertEquals(0.0, cost, 1e-6, "Empty distribution should yield zero cost");
   }
 
   /**
@@ -164,7 +159,7 @@ public class TestStoreFileTableSkewCostFunction {
     double cost = costFunction.cost();
 
     // Expect a positive cost because the skew is computed per table.
-    assertTrue("Multiple table distribution should yield a positive cost", cost > 0.0);
+    assertTrue(cost > 0.0, "Multiple table distribution should yield a positive cost");
   }
 
   /**

@@ -536,10 +536,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     this.remoteFs = remoteFs;
     this.remoteWALDir = remoteWALDir;
 
-    if (!fs.exists(walDir) && !fs.mkdirs(walDir)) {
-      throw new IOException("Unable to mkdir " + walDir);
-    }
-
+    // Here we only crate archive dir, without wal dir. This is to make sure that our fencing way
+    // takes effect. See HBASE-29797 for more details.
     if (!fs.exists(this.walArchiveDir)) {
       if (!fs.mkdirs(this.walArchiveDir)) {
         throw new IOException("Unable to mkdir " + this.walArchiveDir);

@@ -2194,8 +2194,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     // The WAL subsystem will use the default rootDir rather than the passed in rootDir
     // unless I pass along via the conf.
     Configuration confForWAL = new Configuration(conf);
-    confForWAL.set(HConstants.HBASE_DIR, rootDir.toString());
-    return new WALFactory(confForWAL, "hregion-" + RandomStringUtils.randomNumeric(8)).getWAL(hri);
+    CommonFSUtils.setRootDir(confForWAL, rootDir);
+    return new WALFactory(confForWAL, "hregion-" + RandomStringUtils.insecure().nextNumeric(8))
+      .getWAL(hri);
   }
 
   /**
@@ -2340,10 +2341,14 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
         jvmOpts + " --add-opens java.base/java.lang=ALL-UNNAMED");
     }
 
+    // Disable fs cache for DistributedFileSystem, to avoid YARN RM close the shared FileSystem
+    // instance and cause trouble in HBase. See HBASE-29802 for more details.
+    JobConf mrClusterConf = new JobConf(conf);
+    mrClusterConf.setBoolean("fs.hdfs.impl.disable.cache", true);
     // Allow the user to override FS URI for this map-reduce cluster to use.
     mrCluster =
       new MiniMRCluster(servers, FS_URI != null ? FS_URI : FileSystem.get(conf).getUri().toString(),
-        1, null, null, new JobConf(this.conf));
+        1, null, null, mrClusterConf);
     JobConf jobConf = MapreduceTestingShim.getJobConf(mrCluster);
     if (jobConf == null) {
       jobConf = mrCluster.createJobConf();

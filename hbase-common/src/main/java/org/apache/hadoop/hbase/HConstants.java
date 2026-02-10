@@ -1503,6 +1503,12 @@ public final class HConstants {
   public static final String ZK_SERVER_KERBEROS_PRINCIPAL =
     "hbase.zookeeper.server.kerberos.principal";
 
+  /**
+   * Configuration entries with this prefix are passed to the RPC ConnectionHeader and become
+   * accessible on the server side.
+   */
+  public static final String CLIENT_HEADER_PREFIX = "hbase.client.header.";
+
   /** Config key for hbase temporary directory in hdfs */
   public static final String TEMPORARY_FS_DIRECTORY_KEY = "hbase.fs.tmp.dir";
 

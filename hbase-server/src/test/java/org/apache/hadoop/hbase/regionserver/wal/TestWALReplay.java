@@ -47,7 +47,9 @@ public class TestWALReplay extends AbstractTestWALReplay {
 
   @Override
   protected WAL createWAL(Configuration c, Path hbaseRootDir, String logName) throws IOException {
-    FSHLog wal = new FSHLog(FileSystem.get(c), hbaseRootDir, logName, c);
+    FileSystem fs = hbaseRootDir.getFileSystem(c);
+    fs.mkdirs(new Path(hbaseRootDir, logName));
+    FSHLog wal = new FSHLog(fs, hbaseRootDir, logName, c);
     wal.init();
     // Set down maximum recovery so we dfsclient doesn't linger retrying something
     // long gone.

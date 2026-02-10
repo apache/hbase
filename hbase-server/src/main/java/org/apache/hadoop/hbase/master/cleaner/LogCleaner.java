@@ -100,6 +100,13 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
   @Override
   public void onConfigurationChange(Configuration conf) {
     int newSize = conf.getInt(OLD_WALS_CLEANER_THREAD_SIZE, DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE);
+    if (newSize <= 0) {
+      LOG.debug(
+        "The configuration {} has been set to an invalid value {}, "
+          + "the previous value {} will be used, no need to update.",
+        OLD_WALS_CLEANER_THREAD_SIZE, newSize, oldWALsCleaner.size());
+      return;
+    }
     if (newSize == oldWALsCleaner.size()) {
       LOG.debug(
         "Size from configuration is the same as previous which " + "is {}, no need to update.",

@@ -22,7 +22,7 @@ import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
@@ -33,7 +33,7 @@ import org.junit.runners.Parameterized.Parameters;
  * load-test-style unit tests, this one writes a smaller amount of data, but goes through all
  * available data block encoding algorithms.
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Category({ MiscTests.class, LargeTests.class })
 public class TestMiniClusterLoadEncoded extends TestMiniClusterLoadParallel {
 
   @ClassRule

@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.ResizableBlockCache;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerContext;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerResult;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -854,6 +855,11 @@ public class TestHeapMemoryManager {
 
     @Override
     public AsyncClusterConnection getAsyncClusterConnection() {
+      return null;
+    }
+
+    @Override
+    public KeyManagementService getKeyManagementService() {
       return null;
     }
   }

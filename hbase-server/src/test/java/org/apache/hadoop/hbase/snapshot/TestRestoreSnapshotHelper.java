@@ -178,7 +178,7 @@ public class TestRestoreSnapshotHelper {
     for (RegionInfo restoredRegion : restoredRegions) {
       // open restored region
       HRegion region = HRegion.newHRegion(CommonFSUtils.getTableDir(restoreDir, tableName), null,
-        fs, conf, restoredRegion, htd, null);
+        fs, conf, restoredRegion, htd, null, null);
       // set restore flag
       region.setRestoredRegion(true);
       region.initialize();
@@ -188,7 +188,7 @@ public class TestRestoreSnapshotHelper {
 
       // open restored region without set restored flag
       HRegion region2 = HRegion.newHRegion(CommonFSUtils.getTableDir(restoreDir, tableName), null,
-        fs, conf, restoredRegion, htd, null);
+        fs, conf, restoredRegion, htd, null, null);
       region2.initialize();
       long maxSeqId2 = WALSplitUtil.getMaxRegionSequenceId(fs, recoveredEdit);
       Assert.assertTrue(maxSeqId2 > maxSeqId);

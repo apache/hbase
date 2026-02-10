@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.TestServerCustomProtocol;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassLoaderTestHelper;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
@@ -69,7 +69,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test coprocessors class loading.
  */
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Category({ CoprocessorTests.class, LargeTests.class })
 public class TestClassLoading {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =

@@ -221,11 +221,11 @@ under the License.
    limitations under the License.
 
 ## Special cases, for e.g. ASL2.0 licensed works that bundle additional third party works
-#set($bundled-jquery = ${bundled-jquery.equalsIgnoreCase("true")})
-#set($bundled-vega = ${bundled-vega.equalsIgnoreCase("true")})
-#set($bundled-logo = ${bundled-logo.equalsIgnoreCase("true")})
-#set($bundled-dependencies = ${bundled-dependencies.equalsIgnoreCase("true")})
-#if($bundled-jquery || $bundled-vega || $bundled-logo || $bundled-dependencies)
+#set($bundled_jquery_enabled = ${bundled_jquery.equalsIgnoreCase("true")})
+#set($bundled_vega_enabled = ${bundled_vega.equalsIgnoreCase("true")})
+#set($bundled_logo_enabled = ${bundled_logo.equalsIgnoreCase("true")})
+#set($bundled_dependencies_enabled = ${bundled_dependencies.equalsIgnoreCase("true")})
+#if($bundled_jquery_enabled || $bundled_vega_enabled || $bundled_logo_enabled || $bundled_dependencies_enabled)
 ====
 ${project.name} contained works
 
@@ -1341,18 +1341,18 @@ You can redistribute it and/or modify it under either the terms of the
      PURPOSE.
 #end
 ## modules with bundled works in source
-#if(${bundled-jquery})
+#if(${bundled_jquery_enabled})
 #jquery_license()
 #end
-#if(${bundled-vega})
+#if(${bundled_vega_enabled})
 #vega_license()
 #end
-#if(${bundled-logo})
+#if(${bundled_logo_enabled})
 #orca_logo_license()
 #end
 ## when true, we're in a module that makes a binary dist with
 ## bundled works.
-#if(${bundled-dependencies})
+#if(${bundled_dependencies_enabled})
 ====
 ## gather up CDDL licensed works
 #set($cddl_1_0 = [])
@@ -1369,7 +1369,7 @@ You can redistribute it and/or modify it under either the terms of the
 ## gather up EDL works
 #set($edl_1_0 = [])
 ## track commons-math
-#set($commons-math = false)
+#set($commons_math = false)
 ## track if we need jruby additionals.
 #set($jruby = false)
 ## track hadoops
@@ -1394,7 +1394,7 @@ g:${dep.groupId} AND a:${dep.artifactId} AND v:${dep.version}
 Until hbase-resource-bundle/src/main/resources/supplemental-models.xml
 is updated, the build should fail.
 #end
-#if(${debug-print-included-work-info.equalsIgnoreCase("true")})
+#if(${debug_print_included_work_info.equalsIgnoreCase("true")})
 =====
 Check license for included work
 
@@ -1417,7 +1417,7 @@ ${dep.scm.url}
 #set($aggregated=false)
 ## Check for our set of known dependencies that require manual LICENSE additions.
 #if($dep.artifactId.equals("commons-math3"))
-#set($commons-math=true)
+#set($commons_math=true)
 #end
 #if($dep.artifactId.equals("jruby-complete"))
 #set($jruby=true)
@@ -1539,7 +1539,7 @@ ${dep.scm.url}
 #if($hadoop)
 #hadoop_license()
 #end
-#if($commons-math)
+#if($commons_math)
 #commons_math_license()
 #end
 #if(!(${mit.isEmpty()}))

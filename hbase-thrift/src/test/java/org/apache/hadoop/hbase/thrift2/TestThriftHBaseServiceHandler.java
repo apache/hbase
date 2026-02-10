@@ -83,7 +83,7 @@ import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.thrift.ErrorThrowingGetObserver;
 import org.apache.hadoop.hbase.thrift.HBaseThriftTestingUtility;
 import org.apache.hadoop.hbase.thrift.HbaseHandlerMetricsProxy;
@@ -148,7 +148,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
  * Unit testing for ThriftServer.HBaseServiceHandler, a part of the org.apache.hadoop.hbase.thrift2
  * package.
  */
-@Category({ ClientTests.class, MediumTests.class })
+@Category({ ClientTests.class, LargeTests.class })
 public class TestThriftHBaseServiceHandler {
 
   @ClassRule

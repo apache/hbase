@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupInfo.withRoot;
+import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
+import static org.apache.hadoop.hbase.backup.BackupInfo.withType;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -74,7 +78,7 @@ public class BackupAdminImpl implements BackupAdmin {
     BackupInfo backupInfo;
     try (final BackupSystemTable table = new BackupSystemTable(conn)) {
       if (backupId == null) {
-        ArrayList<BackupInfo> recentSessions = table.getBackupInfos(BackupState.RUNNING);
+        List<BackupInfo> recentSessions = table.getBackupInfos(withState(BackupState.RUNNING));
         if (recentSessions.isEmpty()) {
           LOG.warn("No ongoing sessions found.");
           return null;
@@ -111,7 +115,7 @@ public class BackupAdminImpl implements BackupAdmin {
       }
 
       // Step 2: Make sure there is no failed session
-      List<BackupInfo> list = sysTable.getBackupInfos(BackupState.RUNNING);
+      List<BackupInfo> list = sysTable.getBackupInfos(withState(BackupState.RUNNING));
       if (list.size() != 0) {
         // ailed sessions found
         LOG.warn("Failed backup session found. Run backup repair tool first.");
@@ -301,7 +305,7 @@ public class BackupAdminImpl implements BackupAdmin {
     LOG.debug("GetAffectedBackupInfos for: " + backupInfo.getBackupId() + " table=" + tn);
     long ts = backupInfo.getStartTs();
     List<BackupInfo> list = new ArrayList<>();
-    List<BackupInfo> history = table.getBackupHistory(backupInfo.getBackupRootDir());
+    List<BackupInfo> history = table.getBackupHistory(withRoot(backupInfo.getBackupRootDir()));
     // Scan from most recent to backupInfo
     // break when backupInfo reached
     for (BackupInfo info : history) {
@@ -368,48 +372,9 @@ public class BackupAdminImpl implements BackupAdmin {
   }
 
   @Override
-  public List<BackupInfo> getHistory(int n) throws IOException {
-    try (final BackupSystemTable table = new BackupSystemTable(conn)) {
-      List<BackupInfo> history = table.getBackupHistory();
-
-      if (history.size() <= n) {
-        return history;
-      }
-
-      List<BackupInfo> list = new ArrayList<>();
-      for (int i = 0; i < n; i++) {
-        list.add(history.get(i));
-      }
-      return list;
-    }
-  }
-
-  @Override
   public List<BackupInfo> getHistory(int n, BackupInfo.Filter... filters) throws IOException {
-    if (filters.length == 0) {
-      return getHistory(n);
-    }
-
     try (final BackupSystemTable table = new BackupSystemTable(conn)) {
-      List<BackupInfo> history = table.getBackupHistory();
-      List<BackupInfo> result = new ArrayList<>();
-      for (BackupInfo bi : history) {
-        if (result.size() == n) {
-          break;
-        }
-
-        boolean passed = true;
-        for (int i = 0; i < filters.length; i++) {
-          if (!filters[i].apply(bi)) {
-            passed = false;
-            break;
-          }
-        }
-        if (passed) {
-          result.add(bi);
-        }
-      }
-      return result;
+      return table.getBackupInfos(n, filters);
     }
   }
 
@@ -672,7 +637,7 @@ public class BackupAdminImpl implements BackupAdmin {
     // Filter 1 : backupRoot
     // Filter 2 : time range filter
     // Filter 3 : table filter
-    BackupInfo.Filter destinationFilter = info -> info.getBackupRootDir().equals(backupDest);
+    BackupInfo.Filter destinationFilter = withRoot(backupDest);
 
     BackupInfo.Filter timeRangeFilter = info -> {
       long time = info.getStartTs();
@@ -684,10 +649,10 @@ public class BackupAdminImpl implements BackupAdmin {
       return !Collections.disjoint(allTables, tables);
     };
 
-    BackupInfo.Filter typeFilter = info -> info.getType() == BackupType.INCREMENTAL;
-    BackupInfo.Filter stateFilter = info -> info.getState() == BackupState.COMPLETE;
+    BackupInfo.Filter typeFilter = withType(BackupType.INCREMENTAL);
+    BackupInfo.Filter stateFilter = withState(BackupState.COMPLETE);
 
-    List<BackupInfo> allInfos = table.getBackupHistory(-1, destinationFilter, timeRangeFilter,
+    List<BackupInfo> allInfos = table.getBackupHistory(destinationFilter, timeRangeFilter,
       tableFilter, typeFilter, stateFilter);
     if (allInfos.size() != allBackups.size()) {
       // Yes we have at least one hole in backup image sequence

@@ -115,8 +115,9 @@ public class TestAsyncTableScanner extends AbstractTestAsyncTableScan {
       stringTraceRenderer.render(logger::debug);
     }
 
-    final String parentSpanId =
-      spanStream().filter(parentSpanMatcher::matches).map(SpanData::getSpanId).findAny().get();
+    final String parentSpanId = spanStream().filter(parentSpanMatcher::matches)
+      .max((a, b) -> Long.compare(a.getEndEpochNanos(), b.getEndEpochNanos()))
+      .map(SpanData::getSpanId).get();
 
     waitForSpan(allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
       hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.OK), hasEnded()));
@@ -135,8 +136,9 @@ public class TestAsyncTableScanner extends AbstractTestAsyncTableScan {
       stringTraceRenderer.render(logger::debug);
     }
 
-    final String parentSpanId =
-      spanStream().filter(parentSpanMatcher::matches).map(SpanData::getSpanId).findAny().get();
+    final String parentSpanId = spanStream().filter(parentSpanMatcher::matches)
+      .max((a, b) -> Long.compare(a.getEndEpochNanos(), b.getEndEpochNanos()))
+      .map(SpanData::getSpanId).get();
 
     final Matcher<SpanData> scanOperationSpanMatcher =
       allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),

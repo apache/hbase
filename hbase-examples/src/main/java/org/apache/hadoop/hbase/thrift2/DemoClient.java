@@ -26,6 +26,7 @@ import java.util.Map;
 import javax.security.auth.Subject;
 import javax.security.auth.login.LoginContext;
 import javax.security.sasl.Sasl;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnValue;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
@@ -63,7 +64,7 @@ public class DemoClient {
     if (args.length >= 2) {
       port = Integer.parseInt(args[1]);
     }
-    org.apache.hadoop.conf.Configuration conf = HBaseConfiguration.create();
+    Configuration conf = HBaseConfiguration.create();
     String principal = conf.get("hbase.thrift.kerberos.principal");
     if (principal != null) {
       secure = true;
@@ -140,12 +141,12 @@ public class DemoClient {
 
     TResult result = client.get(table, get);
 
-    System.out.print("row = " + ClientUtils.utf8(result.getRow()));
+    System.out.println("row = " + ClientUtils.utf8(result.getRow()));
     for (TColumnValue resultColumnValue : result.getColumnValues()) {
-      System.out.print("family = " + ClientUtils.utf8(resultColumnValue.getFamily()));
-      System.out.print("qualifier = " + ClientUtils.utf8(resultColumnValue.getFamily()));
-      System.out.print("value = " + ClientUtils.utf8(resultColumnValue.getValue()));
-      System.out.print("timestamp = " + resultColumnValue.getTimestamp());
+      System.out.println("family = " + ClientUtils.utf8(resultColumnValue.getFamily()));
+      System.out.println("qualifier = " + ClientUtils.utf8(resultColumnValue.getQualifier()));
+      System.out.println("value = " + ClientUtils.utf8(resultColumnValue.getValue()));
+      System.out.println("timestamp = " + resultColumnValue.getTimestamp());
     }
 
     transport.close();
