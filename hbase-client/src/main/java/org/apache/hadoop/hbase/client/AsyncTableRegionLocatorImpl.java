@@ -63,7 +63,7 @@ class AsyncTableRegionLocatorImpl implements AsyncTableRegionLocator {
           .thenApply(locs -> Arrays.asList(locs.getRegionLocations()));
       }
       CompletableFuture<List<HRegionLocation>> future = ClientMetaTableAccessor
-        .getTableHRegionLocations(conn.getTable(TableName.META_TABLE_NAME), tableName);
+        .getTableHRegionLocations(conn.getTable(conn.getMetaTableName()), tableName);
       addListener(future, (locs, error) -> locs.forEach(loc -> {
         // the cache assumes that all locations have a serverName. only add if that's true
         if (loc.getServerName() != null) {

@@ -120,7 +120,7 @@ class MutableRegionInfo implements RegionInfo {
     this.replicaId = checkReplicaId(replicaId);
     this.offLine = offLine;
     this.regionName = RegionInfo.createRegionName(this.tableName, this.startKey, this.regionId,
-      this.replicaId, !this.tableName.equals(TableName.META_TABLE_NAME));
+      this.replicaId, !TableName.isMetaTableName(this.tableName));
     this.encodedName = RegionInfo.encodeRegionName(this.regionName);
     this.hashCode = generateHashCode(this.tableName, this.startKey, this.endKey, this.regionId,
       this.replicaId, this.offLine, this.regionName);
@@ -232,7 +232,7 @@ class MutableRegionInfo implements RegionInfo {
   /** Returns true if this region is a meta region */
   @Override
   public boolean isMetaRegion() {
-    return tableName.equals(TableName.META_TABLE_NAME);
+    return TableName.isMetaTableName(tableName);
   }
 
   /** Returns True if has been split and has daughters. */

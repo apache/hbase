@@ -182,8 +182,8 @@ public final class MetaTableLocator {
       if (replicaId == RegionInfo.DEFAULT_REPLICA_ID) {
         LOG.debug("hbase:meta region location doesn't exist, create it");
       } else {
-        LOG.debug(
-          "hbase:meta region location doesn't exist for replicaId=" + replicaId + ", create it");
+        LOG.debug("hbase:meta region location doesn't exist for replicaId={}, create it",
+          replicaId);
       }
       ZKUtil.createAndWatch(zookeeper, zookeeper.getZNodePaths().getZNodeForReplica(replicaId),
         data);
