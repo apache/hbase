@@ -16,19 +16,9 @@
 // limitations under the License.
 //
 
-import type { Route } from "./+types/export-control";
-import { ExportControlPage } from "@/pages/export-control";
+import { MdLayout } from "@/components/mdx-components";
+import Content from "./content.md";
 
-export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "Export Control - Apache HBase" },
-    {
-      name: "description",
-      content: "Export control notice for Apache HBase."
-    }
-  ];
-}
-
-export default function ExportControl() {
-  return <ExportControlPage />;
+export function ExportControlPage() {
+  return <MdLayout Content={Content} className="mt-12" />;
 }

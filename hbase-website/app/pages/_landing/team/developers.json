@@ -114,6 +114,12 @@
     "timezone": "-8"
   },
   {
+    "id": "dieter",
+    "name": "Dieter De Paepe",
+    "email": "dieter@apache.org",
+    "timezone": "+1"
+  },
+  {
     "id": "dimaspivak",
     "name": "Dima Spivak",
     "email": "dimaspivak@apache.org",

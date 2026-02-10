@@ -66,7 +66,6 @@ export const projectLinks: LinkType[] = [
     label: "Export Control",
     to: "/export-control"
   },
-
   {
     label: "Other Resources",
     to: "/other-resources"

@@ -424,6 +424,7 @@ mvn site
 ```
 
 The website will **NOT** build during regular commands like:
+
 - `mvn clean install`
 - `mvn package`
 - `mvn compile`
@@ -466,12 +467,14 @@ When you run `mvn site`, the website module automatically:
 #### Maven Commands
 
 **Build HBase WITHOUT the Website (default):**
+
 ```bash
 # From HBase root directory
 mvn clean install
 ```
 
 **Build the Website:**
+
 ```bash
 # From HBase root or hbase-website directory
 mvn site

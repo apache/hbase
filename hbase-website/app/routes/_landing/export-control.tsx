@@ -16,9 +16,19 @@
 // limitations under the License.
 //
 
-import { MarkdownLayout } from "@/components/markdown-layout";
-import content from "./content.md?raw";
+import type { Route } from "./+types/export-control";
+import { ExportControlPage } from "@/pages/_landing/export-control";
 
-export function ExportControlPage() {
-  return <MarkdownLayout>{content}</MarkdownLayout>;
+export function meta({}: Route.MetaArgs) {
+  return [
+    { title: "Export Control - Apache HBase" },
+    {
+      name: "description",
+      content: "Export control notice for Apache HBase."
+    }
+  ];
+}
+
+export default function ExportControl() {
+  return <ExportControlPage />;
 }
