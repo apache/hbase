@@ -133,7 +133,7 @@ public class TestHBaseMetaEdit {
       admin.deleteColumnFamily(TableName.META_TABLE_NAME, HConstants.CATALOG_FAMILY);
       fail("Should not reach here");
     } catch (HBaseIOException hioe) {
-      assertTrue(hioe.getMessage().contains("Delete of hbase:meta"));
+      assertTrue(hioe.getMessage().contains("Invalid deletion of"));
     }
   }
 

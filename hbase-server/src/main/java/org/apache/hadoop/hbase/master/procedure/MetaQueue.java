@@ -32,8 +32,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class MetaQueue extends Queue<TableName> {
 
-  protected MetaQueue(LockStatus lockStatus) {
-    super(TableName.META_TABLE_NAME, 1, lockStatus);
+  protected MetaQueue(TableName metaTableName, LockStatus lockStatus) {
+    super(metaTableName, 1, lockStatus);
   }
 
   @Override

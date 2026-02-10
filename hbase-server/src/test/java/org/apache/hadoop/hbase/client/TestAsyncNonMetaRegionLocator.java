@@ -106,10 +106,10 @@ public class TestAsyncNonMetaRegionLocator {
     admin.balancerSwitch(false, true);
 
     // Enable hbase:meta replication.
-    HBaseTestingUtil.setReplicas(admin, TableName.META_TABLE_NAME, NUM_OF_META_REPLICA);
-    TEST_UTIL.waitFor(30000,
-      () -> TEST_UTIL.getMiniHBaseCluster().getRegions(TableName.META_TABLE_NAME).size()
-          >= NUM_OF_META_REPLICA);
+    HBaseTestingUtil.setReplicas(admin, TEST_UTIL.getConnection().getMetaTableName(),
+      NUM_OF_META_REPLICA);
+    TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getMiniHBaseCluster()
+      .getRegions(TEST_UTIL.getConnection().getMetaTableName()).size() >= NUM_OF_META_REPLICA);
 
     SPLIT_KEYS = new byte[8][];
     for (int i = 111; i < 999; i += 111) {
@@ -129,8 +129,8 @@ public class TestAsyncNonMetaRegionLocator {
     c.set(RegionLocator.LOCATOR_META_REPLICAS_MODE, metaReplicaMode.toString());
     ConnectionRegistry registry =
       ConnectionRegistryFactory.create(TEST_UTIL.getConfiguration(), User.getCurrent());
-    conn =
-      new AsyncConnectionImpl(c, registry, registry.getClusterId().get(), null, User.getCurrent());
+    conn = new AsyncConnectionImpl(c, registry, registry.getClusterId().get(),
+      TEST_UTIL.getConnection().getMetaTableName(), null, User.getCurrent());
     locator = new AsyncNonMetaRegionLocator(conn, AsyncConnectionImpl.RETRY_TIMER);
   }
 
