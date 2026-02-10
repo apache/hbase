@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedureRunnable;
+import org.apache.hadoop.hbase.master.procedure.RestoreBackupSystemTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.replication.AbstractPeerNoLockProcedure;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -321,6 +322,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.Recommissi
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RegionSpecifierAndState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RollAllWALWritersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RollAllWALWritersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreRequest;
@@ -1372,7 +1375,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   @Override
   public GetProcedureResultResponse getProcedureResult(RpcController controller,
     GetProcedureResultRequest request) throws ServiceException {
-    LOG.debug("Checking to see if procedure is done pid=" + request.getProcId());
+    LOG.debug("Checking to see if procedure is done pid={}", request.getProcId());
     try {
       server.checkInitialized();
       GetProcedureResultResponse.Builder builder = GetProcedureResultResponse.newBuilder();
@@ -2575,7 +2578,9 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     }
     request.getResultList().forEach(result -> {
       if (result.getStatus() == RemoteProcedureResult.Status.SUCCESS) {
-        server.remoteProcedureCompleted(result.getProcId());
+        byte[] remoteResultData =
+          result.hasProcResultData() ? result.getProcResultData().toByteArray() : null;
+        server.remoteProcedureCompleted(result.getProcId(), remoteResultData);
       } else {
         server.remoteProcedureFailed(result.getProcId(),
           RemoteProcedureException.fromProto(result.getError()));
@@ -3658,6 +3663,35 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       long procId =
         server.flushTable(tableName, columnFamilies, req.getNonceGroup(), req.getNonce());
       return FlushTableResponse.newBuilder().setProcId(procId).build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
+  @Override
+  public MasterProtos.RestoreBackupSystemTableResponse restoreBackupSystemTable(
+    RpcController rpcController,
+    MasterProtos.RestoreBackupSystemTableRequest restoreBackupSystemTableRequest)
+    throws ServiceException {
+    try {
+      String snapshotName = restoreBackupSystemTableRequest.getSnapshotName();
+      SnapshotDescription snapshot = server.snapshotManager.getCompletedSnapshots().stream()
+        .filter(s -> s.getName().equals(snapshotName)).findFirst()
+        .orElseThrow(() -> new ServiceException("Snapshot %s not found".formatted(snapshotName)));
+      long pid = server.getMasterProcedureExecutor()
+        .submitProcedure(new RestoreBackupSystemTableProcedure(snapshot));
+      return MasterProtos.RestoreBackupSystemTableResponse.newBuilder().setProcId(pid).build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public RollAllWALWritersResponse rollAllWALWriters(RpcController rpcController,
+    RollAllWALWritersRequest request) throws ServiceException {
+    try {
+      long procId = server.rollAllWALWriters(request.getNonceGroup(), request.getNonce());
+      return RollAllWALWritersResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }

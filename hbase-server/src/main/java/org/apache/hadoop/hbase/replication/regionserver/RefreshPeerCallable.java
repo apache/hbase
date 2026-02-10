@@ -43,7 +43,7 @@ public class RefreshPeerCallable extends BaseRSProcedureCallable {
   private int stage;
 
   @Override
-  protected void doCall() throws Exception {
+  protected byte[] doCall() throws Exception {
     LOG.info("Received a peer change event, peerId=" + peerId + ", type=" + type);
     PeerProcedureHandler handler = rs.getReplicationSourceService().getPeerProcedureHandler();
     switch (type) {
@@ -68,6 +68,7 @@ public class RefreshPeerCallable extends BaseRSProcedureCallable {
       default:
         throw new IllegalArgumentException("Unknown peer modification type: " + type);
     }
+    return null;
   }
 
   @Override

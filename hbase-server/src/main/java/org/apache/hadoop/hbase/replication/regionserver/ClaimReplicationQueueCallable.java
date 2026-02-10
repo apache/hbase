@@ -39,9 +39,10 @@ public class ClaimReplicationQueueCallable extends BaseRSProcedureCallable {
   }
 
   @Override
-  protected void doCall() throws Exception {
+  protected byte[] doCall() throws Exception {
     PeerProcedureHandler handler = rs.getReplicationSourceService().getPeerProcedureHandler();
     handler.claimReplicationQueue(queueId);
+    return null;
   }
 
   @Override

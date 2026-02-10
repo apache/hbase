@@ -21,34 +21,73 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import org.apache.commons.codec.binary.Base64;
-import org.apache.directory.server.core.integ.CreateLdapServerRule;
+import org.apache.directory.ldap.client.template.LdapConnectionTemplate;
+import org.apache.directory.server.core.api.DirectoryService;
+import org.apache.directory.server.core.integ.ApacheDSTestExtension;
+import org.apache.directory.server.ldap.LdapServer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.http.resource.JerseyResource;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Base class for setting up and testing an HTTP server with LDAP authentication.
  */
+@ExtendWith(ApacheDSTestExtension.class)
 public class LdapServerTestBase extends HttpServerFunctionalTest {
   private static final Logger LOG = LoggerFactory.getLogger(LdapServerTestBase.class);
-
-  @ClassRule
-  public static CreateLdapServerRule ldapRule = new CreateLdapServerRule();
 
   protected static HttpServer server;
   protected static URL baseUrl;
 
+  /**
+   * The following fields are set by ApacheDSTestExtension. These are normally inherited from
+   * AbstractLdapTestUnit, but this class already has a parent. We only use ldapServer, but
+   * declaring that one alone does not work.
+   */
+
+  /** The class DirectoryService instance */
+  public static DirectoryService classDirectoryService;
+
+  /** The test DirectoryService instance */
+  public static DirectoryService methodDirectoryService;
+
+  /** The current DirectoryService instance */
+  public static DirectoryService directoryService;
+
+  /** The class LdapServer instance */
+  public static LdapServer classLdapServer;
+
+  /** The test LdapServer instance */
+  public static LdapServer methodLdapServer;
+
+  /** The current LdapServer instance */
+  public static LdapServer ldapServer;
+
+  /** The Ldap connection template */
+  public static LdapConnectionTemplate ldapConnectionTemplate;
+
+  /** The current revision */
+  public static long revision = 0L;
+
+  /**
+   * End of fields required by ApacheDSTestExtension
+   */
+
   private static final String AUTH_TYPE = "Basic ";
+
+  protected static LdapServer getLdapServer() {
+    return classLdapServer;
+  }
 
   /**
    * Sets up the HTTP server with LDAP authentication before any tests are run.
    * @throws Exception if an error occurs during server setup
    */
-  @BeforeClass
+  @BeforeAll
   public static void setupServer() throws Exception {
     Configuration conf = new Configuration();
     setLdapConfigurations(conf);
@@ -66,7 +105,7 @@ public class LdapServerTestBase extends HttpServerFunctionalTest {
    * Stops the HTTP server after all tests are completed.
    * @throws Exception if an error occurs during server shutdown
    */
-  @AfterClass
+  @AfterAll
   public static void stopServer() throws Exception {
     try {
       if (null != server) {
@@ -90,8 +129,8 @@ public class LdapServerTestBase extends HttpServerFunctionalTest {
     conf.set(HttpServer.FILTER_INITIALIZERS_PROPERTY,
       "org.apache.hadoop.hbase.http.lib.AuthenticationFilterInitializer");
     conf.set("hadoop.http.authentication.type", "ldap");
-    conf.set("hadoop.http.authentication.ldap.providerurl", String.format("ldap://%s:%s",
-      LdapConstants.LDAP_SERVER_ADDR, ldapRule.getLdapServer().getPort()));
+    conf.set("hadoop.http.authentication.ldap.providerurl",
+      String.format("ldap://%s:%s", LdapConstants.LDAP_SERVER_ADDR, getLdapServer().getPort()));
     conf.set("hadoop.http.authentication.ldap.enablestarttls", "false");
     conf.set("hadoop.http.authentication.ldap.basedn", LdapConstants.LDAP_BASE_DN);
   }

@@ -80,14 +80,16 @@ module Hbase
 
       infoport = @admin.getClusterMetrics.getLiveServerMetrics.get(host).getInfoServerPort.to_s
 
+      tasks_json_path = '/regionserver.jsp?format=json&filter='
+
       begin
         schema = "http://"
-        url = schema + host.hostname + ':' + infoport + '/rs-status?format=json&filter=' + filter
+        url = schema + host.hostname + ':' + infoport + tasks_json_path + filter
         json = URL.new(url).openStream
       rescue SocketException => e
         # Let's try with https when SocketException occur
         schema = "https://"
-        url = schema + host.hostname + ':' + infoport + '/rs-status?format=json&filter=' + filter
+        url = schema + host.hostname + ':' + infoport + tasks_json_path + filter
         json = URL.new(url).openStream
       end
 

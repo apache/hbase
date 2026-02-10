@@ -21,4 +21,5 @@ package org.apache.hadoop.hbase.testclassification;
  * Tag a test that covers our metrics handling.
  */
 public interface MetricsTests {
+  public static final String TAG = "org.apache.hadoop.hbase.testclassification.MetricsTests";
 }

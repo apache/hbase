@@ -34,8 +34,9 @@ public class SwitchRpcThrottleRemoteCallable extends BaseRSProcedureCallable {
   private boolean rpcThrottleEnabled;
 
   @Override
-  protected void doCall() throws Exception {
+  protected byte[] doCall() throws Exception {
     rs.getRegionServerRpcQuotaManager().switchRpcThrottle(rpcThrottleEnabled);
+    return null;
   }
 
   @Override

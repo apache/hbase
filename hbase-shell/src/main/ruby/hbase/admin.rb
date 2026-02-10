@@ -180,6 +180,12 @@ module Hbase
     alias hlog_roll wal_roll
 
     #----------------------------------------------------------------------------------------------
+    # Requests all region servers to roll wal writer
+    def wal_roll_all
+      @admin.rollAllWALWriters
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Requests a table or region split
     def split(table_or_region_name, split_point = nil)
       split_point_bytes = nil

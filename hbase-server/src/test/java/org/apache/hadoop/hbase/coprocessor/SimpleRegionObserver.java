@@ -128,6 +128,8 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   final AtomicInteger ctPostBatchMutate = new AtomicInteger(0);
   final AtomicInteger ctPreReplayWALs = new AtomicInteger(0);
   final AtomicInteger ctPostReplayWALs = new AtomicInteger(0);
+  final AtomicInteger ctPreWALRestore = new AtomicInteger(0);
+  final AtomicInteger ctPostWALRestore = new AtomicInteger(0);
   final AtomicInteger ctPreStoreFileReaderOpen = new AtomicInteger(0);
   final AtomicInteger ctPostStoreFileReaderOpen = new AtomicInteger(0);
   final AtomicInteger ctPostBatchMutateIndispensably = new AtomicInteger(0);
@@ -697,6 +699,24 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
+  public void preWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> env,
+    RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+    String tableName = logKey.getTableName().getNameAsString();
+    if (tableName.equals(TABLE_SKIPPED)) {
+      // skip recovery of TABLE_SKIPPED for testing purpose
+      env.bypass();
+      return;
+    }
+    ctPreWALRestore.incrementAndGet();
+  }
+
+  @Override
+  public void postWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> env,
+    RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+    ctPostWALRestore.incrementAndGet();
+  }
+
+  @Override
   public StoreFileReader preStoreFileReaderOpen(
     ObserverContext<? extends RegionCoprocessorEnvironment> ctx, FileSystem fs, Path p,
     FSDataInputStreamWrapper in, long size, CacheConfig cacheConf, Reference r,
@@ -912,6 +932,14 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
     return ctPostReplayWALs.get() > 0;
   }
 
+  public boolean hadPreWALRestore() {
+    return ctPreWALRestore.get() > 0;
+  }
+
+  public boolean hadPostWALRestore() {
+    return ctPostWALRestore.get() > 0;
+  }
+
   public boolean wasScannerNextCalled() {
     return ctPreScannerNext.get() > 0 && ctPostScannerNext.get() > 0;
   }
@@ -1022,6 +1050,14 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
 
   public int getCtPostReplayWALs() {
     return ctPostReplayWALs.get();
+  }
+
+  public int getCtPreWALRestore() {
+    return ctPreWALRestore.get();
+  }
+
+  public int getCtPostWALRestore() {
+    return ctPostWALRestore.get();
   }
 
   public int getCtPreWALAppend() {

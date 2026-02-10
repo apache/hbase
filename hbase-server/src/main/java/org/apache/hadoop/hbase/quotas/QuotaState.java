@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -32,33 +32,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
     justification = "FindBugs seems confused; says globalLimiter and lastUpdate "
       + "are mostly synchronized...but to me it looks like they are totally synchronized")
 public class QuotaState {
-  protected long lastUpdate = 0;
-  protected long lastQuery = 0;
-
   protected QuotaLimiter globalLimiter = NoopQuotaLimiter.get();
-
-  public QuotaState() {
-    this(0);
-  }
-
-  public QuotaState(final long updateTs) {
-    lastUpdate = updateTs;
-  }
-
-  public synchronized long getLastUpdate() {
-    return lastUpdate;
-  }
-
-  public synchronized long getLastQuery() {
-    return lastQuery;
-  }
 
   @Override
   public synchronized String toString() {
     StringBuilder builder = new StringBuilder();
-    builder.append("QuotaState(ts=" + getLastUpdate());
+    builder.append("QuotaState(");
     if (isBypass()) {
-      builder.append(" bypass");
+      builder.append("bypass");
     } else {
       if (globalLimiter != NoopQuotaLimiter.get()) {
         // builder.append(" global-limiter");
@@ -77,12 +58,17 @@ public class QuotaState {
   /**
    * Setup the global quota information. (This operation is part of the QuotaState setup)
    */
-  public synchronized void setQuotas(final Quotas quotas) {
+  public synchronized void setQuotas(Configuration conf, final Quotas quotas) {
     if (quotas.hasThrottle()) {
-      globalLimiter = QuotaLimiterFactory.fromThrottle(quotas.getThrottle());
+      globalLimiter = QuotaLimiterFactory.fromThrottle(conf, quotas.getThrottle());
     } else {
       globalLimiter = NoopQuotaLimiter.get();
     }
+  }
+
+  /** visible for testing */
+  void setGlobalLimiter(QuotaLimiter globalLimiter) {
+    this.globalLimiter = globalLimiter;
   }
 
   /**
@@ -97,7 +83,6 @@ public class QuotaState {
     } else {
       globalLimiter = QuotaLimiterFactory.update(globalLimiter, other.globalLimiter);
     }
-    lastUpdate = other.lastUpdate;
   }
 
   /**
@@ -105,15 +90,7 @@ public class QuotaState {
    * @return the quota limiter
    */
   public synchronized QuotaLimiter getGlobalLimiter() {
-    lastQuery = EnvironmentEdgeManager.currentTime();
     return globalLimiter;
   }
 
-  /**
-   * Return the limiter associated with this quota without updating internal last query stats
-   * @return the quota limiter
-   */
-  synchronized QuotaLimiter getGlobalLimiterWithoutUpdatingLastQuery() {
-    return globalLimiter;
-  }
 }

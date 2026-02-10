@@ -51,14 +51,16 @@ public class RSProcedureHandler extends EventHandler {
   @Override
   public void process() {
     Throwable error = null;
+    byte[] procResultData = null;
     try {
       MDC.put("pid", Long.toString(procId));
-      callable.call();
+      procResultData = callable.call();
     } catch (Throwable t) {
-      LOG.error("pid=" + this.procId, t);
+      LOG.error("pid={}", this.procId, t);
       error = t;
     } finally {
-      ((HRegionServer) server).remoteProcedureComplete(procId, initiatingMasterActiveTime, error);
+      ((HRegionServer) server).remoteProcedureComplete(procId, initiatingMasterActiveTime, error,
+        procResultData);
     }
   }
 }

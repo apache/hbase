@@ -36,4 +36,6 @@ package org.apache.hadoop.hbase.testclassification;
  * @see org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests
  */
 public interface VerySlowRegionServerTests {
+  public static final String TAG =
+    "org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests";
 }

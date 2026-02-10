@@ -69,7 +69,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread impl
    * Configure for the max count of log rolling retry. The real retry count is also limited by the
    * timeout of log rolling via {@link #WAL_ROLL_WAIT_TIMEOUT}
    */
-  protected static final String WAL_ROLL_RETRIES = "hbase.regionserver.logroll.retries";
+  public static final String WAL_ROLL_RETRIES = "hbase.regionserver.logroll.retries";
 
   protected final ConcurrentMap<WAL, RollController> wals = new ConcurrentHashMap<>();
   protected final T abortable;

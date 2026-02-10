@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
+import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.triggerUserCacheRefresh;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -74,7 +75,6 @@ public class TestThreadHandlerUsageQuota {
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
 
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
-    QuotaCache.TEST_FORCE_REFRESH = true;
     TEST_UTIL.flush(TABLE_NAME);
   }
 
@@ -104,11 +104,12 @@ public class TestThreadHandlerUsageQuota {
     }
   }
 
-  private void configureThrottle() throws IOException {
+  private void configureThrottle() throws Exception {
     try (Admin admin = TEST_UTIL.getAdmin()) {
       admin.setQuota(QuotaSettingsFactory.throttleUser(getUserName(),
-        ThrottleType.REQUEST_HANDLER_USAGE_MS, 10000, TimeUnit.SECONDS));
+        ThrottleType.REQUEST_HANDLER_USAGE_MS, 1, TimeUnit.SECONDS));
     }
+    triggerUserCacheRefresh(TEST_UTIL, false, TABLE_NAME);
   }
 
   private void unthrottleUser() throws Exception {
@@ -116,6 +117,7 @@ public class TestThreadHandlerUsageQuota {
       admin.setQuota(QuotaSettingsFactory.unthrottleUserByThrottleType(getUserName(),
         ThrottleType.REQUEST_HANDLER_USAGE_MS));
     }
+    triggerUserCacheRefresh(TEST_UTIL, true, TABLE_NAME);
   }
 
   private static String getUserName() throws IOException {

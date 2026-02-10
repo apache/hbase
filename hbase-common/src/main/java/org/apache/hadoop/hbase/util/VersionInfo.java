@@ -40,12 +40,15 @@ public class VersionInfo {
   // higher than any numbers in the version.
   private static final int VERY_LARGE_NUMBER = 100000;
 
+  // Copying into a non-final member so that it can be changed by reflection for testing
+  private static String version = Version.version;
+
   /**
    * Get the hbase version.
    * @return the hbase version string, eg. "0.6.3-dev"
    */
   public static String getVersion() {
-    return Version.version;
+    return version;
   }
 
   /**

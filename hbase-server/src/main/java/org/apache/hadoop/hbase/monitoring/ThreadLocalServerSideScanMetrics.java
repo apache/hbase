@@ -18,10 +18,12 @@
 package org.apache.hadoop.hbase.monitoring;
 
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Thread-local storage for server-side scan metrics that captures performance data separately for
@@ -61,7 +63,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * @see RegionScanner
  * @see org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.PHOENIX)
+@InterfaceStability.Evolving
 public final class ThreadLocalServerSideScanMetrics {
   private ThreadLocalServerSideScanMetrics() {
   }
@@ -79,6 +82,9 @@ public final class ThreadLocalServerSideScanMetrics {
     ThreadLocal.withInitial(() -> new AtomicLong(0));
 
   private static final ThreadLocal<AtomicLong> BLOCK_READ_OPS_COUNT =
+    ThreadLocal.withInitial(() -> new AtomicLong(0));
+
+  private static final ThreadLocal<AtomicLong> FS_READ_TIME =
     ThreadLocal.withInitial(() -> new AtomicLong(0));
 
   public static void setScanMetricsEnabled(boolean enable) {
@@ -101,6 +107,10 @@ public final class ThreadLocalServerSideScanMetrics {
     return BLOCK_READ_OPS_COUNT.get().addAndGet(count);
   }
 
+  public static long addFsReadTime(long time) {
+    return FS_READ_TIME.get().addAndGet(time);
+  }
+
   public static boolean isScanMetricsEnabled() {
     return IS_SCAN_METRICS_ENABLED.get();
   }
@@ -121,6 +131,10 @@ public final class ThreadLocalServerSideScanMetrics {
     return BLOCK_READ_OPS_COUNT.get();
   }
 
+  public static AtomicLong getFsReadTimeCounter() {
+    return FS_READ_TIME.get();
+  }
+
   public static long getBytesReadFromFsAndReset() {
     return getBytesReadFromFsCounter().getAndSet(0);
   }
@@ -137,11 +151,16 @@ public final class ThreadLocalServerSideScanMetrics {
     return getBlockReadOpsCountCounter().getAndSet(0);
   }
 
+  public static long getFsReadTimeAndReset() {
+    return getFsReadTimeCounter().getAndSet(0);
+  }
+
   public static void reset() {
     getBytesReadFromFsAndReset();
     getBytesReadFromBlockCacheAndReset();
     getBytesReadFromMemstoreAndReset();
     getBlockReadOpsCountAndReset();
+    getFsReadTimeAndReset();
   }
 
   public static void populateServerSideScanMetrics(ServerSideScanMetrics metrics) {
@@ -156,5 +175,7 @@ public final class ThreadLocalServerSideScanMetrics {
       getBytesReadFromMemstoreCounter().get());
     metrics.addToCounter(ServerSideScanMetrics.BLOCK_READ_OPS_COUNT_METRIC_NAME,
       getBlockReadOpsCountCounter().get());
+    metrics.addToCounter(ServerSideScanMetrics.FS_READ_TIME_METRIC_NAME,
+      getFsReadTimeCounter().get());
   }
 }

@@ -69,7 +69,7 @@ public class ReplaySyncReplicationWALCallable extends BaseRSProcedureCallable {
   private final KeyLocker<String> peersLock = new KeyLocker<>();
 
   @Override
-  protected void doCall() throws Exception {
+  protected byte[] doCall() throws Exception {
     LOG.info("Received a replay sync replication wals {} event, peerId={}", wals, peerId);
     if (rs.getReplicationSinkService() != null) {
       Lock peerLock = peersLock.acquireLock(wals.get(0));
@@ -81,6 +81,7 @@ public class ReplaySyncReplicationWALCallable extends BaseRSProcedureCallable {
         peerLock.unlock();
       }
     }
+    return null;
   }
 
   @Override

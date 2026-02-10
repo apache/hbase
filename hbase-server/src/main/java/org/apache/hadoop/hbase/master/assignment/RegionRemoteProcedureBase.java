@@ -103,7 +103,7 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
     newRemoteOperation(MasterProcedureEnv env);
 
   @Override
-  public void remoteOperationCompleted(MasterProcedureEnv env) {
+  public void remoteOperationCompleted(MasterProcedureEnv env, byte[] remoteResultData) {
     // should not be called since we use reportRegionStateTransition to report the result
     throw new UnsupportedOperationException();
   }

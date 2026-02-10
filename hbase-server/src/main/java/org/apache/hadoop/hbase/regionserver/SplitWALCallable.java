@@ -79,7 +79,7 @@ public class SplitWALCallable extends BaseRSProcedureCallable {
   }
 
   @Override
-  protected void doCall() throws Exception {
+  protected byte[] doCall() throws Exception {
     // grab a lock
     splitWALLock = splitWALLocks.acquireLock(walPath);
     try {
@@ -97,6 +97,7 @@ public class SplitWALCallable extends BaseRSProcedureCallable {
     } finally {
       splitWALLock.unlock();
     }
+    return null;
   }
 
   public String getWalPath() {
