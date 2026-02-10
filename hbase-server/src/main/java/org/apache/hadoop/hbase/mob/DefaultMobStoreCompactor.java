@@ -306,7 +306,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     // Clear old mob references
     mobRefSet.get().clear();
     boolean isUserRequest = userRequest.get();
-    boolean major = request.isAllFiles();
+    boolean major = request.isMajor();
     boolean compactMOBs = major && isUserRequest;
     boolean discardMobMiss = conf.getBoolean(MobConstants.MOB_UNSAFE_DISCARD_MISS_KEY,
       MobConstants.DEFAULT_MOB_DISCARD_MISS);
