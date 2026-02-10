@@ -370,6 +370,11 @@ public class ThriftConnection implements Connection {
   }
 
   @Override
+  public TableName getMetaTableName() {
+    throw new NotImplementedException("getMetaTableName not supported in ThriftConnection");
+  }
+
+  @Override
   public AsyncConnection toAsyncConnection() {
     throw new NotImplementedException("toAsyncConnection not supported in ThriftTable");
   }

@@ -73,6 +73,14 @@ message GetBootstrapNodesResponse {
   repeated ServerName server_name = 1;
 }
 
+/** Request and response to get the meta table name for this cluster */
+message GetMetaTableNameRequest {
+}
+message GetMetaTableNameResponse {
+  /** The name of the meta table. Defaults to "hbase:meta" if not set. */
+  optional string table_name = 1;
+}
+
 /**
  * Implements all the RPCs needed by clients to look up cluster meta information needed for
  * connection establishment.
@@ -105,6 +113,11 @@ service ClientMetaService {
    * Get nodes which could be used as ClientMetaService
    */
   rpc GetBootstrapNodes(GetBootstrapNodesRequest) returns (GetBootstrapNodesResponse);
+
+  /**
+   * Get the meta table name for this cluster.
+   */
+  rpc GetMetaTableName(GetMetaTableNameRequest) returns(GetMetaTableNameResponse);
 }
 
 message GetConnectionRegistryRequest {

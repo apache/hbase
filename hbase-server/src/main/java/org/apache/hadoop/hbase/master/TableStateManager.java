@@ -86,7 +86,7 @@ public class TableStateManager {
   }
 
   public void setDeletedTable(TableName tableName) throws IOException {
-    if (tableName.equals(TableName.META_TABLE_NAME)) {
+    if (tableName.equals(master.getConnection().getMetaTableName())) {
       // Can't delete the hbase:meta table.
       return;
     }
@@ -147,7 +147,7 @@ public class TableStateManager {
   }
 
   private void updateMetaState(TableName tableName, TableState.State newState) throws IOException {
-    if (tableName.equals(TableName.META_TABLE_NAME)) {
+    if (tableName.equals(master.getConnection().getMetaTableName())) {
       if (
         TableState.State.DISABLING.equals(newState) || TableState.State.DISABLED.equals(newState)
       ) {
