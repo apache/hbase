@@ -76,6 +76,7 @@ public class MultiThreadedReader extends MultiThreadedAction {
   private int keyWindow = DEFAULT_KEY_WINDOW;
   private int batchSize = DEFAULT_BATCH_SIZE;
   private int regionReplicaId = -1; // particular region replica id to do reads against if set
+  private boolean timelineConsistency = false;
 
   public MultiThreadedReader(LoadTestDataGenerator dataGen, Configuration conf, TableName tableName,
     double verifyPercent) throws IOException {
@@ -102,6 +103,10 @@ public class MultiThreadedReader extends MultiThreadedAction {
 
   public void setRegionReplicaId(int regionReplicaId) {
     this.regionReplicaId = regionReplicaId;
+  }
+
+  public void setTimelineConsistency(boolean timelineConsistency) {
+    this.timelineConsistency = timelineConsistency;
   }
 
   @Override
@@ -317,6 +322,8 @@ public class MultiThreadedReader extends MultiThreadedAction {
       get = dataGenerator.beforeGet(keyToRead, get);
       if (regionReplicaId > 0) {
         get.setReplicaId(regionReplicaId);
+      }
+      if (timelineConsistency) {
         get.setConsistency(Consistency.TIMELINE);
       }
       if (verbose) {

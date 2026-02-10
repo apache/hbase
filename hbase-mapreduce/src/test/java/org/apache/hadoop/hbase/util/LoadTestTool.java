@@ -173,6 +173,10 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected static final String OPT_REGION_REPLICA_ID_USAGE =
     "Region replica id to do the reads from";
 
+  public static final String OPT_TIMELINE_CONSISTENCY = "timeline";
+  protected static final String OPT_TIMELINE_CONSISTENCY_USAGE =
+    "Use TIMELINE consistency in read operations. Leave region_replica_id unset, otherwise it will override this setting.";
+
   public static final String OPT_MOB_THRESHOLD = "mob_threshold";
   protected static final String OPT_MOB_THRESHOLD_USAGE =
     "Desired cell size to exceed in bytes that will use the MOB write path";
@@ -228,6 +232,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   private int numRegionsPerServer = DEFAULT_NUM_REGIONS_PER_SERVER;
   private int regionReplication = -1; // not set
   private int regionReplicaId = -1; // not set
+  private boolean timelineConsistency = false;
 
   private int mobThreshold = -1; // not set
 
@@ -361,6 +366,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     addOptWithArg(OPT_NUM_REGIONS_PER_SERVER, OPT_NUM_REGIONS_PER_SERVER_USAGE);
     addOptWithArg(OPT_REGION_REPLICATION, OPT_REGION_REPLICATION_USAGE);
     addOptWithArg(OPT_REGION_REPLICA_ID, OPT_REGION_REPLICA_ID_USAGE);
+    addOptNoArg(OPT_TIMELINE_CONSISTENCY, OPT_TIMELINE_CONSISTENCY_USAGE);
     addOptWithArg(OPT_MOB_THRESHOLD, OPT_MOB_THRESHOLD_USAGE);
   }
 
@@ -519,6 +525,11 @@ public class LoadTestTool extends AbstractHBaseTool {
     regionReplicaId = -1;
     if (cmd.hasOption(OPT_REGION_REPLICA_ID)) {
       regionReplicaId = Integer.parseInt(cmd.getOptionValue(OPT_REGION_REPLICA_ID));
+    }
+
+    timelineConsistency = false;
+    if (cmd.hasOption(OPT_TIMELINE_CONSISTENCY)) {
+      timelineConsistency = true;
     }
   }
 
@@ -706,6 +717,7 @@ public class LoadTestTool extends AbstractHBaseTool {
       readerThreads.setKeyWindow(keyWindow);
       readerThreads.setMultiGetBatchSize(multiGetBatchSize);
       readerThreads.setRegionReplicaId(regionReplicaId);
+      readerThreads.setTimelineConsistency(timelineConsistency);
     }
 
     if (isUpdate && isWrite) {
