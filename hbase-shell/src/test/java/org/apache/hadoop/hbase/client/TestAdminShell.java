@@ -19,23 +19,18 @@ package org.apache.hadoop.hbase.client;
 
 import java.util.Collections;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.fs.ErasureCodingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ClientTests.class, LargeTests.class })
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestAdminShell extends AbstractTestShell {
   private static final Logger LOG = LoggerFactory.getLogger(TestAdminShell.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAdminShell.class);
 
   @Override
   public String getIncludeList() {
@@ -45,7 +40,7 @@ public class TestAdminShell extends AbstractTestShell {
   protected boolean erasureCodingSupported = false;
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     RubyShellTest.setUpConfig(this);
 
