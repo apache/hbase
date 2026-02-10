@@ -3257,8 +3257,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return getScanner(scan, null);
   }
 
-  RegionScannerImpl getScannerWithResults(Scan scan, List<Cell> results) throws IOException {
-    return getRowCacheService().getScanner(this, scan, results);
+  RegionScannerImpl getScannerWithResults(Get get, Scan scan, List<Cell> results)
+    throws IOException {
+    return getRowCacheService().getScanner(this, get, scan, results);
   }
 
   @Override

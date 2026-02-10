@@ -18,10 +18,13 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Scan;
 
@@ -51,18 +54,81 @@ public class RowCacheService {
 
   <R> R mutateWithRowCacheBarrier(HRegion region, byte[] row, RowOperation<R> operation)
     throws IOException {
+    if (!region.isRowCacheEnabled()) {
+      return operation.execute();
+    }
+
+    RowCacheKey key = new RowCacheKey(region, row);
     // TODO: implement mutate with row cache barrier logic
+    evictRow(key);
     return execute(operation);
   }
 
   <R> R mutateWithRowCacheBarrier(HRegion region, List<Mutation> mutations,
     RowOperation<R> operation) throws IOException {
+    if (!region.isRowCacheEnabled()) {
+      return operation.execute();
+    }
+
     // TODO: implement mutate with row cache barrier logic
+    Set<RowCacheKey> rowCacheKeys = new HashSet<>(mutations.size());
+    mutations.forEach(mutation -> rowCacheKeys.add(new RowCacheKey(region, mutation.getRow())));
+    rowCacheKeys.forEach(this::evictRow);
+
     return execute(operation);
   }
 
-  RegionScannerImpl getScanner(HRegion region, Scan scan, List<Cell> results) throws IOException {
-    // TODO: implement row cache logic
+  void evictRow(RowCacheKey key) {
+    rowCache.evictRow(key);
+  }
+
+  boolean canCacheRow(Get get, Region region) {
+    // TODO: implement logic to determine if the row can be cached
+    return false;
+  }
+
+  RegionScannerImpl getScanner(HRegion region, Get get, Scan scan, List<Cell> results)
+    throws IOException {
+    if (!canCacheRow(get, region)) {
+      return getScannerInternal(region, scan, results);
+    }
+
+    RowCacheKey key = new RowCacheKey(region, get.getRow());
+
+    // Try get from row cache
+    if (tryGetFromCache(region, key, get, results)) {
+      // Cache is hit, and then no scanner is created
+      return null;
+    }
+
+    RegionScannerImpl scanner = getScannerInternal(region, scan, results);
+    populateCache(region, results, key);
+    return scanner;
+  }
+
+  private boolean tryGetFromCache(HRegion region, RowCacheKey key, Get get, List<Cell> results) {
+    RowCells row = rowCache.getRow(key, get.getCacheBlocks());
+
+    if (row == null) {
+      return false;
+    }
+
+    results.addAll(row.getCells());
+    // TODO: implement update of metrics
+    return true;
+  }
+
+  private void populateCache(HRegion region, List<Cell> results, RowCacheKey key) {
+    // TODO: implement with barrier to avoid cache read during mutation
+    try {
+      rowCache.cacheRow(key, new RowCells(results));
+    } catch (CloneNotSupportedException ignored) {
+      // Not able to cache row cells, ignore
+    }
+  }
+
+  private RegionScannerImpl getScannerInternal(HRegion region, Scan scan, List<Cell> results)
+    throws IOException {
     RegionScannerImpl scanner = region.getScanner(scan);
     scanner.next(results);
     return scanner;

@@ -2609,7 +2609,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     RegionScannerImpl scanner = null;
     long blockBytesScannedBefore = context.getBlockBytesScanned();
     try {
-      scanner = region.getScannerWithResults(scan, results);
+      scanner = region.getScannerWithResults(get, scan, results);
     } finally {
       if (scanner != null) {
         if (closeCallBack == null) {
