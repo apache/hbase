@@ -59,8 +59,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClusterConnection {
 
   public AsyncClusterConnectionImpl(Configuration conf, ConnectionRegistry registry,
-    String clusterId, SocketAddress localAddress, User user) {
-    super(conf, registry, clusterId, localAddress, user, Collections.emptyMap());
+    String clusterId, TableName metaTableName, SocketAddress localAddress, User user) {
+    super(conf, registry, clusterId, metaTableName, localAddress, user, Collections.emptyMap());
   }
 
   @Override

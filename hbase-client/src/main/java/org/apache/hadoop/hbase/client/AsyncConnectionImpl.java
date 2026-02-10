@@ -92,6 +92,8 @@ public class AsyncConnectionImpl implements AsyncConnection {
 
   final ConnectionRegistry registry;
 
+  private final TableName metaTableName;
+
   protected final int rpcTimeout;
 
   protected final RpcClient rpcClient;
@@ -128,14 +130,16 @@ public class AsyncConnectionImpl implements AsyncConnection {
   private volatile ConnectionOverAsyncConnection conn;
 
   public AsyncConnectionImpl(Configuration conf, ConnectionRegistry registry, String clusterId,
-    SocketAddress localAddress, User user) {
-    this(conf, registry, clusterId, localAddress, user, Collections.emptyMap());
+    TableName metaTableName, SocketAddress localAddress, User user) {
+    this(conf, registry, clusterId, metaTableName, localAddress, user, Collections.emptyMap());
   }
 
   public AsyncConnectionImpl(Configuration conf, ConnectionRegistry registry, String clusterId,
-    SocketAddress localAddress, User user, Map<String, byte[]> connectionAttributes) {
+    TableName metaTableName, SocketAddress localAddress, User user,
+    Map<String, byte[]> connectionAttributes) {
     this.conf = conf;
     this.user = user;
+    this.metaTableName = metaTableName;
     this.metricsScope = MetricsConnection.getScope(conf, clusterId, this);
 
     if (user.isLoginFromKeytab()) {
@@ -217,6 +221,10 @@ public class AsyncConnectionImpl implements AsyncConnection {
   @Override
   public Configuration getConfiguration() {
     return conf;
+  }
+
+  public TableName getMetaTableName() {
+    return metaTableName;
   }
 
   @Override
