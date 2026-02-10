@@ -231,7 +231,7 @@ public class TruncateRegionProcedure
   }
 
   private boolean prepareTruncate() throws IOException {
-    if (getTableName().equals(TableName.META_TABLE_NAME)) {
+    if (TableName.isMetaTableName(getTableName())) {
       throw new IOException("Can't truncate region in catalog tables");
     }
     return true;

@@ -27,6 +27,7 @@ import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.AfterEach;
@@ -54,6 +55,8 @@ public class TestConnectionFactoryApplyURIQueries {
     mockedConnectionRegistryFactory
       .when(() -> ConnectionRegistryFactory.create(any(), any(), any())).thenReturn(registry);
     when(registry.getClusterId()).thenReturn(CompletableFuture.completedFuture("cluster"));
+    when(registry.getMetaTableName())
+      .thenReturn(CompletableFuture.completedFuture(TableName.META_TABLE_NAME));
   }
 
   @AfterEach
@@ -63,13 +66,15 @@ public class TestConnectionFactoryApplyURIQueries {
 
   @Test
   public void testApplyURIQueries() throws Exception {
-    ConnectionFactory.createConnection(new URI("hbase+rpc://server:16010?a=1&b=2&c"), conf);
-    ArgumentCaptor<Configuration> captor = ArgumentCaptor.forClass(Configuration.class);
-    mockedConnectionRegistryFactory
-      .verify(() -> ConnectionRegistryFactory.create(any(), captor.capture(), any()));
-    Configuration c = captor.getValue();
-    assertEquals("1", c.get("a"));
-    assertEquals("2", c.get("b"));
-    assertEquals("", c.get("c"));
+    try (Connection ignored =
+      ConnectionFactory.createConnection(new URI("hbase+rpc://server:16010?a=1&b=2&c"), conf)) {
+      ArgumentCaptor<Configuration> captor = ArgumentCaptor.forClass(Configuration.class);
+      mockedConnectionRegistryFactory
+        .verify(() -> ConnectionRegistryFactory.create(any(), captor.capture(), any()));
+      Configuration c = captor.getValue();
+      assertEquals("1", c.get("a"));
+      assertEquals("2", c.get("b"));
+      assertEquals("", c.get("c"));
+    }
   }
 }

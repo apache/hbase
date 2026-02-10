@@ -36,6 +36,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
@@ -78,16 +79,18 @@ public class TestAdmin2 extends TestAdminBase {
 
   @Test
   public void testCreateBadTables() throws IOException {
+    // Meta-named tables (hbase:meta or hbase:meta_<suffix>) are reserved; attempting to create
+    // one is rejected by the master before the table-exists check runs.
     String msg = null;
     try {
       ADMIN.createTable(TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).build());
-    } catch (TableExistsException e) {
+    } catch (DoNotRetryIOException e) {
       msg = e.toString();
     }
     assertTrue(
-      msg != null && msg.startsWith(TableExistsException.class.getName())
+      msg != null && msg.contains("reserved")
         && msg.contains(TableName.META_TABLE_NAME.getNameAsString()),
-      "Unexcepted exception message " + msg);
+      "Unexpected exception message " + msg);
 
     // Now try and do concurrent creation with a bunch of threads.
     TableDescriptor tableDescriptor =

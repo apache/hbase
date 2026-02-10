@@ -1038,9 +1038,14 @@ public final class FSUtils {
       return false;
     }
     String dirName = tablePath.getName();
-    if (dirName.startsWith(TableName.META_TABLE_NAME.getQualifierAsString())) {
-      return TableName.valueOf(TableName.META_TABLE_NAME.getNamespaceAsString(), dirName)
-        .equals(TableName.META_TABLE_NAME);
+    TableName candidate;
+    try {
+      candidate = TableName.valueOf(TableName.META_TABLE_NAME.getNamespaceAsString(), dirName);
+    } catch (IllegalArgumentException e) {
+      return true;
+    }
+    if (TableName.isMetaTableName(candidate)) {
+      return candidate.equals(TableName.META_TABLE_NAME);
     }
     return true;
   }

@@ -528,4 +528,10 @@ public interface MasterServices extends Server, KeyManagementService {
   long rollAllWALWriters(long nonceGroup, long nonce) throws IOException;
 
   RpcThrottleStateStore getRpcThrottleStateStore();
+
+  /**
+   * Return cluster's meta table name
+   * @return meta table name
+   */
+  TableName getMetaTableName();
 }
