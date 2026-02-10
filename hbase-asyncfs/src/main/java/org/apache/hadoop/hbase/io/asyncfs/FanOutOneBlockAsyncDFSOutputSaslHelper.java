@@ -607,9 +607,8 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
       if (evt instanceof IdleStateEvent && ((IdleStateEvent) evt).state() == READER_IDLE) {
-        promise.tryFailure(new IOException(
-          "Timeout(" + timeoutMs + "ms) waiting for response  from datanode " + ctx.channel()
-            .remoteAddress()));
+        promise.tryFailure(new IOException("Timeout(" + timeoutMs
+          + "ms) waiting for response  from datanode " + ctx.channel().remoteAddress()));
       } else {
         super.userEventTriggered(ctx, evt);
       }
