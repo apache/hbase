@@ -1113,7 +1113,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     // Populate the master address configuration from mini cluster configuration.
     conf.set(HConstants.MASTER_ADDRS_KEY, MasterRegistry.getMasterAddr(c));
     // Don't leave here till we've done a successful scan of the hbase:meta
-    try (Table t = getConnection().getTable(TableName.META_TABLE_NAME);
+    try (Table t = getConnection().getTable(getConnection().getMetaTableName());
       ResultScanner s = t.getScanner(new Scan())) {
       for (;;) {
         if (s.next() == null) {
@@ -1235,7 +1235,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       option.getMasterClass(), option.getRsClass());
     // Don't leave here till we've done a successful scan of the hbase:meta
     Connection conn = ConnectionFactory.createConnection(this.conf);
-    Table t = conn.getTable(TableName.META_TABLE_NAME);
+    Table t = conn.getTable(getConnection().getMetaTableName());
     ResultScanner s = t.getScanner(new Scan());
     while (s.next() != null) {
       // do nothing
@@ -2403,7 +2403,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public List<RegionInfo> createMultiRegionsInMeta(final Configuration conf,
     final TableDescriptor htd, byte[][] startKeys) throws IOException {
-    Table meta = getConnection().getTable(TableName.META_TABLE_NAME);
+    Table meta = getConnection().getTable(getConnection().getMetaTableName());
     Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
     List<RegionInfo> newRegions = new ArrayList<>(startKeys.length);
     MetaTableAccessor.updateTableState(getConnection(), htd.getTableName(),
@@ -2485,7 +2485,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public List<byte[]> getMetaTableRows() throws IOException {
     // TODO: Redo using MetaTableAccessor class
-    Table t = getConnection().getTable(TableName.META_TABLE_NAME);
+    Table t = getConnection().getTable(getConnection().getMetaTableName());
     List<byte[]> rows = new ArrayList<>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
@@ -2503,7 +2503,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public List<byte[]> getMetaTableRows(TableName tableName) throws IOException {
     // TODO: Redo using MetaTableAccessor.
-    Table t = getConnection().getTable(TableName.META_TABLE_NAME);
+    Table t = getConnection().getTable(getConnection().getMetaTableName());
     List<byte[]> rows = new ArrayList<>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
@@ -2833,7 +2833,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     monitor.close();
 
     if (checkStatus) {
-      getConnection().getTable(TableName.META_TABLE_NAME).close();
+      getConnection().getTable(getConnection().getMetaTableName()).close();
     }
   }
 
@@ -3358,7 +3358,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Waith until all system table's regions get assigned
    */
   public void waitUntilAllSystemRegionsAssigned() throws IOException {
-    waitUntilAllRegionsAssigned(TableName.META_TABLE_NAME);
+    waitUntilAllRegionsAssigned(getConnection().getMetaTableName());
   }
 
   /**
@@ -3371,7 +3371,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public void waitUntilAllRegionsAssigned(final TableName tableName, final long timeout)
     throws IOException {
     if (!TableName.isMetaTableName(tableName)) {
-      try (final Table meta = getConnection().getTable(TableName.META_TABLE_NAME)) {
+      try (final Table meta = getConnection().getTable(getConnection().getMetaTableName())) {
         LOG.debug("Waiting until all regions of table " + tableName + " get assigned. Timeout = "
           + timeout + "ms");
         waitFor(timeout, 200, true, new ExplainingPredicate<IOException>() {
@@ -3589,7 +3589,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       Bytes.toBytes(String.format(keyFormat, splitEndKey)), numRegions);
 
     if (hbaseCluster != null) {
-      getMiniHBaseCluster().flushcache(TableName.META_TABLE_NAME);
+      getMiniHBaseCluster().flushcache(getConnection().getMetaTableName());
     }
 
     BufferedMutator mutator = getConnection().getBufferedMutator(tableName);
@@ -3804,7 +3804,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   public static int getMetaRSPort(Connection connection) throws IOException {
-    try (RegionLocator locator = connection.getRegionLocator(TableName.META_TABLE_NAME)) {
+    try (RegionLocator locator = connection.getRegionLocator(connection.getMetaTableName())) {
       return locator.getRegionLocation(Bytes.toBytes("")).getPort();
     }
   }

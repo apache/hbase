@@ -156,7 +156,7 @@ public class MetaBrowser {
 
   public Results getResults() {
     final AsyncTable<AdvancedScanResultConsumer> asyncTable =
-      connection.getTable(TableName.META_TABLE_NAME);
+      connection.getTable(connection.getMetaTableName());
     return new Results(asyncTable.getScanner(buildScan()));
   }
 
