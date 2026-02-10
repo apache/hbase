@@ -1072,12 +1072,12 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
   public TRegionInfo getRegionInfo(ByteBuffer searchRow) throws IOError {
     try {
       byte[] row = getBytes(searchRow);
-      Result startRowResult =
-        getReverseScanResult(TableName.META_TABLE_NAME.getName(), row, HConstants.CATALOG_FAMILY);
+      Result startRowResult = getReverseScanResult(
+        connectionCache.getAdmin().getConnection().getMetaTableName().getName(), row,
+        HConstants.CATALOG_FAMILY);
 
       if (startRowResult == null) {
-        throw new IOException(
-          "Cannot find row in " + TableName.META_TABLE_NAME + ", row=" + Bytes.toStringBinary(row));
+        throw new IOException("Cannot find row in hbase:meta, row=" + Bytes.toStringBinary(row));
       }
 
       // find region start and end keys

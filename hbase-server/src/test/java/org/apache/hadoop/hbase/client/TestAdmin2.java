@@ -35,6 +35,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -82,15 +83,11 @@ public class TestAdmin2 extends TestAdminBase {
 
   @Test
   public void testCreateBadTables() throws IOException {
-    String msg = null;
-    try {
-      ADMIN.createTable(TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).build());
-    } catch (TableExistsException e) {
-      msg = e.toString();
-    }
-    assertTrue("Unexcepted exception message " + msg,
-      msg != null && msg.startsWith(TableExistsException.class.getName())
-        && msg.contains(TableName.META_TABLE_NAME.getNameAsString()));
+    DoNotRetryIOException reservedTableEx = assertThrows(DoNotRetryIOException.class, () -> ADMIN
+      .createTable(TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).build()));
+    assertTrue("Unexpected exception message " + reservedTableEx,
+      reservedTableEx.getMessage() != null
+        && reservedTableEx.getMessage().contains(TableName.META_TABLE_NAME.toString()));
 
     // Now try and do concurrent creation with a bunch of threads.
     TableDescriptor tableDescriptor =

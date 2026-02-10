@@ -658,23 +658,23 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
    * next region. 3) if the endkey of the last region is not empty.
    */
   private void checkRegionIndexValid(int idx, List<Pair<byte[], byte[]>> startEndKeys,
-    TableName tableName) throws IOException {
+    TableName tableName, TableName metaTableName) throws IOException {
     if (idx < 0) {
-      throw new IOException("The first region info for table " + tableName
-        + " can't be found in hbase:meta.Please use hbck tool to fix it first.");
+      throw new IOException("The first region info for table " + tableName + " can't be found in "
+        + metaTableName + ". Please use hbck tool to fix it first.");
     } else if (
       (idx == startEndKeys.size() - 1)
         && !Bytes.equals(startEndKeys.get(idx).getSecond(), HConstants.EMPTY_BYTE_ARRAY)
     ) {
-      throw new IOException("The last region info for table " + tableName
-        + " can't be found in hbase:meta.Please use hbck tool to fix it first.");
+      throw new IOException("The last region info for table " + tableName + " can't be found in "
+        + metaTableName + ". Please use hbck tool to fix it first.");
     } else if (
       idx + 1 < startEndKeys.size() && !(Bytes.compareTo(startEndKeys.get(idx).getSecond(),
         startEndKeys.get(idx + 1).getFirst()) == 0)
     ) {
       throw new IOException("The endkey of one region for table " + tableName
-        + " is not equal to the startkey of the next region in hbase:meta."
-        + "Please use hbck tool to fix it first.");
+        + " is not equal to the startkey of the next region in " + metaTableName + "."
+        + " Please use hbck tool to fix it first.");
     }
   }
 
@@ -714,7 +714,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
         + " > " + Bytes.toStringBinary(last.get()));
     }
     int firstKeyRegionIdx = getRegionIndex(startEndKeys, first.get());
-    checkRegionIndexValid(firstKeyRegionIdx, startEndKeys, tableName);
+    checkRegionIndexValid(firstKeyRegionIdx, startEndKeys, tableName, conn.getMetaTableName());
     boolean lastKeyInRange =
       Bytes.compareTo(last.get(), startEndKeys.get(firstKeyRegionIdx).getSecond()) < 0 || Bytes
         .equals(startEndKeys.get(firstKeyRegionIdx).getSecond(), HConstants.EMPTY_BYTE_ARRAY);
@@ -729,7 +729,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
       // make sure the splitPoint is valid in case region overlap occur, maybe the splitPoint bigger
       // than hfile.endkey w/o this check
       if (splitIdx != firstKeyRegionIdx) {
-        checkRegionIndexValid(splitIdx, startEndKeys, tableName);
+        checkRegionIndexValid(splitIdx, startEndKeys, tableName, conn.getMetaTableName());
       }
       byte[] splitPoint = startEndKeys.get(splitIdx).getSecond();
       List<LoadQueueItem> lqis = splitStoreFile(conn.getRegionLocator(tableName), item,

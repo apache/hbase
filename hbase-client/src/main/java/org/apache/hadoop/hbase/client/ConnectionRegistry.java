@@ -21,6 +21,7 @@ import java.io.Closeable;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -47,6 +48,15 @@ public interface ConnectionRegistry extends Closeable {
    * Get the address of active HMaster.
    */
   CompletableFuture<ServerName> getActiveMaster();
+
+  /**
+   * Get the name of the meta table for this cluster.
+   * <p>
+   * Should only be called once, similar to {@link #getClusterId()}.
+   * <p>
+   * @return CompletableFuture containing the meta table name
+   */
+  CompletableFuture<TableName> getMetaTableName();
 
   /**
    * Return the connection string associated with this registry instance. This value is

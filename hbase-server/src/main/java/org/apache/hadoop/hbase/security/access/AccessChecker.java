@@ -544,7 +544,7 @@ public class AccessChecker {
     TableName tableName, Map<byte[], ? extends Collection<?>> families) {
     // 1. All users need read access to hbase:meta table.
     // this is a very common operation, so deal with it quickly.
-    if (TableName.META_TABLE_NAME.equals(tableName)) {
+    if (TableName.isMetaTableName(tableName)) {
       if (permRequest == Action.READ) {
         return AuthResult.allow(request, "All users allowed", user, permRequest, tableName,
           families);

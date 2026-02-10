@@ -786,9 +786,21 @@ public class CellComparatorImpl implements CellComparator {
    * @return CellComparator to use going off the {@code tableName} passed.
    */
   public static CellComparator getCellComparator(byte[] tableName) {
-    // FYI, TableName.toBytes does not create an array; just returns existing array pointer.
-    return Bytes.equals(tableName, TableName.META_TABLE_NAME.toBytes())
+    return isMetaTable(tableName)
       ? MetaCellComparator.META_COMPARATOR
       : CellComparatorImpl.COMPARATOR;
+  }
+
+  /**
+   * @see TableName#isMetaTableName(TableName) for the canonical definition of what qualifies as a
+   *      meta table. Kept as a {@code byte[]}-friendly adapter so we can avoid materializing a
+   *      {@link TableName} on hot comparator-selection paths when the input is malformed.
+   */
+  static boolean isMetaTable(byte[] tableName) {
+    try {
+      return TableName.isMetaTableName(TableName.valueOf(tableName));
+    } catch (IllegalArgumentException e) {
+      return false;
+    }
   }
 }

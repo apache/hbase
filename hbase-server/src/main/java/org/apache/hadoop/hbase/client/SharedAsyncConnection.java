@@ -53,6 +53,11 @@ public class SharedAsyncConnection implements AsyncConnection {
   }
 
   @Override
+  public TableName getMetaTableName() {
+    return conn.getMetaTableName();
+  }
+
+  @Override
   public AsyncTableRegionLocator getRegionLocator(TableName tableName) {
     return conn.getRegionLocator(tableName);
   }

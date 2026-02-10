@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -54,4 +55,13 @@ public interface ConnectionRegistryEndpoint {
    * Get the location of meta regions.
    */
   List<HRegionLocation> getMetaLocations();
+
+  /**
+   * Get the name of the meta table for this cluster.
+   * <p>
+   * By default, this returns "hbase:meta". Future implementations may support custom meta table
+   * names for read replica clusters.
+   * @return The meta table name
+   */
+  TableName getMetaTableName();
 }
