@@ -14,6 +14,13 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+properties([
+  parameters([
+    string(name: 'CRON_EXPRESSION', defaultValue: 'H H/12 * * *',
+           description: 'Cron expression for periodic builds. See https://jenkins.io/doc/book/pipeline/syntax/#cron-syntax')
+  ])
+])
+
 pipeline {
   agent {
     dockerfile {
@@ -23,7 +30,7 @@ pipeline {
     }
   }
   triggers {
-    cron('H H/12 * * *') // See https://jenkins.io/doc/book/pipeline/syntax/#cron-syntax
+    cron("${params.CRON_EXPRESSION ?: 'H H/12 * * *'}")
   }
   options {
     // this should roughly match how long we tell the flaky dashboard to look at
