@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 
 /**
  * It is responsible for populating the row cache and retrieving rows from it.
@@ -46,7 +45,8 @@ public class RowCacheService {
   RowCacheService(Configuration conf) {
     enabledByConf =
       conf.getFloat(HConstants.ROW_CACHE_SIZE_KEY, HConstants.ROW_CACHE_SIZE_DEFAULT) > 0;
-    rowCache = enabledByConf ? new RowCacheImpl(MemorySizeUtil.getRowCacheSize(conf)) : null;
+    // TODO: implement row cache
+    rowCache = null;
   }
 
   <R> R mutateWithRowCacheBarrier(HRegion region, byte[] row, RowOperation<R> operation)
