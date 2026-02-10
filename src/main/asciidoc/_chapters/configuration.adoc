@@ -1473,6 +1473,7 @@ Here are those configurations:
 | Key
 | hbase.balancer.tablesOnMaster
 | hbase.balancer.tablesOnMaster.systemTablesOnly
+| hbase.block.data.cacheonread
 | hbase.cleaner.scan.dir.concurrent.size
 | hbase.coprocessor.master.classes
 | hbase.coprocessor.region.classes
@@ -1547,6 +1548,8 @@ Here are those configurations:
 | hbase.regions.overallSlop
 | hbase.regions.recovery.store.file.ref.count
 | hbase.regions.slop
+| hbase.rs.cacheblocksonwrite
+| hbase.rs.evictblocksonclose
 | hbase.rsgroup.fallback.enable
 | hbase.util.ip.to.rack.determiner
 |===
