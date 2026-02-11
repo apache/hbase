@@ -154,7 +154,8 @@ public final class BackupCommands {
       if (requiresNoActiveSession()) {
         // Check active session
         try (BackupSystemTable table = new BackupSystemTable(conn)) {
-          List<BackupInfo> sessions = table.getBackupInfos(withState(BackupState.RUNNING));
+          List<BackupInfo> sessions =
+            table.getBackupHistory(true, 1, withState(BackupState.RUNNING));
 
           if (sessions.size() > 0) {
             System.err.println("Found backup session in a RUNNING state: ");
@@ -529,7 +530,8 @@ public final class BackupCommands {
         if (backupId != null) {
           info = sysTable.readBackupInfo(backupId);
         } else {
-          List<BackupInfo> infos = sysTable.getBackupInfos(withState(BackupState.RUNNING));
+          List<BackupInfo> infos =
+            sysTable.getBackupHistory(true, 1, withState(BackupState.RUNNING));
           if (infos != null && infos.size() > 0) {
             info = infos.get(0);
             backupId = info.getBackupId();
@@ -677,7 +679,7 @@ public final class BackupCommands {
         final BackupSystemTable sysTable = new BackupSystemTable(conn)) {
         // Failed backup
         BackupInfo backupInfo;
-        List<BackupInfo> list = sysTable.getBackupInfos(withState(BackupState.RUNNING));
+        List<BackupInfo> list = sysTable.getBackupHistory(true, 1, withState(BackupState.RUNNING));
         if (list.size() == 0) {
           // No failed sessions found
           System.out.println("REPAIR status: no failed sessions found."
