@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.Socket;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.function.Supplier;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
@@ -30,36 +31,46 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
 
 /**
  * Testcase for HBASE-29214
  */
-@RunWith(Parameterized.class)
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: policy = {0}")
 public class TestAsyncAdminClearMasterStubCache extends TestAsyncAdminBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncAdminClearMasterStubCache.class);
+  public TestAsyncAdminClearMasterStubCache(Supplier<AsyncAdmin> admin) {
+    super(admin);
+  }
 
-  @Before
+  @BeforeAll
+  public static void setUpBeforeClass() throws Exception {
+    TestAsyncAdminBase.setUpBeforeClass();
+  }
+
+  @AfterAll
+  public static void tearDownAfterClass() throws Exception {
+    TestAsyncAdminBase.tearDownAfterClass();
+  }
+
+  @BeforeEach
   public void waitMasterReady() throws Exception {
     assertTrue(TEST_UTIL.getHBaseCluster().waitForActiveAndReadyMaster(30000));
   }
 
-  @After
+  @AfterEach
   public void clearPortConfig() {
     TEST_UTIL.getHBaseCluster().getConf().setInt(HConstants.MASTER_PORT, 0);
   }
 
-  @Test
+  @TestTemplate
   public void testClearMasterStubCache() throws Exception {
     // cache master stub
     assertNotNull(FutureUtils.get(admin.getClusterMetrics()));
