@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.hbtop.field;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
+
 import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.Tag;
