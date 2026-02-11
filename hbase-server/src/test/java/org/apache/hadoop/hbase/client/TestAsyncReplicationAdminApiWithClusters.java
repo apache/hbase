@@ -18,21 +18,21 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ForkJoinPool;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -41,25 +41,19 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
 
 /**
  * Class to test asynchronous replication admin operations when more than 1 cluster
  */
-@RunWith(Parameterized.class)
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: policy = {0}")
 public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncReplicationAdminApiWithClusters.class);
 
   private final static String ID_SECOND = "2";
 
@@ -68,7 +62,11 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
   private static AsyncAdmin admin2;
   private static AsyncConnection connection;
 
-  @BeforeClass
+  public TestAsyncReplicationAdminApiWithClusters(Supplier<AsyncAdmin> admin) {
+    super(admin);
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 60000);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 120000);
@@ -90,13 +88,14 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     ASYNC_CONN.getAdmin().addReplicationPeer(ID_SECOND, rpc).join();
   }
 
-  @AfterClass
-  public static void clearUp() throws IOException {
+  @AfterAll
+  public static void clearUp() throws Exception {
+    TestAsyncAdminBase.tearDownAfterClass();
     connection.close();
   }
 
   @Override
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     Pattern pattern = Pattern.compile(tableName.getNameAsString() + ".*");
     cleanupTables(admin, pattern);
@@ -124,7 +123,7 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     admin.createTable(builder.build()).join();
   }
 
-  @Test
+  @TestTemplate
   public void testEnableAndDisableTableReplication() throws Exception {
     // default replication scope is local
     createTableWithDefaultConf(tableName);
@@ -141,7 +140,7 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     }
   }
 
-  @Test
+  @TestTemplate
   public void testEnableReplicationWhenSlaveClusterDoesntHaveTable() throws Exception {
     // Only create table in source cluster
     createTableWithDefaultConf(tableName);
@@ -150,7 +149,7 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     assertTrue(admin2.tableExists(tableName).get());
   }
 
-  @Test
+  @TestTemplate
   public void testEnableReplicationWhenTableDescriptorIsNotSameInClusters() throws Exception {
     createTableWithDefaultConf(admin, tableName);
     createTableWithDefaultConf(admin2, tableName);
@@ -179,7 +178,7 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     }
   }
 
-  @Test
+  @TestTemplate
   public void testDisableReplicationForNonExistingTable() throws Exception {
     try {
       admin.disableTableReplication(tableName).join();
@@ -188,7 +187,7 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     }
   }
 
-  @Test
+  @TestTemplate
   public void testEnableReplicationForNonExistingTable() throws Exception {
     try {
       admin.enableTableReplication(tableName).join();
@@ -197,7 +196,7 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     }
   }
 
-  @Test
+  @TestTemplate
   public void testDisableReplicationWhenTableNameAsNull() throws Exception {
     try {
       admin.disableTableReplication(null).join();
@@ -206,7 +205,7 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     }
   }
 
-  @Test
+  @TestTemplate
   public void testEnableReplicationWhenTableNameAsNull() throws Exception {
     try {
       admin.enableTableReplication(null).join();
@@ -219,15 +218,15 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
    * Test enable table replication should create table only in user explicit specified table-cfs.
    * HBASE-14717
    */
-  @Test
+  @TestTemplate
   public void testEnableReplicationForExplicitSetTableCfs() throws Exception {
     TableName tableName2 = TableName.valueOf(tableName.getNameAsString() + "2");
     // Only create table in source cluster
     createTableWithDefaultConf(tableName);
     createTableWithDefaultConf(tableName2);
-    assertFalse("Table should not exists in the peer cluster", admin2.tableExists(tableName).get());
-    assertFalse("Table should not exists in the peer cluster",
-      admin2.tableExists(tableName2).get());
+    assertFalse(admin2.tableExists(tableName).get(), "Table should not exists in the peer cluster");
+    assertFalse(admin2.tableExists(tableName2).get(),
+      "Table should not exists in the peer cluster");
 
     Map<TableName, ? extends Collection<String>> tableCfs = new HashMap<>();
     tableCfs.put(tableName, null);
@@ -238,17 +237,16 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
       // Only add tableName to replication peer config
       admin.updateReplicationPeerConfig(ID_SECOND, rpc).join();
       admin.enableTableReplication(tableName2).join();
-      assertFalse("Table should not be created if user has set table cfs explicitly for the "
-        + "peer and this is not part of that collection", admin2.tableExists(tableName2).get());
+      assertFalse(admin2.tableExists(tableName2).get(), "Table should not be created if user "
+        + "has set table cfs explicitly for the peer and this is not part of that collection");
 
       // Add tableName2 to replication peer config, too
       tableCfs.put(tableName2, null);
       rpc.setTableCFsMap(tableCfs);
       admin.updateReplicationPeerConfig(ID_SECOND, rpc).join();
       admin.enableTableReplication(tableName2).join();
-      assertTrue(
-        "Table should be created if user has explicitly added table into table cfs collection",
-        admin2.tableExists(tableName2).get());
+      assertTrue(admin2.tableExists(tableName2).get(),
+        "Table should be created if user has explicitly added table into table cfs collection");
     } finally {
       rpc.setTableCFsMap(null);
       rpc.setReplicateAllUserTables(true);
