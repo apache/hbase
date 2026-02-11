@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -55,7 +55,7 @@ public class TestWALTailingReaderPartialCellResume {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestWALTailingReaderPartialCellResume.class);
 
-  private static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
+  private static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
   private static FileSystem FS;
 
