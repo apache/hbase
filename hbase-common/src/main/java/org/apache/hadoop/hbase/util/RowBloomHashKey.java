@@ -37,4 +37,15 @@ public class RowBloomHashKey extends CellHashKey {
   public int length() {
     return this.t.getRowLength();
   }
+
+  @Override
+  public int getIntLE(int offset) {
+    return LittleEndianBytes.getRowAsInt(t, offset);
+  }
+
+  @Override
+  public long getLongLE(int offset) {
+    return LittleEndianBytes.getRowAsLong(t, offset);
+  }
+
 }
