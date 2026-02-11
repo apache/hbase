@@ -24,45 +24,40 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.rules.ExternalResource;
-import org.junit.rules.TestRule;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.Extension;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 /**
- * A {@link TestRule} that manages an instance of the {@link MiniHBaseCluster}. Can be used in
- * either the {@link Rule} or {@link ClassRule} positions. Built on top of an instance of
- * {@link HBaseTestingUtility}, so be weary of intermixing direct use of that class with this Rule.
+ * An {@link Extension} that manages an instance of the {@link MiniHBaseCluster}. Built on top of an
+ * instance of {@link HBaseTestingUtility}, so be weary of intermixing direct use of that class with
+ * this Extension.
  * </p>
- * Use in combination with {@link ConnectionRule}, for example:
+ * Use in combination with {@link ConnectionExtension}, for example:
  *
  * <pre>
  * {
  *   &#64;code
  *   public class TestMyClass {
- *     &#64;ClassRule
- *     public static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder().build();
  *
- *     &#64;Rule
- *     public final ConnectionRule connectionRule =
- *       ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
+ *     &#64;RegisterExtension
+ *     public static final MiniClusterExtension miniClusterExtension =
+ *       MiniClusterExtension.newBuilder().build();
+ *
+ *     &#64;RegisterExtension
+ *     public final ConnectionExtension connectionExtension = ConnectionExtension
+ *       .createAsyncConnectionExtension(miniClusterExtension::createAsyncConnection);
  *   }
  * }
  * </pre>
- *
- * @deprecated Use {@link MiniClusterExtension} instead, Once we finish the migration of JUnit5,
- *             which means we do not need {@link MiniClusterRule} any more, we can remove these
- *             dependencies, see
- *             <a href="https://issues.apache.org/jira/browse/HBASE-23671">HBASE-23671</a> for more
- *             details.
  */
-@Deprecated
-public final class MiniClusterRule extends ExternalResource {
+public final class MiniClusterExtension implements BeforeAllCallback, AfterAllCallback {
 
   /**
-   * A builder for fluent composition of a new {@link MiniClusterRule}.
+   * A builder for fluent composition of a new {@link MiniClusterExtension}.
    */
-  public static class Builder {
+  public static final class Builder {
 
     private StartMiniClusterOption miniClusterOption;
     private Configuration conf;
@@ -83,22 +78,25 @@ public final class MiniClusterRule extends ExternalResource {
       return this;
     }
 
-    public Builder setConfiguration(Supplier<Configuration> supplier) {
+    public Builder setConfiguration(final Supplier<Configuration> supplier) {
       return setConfiguration(supplier.get());
     }
 
-    public MiniClusterRule build() {
-      return new MiniClusterRule(conf,
+    public MiniClusterExtension build() {
+      return new MiniClusterExtension(conf,
         miniClusterOption != null ? miniClusterOption : StartMiniClusterOption.builder().build());
     }
   }
 
+  /**
+   * Returns the underlying instance of {@link HBaseTestingUtility}
+   */
   private final HBaseTestingUtility testingUtility;
   private final StartMiniClusterOption miniClusterOptions;
 
   private MiniHBaseCluster miniCluster;
 
-  private MiniClusterRule(final Configuration conf,
+  private MiniClusterExtension(final Configuration conf,
     final StartMiniClusterOption miniClusterOptions) {
     this.testingUtility = new HBaseTestingUtility(conf);
     this.miniClusterOptions = miniClusterOptions;
@@ -108,7 +106,9 @@ public final class MiniClusterRule extends ExternalResource {
     return new Builder();
   }
 
-  /** Returns the underlying instance of {@link HBaseTestingUtility} */
+  /**
+   * Returns the underlying instance of {@link HBaseTestingUtility}
+   */
   public HBaseTestingUtility getTestingUtility() {
     return testingUtility;
   }
@@ -140,12 +140,12 @@ public final class MiniClusterRule extends ExternalResource {
   }
 
   @Override
-  protected void before() throws Throwable {
+  public void beforeAll(ExtensionContext context) throws Exception {
     miniCluster = testingUtility.startMiniCluster(miniClusterOptions);
   }
 
   @Override
-  protected void after() {
+  public void afterAll(ExtensionContext context) {
     try {
       testingUtility.shutdownMiniCluster();
     } catch (IOException e) {

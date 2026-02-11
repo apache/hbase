@@ -19,15 +19,16 @@ package org.apache.hadoop.hbase.client;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -35,22 +36,21 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
 
-@RunWith(Parameterized.class)
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: policy = {0}")
 public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncAdminWithRegionReplicas.class);
+  public TestAsyncAdminWithRegionReplicas(Supplier<AsyncAdmin> admin) {
+    super(admin);
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TestAsyncAdminBase.setUpBeforeClass();
     HBaseTestingUtility.setReplicas(TEST_UTIL.getAdmin(), TableName.META_TABLE_NAME, 3);
@@ -58,6 +58,11 @@ public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
       ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration())) {
       RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL, registry);
     }
+  }
+
+  @AfterAll
+  public static void tearDownAfterClass() throws Exception {
+    TestAsyncAdminBase.tearDownAfterClass();
   }
 
   private void testMoveNonDefaultReplica(TableName tableName)
@@ -74,7 +79,7 @@ public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
       locator.getRegionLocation(HConstants.EMPTY_START_ROW, 2, true).get());
   }
 
-  @Test
+  @TestTemplate
   public void testMoveNonDefaultReplica()
     throws InterruptedException, ExecutionException, IOException {
     createTableWithDefaultConf(tableName, 3);
@@ -82,7 +87,7 @@ public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
     testMoveNonDefaultReplica(TableName.META_TABLE_NAME);
   }
 
-  @Test
+  @TestTemplate
   public void testSplitNonDefaultReplica()
     throws InterruptedException, ExecutionException, IOException {
     createTableWithDefaultConf(tableName, 3);
@@ -100,7 +105,7 @@ public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testMergeNonDefaultReplicas()
     throws InterruptedException, ExecutionException, IOException {
     byte[][] splitRows = new byte[][] { Bytes.toBytes(0) };
@@ -128,14 +133,14 @@ public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testCloneTableSchema() throws IOException, InterruptedException, ExecutionException {
     createTableWithDefaultConf(tableName, 3);
     admin.cloneTableSchema(tableName, TableName.valueOf(tableName.getNameAsString() + "_new"), true)
       .get();
   }
 
-  @Test
+  @TestTemplate
   public void testGetTableRegions() throws InterruptedException, ExecutionException, IOException {
     List<RegionInfo> metaRegions = admin.getRegions(TableName.META_TABLE_NAME).get();
     assertEquals(3, metaRegions.size());
