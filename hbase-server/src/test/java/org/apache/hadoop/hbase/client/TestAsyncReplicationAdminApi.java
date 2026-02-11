@@ -22,13 +22,13 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -39,8 +39,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Supplier;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.TableName;
@@ -55,31 +56,30 @@ import org.apache.hadoop.hbase.replication.VerifyWALEntriesReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.After;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
 
 /**
  * Class to test asynchronous replication admin operations.
  */
-@RunWith(Parameterized.class)
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: policy = {0}")
 public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncReplicationAdminApi.class);
 
   private final String ID_ONE = "1";
   private static String KEY_ONE;
   private final String ID_TWO = "2";
   private static String KEY_TWO;
 
-  @BeforeClass
+  public TestAsyncReplicationAdminApi(Supplier<AsyncAdmin> admin) {
+    super(admin);
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 60000);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 120000);
@@ -91,7 +91,12 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
 
-  @After
+  @AfterAll
+  public static void tearDownAfterClass() throws Exception {
+    TestAsyncAdminBase.tearDownAfterClass();
+  }
+
+  @AfterEach
   public void clearPeerAndQueues() throws IOException, ReplicationException {
     try {
       admin.removeReplicationPeer(ID_ONE).join();
@@ -109,7 +114,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     admin.replicationPeerModificationSwitch(true).join();
   }
 
-  @Test
+  @TestTemplate
   public void testAddRemovePeer() throws Exception {
     ReplicationPeerConfig rpc1 = ReplicationPeerConfig.newBuilder().setClusterKey(KEY_ONE).build();
     ReplicationPeerConfig rpc2 = ReplicationPeerConfig.newBuilder().setClusterKey(KEY_TWO).build();
@@ -141,7 +146,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     assertEquals(0, admin.listReplicationPeers().get().size());
   }
 
-  @Test
+  @TestTemplate
   public void testPeerConfig() throws Exception {
     ReplicationPeerConfig config = ReplicationPeerConfig.newBuilder().setClusterKey(KEY_ONE)
       .putConfiguration("key1", "value1").putConfiguration("key2", "value2").build();
@@ -157,7 +162,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     admin.removeReplicationPeer(ID_ONE).join();
   }
 
-  @Test
+  @TestTemplate
   public void testEnableDisablePeer() throws Exception {
     ReplicationPeerConfig rpc1 = ReplicationPeerConfig.newBuilder().setClusterKey(KEY_ONE).build();
     admin.addReplicationPeer(ID_ONE, rpc1).join();
@@ -172,7 +177,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     admin.removeReplicationPeer(ID_ONE).join();
   }
 
-  @Test
+  @TestTemplate
   public void testAppendPeerTableCFs() throws Exception {
     ReplicationPeerConfigBuilder rpcBuilder =
       ReplicationPeerConfig.newBuilder().setClusterKey(KEY_ONE);
@@ -205,8 +210,8 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     admin.appendReplicationPeerTableCFs(ID_ONE, tableCFs).join();
     result = admin.getReplicationPeerConfig(ID_ONE).get().getTableCFsMap();
     assertEquals(2, result.size());
-    assertTrue("Should contain t1", result.containsKey(tableName1));
-    assertTrue("Should contain t2", result.containsKey(tableName2));
+    assertTrue(result.containsKey(tableName1), "Should contain t1");
+    assertTrue(result.containsKey(tableName2), "Should contain t2");
     assertNull(result.get(tableName1));
     assertNull(result.get(tableName2));
 
@@ -217,9 +222,9 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     admin.appendReplicationPeerTableCFs(ID_ONE, tableCFs).join();
     result = admin.getReplicationPeerConfig(ID_ONE).get().getTableCFsMap();
     assertEquals(3, result.size());
-    assertTrue("Should contain t1", result.containsKey(tableName1));
-    assertTrue("Should contain t2", result.containsKey(tableName2));
-    assertTrue("Should contain t3", result.containsKey(tableName3));
+    assertTrue(result.containsKey(tableName1), "Should contain t1");
+    assertTrue(result.containsKey(tableName2), "Should contain t2");
+    assertTrue(result.containsKey(tableName3), "Should contain t3");
     assertNull(result.get(tableName1));
     assertNull(result.get(tableName2));
     assertEquals(1, result.get(tableName3).size());
@@ -233,10 +238,10 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     admin.appendReplicationPeerTableCFs(ID_ONE, tableCFs).join();
     result = admin.getReplicationPeerConfig(ID_ONE).get().getTableCFsMap();
     assertEquals(4, result.size());
-    assertTrue("Should contain t1", result.containsKey(tableName1));
-    assertTrue("Should contain t2", result.containsKey(tableName2));
-    assertTrue("Should contain t3", result.containsKey(tableName3));
-    assertTrue("Should contain t4", result.containsKey(tableName4));
+    assertTrue(result.containsKey(tableName1), "Should contain t1");
+    assertTrue(result.containsKey(tableName2), "Should contain t2");
+    assertTrue(result.containsKey(tableName3), "Should contain t3");
+    assertTrue(result.containsKey(tableName4), "Should contain t4");
     assertNull(result.get(tableName1));
     assertNull(result.get(tableName2));
     assertEquals(1, result.get(tableName3).size());
@@ -255,7 +260,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     admin.appendReplicationPeerTableCFs(ID_ONE, tableCFs).join();
     result = admin.getReplicationPeerConfig(ID_ONE).get().getTableCFsMap();
     assertEquals(5, result.size());
-    assertTrue("Should contain t5", result.containsKey(tableName5));
+    assertTrue(result.containsKey(tableName5), "Should contain t5");
     // null means replication all cfs of tab5
     assertNull(result.get(tableName5));
 
@@ -269,14 +274,14 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     admin.appendReplicationPeerTableCFs(ID_ONE, tableCFs).join();
     result = admin.getReplicationPeerConfig(ID_ONE).get().getTableCFsMap();
     assertEquals(6, result.size());
-    assertTrue("Should contain t6", result.containsKey(tableName6));
+    assertTrue(result.containsKey(tableName6), "Should contain t6");
     // null means replication all cfs of tab6
     assertNull(result.get(tableName6));
 
     admin.removeReplicationPeer(ID_ONE).join();
   }
 
-  @Test
+  @TestTemplate
   public void testRemovePeerTableCFs() throws Exception {
     ReplicationPeerConfigBuilder rpcBuilder =
       ReplicationPeerConfig.newBuilder().setClusterKey(KEY_ONE);
@@ -316,8 +321,8 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     Map<TableName, List<String>> result =
       admin.getReplicationPeerConfig(ID_ONE).get().getTableCFsMap();
     assertEquals(2, result.size());
-    assertTrue("Should contain t1", result.containsKey(tableName1));
-    assertTrue("Should contain t2", result.containsKey(tableName2));
+    assertTrue(result.containsKey(tableName1), "Should contain t1");
+    assertTrue(result.containsKey(tableName2), "Should contain t2");
     assertNull(result.get(tableName1));
     assertEquals(1, result.get(tableName2).size());
     assertEquals("cf1", result.get(tableName2).get(0));
@@ -362,7 +367,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     admin.removeReplicationPeer(ID_ONE);
   }
 
-  @Test
+  @TestTemplate
   public void testSetPeerNamespaces() throws Exception {
     String ns1 = "ns1";
     String ns2 = "ns2";
@@ -396,7 +401,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     admin.removeReplicationPeer(ID_ONE).join();
   }
 
-  @Test
+  @TestTemplate
   public void testNamespacesAndTableCfsConfigConflict() throws Exception {
     String ns1 = "ns1";
     String ns2 = "ns2";
@@ -442,7 +447,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     admin.removeReplicationPeer(ID_ONE).join();
   }
 
-  @Test
+  @TestTemplate
   public void testPeerBandwidth() throws Exception {
     ReplicationPeerConfigBuilder rpcBuilder =
       ReplicationPeerConfig.newBuilder().setClusterKey(KEY_ONE);
@@ -458,7 +463,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     admin.removeReplicationPeer(ID_ONE).join();
   }
 
-  @Test
+  @TestTemplate
   public void testInvalidClusterKey() throws InterruptedException {
     try {
       admin.addReplicationPeer(ID_ONE,
@@ -469,7 +474,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testClusterKeyWithTrailingSpace() throws Exception {
     admin.addReplicationPeer(ID_ONE,
       ReplicationPeerConfig.newBuilder().setClusterKey(KEY_ONE + " ").build()).get();
@@ -477,7 +482,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     assertEquals(KEY_ONE, clusterKey);
   }
 
-  @Test
+  @TestTemplate
   public void testInvalidReplicationEndpoint() throws InterruptedException {
     try {
       admin.addReplicationPeer(ID_ONE,
@@ -489,7 +494,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testSetReplicationEndpoint() throws InterruptedException, ExecutionException {
     // make sure that we do not need to set cluster key when we use customized ReplicationEndpoint
     admin
@@ -513,7 +518,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
   /**
    * Tests that admin api throws ReplicationPeerNotFoundException if peer doesn't exist.
    */
-  @Test
+  @TestTemplate
   public void testReplicationPeerNotFoundException() throws InterruptedException {
     String dummyPeer = "dummy_peer";
     try {
@@ -524,7 +529,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testReplicationPeerModificationSwitch() throws Exception {
     assertTrue(admin.isReplicationPeerModificationEnabled().get());
     // disable modification, should returns true as it is enabled by default and the above

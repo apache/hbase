@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
@@ -41,13 +40,12 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,11 +66,9 @@ import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.
 import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.PingResponse;
 import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.PingService;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestServerCustomProtocol {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestServerCustomProtocol.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestServerCustomProtocol.class);
   static final String WHOAREYOU = "Who are you?";
@@ -152,14 +148,14 @@ public class TestServerCustomProtocol {
 
   private static HBaseTestingUtil util = new HBaseTestingUtil();
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     util.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       PingHandler.class.getName());
     util.startMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     final byte[][] SPLIT_KEYS = new byte[][] { ROW_B, ROW_C };
     Table table = util.createTable(TEST_TABLE, TEST_FAMILY, SPLIT_KEYS);
@@ -177,12 +173,12 @@ public class TestServerCustomProtocol {
     table.put(putc);
   }
 
-  @After
+  @AfterEach
   public void after() throws Exception {
     util.deleteTable(TEST_TABLE);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     util.shutdownMiniCluster();
   }
@@ -194,7 +190,7 @@ public class TestServerCustomProtocol {
     // There are three regions so should get back three results.
     assertEquals(3, results.size());
     for (Map.Entry<byte[], String> e : results.entrySet()) {
-      assertEquals("Invalid custom protocol response", "pong", e.getValue());
+      assertEquals("pong", e.getValue(), "Invalid custom protocol response");
     }
     hello(table, "George", HELLO + "George");
     LOG.info("Did george");
@@ -241,7 +237,7 @@ public class TestServerCustomProtocol {
     throws ServiceException, Throwable {
     Map<byte[], String> results = hello(table, send);
     for (Map.Entry<byte[], String> e : results.entrySet()) {
-      assertEquals("Invalid custom protocol response", response, e.getValue());
+      assertEquals(response, e.getValue(), "Invalid custom protocol response");
     }
     return results;
   }
@@ -357,8 +353,8 @@ public class TestServerCustomProtocol {
       assertEquals(2, results.size());
       // should contain last 2 regions
       HRegionLocation loc = locator.getRegionLocation(ROW_A, true);
-      assertNull("Should be missing region for row aaa (prior to start row)",
-        results.get(loc.getRegion().getRegionName()));
+      assertNull(results.get(loc.getRegion().getRegionName()),
+        "Should be missing region for row aaa (prior to start row)");
       verifyRegionResults(locator, results, ROW_B);
       verifyRegionResults(locator, results, ROW_C);
 
@@ -369,8 +365,8 @@ public class TestServerCustomProtocol {
       verifyRegionResults(locator, results, ROW_A);
       verifyRegionResults(locator, results, ROW_B);
       loc = locator.getRegionLocation(ROW_C, true);
-      assertNull("Should be missing region for row ccc (past stop row)",
-        results.get(loc.getRegion().getRegionName()));
+      assertNull(results.get(loc.getRegion().getRegionName()),
+        "Should be missing region for row ccc (past stop row)");
 
       // test explicit start + end
       results = ping(table, ROW_AB, ROW_BC);
@@ -379,8 +375,8 @@ public class TestServerCustomProtocol {
       verifyRegionResults(locator, results, ROW_A);
       verifyRegionResults(locator, results, ROW_B);
       loc = locator.getRegionLocation(ROW_C, true);
-      assertNull("Should be missing region for row ccc (past stop row)",
-        results.get(loc.getRegion().getRegionName()));
+      assertNull(results.get(loc.getRegion().getRegionName()),
+        "Should be missing region for row ccc (past stop row)");
 
       // test single region
       results = ping(table, ROW_B, ROW_BC);
@@ -388,11 +384,11 @@ public class TestServerCustomProtocol {
       assertEquals(1, results.size());
       verifyRegionResults(locator, results, ROW_B);
       loc = locator.getRegionLocation(ROW_A, true);
-      assertNull("Should be missing region for row aaa (prior to start)",
-        results.get(loc.getRegion().getRegionName()));
+      assertNull(results.get(loc.getRegion().getRegionName()),
+        "Should be missing region for row aaa (prior to start)");
       loc = locator.getRegionLocation(ROW_C, true);
-      assertNull("Should be missing region for row ccc (past stop row)",
-        results.get(loc.getRegion().getRegionName()));
+      assertNull(results.get(loc.getRegion().getRegionName()),
+        "Should be missing region for row ccc (past stop row)");
     }
   }
 
@@ -451,7 +447,7 @@ public class TestServerCustomProtocol {
   public void testEmptyReturnType() throws Throwable {
     try (Table table = util.getConnection().getTable(TEST_TABLE)) {
       Map<byte[], String> results = noop(table, ROW_A, ROW_C);
-      assertEquals("Should have results from three regions", 3, results.size());
+      assertEquals(3, results.size(), "Should have results from three regions");
       // all results should be null
       for (Object v : results.values()) {
         assertNull(v);
@@ -472,9 +468,9 @@ public class TestServerCustomProtocol {
     }
     HRegionLocation loc = regionLocator.getRegionLocation(row, true);
     byte[] region = loc.getRegion().getRegionName();
-    assertTrue("Results should contain region " + Bytes.toStringBinary(region) + " for row '"
-      + Bytes.toStringBinary(row) + "'", results.containsKey(region));
-    assertEquals("Invalid result for row '" + Bytes.toStringBinary(row) + "'", expected,
-      results.get(region));
+    assertTrue(results.containsKey(region), "Results should contain region "
+      + Bytes.toStringBinary(region) + " for row '" + Bytes.toStringBinary(row) + "'");
+    assertEquals(expected, results.get(region),
+      "Invalid result for row '" + Bytes.toStringBinary(row) + "'");
   }
 }
