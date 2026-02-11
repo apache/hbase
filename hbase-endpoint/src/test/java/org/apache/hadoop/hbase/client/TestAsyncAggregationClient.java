@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.AsyncAggregationClient;
@@ -33,18 +32,14 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MediumTests.class, CoprocessorTests.class })
+@Tag(MediumTests.TAG)
+@Tag(CoprocessorTests.TAG)
 public class TestAsyncAggregationClient {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncAggregationClient.class);
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -62,7 +57,7 @@ public class TestAsyncAggregationClient {
 
   private static AsyncTable<AdvancedScanResultConsumer> TABLE;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
@@ -81,7 +76,7 @@ public class TestAsyncAggregationClient {
       .collect(Collectors.toList())).get();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     CONN.close();
     UTIL.shutdownMiniCluster();

@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
@@ -26,7 +27,6 @@ import com.google.protobuf.Service;
 import java.io.FileNotFoundException;
 import java.util.Collections;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos;
@@ -39,25 +39,21 @@ import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ CoprocessorTests.class, LargeTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRegionServerCoprocessorEndpoint {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerCoprocessorEndpoint.class);
 
   public static final FileNotFoundException WHAT_TO_THROW = new FileNotFoundException("/file.txt");
   private static HBaseTestingUtility TEST_UTIL = null;
   private static Configuration CONF = null;
   private static final String DUMMY_VALUE = "val";
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
     CONF = TEST_UTIL.getConfiguration();
@@ -66,7 +62,7 @@ public class TestRegionServerCoprocessorEndpoint {
     TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -101,7 +97,7 @@ public class TestRegionServerCoprocessorEndpoint {
         TEST_UTIL.getAdmin().coprocessorService(serverName));
     service.dummyThrow(controller,
       DummyRegionServerEndpointProtos.DummyRequest.getDefaultInstance(), rpcCallback);
-    assertEquals(null, rpcCallback.get());
+    assertNull(rpcCallback.get());
     assertTrue(controller.failedOnException());
     assertEquals(WHAT_TO_THROW.getClass().getName().trim(),
       ((RemoteWithExtrasException) controller.getFailedOn().getCause()).getClassName().trim());
