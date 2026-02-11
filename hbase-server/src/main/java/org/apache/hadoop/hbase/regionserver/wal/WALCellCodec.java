@@ -21,6 +21,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
@@ -280,6 +282,32 @@ public class WALCellCodec implements Codec {
     private final boolean hasValueCompression;
     private final boolean hasTagCompression;
 
+    // When the WAL tailing reader hits EOF mid-cell, the compression dictionaries must remain
+    // in the state they were after the last fully-read cell. Otherwise the reader would need
+    // an expensive O(n) reset (re-read from the start of the file to rebuild dictionary state).
+    // To achieve this, dictionary additions for ROW, FAMILY, and QUALIFIER are buffered here
+    // and only flushed on successful cell parse. On failure, they are discarded.
+    // Tag dictionary additions are deferred similarly via TagCompressionContext.
+    private final List<PendingDictAddition> pendingDictAdditions = new ArrayList<>();
+
+    // Tracks whether we are in the value decompression phase of parseCellInner(), so that on
+    // IOException we know whether the ValueCompressor's internal state needs to be reset.
+    private boolean readingValue = false;
+
+    private static class PendingDictAddition {
+      final Dictionary dict;
+      final byte[] data;
+      final int offset;
+      final int length;
+
+      PendingDictAddition(Dictionary dict, byte[] data, int offset, int length) {
+        this.dict = dict;
+        this.data = data;
+        this.offset = offset;
+        this.length = length;
+      }
+    }
+
     public CompressedKvDecoder(InputStream in, CompressionContext compression) {
       super(in);
       this.compression = compression;
@@ -287,8 +315,44 @@ public class WALCellCodec implements Codec {
       this.hasTagCompression = compression.hasTagCompression();
     }
 
+    private void commitPendingAdditions() {
+      for (PendingDictAddition pending : pendingDictAdditions) {
+        pending.dict.addEntry(pending.data, pending.offset, pending.length);
+      }
+      pendingDictAdditions.clear();
+      if (hasTagCompression) {
+        compression.tagCompressionContext.commitDeferredAdditions();
+      }
+    }
+
+    private void clearPendingAdditions() {
+      pendingDictAdditions.clear();
+      if (hasTagCompression) {
+        compression.tagCompressionContext.clearDeferredAdditions();
+      }
+    }
+
     @Override
     protected ExtendedCell parseCell() throws IOException {
+      clearPendingAdditions();
+      if (hasTagCompression) {
+        compression.tagCompressionContext.setDeferAdditions(true);
+      }
+      readingValue = false;
+      try {
+        ExtendedCell cell = parseCellInner();
+        commitPendingAdditions();
+        return cell;
+      } catch (IOException e) {
+        clearPendingAdditions();
+        if (readingValue && hasValueCompression) {
+          compression.getValueCompressor().clear();
+        }
+        throw e;
+      }
+    }
+
+    private ExtendedCell parseCellInner() throws IOException {
       int keylength = StreamUtils.readRawVarint32(in);
       int vlength = StreamUtils.readRawVarint32(in);
       int tagsLength = StreamUtils.readRawVarint32(in);
@@ -334,7 +398,9 @@ public class WALCellCodec implements Codec {
       pos = Bytes.putByte(backingArray, pos, (byte) in.read());
       int valLen = typeValLen - 1;
       if (hasValueCompression) {
+        readingValue = true;
         readCompressedValue(in, backingArray, pos, valLen);
+        readingValue = false;
         pos += valLen;
       } else {
         IOUtils.readFully(in, backingArray, pos, valLen);
@@ -359,7 +425,7 @@ public class WALCellCodec implements Codec {
         // if this isn't in the dictionary, we need to add to the dictionary.
         int length = StreamUtils.readRawVarint32(in);
         IOUtils.readFully(in, to, offset, length);
-        dict.addEntry(to, offset, length);
+        pendingDictAdditions.add(new PendingDictAddition(dict, to, offset, length));
         return length;
       } else {
         // the status byte also acts as the higher order byte of the dictionary entry.

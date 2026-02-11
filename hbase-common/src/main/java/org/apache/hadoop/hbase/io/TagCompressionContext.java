@@ -23,6 +23,8 @@ import java.io.OutputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.util.Dictionary;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
@@ -39,6 +41,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class TagCompressionContext {
   private final Dictionary tagDict;
+  private boolean deferAdditions = false;
+  private final List<byte[]> deferredAdditions = new ArrayList<>();
+  private int deferredBaseIndex;
 
   public TagCompressionContext(Class<? extends Dictionary> dictType, int dictCapacity)
     throws SecurityException, NoSuchMethodException, InstantiationException, IllegalAccessException,
@@ -50,6 +55,27 @@ public class TagCompressionContext {
 
   public void clear() {
     tagDict.clear();
+  }
+
+  public void setDeferAdditions(boolean defer) {
+    this.deferAdditions = defer;
+    if (defer) {
+      deferredBaseIndex = tagDict.size();
+      deferredAdditions.clear();
+    }
+  }
+
+  public void commitDeferredAdditions() {
+    for (byte[] entry : deferredAdditions) {
+      tagDict.addEntry(entry, 0, entry.length);
+    }
+    deferredAdditions.clear();
+    deferAdditions = false;
+  }
+
+  public void clearDeferredAdditions() {
+    deferredAdditions.clear();
+    deferAdditions = false;
   }
 
   /**
@@ -112,11 +138,17 @@ public class TagCompressionContext {
         int tagLen = StreamUtils.readRawVarint32(src);
         offset = Bytes.putAsShort(dest, offset, tagLen);
         IOUtils.readFully(src, dest, offset, tagLen);
-        tagDict.addEntry(dest, offset, tagLen);
+        if (deferAdditions) {
+          byte[] copy = new byte[tagLen];
+          System.arraycopy(dest, offset, copy, 0, tagLen);
+          deferredAdditions.add(copy);
+        } else {
+          tagDict.addEntry(dest, offset, tagLen);
+        }
         offset += tagLen;
       } else {
         short dictIdx = StreamUtils.toShort(status, StreamUtils.readByte(src));
-        byte[] entry = tagDict.getEntry(dictIdx);
+        byte[] entry = getDeferredOrDictEntry(dictIdx);
         if (entry == null) {
           throw new IOException("Missing dictionary entry for index " + dictIdx);
         }
@@ -124,6 +156,20 @@ public class TagCompressionContext {
         System.arraycopy(entry, 0, dest, offset, entry.length);
         offset += entry.length;
       }
+    }
+  }
+
+  private byte[] getDeferredOrDictEntry(short dictIdx) {
+    if (deferAdditions) {
+      int deferredIdx = dictIdx - deferredBaseIndex;
+      if (deferredIdx >= 0 && deferredIdx < deferredAdditions.size()) {
+        return deferredAdditions.get(deferredIdx);
+      }
+    }
+    try {
+      return tagDict.getEntry(dictIdx);
+    } catch (IndexOutOfBoundsException e) {
+      return null;
     }
   }
 

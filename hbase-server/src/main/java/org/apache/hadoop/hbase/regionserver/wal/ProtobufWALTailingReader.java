@@ -30,11 +30,9 @@ import org.apache.hadoop.hbase.wal.WALTailingReader;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
@@ -49,6 +47,10 @@ public class ProtobufWALTailingReader extends AbstractProtobufWALReader
   private static final Logger LOG = LoggerFactory.getLogger(ProtobufWALTailingReader.class);
 
   private DelegatingInputStream delegatingInput;
+
+  private Entry pendingEntry = null;
+  private int pendingRemainingCells = 0;
+  private long pendingResumePosition = -1;
 
   private static final class ReadWALKeyResult {
     final State state;
@@ -184,6 +186,10 @@ public class ProtobufWALTailingReader extends AbstractProtobufWALReader
   }
 
   private Result readWALEdit(Entry entry, int followingKvCount) {
+    return readCellsIntoEntry(entry, followingKvCount, false);
+  }
+
+  private Result readCellsIntoEntry(Entry entry, int remainingCells, boolean isResume) {
     long posBefore;
     try {
       posBefore = inputStream.getPos();
@@ -191,30 +197,44 @@ public class ProtobufWALTailingReader extends AbstractProtobufWALReader
       LOG.warn("failed to get position", e);
       return State.ERROR_AND_RESET.getResult();
     }
-    if (followingKvCount == 0) {
-      LOG.trace("WALKey has no KVs that follow it; trying the next one. current offset={}",
-        posBefore);
+    if (remainingCells == 0) {
+      if (!isResume) {
+        LOG.trace("WALKey has no KVs that follow it; trying the next one. current offset={}",
+          posBefore);
+      }
       return new Result(State.NORMAL, entry, posBefore);
     }
-    int actualCells;
-    try {
-      actualCells = entry.getEdit().readFromCells(cellDecoder, followingKvCount);
-    } catch (Exception e) {
-      String message = " while reading " + followingKvCount + " WAL KVs; started reading at "
-        + posBefore + " and read up to " + getPositionQuietly();
-      IOException realEofEx = extractHiddenEof(e);
-      if (realEofEx != null) {
-        LOG.warn("EOF " + message, realEofEx);
-        return editEof();
-      } else {
-        LOG.warn("Error " + message, e);
+    long lastGoodPos = posBefore;
+    int cellsRead = 0;
+    for (int i = 0; i < remainingCells; i++) {
+      try {
+        lastGoodPos = inputStream.getPos();
+      } catch (IOException e) {
+        LOG.warn("failed to get position before cell read", e);
         return editError();
       }
-    }
-    if (actualCells != followingKvCount) {
-      LOG.warn("Only read {} cells, expected {}; started reading at {} and read up to {}",
-        actualCells, followingKvCount, posBefore, getPositionQuietly());
-      return editEof();
+      boolean advanced;
+      try {
+        advanced = cellDecoder.advance();
+      } catch (Exception e) {
+        IOException realEofEx = extractHiddenEof(e);
+        if (realEofEx != null) {
+          LOG.debug("EOF after reading {} of {} cells; started reading at {}, last good pos={}",
+            cellsRead, remainingCells, posBefore, lastGoodPos, realEofEx);
+          return savePendingAndReturnEof(entry, remainingCells - cellsRead, lastGoodPos);
+        } else {
+          LOG.warn("Error after reading {} of {} cells; started reading at {}, read up to {}",
+            cellsRead, remainingCells, posBefore, getPositionQuietly(), e);
+          return editError();
+        }
+      }
+      if (!advanced) {
+        LOG.debug("EOF (advance returned false) after reading {} of {} cells; started at {},"
+          + " last good pos={}", cellsRead, remainingCells, posBefore, lastGoodPos);
+        return savePendingAndReturnEof(entry, remainingCells - cellsRead, lastGoodPos);
+      }
+      entry.getEdit().add(cellDecoder.current());
+      cellsRead++;
     }
     long posAfter;
     try {
@@ -231,8 +251,45 @@ public class ProtobufWALTailingReader extends AbstractProtobufWALReader
     return new Result(State.NORMAL, entry, posAfter);
   }
 
+  private Result savePendingAndReturnEof(Entry entry, int remaining, long resumePos) {
+    if (hasCompression) {
+      pendingEntry = entry;
+      pendingRemainingCells = remaining;
+      pendingResumePosition = resumePos;
+      return new Result(State.EOF_AND_RESET, null, resumePos);
+    }
+    return editEof();
+  }
+
+  private void clearPendingState() {
+    pendingEntry = null;
+    pendingRemainingCells = 0;
+    pendingResumePosition = -1;
+  }
+
   @Override
   public Result next(long limit) {
+    if (pendingEntry != null) {
+      long originalPosition;
+      try {
+        originalPosition = inputStream.getPos();
+      } catch (IOException e) {
+        LOG.warn("failed to get position", e);
+        clearPendingState();
+        return State.EOF_AND_RESET.getResult();
+      }
+      if (limit < 0) {
+        delegatingInput.setDelegate(inputStream);
+      } else if (limit <= originalPosition) {
+        return State.EOF_AND_RESET.getResult();
+      } else {
+        delegatingInput.setDelegate(ByteStreams.limit(inputStream, limit - originalPosition));
+      }
+      Entry entry = pendingEntry;
+      int remaining = pendingRemainingCells;
+      clearPendingState();
+      return readCellsIntoEntry(entry, remaining, true);
+    }
     long originalPosition;
     try {
       originalPosition = inputStream.getPos();
@@ -268,6 +325,13 @@ public class ProtobufWALTailingReader extends AbstractProtobufWALReader
 
   @Override
   public void resetTo(long position, boolean resetCompression) throws IOException {
+    if (resetCompression) {
+      clearPendingState();
+    }
+    long seekPosition = position;
+    if (!resetCompression && pendingResumePosition > 0) {
+      seekPosition = pendingResumePosition;
+    }
     close();
     Pair<FSDataInputStream, FileStatus> pair = open();
     boolean resetSucceed = false;
@@ -283,6 +347,7 @@ public class ProtobufWALTailingReader extends AbstractProtobufWALReader
         if (compressionCtx != null) {
           compressionCtx.clear();
         }
+        clearPendingState();
         skipHeader(inputStream);
       } else if (resetCompression && compressionCtx != null) {
         // clear compressCtx and skip to the expected position, to fill up the dictionary
@@ -293,7 +358,7 @@ public class ProtobufWALTailingReader extends AbstractProtobufWALReader
         }
       } else {
         // just seek to the expected position
-        inputStream.seek(position);
+        inputStream.seek(seekPosition);
       }
       resetSucceed = true;
     } finally {
