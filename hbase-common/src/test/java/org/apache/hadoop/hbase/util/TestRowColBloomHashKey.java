@@ -109,11 +109,29 @@ public class TestRowColBloomHashKey {
     }
   }
 
+  @Test
+  public void testGetLongLE() {
+    for (int i = 0; i <= hashKey.length() - Bytes.SIZEOF_LONG; i++) {
+      long expected = expectedLongLEFromGet(i);
+      long actual = hashKey.getLongLE(i);
+      assertEquals(expected, actual, "sequential mismatch at offset=" + i);
+    }
+  }
+
   private int expectedIntLEFromGet(int offset) {
     int b0 = hashKey.get(offset) & 0xFF;
     int b1 = hashKey.get(offset + 1) & 0xFF;
     int b2 = hashKey.get(offset + 2) & 0xFF;
     int b3 = hashKey.get(offset + 3) & 0xFF;
     return (b0) | (b1 << 8) | (b2 << 16) | (b3 << 24);
+  }
+
+  private long expectedLongLEFromGet(int offset) {
+    long result = 0L;
+    for (int i = 0; i < Bytes.SIZEOF_LONG; i++) {
+      long b = hashKey.get(offset + i) & 0xFFL;
+      result |= b << (8 * i);
+    }
+    return result;
   }
 }
