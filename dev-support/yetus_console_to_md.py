@@ -170,70 +170,102 @@ def process_first_table(lines: List[str], start_idx: int) -> Tuple[List[str], in
     return content, i
 
 
+SECTION_HEADERS = {
+    '[ERROR] Failures:': 'failures',
+    '[ERROR] Errors:': 'errors',
+    '[WARNING] Flakes:': 'flakes',
+}
+
+
 # TODO: Yetus should support this natively, but docker integration with job summaries doesn't seem
 #       to work out of the box.
-def extract_failed_tests_from_unit_files(output_dir: Path) -> List[Tuple[str, List[str]]]:
+def extract_test_results_from_unit_files(
+    output_dir: Path,
+) -> Tuple[List[Tuple[str, List[str]]], List[Tuple[str, List[str]]]]:
     """
-    Extract failed test names from patch-unit-*.txt files.
+    Extract failed and flaky test names from patch-unit-*.txt files.
 
-    Parses Maven surefire output to find lines like:
-    [ERROR] org.apache.hadoop.hbase.types.TestPBCell.testRoundTrip
+    Parses Maven surefire summary sections:
+      [ERROR] Failures:  - assertion failures
+      [ERROR] Errors:    - exceptions thrown during test execution
+      [WARNING] Flakes:  - tests that failed on some runs but passed on retry
 
     Returns:
-        List of (module_name, [failed_test_names]) tuples
+        Tuple of (failed_tests, flaky_tests) where each is
+        List of (module_name, [test_names]) tuples
     """
-    results = []
+    all_failed = []
+    all_flaky = []
 
     for unit_file in output_dir.glob('patch-unit-*.txt'):
         module_name = unit_file.stem.replace('patch-unit-', '')
         failed_tests = set()
+        flaky_tests = set()
 
         with open(unit_file, 'r') as f:
-            in_failures_section = False
+            current_section = None
             for line in f:
                 stripped = line.strip()
 
-                if stripped == '[ERROR] Failures:':
-                    in_failures_section = True
+                if stripped in SECTION_HEADERS:
+                    current_section = SECTION_HEADERS[stripped]
                     continue
 
-                if in_failures_section:
-                    if stripped.startswith('[ERROR]') and not stripped.startswith('[ERROR]   Run'):
-                        test_name = stripped.replace('[ERROR] ', '').strip()
+                if stripped.startswith('[ERROR] Tests run:'):
+                    current_section = None
+                    continue
+
+                if current_section is None:
+                    continue
+
+                if re.match(r'\[(ERROR|INFO)]\s+Run \d+:', stripped):
+                    continue
+                if stripped.startswith('[INFO]') or not stripped:
+                    continue
+
+                if current_section in ('failures', 'errors'):
+                    if stripped.startswith('[ERROR]'):
+                        test_name = stripped[len('[ERROR]'):].strip()
                         if test_name and '.' in test_name:
                             failed_tests.add(test_name)
-                    elif stripped.startswith('[INFO]') or not stripped:
-                        in_failures_section = False
+                elif current_section == 'flakes':
+                    if stripped.startswith('[WARNING]'):
+                        test_name = stripped[len('[WARNING]'):].strip()
+                        if test_name and '.' in test_name:
+                            flaky_tests.add(test_name)
 
         if failed_tests:
-            results.append((module_name, sorted(failed_tests)))
+            all_failed.append((module_name, sorted(failed_tests)))
+        if flaky_tests:
+            all_flaky.append((module_name, sorted(flaky_tests)))
 
-    return results
+    return all_failed, all_flaky
 
 
-def format_failed_tests_section(failed_tests: List[Tuple[str, List[str]]]) -> List[str]:
-    """
-    Format failed tests into markdown.
-
-    Args:
-        failed_tests: List of (module_name, [test_names]) tuples
-
-    Returns:
-        List of markdown lines
-    """
-    if not failed_tests:
+def _format_test_table(
+    heading: str, tests: List[Tuple[str, List[str]]], column_name: str
+) -> List[str]:
+    if not tests:
         return []
 
     content = []
-    content.append('\n## ❌ Failed Tests\n\n')
-    content.append('| Module | Failed Tests |\n')
+    content.append(f'\n## {heading}\n\n')
+    content.append(f'| Module | {column_name} |\n')
     content.append('|--------|-------------|\n')
 
-    for module_name, tests in failed_tests:
-        tests_str = ', '.join(tests)
-        content.append(f'| {module_name} | {tests_str} |\n')
+    for module_name, names in tests:
+        for name in names:
+            content.append(f'| {module_name} | {name} |\n')
 
     return content
+
+
+def format_failed_tests_section(failed_tests: List[Tuple[str, List[str]]]) -> List[str]:
+    return _format_test_table('❌ Failed Tests', failed_tests, 'Failed Tests')
+
+
+def format_flaky_tests_section(flaky_tests: List[Tuple[str, List[str]]]) -> List[str]:
+    return _format_test_table('⚠️ Flaky Tests (passed on retry)', flaky_tests, 'Flaky Tests')
 
 
 def process_second_table(lines: List[str], start_idx: int) -> Tuple[List[str], int]:
@@ -306,8 +338,9 @@ def convert_console_to_markdown(input_file: str, output_file: Optional[str] = No
 
             # Extract and add failed tests from patch-unit-*.txt files
             if not added_failed_tests:
-                failed_tests = extract_failed_tests_from_unit_files(output_dir)
+                failed_tests, flaky_tests = extract_test_results_from_unit_files(output_dir)
                 content.extend(format_failed_tests_section(failed_tests))
+                content.extend(format_flaky_tests_section(flaky_tests))
                 added_failed_tests = True
             continue
 
