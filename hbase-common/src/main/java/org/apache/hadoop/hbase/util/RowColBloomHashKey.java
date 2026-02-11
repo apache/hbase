@@ -29,6 +29,10 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class RowColBloomHashKey extends CellHashKey {
+  // last 8 bytes (LATEST_TS[1..7] + MAX_TYPE) as LE long
+  private static final long LAST_8_BYTES = -1L;
+  private static final long LATEST_TS_LE = LittleEndianBytes.toLong(LATEST_TS, 0);
+
   private final int rowLength;
   private final int qualLength;
   private final int totalLength;
@@ -78,6 +82,36 @@ public class RowColBloomHashKey extends CellHashKey {
     }
 
     return (int) assembleCrossingLE(offset, Bytes.SIZEOF_INT);
+  }
+
+  @Override
+  public long getLongLE(int offset) {
+    // Handle fast path that can return the row key as long directly
+    // Compute rowkey section range.
+    final int rowEnd = KeyValue.ROW_LENGTH_SIZE + rowLength;
+    if (offset >= KeyValue.ROW_LENGTH_SIZE && offset + Bytes.SIZEOF_LONG <= rowEnd) {
+      return LittleEndianBytes.getRowAsLong(t, offset - KeyValue.ROW_LENGTH_SIZE);
+    }
+
+    // Compute qualifier section range.
+    final int qualStart = rowEnd + KeyValue.FAMILY_LENGTH_SIZE;
+    final int qualEnd = qualStart + qualLength;
+    if (offset >= qualStart && offset + Bytes.SIZEOF_LONG <= qualEnd) {
+      return LittleEndianBytes.getQualifierAsLong(t, offset - qualStart);
+    }
+
+    // Compute timestamp section range.
+    if (offset == qualEnd) {
+      return LATEST_TS_LE;
+    }
+
+    // Optimization: when the offset points to the last 8 bytes,
+    // we can return the precomputed trailing long value directly.
+    if (offset + Bytes.SIZEOF_LONG == totalLength) {
+      return LAST_8_BYTES;
+    }
+
+    return assembleCrossingLE(offset, Bytes.SIZEOF_LONG);
   }
 
   private long assembleCrossingLE(int offset, int wordBytes) {
