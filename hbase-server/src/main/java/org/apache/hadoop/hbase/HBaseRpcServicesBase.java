@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.ClientMetaCoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
@@ -53,6 +54,7 @@ import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.NoopAccessChecker;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
+import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.OOMEChecker;
 import org.apache.hadoop.hbase.util.ReservoirSample;
@@ -389,7 +391,13 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
       requirePermission("updateConfiguration", Permission.Action.ADMIN);
       this.server.updateConfiguration();
 
-      clientMetaCoprocessorHost = new ClientMetaCoprocessorHost(getConfiguration());
+      if (
+        CoprocessorConfigurationUtil.checkConfigurationChange(clientMetaCoprocessorHost,
+          getConfiguration(), CoprocessorHost.CLIENT_META_COPROCESSOR_CONF_KEY)
+      ) {
+        LOG.info("Updating client meta coprocessors, because the configuration has changed.");
+        clientMetaCoprocessorHost = new ClientMetaCoprocessorHost(getConfiguration());
+      }
     } catch (Exception e) {
       throw new ServiceException(e);
     }

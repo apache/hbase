@@ -3021,12 +3021,15 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       .forEach(sn -> procedureExecutor.submitProcedure(new ReloadQuotasProcedure(sn)));
   }
 
-  public ClusterMetrics getClusterMetricsWithoutCoprocessor() throws InterruptedIOException {
+  public ClusterMetrics getClusterMetricsWithoutCoprocessor() {
     return getClusterMetricsWithoutCoprocessor(EnumSet.allOf(Option.class));
   }
 
-  public ClusterMetrics getClusterMetricsWithoutCoprocessor(EnumSet<Option> options)
-    throws InterruptedIOException {
+  public ClusterMetrics getClusterMetricsWithoutCoprocessor(EnumSet<Option> options) {
+    return getClusterMetricsBuilder(options).build();
+  }
+
+  private ClusterMetricsBuilder getClusterMetricsBuilder(EnumSet<Option> options) {
     ClusterMetricsBuilder builder = ClusterMetricsBuilder.newBuilder();
     // given that hbase1 can't submit the request with Option,
     // we return all information to client if the list of Option is empty.
@@ -3050,7 +3053,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           builder.setMasterName(getServerName());
           break;
         case BACKUP_MASTERS:
-          builder.setBackerMasterNames(getBackupMasters());
+          builder.setBackupMasterNames(getBackupMasters());
           break;
         case TASKS: {
           // Master tasks
@@ -3151,7 +3154,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       builder.setLiveServerMetrics(serverMetricsMap);
     }
 
-    return builder.build();
+    return builder;
   }
 
   private List<ServerName> getUnknownServers() {
@@ -3183,11 +3186,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (cpHost != null) {
       cpHost.preGetClusterMetrics();
     }
-    ClusterMetrics status = getClusterMetricsWithoutCoprocessor(options);
+    ClusterMetricsBuilder metricsBuilder = getClusterMetricsBuilder(options);
     if (cpHost != null) {
-      cpHost.postGetClusterMetrics(status);
+      cpHost.postGetClusterMetrics(metricsBuilder);
     }
-    return status;
+    return metricsBuilder.build();
   }
 
   /** Returns info port of active master or 0 if any exception occurs. */
