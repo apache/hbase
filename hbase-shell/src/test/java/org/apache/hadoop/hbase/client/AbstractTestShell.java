@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.jruby.embed.ScriptingContainer;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public abstract class AbstractTestShell implements RubyShellTest {
   protected final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -43,7 +43,7 @@ public abstract class AbstractTestShell implements RubyShellTest {
     return "**/*_test.rb";
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     RubyShellTest.setUpConfig(this);
 
@@ -55,7 +55,7 @@ public abstract class AbstractTestShell implements RubyShellTest {
     RubyShellTest.doTestSetup(this);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
