@@ -2336,6 +2336,23 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   @Override
   public BulkLoadHFileResponse bulkLoadHFile(final RpcController controller,
     final BulkLoadHFileRequest request) throws ServiceException {
+    HRegion region;
+    try {
+      region = getRegion(request.getRegion());
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+
+    if (!region.isRowCacheEnabled()) {
+      return bulkLoadHFileInternal(request);
+    }
+
+    // TODO: implement row cache logic for bulk load
+    return bulkLoadHFileInternal(request);
+  }
+
+  BulkLoadHFileResponse bulkLoadHFileInternal(final BulkLoadHFileRequest request)
+    throws ServiceException {
     long start = EnvironmentEdgeManager.currentTime();
     List<String> clusterIds = new ArrayList<>(request.getClusterIdsList());
     if (clusterIds.contains(this.server.getClusterId())) {
@@ -2592,8 +2609,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     RegionScannerImpl scanner = null;
     long blockBytesScannedBefore = context.getBlockBytesScanned();
     try {
-      scanner = region.getScanner(scan);
-      scanner.next(results);
+      scanner = region.getScannerWithResults(get, scan, results);
     } finally {
       if (scanner != null) {
         if (closeCallBack == null) {

@@ -93,25 +93,29 @@ public class MemorySizeUtil {
     }
     float memStoreFraction = getGlobalMemStoreHeapPercent(conf, false);
     float blockCacheFraction = getBlockCacheHeapPercent(conf);
+    float rowCacheFraction =
+      conf.getFloat(HConstants.ROW_CACHE_SIZE_KEY, HConstants.ROW_CACHE_SIZE_DEFAULT);
     float minFreeHeapFraction = getRegionServerMinFreeHeapFraction(conf);
 
     int memStorePercent = (int) (memStoreFraction * 100);
     int blockCachePercent = (int) (blockCacheFraction * 100);
+    int rowCachePercent = (int) (rowCacheFraction * 100);
     int minFreeHeapPercent = (int) (minFreeHeapFraction * 100);
-    int usedPercent = memStorePercent + blockCachePercent;
+    int usedPercent = memStorePercent + blockCachePercent + rowCachePercent;
     int maxAllowedUsed = 100 - minFreeHeapPercent;
 
     if (usedPercent > maxAllowedUsed) {
       throw new RuntimeException(String.format(
         "RegionServer heap memory allocation is invalid: total memory usage exceeds 100%% "
-          + "(memStore + blockCache + requiredFreeHeap). "
-          + "Check the following configuration values:%n" + "  - %s = %.2f%n" + "  - %s = %s%n"
-          + "  - %s = %s%n" + "  - %s = %s",
+          + "(memStore + blockCache + rowCache + requiredFreeHeap). "
+          + "Check the following configuration values:" + "%n  - %s = %.2f" + "%n  - %s = %s"
+          + "%n  - %s = %s" + "%n  - %s = %s" + "%n  - %s = %s",
         MEMSTORE_SIZE_KEY, memStoreFraction, HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY,
         conf.get(HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY),
         HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, conf.get(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY),
         HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY,
-        conf.get(HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY)));
+        conf.get(HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY), HConstants.ROW_CACHE_SIZE_KEY,
+        conf.get(HConstants.ROW_CACHE_SIZE_KEY)));
     }
   }
 
@@ -312,5 +316,16 @@ public class MemorySizeUtil {
         + "Configure 'hbase.bucketcache.size' with > 1 value");
     }
     return (long) (bucketCacheSize * 1024 * 1024);
+  }
+
+  public static long getRowCacheSize(Configuration conf) {
+    long max = -1L;
+    final MemoryUsage usage = safeGetHeapMemoryUsage();
+    if (usage != null) {
+      max = usage.getMax();
+    }
+    float globalRowCachePercent =
+      conf.getFloat(HConstants.ROW_CACHE_SIZE_KEY, HConstants.ROW_CACHE_SIZE_DEFAULT);
+    return ((long) (max * globalRowCachePercent));
   }
 }

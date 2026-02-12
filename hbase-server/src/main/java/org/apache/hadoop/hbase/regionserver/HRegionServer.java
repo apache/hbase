@@ -499,6 +499,11 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   private PrefetchExecutorNotifier prefetchExecutorNotifier;
 
   /**
+   * The row cache service
+   */
+  private final RowCache rowCache = new RowCache(getConfiguration());
+
+  /**
    * Starts a HRegionServer at the default location.
    * <p/>
    * Don't start any services or managers in here in the Constructor. Defer till after we register
@@ -3717,5 +3722,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   @Override
   public RegionReplicationBufferManager getRegionReplicationBufferManager() {
     return regionReplicationBufferManager;
+  }
+
+  @Override
+  public RowCache getRowCache() {
+    return this.rowCache;
   }
 }
