@@ -376,6 +376,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   final LongAdder flushesQueued = new LongAdder();
 
   private BlockCache blockCache;
+  private RowCacheService rowCacheService;
   private MobFileCache mobFileCache;
   private final WAL wal;
   private final HRegionFileSystem fs;
@@ -858,6 +859,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (this.rsServices != null) {
       this.blockCache = rsServices.getBlockCache().orElse(null);
       this.mobFileCache = rsServices.getMobFileCache().orElse(null);
+      this.rowCacheService = rsServices.getRowCacheService();
     }
     this.regionServicesForStores = new RegionServicesForStores(this, rsServices);
 
@@ -3259,19 +3261,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   RegionScannerImpl getScannerWithResults(Get get, Scan scan, List<Cell> results)
     throws IOException {
-    if (!getRowCacheService().canCacheRow(get, this)) {
+    if (!rowCacheService.canCacheRow(get, this)) {
       return getScannerWithResults(scan, results);
     }
 
     // Try get from row cache
     RowCacheKey key = new RowCacheKey(this, get.getRow());
-    if (getRowCacheService().tryGetFromCache(this, key, get, results)) {
+    if (rowCacheService.tryGetFromCache(this, key, get, results)) {
       // Cache is hit, and then no scanner is created
       return null;
     }
 
     RegionScannerImpl scanner = getScannerWithResults(scan, results);
-    getRowCacheService().populateCache(this, results, key);
+    rowCacheService.populateCache(this, results, key);
     return scanner;
   }
 
@@ -4822,7 +4824,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   OperationStatus[] batchMutate(Mutation[] mutations, boolean atomic) throws IOException {
     OperationStatus[] operationStatuses =
-      getRowCacheService().mutateWithRowCacheBarrier(this, Arrays.asList(mutations),
+      rowCacheService.mutateWithRowCacheBarrier(this, Arrays.asList(mutations),
         () -> this.batchMutate(mutations, atomic, HConstants.NO_NONCE, HConstants.NO_NONCE));
     return TraceUtil.trace(() -> operationStatuses, () -> createRegionSpan("Region.batchMutate"));
   }
@@ -5109,7 +5111,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   public CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate, long nonceGroup,
     long nonce) throws IOException {
-    CheckAndMutateResult checkAndMutateResult = getRowCacheService().mutateWithRowCacheBarrier(this,
+    CheckAndMutateResult checkAndMutateResult = rowCacheService.mutateWithRowCacheBarrier(this,
       checkAndMutate.getRow(), () -> this.checkAndMutate(checkAndMutate, nonceGroup, nonce));
     return TraceUtil.trace(() -> checkAndMutateResult,
       () -> createRegionSpan("Region.checkAndMutate"));
@@ -5310,7 +5312,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private OperationStatus mutate(Mutation mutation, boolean atomic, long nonceGroup, long nonce)
     throws IOException {
-    return getRowCacheService().mutateWithRowCacheBarrier(this, mutation.getRow(),
+    return rowCacheService.mutateWithRowCacheBarrier(this, mutation.getRow(),
       () -> this.mutateInternal(mutation, atomic, nonceGroup, nonce));
   }
 
@@ -9051,9 +9053,5 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       allowedOnPath = ".*/src/test/.*")
   boolean isReadsEnabled() {
     return this.writestate.readsEnabled;
-  }
-
-  private RowCacheService getRowCacheService() {
-    return getRegionServerServices().getRowCacheService();
   }
 }
