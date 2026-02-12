@@ -17,62 +17,55 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Exchanger;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.NoopProcedure;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestForceUpdateProcedure {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestForceUpdateProcedure.class);
-
-  private static HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
+  private static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
   private static WALProcedureStore STORE;
 
   private static ProcedureExecutor<Void> EXEC;
 
-  private static Exchanger<Boolean> EXCHANGER = new Exchanger<>();
+  private static final Exchanger<Boolean> EXCHANGER = new Exchanger<>();
 
-  private static int WAL_COUNT = 5;
+  private static final int WAL_COUNT = 5;
 
-  @Rule
-  public final TestName name = new TestName();
+  private String methodName;
 
   private void createStoreAndExecutor() throws IOException {
     UTIL.getConfiguration().setInt(CompletedProcedureCleaner.CLEANER_INTERVAL_CONF_KEY, 1000);
-    Path logDir = UTIL.getDataTestDir(name.getMethodName());
+    Path logDir = UTIL.getDataTestDir(methodName);
     STORE = ProcedureTestingUtility.createWalStore(UTIL.getConfiguration(), logDir);
     STORE.start(1);
-    EXEC = new ProcedureExecutor<Void>(UTIL.getConfiguration(), null, STORE);
+    EXEC = new ProcedureExecutor<>(UTIL.getConfiguration(), null, STORE);
     ProcedureTestingUtility.initAndStartWorkers(EXEC, 1, true);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws IOException {
     UTIL.getConfiguration().setInt(WALProcedureStore.WAL_COUNT_WARN_THRESHOLD_CONF_KEY, WAL_COUNT);
   }
@@ -84,17 +77,18 @@ public class TestForceUpdateProcedure {
     STORE = null;
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws IOException {
     UTIL.cleanupTestDir();
   }
 
-  @Before
-  public void setUp() throws IOException {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
+    methodName = testInfo.getTestMethod().get().getName();
     createStoreAndExecutor();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     stopStoreAndExecutor();
   }
