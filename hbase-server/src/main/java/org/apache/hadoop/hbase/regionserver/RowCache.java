@@ -102,7 +102,7 @@ public class RowCache {
     return false;
   }
 
-  boolean tryGetFromCache(HRegion region, RowCacheKey key, Get get, List<Cell> results) {
+  boolean tryGetFromCache(RowCacheKey key, Get get, List<Cell> results) {
     RowCells row = rowCacheStrategy.getRow(key, get.getCacheBlocks());
 
     if (row == null) {
@@ -114,7 +114,7 @@ public class RowCache {
     return true;
   }
 
-  void populateCache(HRegion region, List<Cell> results, RowCacheKey key) {
+  void populateCache(List<Cell> results, RowCacheKey key) {
     // TODO: implement with barrier to avoid cache read during mutation
     try {
       rowCacheStrategy.cacheRow(key, new RowCells(results));

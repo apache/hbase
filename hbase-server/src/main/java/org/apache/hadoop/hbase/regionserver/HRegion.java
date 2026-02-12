@@ -3267,13 +3267,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     // Try get from row cache
     RowCacheKey key = new RowCacheKey(this, get.getRow());
-    if (rowCache.tryGetFromCache(this, key, get, results)) {
+    if (rowCache.tryGetFromCache(key, get, results)) {
       // Cache is hit, and then no scanner is created
       return null;
     }
 
     RegionScannerImpl scanner = getScannerWithResults(scan, results);
-    rowCache.populateCache(this, results, key);
+    rowCache.populateCache(results, key);
     return scanner;
   }
 
