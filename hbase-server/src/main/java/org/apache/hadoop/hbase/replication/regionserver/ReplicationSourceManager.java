@@ -1207,7 +1207,7 @@ public class ReplicationSourceManager {
   boolean checkBufferQuota(String peerId) {
     // try not to go over total quota
     if (totalBufferUsed.get() > totalBufferLimit) {
-      LOG.warn("peer={}, can't read more edits from WAL as buffer usage {}B exceeds limit {}B",
+      LOG.debug("peer={}, can't read more edits from WAL as buffer usage {}B exceeds limit {}B",
         peerId, totalBufferUsed.get(), totalBufferLimit);
       return false;
     }
