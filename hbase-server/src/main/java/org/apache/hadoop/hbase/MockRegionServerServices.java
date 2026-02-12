@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.regionserver.MetricsRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.ReplicationSourceService;
+import org.apache.hadoop.hbase.regionserver.RowCache;
 import org.apache.hadoop.hbase.regionserver.SecureBulkLoadManager;
 import org.apache.hadoop.hbase.regionserver.ServerNonceManager;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
@@ -384,6 +385,11 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public RegionReplicationBufferManager getRegionReplicationBufferManager() {
+    return null;
+  }
+
+  @Override
+  public RowCache getRowCache() {
     return null;
   }
 }

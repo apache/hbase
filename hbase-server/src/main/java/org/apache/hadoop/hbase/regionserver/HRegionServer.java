@@ -501,7 +501,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   /**
    * The row cache service
    */
-  private final RowCacheService rowCacheService = new RowCacheService(getConfiguration());
+  private final RowCache rowCache = new RowCache(getConfiguration());
 
   /**
    * Starts a HRegionServer at the default location.
@@ -3725,7 +3725,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   }
 
   @Override
-  public RowCacheService getRowCacheService() {
-    return this.rowCacheService;
+  public RowCache getRowCache() {
+    return this.rowCache;
   }
 }

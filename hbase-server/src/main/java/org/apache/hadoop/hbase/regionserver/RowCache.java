@@ -17,72 +17,109 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Mutation;
+
 /**
- * Interface for caching rows retrieved by Get operations.
+ * Facade for row-level caching in the RegionServer.
+ *
+ * <p>{@code RowCache} coordinates cache access for Get operations and
+ * enforces cache consistency during mutations. It delegates actual
+ * storage and eviction policy decisions (e.g., LRU, LFU) to a
+ * {@link RowCacheStrategy} implementation.</p>
+ *
+ * <p>This class is responsible for:
+ * <ul>
+ *   <li>Determining whether row cache is enabled for a region</li>
+ *   <li>Attempting cache lookups before falling back to the normal read path</li>
+ *   <li>Populating the cache after successful reads</li>
+ *   <li>Evicting affected rows on mutations to maintain correctness</li>
+ * </ul>
+ *
+ * <p>{@code RowCache} does not implement caching policy or storage directly;
+ * those concerns are encapsulated by {@code RowCacheStrategy}.</p>
  */
 @org.apache.yetus.audience.InterfaceAudience.Private
-public interface RowCache {
-  /**
-   * Cache the specified row.
-   * @param key   the key of the row to cache
-   * @param value the cells of the row to cache
-   */
-  void cacheRow(RowCacheKey key, RowCells value);
+public class RowCache {
+  private final boolean enabledByConf;
+  private final RowCacheStrategy rowCacheStrategy;
 
-  /**
-   * Evict the specified row.
-   * @param key the key of the row to evict
-   */
-  void evictRow(RowCacheKey key);
+  @FunctionalInterface
+  interface RowOperation<R> {
+    R execute() throws IOException;
+  }
 
-  /**
-   * Evict all rows belonging to the specified region. This is heavy operation as it iterates the
-   * entire RowCache key set.
-   * @param region the region whose rows should be evicted
-   */
-  void evictRowsByRegion(HRegion region);
+  <R> R execute(RowOperation<R> operation) throws IOException {
+    return operation.execute();
+  }
 
-  /**
-   * Get the number of rows in the cache.
-   * @return the number of rows in the cache
-   */
-  long getCount();
+  RowCache(Configuration conf) {
+    enabledByConf =
+      conf.getFloat(HConstants.ROW_CACHE_SIZE_KEY, HConstants.ROW_CACHE_SIZE_DEFAULT) > 0;
+    // TODO: implement row cache
+    rowCacheStrategy = null;
+  }
 
-  /**
-   * Get the number of rows evicted from the cache.
-   * @return the number of rows evicted from the cache
-   */
-  long getEvictedRowCount();
+  <R> R mutateWithRowCacheBarrier(HRegion region, byte[] row, RowOperation<R> operation)
+    throws IOException {
+    if (!region.isRowCacheEnabled()) {
+      return operation.execute();
+    }
 
-  /**
-   * Get the hit count.
-   * @return the hit count
-   */
-  long getHitCount();
+    RowCacheKey key = new RowCacheKey(region, row);
+    // TODO: implement mutate with row cache barrier logic
+    evictRow(key);
+    return execute(operation);
+  }
 
-  /**
-   * Get the maximum size of the cache in bytes.
-   * @return the maximum size of the cache in bytes
-   */
-  long getMaxSize();
+  <R> R mutateWithRowCacheBarrier(HRegion region, List<Mutation> mutations,
+    RowOperation<R> operation) throws IOException {
+    if (!region.isRowCacheEnabled()) {
+      return operation.execute();
+    }
 
-  /**
-   * Get the miss count.
-   * @return the miss count
-   */
-  long getMissCount();
+    // TODO: implement mutate with row cache barrier logic
+    Set<RowCacheKey> rowCacheKeys = new HashSet<>(mutations.size());
+    mutations.forEach(mutation -> rowCacheKeys.add(new RowCacheKey(region, mutation.getRow())));
+    rowCacheKeys.forEach(this::evictRow);
 
-  /**
-   * Get the specified row from the cache.
-   * @param key     the key of the row to get
-   * @param caching whether caching is enabled for this request
-   * @return the cells of the row, or null if not found or caching is disabled
-   */
-  RowCells getRow(RowCacheKey key, boolean caching);
+    return execute(operation);
+  }
 
-  /**
-   * Get the current size of the cache in bytes.
-   * @return the current size of the cache in bytes
-   */
-  long getSize();
+  void evictRow(RowCacheKey key) {
+    rowCacheStrategy.evictRow(key);
+  }
+
+  boolean canCacheRow(Get get, Region region) {
+    // TODO: implement logic to determine if the row can be cached
+    return false;
+  }
+
+  boolean tryGetFromCache(HRegion region, RowCacheKey key, Get get, List<Cell> results) {
+    RowCells row = rowCacheStrategy.getRow(key, get.getCacheBlocks());
+
+    if (row == null) {
+      return false;
+    }
+
+    results.addAll(row.getCells());
+    // TODO: implement update of metrics
+    return true;
+  }
+
+  void populateCache(HRegion region, List<Cell> results, RowCacheKey key) {
+    // TODO: implement with barrier to avoid cache read during mutation
+    try {
+      rowCacheStrategy.cacheRow(key, new RowCells(results));
+    } catch (CloneNotSupportedException ignored) {
+      // Not able to cache row cells, ignore
+    }
+  }
 }

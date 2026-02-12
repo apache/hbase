@@ -305,5 +305,5 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
   @Override
   List<HRegion> getRegions();
 
-  RowCacheService getRowCacheService();
+  RowCache getRowCache();
 }

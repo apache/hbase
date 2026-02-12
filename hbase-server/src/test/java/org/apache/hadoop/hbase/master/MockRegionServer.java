@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.regionserver.MetricsRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.ReplicationSourceService;
+import org.apache.hadoop.hbase.regionserver.RowCache;
 import org.apache.hadoop.hbase.regionserver.SecureBulkLoadManager;
 import org.apache.hadoop.hbase.regionserver.ServerNonceManager;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
@@ -755,6 +756,11 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   @Override
   public ReplicateWALEntryResponse replicateToReplica(RpcController controller,
     ReplicateWALEntryRequest request) throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public RowCache getRowCache() {
     return null;
   }
 }
