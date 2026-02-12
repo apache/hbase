@@ -943,10 +943,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     minBlockSizeBytes = Arrays.stream(this.htableDescriptor.getColumnFamilies())
       .mapToInt(ColumnFamilyDescriptor::getBlocksize).min().orElse(HConstants.DEFAULT_BLOCKSIZE);
 
-    this.isRowCacheEnabled = determineRowCacheEnabled();
+    this.isRowCacheEnabled = checkRowCacheConfig();
   }
 
-  boolean determineRowCacheEnabled() {
+  private boolean checkRowCacheConfig() {
     Boolean fromDescriptor = htableDescriptor.getRowCacheEnabled();
     // The setting from TableDescriptor has higher priority than the global configuration
     return fromDescriptor != null
