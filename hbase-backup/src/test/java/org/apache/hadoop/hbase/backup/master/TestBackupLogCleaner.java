@@ -300,7 +300,7 @@ public class TestBackupLogCleaner extends TestBackupBase {
     Path oldWAL = new Path("/hbase/oldWALs/server1%2C60020%2C12345.500000");
     String host = BackupUtils.parseHostNameFromLogFile(oldWAL);
     BackupBoundaries boundaries = BackupBoundaries.builder(0L)
-      .addBackupTimestamps(host, backupStartCode, backupStartCode).build();
+      .addBackupTimestamps("backup1", host, backupStartCode, backupStartCode).build();
 
     assertTrue("WAL older than backup should be deletable",
       BackupLogCleaner.canDeleteFile(boundaries, oldWAL));
@@ -332,6 +332,31 @@ public class TestBackupLogCleaner extends TestBackupBase {
     Path masterPath = new Path(
       "/hbase/MasterData/oldWALs/hmaster%2C60000%2C1716224062663.1716247552189$masterlocalwal$");
     assertTrue(BackupLogCleaner.canDeleteFile(empty, masterPath));
+  }
+
+  @Test
+  public void testBackupBoundariesProtectsWALsNeededByAnyRoot() {
+    long r1BoundaryTs = 2000L;
+    long r2StartCode = 1000L;
+
+    Path walForHostH = new Path("/hbase/oldWALs/server1%2C60020%2C12345.1500");
+    String hostH = BackupUtils.parseHostNameFromLogFile(walForHostH);
+
+    Path walForOtherHost = new Path("/hbase/oldWALs/otherhost%2C60020%2C99999.500");
+    String otherHost = BackupUtils.parseHostNameFromLogFile(walForOtherHost);
+
+    BackupBoundaries boundaries = BackupBoundaries.builder(0L)
+      .addBackupTimestamps("backup-B1", hostH, r1BoundaryTs, r1BoundaryTs)
+      .addBackupTimestamps("backup-B2", otherHost, r2StartCode, r2StartCode).build();
+
+    assertFalse(
+      "WAL for hostH at ts=1500 must NOT be deletable: R2 has not backed up hostH "
+        + "and its startCode (" + r2StartCode + ") is lower than the WAL ts",
+      BackupLogCleaner.canDeleteFile(boundaries, walForHostH));
+
+    Path walBeforeStartCode = new Path("/hbase/oldWALs/server1%2C60020%2C12345.500");
+    assertTrue("WAL for hostH at ts=500 should be deletable: before all roots' startCode",
+      BackupLogCleaner.canDeleteFile(boundaries, walBeforeStartCode));
   }
 
   private Set<FileStatus> mergeAsSet(Collection<FileStatus> toCopy, Collection<FileStatus> toAdd) {

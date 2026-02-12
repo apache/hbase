@@ -36,21 +36,20 @@ import org.slf4j.LoggerFactory;
 public class BackupBoundaries {
   private static final Logger LOG = LoggerFactory.getLogger(BackupBoundaries.class);
   private static final BackupBoundaries EMPTY_BOUNDARIES =
-    new BackupBoundaries(Collections.emptyMap(), Long.MAX_VALUE);
+    new BackupBoundaries(Collections.emptyMap());
 
-  // This map tracks, for every RegionServer, the least recent (= oldest / lowest timestamp)
-  // inclusion in any backup. In other words, it is the timestamp boundary up to which all backup
-  // roots have included the WAL in their backup.
-  private final Map<Address, Long> boundaries;
+  // Tracks WAL cleanup boundaries separately for each backup root to ensure WALs are only deleted
+  // when ALL backup roots no longer need them. The map key is the backup ID of the most recent
+  // backup from each backup root. Each BoundaryInfo contains: (1) a map of WAL timestamp
+  // boundaries per RegionServer (the oldest WAL timestamp included in that backup root's most
+  // recent backup), and (2) an oldestStartCode used as a fallback boundary for RegionServers not
+  // explicitly tracked (e.g., servers that joined after the backup began). A WAL file can only be
+  // deleted if it's older than the boundary for ALL backup roots, protecting WALs needed by any
+  // backup root even when other roots have already backed up that host at a later timestamp.
+  private final Map<String, BoundaryInfo> boundaries;
 
-  // The minimum WAL roll timestamp from the most recent backup of each backup root, used as a
-  // fallback cleanup boundary for RegionServers without explicit backup boundaries (e.g., servers
-  // that joined after backups began)
-  private final long oldestStartCode;
-
-  private BackupBoundaries(Map<Address, Long> boundaries, long oldestStartCode) {
+  private BackupBoundaries(Map<String, BoundaryInfo> boundaries) {
     this.boundaries = boundaries;
-    this.oldestStartCode = oldestStartCode;
   }
 
   public boolean isDeletable(Path walLogPath) {
@@ -67,32 +66,19 @@ public class BackupBoundaries {
       Address address = Address.fromString(hostname);
       long pathTs = AbstractFSWALProvider.getTimestamp(walLogPath.getName());
 
-      if (!boundaries.containsKey(address)) {
-        boolean isDeletable = pathTs <= oldestStartCode;
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-            "Boundary for {} not found. isDeletable = {} based on oldestStartCode = {} and WAL ts of {}",
-            walLogPath, isDeletable, oldestStartCode, pathTs);
+      for (Map.Entry<String, BoundaryInfo> entry : boundaries.entrySet()) {
+        String backupId = entry.getKey();
+        BoundaryInfo boundary = entry.getValue();
+        DeleteStatus status = boundary.getStatus(address, pathTs);
+        if (!status.isDeletable()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Backup {} preventing deletion of {} with ts of {} due to {}", backupId,
+              walLogPath, pathTs, status);
+          }
+          return false;
         }
-        return isDeletable;
       }
-
-      long backupTs = boundaries.get(address);
-      if (pathTs <= backupTs) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-            "WAL cleanup time-boundary found for server {}: {}. Ok to delete older file: {}",
-            address.getHostName(), pathTs, walLogPath);
-        }
-        return true;
-      }
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("WAL cleanup time-boundary found for server {}: {}. Keeping younger file: {}",
-          address.getHostName(), backupTs, walLogPath);
-      }
-
-      return false;
+      return true;
     } catch (Exception e) {
       LOG.warn("Error occurred while filtering file: {}. Ignoring cleanup of this log", walLogPath,
         e);
@@ -100,12 +86,8 @@ public class BackupBoundaries {
     }
   }
 
-  public Map<Address, Long> getBoundaries() {
+  public Map<String, BoundaryInfo> getBoundaries() {
     return boundaries;
-  }
-
-  public long getOldestStartCode() {
-    return oldestStartCode;
   }
 
   public static BackupBoundariesBuilder builder(long tsCleanupBuffer) {
@@ -113,27 +95,18 @@ public class BackupBoundaries {
   }
 
   public static class BackupBoundariesBuilder {
-    private final Map<Address, Long> boundaries = new HashMap<>();
+    private final Map<String, BoundaryInfo> boundaries = new HashMap<>();
     private final long tsCleanupBuffer;
-
-    private long oldestStartCode = Long.MAX_VALUE;
 
     private BackupBoundariesBuilder(long tsCleanupBuffer) {
       this.tsCleanupBuffer = tsCleanupBuffer;
     }
 
-    public BackupBoundariesBuilder addBackupTimestamps(String host, long hostLogRollTs,
-      long backupStartCode) {
+    public BackupBoundariesBuilder addBackupTimestamps(String backupId, String host,
+      long hostLogRollTs, long backupStartCode) {
+      BoundaryInfo boundary = boundaries.computeIfAbsent(backupId, ignore -> new BoundaryInfo());
       Address address = Address.fromString(host);
-      Long storedTs = boundaries.get(address);
-      if (storedTs == null || hostLogRollTs < storedTs) {
-        boundaries.put(address, hostLogRollTs);
-      }
-
-      if (oldestStartCode > backupStartCode) {
-        oldestStartCode = backupStartCode;
-      }
-
+      boundary.add(address, hostLogRollTs, backupStartCode);
       return this;
     }
 
@@ -142,8 +115,63 @@ public class BackupBoundaries {
         return EMPTY_BOUNDARIES;
       }
 
-      oldestStartCode -= tsCleanupBuffer;
-      return new BackupBoundaries(boundaries, oldestStartCode);
+      for (BoundaryInfo boundary : boundaries.values()) {
+        boundary.oldestStartCode -= tsCleanupBuffer;
+      }
+
+      return new BackupBoundaries(boundaries);
+    }
+  }
+
+  public static class BoundaryInfo {
+    private final Map<Address, Long> boundaries = new HashMap<>();
+    private long oldestStartCode = Long.MAX_VALUE;
+
+    public Map<Address, Long> getBoundaries() {
+      return boundaries;
+    }
+
+    public long getOldestStartCode() {
+      return oldestStartCode;
+    }
+
+    public void add(Address address, long hostLogRollTs, long backupStartCode) {
+      Long storedTs = boundaries.get(address);
+      if (storedTs == null || hostLogRollTs < storedTs) {
+        boundaries.put(address, hostLogRollTs);
+      }
+
+      if (oldestStartCode > backupStartCode) {
+        oldestStartCode = backupStartCode;
+      }
+    }
+
+    private DeleteStatus getStatus(Address address, long hostLogRollTs) {
+      Long storedTs = boundaries.get(address);
+
+      if (storedTs == null) {
+        return hostLogRollTs <= oldestStartCode
+          ? DeleteStatus.OK
+          : DeleteStatus.NOT_DELETABLE_START_CODE;
+      }
+
+      return hostLogRollTs <= storedTs ? DeleteStatus.OK : DeleteStatus.NOT_DELETABLE_BOUNDARY;
+    }
+  }
+
+  private enum DeleteStatus {
+    OK(true),
+    NOT_DELETABLE_START_CODE(false),
+    NOT_DELETABLE_BOUNDARY(false);
+
+    private final boolean deletable;
+
+    DeleteStatus(boolean deletable) {
+      this.deletable = deletable;
+    }
+
+    public boolean isDeletable() {
+      return deletable;
     }
   }
 }
