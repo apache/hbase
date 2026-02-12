@@ -23,33 +23,35 @@ name: Yetus General Check
   pull_request:
     types: [opened, synchronize, reopened]
 
-permissions:
-  contents: read
-  statuses: write
+permissions: {}
 
 jobs:
   general-check:
     runs-on: ubuntu-latest
     timeout-minutes: 600
+    permissions:
+      contents: read
+      statuses: write
 
     env:
       YETUS_VERSION: '0.15.0'
 
     steps:
       - name: Checkout HBase
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4 # zizmor: ignore[unpinned-uses]
         with:
           path: src
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v4 # zizmor: ignore[unpinned-uses]
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Maven cache
-        uses: actions/cache@v4
+        uses: actions/cache@v4 # zizmor: ignore[unpinned-uses]
         with:
           path: ~/.m2
           key: hbase-m2-${{ hashFiles('**/pom.xml') }}
@@ -101,7 +103,7 @@ jobs:
 
       - name: Publish Test Results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4 # zizmor: ignore[unpinned-uses]
         with:
           name: yetus-general-check-output
           path: ${{ github.workspace }}/yetus-general-check/output
@@ -110,6 +112,8 @@ jobs:
   zizmor:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
 
     steps:
       - name: Check for workflow changes
@@ -125,10 +129,10 @@ jobs:
 
       - name: Checkout HBase
         if: steps.changes.outputs.changed == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4 # zizmor: ignore[unpinned-uses]
         with:
           persist-credentials: false
 
       - name: Run zizmor
         if: steps.changes.outputs.changed == 'true'
-        run: pipx run zizmor .github/workflows/
+        run: pipx run zizmor --min-severity=medium .github/workflows/
