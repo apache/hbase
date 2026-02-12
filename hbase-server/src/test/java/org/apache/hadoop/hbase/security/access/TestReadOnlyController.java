@@ -45,8 +45,8 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -65,7 +65,7 @@ public class TestReadOnlyController {
     HBaseClassTestRule.forClass(TestReadOnlyController.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReadOnlyController.class);
-  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final TableName TEST_TABLE = TableName.valueOf("read_only_test_table");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("read_only_table_col_fam");
   private static HRegionServer hRegionServer;
@@ -81,8 +81,8 @@ public class TestReadOnlyController {
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  @BeforeClass
-  public static void beforeClass() throws Exception {
+  @Before
+  public void beforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
 
     // Shorten the run time of failed unit tests by limiting retries and the session timeout
@@ -123,8 +123,8 @@ public class TestReadOnlyController {
     }
   }
 
-  @AfterClass
-  public static void afterClass() throws Exception {
+  @After
+  public void afterClass() throws Exception {
     if (connection != null) {
       connection.close();
     }

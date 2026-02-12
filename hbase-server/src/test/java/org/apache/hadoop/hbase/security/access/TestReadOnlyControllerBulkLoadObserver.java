@@ -17,13 +17,11 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -43,7 +41,6 @@ public class TestReadOnlyControllerBulkLoadObserver {
     HBaseClassTestRule.forClass(TestReadOnlyControllerBulkLoadObserver.class);
 
   BulkLoadReadOnlyController bulkLoadReadOnlyController;
-  HBaseConfiguration readOnlyConf;
 
   // Region Server Coprocessor mocking variables
   ObserverContext<RegionCoprocessorEnvironment> ctx;
@@ -51,8 +48,6 @@ public class TestReadOnlyControllerBulkLoadObserver {
   @Before
   public void setup() throws Exception {
     bulkLoadReadOnlyController = new BulkLoadReadOnlyController();
-    readOnlyConf = new HBaseConfiguration();
-    readOnlyConf.setBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
 
     // mocking variables initialization
     ctx = mock(ObserverContext.class);
@@ -65,7 +60,7 @@ public class TestReadOnlyControllerBulkLoadObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPrePrepareBulkLoadReadOnlyException() throws IOException {
-    bulkLoadReadOnlyController.onConfigurationChange(readOnlyConf);
+    bulkLoadReadOnlyController.setReadOnlyEnabled(true);
     bulkLoadReadOnlyController.prePrepareBulkLoad(ctx);
   }
 
@@ -76,7 +71,7 @@ public class TestReadOnlyControllerBulkLoadObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCleanupBulkLoadReadOnlyException() throws IOException {
-    bulkLoadReadOnlyController.onConfigurationChange(readOnlyConf);
+    bulkLoadReadOnlyController.setReadOnlyEnabled(true);
     bulkLoadReadOnlyController.preCleanupBulkLoad(ctx);
   }
 

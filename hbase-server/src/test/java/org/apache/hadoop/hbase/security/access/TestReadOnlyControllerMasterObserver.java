@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -26,7 +25,6 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.BalanceRequest;
@@ -59,7 +57,6 @@ public class TestReadOnlyControllerMasterObserver {
     HBaseClassTestRule.forClass(TestReadOnlyControllerMasterObserver.class);
 
   MasterReadOnlyController MasterReadOnlyController;
-  HBaseConfiguration readOnlyConf;
 
   // Master Coprocessor mocking variables
   ObserverContext<MasterCoprocessorEnvironment> c, ctx;
@@ -98,8 +95,6 @@ public class TestReadOnlyControllerMasterObserver {
   @Before
   public void setup() throws Exception {
     MasterReadOnlyController = new MasterReadOnlyController();
-    readOnlyConf = new HBaseConfiguration();
-    readOnlyConf.setBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
 
     // mocking variables initialization
     c = mock(ObserverContext.class);
@@ -152,7 +147,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCreateTableRegionsInfosReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preCreateTableRegionsInfos(ctx, desc);
   }
 
@@ -163,7 +158,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCreateTableReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preCreateTable(ctx, desc, regions);
   }
 
@@ -174,7 +169,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCreateTableActionReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preCreateTableAction(ctx, desc, regions);
   }
 
@@ -185,7 +180,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreDeleteTableReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preDeleteTable(ctx, tableName);
   }
 
@@ -196,7 +191,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreDeleteTableActionReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preDeleteTableAction(ctx, tableName);
   }
 
@@ -207,7 +202,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreTruncateTableReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preTruncateTable(ctx, tableName);
   }
 
@@ -218,7 +213,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreTruncateTableActionReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preTruncateTableAction(ctx, tableName);
   }
 
@@ -229,7 +224,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreModifyTableReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preModifyTable(ctx, tableName, currentDescriptor, newDescriptor);
   }
 
@@ -240,7 +235,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreModifyTableStoreFileTrackerReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preModifyTableStoreFileTracker(ctx, tableName, dstSFT);
   }
 
@@ -251,7 +246,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreModifyColumnFamilyStoreFileTrackerReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preModifyColumnFamilyStoreFileTracker(ctx, tableName, family, dstSFT);
   }
 
@@ -262,7 +257,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreModifyTableActionReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preModifyTableAction(ctx, tableName, currentDescriptor, newDescriptor);
   }
 
@@ -273,7 +268,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreSplitRegionReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preSplitRegion(c, tableName, splitRow);
   }
 
@@ -284,7 +279,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreSplitRegionActionReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preSplitRegionAction(c, tableName, splitRow);
   }
 
@@ -295,7 +290,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreSplitRegionBeforeMETAActionReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preSplitRegionBeforeMETAAction(ctx, splitKey, metaEntries);
   }
 
@@ -306,7 +301,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreSplitRegionAfterMETAActionReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preSplitRegionAfterMETAAction(ctx);
   }
 
@@ -317,7 +312,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreMergeRegionsActionReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preMergeRegionsAction(ctx, regionsToMerge);
   }
 
@@ -328,7 +323,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreMergeRegionsCommitActionReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preMergeRegionsCommitAction(ctx, regionsToMerge, metaEntries);
   }
 
@@ -339,7 +334,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreSnapshotReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preSnapshot(ctx, snapshot, tableDescriptor);
   }
 
@@ -350,7 +345,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCloneSnapshotReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preCloneSnapshot(ctx, snapshot, tableDescriptor);
   }
 
@@ -361,7 +356,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreRestoreSnapshotReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preRestoreSnapshot(ctx, snapshot, tableDescriptor);
   }
 
@@ -372,7 +367,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreDeleteSnapshotReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preDeleteSnapshot(ctx, snapshot);
   }
 
@@ -383,7 +378,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCreateNamespaceReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preCreateNamespace(ctx, ns);
   }
 
@@ -394,7 +389,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreModifyNamespaceReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preModifyNamespace(ctx, currentNsDescriptor, newNsDescriptor);
   }
 
@@ -405,7 +400,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreDeleteNamespaceReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preDeleteNamespace(ctx, namespace);
   }
 
@@ -416,7 +411,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreMasterStoreFlushReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preMasterStoreFlush(ctx);
   }
 
@@ -427,7 +422,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreSetUserQuotaReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preSetUserQuota(ctx, userName, quotas);
   }
 
@@ -438,7 +433,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreSetUserQuotaOnTableReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preSetUserQuota(ctx, userName, tableName, quotas);
   }
 
@@ -449,7 +444,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreSetUserQuotaOnNamespaceReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preSetUserQuota(ctx, userName, namespace, quotas);
   }
 
@@ -460,7 +455,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreSetTableQuotaReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preSetTableQuota(ctx, tableName, quotas);
   }
 
@@ -471,7 +466,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreSetNamespaceQuotaReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preSetNamespaceQuota(ctx, namespace, quotas);
   }
 
@@ -482,7 +477,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreSetRegionServerQuotaReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preSetRegionServerQuota(ctx, regionServer, quotas);
   }
 
@@ -493,7 +488,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreMergeRegionsReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preMergeRegions(ctx, regionsToMerge);
   }
 
@@ -504,7 +499,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreMoveServersAndTablesReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preMoveServersAndTables(ctx, servers, tables, targetGroup);
   }
 
@@ -515,7 +510,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreMoveServersReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preMoveServers(ctx, servers, targetGroup);
   }
 
@@ -526,7 +521,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreMoveTablesReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preMoveTables(ctx, tables, targetGroup);
   }
 
@@ -537,7 +532,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreAddRSGroupReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preAddRSGroup(ctx, name);
   }
 
@@ -548,7 +543,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreRemoveRSGroupReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preRemoveRSGroup(ctx, name);
   }
 
@@ -559,7 +554,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreBalanceRSGroupReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preBalanceRSGroup(ctx, groupName, request);
   }
 
@@ -570,7 +565,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreRemoveServersReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preRemoveServers(ctx, servers);
   }
 
@@ -581,7 +576,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreRenameRSGroupReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preRenameRSGroup(ctx, oldName, newName);
   }
 
@@ -592,7 +587,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreUpdateRSGroupConfigReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preUpdateRSGroupConfig(ctx, groupName, configuration);
   }
 
@@ -603,7 +598,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreAddReplicationPeerReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preAddReplicationPeer(ctx, peerId, peerConfig);
   }
 
@@ -614,7 +609,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreRemoveReplicationPeerReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preRemoveReplicationPeer(ctx, peerId);
   }
 
@@ -625,7 +620,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreEnableReplicationPeerReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preEnableReplicationPeer(ctx, peerId);
   }
 
@@ -636,7 +631,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreDisableReplicationPeerReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preDisableReplicationPeer(ctx, peerId);
   }
 
@@ -647,7 +642,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreUpdateReplicationPeerConfigReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preUpdateReplicationPeerConfig(ctx, peerId, peerConfig);
   }
 
@@ -659,7 +654,7 @@ public class TestReadOnlyControllerMasterObserver {
   @Test(expected = DoNotRetryIOException.class)
   public void testPreTransitReplicationPeerSyncReplicationStateReadOnlyException()
     throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preTransitReplicationPeerSyncReplicationState(ctx, peerId, state);
   }
 
@@ -670,7 +665,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreGrantReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preGrant(ctx, userPermission, mergeExistingPermissions);
   }
 
@@ -681,7 +676,7 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreRevokeReadOnlyException() throws IOException {
-    MasterReadOnlyController.onConfigurationChange(readOnlyConf);
+    MasterReadOnlyController.setReadOnlyEnabled(true);
     MasterReadOnlyController.preRevoke(ctx, userPermission);
   }
 
