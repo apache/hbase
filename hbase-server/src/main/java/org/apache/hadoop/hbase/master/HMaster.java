@@ -4435,7 +4435,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       initializeCoprocessorHost(newConf);
     }
 
-    // Update coprocessor's local variable for readonly mode after it is loaded with new configuration.
+    // Update coprocessor's local variable for readonly mode after it is loaded with new
+    // configuration.
     updateMasterReadOnlyMode(newConf);
   }
 
@@ -4538,7 +4539,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     boolean readOnlyMode = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
       HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
 
-    // set the readonly mode in the configuration so that it can be picked up by the master in case we have dual master setup.
+    // set the readonly mode in the configuration so that it can be picked up by the master in case
+    // we have dual master setup.
     this.conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyMode);
     // If readonly mode is enabled then we need to register the coprocessor(s) for master
     if (readOnlyMode) {
@@ -4558,9 +4560,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       return;
     }
 
-    MasterReadOnlyController masterReadOnlyController = (MasterReadOnlyController) cpHost.findCoprocessor(MasterReadOnlyController.class.getName());
+    MasterReadOnlyController masterReadOnlyController =
+      (MasterReadOnlyController) cpHost.findCoprocessor(MasterReadOnlyController.class.getName());
     if (masterReadOnlyController != null) {
-      masterReadOnlyController.setReadOnlyEnabled(conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT));
+      masterReadOnlyController
+        .setReadOnlyEnabled(conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+          HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT));
     }
   }
 

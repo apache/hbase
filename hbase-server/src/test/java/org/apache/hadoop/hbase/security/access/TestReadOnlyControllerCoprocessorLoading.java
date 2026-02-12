@@ -1,5 +1,27 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hbase.security.access;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -23,10 +45,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.List;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 
 @Category({ SecurityTests.class, MediumTests.class })
 public class TestReadOnlyControllerCoprocessorLoading {
@@ -44,10 +62,9 @@ public class TestReadOnlyControllerCoprocessorLoading {
   HRegionServer regionServer;
   HRegion region;
 
-
   @Before
   public void setup() throws Exception {
-     TEST_UTIL = new HBaseTestingUtil();
+    TEST_UTIL = new HBaseTestingUtil();
     if (TEST_UTIL.getMiniHBaseCluster() != null) {
       TEST_UTIL.shutdownMiniCluster();
     }
@@ -70,8 +87,7 @@ public class TestReadOnlyControllerCoprocessorLoading {
   private void createTable() throws Exception {
     // create a table to get at a region
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf"))
-      .build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build();
     TEST_UTIL.getAdmin().createTable(desc);
 
     List<HRegion> regions = regionServer.getRegions(tableName);
@@ -79,7 +95,7 @@ public class TestReadOnlyControllerCoprocessorLoading {
     region = regions.get(0);
   }
 
-  private void setReadOnlyMode(boolean isReadOnlyEnabled){
+  private void setReadOnlyMode(boolean isReadOnlyEnabled) {
     // Set the read-only enabled config dynamically after cluster startup
     conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, isReadOnlyEnabled);
     master.getConfigurationManager().notifyAllObservers(conf);
@@ -89,18 +105,31 @@ public class TestReadOnlyControllerCoprocessorLoading {
   private void verifyMasterReadOnlyControllerLoading(boolean isReadOnlyEnabled) throws Exception {
     MasterCoprocessorHost masterCPHost = master.getMasterCoprocessorHost();
     if (isReadOnlyEnabled) {
-      assertNotNull(MasterReadOnlyController.class.getName() + " should be loaded at startup when readonly is true.", masterCPHost.findCoprocessor(MasterReadOnlyController.class.getName()));
+      assertNotNull(
+        MasterReadOnlyController.class.getName()
+          + " should be loaded at startup when readonly is true.",
+        masterCPHost.findCoprocessor(MasterReadOnlyController.class.getName()));
     } else {
-      assertNull(MasterReadOnlyController.class.getName() + " should not be loaded at startup when readonly support property is false.", masterCPHost.findCoprocessor(MasterReadOnlyController.class.getName()));
+      assertNull(
+        MasterReadOnlyController.class.getName()
+          + " should not be loaded at startup when readonly support property is false.",
+        masterCPHost.findCoprocessor(MasterReadOnlyController.class.getName()));
     }
   }
 
-  private void verifyRegionServerReadOnlyControllerLoading(boolean isReadOnlyEnabled) throws Exception {
+  private void verifyRegionServerReadOnlyControllerLoading(boolean isReadOnlyEnabled)
+    throws Exception {
     RegionServerCoprocessorHost rsCPHost = regionServer.getRegionServerCoprocessorHost();
     if (isReadOnlyEnabled) {
-      assertNotNull(RegionServerReadOnlyController.class.getName() + " should be loaded at startup when readonly is true.", rsCPHost.findCoprocessor(RegionServerReadOnlyController.class.getName()));
+      assertNotNull(
+        RegionServerReadOnlyController.class.getName()
+          + " should be loaded at startup when readonly is true.",
+        rsCPHost.findCoprocessor(RegionServerReadOnlyController.class.getName()));
     } else {
-      assertNull(RegionServerReadOnlyController.class.getName() + " should not be loaded at startup when readonly support property is false.", rsCPHost.findCoprocessor(RegionServerReadOnlyController.class.getName()));
+      assertNull(
+        RegionServerReadOnlyController.class.getName()
+          + " should not be loaded at startup when readonly support property is false.",
+        rsCPHost.findCoprocessor(RegionServerReadOnlyController.class.getName()));
     }
   }
 
@@ -108,13 +137,31 @@ public class TestReadOnlyControllerCoprocessorLoading {
     RegionCoprocessorHost regionCPHost = region.getCoprocessorHost();
 
     if (isReadOnlyEnabled) {
-      assertNotNull(RegionReadOnlyController.class.getName() + " should be loaded at startup when readonly is true.", regionCPHost.findCoprocessor(RegionReadOnlyController.class.getName()));
-      assertNotNull(EndpointReadOnlyController.class.getName() + " should be loaded at startup when readonly is true.", regionCPHost.findCoprocessor(EndpointReadOnlyController.class.getName()));
-      assertNotNull(BulkLoadReadOnlyController.class.getName() + " should be loaded at startup when readonly is true.", regionCPHost.findCoprocessor(BulkLoadReadOnlyController.class.getName()));
+      assertNotNull(
+        RegionReadOnlyController.class.getName()
+          + " should be loaded at startup when readonly is true.",
+        regionCPHost.findCoprocessor(RegionReadOnlyController.class.getName()));
+      assertNotNull(
+        EndpointReadOnlyController.class.getName()
+          + " should be loaded at startup when readonly is true.",
+        regionCPHost.findCoprocessor(EndpointReadOnlyController.class.getName()));
+      assertNotNull(
+        BulkLoadReadOnlyController.class.getName()
+          + " should be loaded at startup when readonly is true.",
+        regionCPHost.findCoprocessor(BulkLoadReadOnlyController.class.getName()));
     } else {
-      assertNull(RegionReadOnlyController.class.getName() + " should not be loaded at startup when readonly support property is false", regionCPHost.findCoprocessor(RegionReadOnlyController.class.getName()));
-      assertNull(EndpointReadOnlyController.class.getName() + " should not be loaded at startup when readonly support property is false", regionCPHost.findCoprocessor(EndpointReadOnlyController.class.getName()));
-      assertNull(BulkLoadReadOnlyController.class.getName() + " should not be loaded at startup when readonly support property is false", regionCPHost.findCoprocessor(BulkLoadReadOnlyController.class.getName()));
+      assertNull(
+        RegionReadOnlyController.class.getName()
+          + " should not be loaded at startup when readonly support property is false",
+        regionCPHost.findCoprocessor(RegionReadOnlyController.class.getName()));
+      assertNull(
+        EndpointReadOnlyController.class.getName()
+          + " should not be loaded at startup when readonly support property is false",
+        regionCPHost.findCoprocessor(EndpointReadOnlyController.class.getName()));
+      assertNull(
+        BulkLoadReadOnlyController.class.getName()
+          + " should not be loaded at startup when readonly support property is false",
+        regionCPHost.findCoprocessor(BulkLoadReadOnlyController.class.getName()));
     }
   }
 
@@ -122,8 +169,10 @@ public class TestReadOnlyControllerCoprocessorLoading {
   public void testReadOnlyControllerLoadedAtStartupWhenEnabled() throws Exception {
     boolean isReadOnlyEnabled = true;
     setupMiniCluster(isReadOnlyEnabled);
-    // Table creation is needed to get a region and verify region coprocessor loading hence we can't test region coprocessor loading at startup.
-    // This will get covered in the dynamic loading test where we will also verify that the coprocessors are loaded at after table creation dynamically.
+    // Table creation is needed to get a region and verify region coprocessor loading hence we can't
+    // test region coprocessor loading at startup.
+    // This will get covered in the dynamic loading test where we will also verify that the
+    // coprocessors are loaded at after table creation dynamically.
     verifyMasterReadOnlyControllerLoading(isReadOnlyEnabled);
     verifyRegionServerReadOnlyControllerLoading(isReadOnlyEnabled);
   }
@@ -132,8 +181,10 @@ public class TestReadOnlyControllerCoprocessorLoading {
   public void testReadOnlyControllerNotLoadedAtStartupWhenDisabled() throws Exception {
     boolean isReadOnlyEnabled = false;
     setupMiniCluster(isReadOnlyEnabled);
-    // Table creation is needed to get a region and verify region coprocessor loading hence we can't test region coprocessor loading at startup.
-    // This will get covered in the dynamic loading test where we will also verify that the coprocessors are loaded at after table creation dynamically.
+    // Table creation is needed to get a region and verify region coprocessor loading hence we can't
+    // test region coprocessor loading at startup.
+    // This will get covered in the dynamic loading test where we will also verify that the
+    // coprocessors are loaded at after table creation dynamically.
     verifyMasterReadOnlyControllerLoading(isReadOnlyEnabled);
     verifyRegionServerReadOnlyControllerLoading(isReadOnlyEnabled);
   }

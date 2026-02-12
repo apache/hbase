@@ -158,7 +158,6 @@ import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.security.access.RegionReadOnlyController;
 import org.apache.hadoop.hbase.security.access.RegionServerReadOnlyController;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1529,7 +1528,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     boolean readOnlyMode = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
       HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
 
-    // Update the read only mode in regionserver conf object, so that when region server is created, it can pick up the correct read only mode.
+    // Update the read only mode in regionserver conf object, so that when region server is created,
+    // it can pick up the correct read only mode.
     this.conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyMode);
 
     // If readonly mode is enabled then we need to register the coprocessor for RegionServer
@@ -1550,9 +1550,13 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       return;
     }
 
-    RegionServerReadOnlyController regionServerReadOnlyController = (RegionServerReadOnlyController) rsHost.findCoprocessor(RegionServerReadOnlyController.class.getName());
+    RegionServerReadOnlyController regionServerReadOnlyController =
+      (RegionServerReadOnlyController) rsHost
+        .findCoprocessor(RegionServerReadOnlyController.class.getName());
     if (regionServerReadOnlyController != null) {
-      regionServerReadOnlyController.setReadOnlyEnabled(conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT));
+      regionServerReadOnlyController
+        .setReadOnlyEnabled(conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+          HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT));
     }
   }
 
@@ -3527,7 +3531,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       this.rsHost = new RegionServerCoprocessorHost(this, newConf);
     }
 
-    // Update coprocessor's local variable for readonly mode after it is loaded with new configuration.
+    // Update coprocessor's local variable for readonly mode after it is loaded with new
+    // configuration.
     updateRegionServerReadOnlyMode(newConf);
   }
 

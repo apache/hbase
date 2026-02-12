@@ -17,13 +17,11 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
@@ -87,7 +85,7 @@ public class TestReadOnlyControllerRegionServerObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreReplicationSinkBatchMutateReadOnlyException() throws IOException {
-regionServerReadOnlyController.setReadOnlyEnabled(true);
+    regionServerReadOnlyController.setReadOnlyEnabled(true);
     regionServerReadOnlyController.preReplicationSinkBatchMutate(ctx, walEntry, mutation);
   }
 
@@ -98,7 +96,7 @@ regionServerReadOnlyController.setReadOnlyEnabled(true);
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreReplicateLogEntriesReadOnlyException() throws IOException {
-regionServerReadOnlyController.setReadOnlyEnabled(true);
+    regionServerReadOnlyController.setReadOnlyEnabled(true);
     regionServerReadOnlyController.preReplicateLogEntries(ctx);
   }
 

@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
@@ -26,7 +25,6 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -34,7 +32,6 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public abstract class AbstractReadOnlyController implements Coprocessor {
@@ -51,7 +48,8 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
   public void setReadOnlyEnabled(boolean readOnlyEnabledFromConfig) {
     if (this.globalReadOnlyEnabled != readOnlyEnabledFromConfig) {
       this.globalReadOnlyEnabled = readOnlyEnabledFromConfig;
-      LOG.info("Updated {} readOnlyEnabled={}", this.getClass().getName(), readOnlyEnabledFromConfig);
+      LOG.info("Updated {} readOnlyEnabled={}", this.getClass().getName(),
+        readOnlyEnabledFromConfig);
       if (this.masterServices != null) {
         manageActiveClusterIdFile(readOnlyEnabledFromConfig);
       } else {
@@ -70,7 +68,9 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
         + "File system operations for read-only state will not work.");
     }
 
-    setReadOnlyEnabled(env.getConfiguration().getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT));
+    setReadOnlyEnabled(
+      env.getConfiguration().getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+        HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT));
   }
 
   @Override
