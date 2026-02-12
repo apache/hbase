@@ -17,32 +17,29 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.NoopProcedure;
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestProcedureExecutor {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcedureExecutor.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProcedureExecutor.class);
 
@@ -52,7 +49,7 @@ public class TestProcedureExecutor {
 
   private HBaseCommonTestingUtility htu;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     htu = new HBaseCommonTestingUtility();
 
@@ -62,7 +59,7 @@ public class TestProcedureExecutor {
     procStore.start(1);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     procExecutor.stop();
     procStore.stop(false);
@@ -106,9 +103,9 @@ public class TestProcedureExecutor {
     assertEquals(true, procExecutor.isFinished(otherProcId));
     ProcedureTestingUtility.assertProcNotFailed(procExecutor, otherProcId);
 
-    assertEquals(true, procExecutor.isRunning());
-    assertEquals(false, procExecutor.isFinished(busyProcId1));
-    assertEquals(false, procExecutor.isFinished(busyProcId2));
+    assertTrue(procExecutor.isRunning());
+    assertFalse(procExecutor.isFinished(busyProcId1));
+    assertFalse(procExecutor.isFinished(busyProcId2));
 
     // terminate the busy procedures
     latch1.release();
@@ -117,7 +114,7 @@ public class TestProcedureExecutor {
     LOG.info("set keep alive and wait threads being removed");
     procExecutor.setKeepAliveTime(500L, TimeUnit.MILLISECONDS);
     int threads2 = waitThreadCount(NUM_THREADS);
-    LOG.info("threads got removed: " + (threads1 - threads2));
+    LOG.info("threads got removed: {}", threads1 - threads2);
     assertEquals(NUM_THREADS, threads2);
 
     // terminate the busy procedures

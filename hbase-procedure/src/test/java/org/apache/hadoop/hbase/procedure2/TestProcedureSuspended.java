@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,19 +32,16 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestProcedureSuspended {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcedureSuspended.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProcedureSuspended.class);
 
@@ -54,7 +53,7 @@ public class TestProcedureSuspended {
 
   private HBaseCommonTestingUtility htu;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtility();
 
@@ -64,7 +63,7 @@ public class TestProcedureSuspended {
     ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     procExecutor.stop();
     procStore.stop(false);
@@ -87,8 +86,8 @@ public class TestProcedureSuspended {
     waitAndAssertTimestamp(p1keyA, 1, 1);
     waitAndAssertTimestamp(p2keyA, 0, -1);
     waitAndAssertTimestamp(p3keyB, 1, 2);
-    assertEquals(true, lockA.get());
-    assertEquals(true, lockB.get());
+    assertTrue(lockA.get());
+    assertTrue(lockB.get());
 
     // release p3
     p3keyB.setThrowSuspend(false);
@@ -96,11 +95,11 @@ public class TestProcedureSuspended {
     waitAndAssertTimestamp(p1keyA, 1, 1);
     waitAndAssertTimestamp(p2keyA, 0, -1);
     waitAndAssertTimestamp(p3keyB, 2, 3);
-    assertEquals(true, lockA.get());
+    assertTrue(lockA.get());
 
     // wait until p3 is fully completed
     ProcedureTestingUtility.waitProcedure(procExecutor, p3keyB);
-    assertEquals(false, lockB.get());
+    assertFalse(lockB.get());
 
     // rollback p2 and wait until is fully completed
     p1keyA.setTriggerRollback(true);
@@ -111,7 +110,7 @@ public class TestProcedureSuspended {
     waitAndAssertTimestamp(p1keyA, 4, 60000);
     waitAndAssertTimestamp(p2keyA, 1, 7);
     waitAndAssertTimestamp(p3keyB, 2, 3);
-    assertEquals(true, lockA.get());
+    assertTrue(lockA.get());
 
     // wait until p2 is fully completed
     p2keyA.setThrowSuspend(false);
@@ -120,8 +119,8 @@ public class TestProcedureSuspended {
     waitAndAssertTimestamp(p1keyA, 4, 60000);
     waitAndAssertTimestamp(p2keyA, 2, 8);
     waitAndAssertTimestamp(p3keyB, 2, 3);
-    assertEquals(false, lockA.get());
-    assertEquals(false, lockB.get());
+    assertFalse(lockA.get());
+    assertFalse(lockB.get());
   }
 
   @Test
@@ -164,7 +163,7 @@ public class TestProcedureSuspended {
       Threads.sleep(10);
     }
 
-    LOG.info(proc + " -> " + timestamps);
+    LOG.info("{} -> {}", proc, timestamps);
     assertEquals(size, timestamps.size());
     if (size > 0) {
       assertEquals(lastTs, timestamps.get(timestamps.size() - 1).longValue());
@@ -204,7 +203,7 @@ public class TestProcedureSuspended {
     @Override
     protected Procedure[] execute(final TestProcEnv env)
       throws ProcedureYieldException, ProcedureSuspendedException {
-      LOG.info("EXECUTE " + this + " suspend " + (lock != null));
+      LOG.info("EXECUTE {} suspend {}", this, lock != null);
       timestamps.add(env.nextTimestamp());
       if (triggerRollback) {
         setFailure(getClass().getSimpleName(), new Exception("injected failure"));
@@ -218,7 +217,7 @@ public class TestProcedureSuspended {
 
     @Override
     protected void rollback(final TestProcEnv env) {
-      LOG.info("ROLLBACK " + this);
+      LOG.info("ROLLBACK {}", this);
       timestamps.add(env.nextTimestamp() * 10000);
     }
 
@@ -226,7 +225,7 @@ public class TestProcedureSuspended {
     protected LockState acquireLock(final TestProcEnv env) {
       hasLock = lock.compareAndSet(false, true);
       if (hasLock) {
-        LOG.info("ACQUIRE LOCK " + this + " " + (hasLock));
+        LOG.info("ACQUIRE LOCK {} {}", this, hasLock);
         return LockState.LOCK_ACQUIRED;
       }
       return LockState.LOCK_YIELD_WAIT;
@@ -234,7 +233,7 @@ public class TestProcedureSuspended {
 
     @Override
     protected void releaseLock(final TestProcEnv env) {
-      LOG.info("RELEASE LOCK " + this + " " + hasLock);
+      LOG.info("RELEASE LOCK {} {}", this, hasLock);
       lock.set(false);
     }
 

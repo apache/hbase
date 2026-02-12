@@ -22,7 +22,6 @@ import java.io.UncheckedIOException;
 import java.util.LinkedHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.NoopProcedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreBase;
@@ -30,11 +29,10 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureTree;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.AtomicUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
@@ -43,12 +41,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  * {@link RootProcedureState} first and then crash, and then cause holes in stack ids when loading,
  * and finally fail the start up of master.
  */
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestStackIdHoles {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStackIdHoles.class);
 
   private final class DummyProcedureStore extends ProcedureStoreBase {
 
@@ -193,7 +188,7 @@ public class TestStackIdHoles {
 
   private ProcedureExecutor<Void> procExec;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     procStore = new DummyProcedureStore();
     procStore.start(4);
@@ -202,7 +197,7 @@ public class TestStackIdHoles {
     procExec.startWorkers();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     procExec.stop();
   }
