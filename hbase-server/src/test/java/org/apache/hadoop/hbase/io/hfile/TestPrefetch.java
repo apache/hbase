@@ -429,7 +429,7 @@ public class TestPrefetch {
         .withRegionFileSystem(regionFS).build());
     HStoreFile file = new HStoreFile(fs, storeFile, conf, cacheConf, BloomType.NONE, true, sft);
     Path ref = regionFS.splitStoreFile(region, "cf", file, fileWithSplitPoint.getSecond(), false,
-      new ConstantSizeRegionSplitPolicy(), sft);
+      new ConstantSizeRegionSplitPolicy(), sft).getPath();
     conf.setBoolean(HBASE_REGION_SERVER_ENABLE_COMPACTION, compactionEnabled);
     HStoreFile refHsf = new HStoreFile(this.fs, ref, conf, cacheConf, BloomType.NONE, true, sft);
     refHsf.initReader();
