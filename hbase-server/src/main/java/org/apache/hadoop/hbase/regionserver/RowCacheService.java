@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.client.Scan;
 
 /**
  * It is responsible for populating the row cache and retrieving rows from it.
@@ -87,26 +86,7 @@ public class RowCacheService {
     return false;
   }
 
-  RegionScannerImpl getScanner(HRegion region, Get get, Scan scan, List<Cell> results)
-    throws IOException {
-    if (!canCacheRow(get, region)) {
-      return getScannerInternal(region, scan, results);
-    }
-
-    RowCacheKey key = new RowCacheKey(region, get.getRow());
-
-    // Try get from row cache
-    if (tryGetFromCache(region, key, get, results)) {
-      // Cache is hit, and then no scanner is created
-      return null;
-    }
-
-    RegionScannerImpl scanner = getScannerInternal(region, scan, results);
-    populateCache(region, results, key);
-    return scanner;
-  }
-
-  private boolean tryGetFromCache(HRegion region, RowCacheKey key, Get get, List<Cell> results) {
+  boolean tryGetFromCache(HRegion region, RowCacheKey key, Get get, List<Cell> results) {
     RowCells row = rowCache.getRow(key, get.getCacheBlocks());
 
     if (row == null) {
@@ -118,19 +98,12 @@ public class RowCacheService {
     return true;
   }
 
-  private void populateCache(HRegion region, List<Cell> results, RowCacheKey key) {
+  void populateCache(HRegion region, List<Cell> results, RowCacheKey key) {
     // TODO: implement with barrier to avoid cache read during mutation
     try {
       rowCache.cacheRow(key, new RowCells(results));
     } catch (CloneNotSupportedException ignored) {
       // Not able to cache row cells, ignore
     }
-  }
-
-  private RegionScannerImpl getScannerInternal(HRegion region, Scan scan, List<Cell> results)
-    throws IOException {
-    RegionScannerImpl scanner = region.getScanner(scan);
-    scanner.next(results);
-    return scanner;
   }
 }
