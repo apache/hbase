@@ -106,3 +106,29 @@ jobs:
           name: yetus-general-check-output
           path: ${{ github.workspace }}/yetus-general-check/output
           retention-days: 7
+
+  zizmor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check for workflow changes
+        id: changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh pr diff "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --name-only | grep -q '^\.github/workflows/'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout HBase
+        if: steps.changes.outputs.changed == 'true'
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Run zizmor
+        if: steps.changes.outputs.changed == 'true'
+        run: pipx run zizmor .github/workflows/
