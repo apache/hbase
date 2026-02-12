@@ -85,4 +85,16 @@ public class TestRpcSchedulerFactory {
     RpcScheduler rpcScheduler = factory.create(this.conf, null, null);
     assertTrue(rpcScheduler.getClass().equals(FifoRpcScheduler.class));
   }
+
+  @Test
+  public void testRWQWithSmallCallQueueFactor() {
+    // Set some configs just to see how it changes the scheduler. Can't assert the settings had
+    // an effect. Just eyeball the log.
+    this.conf.setDouble(RWQueueRpcExecutor.CALL_QUEUE_READ_SHARE_CONF_KEY, 0.5);
+    this.conf.setDouble(RpcExecutor.CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 0.000001);
+    this.conf.setDouble(RWQueueRpcExecutor.CALL_QUEUE_SCAN_SHARE_CONF_KEY, 0.5);
+    RpcSchedulerFactory factory = new SimpleRpcSchedulerFactory();
+    RpcScheduler rpcScheduler = factory.create(this.conf, null, null);
+    assertTrue(rpcScheduler.getClass().equals(SimpleRpcScheduler.class));
+  }
 }
