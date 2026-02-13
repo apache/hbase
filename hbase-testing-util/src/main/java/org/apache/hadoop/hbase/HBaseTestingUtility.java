@@ -133,6 +133,7 @@ import org.apache.hadoop.hbase.zookeeper.EmptyWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -683,6 +684,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     createDirAndSetProperty("dfs.journalnode.edits.dir");
     createDirAndSetProperty("dfs.provided.aliasmap.inmemory.leveldb.dir");
     createDirAndSetProperty("fs.s3a.committer.staging.tmp.path");
+
+    // disable metrics logger since it depend on commons-logging internal classes and we do not want
+    // commons-logging on our classpath
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_METRICS_LOGGER_PERIOD_SECONDS_KEY, 0);
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_KEY, 0);
   }
 
   /**
