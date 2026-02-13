@@ -3672,6 +3672,22 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return metaRegionLocationCache.getMetaRegionLocations();
   }
 
+  /**
+   * RegionServers get the meta table name from Master via connection registry.
+   */
+  @Override
+  public TableName getMetaTableName() {
+    if (asyncClusterConnection != null) {
+      try {
+        return asyncClusterConnection.getMetaTableName();
+      } catch (Exception e) {
+        LOG.warn("Failed to get meta table name from Master", e);
+      }
+    }
+    // Bootstrap
+    return super.getMetaTableName();
+  }
+
   @Override
   protected NamedQueueRecorder createNamedQueueRecord() {
     return NamedQueueRecorder.getInstance(conf);

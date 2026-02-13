@@ -616,7 +616,7 @@ public class TableDescriptorBuilder {
       families.forEach(c -> this.families.put(c.getName(), ColumnFamilyDescriptorBuilder.copy(c)));
       this.values.putAll(values);
       this.values.put(IS_META_KEY,
-        new Bytes(Bytes.toBytes(Boolean.toString(name.equals(TableName.META_TABLE_NAME)))));
+        new Bytes(Bytes.toBytes(Boolean.toString(TableName.isMetaTableName(name)))));
     }
 
     /**
