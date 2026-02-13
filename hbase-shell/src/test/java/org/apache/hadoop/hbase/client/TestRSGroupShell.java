@@ -23,15 +23,16 @@ import org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint;
 import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 
 @Tag(ClientTests.TAG)
 @Tag(LargeTests.TAG)
 public class TestRSGroupShell extends AbstractTestShell {
 
-  @BeforeAll
-  public static void setUpBeforeClass() throws Exception {
+  @Override
+  @BeforeEach
+  public void setUpEach() throws Exception {
     setUpConfig();
 
     // enable rs group

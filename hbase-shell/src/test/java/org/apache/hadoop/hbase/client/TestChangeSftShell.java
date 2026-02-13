@@ -19,15 +19,15 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 
 @Tag(ClientTests.TAG)
 @Tag(LargeTests.TAG)
 public class TestChangeSftShell extends AbstractTestShell {
 
-  @BeforeAll
-  public static void setUpBeforeClass() throws Exception {
+  @BeforeEach
+  public void setUpEach() throws Exception {
     setUpConfig();
 
     TEST_UTIL.startMiniCluster(3);
