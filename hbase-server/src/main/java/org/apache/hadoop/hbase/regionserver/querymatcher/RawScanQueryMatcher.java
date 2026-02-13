@@ -40,7 +40,9 @@ public abstract class RawScanQueryMatcher extends UserScanQueryMatcher {
       return MatchCode.DONE_SCAN;
     }
     MatchCode returnCode = preCheck(cell);
-    if (returnCode != null) {
+    // "Skip" indicates that the cell was expired due to cell TTL.
+    // We need to include it in the raw scan.
+    if (returnCode != null && returnCode != MatchCode.SKIP) {
       return returnCode;
     }
     long timestamp = cell.getTimestamp();
