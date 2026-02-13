@@ -119,10 +119,14 @@ public class XXH3 extends Hash implements Hash64 {
 
   private static final long DEFAULT_SECRET_BITFLIP_0 =
     ((DEFAULT_SECRET_LONG_0 >>> 32) ^ (DEFAULT_SECRET_LONG_0 & MASK32));
-  private static final long DEFAULT_SECRET_BITFLIP_1 = (DEFAULT_SECRET_LONG_1 ^ DEFAULT_SECRET_LONG_2);
-  private static final long DEFAULT_SECRET_BITFLIP_2 = (DEFAULT_SECRET_LONG_3 ^ DEFAULT_SECRET_LONG_4);
-  private static final long DEFAULT_SECRET_BITFLIP_3 = (DEFAULT_SECRET_LONG_5 ^ DEFAULT_SECRET_LONG_6);
-  private static final long DEFAULT_SECRET_BITFLIP_4 = (DEFAULT_SECRET_LONG_7 ^ DEFAULT_SECRET_LONG_8);
+  private static final long DEFAULT_SECRET_BITFLIP_1 =
+    (DEFAULT_SECRET_LONG_1 ^ DEFAULT_SECRET_LONG_2);
+  private static final long DEFAULT_SECRET_BITFLIP_2 =
+    (DEFAULT_SECRET_LONG_3 ^ DEFAULT_SECRET_LONG_4);
+  private static final long DEFAULT_SECRET_BITFLIP_3 =
+    (DEFAULT_SECRET_LONG_5 ^ DEFAULT_SECRET_LONG_6);
+  private static final long DEFAULT_SECRET_BITFLIP_4 =
+    (DEFAULT_SECRET_LONG_7 ^ DEFAULT_SECRET_LONG_8);
 
   public static Hash getInstance() {
     return _instance;
@@ -195,6 +199,7 @@ public class XXH3 extends Hash implements Hash64 {
   }
 
   private static long mul128AndFold64(long x, long y) {
+    // Consider switching to Math.unsignedMultiplyHigh(x, y) when we can drop Java 8.
     long xLow = x & MASK32;
     long xHigh = x >>> 32;
     long yLow = y & MASK32;
@@ -282,10 +287,12 @@ public class XXH3 extends Hash implements Hash64 {
     return hashEmpty(seed);
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+      value = { "SF_SWITCH_FALLTHROUGH", "SF_SWITCH_NO_DEFAULT" }, justification = "Intentional")
   private <T> long hashLength17To128(HashKey<T> hashKey, int length, long seed) {
     assert length >= 17 && length <= 128;
     long acc = length * PRIME64_1;
-    switch ((length - 1) / 32) {
+    switch ((length - 1) / 32) { // all case statements fall through
       case 3:
         acc += mix16(hashKey, 48, DEFAULT_SECRET_LONG_12, DEFAULT_SECRET_LONG_13, seed);
         acc += mix16(hashKey, length - 64, DEFAULT_SECRET_LONG_14, DEFAULT_SECRET_LONG_15, seed);
@@ -304,6 +311,8 @@ public class XXH3 extends Hash implements Hash64 {
     return avalanche(acc);
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+      value = { "SF_SWITCH_FALLTHROUGH", "SF_SWITCH_NO_DEFAULT" }, justification = "Intentional")
   private <T> long hashLength129To240(HashKey<T> hashKey, int length, long seed) {
     assert length >= 129 && length <= 240;
     long acc = length * PRIME64_1;
@@ -319,7 +328,7 @@ public class XXH3 extends Hash implements Hash64 {
 
     acc = avalanche(acc);
 
-    switch ((length - 128) >> 4) {
+    switch ((length - 128) >> 4) { // all case statements fall through
       case 7:
         acc += mix16(hashKey, 16 * 14, DEFAULT_SECRET_3_LONG_12, DEFAULT_SECRET_3_LONG_13, seed);
       case 6:

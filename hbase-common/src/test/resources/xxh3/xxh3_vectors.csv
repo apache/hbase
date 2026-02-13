@@ -1,3 +1,24 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# This file describes 'Actions' that should be taken for the specified git commit. As new commits
+# land in the repo that have commit messages that are not recognized by the regular expressions
+# in the application, this file provides overrides on a per-sha basis.
+#
 0,0,3244421341483603138,31,-5533455083687115210
 1,0,-4302098779834749733,31,-8203419927524778795
 2,0,-2998166160713018281,31,507397404195618438

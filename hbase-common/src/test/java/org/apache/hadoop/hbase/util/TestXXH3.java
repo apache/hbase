@@ -63,6 +63,9 @@ class TestXXH3 {
       List<Case> out = new ArrayList<>(4096);
 
       br.lines().filter(s -> !s.isEmpty()).forEach(line -> {
+        if (line.startsWith("#")) {
+          return;
+        }
         String[] p = line.split(",");
         int len = Integer.parseInt(p[0]);
 
