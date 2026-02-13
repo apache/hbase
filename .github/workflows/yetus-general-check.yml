@@ -100,7 +100,7 @@ jobs:
         if: always()
         run: |
           cd "${{ github.workspace }}"
-          python3 src/dev-support/yetus_console_to_md.py yetus-general-check/output/console.txt >> $GITHUB_STEP_SUMMARY
+          python3 src/dev-support/yetus_console_to_md.py yetus-general-check/output >> $GITHUB_STEP_SUMMARY
 
       - name: Publish Test Results
         if: always()
