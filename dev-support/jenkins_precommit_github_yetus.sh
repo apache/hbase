@@ -38,7 +38,6 @@ declare -a required_envs=(
   "PLUGINS"
   "SET_JAVA_HOME"
   "SOURCEDIR"
-  "TESTS_FILTER"
   "YETUSDIR"
   "AUTHOR_IGNORE_LIST"
   "BLANKS_EOL_IGNORE_FILE"
@@ -126,7 +125,9 @@ YETUS_ARGS+=("--java-home=${SET_JAVA_HOME}")
 YETUS_ARGS+=("--author-ignore-list=${AUTHOR_IGNORE_LIST}")
 YETUS_ARGS+=("--blanks-eol-ignore-file=${BLANKS_EOL_IGNORE_FILE}")
 YETUS_ARGS+=("--blanks-tabs-ignore-file=${BLANKS_TABS_IGNORE_FILE}*")
-YETUS_ARGS+=("--tests-filter=${TESTS_FILTER}")
+if [[ -n "${TESTS_FILTER}" ]]; then
+  YETUS_ARGS+=("--tests-filter=${TESTS_FILTER}")
+fi
 YETUS_ARGS+=("--personality=${SOURCEDIR}/dev-support/hbase-personality.sh")
 YETUS_ARGS+=("--quick-hadoopcheck")
 if [[ "${SKIP_ERRORPRONE}" = "true" ]]; then
