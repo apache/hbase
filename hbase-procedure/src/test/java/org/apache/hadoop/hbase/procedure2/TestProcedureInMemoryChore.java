@@ -17,31 +17,26 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestProcedureInMemoryChore {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcedureInMemoryChore.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProcedureInMemoryChore.class);
 
@@ -53,7 +48,7 @@ public class TestProcedureInMemoryChore {
 
   private HBaseCommonTestingUtility htu;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtility();
 
@@ -65,7 +60,7 @@ public class TestProcedureInMemoryChore {
     ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     procExecutor.stop();
     procStore.stop(false);
@@ -89,9 +84,9 @@ public class TestProcedureInMemoryChore {
     latch = new CountDownLatch(nCountDown);
     chore.setLatch(latch);
     latch.await(timeoutMSec * nCountDown, TimeUnit.MILLISECONDS);
-    LOG.info("chore latch count=" + latch.getCount());
+    LOG.info("chore latch count={}", latch.getCount());
     assertFalse(chore.isWaiting());
-    assertTrue("latchCount=" + latch.getCount(), latch.getCount() > 0);
+    assertTrue(latch.getCount() > 0, "latchCount=" + latch.getCount());
   }
 
   public static class TestLatchChore extends ProcedureInMemoryChore<TestProcEnv> {
@@ -108,7 +103,7 @@ public class TestProcedureInMemoryChore {
 
     @Override
     protected void periodicExecute(final TestProcEnv env) {
-      LOG.info("periodic execute " + this);
+      LOG.info("periodic execute {}", this);
       latch.countDown();
     }
   }

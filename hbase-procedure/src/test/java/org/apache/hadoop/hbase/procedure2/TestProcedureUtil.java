@@ -17,33 +17,32 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestProcedureUtil {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcedureUtil.class);
 
   @Test
   public void testValidation() throws Exception {
     ProcedureUtil.validateClass(new TestProcedure(10));
   }
 
-  @Test(expected = BadProcedureException.class)
+  @Test
   public void testNoDefaultConstructorValidation() throws Exception {
-    ProcedureUtil.validateClass(new TestProcedureNoDefaultConstructor(1));
+    assertThrows(BadProcedureException.class, () -> {
+      ProcedureUtil.validateClass(new TestProcedureNoDefaultConstructor(1));
+    });
   }
 
   @Test
@@ -53,8 +52,8 @@ public class TestProcedureUtil {
     final ProcedureProtos.Procedure proto1 = ProcedureUtil.convertToProtoProcedure(proc1);
     final TestProcedure proc2 = (TestProcedure) ProcedureUtil.convertToProcedure(proto1);
     final ProcedureProtos.Procedure proto2 = ProcedureUtil.convertToProtoProcedure(proc2);
-    assertEquals(false, proto2.hasResult());
-    assertEquals("Procedure protobuf does not match", proto1, proto2);
+    assertFalse(proto2.hasResult());
+    assertEquals(proto1, proto2, "Procedure protobuf does not match");
   }
 
   public static class TestProcedureNoDefaultConstructor extends TestProcedure {
