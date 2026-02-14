@@ -170,6 +170,24 @@ public abstract class ScanQueryMatcher implements ShipperListener {
    * @return null means continue.
    */
   protected final MatchCode preCheck(ExtendedCell cell) {
+    final MatchCode code = preCheckRaw(cell);
+    if (code != null) {
+      return code;
+    }
+
+    // check if the cell is expired by cell TTL
+    if (isCellTTLExpired(cell, this.oldestUnexpiredTS, this.now)) {
+      return MatchCode.SKIP;
+    }
+
+    return null;
+  }
+
+  /**
+   * preCheck for raw scan. This should not skip expired cells.
+   * @return null means continue.
+   */
+  protected final MatchCode preCheckRaw(ExtendedCell cell) {
     if (currentRow == null) {
       // Since the curCell is null it means we are already sure that we have moved over to the next
       // row
@@ -190,10 +208,6 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     // check for early out based on timestamp alone
     if (timestamp == PrivateConstants.OLDEST_TIMESTAMP || columns.isDone(timestamp)) {
       return columns.getNextRowOrNextColumn(cell);
-    }
-    // check if the cell is expired by cell TTL
-    if (isCellTTLExpired(cell, this.oldestUnexpiredTS, this.now)) {
-      return MatchCode.SKIP;
     }
     return null;
   }
