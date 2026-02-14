@@ -17,34 +17,29 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestProcedureBypass {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcedureBypass.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProcedureBypass.class);
 
@@ -64,7 +59,7 @@ public class TestProcedureBypass {
   private static class TestProcEnv {
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     htu = new HBaseCommonTestingUtility();
 
@@ -79,6 +74,13 @@ public class TestProcedureBypass {
     procExecutor = new ProcedureExecutor<>(htu.getConfiguration(), procEnv, procStore);
     procStore.start(PROCEDURE_EXECUTOR_SLOTS);
     ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, true);
+  }
+
+  @AfterAll
+  public static void tearDown() throws Exception {
+    procExecutor.stop();
+    procStore.stop(false);
+    procExecutor.join();
   }
 
   @Test
@@ -155,13 +157,6 @@ public class TestProcedureBypass {
 
     htu.waitFor(5000, () -> proc.isSuccess() && proc.isBypass());
     LOG.info("{} finished", proc);
-  }
-
-  @AfterClass
-  public static void tearDown() throws Exception {
-    procExecutor.stop();
-    procStore.stop(false);
-    procExecutor.join();
   }
 
   public static class SuspendProcedure extends ProcedureTestingUtility.NoopProcedure<TestProcEnv> {
@@ -284,5 +279,4 @@ public class TestProcedureBypass {
       return tState.ordinal();
     }
   }
-
 }
