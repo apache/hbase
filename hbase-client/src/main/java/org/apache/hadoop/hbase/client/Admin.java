@@ -2705,4 +2705,28 @@ public interface Admin extends Abortable, Closeable {
 
   @InterfaceAudience.Private
   void restoreBackupSystemTable(String snapshotName) throws IOException;
+
+  /**
+   * Refresh the system key cache on all specified region servers.
+   * @param regionServers the list of region servers to refresh the system key cache on
+   */
+  void refreshSystemKeyCacheOnServers(List<ServerName> regionServers) throws IOException;
+
+  /**
+   * Eject a specific managed key entry from the managed key data cache on all specified region
+   * servers.
+   * @param regionServers the list of region servers to eject the managed key entry from
+   * @param keyCustodian  the key custodian
+   * @param keyNamespace  the key namespace
+   * @param keyMetadata   the key metadata
+   */
+  void ejectManagedKeyDataCacheEntryOnServers(List<ServerName> regionServers, byte[] keyCustodian,
+    String keyNamespace, String keyMetadata) throws IOException;
+
+  /**
+   * Clear all entries in the managed key data cache on all specified region servers without having
+   * to restart the process.
+   * @param regionServers the list of region servers to clear the managed key data cache on
+   */
+  void clearManagedKeyDataCacheOnServers(List<ServerName> regionServers) throws IOException;
 }
