@@ -17,31 +17,26 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestChildProcedures {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestChildProcedures.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestChildProcedures.class);
 
@@ -56,7 +51,7 @@ public class TestChildProcedures {
   private Path testDir;
   private Path logDir;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtility();
     testDir = htu.getDataTestDir();
@@ -72,7 +67,7 @@ public class TestChildProcedures {
     ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     procExecutor.stop();
     procStore.stop(false);
@@ -88,7 +83,7 @@ public class TestChildProcedures {
     ProcedureTestingUtility.restart(procExecutor);
     ProcedureTestingUtility.waitProcedure(procExecutor, proc);
 
-    assertTrue("expected completed proc", procExecutor.isFinished(procId));
+    assertTrue(procExecutor.isFinished(procId), "expected completed proc");
     ProcedureTestingUtility.assertProcNotFailed(procExecutor, procId);
   }
 
@@ -105,7 +100,7 @@ public class TestChildProcedures {
       restartCount++;
     }
     assertEquals(3, restartCount);
-    assertTrue("expected completed proc", procExecutor.isFinished(procId));
+    assertTrue(procExecutor.isFinished(procId), "expected completed proc");
     ProcedureTestingUtility.assertProcNotFailed(procExecutor, procId);
   }
 
@@ -126,7 +121,7 @@ public class TestChildProcedures {
       restartCount++;
     }
     assertEquals(4, restartCount);
-    assertTrue("expected completed proc", procExecutor.isFinished(procId));
+    assertTrue(procExecutor.isFinished(procId), "expected completed proc");
     ProcedureTestingUtility.assertProcNotFailed(procExecutor, procId);
   }
 
@@ -161,9 +156,9 @@ public class TestChildProcedures {
   }
 
   private void assertProcFailed(long procId) {
-    assertTrue("expected completed proc", procExecutor.isFinished(procId));
+    assertTrue(procExecutor.isFinished(procId), "expected completed proc");
     Procedure<?> result = procExecutor.getResult(procId);
-    assertEquals(true, result.isFailed());
+    assertTrue(result.isFailed());
     LOG.info(result.getException().getMessage());
   }
 

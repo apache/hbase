@@ -19,29 +19,24 @@ package org.apache.hadoop.hbase.procedure2;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.NoopProcedure;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Testcase for HBASE-20973
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestProcedureRollbackAIOOB {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcedureRollbackAIOOB.class);
 
   private static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
 
@@ -77,25 +72,22 @@ public class TestProcedureRollbackAIOOB {
 
   private ProcedureExecutor<Void> procExec;
 
-  @Rule
-  public final TestName name = new TestName();
-
-  @Before
-  public void setUp() throws IOException {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
     procStore = ProcedureTestingUtility.createWalStore(UTIL.getConfiguration(),
-      UTIL.getDataTestDir(name.getMethodName()));
+      UTIL.getDataTestDir(testInfo.getTestMethod().get().getName()));
     procStore.start(2);
-    procExec = new ProcedureExecutor<Void>(UTIL.getConfiguration(), null, procStore);
+    procExec = new ProcedureExecutor<>(UTIL.getConfiguration(), null, procStore);
     ProcedureTestingUtility.initAndStartWorkers(procExec, 2, true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     procExec.stop();
     procStore.stop(false);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws IOException {
     UTIL.cleanupTestDir();
   }

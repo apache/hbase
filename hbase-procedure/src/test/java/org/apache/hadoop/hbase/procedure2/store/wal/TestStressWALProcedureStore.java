@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.procedure2.store.wal;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Random;
@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.LoadCounter;
@@ -35,21 +34,17 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestStressWALProcedureStore {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStressWALProcedureStore.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWALProcedureStore.class);
 
@@ -68,7 +63,7 @@ public class TestStressWALProcedureStore {
     conf.setInt(WALProcedureStore.ROLL_THRESHOLD_CONF_KEY, 128 * 1024);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtility();
     setupConfiguration(htu.getConfiguration());
@@ -89,7 +84,7 @@ public class TestStressWALProcedureStore {
     assertEquals(0, loader.getCorruptedCount());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     procStore.stop(false);
     fs.delete(logDir, true);
@@ -138,14 +133,14 @@ public class TestStressWALProcedureStore {
     assertEquals(1, procStore.getActiveLogs().size());
   }
 
-  @Ignore
+  @Disabled
   @Test // REENABLE after merge of
   // https://github.com/google/protobuf/issues/2228#issuecomment-252058282
   public void testEntrySizeLimit() throws Exception {
     final int NITEMS = 20;
     for (int i = 1; i <= NITEMS; ++i) {
       final byte[] data = new byte[256 << i];
-      LOG.info(String.format("Writing %s", StringUtils.humanSize(data.length)));
+      LOG.info("Writing {}", StringUtils.humanSize(data.length));
       TestProcedure proc = new TestProcedure(i, 0, data);
       procStore.insert(proc, null);
     }
