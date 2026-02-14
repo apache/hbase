@@ -661,6 +661,25 @@ public class TestScannersFromClientSide {
   }
 
   @Test
+  public void testRawScanExpiredCell() throws Exception {
+    final TableName tableName = name.getTableName();
+    try (final Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
+      final Put put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
+      put.setTTL(0);
+      table.put(put);
+      final Scan scan = new Scan().setRaw(true);
+      try (final ResultScanner scanner = table.getScanner(scan)) {
+        final Result result = scanner.next();
+        assertArrayEquals(VALUE, result.getValue(FAMILY, QUALIFIER));
+        assertNull(scanner.next());
+      }
+    } finally {
+      TEST_UTIL.deleteTable(tableName);
+    }
+  }
+
+  @Test
   public void testScanRawDeleteFamilyVersion() throws Exception {
     TableName tableName = name.getTableName();
     TEST_UTIL.createTable(tableName, FAMILY);
