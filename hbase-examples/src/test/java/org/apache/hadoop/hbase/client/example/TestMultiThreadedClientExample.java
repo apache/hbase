@@ -17,23 +17,22 @@
  */
 package org.apache.hadoop.hbase.client.example;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMultiThreadedClientExample {
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -43,17 +42,13 @@ public class TestMultiThreadedClientExample {
   private static byte[] familyName = Bytes.toBytes("d");
   private static byte[] columnName = Bytes.toBytes("col");
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultiThreadedClientExample.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     TEST_UTIL.startMiniCluster(1);
     table = TEST_UTIL.createTable(MY_TABLE_NAME, familyName);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.deleteTable(MY_TABLE_NAME);
     TEST_UTIL.shutdownMiniCluster();
