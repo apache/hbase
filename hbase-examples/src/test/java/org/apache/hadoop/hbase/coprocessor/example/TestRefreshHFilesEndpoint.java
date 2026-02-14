@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.coprocessor.example;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,7 +27,6 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -38,15 +38,11 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestRefreshHFilesEndpoint extends TestRefreshHFilesBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRefreshHFilesEndpoint.class);
 
   @Test
   public void testRefreshRegionHFilesEndpoint() throws Exception {
@@ -57,10 +53,10 @@ public class TestRefreshHFilesEndpoint extends TestRefreshHFilesBase {
     assertEquals(4, HTU.getNumHFiles(TABLE_NAME, FAMILY));
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testRefreshRegionHFilesEndpointWithException() throws IOException {
     setUp(HRegionForRefreshHFilesEP.class.getName());
-    callRefreshRegionHFilesEndPoint();
+    assertThrows(IOException.class, () -> callRefreshRegionHFilesEndPoint());
   }
 
   private void callRefreshRegionHFilesEndPoint() throws IOException {

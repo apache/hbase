@@ -23,5 +23,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public interface RowStatisticsRecorder {
+
   void record(RowStatisticsImpl stats, Optional<byte[]> fullRegionName);
 }
