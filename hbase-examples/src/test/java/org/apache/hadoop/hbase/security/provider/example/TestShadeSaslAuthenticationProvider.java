@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.security.provider.example;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
@@ -67,25 +66,21 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MediumTests.class, SecurityTests.class })
+@Tag(MediumTests.TAG)
+@Tag(SecurityTests.TAG)
 public class TestShadeSaslAuthenticationProvider {
+
   private static final Logger LOG =
     LoggerFactory.getLogger(TestShadeSaslAuthenticationProvider.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestShadeSaslAuthenticationProvider.class);
 
   private static final char[] USER1_PASSWORD = "foobarbaz".toCharArray();
 
@@ -138,7 +133,7 @@ public class TestShadeSaslAuthenticationProvider {
   private static File KEYTAB_FILE;
   private static Path USER_DATABASE_FILE;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     KEYTAB_FILE = new File(UTIL.getDataTestDir("keytab").toUri().getPath());
     final MiniKdc kdc = UTIL.setupMiniKdc(KEYTAB_FILE);
@@ -156,7 +151,7 @@ public class TestShadeSaslAuthenticationProvider {
     CLUSTER.startup();
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownCluster() throws Exception {
     if (CLUSTER != null) {
       CLUSTER.shutdown();
@@ -165,14 +160,12 @@ public class TestShadeSaslAuthenticationProvider {
     UTIL.shutdownMiniZKCluster();
   }
 
-  @Rule
-  public TestName name = new TestName();
   TableName tableName;
   String clusterId;
 
-  @Before
-  public void createTable() throws Exception {
-    tableName = TableName.valueOf(name.getMethodName());
+  @BeforeEach
+  public void createTable(TestInfo testInfo) throws Exception {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
 
     // Create a table and write a record as the service user (hbase)
     UserGroupInformation serviceUgi = UserGroupInformation
@@ -215,9 +208,9 @@ public class TestShadeSaslAuthenticationProvider {
             try (Table t = conn.getTable(tableName)) {
               Result r = t.get(new Get(Bytes.toBytes("r1")));
               assertNotNull(r);
-              assertFalse("Should have read a non-empty Result", r.isEmpty());
+              assertFalse(r.isEmpty(), "Should have read a non-empty Result");
               final Cell cell = r.getColumnLatestCell(Bytes.toBytes("f1"), Bytes.toBytes("q1"));
-              assertTrue("Unexpected value", CellUtil.matchingValue(cell, Bytes.toBytes("1")));
+              assertTrue(CellUtil.matchingValue(cell, Bytes.toBytes("1")), "Unexpected value");
 
               return null;
             }
@@ -257,7 +250,7 @@ public class TestShadeSaslAuthenticationProvider {
               fail("Should not successfully authenticate with HBase");
             } catch (Exception e) {
               LOG.info("Caught exception in negative Master connectivity test", e);
-              assertEquals("Found unexpected exception", pair.getSecond(), e.getClass());
+              assertEquals(pair.getSecond(), e.getClass(), "Found unexpected exception");
             }
             return null;
           }
@@ -273,7 +266,7 @@ public class TestShadeSaslAuthenticationProvider {
               fail("Should not successfully authenticate with HBase");
             } catch (Exception e) {
               LOG.info("Caught exception in negative RegionServer connectivity test", e);
-              assertEquals("Found unexpected exception", pair.getSecond(), e.getClass());
+              assertEquals(pair.getSecond(), e.getClass(), "Found unexpected exception");
             }
             return null;
           }
