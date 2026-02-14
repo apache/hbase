@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
 @Tag(SmallTests.TAG)
 public class TestProcedureSchedulerConcurrency {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestProcedureEvents.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestProcedureSchedulerConcurrency.class);
 
   private SimpleProcedureScheduler procSched;
 
