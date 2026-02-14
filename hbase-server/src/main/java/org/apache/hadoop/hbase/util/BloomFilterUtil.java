@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.apache.hadoop.hbase.regionserver.BloomType.ROWPREFIX_FIXED_LENGTH;
-
 import java.text.NumberFormat;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
@@ -255,7 +253,7 @@ public final class BloomFilterUtil {
     throws IllegalArgumentException {
     byte[] bloomParam = null;
     String message = "Bloom filter type is " + bloomFilterType + ", ";
-    if (bloomFilterType.equals(ROWPREFIX_FIXED_LENGTH)) {
+    if (bloomFilterType == BloomType.ROWPREFIX_FIXED_LENGTH) {
       String prefixLengthString = conf.get(PREFIX_LENGTH_KEY);
       if (prefixLengthString == null) {
         message += PREFIX_LENGTH_KEY + " not specified.";

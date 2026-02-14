@@ -339,7 +339,22 @@ enum TBloomFilterType {
   /**
    * Bloom enabled with Table row prefix as Key, specify the length of the prefix
    */
-  ROWPREFIX_FIXED_LENGTH = 3,
+  ROWPREFIX_FIXED_LENGTH = 3
+}
+
+/**
+ * Thrift wrapper around
+ * org.apache.hadoop.hbase.regionserver.BloomFilterImpl
+ */
+enum TBloomFilterImpl {
+  /**
+   * Traditional Bloom filter implementation
+   */
+  BLOOM = 0,
+  /**
+   * Ribbon filter implementation (more space-efficient than Bloom filters)
+   */
+  RIBBON = 1
 }
 
 /**
@@ -432,6 +447,7 @@ struct TColumnFamilyDescriptor {
   18: optional bool compressTags
   19: optional bool evictBlocksOnClose
   20: optional bool inMemory
+  21: optional TBloomFilterImpl bloomFilterImpl
 
 }
 
