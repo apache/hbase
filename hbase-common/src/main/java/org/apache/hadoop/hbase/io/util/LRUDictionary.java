@@ -68,6 +68,11 @@ public class LRUDictionary implements Dictionary {
   }
 
   @Override
+  public int size() {
+    return backingStore.currSize;
+  }
+
+  @Override
   public void clear() {
     backingStore.clear();
   }
