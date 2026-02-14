@@ -19,13 +19,13 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.apache.hadoop.hbase.replication.ReplicationPeerConfigTestUtil.assertConfigEquals;
 import static org.apache.hadoop.hbase.replication.ReplicationPeerConfigTestUtil.getConfig;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.List;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public abstract class ReplicationPeerStorageTestBase {
 
