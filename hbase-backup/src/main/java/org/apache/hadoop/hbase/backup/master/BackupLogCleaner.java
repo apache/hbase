@@ -128,7 +128,8 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
       for (TableName table : backupInfo.getTableSetTimestampMap().keySet()) {
         for (Map.Entry<String, Long> entry : backupInfo.getTableSetTimestampMap().get(table)
           .entrySet()) {
-          builder.addBackupTimestamps(entry.getKey(), entry.getValue(), startCode);
+          builder.addBackupTimestamps(backupInfo.getBackupId(), entry.getKey(), entry.getValue(),
+            startCode);
         }
       }
     }
@@ -137,9 +138,12 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Boundaries oldestStartCode: {}", boundaries.getOldestStartCode());
-      for (Map.Entry<Address, Long> entry : boundaries.getBoundaries().entrySet()) {
-        LOG.debug("Server: {}, WAL cleanup boundary: {}", entry.getKey().getHostName(),
-          entry.getValue());
+      for (Map.Entry<String, Map<Address, Long>> entry : boundaries.getBoundaries().entrySet()) {
+        String backupId = entry.getKey();
+        for (Map.Entry<Address, Long> addressAndTs : entry.getValue().entrySet()) {
+          LOG.debug("Backup: {}, Server: {}, WAL cleanup boundary: {}", backupId,
+            addressAndTs.getKey().getHostName(), addressAndTs.getValue());
+        }
       }
     }
 

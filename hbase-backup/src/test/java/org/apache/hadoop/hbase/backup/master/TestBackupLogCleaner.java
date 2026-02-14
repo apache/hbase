@@ -300,7 +300,7 @@ public class TestBackupLogCleaner extends TestBackupBase {
     Path oldWAL = new Path("/hbase/oldWALs/server1%2C60020%2C12345.500000");
     String host = BackupUtils.parseHostNameFromLogFile(oldWAL);
     BackupBoundaries boundaries = BackupBoundaries.builder(0L)
-      .addBackupTimestamps(host, backupStartCode, backupStartCode).build();
+      .addBackupTimestamps("backup1", host, backupStartCode, backupStartCode).build();
 
     assertTrue("WAL older than backup should be deletable",
       BackupLogCleaner.canDeleteFile(boundaries, oldWAL));
@@ -332,6 +332,32 @@ public class TestBackupLogCleaner extends TestBackupBase {
     Path masterPath = new Path(
       "/hbase/MasterData/oldWALs/hmaster%2C60000%2C1716224062663.1716247552189$masterlocalwal$");
     assertTrue(BackupLogCleaner.canDeleteFile(empty, masterPath));
+  }
+
+  @Test
+  public void testBackupBoundariesProtectsWALsNeededByAnyRoot() {
+    long t1 = 1000L;
+    long t2 = 2000L;
+
+    Path walBetweenBoundaries = new Path("/hbase/oldWALs/server1%2C60020%2C12345.1500");
+    String host = BackupUtils.parseHostNameFromLogFile(walBetweenBoundaries);
+
+    BackupBoundaries boundaries =
+      BackupBoundaries.builder(0L).addBackupTimestamps("backup-B1", host, t1, t1)
+        .addBackupTimestamps("backup-B2", host, t2, t2).build();
+
+    assertFalse(
+      "WAL at 1500 should NOT be deletable because backup B1 " + "(boundary=" + t1
+        + ") still needs it, even though backup B2 (boundary=" + t2 + ") doesn't",
+      BackupLogCleaner.canDeleteFile(boundaries, walBetweenBoundaries));
+
+    Path walBeforeBoth = new Path("/hbase/oldWALs/server1%2C60020%2C12345.500");
+    assertTrue("WAL at 500 should be deletable because it's before both boundaries",
+      BackupLogCleaner.canDeleteFile(boundaries, walBeforeBoth));
+
+    Path walAfterBoth = new Path("/hbase/oldWALs/server1%2C60020%2C12345.2500");
+    assertFalse("WAL at 2500 should NOT be deletable because it's after both boundaries",
+      BackupLogCleaner.canDeleteFile(boundaries, walAfterBoth));
   }
 
   private Set<FileStatus> mergeAsSet(Collection<FileStatus> toCopy, Collection<FileStatus> toAdd) {

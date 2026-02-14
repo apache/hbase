@@ -38,22 +38,35 @@ public class BackupBoundaries {
   private static final BackupBoundaries EMPTY_BOUNDARIES =
     new BackupBoundaries(Collections.emptyMap(), Long.MAX_VALUE);
 
-  // This map tracks, for every RegionServer, the least recent (= oldest / lowest timestamp)
-  // inclusion in any backup. In other words, it is the timestamp boundary up to which all backup
-  // roots have included the WAL in their backup.
-  private final Map<Address, Long> boundaries;
+  // Tracks WAL cleanup boundaries separately for each backup root to ensure WALs are only deleted
+  // when ALL backup roots no longer need them. The outer map key is the backup ID of the most
+  // recent backup from each backup root. For each backup root, the inner map stores the WAL
+  // timestamp boundary per RegionServer (the oldest WAL timestamp included in that backup root's
+  // most recent backup). A WAL file can only be deleted if it's older than the boundary for ALL
+  // backup roots, protecting WALs needed by any backup root even when other roots have already
+  // backed up that host at a later timestamp.
+  private final Map<String, Map<Address, Long>> boundaries;
 
   // The minimum WAL roll timestamp from the most recent backup of each backup root, used as a
   // fallback cleanup boundary for RegionServers without explicit backup boundaries (e.g., servers
   // that joined after backups began)
   private final long oldestStartCode;
 
-  private BackupBoundaries(Map<Address, Long> boundaries, long oldestStartCode) {
+  private BackupBoundaries(Map<String, Map<Address, Long>> boundaries, long oldestStartCode) {
     this.boundaries = boundaries;
     this.oldestStartCode = oldestStartCode;
   }
 
   public boolean isDeletable(Path walLogPath) {
+    for (Map<Address, Long> boundaries : this.boundaries.values()) {
+      if (!isDeletable(boundaries, walLogPath)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private boolean isDeletable(Map<Address, Long> boundaries, Path walLogPath) {
     try {
       String hostname = BackupUtils.parseHostNameFromLogFile(walLogPath);
 
@@ -100,7 +113,7 @@ public class BackupBoundaries {
     }
   }
 
-  public Map<Address, Long> getBoundaries() {
+  public Map<String, Map<Address, Long>> getBoundaries() {
     return boundaries;
   }
 
@@ -113,7 +126,7 @@ public class BackupBoundaries {
   }
 
   public static class BackupBoundariesBuilder {
-    private final Map<Address, Long> boundaries = new HashMap<>();
+    private final Map<String, Map<Address, Long>> boundaries = new HashMap<>();
     private final long tsCleanupBuffer;
 
     private long oldestStartCode = Long.MAX_VALUE;
@@ -122,12 +135,15 @@ public class BackupBoundaries {
       this.tsCleanupBuffer = tsCleanupBuffer;
     }
 
-    public BackupBoundariesBuilder addBackupTimestamps(String host, long hostLogRollTs,
-      long backupStartCode) {
+    public BackupBoundariesBuilder addBackupTimestamps(String backupId, String host,
+      long hostLogRollTs, long backupStartCode) {
+      Map<Address, Long> backupBoundaries =
+        boundaries.computeIfAbsent(backupId, ignore -> new HashMap<>());
+
       Address address = Address.fromString(host);
-      Long storedTs = boundaries.get(address);
+      Long storedTs = backupBoundaries.get(address);
       if (storedTs == null || hostLogRollTs < storedTs) {
-        boundaries.put(address, hostLogRollTs);
+        backupBoundaries.put(address, hostLogRollTs);
       }
 
       if (oldestStartCode > backupStartCode) {
