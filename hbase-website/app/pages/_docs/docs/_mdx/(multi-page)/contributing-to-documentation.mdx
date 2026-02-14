@@ -1,0 +1,317 @@
+---
+title: "Appendix: Contributing to Documentation"
+description: "Guide for contributing to Apache HBase documentation, including patch submission procedures, website editing, style guidelines, and best practices."
+---
+
+## Contributing to Documentation
+
+The Apache HBase project welcomes contributions to all aspects of the project, including the documentation.
+
+In HBase, documentation includes the following areas, and probably some others:
+
+- The [HBase Reference Guide](/docs) (this book)
+- The [HBase website](/)
+- API documentation
+- Command-line utility output and help text
+- Web UI strings, explicit help text, context-sensitive strings, and others
+- Log messages
+- Comments in source files, configuration files, and others
+- Localization of any of the above into target languages other than English
+
+No matter which area you want to help out with, the first step is almost always to download (typically by cloning the Git repository) and familiarize yourself with the HBase source code. For information on downloading and building the source, see [developer](/docs/building-and-developing).
+
+## Contributing to Other Strings
+
+If you spot an error in a string in a UI, utility, script, log message, or elsewhere, or you think something could be made more clear, or you think text needs to be added where it doesn't currently exist, the first step is to file a JIRA. Be sure to set the component to `Documentation` in addition to any other involved components. Most components have one or more default owners, who monitor new issues which come into those queues. Regardless of whether you feel able to fix the bug, you should still file bugs where you see them.
+
+If you want to try your hand at fixing your newly-filed bug, assign it to yourself. You will need to clone the HBase Git repository to your local system and work on the issue there. When you have developed a potential fix, submit it for review. If it addresses the issue and is seen as an improvement, one of the HBase committers will commit it to one or more branches, as appropriate.
+
+### Procedure: Suggested Work flow for Submitting Patches
+
+This procedure goes into more detail than Git pros will need, but is included in this appendix so that people unfamiliar with Git can feel confident contributing to HBase while they learn.
+
+<Steps>
+
+<Step>
+  If you have not already done so, clone the Git repository locally. You only need to do this once.
+</Step>
+
+<Step>
+  Fairly often, pull remote changes into your local repository by using the `git pull` command,
+  while your tracking branch is checked out.
+</Step>
+
+<Step>
+For each issue you work on, create a new branch. One convention that works well for naming the branches is to name a given branch the same as the JIRA it relates to:
+
+```bash
+$ git checkout -b HBASE-123456
+```
+
+</Step>
+
+<Step>
+  Make your suggested changes on your branch, committing your changes to your local repository
+  often. If you need to switch to working on a different issue, remember to check out the
+  appropriate branch.
+</Step>
+
+<Step>
+  When you are ready to submit your patch, first be sure that HBase builds cleanly and behaves as
+  expected in your modified branch.
+</Step>
+
+<Step>
+  If you have made documentation or website changes, verify that the site builds correctly by
+  running the development server from the `hbase-website/` directory.
+</Step>
+
+<Step>
+If it takes you several days or weeks to implement your fix, or you know that the area of the code you are working in has had a lot of changes lately, make sure you rebase your branch against the remote master and take care of any conflicts before submitting your patch.
+
+```bash
+$ git checkout HBASE-123456
+$ git rebase origin/master
+```
+
+</Step>
+
+<Step>
+Generate your patch against the remote master. Run the following command from the top level of your git repository (usually called `hbase`):
+
+```bash
+$ git format-patch --stdout origin/master > HBASE-123456.patch
+```
+
+The name of the patch should contain the JIRA ID.
+
+</Step>
+
+<Step>
+  Look over the patch file to be sure that you did not change any additional files by accident and
+  that there are no other surprises.
+</Step>
+
+<Step>
+  When you are satisfied, attach the patch to the JIRA and click the **Patch Available** button. A
+  reviewer will review your patch.
+</Step>
+
+<Step>
+  If you need to submit a new version of the patch, leave the old one on the JIRA and add a version
+  number to the name of the new patch.
+</Step>
+
+<Step>After a change has been committed, there is no need to keep your local branch around.</Step>
+
+</Steps>
+
+## Editing the HBase Website and Documentation
+
+The HBase website and documentation are now part of a single application built with Remix and Fumadocs. The source files are located in the `hbase-website/` directory:
+
+- **Documentation pages**: `hbase-website/app/pages/_docs/docs/_mdx/(multi-page)/` - individual MDX files for each documentation section
+- **Single-page view**: `hbase-website/app/pages/_docs/docs/_mdx/single-page/index.mdx` - combines all documentation into one page
+- **Website components**: `hbase-website/app/components/` - React components used throughout the site
+- **Images**: `hbase-website/public/` - static assets including images
+
+You can edit MDX files in any text editor or IDE. To preview your changes locally, run the development server from the `hbase-website/` directory and navigate to the documentation pages in your browser. When you are satisfied with your changes, follow the procedure in [submit doc patch procedure](/docs/contributing-to-documentation#procedure-suggested-work-flow-for-submitting-patches) to submit your patch.
+
+## Publishing the HBase Website and Documentation
+
+The HBase website and documentation are built and deployed as a single Remix application. The deployment process is managed through the project's CI/CD pipeline, which builds the site from the `hbase-website/` directory and deploys it automatically when changes are merged to the main branch.
+
+## MDX and Fumadocs Components
+
+The HBase documentation is written in MDX (Markdown with JSX), which allows you to use standard Markdown syntax along with React components. For comprehensive documentation on Markdown formatting and MDX features, refer to:
+
+- [Fumadocs Markdown Documentation](https://www.fumadocs.dev/docs/markdown) - Complete guide to MDX syntax and Fumadocs features
+- [CommonMark specification](https://commonmark.org/) - Standard Markdown syntax reference
+- [GFM (GitHub Flavored Markdown)](https://github.github.com/gfm) - GitHub-style Markdown extensions
+
+### Fumadocs Components
+
+Fumadocs provides several components that enhance the documentation:
+
+#### Steps Component
+
+Use `<Steps>` to create numbered step-by-step instructions:
+
+```mdx
+<Steps>
+
+<Step>First, do this thing.</Step>
+
+<Step>Then, do this other thing.</Step>
+
+</Steps>
+```
+
+**Example output:**
+
+<Steps>
+
+<Step>First, do this thing.</Step>
+
+<Step>Then, do this other thing.</Step>
+
+</Steps>
+
+#### Callout Component
+
+Use `<Callout>` for notes, warnings, and important information:
+
+```mdx
+<Callout type="info">This is an informational callout.</Callout>
+
+<Callout type="warning">This is a warning callout.</Callout>
+```
+
+**Example output:**
+
+<Callout type="info">This is an informational callout.</Callout>
+
+<Callout type="warning">This is a warning callout.</Callout>
+
+#### Include Directive
+
+The single-page documentation view uses `<include>` tags to combine multiple MDX files:
+
+```mdx
+<include>../(multi-page)/getting-started.mdx</include>
+```
+
+See `hbase-website/app/pages/_docs/docs/_mdx/single-page/index.mdx` for examples of how all documentation sections are included in the single-page view.
+
+## Auto-Generated Content
+
+Some parts of the HBase documentation, such as the [default configuration](/docs/configuration/default), are generated automatically to stay in sync with the code. The configuration documentation is generated from the `hbase-common/src/main/resources/hbase-default.xml` file.
+
+To add or modify configuration parameters, update the source XML file. To regenerate the documentation from the updated configuration, run:
+
+```bash
+npm run extract-hbase-config
+```
+
+This command is also executed automatically when you run `npm ci`.
+
+## Images in the Documentation
+
+You can include images in the HBase documentation using standard Markdown syntax. Always include descriptive alt text for accessibility:
+
+```markdown
+![Alt text describing the image](/path/to/image.png)
+```
+
+Save images to the `hbase-website/public/` directory or an appropriate subdirectory. Reference them in your MDX files using absolute paths from the public directory:
+
+```markdown
+![Architecture diagram](/images/architecture-diagram.png)
+```
+
+When submitting a patch that includes images, attach the images to the JIRA issue.
+
+## Adding a New Section to the Documentation
+
+To add a new section to the HBase documentation:
+
+1. Create a new MDX file in `hbase-website/app/pages/_docs/docs/_mdx/(multi-page)/` with a descriptive name (e.g., `my-new-section.mdx`)
+2. Add frontmatter at the top of the file with a title and description:
+
+```mdx
+---
+title: "My New Section"
+description: "Brief description of what this section covers"
+---
+
+## My New Section
+
+Your content here...
+```
+
+3. Add your new file to `hbase-website/app/pages/_docs/docs/_mdx/(multi-page)/meta.json` in the appropriate location within the `pages` array (without the `.mdx` extension):
+
+```json
+{
+  "pages": [
+    "---My Category---",
+    "my-new-section",
+    ...
+  ]
+}
+```
+
+4. Add an `<include>` directive to `hbase-website/app/pages/_docs/docs/_mdx/single-page/index.mdx` in the appropriate location:
+
+```mdx
+<include>../(multi-page)/my-new-section.mdx</include>
+```
+
+5. Add your new file to Git before creating your patch.
+
+## Unique Headings Requirement
+
+Since all documentation files are merged into a single-page view, **all heading IDs must be unique across the entire documentation**. A test will fail during the build if duplicate heading IDs are detected, marking the problematic headings.
+
+Headings don't have to be visually unique, but their link IDs must be unique. You can customize the heading ID using Fumadocs syntax:
+
+```markdown
+## Configuration [#server-configuration]
+```
+
+This creates a heading that displays as "Configuration" but has the unique ID `#server-configuration` for linking purposes.
+
+### Hiding Headings from Table of Contents
+
+You can hide specific headings from the right-side table of contents:
+
+```markdown
+## Internal Implementation Details [!toc]
+```
+
+This heading will still appear in the document but won't show up in the table of contents navigation.
+
+<Callout type="warning">
+  Note: `[!toc]` becomes part of the heading ID. For example, `## Usage [!toc]` will have the ID
+  `#usage-toc`.
+</Callout>
+
+### Combining Custom IDs and TOC Hiding
+
+You can combine both attributes:
+
+```markdown
+## Configuration Details [#server-config] [!toc]
+```
+
+## Common Documentation Issues
+
+The following documentation issues come up often:
+
+1.  **Isolate Changes for Easy Diff Review**
+
+    Avoid reformatting entire files when making content changes. If you need to reformat a file, do that in a separate JIRA where you do not change any content.
+
+2.  **Syntax Highlighting**
+
+    MDX supports syntax highlighting for code blocks. Specify the language after the opening triple backticks:
+
+    ````markdown
+    ```java
+    public class Example {
+        // your code here
+    }
+    ```
+    ````
+
+3.  **Component Syntax**
+
+    Remember to properly close Fumadocs components. Components like `<Steps>` and `<Callout>` must be properly closed:
+
+    ```mdx
+    <Callout>Your content here</Callout>
+    ```
+
+4.  **Unique Heading IDs**
+
+    Ensure all heading IDs are unique across the entire documentation. If you get a test failure about duplicate headings, customize the heading ID using `[#custom-id]` syntax as described in the [Unique Headings Requirement](#unique-headings-requirement) section.
