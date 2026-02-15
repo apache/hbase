@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.hbtop.mode;
 import java.util.List;
 import org.apache.hadoop.hbase.hbtop.Record;
 import org.apache.hadoop.hbase.hbtop.TestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public abstract class TestModeBase {
 
