@@ -18,24 +18,19 @@
 package org.apache.hadoop.hbase.metrics;
 
 import java.util.Collection;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.impl.MetricsExportHelper;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MetricsTests.class, SmallTests.class })
+@Tag(MetricsTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMetricsExportHelper {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricsExportHelper.class);
 
   @Test
   public void testExportHelper() {
@@ -54,11 +49,11 @@ public class TestMetricsExportHelper {
     Collection<MetricsRecord> metrics = MetricsExportHelper.export();
     DefaultMetricsSystem.instance().stop();
 
-    Assert.assertTrue(metrics.stream().anyMatch(mr -> mr.name().equals(metricsName)));
-    Assert.assertTrue(gaugeName + " is missing in the export",
-      contains(metrics, metricsName, gaugeName));
-    Assert.assertTrue(counterName + " is missing in the export",
-      contains(metrics, metricsName, counterName));
+    Assertions.assertTrue(metrics.stream().anyMatch(mr -> mr.name().equals(metricsName)));
+    Assertions.assertTrue(contains(metrics, metricsName, gaugeName),
+      gaugeName + " is missing in the export");
+    Assertions.assertTrue(contains(metrics, metricsName, counterName),
+      counterName + " is missing in the export");
   }
 
   private boolean contains(Collection<MetricsRecord> metrics, String metricsName,
