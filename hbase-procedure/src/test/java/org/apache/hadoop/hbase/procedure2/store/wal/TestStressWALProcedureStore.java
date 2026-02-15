@@ -46,7 +46,7 @@ import org.slf4j.LoggerFactory;
 @Tag(MediumTests.TAG)
 public class TestStressWALProcedureStore {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestWALProcedureStore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestStressWALProcedureStore.class);
 
   private static final int PROCEDURE_STORE_SLOTS = 8;
 
