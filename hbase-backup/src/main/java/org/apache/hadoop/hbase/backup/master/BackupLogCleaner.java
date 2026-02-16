@@ -25,17 +25,21 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.util.BackupBoundaries;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -89,11 +93,14 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
    * Calculates the timestamp boundary up to which all backup roots have already included the WAL.
    * I.e. WALs with a lower (= older) or equal timestamp are no longer needed for future incremental
    * backups.
-   * @param backups  all completed or running backups to use for the calculation of the boundary
-   * @param tsBuffer a buffer (in ms) to lower the boundary for the default bound
+   * @param backups                   all completed or running backups to use for the calculation of
+   *                                  the boundary
+   * @param incrBackupTableSetPerRoot per backup root, the tables that future incremental backups
+   *                                  will include. Other tables do not affect the boundary.
+   * @param tsBuffer                  a buffer (in ms) to lower the boundary for the default bound
    */
   protected static BackupBoundaries calculatePreservationBoundary(List<BackupInfo> backups,
-    long tsBuffer) {
+    Map<String, Set<TableName>> incrBackupTableSetPerRoot, long tsBuffer) {
     if (LOG.isDebugEnabled()) {
       LOG.debug(
         "Cleaning WALs if they are older than the WAL cleanup time-boundary. "
@@ -120,7 +127,13 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     }
 
     BackupBoundaries.BackupBoundariesBuilder builder = BackupBoundaries.builder(tsBuffer);
-    newestBackupPerRootDir.values().forEach(builder::update);
+    for (Map.Entry<String, BackupInfo> rootEntry : newestBackupPerRootDir.entrySet()) {
+      String backupRoot = rootEntry.getKey();
+      BackupInfo backupInfo = rootEntry.getValue();
+      Set<TableName> activeTables = incrBackupTableSetPerRoot.get(backupRoot);
+      builder.update(backupInfo, activeTables);
+    }
+
     BackupBoundaries boundaries = builder.build();
 
     if (LOG.isDebugEnabled()) {
@@ -151,7 +164,24 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
       long tsBuffer = getConf().getLong(TS_BUFFER_KEY, TS_BUFFER_DEFAULT);
       List<BackupInfo> backupHistory = sysTable.getBackupHistory(
         i -> EnumSet.of(BackupState.COMPLETE, BackupState.RUNNING).contains(i.getState()));
-      boundaries = calculatePreservationBoundary(backupHistory, tsBuffer);
+      Set<TableName> existingTables;
+      try (Admin admin = conn.getAdmin()) {
+        existingTables = Set.of(admin.listTableNames(Pattern.compile(".*"), true));
+      }
+      // Future incremental backups of a backup root include the tables of its incremental backup
+      // set that still exist, so only those tables need their WALs retained. A deleted table
+      // stays in the incremental backup set while backups containing it are retained.
+      Map<String, Set<TableName>> incrBackupTableSetPerRoot = new HashMap<>();
+      for (BackupInfo backupInfo : backupHistory) {
+        String backupRootDir = backupInfo.getBackupRootDir();
+        if (!incrBackupTableSetPerRoot.containsKey(backupRootDir)) {
+          Set<TableName> tables = sysTable.getIncrementalBackupTableSet(backupRootDir);
+          tables.retainAll(existingTables);
+          incrBackupTableSetPerRoot.put(backupRootDir, tables);
+        }
+      }
+      boundaries =
+        calculatePreservationBoundary(backupHistory, incrBackupTableSetPerRoot, tsBuffer);
     } catch (IOException ex) {
       LOG.error("Failed to analyse backup history with exception: {}. Retaining all logs",
         ex.getMessage(), ex);
