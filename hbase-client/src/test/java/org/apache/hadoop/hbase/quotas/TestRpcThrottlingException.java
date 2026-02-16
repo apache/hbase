@@ -17,23 +17,17 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Map;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
-@Category({ SmallTests.class })
+@Tag(SmallTests.TAG)
 public class TestRpcThrottlingException {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRpcThrottlingException.class);
 
   private static final Map<String, Long> STR_TO_MS_NEW_FORMAT =
     ImmutableMap.<String, Long> builder().put("0ms", 0L).put("50ms", 50L).put("1sec, 1ms", 1001L)

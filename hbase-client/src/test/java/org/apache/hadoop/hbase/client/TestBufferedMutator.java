@@ -17,32 +17,23 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ SmallTests.class, ClientTests.class })
+@Tag(SmallTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestBufferedMutator {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBufferedMutator.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   /**
    * My BufferedMutator. Just to prove that I can insert a BM other than default.
@@ -55,9 +46,9 @@ public class TestBufferedMutator {
   }
 
   @Test
-  public void testAlternateBufferedMutatorImpl() throws IOException {
+  public void testAlternateBufferedMutatorImpl(TestInfo testInfo) throws IOException {
     BufferedMutatorParams params =
-      new BufferedMutatorParams(TableName.valueOf(name.getMethodName()));
+      new BufferedMutatorParams(TableName.valueOf(testInfo.getTestMethod().get().getName()));
     Configuration conf = HBaseConfiguration.create();
     conf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
       DoNothingConnectionRegistry.class.getName());

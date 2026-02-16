@@ -26,25 +26,19 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestHTableMultiplexerViaMocks {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHTableMultiplexerViaMocks.class);
 
   private HTableMultiplexer mockMultiplexer;
   private ClusterConnection mockConnection;
 
-  @Before
+  @BeforeEach
   public void setupTest() {
     mockMultiplexer = mock(HTableMultiplexer.class);
     mockConnection = mock(ClusterConnection.class);

@@ -19,11 +19,11 @@ package org.apache.hadoop.hbase.client;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -37,7 +37,6 @@ import java.util.concurrent.Executors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -46,27 +45,18 @@ import org.apache.hadoop.hbase.client.ScannerCallable.MoreResults;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-/**
- * Test the ClientScanner.
- */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestClientScanner {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClientScanner.class);
 
   Scan scan;
   ExecutorService pool;
@@ -77,11 +67,11 @@ public class TestClientScanner {
   RpcRetryingCallerFactory rpcFactory;
   RpcControllerFactory controllerFactory;
 
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
-  @Before
-  public void setup() throws IOException {
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws IOException {
+    methodName = testInfo.getTestMethod().get().getName();
     clusterConn = Mockito.mock(ClusterConnection.class);
     rpcFactory = Mockito.mock(RpcRetryingCallerFactory.class);
     controllerFactory = Mockito.mock(RpcControllerFactory.class);
@@ -93,7 +83,7 @@ public class TestClientScanner {
     Mockito.when(clusterConn.getConnectionConfiguration()).thenReturn(connectionConfig);
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     if (null != pool) {
       pool.shutdownNow();
@@ -176,9 +166,9 @@ public class TestClientScanner {
     scan.setCaching(100);
     scan.setMaxResultSize(1000 * 1000);
 
-    try (MockClientScanner scanner =
-      new MockClientScanner(conf, scan, TableName.valueOf(name.getMethodName()), clusterConn,
-        rpcFactory, controllerFactory, pool, Integer.MAX_VALUE, connectionConfig)) {
+    try (
+      MockClientScanner scanner = new MockClientScanner(conf, scan, TableName.valueOf(methodName),
+        clusterConn, rpcFactory, controllerFactory, pool, Integer.MAX_VALUE, connectionConfig)) {
 
       scanner.setRpcFinished(true);
 
@@ -240,9 +230,9 @@ public class TestClientScanner {
     // The single key-value will exit the loop
     scan.setMaxResultSize(1);
 
-    try (MockClientScanner scanner =
-      new MockClientScanner(conf, scan, TableName.valueOf(name.getMethodName()), clusterConn,
-        rpcFactory, controllerFactory, pool, Integer.MAX_VALUE, connectionConfig)) {
+    try (
+      MockClientScanner scanner = new MockClientScanner(conf, scan, TableName.valueOf(methodName),
+        clusterConn, rpcFactory, controllerFactory, pool, Integer.MAX_VALUE, connectionConfig)) {
       InOrder inOrder = Mockito.inOrder(caller);
 
       scanner.loadCache();
@@ -303,9 +293,9 @@ public class TestClientScanner {
     // Set a very large size
     scan.setMaxResultSize(1000 * 1000);
 
-    try (MockClientScanner scanner =
-      new MockClientScanner(conf, scan, TableName.valueOf(name.getMethodName()), clusterConn,
-        rpcFactory, controllerFactory, pool, Integer.MAX_VALUE, connectionConfig)) {
+    try (
+      MockClientScanner scanner = new MockClientScanner(conf, scan, TableName.valueOf(methodName),
+        clusterConn, rpcFactory, controllerFactory, pool, Integer.MAX_VALUE, connectionConfig)) {
       InOrder inOrder = Mockito.inOrder(caller);
 
       scanner.loadCache();
@@ -374,9 +364,9 @@ public class TestClientScanner {
     scan.setCaching(100);
     scan.setMaxResultSize(1000 * 1000);
 
-    try (MockClientScanner scanner =
-      new MockClientScanner(conf, scan, TableName.valueOf(name.getMethodName()), clusterConn,
-        rpcFactory, controllerFactory, pool, Integer.MAX_VALUE, connectionConfig)) {
+    try (
+      MockClientScanner scanner = new MockClientScanner(conf, scan, TableName.valueOf(methodName),
+        clusterConn, rpcFactory, controllerFactory, pool, Integer.MAX_VALUE, connectionConfig)) {
       scanner.setRpcFinished(true);
 
       InOrder inOrder = Mockito.inOrder(caller);
@@ -441,9 +431,9 @@ public class TestClientScanner {
     scan.setCaching(100);
     scan.setMaxResultSize(1000 * 1000);
 
-    try (MockClientScanner scanner =
-      new MockClientScanner(conf, scan, TableName.valueOf(name.getMethodName()), clusterConn,
-        rpcFactory, controllerFactory, pool, Integer.MAX_VALUE, connectionConfig)) {
+    try (
+      MockClientScanner scanner = new MockClientScanner(conf, scan, TableName.valueOf(methodName),
+        clusterConn, rpcFactory, controllerFactory, pool, Integer.MAX_VALUE, connectionConfig)) {
       InOrder inOrder = Mockito.inOrder(caller);
       scanner.setRpcFinished(true);
 
@@ -487,8 +477,8 @@ public class TestClientScanner {
       anyInt())).thenReturn(new RegionLocations(null, null, null));
 
     try (MockClientScanner scanner =
-      new MockClientScanner(conf, scan, TableName.valueOf(name.getMethodName()), clusterConn,
-        rpcFactory, new RpcControllerFactory(conf), pool, Integer.MAX_VALUE, connectionConfig)) {
+      new MockClientScanner(conf, scan, TableName.valueOf(methodName), clusterConn, rpcFactory,
+        new RpcControllerFactory(conf), pool, Integer.MAX_VALUE, connectionConfig)) {
       Iterator<Result> iter = scanner.iterator();
       while (iter.hasNext()) {
         iter.next();
