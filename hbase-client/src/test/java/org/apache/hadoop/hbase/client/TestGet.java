@@ -19,10 +19,12 @@ package org.apache.hadoop.hbase.client;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -33,7 +35,6 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
@@ -43,10 +44,8 @@ import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
@@ -54,10 +53,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 // TODO: cover more test cases
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestGet {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestGet.class);
 
   private static final byte[] ROW = new byte[] { 'r' };
 
@@ -101,61 +99,58 @@ public class TestGet {
     ClientProtos.Get getProto = ProtobufUtil.toGet(get);
 
     Get get2 = ProtobufUtil.toGet(getProto);
-    Assert.assertNull(get2.getAttribute("absent"));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), get2.getAttribute("attribute1")));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"), get2.getAttribute("attribute2")));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value3"), get2.getAttribute("attribute3")));
-    Assert.assertEquals(3, get2.getAttributesMap().size());
+    assertNull(get2.getAttribute("absent"));
+    assertTrue(Arrays.equals(Bytes.toBytes("value1"), get2.getAttribute("attribute1")));
+    assertTrue(Arrays.equals(Bytes.toBytes("value2"), get2.getAttribute("attribute2")));
+    assertTrue(Arrays.equals(Bytes.toBytes("value3"), get2.getAttribute("attribute3")));
+    assertEquals(3, get2.getAttributesMap().size());
   }
 
   @Test
   public void testGetAttributes() {
     Get get = new Get(ROW);
-    Assert.assertTrue(get.getAttributesMap().isEmpty());
-    Assert.assertNull(get.getAttribute("absent"));
+    assertTrue(get.getAttributesMap().isEmpty());
+    assertNull(get.getAttribute("absent"));
 
     get.setAttribute("absent", null);
-    Assert.assertTrue(get.getAttributesMap().isEmpty());
-    Assert.assertNull(get.getAttribute("absent"));
+    assertTrue(get.getAttributesMap().isEmpty());
+    assertNull(get.getAttribute("absent"));
 
     // adding attribute
     get.setAttribute("attribute1", Bytes.toBytes("value1"));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), get.getAttribute("attribute1")));
-    Assert.assertEquals(1, get.getAttributesMap().size());
-    Assert
-      .assertTrue(Arrays.equals(Bytes.toBytes("value1"), get.getAttributesMap().get("attribute1")));
+    assertTrue(Arrays.equals(Bytes.toBytes("value1"), get.getAttribute("attribute1")));
+    assertEquals(1, get.getAttributesMap().size());
+    assertTrue(Arrays.equals(Bytes.toBytes("value1"), get.getAttributesMap().get("attribute1")));
 
     // overriding attribute value
     get.setAttribute("attribute1", Bytes.toBytes("value12"));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"), get.getAttribute("attribute1")));
-    Assert.assertEquals(1, get.getAttributesMap().size());
-    Assert.assertTrue(
-      Arrays.equals(Bytes.toBytes("value12"), get.getAttributesMap().get("attribute1")));
+    assertTrue(Arrays.equals(Bytes.toBytes("value12"), get.getAttribute("attribute1")));
+    assertEquals(1, get.getAttributesMap().size());
+    assertTrue(Arrays.equals(Bytes.toBytes("value12"), get.getAttributesMap().get("attribute1")));
 
     // adding another attribute
     get.setAttribute("attribute2", Bytes.toBytes("value2"));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"), get.getAttribute("attribute2")));
-    Assert.assertEquals(2, get.getAttributesMap().size());
-    Assert
-      .assertTrue(Arrays.equals(Bytes.toBytes("value2"), get.getAttributesMap().get("attribute2")));
+    assertTrue(Arrays.equals(Bytes.toBytes("value2"), get.getAttribute("attribute2")));
+    assertEquals(2, get.getAttributesMap().size());
+    assertTrue(Arrays.equals(Bytes.toBytes("value2"), get.getAttributesMap().get("attribute2")));
 
     // removing attribute
     get.setAttribute("attribute2", null);
-    Assert.assertNull(get.getAttribute("attribute2"));
-    Assert.assertEquals(1, get.getAttributesMap().size());
-    Assert.assertNull(get.getAttributesMap().get("attribute2"));
+    assertNull(get.getAttribute("attribute2"));
+    assertEquals(1, get.getAttributesMap().size());
+    assertNull(get.getAttributesMap().get("attribute2"));
 
     // removing non-existed attribute
     get.setAttribute("attribute2", null);
-    Assert.assertNull(get.getAttribute("attribute2"));
-    Assert.assertEquals(1, get.getAttributesMap().size());
-    Assert.assertNull(get.getAttributesMap().get("attribute2"));
+    assertNull(get.getAttribute("attribute2"));
+    assertEquals(1, get.getAttributesMap().size());
+    assertNull(get.getAttributesMap().get("attribute2"));
 
     // removing another attribute
     get.setAttribute("attribute1", null);
-    Assert.assertNull(get.getAttribute("attribute1"));
-    Assert.assertTrue(get.getAttributesMap().isEmpty());
-    Assert.assertNull(get.getAttributesMap().get("attribute1"));
+    assertNull(get.getAttribute("attribute1"));
+    assertTrue(get.getAttributesMap().isEmpty());
+    assertNull(get.getAttributesMap().get("attribute1"));
   }
 
   @Test
@@ -164,7 +159,7 @@ public class TestGet {
     byte[] family = Bytes.toBytes("family");
     get.addColumn(family, null);
     Set<byte[]> qualifiers = get.getFamilyMap().get(family);
-    Assert.assertEquals(1, qualifiers.size());
+    assertEquals(1, qualifiers.size());
   }
 
   @Test
@@ -215,7 +210,7 @@ public class TestGet {
     String localPath = conf.get("hbase.local.dir") + File.separator + "jars" + File.separator;
     File jarFile = new File(localPath, "MockFilter.jar");
     jarFile.delete();
-    assertFalse("Should be deleted: " + jarFile.getPath(), jarFile.exists());
+    assertFalse(jarFile.exists(), "Should be deleted: " + jarFile.getPath());
 
     ClientProtos.Get getProto1 = ClientProtos.Get.parseFrom(Base64.getDecoder().decode(PB_GET));
     ClientProtos.Get getProto2 =
@@ -257,6 +252,6 @@ public class TestGet {
     ByteBuffer rowBuffer = ByteBuffer.wrap(row1);
     Get get1 = new Get(rowBuffer);
     Get get2 = new Get(row2, 4, 7);
-    Assert.assertArrayEquals(get1.getRow(), get2.getRow());
+    assertArrayEquals(get1.getRow(), get2.getRow());
   }
 }

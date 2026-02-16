@@ -17,161 +17,154 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.Arrays;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestAttributes {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAttributes.class);
 
   private static final byte[] ROW = new byte[] { 'r' };
 
   @Test
   public void testPutAttributes() {
     Put put = new Put(ROW);
-    Assert.assertTrue(put.getAttributesMap().isEmpty());
-    Assert.assertNull(put.getAttribute("absent"));
+    assertTrue(put.getAttributesMap().isEmpty());
+    assertNull(put.getAttribute("absent"));
 
     put.setAttribute("absent", null);
-    Assert.assertTrue(put.getAttributesMap().isEmpty());
-    Assert.assertNull(put.getAttribute("absent"));
+    assertTrue(put.getAttributesMap().isEmpty());
+    assertNull(put.getAttribute("absent"));
 
     // adding attribute
     put.setAttribute("attribute1", Bytes.toBytes("value1"));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), put.getAttribute("attribute1")));
-    Assert.assertEquals(1, put.getAttributesMap().size());
-    Assert
-      .assertTrue(Arrays.equals(Bytes.toBytes("value1"), put.getAttributesMap().get("attribute1")));
+    assertTrue(Arrays.equals(Bytes.toBytes("value1"), put.getAttribute("attribute1")));
+    assertEquals(1, put.getAttributesMap().size());
+    assertTrue(Arrays.equals(Bytes.toBytes("value1"), put.getAttributesMap().get("attribute1")));
 
     // overriding attribute value
     put.setAttribute("attribute1", Bytes.toBytes("value12"));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"), put.getAttribute("attribute1")));
-    Assert.assertEquals(1, put.getAttributesMap().size());
-    Assert.assertTrue(
-      Arrays.equals(Bytes.toBytes("value12"), put.getAttributesMap().get("attribute1")));
+    assertTrue(Arrays.equals(Bytes.toBytes("value12"), put.getAttribute("attribute1")));
+    assertEquals(1, put.getAttributesMap().size());
+    assertTrue(Arrays.equals(Bytes.toBytes("value12"), put.getAttributesMap().get("attribute1")));
 
     // adding another attribute
     put.setAttribute("attribute2", Bytes.toBytes("value2"));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"), put.getAttribute("attribute2")));
-    Assert.assertEquals(2, put.getAttributesMap().size());
-    Assert
-      .assertTrue(Arrays.equals(Bytes.toBytes("value2"), put.getAttributesMap().get("attribute2")));
+    assertTrue(Arrays.equals(Bytes.toBytes("value2"), put.getAttribute("attribute2")));
+    assertEquals(2, put.getAttributesMap().size());
+    assertTrue(Arrays.equals(Bytes.toBytes("value2"), put.getAttributesMap().get("attribute2")));
 
     // removing attribute
     put.setAttribute("attribute2", null);
-    Assert.assertNull(put.getAttribute("attribute2"));
-    Assert.assertEquals(1, put.getAttributesMap().size());
-    Assert.assertNull(put.getAttributesMap().get("attribute2"));
+    assertNull(put.getAttribute("attribute2"));
+    assertEquals(1, put.getAttributesMap().size());
+    assertNull(put.getAttributesMap().get("attribute2"));
 
     // removing non-existed attribute
     put.setAttribute("attribute2", null);
-    Assert.assertNull(put.getAttribute("attribute2"));
-    Assert.assertEquals(1, put.getAttributesMap().size());
-    Assert.assertNull(put.getAttributesMap().get("attribute2"));
+    assertNull(put.getAttribute("attribute2"));
+    assertEquals(1, put.getAttributesMap().size());
+    assertNull(put.getAttributesMap().get("attribute2"));
 
     // removing another attribute
     put.setAttribute("attribute1", null);
-    Assert.assertNull(put.getAttribute("attribute1"));
-    Assert.assertTrue(put.getAttributesMap().isEmpty());
-    Assert.assertNull(put.getAttributesMap().get("attribute1"));
+    assertNull(put.getAttribute("attribute1"));
+    assertTrue(put.getAttributesMap().isEmpty());
+    assertNull(put.getAttributesMap().get("attribute1"));
   }
 
   @Test
   public void testDeleteAttributes() {
     Delete del = new Delete(new byte[] { 'r' });
-    Assert.assertTrue(del.getAttributesMap().isEmpty());
-    Assert.assertNull(del.getAttribute("absent"));
+    assertTrue(del.getAttributesMap().isEmpty());
+    assertNull(del.getAttribute("absent"));
 
     del.setAttribute("absent", null);
-    Assert.assertTrue(del.getAttributesMap().isEmpty());
-    Assert.assertNull(del.getAttribute("absent"));
+    assertTrue(del.getAttributesMap().isEmpty());
+    assertNull(del.getAttribute("absent"));
 
     // adding attribute
     del.setAttribute("attribute1", Bytes.toBytes("value1"));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), del.getAttribute("attribute1")));
-    Assert.assertEquals(1, del.getAttributesMap().size());
-    Assert
-      .assertTrue(Arrays.equals(Bytes.toBytes("value1"), del.getAttributesMap().get("attribute1")));
+    assertTrue(Arrays.equals(Bytes.toBytes("value1"), del.getAttribute("attribute1")));
+    assertEquals(1, del.getAttributesMap().size());
+    assertTrue(Arrays.equals(Bytes.toBytes("value1"), del.getAttributesMap().get("attribute1")));
 
     // overriding attribute value
     del.setAttribute("attribute1", Bytes.toBytes("value12"));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"), del.getAttribute("attribute1")));
-    Assert.assertEquals(1, del.getAttributesMap().size());
-    Assert.assertTrue(
-      Arrays.equals(Bytes.toBytes("value12"), del.getAttributesMap().get("attribute1")));
+    assertTrue(Arrays.equals(Bytes.toBytes("value12"), del.getAttribute("attribute1")));
+    assertEquals(1, del.getAttributesMap().size());
+    assertTrue(Arrays.equals(Bytes.toBytes("value12"), del.getAttributesMap().get("attribute1")));
 
     // adding another attribute
     del.setAttribute("attribute2", Bytes.toBytes("value2"));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"), del.getAttribute("attribute2")));
-    Assert.assertEquals(2, del.getAttributesMap().size());
-    Assert
-      .assertTrue(Arrays.equals(Bytes.toBytes("value2"), del.getAttributesMap().get("attribute2")));
+    assertTrue(Arrays.equals(Bytes.toBytes("value2"), del.getAttribute("attribute2")));
+    assertEquals(2, del.getAttributesMap().size());
+    assertTrue(Arrays.equals(Bytes.toBytes("value2"), del.getAttributesMap().get("attribute2")));
 
     // removing attribute
     del.setAttribute("attribute2", null);
-    Assert.assertNull(del.getAttribute("attribute2"));
-    Assert.assertEquals(1, del.getAttributesMap().size());
-    Assert.assertNull(del.getAttributesMap().get("attribute2"));
+    assertNull(del.getAttribute("attribute2"));
+    assertEquals(1, del.getAttributesMap().size());
+    assertNull(del.getAttributesMap().get("attribute2"));
 
     // removing non-existed attribute
     del.setAttribute("attribute2", null);
-    Assert.assertNull(del.getAttribute("attribute2"));
-    Assert.assertEquals(1, del.getAttributesMap().size());
-    Assert.assertNull(del.getAttributesMap().get("attribute2"));
+    assertNull(del.getAttribute("attribute2"));
+    assertEquals(1, del.getAttributesMap().size());
+    assertNull(del.getAttributesMap().get("attribute2"));
 
     // removing another attribute
     del.setAttribute("attribute1", null);
-    Assert.assertNull(del.getAttribute("attribute1"));
-    Assert.assertTrue(del.getAttributesMap().isEmpty());
-    Assert.assertNull(del.getAttributesMap().get("attribute1"));
+    assertNull(del.getAttribute("attribute1"));
+    assertTrue(del.getAttributesMap().isEmpty());
+    assertNull(del.getAttributesMap().get("attribute1"));
   }
 
   @Test
   public void testGetId() {
     Get get = new Get(ROW);
-    Assert.assertNull("Make sure id is null if unset", get.toMap().get("id"));
+    assertNull(get.toMap().get("id"), "Make sure id is null if unset");
     get.setId("myId");
-    Assert.assertEquals("myId", get.toMap().get("id"));
+    assertEquals("myId", get.toMap().get("id"));
   }
 
   @Test
   public void testAppendId() {
     Append append = new Append(ROW);
-    Assert.assertNull("Make sure id is null if unset", append.toMap().get("id"));
+    assertNull(append.toMap().get("id"), "Make sure id is null if unset");
     append.setId("myId");
-    Assert.assertEquals("myId", append.toMap().get("id"));
+    assertEquals("myId", append.toMap().get("id"));
   }
 
   @Test
   public void testDeleteId() {
     Delete delete = new Delete(ROW);
-    Assert.assertNull("Make sure id is null if unset", delete.toMap().get("id"));
+    assertNull(delete.toMap().get("id"), "Make sure id is null if unset");
     delete.setId("myId");
-    Assert.assertEquals("myId", delete.toMap().get("id"));
+    assertEquals("myId", delete.toMap().get("id"));
   }
 
   @Test
   public void testPutId() {
     Put put = new Put(ROW);
-    Assert.assertNull("Make sure id is null if unset", put.toMap().get("id"));
+    assertNull(put.toMap().get("id"), "Make sure id is null if unset");
     put.setId("myId");
-    Assert.assertEquals("myId", put.toMap().get("id"));
+    assertEquals("myId", put.toMap().get("id"));
   }
 
   @Test
   public void testScanId() {
     Scan scan = new Scan();
-    Assert.assertNull("Make sure id is null if unset", scan.toMap().get("id"));
+    assertNull(scan.toMap().get("id"), "Make sure id is null if unset");
     scan.setId("myId");
-    Assert.assertEquals("myId", scan.toMap().get("id"));
+    assertEquals("myId", scan.toMap().get("id"));
   }
 }

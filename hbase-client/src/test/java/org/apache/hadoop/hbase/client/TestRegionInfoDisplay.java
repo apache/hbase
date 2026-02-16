@@ -17,50 +17,46 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestRegionInfoDisplay {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionInfoDisplay.class);
-
-  @Rule
-  public TestName name = new TestName();
-
   @Test
-  public void testRegionDetailsForDisplay() throws IOException {
+  public void testRegionDetailsForDisplay(TestInfo testInfo) throws IOException {
+    String name = testInfo.getTestMethod().get().getName();
     byte[] startKey = new byte[] { 0x01, 0x01, 0x02, 0x03 };
     byte[] endKey = new byte[] { 0x01, 0x01, 0x02, 0x04 };
     Configuration conf = new Configuration();
     conf.setBoolean("hbase.display.keys", false);
-    RegionInfo ri = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setStartKey(startKey).setEndKey(endKey).build();
+    RegionInfo ri = RegionInfoBuilder.newBuilder(TableName.valueOf(name)).setStartKey(startKey)
+      .setEndKey(endKey).build();
     checkEquality(ri, conf);
     // check HRIs with non-default replicaId
-    ri = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).setStartKey(startKey)
-      .setEndKey(endKey).setSplit(false).setRegionId(EnvironmentEdgeManager.currentTime())
-      .setReplicaId(1).build();
+    ri =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(name)).setStartKey(startKey).setEndKey(endKey)
+        .setSplit(false).setRegionId(EnvironmentEdgeManager.currentTime()).setReplicaId(1).build();
     checkEquality(ri, conf);
-    Assert.assertArrayEquals(RegionInfoDisplay.HIDDEN_END_KEY,
+    assertArrayEquals(RegionInfoDisplay.HIDDEN_END_KEY,
       RegionInfoDisplay.getEndKeyForDisplay(ri, conf));
-    Assert.assertArrayEquals(RegionInfoDisplay.HIDDEN_START_KEY,
+    assertArrayEquals(RegionInfoDisplay.HIDDEN_START_KEY,
       RegionInfoDisplay.getStartKeyForDisplay(ri, conf));
 
     RegionState state = RegionState.createForTesting(ri, RegionState.State.OPEN);
@@ -70,9 +66,9 @@ public class TestRegionInfoDisplay {
     checkDescriptiveNameEquality(descriptiveNameForDisplay, originalDescriptive, startKey);
 
     conf.setBoolean("hbase.display.keys", true);
-    Assert.assertArrayEquals(endKey, RegionInfoDisplay.getEndKeyForDisplay(ri, conf));
-    Assert.assertArrayEquals(startKey, RegionInfoDisplay.getStartKeyForDisplay(ri, conf));
-    Assert.assertEquals(originalDescriptive,
+    assertArrayEquals(endKey, RegionInfoDisplay.getEndKeyForDisplay(ri, conf));
+    assertArrayEquals(startKey, RegionInfoDisplay.getStartKeyForDisplay(ri, conf));
+    assertEquals(originalDescriptive,
       RegionInfoDisplay.getDescriptiveNameFromRegionStateForDisplay(state, conf));
   }
 
@@ -87,8 +83,8 @@ public class TestRegionInfoDisplay {
     String firstPartOrig = origDesc.substring(0, origDesc.indexOf(Bytes.toStringBinary(startKey)));
     String secondPartOrig = origDesc.substring(
       origDesc.indexOf(Bytes.toStringBinary(startKey)) + Bytes.toStringBinary(startKey).length());
-    Assert.assertTrue(firstPart.equals(firstPartOrig));
-    Assert.assertTrue(secondPart.equals(secondPartOrig));
+    assertTrue(firstPart.equals(firstPartOrig));
+    assertTrue(secondPart.equals(secondPartOrig));
   }
 
   private void checkEquality(RegionInfo ri, Configuration conf) throws IOException {
@@ -105,12 +101,12 @@ public class TestRegionInfoDisplay {
       if (i != 1) {
         System.out.println("" + i + " " + Bytes.toString(regionNameParts[i]) + " "
           + Bytes.toString(modifiedRegionNameParts[i]));
-        Assert.assertArrayEquals(regionNameParts[i], modifiedRegionNameParts[i]);
+        assertArrayEquals(regionNameParts[i], modifiedRegionNameParts[i]);
       } else {
         System.out.println("" + i + " " + Bytes.toString(regionNameParts[i]) + " "
           + Bytes.toString(modifiedRegionNameParts[i]));
-        Assert.assertNotEquals(regionNameParts[i], modifiedRegionNameParts[i]);
-        Assert.assertArrayEquals(modifiedRegionNameParts[1],
+        assertNotEquals(regionNameParts[i], modifiedRegionNameParts[i]);
+        assertArrayEquals(modifiedRegionNameParts[1],
           RegionInfoDisplay.getStartKeyForDisplay(ri, conf));
       }
     }
