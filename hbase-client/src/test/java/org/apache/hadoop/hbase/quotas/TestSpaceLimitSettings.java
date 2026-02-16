@@ -17,18 +17,17 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
@@ -38,43 +37,45 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 /**
  * Test class for {@link SpaceLimitSettings}.
  */
-@Category({ SmallTests.class })
+@Tag(SmallTests.TAG)
 public class TestSpaceLimitSettings {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSpaceLimitSettings.class);
-
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidTableQuotaSizeLimit() {
-    new SpaceLimitSettings(TableName.valueOf("foo"), -1, SpaceViolationPolicy.NO_INSERTS);
+    assertThrows(IllegalArgumentException.class,
+      () -> new SpaceLimitSettings(TableName.valueOf("foo"), -1, SpaceViolationPolicy.NO_INSERTS));
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testNullTableName() {
     TableName tn = null;
-    new SpaceLimitSettings(tn, 1, SpaceViolationPolicy.NO_INSERTS);
+    assertThrows(NullPointerException.class,
+      () -> new SpaceLimitSettings(tn, 1, SpaceViolationPolicy.NO_INSERTS));
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testNullTableViolationPolicy() {
-    new SpaceLimitSettings(TableName.valueOf("foo"), 1, null);
+    assertThrows(NullPointerException.class,
+      () -> new SpaceLimitSettings(TableName.valueOf("foo"), 1, null));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidNamespaceQuotaSizeLimit() {
-    new SpaceLimitSettings("foo_ns", -1, SpaceViolationPolicy.NO_INSERTS);
+    assertThrows(IllegalArgumentException.class,
+      () -> new SpaceLimitSettings("foo_ns", -1, SpaceViolationPolicy.NO_INSERTS));
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testNullNamespace() {
     String ns = null;
-    new SpaceLimitSettings(ns, 1, SpaceViolationPolicy.NO_INSERTS);
+    assertThrows(NullPointerException.class,
+      () -> new SpaceLimitSettings(ns, 1, SpaceViolationPolicy.NO_INSERTS));
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testNullNamespaceViolationPolicy() {
-    new SpaceLimitSettings("foo_ns", 1, null);
+    assertThrows(NullPointerException.class, () -> new SpaceLimitSettings("foo_ns", 1, null));
+
   }
 
   @Test
@@ -85,13 +86,13 @@ public class TestSpaceLimitSettings {
     SpaceLimitSettings settings = new SpaceLimitSettings(tableName, sizeLimit, policy);
     SetQuotaRequest proto = QuotaSettings.buildSetQuotaRequestProto(settings);
 
-    assertFalse("User should be missing", proto.hasUserName());
-    assertFalse("Namespace should be missing", proto.hasNamespace());
+    assertFalse(proto.hasUserName(), "User should be missing");
+    assertFalse(proto.hasNamespace(), "Namespace should be missing");
     assertEquals(ProtobufUtil.toProtoTableName(tableName), proto.getTableName());
     SpaceLimitRequest spaceLimitReq = proto.getSpaceLimit();
-    assertNotNull("SpaceLimitRequest was null", spaceLimitReq);
+    assertNotNull(spaceLimitReq, "SpaceLimitRequest was null");
     SpaceQuota spaceQuota = spaceLimitReq.getQuota();
-    assertNotNull("SpaceQuota was null", spaceQuota);
+    assertNotNull(spaceQuota, "SpaceQuota was null");
     assertEquals(sizeLimit, spaceQuota.getSoftLimit());
     assertEquals(ProtobufUtil.toProtoViolationPolicy(policy), spaceQuota.getViolationPolicy());
 
@@ -110,13 +111,13 @@ public class TestSpaceLimitSettings {
     SpaceLimitSettings settings = new SpaceLimitSettings(namespace, sizeLimit, policy);
     SetQuotaRequest proto = QuotaSettings.buildSetQuotaRequestProto(settings);
 
-    assertFalse("User should be missing", proto.hasUserName());
-    assertFalse("TableName should be missing", proto.hasTableName());
+    assertFalse(proto.hasUserName(), "User should be missing");
+    assertFalse(proto.hasTableName(), "TableName should be missing");
     assertEquals(namespace, proto.getNamespace());
     SpaceLimitRequest spaceLimitReq = proto.getSpaceLimit();
-    assertNotNull("SpaceLimitRequest was null", spaceLimitReq);
+    assertNotNull(spaceLimitReq, "SpaceLimitRequest was null");
     SpaceQuota spaceQuota = spaceLimitReq.getQuota();
-    assertNotNull("SpaceQuota was null", spaceQuota);
+    assertNotNull(spaceQuota, "SpaceQuota was null");
     assertEquals(sizeLimit, spaceQuota.getSoftLimit());
     assertEquals(ProtobufUtil.toProtoViolationPolicy(policy), spaceQuota.getViolationPolicy());
 
