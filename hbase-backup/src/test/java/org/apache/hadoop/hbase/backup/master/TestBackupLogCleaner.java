@@ -23,7 +23,10 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -207,6 +210,154 @@ public class TestBackupLogCleaner extends TestBackupBase {
       deletable = cleaner.getDeletableFiles(walFilesAfterB5);
       assertEquals(toSet(walFilesAfterB2), toSet(deletable));
     } finally {
+      TEST_UTIL.truncateTable(BackupSystemTable.getTableName(TEST_UTIL.getConfiguration())).close();
+    }
+  }
+
+  /**
+   * Verify that when a table is no longer in the backup set, it doesn't block WAL cleanup. 
+   */
+  @Test
+  public void testRemovedBackupDoesNotPinWals() throws Exception {
+    Path backupRoot = new Path(BACKUP_ROOT_DIR, "staleRoot");
+
+    try {
+      BackupLogCleaner cleaner = new BackupLogCleaner();
+      cleaner.setConf(TEST_UTIL.getConfiguration());
+      Map<String, Object> params = new HashMap<>(1);
+      params.put(HMaster.MASTER, TEST_UTIL.getHBaseCluster().getMaster());
+      cleaner.init(params);
+
+      // Create FULL backup B1 with table1 and table2
+      String backupIdB1 =
+        backupTables(BackupType.FULL, Arrays.asList(table1, table2), backupRoot.toString());
+      assertTrue(checkSucceeded(backupIdB1));
+
+      Set<FileStatus> walFilesAfterB1 =
+        new LinkedHashSet<>(getListOfWALFiles(TEST_UTIL.getConfiguration()));
+
+      // Insert data so the next backup advances WAL positions for table1
+      Connection conn = TEST_UTIL.getConnection();
+      try (Table t1 = conn.getTable(table1)) {
+        for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
+          Put p = new Put(Bytes.toBytes("stale-row-t1" + i));
+          p.addColumn(famName, qualName, Bytes.toBytes("val" + i));
+          t1.put(p);
+        }
+      }
+
+      // Create FULL backup B2 with only table1.
+      // B2's tableSetTimestampMap carries forward the old timestamp from B1 for table2,
+      // while table1 gets a fresh timestamp: { table1: ts(B2), table2: ts(B1) }
+      String backupIdB2 =
+        backupTables(BackupType.FULL, Collections.singletonList(table1), backupRoot.toString());
+      assertTrue(checkSucceeded(backupIdB2));
+
+      Set<FileStatus> walFilesAfterB2 =
+        mergeAsSet(walFilesAfterB1, getListOfWALFiles(TEST_UTIL.getConfiguration()));
+
+      // Delete B1: since it is the only backup referencing table2, finalizeDelete will
+      // remove table2 from the incremental backup set for this root.
+      getBackupAdmin().deleteBackups(new String[] { backupIdB1 });
+
+      // table2 is no longer in the backup set, so the boundary = ts(B2) instead of
+      // min(ts(B2), ts(B1)) = ts(B1). WALs between B1 and B2 are now deletable.
+      Iterable<FileStatus> deletable = cleaner.getDeletableFiles(walFilesAfterB2);
+      assertTrue("WALs after B1 should be deletable once stale tables are removed from incr set",
+        toSet(deletable).containsAll(walFilesAfterB1));
+    } finally {
+      TEST_UTIL.truncateTable(BackupSystemTable.getTableName(TEST_UTIL.getConfiguration())).close();
+    }
+  }
+
+  /**
+   * Similar as {@link #testRemovedBackupDoesNotPinWals()} but for the case where a table
+   * is removed, and hence no longer in any backup either.
+   */
+  @Test
+  public void testRemovedTableDoesNotPinWals() throws Exception {
+    Path backupRoot = new Path(BACKUP_ROOT_DIR, "removedTableRoot");
+
+    try {
+      BackupLogCleaner cleaner = new BackupLogCleaner();
+      cleaner.setConf(TEST_UTIL.getConfiguration());
+      cleaner.init(Map.of(HMaster.MASTER, TEST_UTIL.getHBaseCluster().getMaster()));
+
+      // F1: Full backup of table1 and table2
+      String backupIdF1 =
+        backupTables(BackupType.FULL, Arrays.asList(table1, table2), backupRoot.toString());
+      assertTrue(checkSucceeded(backupIdF1));
+
+      Set<FileStatus> walFilesAfterF1 =
+        new LinkedHashSet<>(getListOfWALFiles(TEST_UTIL.getConfiguration()));
+
+      // Insert data into both tables so the incremental has something to back up
+      Connection conn = TEST_UTIL.getConnection();
+      try (Table t1 = conn.getTable(table1)) {
+        for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
+          Put p = new Put(Bytes.toBytes("rem-t1-" + i));
+          p.addColumn(famName, qualName, Bytes.toBytes("val" + i));
+          t1.put(p);
+        }
+      }
+      try (Table t2 = conn.getTable(table2)) {
+        for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
+          Put p = new Put(Bytes.toBytes("rem-t2-" + i));
+          p.addColumn(famName, qualName, Bytes.toBytes("val" + i));
+          t2.put(p);
+        }
+      }
+
+      // I1: Incremental backup (for both table1 and table2)
+      String backupIdI1 = backupTables(BackupType.INCREMENTAL, Arrays.asList(table1, table2),
+        backupRoot.toString());
+      assertTrue(checkSucceeded(backupIdI1));
+
+      Set<FileStatus> walFilesAfterI1 =
+        mergeAsSet(walFilesAfterF1, getListOfWALFiles(TEST_UTIL.getConfiguration()));
+
+      // Delete table2 from HBase. After this point, no new backup can reference it.
+      TEST_UTIL.deleteTable(table2);
+
+      // F2: Full backup of table1 only
+      String backupIdF2 =
+        backupTables(BackupType.FULL, Collections.singletonList(table1), backupRoot.toString());
+      assertTrue(checkSucceeded(backupIdF2));
+
+      Set<FileStatus> walFilesAfterF2 =
+        mergeAsSet(walFilesAfterI1, getListOfWALFiles(TEST_UTIL.getConfiguration()));
+
+      // Insert more data into table1 so the incremental has something to back up
+      try (Table t1 = conn.getTable(table1)) {
+        for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
+          Put p = new Put(Bytes.toBytes("rem-t1b-" + i));
+          p.addColumn(famName, qualName, Bytes.toBytes("val" + i));
+          t1.put(p);
+        }
+      }
+
+      // I2: Incremental backup of table1 only
+      String backupIdI2 = backupTables(BackupType.INCREMENTAL, Collections.singletonList(table1),
+        backupRoot.toString());
+      assertTrue(checkSucceeded(backupIdI2));
+
+      Set<FileStatus> walFilesAfterI2 =
+        mergeAsSet(walFilesAfterF2, getListOfWALFiles(TEST_UTIL.getConfiguration()));
+
+      // Delete F1 and I1 (i.e. the backups that still referenced table2).
+      getBackupAdmin().deleteBackups(new String[] { backupIdF1, backupIdI1 });
+
+      // table2 no longer exists and F1/I1 (the only backups referencing it) are deleted.
+      // The boundary should now be based solely on the remaining backups (F2, I2) for table1.
+      // All WALs after I1 should be deletable.
+      Iterable<FileStatus> deletable = cleaner.getDeletableFiles(walFilesAfterI2);
+      assertTrue("WALs after I1 should be deletable once removed table no longer pins them",
+        toSet(deletable).containsAll(walFilesAfterI1));
+    } finally {
+      // Recreate table2 if it was deleted during the test
+      if (!TEST_UTIL.getAdmin().tableExists(table2)) {
+        TEST_UTIL.createTable(table2, famName);
+      }
       TEST_UTIL.truncateTable(BackupSystemTable.getTableName(TEST_UTIL.getConfiguration())).close();
     }
   }
