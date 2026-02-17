@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -123,6 +124,47 @@ public class TestWALInputFormat {
     assertEquals(1, splits.size());
     WALInputFormat.WALSplit split = (WALInputFormat.WALSplit) splits.get(0);
     assertEquals(archiveWal.toString(), split.getLogFileName());
+  }
+
+  /**
+   * Test that an empty WAL file (which causes WALHeaderEOFException) is gracefully handled and
+   * skipped rather than causing the job to fail.
+   */
+  @Test
+  public void testHandlesEmptyWALFile() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+
+    // Create an empty WAL file
+    Path walRootDir = CommonFSUtils.getWALRootDir(conf);
+    Path emptyWalFile =
+      new Path(walRootDir, "WALs/empty-wal-test/empty." + EnvironmentEdgeManager.currentTime());
+    TEST_UTIL.getTestFileSystem().mkdirs(emptyWalFile.getParent());
+    TEST_UTIL.getTestFileSystem().create(emptyWalFile).close();
+
+    JobContext ctx = Mockito.mock(JobContext.class);
+    conf.set(FileInputFormat.INPUT_DIR, emptyWalFile.toString());
+    conf.set(WALPlayer.INPUT_FILES_SEPARATOR_KEY, ";");
+    Mockito.when(ctx.getConfiguration()).thenReturn(conf);
+    Job job = Job.getInstance(conf);
+    TableMapReduceUtil.initCredentialsForCluster(job, conf);
+    Mockito.when(ctx.getCredentials()).thenReturn(job.getCredentials());
+
+    // Create record reader and verify it handles the empty file gracefully
+    try(WALInputFormat.WALKeyRecordReader reader = new WALInputFormat.WALKeyRecordReader()) {
+      org.apache.hadoop.mapreduce.TaskAttemptContext taskCtx =
+        Mockito.mock(org.apache.hadoop.mapreduce.TaskAttemptContext.class);
+      Mockito.when(taskCtx.getConfiguration()).thenReturn(conf);
+
+      WALInputFormat wif = new WALInputFormat();
+      List<InputSplit> splits = wif.getSplits(ctx);
+      assertEquals(1, splits.size());
+      WALInputFormat.WALSplit split = (WALInputFormat.WALSplit) splits.get(0);
+
+      // This should not throw WALHeaderEOFException - it should return false for nextKeyValue()
+      reader.initialize(split, taskCtx);
+      // nextKeyValue() should return false since the file is empty (reader is null)
+      assertFalse(reader.nextKeyValue());
+    }
   }
 
 }
