@@ -36,7 +36,10 @@ import java.util.ArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -45,11 +48,15 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ClientSideRegionScanner;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.WALPlayer.WALKeyValueMapper;
 import org.apache.hadoop.hbase.regionserver.TestRecoveredEdits;
@@ -223,6 +230,113 @@ public class TestWALPlayer {
       FileSystem fs = out.getFileSystem(configuration);
       assertTrue(fs.delete(out, true));
     });
+  }
+
+  /**
+   * Tests that the sequence IDs of cells are retained in the resulting HFile and usable by a
+   * RegionScanner. It does this by running the WALPlayer multiple times and using a RegionScanner
+   * to read the files; without sequence IDs, the files will be sorted by size or name and will not
+   * always return the correct result.
+   */
+  @Test
+  public void testMaxSeqIdHFileMetadata() throws Exception {
+    final int numEdits = 20;
+    final int flushInterval = 10;
+
+    // Phase 1: Setup test data and configuration
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final byte[] family = Bytes.toBytes("family");
+    final byte[] column = Bytes.toBytes("c1");
+    final byte[] row = Bytes.toBytes("row");
+    final Table table = TEST_UTIL.createTable(tableName, family);
+
+    long now = EnvironmentEdgeManager.currentTime();
+    {
+      Put put = new Put(row);
+      put.addColumn(family, column, now, column);
+      table.put(put);
+    }
+
+    String walInputDir = new Path(cluster.getMaster().getMasterFileSystem().getWALRootDir(),
+      HConstants.HREGION_LOGDIR_NAME).toString();
+    String walPlayerOutputRoot = "/tmp/" + name.getMethodName();
+
+    Configuration walPlayerConfig = new Configuration(TEST_UTIL.getConfiguration());
+    walPlayerConfig.setBoolean(WALPlayer.MULTI_TABLES_SUPPORT, true);
+    walPlayerConfig.setBoolean(HFileOutputFormat2.SET_MAX_SEQ_ID_KEY, true);
+
+    // Phase 2: Write edits with periodic WAL rolling and WALPlayer execution
+    int walPlayerRunCount = 0;
+    byte[] lastVal = null;
+
+    for (int i = 0; i < numEdits; i++) {
+      lastVal = new byte[12];
+      ThreadLocalRandom.current().nextBytes(lastVal);
+
+      Put put = new Put(row);
+      put.addColumn(family, column, now, lastVal);
+      table.put(put);
+
+      // Roll WALs and run WALPlayer every flushInterval iterations
+      if (i > 0 && (i % flushInterval == 0) || i + 1 == numEdits) {
+        WAL log = cluster.getRegionServer(0).getWAL(null);
+        log.rollWriter();
+
+        walPlayerRunCount++;
+        String walPlayerRunDir = walPlayerOutputRoot + "/run_" + walPlayerRunCount;
+        Configuration runConfig = new Configuration(walPlayerConfig);
+        runConfig.set(WALPlayer.BULK_OUTPUT_CONF_KEY, walPlayerRunDir);
+
+        WALPlayer player = new WALPlayer(runConfig);
+        assertEquals(0, ToolRunner.run(runConfig, player,
+          new String[] { walInputDir, tableName.getNameAsString() }));
+      }
+    }
+
+    table.close();
+
+    final byte[] finalLastVal = lastVal;
+
+    // Phase 3: Collect all generated HFiles into proper structure for region scanner
+    TableDescriptor htd = TEST_UTIL.getAdmin().getDescriptor(tableName);
+    RegionInfo regionInfo = cluster.getRegions(tableName).get(0).getRegionInfo();
+    FileSystem fs = cluster.getRegionServer(0).getFileSystem();
+
+    Path regionOutPath = CommonFSUtils.getRegionDir(new Path(walPlayerOutputRoot),
+      htd.getTableName(), regionInfo.getEncodedName());
+    Path familyOutPath = new Path(regionOutPath, new String(family));
+    fs.mkdirs(familyOutPath);
+
+    // Copy all HFiles from each WALPlayer run
+    for (int i = 1; i <= walPlayerRunCount; i++) {
+      Path walPlayerRunPath = new Path(walPlayerOutputRoot, "run_" + i);
+      RemoteIterator<LocatedFileStatus> files =
+        fs.listFiles(new Path(walPlayerRunPath, tableName.getNamespaceAsString()), true);
+
+      while (files.hasNext()) {
+        LocatedFileStatus fileStatus = files.next();
+        // Skip hidden/metadata files (starting with '.')
+        if (fileStatus.isFile() && !fileStatus.getPath().getName().startsWith(".")) {
+          FileUtil.copy(fs, fileStatus.getPath(), fs,
+            new Path(familyOutPath, fileStatus.getPath().getName()), false, walPlayerConfig);
+        }
+      }
+    }
+
+    // Phase 4: Verify sequence IDs are preserved correctly
+    Scan scan = new Scan();
+    try (ClientSideRegionScanner scanner = new ClientSideRegionScanner(walPlayerConfig, fs,
+      new Path(walPlayerOutputRoot), htd, regionInfo, scan, null)) {
+
+      // Verify exactly one row returned
+      Result result = scanner.next();
+      assertThat(result, notNullValue());
+      assertThat(result.listCells(), notNullValue());
+
+      // Verify the value with highest sequence ID (from last iteration) wins
+      byte[] value = CellUtil.cloneValue(result.getColumnLatestCell(family, column));
+      assertThat(Bytes.toStringBinary(value), equalTo(Bytes.toStringBinary(finalLastVal)));
+    }
   }
 
   /**
