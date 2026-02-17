@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.backup.master;
 
+import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
+
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -31,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
+import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
@@ -91,7 +94,7 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
    */
   private BackupBoundaries serverToPreservationBoundaryTs(BackupSystemTable sysTable)
     throws IOException {
-    List<BackupInfo> backups = sysTable.getBackupHistory(true);
+    List<BackupInfo> backups = sysTable.getBackupHistory(withState(BackupState.COMPLETE));
     if (LOG.isDebugEnabled()) {
       LOG.debug(
         "Cleaning WALs if they are older than the WAL cleanup time-boundary. "
