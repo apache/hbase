@@ -24,12 +24,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -495,24 +495,6 @@ public final class BackupUtils {
   }
 
   /**
-   * Sort history list by start time in descending order.
-   * @param historyList history list
-   * @return sorted list of BackupCompleteData
-   */
-  public static ArrayList<BackupInfo> sortHistoryListDesc(ArrayList<BackupInfo> historyList) {
-    ArrayList<BackupInfo> list = new ArrayList<>();
-    TreeMap<String, BackupInfo> map = new TreeMap<>();
-    for (BackupInfo h : historyList) {
-      map.put(Long.toString(h.getStartTs()), h);
-    }
-    Iterator<String> i = map.descendingKeySet().iterator();
-    while (i.hasNext()) {
-      list.add(map.get(i.next()));
-    }
-    return list;
-  }
-
-  /**
    * Calls fs.listStatus() and treats FileNotFoundException as non-fatal This accommodates
    * differences between hadoop versions, where hadoop 1 does not throw a FileNotFoundException, and
    * return an empty FileStatus[] while Hadoop 2 will throw FileNotFoundException.
@@ -612,23 +594,11 @@ public final class BackupUtils {
   public static List<BackupInfo> getHistory(Configuration conf, int n, Path backupRootPath,
     BackupInfo.Filter... filters) throws IOException {
     List<BackupInfo> infos = getHistory(conf, backupRootPath);
-    List<BackupInfo> ret = new ArrayList<>();
-    for (BackupInfo info : infos) {
-      if (ret.size() == n) {
-        break;
-      }
-      boolean passed = true;
-      for (int i = 0; i < filters.length; i++) {
-        if (!filters[i].apply(info)) {
-          passed = false;
-          break;
-        }
-      }
-      if (passed) {
-        ret.add(info);
-      }
-    }
-    return ret;
+
+    Predicate<BackupInfo> combinedPredicate = Stream.of(filters)
+      .map(filter -> (Predicate<BackupInfo>) filter).reduce(Predicate::and).orElse(x -> true);
+
+    return infos.stream().filter(combinedPredicate).limit(n).toList();
   }
 
   public static BackupInfo loadBackupInfo(Path backupRootPath, String backupId, FileSystem fs)

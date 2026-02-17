@@ -173,6 +173,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>dieter</id>
+      <name>Dieter De Paepe</name>
+      <email>dieter@apache.org</email>
+      <timezone>+1</timezone>
+    </developer>
+    <developer>
       <id>dimaspivak</id>
       <name>Dima Spivak</name>
       <email>dimaspivak@apache.org</email>
@@ -875,7 +881,7 @@
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <audience-annotations.version>0.15.0</audience-annotations.version>
     <javadoc.audience-annotations.version>0.15.0</javadoc.audience-annotations.version>
-    <avro.version>1.11.4</avro.version>
+    <avro.version>1.11.5</avro.version>
     <caffeine.version>2.8.1</caffeine.version>
     <commons-codec.version>1.15</commons-codec.version>
     <commons-validator.version>1.7</commons-validator.version>
@@ -959,7 +965,7 @@
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
     <spotless.version>2.44.4</spotless.version>
-    <maven-site.version>3.12.0</maven-site.version>
+    <maven-site.version>3.21.0</maven-site.version>
     <reflow-maven-skin.version>2.3.3</reflow-maven-skin.version>
     <maven-download-plugin.version>1.2.1</maven-download-plugin.version>
     <!-- Website static CSS, JS dependencies -->
@@ -1520,6 +1526,12 @@
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpclient</artifactId>
         <version>${httpclient.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.httpcomponents</groupId>
@@ -1535,6 +1547,12 @@
         <groupId>commons-validator</groupId>
         <artifactId>commons-validator</artifactId>
         <version>${commons-validator.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>commons-io</groupId>
@@ -1555,14 +1573,6 @@
         <groupId>commons-cli</groupId>
         <artifactId>commons-cli</artifactId>
         <version>${commons-cli.version}</version>
-      </dependency>
-      <dependency>
-        <!-- commons-logging is only used by hbase-http's HttpRequestLog and hbase-server's
-             HBaseTestingUtil.
-          -->
-        <groupId>commons-logging</groupId>
-        <artifactId>commons-logging</artifactId>
-        <version>1.2</version>
       </dependency>
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
@@ -1770,6 +1780,12 @@
       <dependency>
         <groupId>org.bouncycastle</groupId>
         <artifactId>bcprov-jdk18on</artifactId>
+        <version>${bouncycastle.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcutil-jdk18on</artifactId>
         <version>${bouncycastle.version}</version>
         <scope>test</scope>
       </dependency>
@@ -2483,8 +2499,7 @@
                   <excludes>
                     <exclude>commons-logging:commons-logging</exclude>
                   </excludes>
-                  <message>We don't use commons-logging any more, so do not depend on it directly.</message>
-                  <searchTransitive>false</searchTransitive>
+                  <message>We don't use commons-logging any more, so do not depend on it directly. We are also using jcl-over-slf4j for libraries so exclude any transitive commons-logging dependencies.</message>
                 </bannedDependencies>
               </rules>
             </configuration>
@@ -3438,6 +3453,11 @@
                   <artifactId>jsr305</artifactId>
                   <version>3.0.2</version>
                 </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.osgi</groupId>
+                  <artifactId>osgi.annotation</artifactId>
+                  <version>8.1.0</version>
+                </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
             </configuration>
@@ -3488,6 +3508,11 @@
                   <groupId>com.google.code.findbugs</groupId>
                   <artifactId>jsr305</artifactId>
                   <version>3.0.2</version>
+                </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.osgi</groupId>
+                  <artifactId>osgi.annotation</artifactId>
+                  <version>8.1.0</version>
                 </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
@@ -3548,6 +3573,11 @@
                   <artifactId>jsr305</artifactId>
                   <version>3.0.2</version>
                 </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.osgi</groupId>
+                  <artifactId>osgi.annotation</artifactId>
+                  <version>8.1.0</version>
+                </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
             </configuration>
@@ -3605,6 +3635,11 @@
                   <groupId>com.google.code.findbugs</groupId>
                   <artifactId>jsr305</artifactId>
                   <version>3.0.2</version>
+                </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.osgi</groupId>
+                  <artifactId>osgi.annotation</artifactId>
+                  <version>8.1.0</version>
                 </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
@@ -4148,6 +4183,10 @@
                 <groupId>org.openlabtesting.leveldbjni</groupId>
                 <artifactId>leveldbjni-all</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -4200,6 +4239,10 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -4304,6 +4347,10 @@
                 <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
               <exclusion>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
+              </exclusion>
+              <exclusion>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk15on</artifactId>
               </exclusion>
@@ -4363,6 +4410,10 @@
               <exclusion>
                 <groupId>javax.ws.rs</groupId>
                 <artifactId>jsr311-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>org.bouncycastle</groupId>
@@ -4444,6 +4495,10 @@
               <exclusion>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcpkix-jdk15on</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -4560,6 +4615,91 @@
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
         <surefire.secondPartGroups/>
       </properties>
+    </profile>
+    <profile>
+      <!--
+        Wave profiles for partitioning Large tests across parallel CI jobs.
+        Tests are split alphabetically by class name (after "Test" prefix):
+          Wave 1: Test[A-H]* classes
+          Wave 2: Test[I-R]* classes
+          Wave 3: Test[S-Z]* classes
+
+        Flaky test exclusion is handled separately via -Dtest.exclude.pattern
+        which is set by hbase-personality.sh from EXCLUDE_TESTS_URL.
+      -->
+      <id>runLargeTests-wave1</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
+        <surefire.secondPartGroups/>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>%regex[(?i).*/test[a-h].*]</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>runLargeTests-wave2</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
+        <surefire.secondPartGroups/>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>%regex[(?i).*/test[i-r].*]</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>runLargeTests-wave3</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
+        <surefire.secondPartGroups/>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>%regex[(?i).*/test[s-z].*]</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
     <profile>
       <!-- Use it to launch small & medium tests -->

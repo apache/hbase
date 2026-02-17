@@ -125,7 +125,8 @@ public class TestRecoveredEditsReplayAndAbort {
     Path rootDir = TEST_UTIL.getDataTestDir();
     Path tableDir = CommonFSUtils.getTableDir(rootDir, info.getTable());
     HRegionFileSystem.createRegionOnFileSystem(CONF, TEST_UTIL.getTestFileSystem(), tableDir, info);
-    region = HRegion.newHRegion(tableDir, wal, TEST_UTIL.getTestFileSystem(), CONF, info, htd, rs);
+    region = HRegion.newHRegion(tableDir, wal, TEST_UTIL.getTestFileSystem(), CONF, info, htd, rs,
+      rs.getKeyManagementService());
     // create some recovered.edits
     final WALFactory wals = new WALFactory(CONF, method);
     try {

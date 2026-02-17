@@ -58,7 +58,7 @@ import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
@@ -77,7 +77,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  * A client-side test, mostly testing scanners with various parameters. Parameterized on different
  * registry implementations.
  */
-@Category({ MediumTests.class, ClientTests.class })
+@Category({ ClientTests.class, LargeTests.class })
 @RunWith(Parameterized.class)
 public class TestScannersFromClientSide {
 
@@ -623,6 +623,25 @@ public class TestScannersFromClientSide {
     kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[4], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[5], 1, VALUE));
     verifyResult(result, kvListExp, toLog, "Testing offset + multiple CFs + maxResults");
+  }
+
+  @Test
+  public void testRawScanExpiredCell() throws Exception {
+    final TableName tableName = name.getTableName();
+    try (final Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
+      final Put put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
+      put.setTTL(0);
+      table.put(put);
+      final Scan scan = new Scan().setRaw(true);
+      try (final ResultScanner scanner = table.getScanner(scan)) {
+        final Result result = scanner.next();
+        assertArrayEquals(VALUE, result.getValue(FAMILY, QUALIFIER));
+        assertNull(scanner.next());
+      }
+    } finally {
+      TEST_UTIL.deleteTable(tableName);
+    }
   }
 
   @Test

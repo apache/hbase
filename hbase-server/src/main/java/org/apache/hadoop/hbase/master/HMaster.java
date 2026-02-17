@@ -1424,6 +1424,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       .setColumnFamily(FSTableDescriptors.getTableFamilyDescForMeta(conf))
       .setColumnFamily(FSTableDescriptors.getReplBarrierFamilyDescForMeta()).build();
     long pid = this.modifyTable(TableName.META_TABLE_NAME, () -> newMetaDesc, 0, 0, false);
+    waitForProcedureToComplete(pid, "Failed to add table and rep_barrier CFs to meta");
+  }
+
+  private void waitForProcedureToComplete(long pid, String errorMessage) throws IOException {
     int tries = 30;
     while (
       !(getMasterProcedureExecutor().isFinished(pid)) && getMasterProcedureExecutor().isRunning()
@@ -1442,8 +1446,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     } else {
       Procedure<?> result = getMasterProcedureExecutor().getResult(pid);
       if (result != null && result.isFailed()) {
-        throw new IOException("Failed to add table and rep_barrier CFs to meta. "
-          + MasterProcedureUtil.unwrapRemoteIOException(result));
+        throw new IOException(
+          errorMessage + ". " + MasterProcedureUtil.unwrapRemoteIOException(result));
       }
     }
   }
@@ -1630,6 +1634,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   @Override
   public MasterWalManager getMasterWalManager() {
     return this.walManager;
+  }
+
+  @Override
+  public boolean rotateSystemKeyIfChanged() throws IOException {
+    // STUB - Feature not yet implemented
+    return false;
   }
 
   @Override
@@ -2508,6 +2518,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   @Override
   public long createSystemTable(final TableDescriptor tableDescriptor) throws IOException {
+    return createSystemTable(tableDescriptor, false);
+  }
+
+  private long createSystemTable(final TableDescriptor tableDescriptor, final boolean isCritical)
+    throws IOException {
     if (isStopped()) {
       throw new MasterNotRunningException();
     }
@@ -2524,10 +2539,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
     // This special create table is called locally to master. Therefore, no RPC means no need
     // to use nonce to detect duplicated RPC call.
-    long procId = this.procedureExecutor.submitProcedure(
-      new CreateTableProcedure(procedureExecutor.getEnvironment(), tableDescriptor, newRegions));
-
-    return procId;
+    CreateTableProcedure proc =
+      new CreateTableProcedure(procedureExecutor.getEnvironment(), tableDescriptor, newRegions);
+    proc.setCriticalSystemTable(isCritical);
+    return this.procedureExecutor.submitProcedure(proc);
   }
 
   private void startActiveMasterManager(int infoPort) throws KeeperException {
@@ -4249,6 +4264,54 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
       });
 
+  }
+
+  /**
+   * Reopen regions provided in the argument. Applies throttling to the procedure to avoid
+   * overwhelming the system. This is used by the reopenTableRegions methods in the Admin API via
+   * HMaster.
+   * @param tableName   The current table name
+   * @param regionNames The region names of the regions to reopen
+   * @param nonceGroup  Identifier for the source of the request, a client or process
+   * @param nonce       A unique identifier for this operation from the client or process identified
+   *                    by <code>nonceGroup</code> (the source must ensure each operation gets a
+   *                    unique id).
+   * @return procedure Id
+   * @throws IOException if reopening region fails while running procedure
+   */
+  long reopenRegionsThrottled(final TableName tableName, final List<byte[]> regionNames,
+    final long nonceGroup, final long nonce) throws IOException {
+
+    checkInitialized();
+
+    if (!tableStateManager.isTablePresent(tableName)) {
+      throw new TableNotFoundException(tableName);
+    }
+
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          ReopenTableRegionsProcedure proc;
+          if (regionNames.isEmpty()) {
+            proc = ReopenTableRegionsProcedure.throttled(getConfiguration(),
+              getTableDescriptors().get(tableName));
+          } else {
+            proc = ReopenTableRegionsProcedure.throttled(getConfiguration(),
+              getTableDescriptors().get(tableName), regionNames);
+          }
+
+          LOG.info("{} throttled reopening {} regions for table {}", getClientIdAuditPrefix(),
+            regionNames.isEmpty() ? "all" : regionNames.size(), tableName);
+
+          submitProcedure(proc);
+        }
+
+        @Override
+        protected String getDescription() {
+          return "Throttled ReopenTableRegionsProcedure for " + tableName;
+        }
+      });
   }
 
   @Override

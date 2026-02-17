@@ -69,14 +69,18 @@ public class DataTieringManager {
    */
   public static synchronized boolean instantiate(Configuration conf,
     Map<String, HRegion> onlineRegions) {
-    if (isDataTieringFeatureEnabled(conf) && instance == null) {
-      instance = new DataTieringManager(onlineRegions);
-      LOG.info("DataTieringManager instantiated successfully.");
-      return true;
-    } else {
-      LOG.warn("DataTieringManager is already instantiated.");
+    if (!isDataTieringFeatureEnabled(conf)) {
+      LOG.debug("DataTiering feature is disabled (key: {}). Skipping instantiation.",
+        GLOBAL_DATA_TIERING_ENABLED_KEY);
+      return false;
     }
-    return false;
+    if (instance != null) {
+      LOG.warn("DataTieringManager is already instantiated.");
+      return false;
+    }
+    instance = new DataTieringManager(onlineRegions);
+    LOG.info("DataTieringManager instantiated successfully.");
+    return true;
   }
 
   /**

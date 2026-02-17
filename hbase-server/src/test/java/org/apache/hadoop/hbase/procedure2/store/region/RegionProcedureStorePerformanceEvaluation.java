@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
+import org.apache.hadoop.hbase.master.MockNoopMasterServices;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStorePerformanceEvaluation;
@@ -31,26 +32,18 @@ import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.hadoop.hbase.util.Pair;
 
 public class RegionProcedureStorePerformanceEvaluation
   extends ProcedureStorePerformanceEvaluation<RegionProcedureStore> {
 
-  private static final class DummyServer extends MockServer {
-
-    private final Configuration conf;
+  private static final class DummyServer extends MockNoopMasterServices {
 
     private final ServerName serverName =
       ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime());
 
     public DummyServer(Configuration conf) {
-      this.conf = conf;
-    }
-
-    @Override
-    public Configuration getConfiguration() {
-      return conf;
+      super(conf);
     }
 
     @Override

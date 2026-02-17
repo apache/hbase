@@ -21,7 +21,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
-import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.LoadCounter;
@@ -51,7 +51,7 @@ public class RegionProcedureStoreTestBase {
     conf.setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, false);
     Path testDir = htu.getDataTestDir();
     CommonFSUtils.setRootDir(htu.getConfiguration(), testDir);
-    Server server = RegionProcedureStoreTestHelper.mockServer(conf);
+    MasterServices server = RegionProcedureStoreTestHelper.mockServer(conf);
     region = MasterRegionFactory.create(server);
     store = RegionProcedureStoreTestHelper.createStore(server, region, new LoadCounter());
   }

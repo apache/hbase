@@ -34,6 +34,7 @@ import java.security.cert.CertificateException;
 import java.util.Locale;
 import java.util.Properties;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * A basic KeyProvider that can resolve keys from a protected KeyStore file on the local filesystem.
@@ -74,6 +75,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * this class to specify the appropriate LoadStoreParameters.
  */
 @InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class KeyStoreKeyProvider implements KeyProvider {
 
   protected KeyStore store;

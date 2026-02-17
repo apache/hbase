@@ -82,7 +82,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -112,7 +112,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Tests the table import and table export MR job functionality
  */
-@Category({ VerySlowMapReduceTests.class, MediumTests.class })
+@Category({ VerySlowMapReduceTests.class, LargeTests.class })
 public class TestImportExport {
 
   @ClassRule

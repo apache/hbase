@@ -1078,6 +1078,47 @@ public interface Admin extends Abortable, Closeable {
   Future<Void> modifyTableAsync(TableDescriptor td, boolean reopenRegions) throws IOException;
 
   /**
+   * Reopen all regions of a table. This is useful after calling
+   * {@link #modifyTableAsync(TableDescriptor, boolean)} with reopenRegions=false to gradually roll
+   * out table descriptor changes to regions. Regions are reopened in-place (no move).
+   * @param tableName table whose regions to reopen
+   * @throws IOException if a remote or network exception occurs
+   */
+  default void reopenTableRegions(TableName tableName) throws IOException {
+    get(reopenTableRegionsAsync(tableName), getSyncWaitTimeout(), TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Reopen specific regions of a table. Useful for canary testing table descriptor changes on a
+   * subset of regions before rolling out to the entire table.
+   * @param tableName table whose regions to reopen
+   * @param regions   specific regions to reopen
+   * @throws IOException if a remote or network exception occurs
+   */
+  default void reopenTableRegions(TableName tableName, List<RegionInfo> regions)
+    throws IOException {
+    get(reopenTableRegionsAsync(tableName, regions), getSyncWaitTimeout(), TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Asynchronously reopen all regions of a table.
+   * @param tableName table whose regions to reopen
+   * @return Future for tracking completion
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> reopenTableRegionsAsync(TableName tableName) throws IOException;
+
+  /**
+   * Asynchronously reopen specific regions of a table.
+   * @param tableName table whose regions to reopen
+   * @param regions   specific regions to reopen
+   * @return Future for tracking completion
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> reopenTableRegionsAsync(TableName tableName, List<RegionInfo> regions)
+    throws IOException;
+
+  /**
    * Change the store file tracker of the given table.
    * @param tableName the table you want to change
    * @param dstSFT    the destination store file tracker

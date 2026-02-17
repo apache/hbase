@@ -74,8 +74,7 @@ public class TestBackupShowHistory extends TestBackupBase {
 
     List<BackupInfo> history = getBackupAdmin().getHistory(10);
     assertTrue(findBackup(history, backupId));
-    BackupInfo.Filter nullFilter = info -> true;
-    history = BackupUtils.getHistory(conf1, 10, new Path(BACKUP_ROOT_DIR), nullFilter);
+    history = BackupUtils.getHistory(conf1, 10, new Path(BACKUP_ROOT_DIR));
     assertTrue(findBackup(history, backupId));
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
