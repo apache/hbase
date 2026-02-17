@@ -18,9 +18,11 @@
 
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "highlight.js/styles/github.css";
+@import "fumadocs-ui/css/shadcn.css";
+@import "fumadocs-ui/css/preset.css";
 
-@theme {
+@plugin "@tailwindcss/typography" {
+  className: prose-original;
 }
 
 @custom-variant dark (&:is(.dark *));
@@ -169,6 +171,10 @@
     font-family: "Inter", sans-serif;
     font-synthesis: none;
   }
+
+  .print-only {
+    display: none;
+  }
 }
 
 @layer utilities {
@@ -179,33 +185,103 @@
   }
 }
 
-/* Code syntax highlighting for dark mode */
-.dark pre code.hljs {
-  background: oklch(0.2 0 0);
-  color: oklch(0.85 0 0);
-}
+/* For rendering a PDF */
+@media print {
+  @page {
+    size: A4;
+  }
 
-.dark .hljs-comment {
-  color: oklch(0.55 0 0);
-}
+  /* Utility classes */
+  .print-only {
+    display: block !important;
+  }
+  .no-print {
+    display: none !important;
+  }
 
-.dark .hljs-keyword {
-  color: oklch(0.75 0.12 340);
-}
+  /* Hide layout elements */
+  #nd-docs-layout {
+    --fd-sidebar-width: 0px !important;
+  }
+  #nd-sidebar {
+    display: none;
+  }
+  header {
+    display: none !important;
+  }
+  /* Hide copy button in the code blocks */
+  figure > div > button {
+    display: none !important;
+  }
 
-.dark .hljs-string {
-  color: oklch(0.75 0.1 140);
-}
+  /* Every major section starts on a new page */
+  h1:not(:first-of-type) {
+    break-before: page;
+    margin-top: 0; /* Remove top margin since it's at the top of a page now */
+  }
 
-.dark .hljs-number {
-  color: oklch(0.75 0.1 100);
-}
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    break-after: avoid;
+    break-inside: avoid;
+  }
 
-.dark .hljs-title {
-  color: oklch(0.75 0.12 260);
-}
+  /* Hides the <hr> line */
+  hr {
+    display: none;
+  }
 
-.dark .hljs-name,
-.dark .hljs-attribute {
-  color: oklch(0.7 0.12 200);
+  /* Force tables to wrap the content */
+  table {
+    max-width: 100%;
+    table-layout: fixed;
+    word-wrap: break-word;
+  }
+  th,
+  td {
+    padding: 6px 10px !important;
+    word-break: break-all; /* Older browsers */
+    overflow-wrap: anywhere; /* Modern browsers: breaks at any character */
+    hyphens: auto; /* Adds a hyphen if the language is defined */
+  }
+  thead {
+    display: table-header-group; /* Re-renders header on every new page */
+  }
+  /* Don't split a row on two pages, just move it to the next page */
+  tr {
+    break-inside: avoid;
+  }
+
+  /* Force code blocks to wrap instead of scroll */
+  pre,
+  code {
+    max-width: 100% !important;
+    white-space: pre-wrap !important;
+    word-break: break-all !important;
+    overflow-wrap: break-word !important;
+  }
+
+  /* Targets Code and Tables */
+  pre,
+  table,
+  blockquote {
+    /* Try to keep it on one page if possible */
+    break-inside: auto;
+    /* If it breaks, ensure at least 3 lines stay on the current page */
+    orphans: 3;
+    /* If it breaks, ensure at least 3 lines move to the next page */
+    widows: 3;
+  }
+
+  /* Remove the height restriction and scrolling from the code blocks */
+  figure .fd-scroll-container.max-h-\[600px\] {
+    max-height: none !important;
+    overflow: visible !important;
+    height: auto !important;
+    display: block !important;
+  }
 }
