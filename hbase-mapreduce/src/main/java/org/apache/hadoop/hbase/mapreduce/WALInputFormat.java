@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.hbase.regionserver.wal.WALHeaderEOFException;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -161,6 +162,17 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
           reader =
             WALFactory.createStreamReader(path.getFileSystem(conf), path, conf, startPosition);
           return reader;
+        } catch (WALHeaderEOFException wheofe) {
+          // We hit EOF while reading the WAL header. A file that ever had an entry synced to it
+          // necessarily has a complete, readable header (a sync flushes the header too), so a
+          // header EOF means the file holds nothing recoverable right now. For a file that is not
+          // being actively written (a closed/archived WAL, or one left empty by a crashed
+          // RegionServer) the header never appears, so retrying only delays an inevitable skip.
+          // The one case a retry could help is a WAL still being written by the legacy
+          // (non-async) writer that has not yet flushed its header; but we skip that too.
+          LOG.warn("Got WALHeaderEOFException opening reader for {}, skipping empty WAL file.",
+            path, wheofe);
+          return null;
         } catch (LeaseNotRecoveredException lnre) {
           // HBASE-15019 the WAL was not closed due to some hiccup.
           LOG.warn("Try to recover the WAL lease " + path, lnre);
