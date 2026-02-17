@@ -2424,7 +2424,7 @@
   HBase requires at least version ${maven.min.version} of Maven to properly build from source.
   You appear to be using an older version. You can use either "mvn -version" or
   "mvn enforcer:display-info" to verify what version is active.
-  See the documentation for more information: https://hbase.apache.org/docs/</message>
+  See the documentation for more information: https://hbase.apache.org/docs/building-and-developing/building</message>
                 </requireMavenVersion>
                 <!-- The earliest JVM version we verify builds for via ASF Jenkins -->
                 <requireJavaVersion>
@@ -2433,7 +2433,7 @@
   HBase requires at least version ${java.min.version} of the JDK to properly build from source.
   You appear to be using an older version. You can use either "mvn -version" or
   "mvn enforcer:display-info" to verify what version is active.
-  See the documentation for more information: https://hbase.apache.org/docs/</message>
+  See the documentation for more information: https://hbase.apache.org/docs/building-and-developing/building</message>
                 </requireJavaVersion>
                 <bannedDependencies>
                   <excludes>
