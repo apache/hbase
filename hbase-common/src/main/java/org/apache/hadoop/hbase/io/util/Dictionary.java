@@ -70,11 +70,6 @@ public interface Dictionary {
   short addEntry(byte[] data, int offset, int length);
 
   /**
-   * Returns the number of entries in the dictionary.
-   */
-  int size();
-
-  /**
    * Flushes the dictionary, empties all values.
    */
   void clear();

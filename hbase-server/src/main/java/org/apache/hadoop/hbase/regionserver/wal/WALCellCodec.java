@@ -287,7 +287,7 @@ public class WALCellCodec implements Codec {
     // an expensive O(n) reset (re-read from the start of the file to rebuild dictionary state).
     // To achieve this, dictionary additions for ROW, FAMILY, and QUALIFIER are buffered here
     // and only flushed on successful cell parse. On failure, they are discarded.
-    // Tag dictionary additions are deferred similarly via TagCompressionContext.
+    // Tag dictionary uses checkpoint/rollback via TagCompressionContext instead.
     private final List<PendingDictAddition> pendingDictAdditions = new ArrayList<>();
 
     // Tracks whether we are in the value decompression phase of parseCellInner(), so that on
@@ -321,14 +321,14 @@ public class WALCellCodec implements Codec {
       }
       pendingDictAdditions.clear();
       if (hasTagCompression) {
-        compression.tagCompressionContext.commitDeferredAdditions();
+        compression.tagCompressionContext.commit();
       }
     }
 
     private void clearPendingAdditions() {
       pendingDictAdditions.clear();
       if (hasTagCompression) {
-        compression.tagCompressionContext.clearDeferredAdditions();
+        compression.tagCompressionContext.rollback();
       }
     }
 
@@ -336,7 +336,7 @@ public class WALCellCodec implements Codec {
     protected ExtendedCell parseCell() throws IOException {
       clearPendingAdditions();
       if (hasTagCompression) {
-        compression.tagCompressionContext.setDeferAdditions(true);
+        compression.tagCompressionContext.checkpoint();
       }
       readingValue = false;
       try {

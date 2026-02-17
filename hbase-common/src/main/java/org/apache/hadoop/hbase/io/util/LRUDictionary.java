@@ -62,14 +62,9 @@ public class LRUDictionary implements Dictionary {
     return addEntryInternal(data, offset, length, true);
   }
 
-  private short addEntryInternal(byte[] data, int offset, int length, boolean copy) {
+  short addEntryInternal(byte[] data, int offset, int length, boolean copy) {
     if (length <= 0) return NOT_IN_DICTIONARY;
     return backingStore.put(data, offset, length, copy);
-  }
-
-  @Override
-  public int size() {
-    return backingStore.currSize;
   }
 
   @Override
@@ -82,22 +77,22 @@ public class LRUDictionary implements Dictionary {
    * thread safe. Don't use in multi-threaded applications.
    */
   static class BidirectionalLRUMap {
-    private int currSize = 0;
+    int currSize = 0;
 
     // Head and tail of the LRU list.
-    private Node head;
-    private Node tail;
+    Node head;
+    Node tail;
 
-    private HashMap<Node, Short> nodeToIndex = new HashMap<>();
-    private Node[] indexToNode;
-    private int initSize = 0;
+    HashMap<Node, Short> nodeToIndex = new HashMap<>();
+    Node[] indexToNode;
+    int initSize = 0;
 
     public BidirectionalLRUMap(int initialSize) {
       initSize = initialSize;
       indexToNode = new Node[initialSize];
     }
 
-    private short put(byte[] array, int offset, int length, boolean copy) {
+    short put(byte[] array, int offset, int length, boolean copy) {
       if (copy) {
         // We copy the bytes we want, otherwise we might be holding references to
         // massive arrays in our dictionary (or those arrays might change)
@@ -109,7 +104,7 @@ public class LRUDictionary implements Dictionary {
       }
     }
 
-    private short putInternal(byte[] stored) {
+    short putInternal(byte[] stored) {
       if (currSize < initSize) {
         // There is space to add without evicting.
         if (indexToNode[currSize] == null) {
@@ -130,7 +125,7 @@ public class LRUDictionary implements Dictionary {
       }
     }
 
-    private short findIdx(byte[] array, int offset, int length) {
+    short findIdx(byte[] array, int offset, int length) {
       Short s;
       final Node comparisonNode = new ByteArrayBackedNode();
       comparisonNode.setContents(array, offset, length);
@@ -142,7 +137,7 @@ public class LRUDictionary implements Dictionary {
       }
     }
 
-    private short findIdx(ByteBuffer buf, int offset, int length) {
+    short findIdx(ByteBuffer buf, int offset, int length) {
       Short s;
       final ByteBufferBackedNode comparisonNode = new ByteBufferBackedNode();
       comparisonNode.setContents(buf, offset, length);
@@ -154,13 +149,13 @@ public class LRUDictionary implements Dictionary {
       }
     }
 
-    private byte[] get(short idx) {
+    byte[] get(short idx) {
       Preconditions.checkElementIndex(idx, currSize);
       moveToHead(indexToNode[idx]);
       return indexToNode[idx].getContents();
     }
 
-    private void moveToHead(Node n) {
+    void moveToHead(Node n) {
       if (head == n) {
         // no-op -- it's already the head.
         return;
@@ -181,7 +176,7 @@ public class LRUDictionary implements Dictionary {
       setHead(n);
     }
 
-    private void setHead(Node n) {
+    void setHead(Node n) {
       // assume it's already unlinked from the list at this point.
       n.prev = null;
       n.next = head;
@@ -198,7 +193,7 @@ public class LRUDictionary implements Dictionary {
       }
     }
 
-    private void clear() {
+    void clear() {
       for (int i = 0; i < currSize; i++) {
         indexToNode[i].next = null;
         indexToNode[i].prev = null;
@@ -210,7 +205,7 @@ public class LRUDictionary implements Dictionary {
       head = null;
     }
 
-    private static abstract class Node {
+    static abstract class Node {
       int offset;
       int length;
       Node next; // link towards the tail
@@ -224,7 +219,7 @@ public class LRUDictionary implements Dictionary {
     }
 
     // The actual contents of the LRUDictionary are of ByteArrayBackedNode type
-    private static class ByteArrayBackedNode extends Node {
+    static class ByteArrayBackedNode extends Node {
       private byte[] container;
 
       @Override
@@ -264,7 +259,7 @@ public class LRUDictionary implements Dictionary {
     // Currently only used for finding the index and hence this node acts
     // as a temporary holder to look up in the indexToNode map
     // which is formed by ByteArrayBackedNode
-    private static class ByteBufferBackedNode extends Node {
+    static class ByteBufferBackedNode extends Node {
       private ByteBuffer container;
 
       public ByteBufferBackedNode() {
