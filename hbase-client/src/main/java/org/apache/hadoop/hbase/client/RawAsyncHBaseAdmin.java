@@ -542,7 +542,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   private <PREQ, PRESP, PRES> CompletableFuture<PRES> procedureCall(TableName tableName, PREQ preq,
     MasterRpcCall<PRESP, PREQ> rpcCall, Converter<Long, PRESP> respConverter,
     Converter<PRES, ByteString> resultConverter, ProcedureBiConsumer<PRES> consumer) {
-    return procedureCall(b -> b.priority(tableName), preq, rpcCall, respConverter, resultConverter,
+    return procedureCall(b -> b.tableName(tableName), preq, rpcCall, respConverter, resultConverter,
       consumer);
   }
 
@@ -686,7 +686,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<TableDescriptor> getDescriptor(TableName tableName) {
     CompletableFuture<TableDescriptor> future = new CompletableFuture<>();
-    addListener(this.<List<TableSchema>> newMasterCaller().priority(tableName)
+    addListener(this.<List<TableSchema>> newMasterCaller().tableName(tableName)
       .action((controller, stub) -> this.<GetTableDescriptorsRequest, GetTableDescriptorsResponse,
         List<TableSchema>> call(controller, stub,
           RequestConverter.buildGetTableDescriptorsRequest(tableName),
@@ -1764,7 +1764,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         return;
       }
       addListener(
-        this.<Void> newMasterCaller().priority(regionInfo.getTable())
+        this.<Void> newMasterCaller().tableName(regionInfo.getTable())
           .action((controller, stub) -> this.<AssignRegionRequest, AssignRegionResponse, Void> call(
             controller, stub, RequestConverter.buildAssignRegionRequest(regionInfo.getRegionName()),
             (s, c, req, done) -> s.assignRegion(c, req, done), resp -> null))
@@ -1789,7 +1789,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         return;
       }
       addListener(
-        this.<Void> newMasterCaller().priority(regionInfo.getTable())
+        this.<Void> newMasterCaller().tableName(regionInfo.getTable())
           .action((controller, stub) -> this.<UnassignRegionRequest, UnassignRegionResponse,
             Void> call(controller, stub,
               RequestConverter.buildUnassignRegionRequest(regionInfo.getRegionName()),
@@ -1814,7 +1814,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         future.completeExceptionally(err);
         return;
       }
-      addListener(this.<Void> newMasterCaller().priority(regionInfo.getTable())
+      addListener(this.<Void> newMasterCaller().tableName(regionInfo.getTable())
         .action((controller, stub) -> this.<OfflineRegionRequest, OfflineRegionResponse, Void> call(
           controller, stub, RequestConverter.buildOfflineRegionRequest(regionInfo.getRegionName()),
           (s, c, req, done) -> s.offlineRegion(c, req, done), resp -> null))
@@ -1876,7 +1876,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   private CompletableFuture<Void> moveRegion(RegionInfo regionInfo, MoveRegionRequest request) {
-    return this.<Void> newMasterCaller().priority(regionInfo.getTable())
+    return this.<Void> newMasterCaller().tableName(regionInfo.getTable())
       .action(
         (controller, stub) -> this.<MoveRegionRequest, MoveRegionResponse, Void> call(controller,
           stub, request, (s, c, req, done) -> s.moveRegion(c, req, done), resp -> null))
