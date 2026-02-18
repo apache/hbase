@@ -109,7 +109,7 @@ class AsyncMetaRegionLocator {
 
   void updateCachedLocationOnError(HRegionLocation loc, Throwable exception) {
     AsyncRegionLocatorHelper.updateCachedLocationOnError(loc, exception, this::getCacheLocation,
-      this::addLocationToCache, this::removeLocationFromCache, null);
+      this::addLocationToCache, this::removeLocationFromCache, null, null);
   }
 
   void clearCache() {
