@@ -80,7 +80,7 @@ class MoveWithAck implements Callable<Boolean> {
       }
       count = count + 1;
       admin.move(region.getEncodedNameAsBytes(), targetServer);
-      long maxWait = startTime + (maxWaitInSeconds * 1000);
+      long maxWait = EnvironmentEdgeManager.currentTime() + (maxWaitInSeconds * 1000);
       while (EnvironmentEdgeManager.currentTime() < maxWait) {
         sameServer = isSameServer(region, sourceServer);
         if (!sameServer) {
