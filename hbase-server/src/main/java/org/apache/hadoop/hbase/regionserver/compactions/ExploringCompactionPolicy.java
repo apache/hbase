@@ -62,20 +62,21 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
     List<HStoreFile> smallest = mightBeStuck ? new ArrayList<>(0) : null;
     long bestSize = 0;
     long smallestSize = Long.MAX_VALUE;
+    int bestNum = minFiles;
 
     int opts = 0, optsInRatio = 0, bestStart = -1; // for debug logging
     // Consider every starting place.
     for (int start = 0; start < candidates.size(); start++) {
-      // Consider every different sub list permutation in between start and end with min files.
-      for (int currentEnd = start + minFiles - 1; currentEnd < candidates.size(); currentEnd++) {
+      // Consider every sub list permutation in between start and end with min files when stuck.
+      // Otherwise, only sub list permutation with more elements are taken into account.
+      int candidatesNum = mightBeStuck ? minFiles : bestNum;
+      for (int currentEnd = start + candidatesNum - 1;
+           currentEnd < candidates.size(); currentEnd++) {
         List<HStoreFile> potentialMatchFiles = candidates.subList(start, currentEnd + 1);
 
         // Sanity checks
-        if (potentialMatchFiles.size() < minFiles) {
-          continue;
-        }
         if (potentialMatchFiles.size() > maxFiles) {
-          continue;
+          break;
         }
 
         // Compute the total size of files that will
@@ -90,7 +91,7 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
         }
 
         if (size > comConf.getMaxCompactSize(mayUseOffPeak)) {
-          continue;
+          break;
         }
 
         ++opts;
@@ -105,6 +106,7 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
           bestSelection = potentialMatchFiles;
           bestSize = size;
           bestStart = start;
+          bestNum = potentialMatchFiles.size();
         }
       }
     }
