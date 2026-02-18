@@ -278,6 +278,19 @@ public class SecureBulkLoadManager {
               if (!fs.exists(stageFamily)) {
                 fs.mkdirs(stageFamily);
                 fs.setPermission(stageFamily, PERM_ALL_ACCESS);
+                if (
+                  conf.getBoolean(HConstants.BULKLOAD_COPYFILE_STORAGE_POLICY_ENABLED_KEY,
+                    HConstants.BULKLOAD_COPYFILE_STORAGE_POLICY_ENABLED_DEFAULT)
+                    && (!FSUtils.isSameHdfs(conf, new Path(el.getSecond()).getFileSystem(conf), fs)
+                      || request.getCopyFile())
+                ) {
+                  String policyName =
+                    region.getTableDescriptor().getColumnFamily(el.getFirst()).getStoragePolicy();
+                  if (policyName != null) {
+                    LOG.info("Setting storage policy for " + stageFamily + " to " + policyName);
+                    CommonFSUtils.setStoragePolicy(fs, stageFamily, policyName);
+                  }
+                }
               }
             }
             if (fsCreatedListener != null) {
