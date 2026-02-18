@@ -493,8 +493,7 @@ public class RestoreSnapshotHelper {
     String tableName = tableDesc.getTableName().getNameAsString();
     final String snapshotName = snapshotDesc.getName();
 
-    Path regionPath = new Path(tableDir, regionInfo.getEncodedName());
-    HRegionFileSystem regionFS = (fs.exists(regionPath))
+    HRegionFileSystem regionFS = (fs.exists(regionDir))
       ? HRegionFileSystem.openRegionFromFileSystem(conf, fs, tableDir, regionInfo, false)
       : HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, regionInfo);
 
