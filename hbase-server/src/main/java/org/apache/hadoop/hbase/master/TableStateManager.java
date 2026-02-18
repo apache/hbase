@@ -133,12 +133,18 @@ public class TableStateManager {
 
   @NonNull
   public TableState getTableState(TableName tableName) throws IOException {
+    return getTableState(tableName, false);
+  }
+
+  public TableState getTableState(TableName tableName, boolean ignoreNotFound) throws IOException {
     ReadWriteLock lock = tnLock.getLock(tableName);
     lock.readLock().lock();
     try {
       TableState currentState = readMetaState(tableName);
       if (currentState == null) {
-        throw new TableNotFoundException("No state found for " + tableName);
+        if (!ignoreNotFound) {
+          throw new TableNotFoundException("No state found for " + tableName);
+        }
       }
       return currentState;
     } finally {
