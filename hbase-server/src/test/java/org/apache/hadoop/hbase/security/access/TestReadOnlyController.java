@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -92,15 +91,6 @@ public class TestReadOnlyController {
 
     // Set up test class with Read-Only mode disabled so a table can be created
     conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, false);
-
-    // Add ReadOnlyController coprocessors to the master, region server, and regions
-    TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-      MasterReadOnlyController.class.getName());
-    TEST_UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-      String.join(",", RegionReadOnlyController.class.getName(),
-        BulkLoadReadOnlyController.class.getName(), EndpointReadOnlyController.class.getName()));
-    TEST_UTIL.getConfiguration().set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
-      RegionServerReadOnlyController.class.getName());
 
     try {
       // Start the test cluster

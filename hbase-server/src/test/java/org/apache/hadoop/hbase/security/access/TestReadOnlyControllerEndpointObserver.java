@@ -70,12 +70,6 @@ public class TestReadOnlyControllerEndpointObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreEndpointInvocationReadOnlyException() throws IOException {
-    endpointReadOnlyController.setReadOnlyEnabled(true);
-    endpointReadOnlyController.preEndpointInvocation(ctx, service, methodName, request);
-  }
-
-  @Test
-  public void testPreEndpointInvocationNoException() throws IOException {
     endpointReadOnlyController.preEndpointInvocation(ctx, service, methodName, request);
   }
 }

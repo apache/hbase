@@ -25,7 +25,6 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -35,50 +34,22 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public abstract class AbstractReadOnlyController implements Coprocessor {
-  protected volatile boolean globalReadOnlyEnabled;
   private MasterServices masterServices;
   private static final Logger LOG = LoggerFactory.getLogger(AbstractReadOnlyController.class);
 
   protected void internalReadOnlyGuard() throws DoNotRetryIOException {
-    if (this.globalReadOnlyEnabled) {
-      throw new DoNotRetryIOException("Operation not allowed in Read-Only Mode");
-    }
-  }
-
-  public void setReadOnlyEnabled(boolean readOnlyEnabledFromConfig) {
-    if (this.globalReadOnlyEnabled != readOnlyEnabledFromConfig) {
-      this.globalReadOnlyEnabled = readOnlyEnabledFromConfig;
-      LOG.info("Updated {} readOnlyEnabled={}", this.getClass().getName(),
-        readOnlyEnabledFromConfig);
-      if (this.masterServices != null) {
-        manageActiveClusterIdFile(readOnlyEnabledFromConfig);
-      } else {
-        LOG.debug("Global R/O flag changed, but not running on master");
-      }
-    }
+    throw new DoNotRetryIOException("Operation not allowed in Read-Only Mode");
   }
 
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
-    if (env instanceof MasterCoprocessorEnvironment) {
-      this.masterServices = ((MasterCoprocessorEnvironment) env).getMasterServices();
-      LOG.info("ReadOnlyController obtained MasterServices reference from start().");
-    } else {
-      LOG.debug("ReadOnlyController loaded in a non-Master environment. "
-        + "File system operations for read-only state will not work.");
-    }
-
-    setReadOnlyEnabled(
-      env.getConfiguration().getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT));
   }
 
   @Override
   public void stop(CoprocessorEnvironment env) {
   }
 
-  private void manageActiveClusterIdFile(boolean readOnlyEnabled) {
-    MasterFileSystem mfs = this.masterServices.getMasterFileSystem();
+  public static void manageActiveClusterIdFile(boolean readOnlyEnabled, MasterFileSystem mfs) {
     FileSystem fs = mfs.getFileSystem();
     Path rootDir = mfs.getRootDir();
     Path activeClusterFile = new Path(rootDir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);

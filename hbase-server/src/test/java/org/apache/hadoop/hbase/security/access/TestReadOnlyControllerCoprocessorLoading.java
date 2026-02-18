@@ -21,6 +21,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -43,9 +45,13 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@RunWith(Parameterized.class)
 @Category({ SecurityTests.class, MediumTests.class })
 public class TestReadOnlyControllerCoprocessorLoading {
 
@@ -61,6 +67,12 @@ public class TestReadOnlyControllerCoprocessorLoading {
   HMaster master;
   HRegionServer regionServer;
   HRegion region;
+
+  private final boolean initialReadOnlyMode;
+
+  public TestReadOnlyControllerCoprocessorLoading(boolean initialReadOnlyMode) {
+    this.initialReadOnlyMode = initialReadOnlyMode;
+  }
 
   @Before
   public void setup() throws Exception {
@@ -165,49 +177,75 @@ public class TestReadOnlyControllerCoprocessorLoading {
     }
   }
 
-  @Test
-  public void testReadOnlyControllerLoadedAtStartupWhenEnabled() throws Exception {
-    boolean isReadOnlyEnabled = true;
-    setupMiniCluster(isReadOnlyEnabled);
-    // Table creation is needed to get a region and verify region coprocessor loading hence we can't
-    // test region coprocessor loading at startup.
-    // This will get covered in the dynamic loading test where we will also verify that the
-    // coprocessors are loaded at after table creation dynamically.
+  private void verifyReadOnlyState(boolean isReadOnlyEnabled) throws Exception {
     verifyMasterReadOnlyControllerLoading(isReadOnlyEnabled);
     verifyRegionServerReadOnlyControllerLoading(isReadOnlyEnabled);
+    verifyRegionReadOnlyControllerLoading(isReadOnlyEnabled);
   }
 
   @Test
-  public void testReadOnlyControllerNotLoadedAtStartupWhenDisabled() throws Exception {
-    boolean isReadOnlyEnabled = false;
-    setupMiniCluster(isReadOnlyEnabled);
+  public void testReadOnlyControllerStartupBehavior() throws Exception {
+    setupMiniCluster(initialReadOnlyMode);
     // Table creation is needed to get a region and verify region coprocessor loading hence we can't
     // test region coprocessor loading at startup.
     // This will get covered in the dynamic loading test where we will also verify that the
     // coprocessors are loaded at after table creation dynamically.
-    verifyMasterReadOnlyControllerLoading(isReadOnlyEnabled);
-    verifyRegionServerReadOnlyControllerLoading(isReadOnlyEnabled);
+    verifyMasterReadOnlyControllerLoading(initialReadOnlyMode);
+    verifyRegionServerReadOnlyControllerLoading(initialReadOnlyMode);
   }
 
   @Test
   public void testReadOnlyControllerLoadedWhenEnabledDynamically() throws Exception {
+    setupMiniCluster(initialReadOnlyMode);
+    if (!initialReadOnlyMode) {
+      createTable();
+    }
     boolean isReadOnlyEnabled = true;
-    setupMiniCluster(false);
-    createTable();
     setReadOnlyMode(isReadOnlyEnabled);
+    verifyMasterReadOnlyControllerLoading(isReadOnlyEnabled);
+    verifyRegionServerReadOnlyControllerLoading(isReadOnlyEnabled);
+    if (!initialReadOnlyMode) {
+      verifyRegionReadOnlyControllerLoading(isReadOnlyEnabled);
+    }
+  }
+
+  @Test
+  public void testReadOnlyControllerUnloadedWhenDisabledDynamically() throws Exception {
+    setupMiniCluster(initialReadOnlyMode);
+    boolean isReadOnlyEnabled = false;
+    setReadOnlyMode(isReadOnlyEnabled);
+    createTable();
     verifyMasterReadOnlyControllerLoading(isReadOnlyEnabled);
     verifyRegionServerReadOnlyControllerLoading(isReadOnlyEnabled);
     verifyRegionReadOnlyControllerLoading(isReadOnlyEnabled);
   }
 
   @Test
-  public void testReadOnlyControllerUnloadedWhenDisabledDynamically() throws Exception {
-    boolean isReadOnlyEnabled = false;
-    setupMiniCluster(true);
-    setReadOnlyMode(isReadOnlyEnabled);
+  public void testReadOnlyControllerLoadUnloadedWhenMultipleReadOnlyToggle() throws Exception {
+    setupMiniCluster(initialReadOnlyMode);
+
+    // Ensure region exists before validation
+    setReadOnlyMode(false);
     createTable();
-    verifyMasterReadOnlyControllerLoading(isReadOnlyEnabled);
-    verifyRegionServerReadOnlyControllerLoading(isReadOnlyEnabled);
-    verifyRegionReadOnlyControllerLoading(isReadOnlyEnabled);
+    verifyReadOnlyState(false);
+
+    // Define toggle sequence
+    boolean[] toggleSequence = new boolean[] { true, false, // basic toggle
+      true, true, // idempotent enable
+      false, false // idempotent disable
+    };
+
+    for (int i = 0; i < toggleSequence.length; i++) {
+      boolean state = toggleSequence[i];
+      LOG.info("Toggling read-only mode to {} (step {})", state, i);
+
+      setReadOnlyMode(state);
+      verifyReadOnlyState(state);
+    }
+  }
+
+  @Parameters(name = "initialReadOnlyMode={0}")
+  public static Collection<Object[]> parameters() {
+    return Arrays.asList(new Object[][] { { Boolean.TRUE }, { Boolean.FALSE } });
   }
 }

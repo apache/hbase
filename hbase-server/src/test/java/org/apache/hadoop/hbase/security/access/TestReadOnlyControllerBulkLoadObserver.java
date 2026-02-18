@@ -60,23 +60,11 @@ public class TestReadOnlyControllerBulkLoadObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPrePrepareBulkLoadReadOnlyException() throws IOException {
-    bulkLoadReadOnlyController.setReadOnlyEnabled(true);
-    bulkLoadReadOnlyController.prePrepareBulkLoad(ctx);
-  }
-
-  @Test
-  public void testPrePrepareBulkLoadNoException() throws IOException {
     bulkLoadReadOnlyController.prePrepareBulkLoad(ctx);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCleanupBulkLoadReadOnlyException() throws IOException {
-    bulkLoadReadOnlyController.setReadOnlyEnabled(true);
-    bulkLoadReadOnlyController.preCleanupBulkLoad(ctx);
-  }
-
-  @Test
-  public void testPreCleanupBulkLoadNoException() throws IOException {
     bulkLoadReadOnlyController.preCleanupBulkLoad(ctx);
   }
 }

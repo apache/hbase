@@ -74,34 +74,16 @@ public class TestReadOnlyControllerRegionServerObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreRollWALWriterRequestReadOnlyException() throws IOException {
-    regionServerReadOnlyController.setReadOnlyEnabled(true);
-    regionServerReadOnlyController.preRollWALWriterRequest(ctx);
-  }
-
-  @Test
-  public void testPreRollWALWriterRequestNoException() throws IOException {
     regionServerReadOnlyController.preRollWALWriterRequest(ctx);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreReplicationSinkBatchMutateReadOnlyException() throws IOException {
-    regionServerReadOnlyController.setReadOnlyEnabled(true);
-    regionServerReadOnlyController.preReplicationSinkBatchMutate(ctx, walEntry, mutation);
-  }
-
-  @Test
-  public void testPreReplicationSinkBatchMutateNoException() throws IOException {
     regionServerReadOnlyController.preReplicationSinkBatchMutate(ctx, walEntry, mutation);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreReplicateLogEntriesReadOnlyException() throws IOException {
-    regionServerReadOnlyController.setReadOnlyEnabled(true);
-    regionServerReadOnlyController.preReplicateLogEntries(ctx);
-  }
-
-  @Test
-  public void testPreReplicateLogEntriesNoException() throws IOException {
     regionServerReadOnlyController.preReplicateLogEntries(ctx);
   }
 }
