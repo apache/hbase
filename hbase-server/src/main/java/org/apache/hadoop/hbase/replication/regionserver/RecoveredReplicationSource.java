@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
+import java.net.URLDecoder;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -25,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
@@ -104,7 +106,30 @@ public class RecoveredReplicationSource extends ReplicationSource {
         // didn't find a new location
         LOG.error(
           String.format("WAL Path %s doesn't exist and couldn't find its new location", path));
-        newPaths.add(path);
+        Path walPath = path;
+        if (
+          conf.getBoolean(AbstractFSWALProvider.SEPARATE_OLDLOGDIR,
+            AbstractFSWALProvider.DEFAULT_SEPARATE_OLDLOGDIR)
+        ) {
+          // When enable the "hbase.separate.oldlogdir.by.regionserver" feature and Path not found,
+          // try to convert the original path. See HBASE-29216
+          String walPrefix =
+            URLDecoder.decode(AbstractFSWALProvider.getWALPrefixFromWALName(path.getName()),
+              HConstants.UTF8_ENCODING);
+          // Match based on prefix(serverName)
+          for (ServerName curDeadServerName : deadRegionServers) {
+            if (walPrefix.startsWith(curDeadServerName.getServerName())) {
+              walPath = new Path(walDir,
+                AbstractFSWALProvider.getWALDirectoryName(curDeadServerName.getServerName()));
+              walPath = new Path(walPath, path.getName());
+              LOG
+                .error(String.format("WAL Path %s doesn't exist and couldn't find its new location,"
+                  + " Use the original path %s ", path, walPath));
+              break;
+            }
+          }
+        }
+        newPaths.add(walPath);
       }
     }
 
