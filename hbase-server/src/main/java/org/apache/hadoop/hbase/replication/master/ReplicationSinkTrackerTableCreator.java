@@ -80,7 +80,7 @@ public final class ReplicationSinkTrackerTableCreator {
 
   /*
    * We will create this table only if hbase.regionserver.replication.sink.tracker.enabled is
-   * enabled and table doesn't exists already.
+   * enabled and table doesn't exist already.
    */
   public static void createIfNeededAndNotExists(Configuration conf, MasterServices masterServices)
     throws IOException {
