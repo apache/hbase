@@ -22,6 +22,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -33,6 +35,7 @@ import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,6 +71,7 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
   private long splitPlanCount;
   private long mergePlanCount;
   private final AtomicLong cumulativePlansSizeLimitMb;
+  private final ExecutorService pool;
 
   RegionNormalizerWorker(final Configuration configuration, final MasterServices masterServices,
     final RegionNormalizer regionNormalizer, final RegionNormalizerWorkQueue<TableName> workQueue) {
@@ -81,6 +85,13 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
     this.defaultNormalizerTableLevel = extractDefaultNormalizerValue(configuration);
     this.cumulativePlansSizeLimitMb = new AtomicLong(
       configuration.getLong(CUMULATIVE_SIZE_LIMIT_MB_KEY, DEFAULT_CUMULATIVE_SIZE_LIMIT_MB));
+    this.pool = Executors.newFixedThreadPool(
+      configuration.getInt(HConstants.HBASE_NORMALIZER_WORKER_POOL_THREADS,
+        HConstants.HBASE_NORMALIZER_WORKER_POOL_THREADS_DEFAULT),
+      new ThreadFactoryBuilder().setDaemon(true).setNameFormat("table-normalizer-worker-%d")
+        .setUncaughtExceptionHandler(
+          (thread, throwable) -> LOG.error("Uncaught exception, worker thread likely terminated.",
+            throwable)).build());
   }
 
   private boolean extractDefaultNormalizerValue(final Configuration configuration) {
@@ -184,6 +195,7 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
     while (true) {
       if (Thread.interrupted()) {
         LOG.debug("interrupt detected. terminating.");
+        pool.shutdown();
         break;
       }
       final TableName tableName;
@@ -191,11 +203,14 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
         tableName = workQueue.take();
       } catch (InterruptedException e) {
         LOG.debug("interrupt detected. terminating.");
+        pool.shutdown();
         break;
       }
 
-      final List<NormalizationPlan> plans = calculatePlans(tableName);
-      submitPlans(plans);
+      pool.submit(() -> {
+        final List<NormalizationPlan> plans = calculatePlans(tableName);
+        submitPlans(plans);
+      });
     }
   }
 
