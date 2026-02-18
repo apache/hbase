@@ -19,13 +19,13 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ MapReduceTests.class, MediumTests.class })
+@Category({ MapReduceTests.class, LargeTests.class })
 public class TestTableInputFormatScanOBBToOPP extends TestTableInputFormatScanBase {
 
   @ClassRule

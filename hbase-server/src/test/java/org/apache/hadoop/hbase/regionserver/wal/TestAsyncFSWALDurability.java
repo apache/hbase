@@ -58,7 +58,7 @@ public class TestAsyncFSWALDurability extends WALDurabilityTestBase<CustomAsyncF
   }
 
   @Override
-  protected CustomAsyncFSWAL getWAL(FileSystem fs, Path root, String logDir, Configuration conf)
+  protected CustomAsyncFSWAL getWAL0(FileSystem fs, Path root, String logDir, Configuration conf)
     throws IOException {
     CustomAsyncFSWAL wal =
       new CustomAsyncFSWAL(fs, root, logDir, conf, GROUP, NioSocketChannel.class);

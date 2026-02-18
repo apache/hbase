@@ -128,6 +128,6 @@ public class TestAssignmentManagerUtil {
     IntStream.range(0, REGION_REPLICATION)
       .mapToObj(i -> RegionReplicaUtil.getRegionInfoForReplica(regionA, i))
       .map(AM.getRegionStates()::getRegionStateNode).forEachOrdered(
-        rn -> assertFalse("Should have unset the proc for " + rn, rn.isInTransition()));
+        rn -> assertFalse("Should have unset the proc for " + rn, rn.isTransitionScheduled()));
   }
 }

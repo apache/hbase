@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.quotas.RegionServerRpcQuotaManager;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
@@ -54,7 +55,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * judicious adding API. Changes cause ripples through the code base.
  */
 @InterfaceAudience.Private
-public interface RegionServerServices extends Server, MutableOnlineRegions, FavoredNodesForRegion {
+public interface RegionServerServices
+  extends Server, MutableOnlineRegions, FavoredNodesForRegion, KeyManagementService {
 
   /** Returns the WAL for a particular region. Pass null for getting the default (common) WAL */
   WAL getWAL(RegionInfo regionInfo) throws IOException;

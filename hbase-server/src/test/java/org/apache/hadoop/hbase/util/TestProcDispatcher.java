@@ -77,6 +77,7 @@ public class TestProcDispatcher {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().set(HBASE_MASTER_RSPROC_DISPATCHER_CLASS,
       RSProcDispatcher.class.getName());
+    TEST_UTIL.getConfiguration().setInt("hbase.master.rs.remote.proc.fail.fast.limit", 5);
     TEST_UTIL.startMiniCluster(3);
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     rs0 = cluster.getRegionServer(0).getServerName();

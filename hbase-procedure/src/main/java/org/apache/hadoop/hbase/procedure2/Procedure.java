@@ -127,6 +127,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   private long rootProcId = NO_PROC_ID;
   private long procId = NO_PROC_ID;
   private long submittedTime;
+  private boolean isCriticalSystemTable;
 
   // Runtime state, updated every operation
   private ProcedureState state = ProcedureState.INITIALIZING;
@@ -606,6 +607,14 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    */
   protected void setParentProcId(long parentProcId) {
     this.parentProcId = parentProcId;
+  }
+
+  public void setCriticalSystemTable(boolean isCriticalSystemTable) {
+    this.isCriticalSystemTable = isCriticalSystemTable;
+  }
+
+  public boolean isCriticalSystemTable() {
+    return isCriticalSystemTable;
   }
 
   protected void setRootProcId(long rootProcId) {

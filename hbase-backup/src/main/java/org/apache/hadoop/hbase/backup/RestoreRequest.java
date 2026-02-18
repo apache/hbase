@@ -62,7 +62,7 @@ public final class RestoreRequest {
       return this;
     }
 
-    public Builder withOvewrite(boolean overwrite) {
+    public Builder withOverwrite(boolean overwrite) {
       request.setOverwrite(overwrite);
       return this;
     }

@@ -21,7 +21,7 @@ import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
  * HBASE-28432 to break cyclic dependency.
  */
 @RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, MediumTests.class })
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestBoundedRegionGroupingStrategyUsingWPETool
   extends TestBoundedRegionGroupingStrategy {
 

@@ -70,8 +70,10 @@ public class TestRecoveryPersistentBucketCache {
       bucketCache.isCacheInitialized("testBucketCacheRecovery") && bucketCache.isCacheEnabled());
 
     CacheTestUtils.HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(8192, 4);
+    String[] names = CacheTestUtils.getHFileNames(blocks);
 
     CacheTestUtils.HFileBlockPair[] smallerBlocks = CacheTestUtils.generateHFileBlocks(4096, 1);
+    String[] smallerNames = CacheTestUtils.getHFileNames(smallerBlocks);
     // Add four blocks
     cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[0].getBlockName(), blocks[0].getBlock());
     cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[1].getBlockName(), blocks[1].getBlock());
@@ -104,16 +106,18 @@ public class TestRecoveryPersistentBucketCache {
       8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
     assertTrue(newBucketCache.waitForCacheInitialization(1000));
-
-    assertEquals(3, newBucketCache.backingMap.size());
-    assertNull(newBucketCache.getBlock(blocks[3].getBlockName(), false, false, false));
-    assertNull(newBucketCache.getBlock(smallerBlocks[0].getBlockName(), false, false, false));
-    assertEquals(blocks[0].getBlock(),
-      newBucketCache.getBlock(blocks[0].getBlockName(), false, false, false));
-    assertEquals(blocks[1].getBlock(),
-      newBucketCache.getBlock(blocks[1].getBlockName(), false, false, false));
-    assertEquals(blocks[2].getBlock(),
-      newBucketCache.getBlock(blocks[2].getBlockName(), false, false, false));
+    BlockCacheKey[] newKeys = CacheTestUtils.regenerateKeys(blocks, names);
+    BlockCacheKey[] newKeysSmaller = CacheTestUtils.regenerateKeys(smallerBlocks, smallerNames);
+    // The new bucket cache would have only the first three blocks. Although we have persisted the
+    // the cache state when it had the first four blocks, the 4th block was evicted and then we
+    // added a 5th block, which overrides part of the 4th block in the cache. This would cause a
+    // checksum failure for this block offset, when we try to read from the cache, and we would
+    // consider that block as invalid and its offset available in the cache.
+    assertNull(newBucketCache.getBlock(newKeys[3], false, false, false));
+    assertNull(newBucketCache.getBlock(newKeysSmaller[0], false, false, false));
+    assertEquals(blocks[0].getBlock(), newBucketCache.getBlock(newKeys[0], false, false, false));
+    assertEquals(blocks[1].getBlock(), newBucketCache.getBlock(newKeys[1], false, false, false));
+    assertEquals(blocks[2].getBlock(), newBucketCache.getBlock(newKeys[2], false, false, false));
     TEST_UTIL.cleanupTestDir();
   }
 
@@ -138,6 +142,9 @@ public class TestRecoveryPersistentBucketCache {
     cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[1].getBlockName(), blocks[1].getBlock());
     cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[2].getBlockName(), blocks[2].getBlock());
     cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[3].getBlockName(), blocks[3].getBlock());
+
+    String firstFileName = blocks[0].getBlockName().getHfileName();
+
     // saves the current state of the cache
     bucketCache.persistToFile();
 
@@ -146,7 +153,8 @@ public class TestRecoveryPersistentBucketCache {
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
     assertTrue(newBucketCache.waitForCacheInitialization(10000));
     assertEquals(4, newBucketCache.backingMap.size());
-    newBucketCache.evictBlocksByHfileName(blocks[0].getBlockName().getHfileName());
+
+    newBucketCache.evictBlocksByHfileName(firstFileName);
     assertEquals(3, newBucketCache.backingMap.size());
     TEST_UTIL.cleanupTestDir();
   }
@@ -222,6 +230,7 @@ public class TestRecoveryPersistentBucketCache {
       bucketCache.isCacheInitialized("testBucketCacheRecovery") && bucketCache.isCacheEnabled());
 
     CacheTestUtils.HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(8192, 5);
+    String[] names = CacheTestUtils.getHFileNames(blocks);
 
     // Add four blocks
     cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[0].getBlockName(), blocks[0].getBlock());
@@ -249,16 +258,15 @@ public class TestRecoveryPersistentBucketCache {
       Thread.sleep(10);
     }
 
-    assertNull(newBucketCache.getBlock(blocks[4].getBlockName(), false, false, false));
+    BlockCacheKey[] newKeys = CacheTestUtils.regenerateKeys(blocks, names);
+
+    assertNull(newBucketCache.getBlock(newKeys[4], false, false, false));
     // The backing map entry with key blocks[0].getBlockName() for the may point to a valid entry
     // or null based on different ordering of the keys in the backing map.
     // Hence, skipping the check for that key.
-    assertEquals(blocks[1].getBlock(),
-      newBucketCache.getBlock(blocks[1].getBlockName(), false, false, false));
-    assertEquals(blocks[2].getBlock(),
-      newBucketCache.getBlock(blocks[2].getBlockName(), false, false, false));
-    assertEquals(blocks[3].getBlock(),
-      newBucketCache.getBlock(blocks[3].getBlockName(), false, false, false));
+    assertEquals(blocks[1].getBlock(), newBucketCache.getBlock(newKeys[1], false, false, false));
+    assertEquals(blocks[2].getBlock(), newBucketCache.getBlock(newKeys[2], false, false, false));
+    assertEquals(blocks[3].getBlock(), newBucketCache.getBlock(newKeys[3], false, false, false));
     assertEquals(4, newBucketCache.backingMap.size());
     TEST_UTIL.cleanupTestDir();
   }

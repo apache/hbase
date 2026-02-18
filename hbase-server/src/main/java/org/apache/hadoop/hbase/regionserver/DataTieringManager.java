@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -47,6 +46,9 @@ public class DataTieringManager {
     "hbase.regionserver.datatiering.enable";
   public static final boolean DEFAULT_GLOBAL_DATA_TIERING_ENABLED = false; // disabled by default
   public static final String DATATIERING_KEY = "hbase.hstore.datatiering.type";
+  public static final String HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY =
+    "hbase.hstore.datatiering.grace.period.millis";
+  public static final long DEFAULT_DATATIERING_GRACE_PERIOD = 0;
   public static final String DATATIERING_HOT_DATA_AGE_KEY =
     "hbase.hstore.datatiering.hot.age.millis";
   public static final DataTieringType DEFAULT_DATATIERING = DataTieringType.NONE;
@@ -67,14 +69,18 @@ public class DataTieringManager {
    */
   public static synchronized boolean instantiate(Configuration conf,
     Map<String, HRegion> onlineRegions) {
-    if (isDataTieringFeatureEnabled(conf) && instance == null) {
-      instance = new DataTieringManager(onlineRegions);
-      LOG.info("DataTieringManager instantiated successfully.");
-      return true;
-    } else {
-      LOG.warn("DataTieringManager is already instantiated.");
+    if (!isDataTieringFeatureEnabled(conf)) {
+      LOG.debug("DataTiering feature is disabled (key: {}). Skipping instantiation.",
+        GLOBAL_DATA_TIERING_ENABLED_KEY);
+      return false;
     }
-    return false;
+    if (instance != null) {
+      LOG.warn("DataTieringManager is already instantiated.");
+      return false;
+    }
+    instance = new DataTieringManager(onlineRegions);
+    LOG.info("DataTieringManager instantiated successfully.");
+    return true;
   }
 
   /**
@@ -93,11 +99,14 @@ public class DataTieringManager {
    * @throws DataTieringException if there is an error retrieving the HFile path or configuration
    */
   public boolean isDataTieringEnabled(BlockCacheKey key) throws DataTieringException {
-    Path hFilePath = key.getFilePath();
-    if (hFilePath == null) {
-      throw new DataTieringException("BlockCacheKey Doesn't Contain HFile Path");
+    if (key.getCfName() == null || key.getRegionName() == null) {
+      throw new DataTieringException(
+        "BlockCacheKey doesn't contain Column Family Name or Region Name");
     }
-    return isDataTieringEnabled(hFilePath);
+    Configuration configuration =
+      getHStore(key.getRegionName(), key.getCfName()).getReadOnlyConfiguration();
+    DataTieringType dataTieringType = getDataTieringType(configuration);
+    return !dataTieringType.equals(DataTieringType.NONE);
   }
 
   /**
@@ -122,11 +131,16 @@ public class DataTieringManager {
    * @throws DataTieringException if there is an error retrieving data tiering information
    */
   public boolean isHotData(BlockCacheKey key) throws DataTieringException {
-    Path hFilePath = key.getFilePath();
-    if (hFilePath == null) {
-      throw new DataTieringException("BlockCacheKey Doesn't Contain HFile Path");
+    if (key.getRegionName() == null) {
+      throw new DataTieringException("BlockCacheKey doesn't contain Region Name");
     }
-    return isHotData(hFilePath);
+    if (key.getCfName() == null) {
+      throw new DataTieringException("BlockCacheKey doesn't contain CF Name");
+    }
+    if (key.getHfileName() == null) {
+      throw new DataTieringException("BlockCacheKey doesn't contain File Name");
+    }
+    return isHotData(key.getRegionName(), key.getCfName(), key.getHfileName());
   }
 
   /**
@@ -139,6 +153,9 @@ public class DataTieringManager {
    * @return {@code true} if the data is hot, {@code false} otherwise
    */
   public boolean isHotData(long maxTimestamp, Configuration conf) {
+    if (isWithinGracePeriod(maxTimestamp, conf)) {
+      return true;
+    }
     DataTieringType dataTieringType = getDataTieringType(conf);
 
     if (
@@ -151,27 +168,20 @@ public class DataTieringManager {
     return true;
   }
 
-  /**
-   * Determines whether the data in the HFile at the given path is considered hot based on the
-   * configured data tiering type and hot data age. If the data tiering type is set to
-   * {@link DataTieringType#TIME_RANGE} and maximum timestamp is not present, it considers
-   * {@code Long.MAX_VALUE} as the maximum timestamp, making the data hot by default.
-   * @param hFilePath the path to the HFile
-   * @return {@code true} if the data is hot, {@code false} otherwise
-   * @throws DataTieringException if there is an error retrieving data tiering information
-   */
-  public boolean isHotData(Path hFilePath) throws DataTieringException {
-    Configuration configuration = getConfiguration(hFilePath);
+  private boolean isHotData(String region, String cf, String fileName) throws DataTieringException {
+    Configuration configuration = getHStore(region, cf).getReadOnlyConfiguration();
     DataTieringType dataTieringType = getDataTieringType(configuration);
-
     if (!dataTieringType.equals(DataTieringType.NONE)) {
-      HStoreFile hStoreFile = getHStoreFile(hFilePath);
+      HStoreFile hStoreFile = getHStoreFile(region, cf, fileName);
       if (hStoreFile == null) {
         throw new DataTieringException(
-          "Store file corresponding to " + hFilePath + " doesn't exist");
+          "Store file corresponding to " + region + "/" + cf + "/" + fileName + " doesn't exist");
       }
-      return hotDataValidator(dataTieringType.getInstance().getTimestamp(getHStoreFile(hFilePath)),
-        getDataTieringHotDataAge(configuration));
+      long maxTimestamp = dataTieringType.getInstance().getTimestamp(hStoreFile);
+      if (isWithinGracePeriod(maxTimestamp, configuration)) {
+        return true;
+      }
+      return hotDataValidator(maxTimestamp, getDataTieringHotDataAge(configuration));
     }
     // DataTieringType.NONE or other types are considered hot by default
     return true;
@@ -189,11 +199,19 @@ public class DataTieringManager {
   public boolean isHotData(HFileInfo hFileInfo, Configuration configuration) {
     DataTieringType dataTieringType = getDataTieringType(configuration);
     if (hFileInfo != null && !dataTieringType.equals(DataTieringType.NONE)) {
-      return hotDataValidator(dataTieringType.getInstance().getTimestamp(hFileInfo),
-        getDataTieringHotDataAge(configuration));
+      long maxTimestamp = dataTieringType.getInstance().getTimestamp(hFileInfo);
+      if (isWithinGracePeriod(maxTimestamp, configuration)) {
+        return true;
+      }
+      return hotDataValidator(maxTimestamp, getDataTieringHotDataAge(configuration));
     }
     // DataTieringType.NONE or other types are considered hot by default
     return true;
+  }
+
+  private boolean isWithinGracePeriod(long maxTimestamp, Configuration conf) {
+    long gracePeriod = getDataTieringGracePeriod(conf);
+    return gracePeriod > 0 && (getCurrentTimestamp() - maxTimestamp) < gracePeriod;
   }
 
   private boolean hotDataValidator(long maxTimestamp, long hotDataAge) {
@@ -227,34 +245,29 @@ public class DataTieringManager {
     return coldHFiles;
   }
 
-  private HRegion getHRegion(Path hFilePath) throws DataTieringException {
-    String regionId;
-    try {
-      regionId = HRegionFileSystem.getRegionId(hFilePath);
-    } catch (IOException e) {
-      throw new DataTieringException(e.getMessage());
-    }
-    HRegion hRegion = this.onlineRegions.get(regionId);
+  private HRegion getHRegion(String region) throws DataTieringException {
+    HRegion hRegion = this.onlineRegions.get(region);
     if (hRegion == null) {
-      throw new DataTieringException("HRegion corresponding to " + hFilePath + " doesn't exist");
+      throw new DataTieringException("HRegion corresponding to " + region + " doesn't exist");
     }
     return hRegion;
   }
 
-  private HStore getHStore(Path hFilePath) throws DataTieringException {
-    HRegion hRegion = getHRegion(hFilePath);
-    String columnFamily = hFilePath.getParent().getName();
-    HStore hStore = hRegion.getStore(Bytes.toBytes(columnFamily));
+  private HStore getHStore(String region, String cf) throws DataTieringException {
+    HRegion hRegion = getHRegion(region);
+    HStore hStore = hRegion.getStore(Bytes.toBytes(cf));
     if (hStore == null) {
-      throw new DataTieringException("HStore corresponding to " + hFilePath + " doesn't exist");
+      throw new DataTieringException(
+        "HStore corresponding to " + region + "/" + cf + " doesn't exist");
     }
     return hStore;
   }
 
-  private HStoreFile getHStoreFile(Path hFilePath) throws DataTieringException {
-    HStore hStore = getHStore(hFilePath);
+  private HStoreFile getHStoreFile(String region, String cf, String fileName)
+    throws DataTieringException {
+    HStore hStore = getHStore(region, cf);
     for (HStoreFile file : hStore.getStorefiles()) {
-      if (file.getPath().toUri().getPath().toString().equals(hFilePath.toString())) {
+      if (file.getPath().getName().equals(fileName)) {
         return file;
       }
     }
@@ -262,7 +275,18 @@ public class DataTieringManager {
   }
 
   private Configuration getConfiguration(Path hFilePath) throws DataTieringException {
-    HStore hStore = getHStore(hFilePath);
+    String regionName = null;
+    String cfName = null;
+    try {
+      regionName = hFilePath.getParent().getParent().getName();
+      cfName = hFilePath.getParent().getName();
+    } catch (Exception e) {
+      throw new DataTieringException("Incorrect HFile Path: " + hFilePath);
+    }
+    if (regionName == null || cfName == null) {
+      throw new DataTieringException("Incorrect HFile Path: " + hFilePath);
+    }
+    HStore hStore = getHStore(regionName, cfName);
     return hStore.getReadOnlyConfiguration();
   }
 
@@ -273,6 +297,11 @@ public class DataTieringManager {
   private long getDataTieringHotDataAge(Configuration conf) {
     return Long.parseLong(
       conf.get(DATATIERING_HOT_DATA_AGE_KEY, String.valueOf(DEFAULT_DATATIERING_HOT_DATA_AGE)));
+  }
+
+  private long getDataTieringGracePeriod(Configuration conf) {
+    return Long.parseLong(conf.get(HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY,
+      String.valueOf(DEFAULT_DATATIERING_GRACE_PERIOD)));
   }
 
   /*

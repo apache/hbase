@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.quotas;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -32,7 +31,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.TimedQuota;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class TimeBasedLimiter implements QuotaLimiter {
-  private static final Configuration conf = HBaseConfiguration.create();
   private RateLimiter reqsLimiter = null;
   private RateLimiter reqSizeLimiter = null;
   private RateLimiter writeReqsLimiter = null;
@@ -47,12 +45,11 @@ public class TimeBasedLimiter implements QuotaLimiter {
   private RateLimiter atomicWriteSizeLimiter = null;
   private RateLimiter reqHandlerUsageTimeLimiter = null;
 
-  private TimeBasedLimiter() {
-    if (
-      FixedIntervalRateLimiter.class.getName().equals(
-        conf.getClass(RateLimiter.QUOTA_RATE_LIMITER_CONF_KEY, AverageIntervalRateLimiter.class)
-          .getName())
-    ) {
+  private TimeBasedLimiter(Configuration conf) {
+    String limiterClassName =
+      conf.getClass(RateLimiter.QUOTA_RATE_LIMITER_CONF_KEY, AverageIntervalRateLimiter.class)
+        .getName();
+    if (FixedIntervalRateLimiter.class.getName().equals(limiterClassName)) {
       long refillInterval = conf.getLong(FixedIntervalRateLimiter.RATE_LIMITER_REFILL_INTERVAL_MS,
         RateLimiter.DEFAULT_TIME_UNIT);
       reqsLimiter = new FixedIntervalRateLimiter(refillInterval);
@@ -68,6 +65,22 @@ public class TimeBasedLimiter implements QuotaLimiter {
       atomicReadSizeLimiter = new FixedIntervalRateLimiter(refillInterval);
       atomicWriteSizeLimiter = new FixedIntervalRateLimiter(refillInterval);
       reqHandlerUsageTimeLimiter = new FixedIntervalRateLimiter(refillInterval);
+    } else if (FeedbackAdaptiveRateLimiter.class.getName().equals(limiterClassName)) {
+      FeedbackAdaptiveRateLimiter.FeedbackAdaptiveRateLimiterFactory feedbackLimiterFactory =
+        new FeedbackAdaptiveRateLimiter.FeedbackAdaptiveRateLimiterFactory(conf);
+      reqsLimiter = feedbackLimiterFactory.create();
+      reqSizeLimiter = feedbackLimiterFactory.create();
+      writeReqsLimiter = feedbackLimiterFactory.create();
+      writeSizeLimiter = feedbackLimiterFactory.create();
+      readReqsLimiter = feedbackLimiterFactory.create();
+      readSizeLimiter = feedbackLimiterFactory.create();
+      reqCapacityUnitLimiter = feedbackLimiterFactory.create();
+      writeCapacityUnitLimiter = feedbackLimiterFactory.create();
+      readCapacityUnitLimiter = feedbackLimiterFactory.create();
+      atomicReqLimiter = feedbackLimiterFactory.create();
+      atomicReadSizeLimiter = feedbackLimiterFactory.create();
+      atomicWriteSizeLimiter = feedbackLimiterFactory.create();
+      reqHandlerUsageTimeLimiter = feedbackLimiterFactory.create();
     } else {
       reqsLimiter = new AverageIntervalRateLimiter();
       reqSizeLimiter = new AverageIntervalRateLimiter();
@@ -85,8 +98,8 @@ public class TimeBasedLimiter implements QuotaLimiter {
     }
   }
 
-  static QuotaLimiter fromThrottle(final Throttle throttle) {
-    TimeBasedLimiter limiter = new TimeBasedLimiter();
+  static QuotaLimiter fromThrottle(Configuration conf, final Throttle throttle) {
+    TimeBasedLimiter limiter = new TimeBasedLimiter(conf);
     boolean isBypass = true;
     if (throttle.hasReqNum()) {
       setFromTimedQuota(limiter.reqsLimiter, throttle.getReqNum());

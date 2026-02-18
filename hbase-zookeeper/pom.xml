@@ -362,23 +362,9 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-eclipse-plugin</artifactId>
             <configuration>
-              <additionalProjectnatures>
-                <projectnature>org.jamon.project.jamonnature</projectnature>
-              </additionalProjectnatures>
               <buildcommands>
-                <buildcommand>org.jamon.project.templateBuilder</buildcommand>
                 <buildcommand>org.eclipse.jdt.core.javabuilder</buildcommand>
-                <buildcommand>org.jamon.project.markerUpdater</buildcommand>
               </buildcommands>
-              <additionalConfig>
-                <file>
-                  <name>.settings/org.jamon.prefs</name>
-                  <content># now
-                    eclipse.preferences.version=1
-                    templateSourceDir=src/main/jamon
-                    templateOutputDir=target/generated-jamon</content>
-                </file>
-              </additionalConfig>
             </configuration>
           </plugin>
         </plugins>

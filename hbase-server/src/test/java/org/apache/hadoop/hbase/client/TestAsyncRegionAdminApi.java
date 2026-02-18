@@ -94,12 +94,12 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       // Expected
       assertThat(e.getCause(), instanceOf(DoNotRetryRegionException.class));
     }
-    assertFalse(am.getRegionStates().getRegionStateNode(hri).isInTransition());
+    assertFalse(am.getRegionStates().getRegionStateNode(hri).isTransitionScheduled());
     assertTrue(regionStates.getRegionState(hri).isOpened());
 
     // unassign region
     admin.unassign(hri.getRegionName(), true).get();
-    assertFalse(am.getRegionStates().getRegionStateNode(hri).isInTransition());
+    assertFalse(am.getRegionStates().getRegionStateNode(hri).isTransitionScheduled());
     assertTrue(regionStates.getRegionState(hri).isClosed());
   }
 

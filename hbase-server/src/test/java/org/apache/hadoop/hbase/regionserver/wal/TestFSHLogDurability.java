@@ -36,7 +36,7 @@ public class TestFSHLogDurability extends WALDurabilityTestBase<CustomFSHLog> {
     HBaseClassTestRule.forClass(TestFSHLogDurability.class);
 
   @Override
-  protected CustomFSHLog getWAL(FileSystem fs, Path root, String logDir, Configuration conf)
+  protected CustomFSHLog getWAL0(FileSystem fs, Path root, String logDir, Configuration conf)
     throws IOException {
     CustomFSHLog wal = new CustomFSHLog(fs, root, logDir, conf);
     wal.init();

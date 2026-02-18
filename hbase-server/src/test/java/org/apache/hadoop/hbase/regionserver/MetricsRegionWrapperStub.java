@@ -203,4 +203,9 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
     map.put("info", 0L);
     return map;
   }
+
+  @Override
+  public String getTableDescriptorHash() {
+    return "testhash123abc";
+  }
 }

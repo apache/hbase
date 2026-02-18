@@ -212,6 +212,32 @@ public final class FSUtils {
    */
   public static FSDataOutputStream create(Configuration conf, FileSystem fs, Path path,
     FsPermission perm, InetSocketAddress[] favoredNodes) throws IOException {
+    return create(conf, fs, path, perm, favoredNodes, true);
+  }
+
+  /**
+   * Create the specified file on the filesystem. By default, this will:
+   * <ol>
+   * <li>overwrite the file if it exists</li>
+   * <li>apply the umask in the configuration (if it is enabled)</li>
+   * <li>use the fs configured buffer size (or 4096 if not set)</li>
+   * <li>use the configured column family replication or default replication if
+   * {@link ColumnFamilyDescriptorBuilder#DEFAULT_DFS_REPLICATION}</li>
+   * <li>use the default block size</li>
+   * <li>not track progress</li>
+   * </ol>
+   * @param conf              configurations
+   * @param fs                {@link FileSystem} on which to write the file
+   * @param path              {@link Path} to the file to write
+   * @param perm              permissions
+   * @param favoredNodes      favored data nodes
+   * @param isRecursiveCreate recursively create parent directories
+   * @return output stream to the created file
+   * @throws IOException if the file cannot be created
+   */
+  public static FSDataOutputStream create(Configuration conf, FileSystem fs, Path path,
+    FsPermission perm, InetSocketAddress[] favoredNodes, boolean isRecursiveCreate)
+    throws IOException {
     if (fs instanceof HFileSystem) {
       FileSystem backingFs = ((HFileSystem) fs).getBackingFs();
       if (backingFs instanceof DistributedFileSystem) {
@@ -230,7 +256,7 @@ public final class FSUtils {
       }
 
     }
-    return CommonFSUtils.create(fs, path, perm, true);
+    return CommonFSUtils.create(fs, path, perm, true, isRecursiveCreate);
   }
 
   /**

@@ -77,18 +77,10 @@ public interface BackupAdmin extends Closeable {
   void mergeBackups(String[] backupIds) throws IOException;
 
   /**
-   * Show backup history command
-   * @param n last n backup sessions
-   * @return list of backup info objects
-   * @throws IOException exception
-   */
-  List<BackupInfo> getHistory(int n) throws IOException;
-
-  /**
-   * Show backup history command with filters
-   * @param n last n backup sessions
-   * @param f list of filters
-   * @return list of backup info objects
+   * Retrieve info about the most recent backups.
+   * @param n number of backup infos desired
+   * @param f optional filters, only entries passing the filters will be returned
+   * @return a list of at most n entries, ordered from newest (most recent) to oldest (least recent)
    * @throws IOException exception
    */
   List<BackupInfo> getHistory(int n, BackupInfo.Filter... f) throws IOException;

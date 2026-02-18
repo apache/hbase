@@ -331,6 +331,7 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
           if (kvs != null && bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
             ((ShipperListener) writer).beforeShipped();
             kvs.shipped();
+            scannerContext.clearBlockSizeProgress();
             bytesWrittenProgressForShippedCall = 0;
           }
         }

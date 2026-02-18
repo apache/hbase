@@ -20,33 +20,27 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.util.JVM;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hbase.thirdparty.io.netty.channel.epoll.EpollEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.epoll.EpollSocketChannel;
 import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 
-@RunWith(Parameterized.class)
-@Category({ RPCTests.class, MediumTests.class })
+@Tag(RPCTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: rpcServerImpl={0}, EventLoop={1}")
 public class TestNettyIPC extends AbstractTestIPC {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNettyIPC.class);
 
   private static List<String> getEventLoopTypes() {
     List<String> types = new ArrayList<>();
@@ -58,24 +52,27 @@ public class TestNettyIPC extends AbstractTestIPC {
     return types;
   }
 
-  @Parameters(name = "{index}: rpcServerImpl={0}, EventLoop={1}")
-  public static List<Object[]> parameters() {
-    List<Object[]> params = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     for (String eventLoopType : getEventLoopTypes()) {
-      params.add(new Object[] { SimpleRpcServer.class, eventLoopType });
-      params.add(new Object[] { NettyRpcServer.class, eventLoopType });
+      params.add(Arguments.of(SimpleRpcServer.class, eventLoopType));
+      params.add(Arguments.of(NettyRpcServer.class, eventLoopType));
     }
-    return params;
+    return params.stream();
   }
 
-  @Parameter(1)
-  public String eventLoopType;
+  private String eventLoopType;
+
+  public TestNettyIPC(Class<? extends RpcServer> rpcServerImpl, String eventLoopType) {
+    super(rpcServerImpl);
+    this.eventLoopType = eventLoopType;
+  }
 
   private static NioEventLoopGroup NIO;
 
   private static EpollEventLoopGroup EPOLL;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() {
     NIO = new NioEventLoopGroup();
     if (JVM.isLinux() && JVM.isAmd64()) {
@@ -83,7 +80,7 @@ public class TestNettyIPC extends AbstractTestIPC {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() {
     if (NIO != null) {
       NIO.shutdownGracefully();

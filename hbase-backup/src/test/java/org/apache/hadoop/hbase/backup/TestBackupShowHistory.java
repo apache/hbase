@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -24,7 +25,6 @@ import java.io.PrintStream;
 import java.util.List;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.util.ToolRunner;
@@ -33,8 +33,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestBackupShowHistory extends TestBackupBase {
@@ -45,97 +43,100 @@ public class TestBackupShowHistory extends TestBackupBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupShowHistory.class);
 
-  private boolean findBackup(List<BackupInfo> history, String backupId) {
-    assertTrue(history.size() > 0);
-    boolean success = false;
-    for (BackupInfo info : history) {
-      if (info.getBackupId().equals(backupId)) {
-        success = true;
-        break;
-      }
-    }
-    return success;
-  }
-
   /**
-   * Verify that full backup is created on a single table with data correctly. Verify that history
-   * works as expected.
-   * @throws Exception if doing the backup or an operation on the tables fails
+   * Verify that backup history retrieval works as expected.
    */
   @Test
   public void testBackupHistory() throws Exception {
-
     LOG.info("test backup history on a single table with data");
 
-    List<TableName> tableList = Lists.newArrayList(table1);
-    String backupId = fullTableBackup(tableList);
+    // Test without backups present
+    List<BackupInfo> history = getBackupAdmin().getHistory(10);
+    assertEquals(0, history.size());
+
+    history = BackupUtils.getHistory(conf1, 10, new Path(BACKUP_ROOT_DIR));
+    assertEquals(0, history.size());
+
+    // Create first backup
+    String backupId = fullTableBackup(List.of(table1));
     assertTrue(checkSucceeded(backupId));
     LOG.info("backup complete");
 
-    List<BackupInfo> history = getBackupAdmin().getHistory(10);
-    assertTrue(findBackup(history, backupId));
-    BackupInfo.Filter nullFilter = info -> true;
-    history = BackupUtils.getHistory(conf1, 10, new Path(BACKUP_ROOT_DIR), nullFilter);
-    assertTrue(findBackup(history, backupId));
+    // Tests with one backup present
+    history = getBackupAdmin().getHistory(10);
+    assertEquals(1, history.size());
+    assertEquals(backupId, history.get(0).getBackupId());
 
+    history = BackupUtils.getHistory(conf1, 10, new Path(BACKUP_ROOT_DIR));
+    assertEquals(1, history.size());
+    assertEquals(backupId, history.get(0).getBackupId());
+
+    String output = runHistoryCommand(10);
+    assertTrue(output.indexOf(backupId) > 0);
+
+    // Create second backup
+    String backupId2 = fullTableBackup(List.of(table2));
+    assertTrue(checkSucceeded(backupId2));
+    LOG.info("backup complete: " + table2);
+
+    // Test with multiple backups
+    history = getBackupAdmin().getHistory(10);
+    assertEquals(2, history.size());
+    assertEquals(backupId2, history.get(0).getBackupId());
+    assertEquals(backupId, history.get(1).getBackupId());
+
+    history = BackupUtils.getHistory(conf1, 10, new Path(BACKUP_ROOT_DIR));
+    assertEquals(2, history.size());
+    assertEquals(backupId2, history.get(0).getBackupId());
+    assertEquals(backupId, history.get(1).getBackupId());
+
+    output = runHistoryCommand(10);
+    int idx1 = output.indexOf(backupId);
+    int idx2 = output.indexOf(backupId2);
+    assertTrue(idx1 >= 0); // Backup 1 is listed
+    assertTrue(idx2 >= 0); // Backup 2 is listed
+    assertTrue(idx2 < idx1); // Newest backup (Backup 2) comes first
+
+    // Test with multiple backups & n == 1
+    history = getBackupAdmin().getHistory(1);
+    assertEquals(1, history.size());
+    assertEquals(backupId2, history.get(0).getBackupId());
+
+    history = BackupUtils.getHistory(conf1, 1, new Path(BACKUP_ROOT_DIR));
+    assertEquals(1, history.size());
+    assertEquals(backupId2, history.get(0).getBackupId());
+
+    output = runHistoryCommand(1);
+    idx1 = output.indexOf(backupId);
+    idx2 = output.indexOf(backupId2);
+    assertTrue(idx2 > 0); // most recent backup is listed
+    assertEquals(-1, idx1); // second most recent backup isn't listed
+
+    // Test with multiple backups & filtering
+    BackupInfo.Filter tableNameFilter = i -> i.getTableNames().contains(table1);
+
+    history = getBackupAdmin().getHistory(10, tableNameFilter);
+    assertEquals(1, history.size());
+    assertEquals(backupId, history.get(0).getBackupId());
+
+    history = BackupUtils.getHistory(conf1, 10, new Path(BACKUP_ROOT_DIR), tableNameFilter);
+    assertEquals(1, history.size());
+    assertEquals(backupId, history.get(0).getBackupId());
+
+  }
+
+  private String runHistoryCommand(int n) throws Exception {
+    String[] args = new String[] { "history", "-n", String.valueOf(n), "-p", BACKUP_ROOT_DIR };
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     System.setOut(new PrintStream(baos));
 
-    String[] args = new String[] { "history", "-n", "10", "-p", BACKUP_ROOT_DIR };
-    // Run backup
+    LOG.info("Running history command");
     int ret = ToolRunner.run(conf1, new BackupDriver(), args);
-    assertTrue(ret == 0);
-    LOG.info("show_history");
+    assertEquals(0, ret);
+
     String output = baos.toString();
     LOG.info(output);
     baos.close();
-    assertTrue(output.indexOf(backupId) > 0);
-
-    tableList = Lists.newArrayList(table2);
-    String backupId2 = fullTableBackup(tableList);
-    assertTrue(checkSucceeded(backupId2));
-    LOG.info("backup complete: " + table2);
-    BackupInfo.Filter tableNameFilter = image -> {
-      if (table1 == null) {
-        return true;
-      }
-
-      List<TableName> names = image.getTableNames();
-      return names.contains(table1);
-    };
-    BackupInfo.Filter tableSetFilter = info -> {
-      String backupId1 = info.getBackupId();
-      return backupId1.startsWith("backup");
-    };
-
-    history = getBackupAdmin().getHistory(10, tableNameFilter, tableSetFilter);
-    assertTrue(history.size() > 0);
-    boolean success = true;
-    for (BackupInfo info : history) {
-      if (!info.getTableNames().contains(table1)) {
-        success = false;
-        break;
-      }
-    }
-    assertTrue(success);
-
-    history =
-      BackupUtils.getHistory(conf1, 10, new Path(BACKUP_ROOT_DIR), tableNameFilter, tableSetFilter);
-    assertTrue(history.size() > 0);
-    success = true;
-    for (BackupInfo info : history) {
-      if (!info.getTableNames().contains(table1)) {
-        success = false;
-        break;
-      }
-    }
-    assertTrue(success);
-
-    args =
-      new String[] { "history", "-n", "10", "-p", BACKUP_ROOT_DIR, "-t", "table1", "-s", "backup" };
-    // Run backup
-    ret = ToolRunner.run(conf1, new BackupDriver(), args);
-    assertTrue(ret == 0);
-    LOG.info("show_history");
+    return output;
   }
 }

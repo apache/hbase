@@ -21,9 +21,9 @@ import static org.apache.hadoop.hbase.util.FutureUtils.consume;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -38,7 +38,6 @@ import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.ExcludeDatanodeManager;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
@@ -49,15 +48,12 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ipc.RemoteException;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.FixMethodOrder;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,13 +63,9 @@ import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFanOutOneBlockAsyncDFSOutput.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFanOutOneBlockAsyncDFSOutput.class);
   private static DistributedFileSystem FS;
@@ -83,10 +75,9 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
 
   private static StreamSlowMonitor MONITOR;
 
-  @Rule
-  public TestName name = new TestName();
+  private Path file;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, READ_TIMEOUT_MS);
     startMiniDFSCluster(3);
@@ -96,7 +87,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     MONITOR = StreamSlowMonitor.create(UTIL.getConfiguration(), "testMonitor");
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if (EVENT_LOOP_GROUP != null) {
       EVENT_LOOP_GROUP.shutdownGracefully().get();
@@ -136,13 +127,17 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     }
   }
 
+  @BeforeEach
+  public void setUpBeforeEach(TestInfo testInfo) {
+    file = new Path("/" + testInfo.getTestMethod().get().getName());
+  }
+
   @Test
   public void test() throws IOException, InterruptedException, ExecutionException {
-    Path f = new Path("/" + name.getMethodName());
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
-    FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
-      false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, MONITOR, true);
-    writeAndVerify(FS, f, out);
+    FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, file,
+      true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, MONITOR, true);
+    writeAndVerify(FS, file, out);
   }
 
   /**
@@ -151,10 +146,9 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
    */
   @Test
   public void test0Recover() throws IOException, InterruptedException, ExecutionException {
-    Path f = new Path("/" + name.getMethodName());
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
-    FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
-      false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, MONITOR, true);
+    FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, file,
+      true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, MONITOR, true);
     byte[] b = new byte[10];
     Bytes.random(b);
     out.write(b, 0, b.length);
@@ -162,17 +156,12 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     // restart one datanode which causes one connection broken
     CLUSTER.restartDataNode(0);
     out.write(b, 0, b.length);
-    try {
-      out.flush(false).get();
-      fail("flush should fail");
-    } catch (ExecutionException e) {
-      // we restarted one datanode so the flush should fail
-      LOG.info("expected exception caught", e);
-    }
+    ExecutionException e = assertThrows(ExecutionException.class, () -> out.flush(false).get());
+    LOG.info("expected exception caught", e);
     out.recoverAndClose(null);
-    assertEquals(b.length, FS.getFileStatus(f).getLen());
+    assertEquals(b.length, FS.getFileStatus(file).getLen());
     byte[] actual = new byte[b.length];
-    try (FSDataInputStream in = FS.open(f)) {
+    try (FSDataInputStream in = FS.open(file)) {
       in.readFully(actual);
     }
     assertArrayEquals(b, actual);
@@ -180,13 +169,12 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
 
   @Test
   public void testHeartbeat() throws IOException, InterruptedException, ExecutionException {
-    Path f = new Path("/" + name.getMethodName());
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
-    FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
-      false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, MONITOR, true);
+    FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, file,
+      true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, MONITOR, true);
     Thread.sleep(READ_TIMEOUT_MS * 2);
     // the connection to datanode should still alive.
-    writeAndVerify(FS, f, out);
+    writeAndVerify(FS, file, out);
   }
 
   /**
@@ -194,16 +182,13 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
    */
   @Test
   public void testCreateParentFailed() throws IOException {
-    Path f = new Path("/" + name.getMethodName() + "/test");
+    Path f = new Path(file, "test");
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
-    try {
-      FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true, false, (short) 3,
-        FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, MONITOR, true);
-      fail("should fail with parent does not exist");
-    } catch (RemoteException e) {
-      LOG.info("expected exception caught", e);
-      assertThat(e.unwrapRemoteException(), instanceOf(FileNotFoundException.class));
-    }
+    RemoteException e = assertThrows(RemoteException.class,
+      () -> FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true, false, (short) 3,
+        FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, MONITOR, true));
+    LOG.info("expected exception caught", e);
+    assertThat(e.unwrapRemoteException(), instanceOf(FileNotFoundException.class));
   }
 
   @Test
@@ -264,19 +249,18 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
 
   @Test
   public void testWriteLargeChunk() throws IOException, InterruptedException, ExecutionException {
-    Path f = new Path("/" + name.getMethodName());
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
-    FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
-      false, (short) 3, 1024 * 1024 * 1024, eventLoop, CHANNEL_CLASS, MONITOR, true);
+    FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, file,
+      true, false, (short) 3, 1024 * 1024 * 1024, eventLoop, CHANNEL_CLASS, MONITOR, true);
     byte[] b = new byte[50 * 1024 * 1024];
     Bytes.random(b);
     out.write(b);
     consume(out.flush(false));
     assertEquals(b.length, out.flush(false).get().longValue());
     out.close();
-    assertEquals(b.length, FS.getFileStatus(f).getLen());
+    assertEquals(b.length, FS.getFileStatus(file).getLen());
     byte[] actual = new byte[b.length];
-    try (FSDataInputStream in = FS.open(f)) {
+    try (FSDataInputStream in = FS.open(file)) {
       in.readFully(actual);
     }
     assertArrayEquals(b, actual);

@@ -136,7 +136,7 @@ public class TestRSGroupsOfflineMode extends TestRSGroupsBase {
       @Override
       public boolean evaluate() throws Exception {
         return groupRS.getNumberOfOnlineRegions() < 1
-          && master.getAssignmentManager().getRegionStates().getRegionsInTransitionCount() < 1;
+          && master.getAssignmentManager().getRegionsInTransitionCount() < 1;
       }
     });
     // Move table to group and wait.

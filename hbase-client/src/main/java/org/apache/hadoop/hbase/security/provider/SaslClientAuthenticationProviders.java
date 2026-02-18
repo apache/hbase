@@ -48,16 +48,36 @@ public final class SaslClientAuthenticationProviders {
   public static final String SELECTOR_KEY = "hbase.client.sasl.provider.class";
   public static final String EXTRA_PROVIDERS_KEY = "hbase.client.sasl.provider.extras";
 
-  private static final AtomicReference<SaslClientAuthenticationProviders> providersRef =
+  private static final AtomicReference<SaslClientAuthenticationProviders> PROVIDER_REF =
     new AtomicReference<>();
 
   private final Collection<SaslClientAuthenticationProvider> providers;
   private final AuthenticationProviderSelector selector;
 
-  private SaslClientAuthenticationProviders(Collection<SaslClientAuthenticationProvider> providers,
-    AuthenticationProviderSelector selector) {
-    this.providers = providers;
-    this.selector = selector;
+  /**
+   * Creates a new instance of SaslClientAuthenticationProviders.
+   * @param conf the configuration to use for loading providers and selector
+   */
+  public SaslClientAuthenticationProviders(Configuration conf) {
+    ServiceLoader<SaslClientAuthenticationProvider> loader =
+      ServiceLoader.load(SaslClientAuthenticationProvider.class,
+        SaslClientAuthenticationProviders.class.getClassLoader());
+    HashMap<Byte, SaslClientAuthenticationProvider> providerMap = new HashMap<>();
+    for (SaslClientAuthenticationProvider provider : loader) {
+      addProviderIfNotExists(provider, providerMap);
+    }
+
+    addExplicitProviders(conf, providerMap);
+
+    providers = Collections.unmodifiableCollection(providerMap.values());
+
+    if (LOG.isTraceEnabled()) {
+      String loadedProviders = providers.stream().map((provider) -> provider.getClass().getName())
+        .collect(Collectors.joining(", "));
+      LOG.trace("Found SaslClientAuthenticationProviders {}", loadedProviders);
+    }
+
+    selector = instantiateSelector(conf, providers);
   }
 
   /**
@@ -69,12 +89,16 @@ public final class SaslClientAuthenticationProviders {
 
   /**
    * Returns a singleton instance of {@link SaslClientAuthenticationProviders}.
+   * @deprecated Since 2.5.14 and 2.6.4, will be removed in newer minor release lines. This class
+   *             should not be singleton, please do not use it any more. see HBASE-29144 for more
+   *             details.
    */
+  @Deprecated
   public static synchronized SaslClientAuthenticationProviders getInstance(Configuration conf) {
-    SaslClientAuthenticationProviders providers = providersRef.get();
+    SaslClientAuthenticationProviders providers = PROVIDER_REF.get();
     if (providers == null) {
-      providers = instantiate(conf);
-      providersRef.set(providers);
+      providers = new SaslClientAuthenticationProviders(conf);
+      PROVIDER_REF.set(providers);
     }
 
     return providers;
@@ -82,9 +106,13 @@ public final class SaslClientAuthenticationProviders {
 
   /**
    * Removes the cached singleton instance of {@link SaslClientAuthenticationProviders}.
+   * @deprecated Since 2.5.14 and 2.6.4, will be removed in newer minor release lines. This class
+   *             should not be singleton, please do not use it any more. see HBASE-29144 for more
+   *             details.
    */
+  @Deprecated
   public static synchronized void reset() {
-    providersRef.set(null);
+    PROVIDER_REF.set(null);
   }
 
   /**
@@ -93,7 +121,7 @@ public final class SaslClientAuthenticationProviders {
    */
   static void addProviderIfNotExists(SaslClientAuthenticationProvider provider,
     HashMap<Byte, SaslClientAuthenticationProvider> providers) {
-    Byte code = provider.getSaslAuthMethod().getCode();
+    byte code = provider.getSaslAuthMethod().getCode();
     SaslClientAuthenticationProvider existingProvider = providers.get(code);
     if (existingProvider != null) {
       throw new RuntimeException("Already registered authentication provider with " + code + " "
@@ -105,7 +133,7 @@ public final class SaslClientAuthenticationProviders {
   /**
    * Instantiates the ProviderSelector implementation from the provided configuration.
    */
-  static AuthenticationProviderSelector instantiateSelector(Configuration conf,
+  private static AuthenticationProviderSelector instantiateSelector(Configuration conf,
     Collection<SaslClientAuthenticationProvider> providers) {
     Class<? extends AuthenticationProviderSelector> clz = conf.getClass(SELECTOR_KEY,
       BuiltInProviderSelector.class, AuthenticationProviderSelector.class);
@@ -159,34 +187,6 @@ public final class SaslClientAuthenticationProviders {
       // already registered.
       addProviderIfNotExists(provider, providers);
     }
-  }
-
-  /**
-   * Instantiates all client authentication providers and returns an instance of
-   * {@link SaslClientAuthenticationProviders}.
-   */
-  static SaslClientAuthenticationProviders instantiate(Configuration conf) {
-    ServiceLoader<SaslClientAuthenticationProvider> loader =
-      ServiceLoader.load(SaslClientAuthenticationProvider.class,
-        SaslClientAuthenticationProviders.class.getClassLoader());
-    HashMap<Byte, SaslClientAuthenticationProvider> providerMap = new HashMap<>();
-    for (SaslClientAuthenticationProvider provider : loader) {
-      addProviderIfNotExists(provider, providerMap);
-    }
-
-    addExplicitProviders(conf, providerMap);
-
-    Collection<SaslClientAuthenticationProvider> providers =
-      Collections.unmodifiableCollection(providerMap.values());
-
-    if (LOG.isTraceEnabled()) {
-      String loadedProviders = providers.stream().map((provider) -> provider.getClass().getName())
-        .collect(Collectors.joining(", "));
-      LOG.trace("Found SaslClientAuthenticationProviders {}", loadedProviders);
-    }
-
-    AuthenticationProviderSelector selector = instantiateSelector(conf, providers);
-    return new SaslClientAuthenticationProviders(providers, selector);
   }
 
   /**

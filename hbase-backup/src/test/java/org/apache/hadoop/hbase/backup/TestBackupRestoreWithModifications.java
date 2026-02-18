@@ -54,7 +54,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testing.TestingHBaseCluster;
 import org.apache.hadoop.hbase.testing.TestingHBaseClusterOption;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
@@ -70,7 +70,7 @@ import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(MediumTests.class)
+@Category(LargeTests.class)
 @RunWith(Parameterized.class)
 public class TestBackupRestoreWithModifications {
 
@@ -228,7 +228,7 @@ public class TestBackupRestoreWithModifications {
     try (Connection connection = ConnectionFactory.createConnection(cluster.getConf());
       BackupAdmin backupAdmin = new BackupAdminImpl(connection)) {
       RestoreRequest restoreRequest = new RestoreRequest.Builder().withBackupId(backupId)
-        .withBackupRootDir(BACKUP_ROOT_DIR.toString()).withOvewrite(true)
+        .withBackupRootDir(BACKUP_ROOT_DIR.toString()).withOverwrite(true)
         .withFromTables(new TableName[] { sourceTableName })
         .withToTables(new TableName[] { targetTableName }).build();
       backupAdmin.restore(restoreRequest);

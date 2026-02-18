@@ -20,31 +20,23 @@ package org.apache.hadoop.hbase.master.balancer;
 import static org.apache.hadoop.hbase.master.balancer.HeterogeneousCostRulesTestHelper.DEFAULT_RULES_FILE_NAME;
 import static org.apache.hadoop.hbase.master.balancer.HeterogeneousCostRulesTestHelper.cleanup;
 import static org.apache.hadoop.hbase.master.balancer.HeterogeneousCostRulesTestHelper.createRulesFile;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestStochasticLoadBalancerHeterogeneousCostRules extends StochasticBalancerTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStochasticLoadBalancerHeterogeneousCostRules.class);
-  @Rule
-  public TestName name = new TestName();
 
   private HeterogeneousRegionCountCostFunction costFunction;
   private static final HBaseCommonTestingUtil HTU = new HBaseCommonTestingUtil();
@@ -55,17 +47,18 @@ public class TestStochasticLoadBalancerHeterogeneousCostRules extends Stochastic
    */
   private String rulesFilename;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws IOException {
     // Ensure test dir is created
     HTU.getDataTestDir().getFileSystem(HTU.getConfiguration()).mkdirs(HTU.getDataTestDir());
   }
 
-  @Before
-  public void before() throws IOException {
+  @BeforeEach
+  public void before(TestInfo testInfo) throws IOException {
     // New rules file name per test.
     this.rulesFilename =
-      HTU.getDataTestDir(this.name.getMethodName() + "." + DEFAULT_RULES_FILE_NAME).toString();
+      HTU.getDataTestDir(testInfo.getTestMethod().get().getName() + "." + DEFAULT_RULES_FILE_NAME)
+        .toString();
     // Set the created rules filename into the configuration.
     HTU.getConfiguration().set(
       HeterogeneousRegionCountCostFunction.HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_FILE,

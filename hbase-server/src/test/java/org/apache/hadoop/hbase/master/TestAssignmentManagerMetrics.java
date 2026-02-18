@@ -154,7 +154,7 @@ public class TestAssignmentManagerMetrics {
       // Sleep 5 seconds, wait for doMetrics chore catching up
       // the rit count consists of rit and failed opens. see RegionInTransitionStat#update
       // Waiting for the completion of rit makes the assert stable.
-      TEST_UTIL.waitUntilNoRegionsInTransition();
+      TEST_UTIL.waitUntilNoRegionTransitScheduled();
       Thread.sleep(MSG_INTERVAL * 5);
       METRICS_HELPER.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_NAME, 1, amSource);
       METRICS_HELPER.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_OVER_THRESHOLD_NAME, 1,

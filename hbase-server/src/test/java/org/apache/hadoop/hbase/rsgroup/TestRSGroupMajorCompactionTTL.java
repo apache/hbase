@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RSGroupTests;
 import org.apache.hadoop.hbase.util.compaction.TestMajorCompactorTTL;
 import org.junit.After;
@@ -39,7 +39,7 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category({ RSGroupTests.class, MediumTests.class })
+@Category({ RSGroupTests.class, LargeTests.class })
 public class TestRSGroupMajorCompactionTTL extends TestMajorCompactorTTL {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
