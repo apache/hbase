@@ -147,6 +147,9 @@ public interface Region extends ConfigurationObserver {
   /** Returns filtered read requests count for this region */
   long getFilteredReadRequestsCount();
 
+  /** Returns deleted row read requests count for this region */
+  long getDeletedReadRequestsCount();
+
   /** Returns write request count for this region */
   long getWriteRequestsCount();
 

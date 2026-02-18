@@ -183,6 +183,9 @@ message RegionLoad {
 
   /** Current region cache ratio on this server */
   optional float current_region_cached_ratio = 29;
+
+  /** the current total deleted row read requests made to region */
+  optional uint64 deleted_read_requests_count = 30;
 }
 
 message UserLoad {

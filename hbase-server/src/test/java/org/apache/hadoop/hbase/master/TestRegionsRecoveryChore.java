@@ -457,6 +457,11 @@ public class TestRegionsRecoveryChore {
       }
 
       @Override
+      public long getDeletedReadRequestCount() {
+        return 0;
+      }
+
+      @Override
       public Size getStoreFileIndexSize() {
         return null;
       }

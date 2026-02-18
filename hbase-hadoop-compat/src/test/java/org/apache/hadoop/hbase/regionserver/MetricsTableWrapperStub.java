@@ -49,6 +49,11 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
   }
 
   @Override
+  public long getDeletedReadRequestCount(String table) {
+    return 50;
+  }
+
+  @Override
   public long getMemStoreSize(String table) {
     return 1000;
   }
