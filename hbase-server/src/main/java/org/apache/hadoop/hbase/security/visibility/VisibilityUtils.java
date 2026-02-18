@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
@@ -327,6 +328,15 @@ public class VisibilityUtils {
       }
     }
     return tags;
+  }
+
+  public static boolean isVisibilityLabelEnabled(Configuration conf) {
+    return conf.getInt("hfile.format.version", 0) == 3
+      && conf.getBoolean(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, false)
+      && (conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, "")
+        .contains(VisibilityController.class.getName())
+        || conf.get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "")
+          .contains(VisibilityController.class.getName()));
   }
 
   private static void getLabelOrdinals(ExpressionNode node, List<Integer> labelOrdinals,
