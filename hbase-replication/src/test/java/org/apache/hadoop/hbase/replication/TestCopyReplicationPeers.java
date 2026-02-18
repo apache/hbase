@@ -19,29 +19,24 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.apache.hadoop.hbase.replication.ReplicationPeerConfigTestUtil.assertConfigEquals;
 import static org.apache.hadoop.hbase.replication.ReplicationPeerConfigTestUtil.getConfig;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseZKTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ReplicationTests.class, MediumTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCopyReplicationPeers {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCopyReplicationPeers.class);
 
   private static final HBaseZKTestingUtility UTIL = new HBaseZKTestingUtility();
 
@@ -53,7 +48,7 @@ public class TestCopyReplicationPeers {
 
   private static ReplicationPeerStorage DST;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     DIR = UTIL.getDataTestDir("test_peer_migration");
     CommonFSUtils.setRootDir(UTIL.getConfiguration(), DIR);
@@ -63,7 +58,7 @@ public class TestCopyReplicationPeers {
     DST = new FSReplicationPeerStorage(FS, UTIL.getConfiguration());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniZKCluster();
     UTIL.cleanupTestDir();
