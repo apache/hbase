@@ -92,6 +92,7 @@ public class AssignRegionHandler extends EventHandler {
       throw new IOException(
         "Failed to report failed open to master: " + regionInfo.getRegionNameAsString());
     }
+    rs.finishRegionProcedure(openProcId);
   }
 
   @Override
@@ -109,6 +110,7 @@ public class AssignRegionHandler extends EventHandler {
       // but before returning to master the connection is broken. And when master tries again, we
       // have already finished the opening. For this case we do not need to call
       // reportRegionStateTransition any more.
+      rs.finishRegionProcedure(openProcId);
       return;
     }
     Boolean previous = rs.getRegionsInTransitionInRS().putIfAbsent(encodedNameBytes, Boolean.TRUE);
@@ -117,6 +119,7 @@ public class AssignRegionHandler extends EventHandler {
         // The region is opening and this maybe a retry on the rpc call, it is safe to ignore it.
         LOG.info("Receiving OPEN for {} which we are already trying to OPEN"
           + " - ignoring this new request for this region.", regionName);
+        rs.finishRegionProcedure(openProcId);
       } else {
         // The region is closing. This is possible as we will update the region state to CLOSED when
         // calling reportRegionStateTransition, so the HMaster will think the region is offline,
