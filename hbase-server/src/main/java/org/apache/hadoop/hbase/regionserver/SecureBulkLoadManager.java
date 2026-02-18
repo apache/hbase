@@ -107,6 +107,8 @@ public class SecureBulkLoadManager {
   private ConcurrentHashMap<UserGroupInformation, MutableInt> ugiReferenceCounter;
   private Connection conn;
 
+  static final String TMP_DIR = ".tmp";
+
   SecureBulkLoadManager(Configuration conf, Connection conn) {
     this.conf = conf;
     this.conn = conn;
@@ -390,7 +392,7 @@ public class SecureBulkLoadManager {
         LOG.debug("Bulk-load file " + srcPath + " is on different filesystem than "
           + "the destination filesystem. Copying file over to destination staging dir.");
         FileUtil.copy(srcFs, p, fs, stageP, false, conf);
-      } else if (copyFile) {
+      } else if (copyFile && !p.getParent().getName().equals(TMP_DIR)) {
         LOG.debug("Bulk-load file " + srcPath + " is copied to destination staging dir.");
         FileUtil.copy(srcFs, p, fs, stageP, false, conf);
       } else {
