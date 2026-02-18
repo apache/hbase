@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.junit.After;
 import org.junit.Before;
@@ -328,7 +329,7 @@ public class TestMobCompactionWithDefaults {
       if (HTU != null) {
         fail(e.getMessage());
       } else {
-        System.exit(-1);
+        ExitHandler.getInstance().exit(-1);
       }
     }
     return 0;

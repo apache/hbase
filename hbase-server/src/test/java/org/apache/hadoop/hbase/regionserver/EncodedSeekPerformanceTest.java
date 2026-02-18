@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
+import org.apache.hadoop.hbase.util.ExitHandler;
 
 /**
  * Test seek performance for encoded data blocks. Read an HFile and do several random seeks.
@@ -162,7 +163,7 @@ public class EncodedSeekPerformanceTest {
   public static void main(final String[] args) throws IOException {
     if (args.length < 1) {
       printUsage();
-      System.exit(-1);
+      ExitHandler.getInstance().exit(-1);
     }
 
     Path path = new Path(args[0]);
@@ -171,7 +172,7 @@ public class EncodedSeekPerformanceTest {
     EncodedSeekPerformanceTest utility = new EncodedSeekPerformanceTest();
     utility.runTests(path, DataBlockEncoding.values());
 
-    System.exit(0);
+    ExitHandler.getInstance().exit(0);
   }
 
   private static void printUsage() {

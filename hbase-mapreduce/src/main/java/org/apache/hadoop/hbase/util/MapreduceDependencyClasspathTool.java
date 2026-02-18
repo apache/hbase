@@ -65,7 +65,7 @@ public class MapreduceDependencyClasspathTool implements Tool {
   public static void main(String[] argv) throws Exception {
     // Silence the usual noise. This is probably fragile...
     Log4jUtils.setLogLevel("org.apache.hadoop.hbase", "WARN");
-    System.exit(
+    ExitHandler.getInstance().exit(
       ToolRunner.run(HBaseConfiguration.create(), new MapreduceDependencyClasspathTool(), argv));
   }
 }

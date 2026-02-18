@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.ConstantDelayQueue;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.hbase.util.MultiThreadedUpdater;
 import org.apache.hadoop.hbase.util.MultiThreadedWriter;
@@ -221,6 +222,6 @@ public class IntegrationTestRegionReplicaReplication extends IntegrationTestInge
     Configuration conf = HBaseConfiguration.create();
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     int ret = ToolRunner.run(conf, new IntegrationTestRegionReplicaReplication(), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 }

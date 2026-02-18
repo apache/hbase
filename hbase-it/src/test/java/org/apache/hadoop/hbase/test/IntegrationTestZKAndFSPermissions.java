@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -234,6 +235,6 @@ public class IntegrationTestZKAndFSPermissions extends AbstractHBaseTool {
     IntegrationTestingUtility.setUseDistributedCluster(configuration);
     IntegrationTestZKAndFSPermissions tool = new IntegrationTestZKAndFSPermissions();
     int ret = ToolRunner.run(configuration, tool, args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 }
