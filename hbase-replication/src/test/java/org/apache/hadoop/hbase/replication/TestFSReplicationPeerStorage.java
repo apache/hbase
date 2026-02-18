@@ -23,22 +23,17 @@ import static org.hamcrest.Matchers.endsWith;
 import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-@Category({ ReplicationTests.class, MediumTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestFSReplicationPeerStorage extends ReplicationPeerStorageTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFSReplicationPeerStorage.class);
 
   private static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
 
@@ -46,7 +41,7 @@ public class TestFSReplicationPeerStorage extends ReplicationPeerStorageTestBase
 
   private static Path DIR;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     DIR = UTIL.getDataTestDir("test_fs_peer_storage");
     CommonFSUtils.setRootDir(UTIL.getConfiguration(), DIR);
@@ -54,7 +49,7 @@ public class TestFSReplicationPeerStorage extends ReplicationPeerStorageTestBase
     STORAGE = new FSReplicationPeerStorage(FS, UTIL.getConfiguration());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     UTIL.cleanupTestDir();
   }
