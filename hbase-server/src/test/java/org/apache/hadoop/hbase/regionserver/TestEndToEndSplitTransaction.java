@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
@@ -59,10 +61,10 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -427,7 +429,7 @@ public class TestEndToEndSplitTransaction {
     final byte[] regionName, boolean waitForDaughters) throws IOException, InterruptedException {
     long start = EnvironmentEdgeManager.currentTime();
     log("blocking until region is split:" + Bytes.toStringBinary(regionName));
-    RegionInfo daughterA = null, daughterB = null;
+    List<RegionInfo> daughterRegions = new ArrayList<>();
     try (Connection conn = ConnectionFactory.createConnection(conf);
       Table metaTable = conn.getTable(TableName.META_TABLE_NAME)) {
       Result result = null;
@@ -441,41 +443,38 @@ public class TestEndToEndSplitTransaction {
         region = MetaTableAccessor.getRegionInfo(result);
         if (region.isSplitParent()) {
           log("found parent region: " + region.toString());
-          PairOfSameType<RegionInfo> pair = MetaTableAccessor.getDaughterRegions(result);
-          daughterA = pair.getFirst();
-          daughterB = pair.getSecond();
+          daughterRegions = MetaTableAccessor.getDaughterRegions(result);
           break;
         }
         Threads.sleep(100);
       }
-      if (daughterA == null || daughterB == null) {
-        throw new IOException("Failed to get daughters, daughterA=" + daughterA + ", daughterB="
-          + daughterB + ", timeout=" + timeout + ", result=" + result + ", regionName="
+
+      Assert.assertEquals("Failed to get daughter regions", 2, daughterRegions.size());
+
+      boolean isAnyDaughterRegionNull = daughterRegions.stream().anyMatch(Objects::isNull);
+      if (isAnyDaughterRegionNull) {
+        throw new IOException("Failed to get daughters, timeout=" + timeout + ", result=" + result + ", regionName="
           + Bytes.toString(regionName) + ", region=" + region);
       }
 
       // if we are here, this means the region split is complete or timed out
       if (waitForDaughters) {
-        long rem = timeout - (EnvironmentEdgeManager.currentTime() - start);
-        blockUntilRegionIsInMeta(conn, rem, daughterA);
-
-        rem = timeout - (EnvironmentEdgeManager.currentTime() - start);
-        blockUntilRegionIsInMeta(conn, rem, daughterB);
-
-        rem = timeout - (EnvironmentEdgeManager.currentTime() - start);
-        blockUntilRegionIsOpened(conf, rem, daughterA);
-
-        rem = timeout - (EnvironmentEdgeManager.currentTime() - start);
-        blockUntilRegionIsOpened(conf, rem, daughterB);
-
+        for(RegionInfo daughterRegion : daughterRegions) {
+          long rem = timeout - (EnvironmentEdgeManager.currentTime() - start);
+          blockUntilRegionIsInMeta(conn, rem, daughterRegion);
+        }
+        for(RegionInfo daughterRegion : daughterRegions) {
+          long rem = timeout - (EnvironmentEdgeManager.currentTime() - start);
+          blockUntilRegionIsOpened(conf, rem, daughterRegion);
+        }
         // Compacting the new region to make sure references can be cleaned up
-        compactAndBlockUntilDone(TEST_UTIL.getAdmin(),
-          TEST_UTIL.getMiniHBaseCluster().getRegionServer(0), daughterA.getRegionName());
-        compactAndBlockUntilDone(TEST_UTIL.getAdmin(),
-          TEST_UTIL.getMiniHBaseCluster().getRegionServer(0), daughterB.getRegionName());
-
-        removeCompactedFiles(conn, timeout, daughterA);
-        removeCompactedFiles(conn, timeout, daughterB);
+        for(RegionInfo daughterRegion : daughterRegions) {
+          compactAndBlockUntilDone(TEST_UTIL.getAdmin(),
+            TEST_UTIL.getMiniHBaseCluster().getRegionServer(0), daughterRegion.getRegionName());
+        }
+        for(RegionInfo daughterRegion : daughterRegions) {
+          removeCompactedFiles(conn, timeout, daughterRegion);
+        }
       }
     }
   }

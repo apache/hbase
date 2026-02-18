@@ -24,7 +24,10 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -123,8 +126,9 @@ public class TestCatalogJanitorInMemoryStates {
       sm.isRegionInServerManagerStates(parent.getRegion()));
 
     // clean the parent
-    Result r = MetaMockingUtil.getMetaTableRowResult(parent.getRegion(), null,
-      daughters.get(0).getRegion(), daughters.get(1).getRegion());
+    Result r = MetaMockingUtil.getMetaTableRowResult(parent.getRegion(), null, Collections.unmodifiableList(
+        Arrays.asList(daughters.get(0).getRegion(), daughters.get(1).getRegion())));
+
     CatalogJanitor.cleanParent(master, parent.getRegion(), r);
 
     // wait for procedures to complete
@@ -161,11 +165,12 @@ public class TestCatalogJanitorInMemoryStates {
     Connection connection = TEST_UTIL.getConnection();
     admin.splitRegionAsync(r.getEncodedNameAsBytes()).get();
     admin.close();
-    PairOfSameType<RegionInfo> regions = waitOnDaughters(r);
+    List<RegionInfo> regions = waitOnDaughters(r);
     if (regions != null) {
       try (RegionLocator rl = connection.getRegionLocator(r.getTable())) {
-        locations.add(rl.getRegionLocation(regions.getFirst().getEncodedNameAsBytes()));
-        locations.add(rl.getRegionLocation(regions.getSecond().getEncodedNameAsBytes()));
+        for(RegionInfo region : regions) {
+          locations.add(rl.getRegionLocation(region.getEncodedNameAsBytes()));
+        }
       }
       return locations;
     }
@@ -177,9 +182,9 @@ public class TestCatalogJanitorInMemoryStates {
    * happen. Caller should check.
    * @return Daughter regions; caller needs to check table actually split.
    */
-  private PairOfSameType<RegionInfo> waitOnDaughters(final RegionInfo r) throws IOException {
+  private List<RegionInfo> waitOnDaughters(final RegionInfo r) throws IOException {
     long start = EnvironmentEdgeManager.currentTime();
-    PairOfSameType<RegionInfo> pair = null;
+    List<RegionInfo> daughterRegions = null;
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
       Table metaTable = conn.getTable(TableName.META_TABLE_NAME)) {
       Result result = null;
@@ -192,16 +197,17 @@ public class TestCatalogJanitorInMemoryStates {
         region = MetaTableAccessor.getRegionInfo(result);
         if (region.isSplitParent()) {
           LOG.debug(region.toString() + " IS a parent!");
-          pair = MetaTableAccessor.getDaughterRegions(result);
+          daughterRegions = MetaTableAccessor.getDaughterRegions(result);
           break;
         }
         Threads.sleep(100);
       }
 
-      if (pair.getFirst() == null || pair.getSecond() == null) {
+      boolean isAnyDaughterNull = daughterRegions.stream().anyMatch(Objects::isNull);
+      if (isAnyDaughterNull) {
         throw new IOException("Failed to get daughters, for parent region: " + r);
       }
-      return pair;
+      return daughterRegions;
     }
   }
 }

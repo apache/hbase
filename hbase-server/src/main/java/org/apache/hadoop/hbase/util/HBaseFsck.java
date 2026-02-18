@@ -26,6 +26,7 @@ import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -1925,8 +1926,9 @@ public class HBaseFsck extends Configured implements Closeable {
   private void resetSplitParent(HbckRegionInfo hi) throws IOException {
     RowMutations mutations = new RowMutations(hi.getMetaEntry().getRegionName());
     Delete d = new Delete(hi.getMetaEntry().getRegionName());
-    d.addColumn(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER);
-    d.addColumn(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER);
+    for(RegionInfo regionInfo : hi.getMetaEntry().splitRegions) {
+      d.addColumn(HConstants.CATALOG_FAMILY, Bytes.toBytes(HConstants.MULTIPLE_REGIONS_QUALIFIER_PREFIX_STR + regionInfo.getEncodedName()));
+    }
     mutations.add(d);
 
     RegionInfo hri =
@@ -2231,16 +2233,12 @@ public class HBaseFsck extends Configured implements Closeable {
       // ========== Cases where the region is in hbase:meta =============
     } else if (inMeta && inHdfs && !isDeployed && splitParent) {
       // check whether this is an actual error, or just transient state where parent
-      // is not cleaned
-      if (hbi.getMetaEntry().splitA != null && hbi.getMetaEntry().splitB != null) {
-        // check that split daughters are there
-        HbckRegionInfo infoA = this.regionInfoMap.get(hbi.getMetaEntry().splitA.getEncodedName());
-        HbckRegionInfo infoB = this.regionInfoMap.get(hbi.getMetaEntry().splitB.getEncodedName());
-        if (infoA != null && infoB != null) {
-          // we already processed or will process daughters. Move on, nothing to see here.
-          hbi.setSkipChecks(true);
-          return;
-        }
+      // is not cleaned by ensuring that split daughters are there
+      if (hbi.getMetaEntry().splitRegions != null && hbi.getMetaEntry().splitRegions.stream().noneMatch(
+        Objects::isNull) && hbi.getMetaEntry().splitRegions.stream().noneMatch(daughterRegion -> (this.regionInfoMap.get(daughterRegion.getEncodedName()) == null))) {
+        // we already processed or will process daughters. Move on, nothing to see here.
+        hbi.setSkipChecks(true);
+        return;
       }
 
       // For Replica region, we need to do a similar check. If replica is not split successfully,
@@ -2696,7 +2694,7 @@ public class HBaseFsck extends Configured implements Closeable {
           if (!(isTableIncluded(hri.getTable()) || hri.isMetaRegion())) {
             return true;
           }
-          PairOfSameType<RegionInfo> daughters = MetaTableAccessor.getDaughterRegions(result);
+          List<RegionInfo> daughters = MetaTableAccessor.getDaughterRegions(result);
           for (HRegionLocation h : rl.getRegionLocations()) {
             if (h == null || h.getRegionInfo() == null) {
               continue;
@@ -2706,10 +2704,10 @@ public class HBaseFsck extends Configured implements Closeable {
 
             HbckRegionInfo.MetaEntry m = null;
             if (hri.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
-              m = new HbckRegionInfo.MetaEntry(hri, sn, ts, daughters.getFirst(),
-                daughters.getSecond());
+              m = new HbckRegionInfo.MetaEntry(hri, sn, ts, daughters);
             } else {
-              m = new HbckRegionInfo.MetaEntry(hri, sn, ts, null, null);
+              m = new HbckRegionInfo.MetaEntry(hri, sn, ts, Collections.unmodifiableList(
+                Arrays.asList(null, null)));
             }
             HbckRegionInfo previous = regionInfoMap.get(hri.getEncodedName());
             if (previous == null) {
