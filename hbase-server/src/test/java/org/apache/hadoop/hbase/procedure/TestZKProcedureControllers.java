@@ -234,7 +234,9 @@ public class TestZKProcedureControllers {
       assertArrayEquals("Incorrect data from member", memberData, result);
     }
 
-    controller.resetMembers(p);
+    controller.cleanupBarrierAcquired(p);
+    controller.cleanupBarrierReached(p);
+    controller.cleanupBarrierAborted(p);
 
     // verify all behavior
     verifyZooKeeperClean(operationName, watcher, controller.getZkProcedureUtil());
@@ -309,7 +311,9 @@ public class TestZKProcedureControllers {
     Mockito.verify(coordinator, times(expected.size())).memberFinishedBarrier(
       Mockito.eq(operationName), Mockito.anyString(), Mockito.eq(memberData));
 
-    controller.resetMembers(p);
+    controller.cleanupBarrierAcquired(p);
+    controller.cleanupBarrierReached(p);
+    controller.cleanupBarrierAborted(p);
 
     // verify all behavior
     verifyZooKeeperClean(operationName, watcher, controller.getZkProcedureUtil());

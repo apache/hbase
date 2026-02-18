@@ -259,6 +259,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
    */
   public void sendGlobalBarrierReached() throws ForeignException {
     try {
+      coord.getRpcs().cleanupBarrierAcquired(this);
       // trigger to have member run {@link Subprocedure#insideBarrier}
       coord.getRpcs().sendGlobalBarrierReached(this, Lists.newArrayList(inBarrierMembers));
     } catch (IOException e) {
@@ -274,7 +275,9 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   public void sendGlobalBarrierComplete() {
     LOG.debug("Finished coordinator procedure - removing self from list of running procedures");
     try {
-      coord.getRpcs().resetMembers(this);
+      coord.getRpcs().cleanupBarrierAcquired(this);
+      coord.getRpcs().cleanupBarrierReached(this);
+      coord.getRpcs().cleanupBarrierAborted(this);
     } catch (IOException e) {
       coord.rpcConnectionFailure("Failed to reset procedure:" + procName, e);
     }
