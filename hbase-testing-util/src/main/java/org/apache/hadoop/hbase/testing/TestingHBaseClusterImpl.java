@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.testing;
 
+import static org.apache.hadoop.hbase.http.ServerConfigurationKeys.HBASE_SSL_ENABLED_KEY;
+
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -24,6 +27,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -37,6 +41,9 @@ import org.apache.hadoop.hbase.regionserver.OnlineRegions;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
@@ -147,7 +154,7 @@ class TestingHBaseClusterImpl implements TestingHBaseCluster {
   public void start() throws Exception {
     Preconditions.checkState(!miniClusterRunning, "Cluster has already been started");
     if (externalZkConnectString == null) {
-      util.startMiniZKCluster();
+      util.startMiniZKCluster(option.getNumZkServers());
     } else {
       Configuration conf = util.getConfiguration();
       conf.set(HConstants.ZOOKEEPER_QUORUM, externalZkConnectString);
@@ -217,6 +224,76 @@ class TestingHBaseClusterImpl implements TestingHBaseCluster {
   public List<ServerName> getRegionServerAddresses() {
     return util.getMiniHBaseCluster().getRegionServerThreads().stream()
       .map(t -> t.getRegionServer().getServerName()).collect(Collectors.toList());
+  }
+
+  @Override
+  public Optional<String> getActiveMasterInfoAddress() {
+    final HMaster master = util.getMiniHBaseCluster().getMaster();
+
+    // No active master
+    if (master == null) {
+      return Optional.empty();
+    }
+
+    final Configuration conf = master.getConfiguration();
+    final int port = conf.getInt(HConstants.MASTER_INFO_PORT, 0);
+
+    // Web UI disabled
+    if (port <= 0) {
+      return Optional.empty();
+    }
+
+    final String protocol = conf.getBoolean(HBASE_SSL_ENABLED_KEY, false) ? "https" : "http";
+    final String hostname = master.getServerName().getHostname();
+    return Optional.of(String.format("%s://%s:%d", protocol, hostname, port));
+  }
+
+  @Override
+  public Optional<String> getActiveNameNodeInfoAddress() {
+    final MiniDFSCluster cluster = util.getDFSCluster();
+
+    // External DFS cluster
+    if (cluster == null) {
+      return Optional.empty();
+    }
+
+    final NameNode ann = Stream.of(cluster.getNameNodeInfos()).map(i -> i.nameNode)
+      .filter(NameNode::isActiveState).findFirst().orElse(null);
+
+    // No active NameNode
+    if (ann == null) {
+      return Optional.empty();
+    }
+
+    String protocol = "http";
+    InetSocketAddress address = ann.getHttpAddress();
+    if (address == null) {
+      protocol = "https";
+      address = ann.getHttpsAddress();
+    }
+
+    // Neither HTTP nor HTTPS address is available
+    if (address == null) {
+      return Optional.empty();
+    }
+
+    return Optional
+      .of(String.format("%s://%s:%d", protocol, address.getHostName(), address.getPort()));
+  }
+
+  @Override
+  public Optional<String> getZooKeeperQuorum() {
+    return Optional.ofNullable(util.getZkCluster())
+      .map(zk -> zk.getClientPortList().stream()
+        .map(port -> String.format("%s:%d", MiniZooKeeperCluster.HOST, port))
+        .collect(Collectors.joining(",")));
+  }
+
+  @Override
+  public List<String> getMasterAddresses() {
+    return util.getMiniHBaseCluster().getMasterThreads().stream()
+      .map(mt -> mt.getMaster().getServerName()).map(sn -> sn.getHostname() + ':' + sn.getPort())
+      .collect(Collectors.toList());
   }
 
   @Override
