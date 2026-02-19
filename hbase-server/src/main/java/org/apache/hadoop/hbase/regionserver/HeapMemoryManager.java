@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY;
 import static org.apache.hadoop.hbase.HConstants.HFILE_BLOCK_CACHE_SIZE_KEY;
+import static org.apache.hadoop.hbase.io.util.MemorySizeUtil.MEMSTORE_MEMORY_SIZE_KEY;
+import static org.apache.hadoop.hbase.io.util.MemorySizeUtil.MEMSTORE_SIZE_KEY;
 
 import java.lang.management.MemoryUsage;
 import java.util.ArrayList;
@@ -120,7 +122,7 @@ public class HeapMemoryManager {
 
   private ResizableBlockCache toResizableBlockCache(BlockCache blockCache) {
     if (blockCache instanceof CombinedBlockCache) {
-      return (ResizableBlockCache) ((CombinedBlockCache) blockCache).getFirstLevelCache();
+      return ((CombinedBlockCache) blockCache).getFirstLevelCache();
     } else {
       return (ResizableBlockCache) blockCache;
     }
@@ -137,16 +139,20 @@ public class HeapMemoryManager {
     globalMemStorePercentMaxRange =
       conf.getFloat(MEMSTORE_SIZE_MAX_RANGE_KEY, globalMemStorePercent);
     if (globalMemStorePercent < globalMemStorePercentMinRange) {
-      LOG.warn("Setting " + MEMSTORE_SIZE_MIN_RANGE_KEY + " to " + globalMemStorePercent
-        + ", same value as " + MemorySizeUtil.MEMSTORE_SIZE_KEY
-        + " because supplied value greater than initial memstore size value.");
+      LOG.warn(
+        "Setting {} to {} (lookup order: {} -> {}), same value as "
+          + " because supplied value less than initial memstore size value.",
+        MEMSTORE_SIZE_MIN_RANGE_KEY, globalMemStorePercent, MEMSTORE_MEMORY_SIZE_KEY,
+        MEMSTORE_SIZE_KEY);
       globalMemStorePercentMinRange = globalMemStorePercent;
       conf.setFloat(MEMSTORE_SIZE_MIN_RANGE_KEY, globalMemStorePercentMinRange);
     }
     if (globalMemStorePercent > globalMemStorePercentMaxRange) {
-      LOG.warn("Setting " + MEMSTORE_SIZE_MAX_RANGE_KEY + " to " + globalMemStorePercent
-        + ", same value as " + MemorySizeUtil.MEMSTORE_SIZE_KEY
-        + " because supplied value less than initial memstore size value.");
+      LOG.warn(
+        "Setting {} to {} (lookup order: {} -> {}), same value as "
+          + " because supplied value greater than initial memstore size value.",
+        MEMSTORE_SIZE_MAX_RANGE_KEY, globalMemStorePercent, MEMSTORE_MEMORY_SIZE_KEY,
+        MEMSTORE_SIZE_KEY);
       globalMemStorePercentMaxRange = globalMemStorePercent;
       conf.setFloat(MEMSTORE_SIZE_MAX_RANGE_KEY, globalMemStorePercentMaxRange);
     }
@@ -376,8 +382,8 @@ public class HeapMemoryManager {
           LOG.info("Current heap configuration from HeapMemoryTuner exceeds "
             + "the allowed heap usage. At least " + minFreeHeapFraction
             + " of the heap must remain free to ensure stable RegionServer operation. "
-            + MemorySizeUtil.MEMSTORE_SIZE_KEY + " is " + memstoreSize + " and "
-            + HFILE_BLOCK_CACHE_SIZE_KEY + " is " + blockCacheSize);
+            + MEMSTORE_SIZE_KEY + " is " + memstoreSize + " and " + HFILE_BLOCK_CACHE_SIZE_KEY
+            + " is " + blockCacheSize);
           // NOTE: In the future, we might adjust values to not exceed limits,
           // but for now tuning is skipped if over threshold.
         } else {
