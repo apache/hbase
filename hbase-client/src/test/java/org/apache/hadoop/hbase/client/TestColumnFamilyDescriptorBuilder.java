@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
@@ -95,8 +95,8 @@ public class TestColumnFamilyDescriptorBuilder {
    */
   @Test
   public void testHColumnDescriptorShouldThrowIAEWhenFamilyNameEmpty() throws Exception {
-    assertThrows(IllegalArgumentException.class,
-      () -> ColumnFamilyDescriptorBuilder.of(""), "Column Family name can not be empty");
+    assertThrows(IllegalArgumentException.class, () -> ColumnFamilyDescriptorBuilder.of(""),
+      "Column Family name can not be empty");
   }
 
   /**

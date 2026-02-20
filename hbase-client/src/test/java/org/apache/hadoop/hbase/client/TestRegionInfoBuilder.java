@@ -251,8 +251,8 @@ public class TestRegionInfoBuilder {
     assertArrayEquals(tableName.getName(), fields[0], Bytes.toString(fields[0]));
     assertArrayEquals(startKey, fields[1], Bytes.toString(fields[1]));
     assertArrayEquals(Bytes.toBytes(Long.toString(regionId)), fields[2], Bytes.toString(fields[2]));
-    assertArrayEquals(
-      Bytes.toBytes(String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId)), fields[3], Bytes.toString(fields[3]));
+    assertArrayEquals(Bytes.toBytes(String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId)),
+      fields[3], Bytes.toString(fields[3]));
   }
 
   @Test

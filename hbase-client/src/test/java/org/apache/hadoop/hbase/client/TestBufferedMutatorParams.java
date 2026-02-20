@@ -127,7 +127,8 @@ public class TestBufferedMutatorParams {
   @Test
   public void testClone(TestInfo testInfo) {
     ExecutorService pool = new MockExecutorService();
-    final String tableName = testInfo.getTestMethod().get().getName();;
+    final String tableName = testInfo.getTestMethod().get().getName();
+    ;
     BufferedMutatorParams bmp = new BufferedMutatorParams(TableName.valueOf(tableName));
 
     BufferedMutator.ExceptionListener listener = new MockExceptionListener();
