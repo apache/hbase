@@ -180,7 +180,7 @@ public class HTableMultiplexer {
     }
 
     try {
-      ConnectionUtils.validatePut(put, maxKeyValueSize);
+      ConnectionUtils.validateMutation(put, maxKeyValueSize);
       // Allow mocking to get at the connection, but don't expose the connection to users.
       ClusterConnection conn = (ClusterConnection) getConnection();
       // AsyncProcess in the FlushWorker should take care of refreshing the location cache

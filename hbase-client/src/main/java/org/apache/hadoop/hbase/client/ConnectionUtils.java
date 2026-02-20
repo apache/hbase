@@ -499,13 +499,20 @@ public final class ConnectionUtils {
     return future;
   }
 
-  // validate for well-formedness
-  static void validatePut(Put put, int maxKeyValueSize) {
-    if (put.isEmpty()) {
-      throw new IllegalArgumentException("No columns to insert");
+  // Validate individual Mutation
+  static void validateMutation(Mutation mutation, int maxKeyValueSize) {
+    // Skip Delete
+    if (mutation instanceof Delete) return;
+
+    // 1. Check if empty
+    if (mutation.isEmpty()) {
+      throw new IllegalArgumentException(
+        "No columns to " + mutation.getClass().getSimpleName().toLowerCase());
     }
+
+    // 2. Check if size exceeds maxKeyValueSize
     if (maxKeyValueSize > 0) {
-      for (List<Cell> list : put.getFamilyCellMap().values()) {
+      for (List<Cell> list : mutation.getFamilyCellMap().values()) {
         for (Cell cell : list) {
           if (cell.getSerializedSize() > maxKeyValueSize) {
             throw new IllegalArgumentException("KeyValue size too large");
@@ -515,11 +522,10 @@ public final class ConnectionUtils {
     }
   }
 
-  static void validatePutsInRowMutations(RowMutations rowMutations, int maxKeyValueSize) {
+  // Validate RowMutations
+  static void validateRowMutations(RowMutations rowMutations, int maxKeyValueSize) {
     for (Mutation mutation : rowMutations.getMutations()) {
-      if (mutation instanceof Put) {
-        validatePut((Put) mutation, maxKeyValueSize);
-      }
+      validateMutation(mutation, maxKeyValueSize);
     }
   }
 
