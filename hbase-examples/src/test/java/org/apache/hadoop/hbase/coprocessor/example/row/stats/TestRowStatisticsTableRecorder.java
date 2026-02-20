@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.coprocessor.example.row.stats;
 
 import static org.apache.hadoop.hbase.util.TestRegionSplitCalculator.TEST_UTIL;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -37,14 +37,17 @@ import org.apache.hadoop.hbase.coprocessor.example.row.stats.recorder.RowStatist
 import org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.RowStatisticsTableUtil;
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.impl.CounterImpl;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@RunWith(MockitoJUnitRunner.class)
+@Tag(MediumTests.TAG)
+@ExtendWith(MockitoExtension.class)
 public class TestRowStatisticsTableRecorder {
 
   private static final NamespaceDescriptor NAMESPACE_DESCRIPTOR =
@@ -55,7 +58,7 @@ public class TestRowStatisticsTableRecorder {
   private RowStatisticsImpl rowStatistics;
   private Counter counter;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpClass() throws Exception {
     cluster = TEST_UTIL.startMiniCluster(1);
     connection = ConnectionFactory.createConnection(cluster.getConf());
@@ -64,7 +67,7 @@ public class TestRowStatisticsTableRecorder {
     TEST_UTIL.createTable(RowStatisticsTableUtil.NAMESPACED_TABLE_NAME, RowStatisticsTableUtil.CF);
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     rowStatistics = mock(RowStatisticsImpl.class);
     counter = new CounterImpl();
@@ -88,7 +91,7 @@ public class TestRowStatisticsTableRecorder {
       RowStatisticsTableRecorder.forClusterConnection(connection, counter, counter);
     assertNotNull(recorder);
     recorder.record(rowStatistics, Optional.of(FULL_REGION_NAME));
-    assertEquals(counter.getCount(), 0);
+    assertEquals(0, counter.getCount());
   }
 
   @Test
@@ -98,6 +101,6 @@ public class TestRowStatisticsTableRecorder {
     assertNotNull(recorder);
     recorder.close();
     recorder.record(rowStatistics, Optional.of(FULL_REGION_NAME));
-    assertEquals(counter.getCount(), 1);
+    assertEquals(1, counter.getCount());
   }
 }
