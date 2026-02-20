@@ -18,6 +18,9 @@
 /build/
 .vite
 
+# Fumadocs
+.source/
+
 # Logs
 logs
 *.log
@@ -32,5 +35,15 @@ lerna-debug.log*
 /node/
 
 # Generated files
-/app/pages/team/developers.json
+/app/pages/_landing/team/developers.json
+/app/pages/_docs/docs/_mdx/(multi-page)/configuration/hbase-default.md
+/app/lib/export-pdf/hbase-version.json
+/public/books/**
 
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
