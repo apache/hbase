@@ -25,8 +25,14 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CON
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupCopyJob;
 import org.apache.hadoop.hbase.backup.BackupInfo;
@@ -38,7 +44,9 @@ import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -144,21 +152,21 @@ public class FullTableBackupClient extends TableBackupClient {
         // logs while we do the backup.
         backupManager.writeBackupStartCode(0L);
       }
+
+      // Gather the bulk loads being tracked by the system, which can be deleted (since their data
+      // will be part of the snapshot being taken). We gather this list before taking the actual
+      // snapshots for the same reason as the log rolls.
+      List<BulkLoad> bulkLoadsToDelete = backupManager.readBulkloadRows(tableList);
+      Map<String, Long> previousLogRollsByHost = backupManager.readRegionServerLastLogRollResult();
+
       // We roll log here before we do the snapshot. It is possible there is duplicate data
       // in the log that is already in the snapshot. But if we do it after the snapshot, we
       // could have data loss.
       // A better approach is to do the roll log on each RS in the same global procedure as
       // the snapshot.
       LOG.info("Execute roll log procedure for full backup ...");
-
-      // Gather the bulk loads being tracked by the system, which can be deleted (since their data
-      // will be part of the snapshot being taken). We gather this list before taking the actual
-      // snapshots for the same reason as the log rolls.
-      List<BulkLoad> bulkLoadsToDelete = backupManager.readBulkloadRows(tableList);
-
       BackupUtils.logRoll(conn, backupInfo.getBackupRootDir(), conf);
-
-      newTimestamps = backupManager.readRegionServerLastLogRollResult();
+      Map<String, Long> latestLogRollsByHost = backupManager.readRegionServerLastLogRollResult();
 
       // SNAPSHOT_TABLES:
       backupInfo.setPhase(BackupPhase.SNAPSHOT);
@@ -181,6 +189,50 @@ public class FullTableBackupClient extends TableBackupClient {
       // set overall backup status: complete. Here we make sure to complete the backup.
       // After this checkpoint, even if entering cancel process, will let the backup finished
       backupInfo.setState(BackupState.COMPLETE);
+
+      // Scan oldlogs for dead/decommissioned hosts and add their max WAL timestamps
+      // to newTimestamps. This ensures subsequent incremental backups won't try to back up
+      // WALs that are already covered by this full backup's snapshot.
+      Path walRootDir = CommonFSUtils.getWALRootDir(conf);
+      Path logDir = new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME);
+      Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+      FileSystem fs = walRootDir.getFileSystem(conf);
+
+      List<FileStatus> allLogs = new ArrayList<>();
+      for (FileStatus hostLogDir : fs.listStatus(logDir)) {
+        String host = BackupUtils.parseHostNameFromLogFile(hostLogDir.getPath());
+        if (host == null) {
+          continue;
+        }
+        allLogs.addAll(Arrays.asList(fs.listStatus(hostLogDir.getPath())));
+      }
+      allLogs.addAll(Arrays.asList(fs.listStatus(oldLogDir)));
+
+      newTimestamps = new HashMap<>();
+
+      for (FileStatus log : allLogs) {
+        if (AbstractFSWALProvider.isMetaFile(log.getPath())) {
+          continue;
+        }
+        String host = BackupUtils.parseHostNameFromLogFile(log.getPath());
+        if (host == null) {
+          continue;
+        }
+        long timestamp = BackupUtils.getCreationTime(log.getPath());
+        Long previousLogRoll = previousLogRollsByHost.get(host);
+        Long latestLogRoll = latestLogRollsByHost.get(host);
+        boolean isInactive = latestLogRoll == null || latestLogRoll.equals(previousLogRoll);
+
+        if (isInactive) {
+          long currentTs = newTimestamps.getOrDefault(host, 0L);
+          if (timestamp > currentTs) {
+            newTimestamps.put(host, timestamp);
+          }
+        } else {
+          newTimestamps.put(host, latestLogRoll);
+        }
+      }
+
       // The table list in backupInfo is good for both full backup and incremental backup.
       // For incremental backup, it contains the incremental backup table set.
       backupManager.writeRegionServerLogTimestamp(backupInfo.getTables(), newTimestamps);
