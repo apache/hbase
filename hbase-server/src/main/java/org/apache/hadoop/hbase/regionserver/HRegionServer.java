@@ -42,6 +42,7 @@ import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -158,6 +159,7 @@ import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.RegionServerReadOnlyController;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
@@ -825,6 +827,14 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     try {
       if (!isStopped() && !isAborted()) {
         installShutdownHook();
+
+        if (
+          conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+            HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT)
+        ) {
+          addReadOnlyCoprocessors(this.conf);
+        }
+
         // Initialize the RegionServerCoprocessorHost now that our ephemeral
         // node was created, in case any coprocessors want to use ZooKeeper
         this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
@@ -1518,6 +1528,55 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   private void deleteMyEphemeralNode() throws KeeperException {
     ZKUtil.deleteNode(this.zooKeeper, getMyEphemeralNodePath());
+  }
+
+  private void addReadOnlyCoprocessors(Configuration conf) {
+    String[] rsCoprocs = conf.getStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
+
+    String cp = RegionServerReadOnlyController.class.getName();
+
+    // Avoid duplicate
+    if (rsCoprocs != null && Arrays.asList(rsCoprocs).contains(cp)) {
+      return;
+    }
+
+    final int length = rsCoprocs == null ? 0 : rsCoprocs.length;
+    String[] updatedCoprocs = new String[length + 1];
+
+    if (length > 0) {
+      System.arraycopy(rsCoprocs, 0, updatedCoprocs, 0, length);
+    }
+    updatedCoprocs[length] = cp;
+    conf.setStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, updatedCoprocs);
+  }
+
+  private void removeReadOnlyCoprocessors(Configuration conf) {
+    String[] coprocessors = conf.getStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
+
+    if (coprocessors == null) {
+      return;
+    }
+
+    String target = RegionServerReadOnlyController.class.getName();
+
+    String[] updated =
+      java.util.Arrays.stream(coprocessors).filter(cp -> !target.equals(cp)).toArray(String[]::new);
+
+    if (updated.length == 0) {
+      conf.unset(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
+    } else if (updated.length != coprocessors.length) {
+      conf.setStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, updated);
+    }
+  }
+
+  private void syncReadOnlyConfigurations(boolean readOnlyMode) {
+    this.conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyMode);
+    // If readonly is true then add the coprocessor of master
+    if (readOnlyMode) {
+      addReadOnlyCoprocessors(this.conf);
+    } else {
+      removeReadOnlyCoprocessors(this.conf);
+    }
   }
 
   @Override
@@ -3480,6 +3539,18 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       LOG.warn("Failed to initialize SuperUsers on reloading of the configuration");
     }
 
+    boolean readOnlyMode = newConf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+    if (readOnlyMode) {
+      addReadOnlyCoprocessors(newConf);
+    } else {
+      // Needed as safety measure in case the coprocessors are added in hbase-site.xml manually and
+      // the user toggles the read only mode on and off.
+      // This will ensure that we don't have the read only coprocessors loaded when read only mode
+      // is disabled.
+      removeReadOnlyCoprocessors(newConf);
+    }
+
     // update region server coprocessor if the configuration has changed.
     if (
       CoprocessorConfigurationUtil.checkConfigurationChange(getConfiguration(), newConf,
@@ -3487,6 +3558,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     ) {
       LOG.info("Update region server coprocessors because the configuration has changed");
       this.rsHost = new RegionServerCoprocessorHost(this, newConf);
+      syncReadOnlyConfigurations(readOnlyMode);
     }
   }
 

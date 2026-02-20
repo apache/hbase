@@ -167,6 +167,9 @@ import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationObserver;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.BulkLoadReadOnlyController;
+import org.apache.hadoop.hbase.security.access.EndpointReadOnlyController;
+import org.apache.hadoop.hbase.security.access.RegionReadOnlyController;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.trace.TraceUtil;
@@ -885,6 +888,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       : this.htableDescriptor.getDurability();
 
     decorateRegionConfiguration(conf);
+
+    if (
+      conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+        HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT)
+    ) {
+      addReadOnlyCoprocessors(this.baseConf);
+      addReadOnlyCoprocessors(this.conf);
+    } else {
+      removeReadOnlyCoprocessors(this.baseConf);
+      removeReadOnlyCoprocessors(this.conf);
+    }
     if (rsServices != null) {
       this.rsAccounting = this.rsServices.getRegionServerAccounting();
       // don't initialize coprocessors if not running within a regionserver
@@ -1289,6 +1303,80 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (getWalFileSystem().exists(getWALRegionDir())) {
       WALSplitUtil.writeRegionSequenceIdFile(getWalFileSystem(), getWALRegionDir(),
         mvcc.getReadPoint());
+    }
+  }
+
+  private String[] append(String[] original, String value) {
+    String[] updated = new String[original.length + 1];
+    System.arraycopy(original, 0, updated, 0, original.length);
+    updated[original.length] = value;
+    return updated;
+  }
+
+  private void addReadOnlyCoprocessors(Configuration conf) {
+    String[] regionCoprocs = conf.getStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
+
+    if (regionCoprocs == null) {
+      regionCoprocs = new String[0];
+    }
+
+    String regionCP = RegionReadOnlyController.class.getName();
+    String bulkCP = BulkLoadReadOnlyController.class.getName();
+    String endpointCP = EndpointReadOnlyController.class.getName();
+
+    // Add each CP independently if not present
+    if (!java.util.Arrays.asList(regionCoprocs).contains(regionCP)) {
+      regionCoprocs = append(regionCoprocs, regionCP);
+    }
+
+    if (!java.util.Arrays.asList(regionCoprocs).contains(bulkCP)) {
+      regionCoprocs = append(regionCoprocs, bulkCP);
+    }
+
+    if (!java.util.Arrays.asList(regionCoprocs).contains(endpointCP)) {
+      regionCoprocs = append(regionCoprocs, endpointCP);
+    }
+
+    conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, regionCoprocs);
+  }
+
+  private void removeReadOnlyCoprocessors(Configuration conf) {
+    String[] coprocessors = conf.getStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
+
+    if (coprocessors == null) {
+      conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, new String[0]);
+      return;
+    }
+
+    String regionCP = RegionReadOnlyController.class.getName();
+    String bulkCP = BulkLoadReadOnlyController.class.getName();
+    String endpointCP = EndpointReadOnlyController.class.getName();
+
+    String[] updated = java.util.Arrays.stream(coprocessors)
+      .filter(cp -> !regionCP.equals(cp) && !bulkCP.equals(cp) && !endpointCP.equals(cp))
+      .toArray(String[]::new);
+
+    if (updated.length == 0) {
+      // As conf is CompoundConfiguration, we need to set it to empty string instead of null to
+      // remove the coprocessors
+      // Also conf.unset will not have any effect on CompoundConfiguration, unlike with Hmaster and
+      // HRegionServer
+      conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, new String[0]);
+    } else if (updated.length != coprocessors.length) {
+      conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, updated);
+    }
+  }
+
+  private void syncReadOnlyConfigurations(boolean readOnlyMode) {
+    this.baseConf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyMode);
+    this.conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyMode);
+    // If readonly is true then add the coprocessor of master
+    if (readOnlyMode) {
+      addReadOnlyCoprocessors(this.baseConf);
+      addReadOnlyCoprocessors(this.conf);
+    } else {
+      removeReadOnlyCoprocessors(this.baseConf);
+      removeReadOnlyCoprocessors(this.conf);
     }
   }
 
@@ -8814,6 +8902,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public void onConfigurationChange(Configuration conf) {
     this.storeHotnessProtector.update(conf);
+
+    boolean readOnlyMode = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+    if (readOnlyMode) {
+      addReadOnlyCoprocessors(conf);
+    } else {
+      // Needed as safety measure in case the coprocessors are added in hbase-site.xml manually and
+      // the user toggles the read only mode on and off.
+      // This will ensure that we don't have the read only coprocessors loaded when read only mode
+      // is disabled.
+      removeReadOnlyCoprocessors(conf);
+    }
+
     // update coprocessorHost if the configuration has changed.
     if (
       CoprocessorConfigurationUtil.checkConfigurationChange(getReadOnlyConfiguration(), conf,
@@ -8823,6 +8924,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       LOG.info("Update the system coprocessors because the configuration has changed");
       decorateRegionConfiguration(conf);
       this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
+      syncReadOnlyConfigurations(readOnlyMode);
     }
   }
 
