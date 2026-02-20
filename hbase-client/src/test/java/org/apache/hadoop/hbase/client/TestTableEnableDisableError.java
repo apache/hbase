@@ -17,39 +17,34 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
 import org.apache.hadoop.hbase.ClientMetaTableAccessor;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.FutureUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestTableEnableDisableError {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableEnableDisableError.class);
 
   private MockedStatic<ClientMetaTableAccessor> mockedClientMetaTableAccessor;
 
   private AsyncAdmin admin;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     mockedClientMetaTableAccessor = mockStatic(ClientMetaTableAccessor.class);
     AsyncConnectionImpl conn = mock(AsyncConnectionImpl.class);
@@ -64,7 +59,7 @@ public class TestTableEnableDisableError {
     admin = builder.build();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     mockedClientMetaTableAccessor.closeOnDemand();
   }
