@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.net.HttpURLConnection;
@@ -62,11 +62,10 @@ import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,11 +74,9 @@ import org.slf4j.LoggerFactory;
  * HttpComponents to verify that the doas= mechanicsm works, and that the proxyuser settings are
  * observed.
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProxyUserSpnegoHttpServer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProxyUserSpnegoHttpServer.class);
   private static final String KDC_SERVER_HOST = "localhost";
@@ -97,7 +94,7 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
   private static File privilegedKeytab;
   private static File privileged2Keytab;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupServer() throws Exception {
     Configuration conf = new Configuration();
     HBaseCommonTestingUtility htu = new HBaseCommonTestingUtility(conf);
@@ -137,7 +134,7 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
     LOG.info("HTTP server started: " + baseUrl);
   }
 
-  @AfterClass
+  @AfterAll
   public static void stopServer() throws Exception {
     try {
       if (null != server) {
