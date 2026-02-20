@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.thrift;
 
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SUPPORT_PROXYUSER_KEY;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.nio.file.Paths;
@@ -31,7 +31,6 @@ import java.util.function.Supplier;
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosTicket;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
@@ -60,11 +59,11 @@ import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,11 +73,9 @@ import org.slf4j.LoggerFactory;
  * TestThriftSpnegoHttpServer which falls back to the original Kerberos principal and keytab
  * configuration properties, not the separate SPNEGO-specific properties.
  */
-@Category({ ClientTests.class, LargeTests.class })
-public class TestThriftSpnegoHttpFallbackServer extends TestThriftHttpServer {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestThriftSpnegoHttpFallbackServer.class);
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
+public class TestThriftSpnegoHttpFallbackServer extends TestThriftHttpServerBase {
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestThriftSpnegoHttpFallbackServer.class);
@@ -108,8 +105,8 @@ public class TestThriftSpnegoHttpFallbackServer extends TestThriftHttpServer {
     conf.set(Constants.THRIFT_KERBEROS_PRINCIPAL_KEY, spnegoServerPrincipal);
   }
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  @BeforeAll
+  public static void beforeAll() throws Exception {
     kdc = SimpleKdcServerUtil.getRunningSimpleKdcServer(
       new File(TEST_UTIL.getDataTestDir().toString()), HBaseTestingUtility::randomFreePort);
 
@@ -130,12 +127,12 @@ public class TestThriftSpnegoHttpFallbackServer extends TestThriftHttpServer {
     TEST_UTIL.getConfiguration().setBoolean(Constants.USE_HTTP_CONF_KEY, true);
     addSecurityConfigurations(TEST_UTIL.getConfiguration());
 
-    TestThriftHttpServer.setUpBeforeClass();
+    TestThriftHttpServerBase.setUpBeforeClass();
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    TestThriftHttpServer.tearDownAfterClass();
+  @AfterAll
+  public static void afterAll() throws Exception {
+    TestThriftHttpServerBase.tearDownAfterClass();
 
     try {
       if (null != kdc) {
@@ -173,15 +170,15 @@ public class TestThriftSpnegoHttpFallbackServer extends TestThriftHttpServer {
     final Subject clientSubject = JaasKrbUtil.loginUsingKeytab(clientPrincipal, clientKeytab);
     final Set<Principal> clientPrincipals = clientSubject.getPrincipals();
     // Make sure the subject has a principal
-    assertFalse("Found no client principals in the clientSubject.", clientPrincipals.isEmpty());
+    assertFalse(clientPrincipals.isEmpty(), "Found no client principals in the clientSubject.");
 
     // Get a TGT for the subject (might have many, different encryption types). The first should
     // be the default encryption type.
     Set<KerberosTicket> privateCredentials =
       clientSubject.getPrivateCredentials(KerberosTicket.class);
-    assertFalse("Found no private credentials in the clientSubject.", privateCredentials.isEmpty());
+    assertFalse(privateCredentials.isEmpty(), "Found no private credentials in the clientSubject.");
     KerberosTicket tgt = privateCredentials.iterator().next();
-    assertNotNull("No kerberos ticket found.", tgt);
+    assertNotNull(tgt, "No kerberos ticket found.");
 
     // The name of the principal
     final String clientPrincipalName = clientPrincipals.iterator().next().getName();
@@ -217,7 +214,7 @@ public class TestThriftSpnegoHttpFallbackServer extends TestThriftHttpServer {
    * place to succeed. Let the super impl of this test be responsible for verifying we fail if bad
    * header size.
    */
-  @org.junit.Ignore
+  @Disabled
   @Test
   @Override
   public void testRunThriftServerWithHeaderBufferLength() throws Exception {

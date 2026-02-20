@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.thrift2;
 
 import static java.nio.ByteBuffer.wrap;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -29,7 +29,6 @@ import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -52,19 +51,15 @@ import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.TException;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestThriftHBaseServiceHandlerWithReadOnly {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestThriftHBaseServiceHandlerWithReadOnly.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -80,7 +75,7 @@ public class TestThriftHBaseServiceHandlerWithReadOnly {
     new HColumnDescriptor[] { new HColumnDescriptor(familyAname).setMaxVersions(3),
       new HColumnDescriptor(familyBname).setMaxVersions(2) };
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     UTIL.getConfiguration().setBoolean("hbase.thrift.readonly", true);
     UTIL.getConfiguration().set("hbase.client.retries.number", "3");
@@ -94,12 +89,12 @@ public class TestThriftHBaseServiceHandlerWithReadOnly {
     admin.close();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
 
   }

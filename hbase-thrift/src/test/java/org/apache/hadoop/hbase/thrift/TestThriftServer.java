@@ -18,11 +18,11 @@
 package org.apache.hadoop.hbase.thrift;
 
 import static org.apache.hadoop.hbase.thrift.Constants.COALESCE_INC_KEY;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -36,7 +36,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -71,13 +70,11 @@ import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,12 +82,9 @@ import org.slf4j.LoggerFactory;
  * Unit testing for ThriftServerRunner.HBaseServiceHandler, a part of the
  * org.apache.hadoop.hbase.thrift package.
  */
-@Category({ ClientTests.class, LargeTests.class })
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestThriftServer {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestThriftServer.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final Logger LOG = LoggerFactory.getLogger(TestThriftServer.class);
@@ -120,10 +114,7 @@ public class TestThriftServer {
   private static ByteBuffer valueDname = asByteBuffer("valueD");
   private static ByteBuffer valueEname = asByteBuffer(100l);
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     UTIL.getConfiguration().setBoolean(COALESCE_INC_KEY, true);
     UTIL.getConfiguration().setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, false);
@@ -131,7 +122,7 @@ public class TestThriftServer {
     UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -216,7 +207,6 @@ public class TestThriftServer {
     int currentCountDisableTable = getCurrentCount("disableTable_num_ops", 2, metrics);
     createTestTables(handler);
     dropTestTables(handler);
-    ;
     metricsHelper.assertCounter("createTable_num_ops", currentCountCreateTable + 2,
       metrics.getSource());
     metricsHelper.assertCounter("deleteTable_num_ops", currentCountDeleteTable + 2,
@@ -249,8 +239,8 @@ public class TestThriftServer {
   public static void createTestTables(Hbase.Iface handler) throws Exception {
     // Create/enable/disable/delete tables, ensure methods act correctly
     List<java.nio.ByteBuffer> bbs = handler.getTableNames();
-    assertEquals(bbs.stream().map(b -> Bytes.toString(b.array())).collect(Collectors.joining(",")),
-      0, bbs.size());
+    assertEquals(0, bbs.size(),
+      bbs.stream().map(b -> Bytes.toString(b.array())).collect(Collectors.joining(",")));
     handler.createTable(tableAname, getColumnDescriptors());
     assertEquals(1, handler.getTableNames().size());
     assertEquals(2, handler.getColumnDescriptors(tableAname).size());
@@ -308,8 +298,10 @@ public class TestThriftServer {
     Thread.sleep(1000);
     long lv = handler.get(tableAname, rowAname, columnAname, null).get(0).value.getLong();
     // Wait on all increments being flushed
-    while (handler.coalescer.getQueueSize() != 0)
+    while (handler.coalescer.getQueueSize() != 0) {
       Threads.sleep(10);
+    }
+
     assertEquals((100 + (2 * numIncrements)), lv);
 
     lv = handler.get(tableAname, rowBname, columnAAname, null).get(0).value.getLong();
@@ -602,14 +594,14 @@ public class TestThriftServer {
     assertEquals(1, handler.getTableNames().size());
     List<TRegionInfo> regions = handler.getTableRegions(tableAname);
     int regionCount = regions.size();
-    assertEquals("empty table should have only 1 region, " + "but found " + regionCount, 1,
-      regionCount);
-    LOG.info("Region found:" + regions.get(0));
+    assertEquals(1, regionCount,
+      "empty table should have only 1 region, " + "but found " + regionCount);
+    LOG.info("Region found:{}", regions.get(0));
     handler.disableTable(tableAname);
     handler.deleteTable(tableAname);
     regionCount = handler.getTableRegions(tableAname).size();
-    assertEquals("non-existing table should have 0 region, " + "but found " + regionCount, 0,
-      regionCount);
+    assertEquals(0, regionCount,
+      "non-existing table should have 0 region, " + "but found " + regionCount);
   }
 
   public void doTestFilterRegistration() throws Exception {
@@ -732,12 +724,12 @@ public class TestThriftServer {
   }
 
   @Test
-  public void testMetricsWithException() throws Exception {
+  public void testMetricsWithException(TestInfo testInfo) throws Exception {
     String rowkey = "row1";
     String family = "f";
     String col = "c";
     // create a table which will throw exceptions for requests
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     try {
       HTableDescriptor tableDesc = new HTableDescriptor(tableName);
       tableDesc.addCoprocessor(ErrorThrowingGetObserver.class.getName());
@@ -829,8 +821,14 @@ public class TestThriftServer {
    */
   private List<ByteBuffer> getColumnList(boolean includeA, boolean includeB) {
     List<ByteBuffer> columnList = new ArrayList<>();
-    if (includeA) columnList.add(columnAname);
-    if (includeB) columnList.add(columnBname);
+
+    if (includeA) {
+      columnList.add(columnAname);
+    }
+    if (includeB) {
+      columnList.add(columnBname);
+    }
+
     return columnList;
   }
 

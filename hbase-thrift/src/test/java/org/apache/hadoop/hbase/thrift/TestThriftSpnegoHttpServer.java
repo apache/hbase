@@ -18,8 +18,9 @@
 package org.apache.hadoop.hbase.thrift;
 
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SUPPORT_PROXYUSER_KEY;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.net.InetAddress;
@@ -34,7 +35,6 @@ import java.util.stream.Collectors;
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosTicket;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -63,12 +63,11 @@ import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,11 +75,9 @@ import org.slf4j.LoggerFactory;
  * Start the HBase Thrift HTTP server on a random port through the command-line interface and talk
  * to it from client side with SPNEGO security enabled.
  */
-@Category({ ClientTests.class, LargeTests.class })
-public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestThriftSpnegoHttpServer.class);
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
+public class TestThriftSpnegoHttpServer extends TestThriftHttpServerBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestThriftSpnegoHttpServer.class);
 
@@ -111,12 +108,12 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
     conf.set(Constants.THRIFT_SPNEGO_KEYTAB_FILE_KEY, spnegoServerKeytab.getAbsolutePath());
   }
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  @BeforeAll
+  public static void beforeAll() throws Exception {
     kdc = SimpleKdcServerUtil.getRunningSimpleKdcServer(
       new File(TEST_UTIL.getDataTestDir().toString()), HBaseTestingUtility::randomFreePort);
     File keytabDir = Paths.get(TEST_UTIL.getRandomDir().toString()).toAbsolutePath().toFile();
-    Assert.assertTrue(keytabDir.mkdirs());
+    assertTrue(keytabDir.mkdirs());
 
     clientPrincipal = "client@" + kdc.getKdcConfig().getKdcRealm();
     clientKeytab = new File(keytabDir, clientPrincipal + ".keytab");
@@ -135,7 +132,7 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
     TEST_UTIL.getConfiguration().setBoolean(Constants.USE_HTTP_CONF_KEY, true);
     addSecurityConfigurations(TEST_UTIL.getConfiguration());
 
-    TestThriftHttpServer.setUpBeforeClass();
+    TestThriftHttpServerBase.setUpBeforeClass();
   }
 
   @Override
@@ -143,9 +140,9 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
     return () -> new ThriftServer(TEST_UTIL.getConfiguration());
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    TestThriftHttpServer.tearDownAfterClass();
+  @AfterAll
+  public static void afterAll() throws Exception {
+    TestThriftHttpServerBase.tearDownAfterClass();
 
     try {
       if (null != kdc) {
@@ -163,7 +160,7 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
    * place to succeed. Let the super impl of this test be responsible for verifying we fail if bad
    * header size.
    */
-  @org.junit.Ignore
+  @Disabled
   @Test
   @Override
   public void testRunThriftServerWithHeaderBufferLength() throws Exception {
@@ -205,15 +202,15 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
     final Subject clientSubject = JaasKrbUtil.loginUsingKeytab(clientPrincipal, clientKeytab);
     final Set<Principal> clientPrincipals = clientSubject.getPrincipals();
     // Make sure the subject has a principal
-    assertFalse("Found no client principals in the clientSubject.", clientPrincipals.isEmpty());
+    assertFalse(clientPrincipals.isEmpty(), "Found no client principals in the clientSubject.");
 
     // Get a TGT for the subject (might have many, different encryption types). The first should
     // be the default encryption type.
     Set<KerberosTicket> privateCredentials =
       clientSubject.getPrivateCredentials(KerberosTicket.class);
-    assertFalse("Found no private credentials in the clientSubject.", privateCredentials.isEmpty());
+    assertFalse(privateCredentials.isEmpty(), "Found no private credentials in the clientSubject.");
     KerberosTicket tgt = privateCredentials.iterator().next();
-    assertNotNull("No kerberos ticket found.", tgt);
+    assertNotNull(tgt, "No kerberos ticket found.");
 
     // The name of the principal
     final String clientPrincipalName = clientPrincipals.iterator().next().getName();
