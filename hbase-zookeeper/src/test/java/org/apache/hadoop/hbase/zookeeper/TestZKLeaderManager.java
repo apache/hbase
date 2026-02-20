@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseZKTestingUtility;
 import org.apache.hadoop.hbase.Stoppable;
@@ -34,20 +33,16 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ZKTests.class, MediumTests.class })
+@Tag(ZKTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestZKLeaderManager {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZKLeaderManager.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZKLeaderManager.class);
 
@@ -134,7 +129,7 @@ public class TestZKLeaderManager {
   private static HBaseZKTestingUtility TEST_UTIL;
   private static MockLeader[] CANDIDATES;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL = new HBaseZKTestingUtility();
     TEST_UTIL.startMiniZKCluster();
@@ -151,7 +146,7 @@ public class TestZKLeaderManager {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniZKCluster();
   }
@@ -160,15 +155,15 @@ public class TestZKLeaderManager {
   public void testLeaderSelection() throws Exception {
     MockLeader currentLeader = getCurrentLeader();
     // one leader should have been found
-    assertNotNull("Leader should exist", currentLeader);
+    assertNotNull(currentLeader, "Leader should exist");
     LOG.debug("Current leader index is " + currentLeader.getIndex());
 
     byte[] znodeData = ZKUtil.getData(currentLeader.getWatcher(), LEADER_ZNODE);
-    assertNotNull("Leader znode should contain leader index", znodeData);
-    assertTrue("Leader znode should not be empty", znodeData.length > 0);
+    assertNotNull(znodeData, "Leader znode should contain leader index");
+    assertTrue(znodeData.length > 0, "Leader znode should not be empty");
     int storedIndex = Bytes.toInt(znodeData);
     LOG.debug("Stored leader index in ZK is " + storedIndex);
-    assertEquals("Leader znode should match leader index", currentLeader.getIndex(), storedIndex);
+    assertEquals(currentLeader.getIndex(), storedIndex, "Leader znode should match leader index");
 
     // force a leader transition
     currentLeader.abdicate();
@@ -176,15 +171,15 @@ public class TestZKLeaderManager {
     // check for new leader
     currentLeader = getCurrentLeader();
     // one leader should have been found
-    assertNotNull("New leader should exist after abdication", currentLeader);
+    assertNotNull(currentLeader, "New leader should exist after abdication");
     LOG.debug("New leader index is " + currentLeader.getIndex());
 
     znodeData = ZKUtil.getData(currentLeader.getWatcher(), LEADER_ZNODE);
-    assertNotNull("Leader znode should contain leader index", znodeData);
-    assertTrue("Leader znode should not be empty", znodeData.length > 0);
+    assertNotNull(znodeData, "Leader znode should contain leader index");
+    assertTrue(znodeData.length > 0, "Leader znode should not be empty");
     storedIndex = Bytes.toInt(znodeData);
     LOG.debug("Stored leader index in ZK is " + storedIndex);
-    assertEquals("Leader znode should match leader index", currentLeader.getIndex(), storedIndex);
+    assertEquals(currentLeader.getIndex(), storedIndex, "Leader znode should match leader index");
 
     // force another transition by stopping the current
     currentLeader.stop("Stopping for test");
@@ -192,22 +187,22 @@ public class TestZKLeaderManager {
     // check for new leader
     currentLeader = getCurrentLeader();
     // one leader should have been found
-    assertNotNull("New leader should exist after stop", currentLeader);
+    assertNotNull(currentLeader, "New leader should exist after stop");
     LOG.debug("New leader index is " + currentLeader.getIndex());
 
     znodeData = ZKUtil.getData(currentLeader.getWatcher(), LEADER_ZNODE);
-    assertNotNull("Leader znode should contain leader index", znodeData);
-    assertTrue("Leader znode should not be empty", znodeData.length > 0);
+    assertNotNull(znodeData, "Leader znode should contain leader index");
+    assertTrue(znodeData.length > 0, "Leader znode should not be empty");
     storedIndex = Bytes.toInt(znodeData);
     LOG.debug("Stored leader index in ZK is " + storedIndex);
-    assertEquals("Leader znode should match leader index", currentLeader.getIndex(), storedIndex);
+    assertEquals(currentLeader.getIndex(), storedIndex, "Leader znode should match leader index");
 
     // with a second stop we can guarantee that a previous leader has resumed leading
     currentLeader.stop("Stopping for test");
 
     // check for new
     currentLeader = getCurrentLeader();
-    assertNotNull("New leader should exist", currentLeader);
+    assertNotNull(currentLeader, "New leader should exist");
   }
 
   private MockLeader getCurrentLeader() {

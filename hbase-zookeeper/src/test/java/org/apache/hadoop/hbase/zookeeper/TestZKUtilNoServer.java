@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -35,16 +35,13 @@ import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-@Category({ ZKTests.class, SmallTests.class })
+@Tag(ZKTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestZKUtilNoServer {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZKUtilNoServer.class);
 
   @Test
   public void testUnsecure() throws IOException {
@@ -99,7 +96,7 @@ public class TestZKUtilNoServer {
     assertTrue(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "user6"))));
   }
 
-  @Test(expected = KeeperException.SystemErrorException.class)
+  @Test
   public void testInterruptedDuringAction()
     throws IOException, KeeperException, InterruptedException {
     final RecoverableZooKeeper recoverableZk = Mockito.mock(RecoverableZooKeeper.class);
@@ -111,6 +108,7 @@ public class TestZKUtilNoServer {
     };
     Mockito.doThrow(new InterruptedException()).when(recoverableZk)
       .getChildren(zkw.getZNodePaths().baseZNode, null);
-    ZKUtil.listChildrenNoWatch(zkw, zkw.getZNodePaths().baseZNode);
+    assertThrows(KeeperException.SystemErrorException.class,
+      () -> ZKUtil.listChildrenNoWatch(zkw, zkw.getZNodePaths().baseZNode));
   }
 }
