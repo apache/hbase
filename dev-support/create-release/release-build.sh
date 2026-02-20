@@ -101,6 +101,8 @@ fi
 
 init_locale
 init_java
+#set java 17 for spotless
+set_java17_home
 init_mvn
 init_python
 # Print out subset of perl version (used in git hooks and japi-compliance-checker)
