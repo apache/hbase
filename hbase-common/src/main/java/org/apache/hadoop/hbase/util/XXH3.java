@@ -198,23 +198,14 @@ public class XXH3 extends Hash implements Hash64 {
     return hash;
   }
 
-  private static long mul128AndFold64(long x, long y) {
-    // Consider switching to Math.unsignedMultiplyHigh(x, y) when we can drop Java 8.
-    long xLow = x & MASK32;
-    long xHigh = x >>> 32;
-    long yLow = y & MASK32;
-    long yHigh = y >>> 32;
+  private static long unsignedMultiplyHigh(long a, long b) {
+    return Math.multiplyHigh(a, b) + ((a >> 63) & b) + ((b >> 63) & a);
+  }
 
-    long lowLow = xLow * yLow;
-    long lowHigh = xLow * yHigh;
-    long highLow = xHigh * yLow;
-    long highHigh = xHigh * yHigh;
-
-    long mid = lowHigh + (highLow & MASK32) + (lowLow >>> 32);
-    long hi = highHigh + (highLow >>> 32) + (mid >>> 32);
-    long lo = (mid << 32) | (lowLow & MASK32);
-
-    return hi ^ lo;
+  private static long mul128AndFold64(long a, long b) {
+    long x = a * b;
+    long y = unsignedMultiplyHigh(a, b);
+    return x ^ y;
   }
 
   private static <T> long mix16(HashKey<T> key, int keyOffset, long secretLow, long secretHigh,
