@@ -97,6 +97,11 @@
       <artifactId>commons-validator</artifactId>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>net.openhft</groupId>
+      <artifactId>zero-allocation-hashing</artifactId>
+      <scope>compile</scope>
+    </dependency>
     <!-- tracing Dependencies -->
     <dependency>
       <groupId>io.opentelemetry</groupId>

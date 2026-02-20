@@ -983,6 +983,8 @@
     <lz4.version>1.10.1</lz4.version>
     <snappy.version>1.1.10.4</snappy.version>
     <zstd-jni.version>1.5.7-2</zstd-jni.version>
+    <!-- hash -->
+    <zero-allocation-hashing.version>2026.0</zero-allocation-hashing.version>
     <!--
         Note that the version of protobuf shipped in hbase-thirdparty must match the version used
         in hbase-protocol-shaded and hbase-examples. The version of jackson-[annotations,core,
@@ -1836,6 +1838,11 @@
         <groupId>com.github.luben</groupId>
         <artifactId>zstd-jni</artifactId>
         <version>${zstd-jni.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>net.openhft</groupId>
+        <artifactId>zero-allocation-hashing</artifactId>
+        <version>${zero-allocation-hashing.version}</version>
       </dependency>
       <!-- shaded thirdparty -->
       <dependency>
