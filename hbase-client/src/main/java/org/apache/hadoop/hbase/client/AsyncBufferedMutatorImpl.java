@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.ConnectionUtils.validatePut;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.validateMutation;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.IOException;
@@ -175,9 +175,7 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
     long heapSize = 0;
     for (Mutation mutation : mutations) {
       heapSize += mutation.heapSize();
-      if (mutation instanceof Put) {
-        validatePut((Put) mutation, maxKeyValueSize);
-      }
+      validateMutation(mutation, maxKeyValueSize);
     }
     Batch batch = null;
     lock.lock();
