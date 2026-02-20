@@ -19,10 +19,10 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.zookeeper.KeeperException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,8 +87,8 @@ public abstract class TestReplicationStateBasic {
 
     List<ServerName> reps = rqs.getListOfReplicators();
     assertEquals(2, reps.size());
-    assertTrue(server1.getServerName(), reps.contains(server1));
-    assertTrue(server2.getServerName(), reps.contains(server2));
+    assertTrue(reps.contains(server1), server1.getServerName());
+    assertTrue(reps.contains(server2), server2.getServerName());
 
     assertTrue(rqs.getWALsInQueue(ServerName.valueOf("bogus", 12345, 12345), "bogus").isEmpty());
     assertTrue(rqs.getWALsInQueue(server1, "bogus").isEmpty());
