@@ -19,14 +19,13 @@ package org.apache.hadoop.hbase.hbtop.screen.top;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.lenient;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.hbtop.Record;
 import org.apache.hadoop.hbase.hbtop.RecordFilter;
@@ -36,21 +35,16 @@ import org.apache.hadoop.hbase.hbtop.field.FieldInfo;
 import org.apache.hadoop.hbase.hbtop.field.FieldValue;
 import org.apache.hadoop.hbase.hbtop.mode.Mode;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@Category(SmallTests.class)
-@RunWith(MockitoJUnitRunner.class)
+@Tag(SmallTests.TAG)
+@ExtendWith(MockitoExtension.class)
 public class TestTopScreenModel {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTopScreenModel.class);
 
   @Mock
   private Admin admin;
@@ -59,9 +53,9 @@ public class TestTopScreenModel {
 
   private List<Field> fields;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
-    when(admin.getClusterMetrics()).thenReturn(TestUtils.createDummyClusterMetrics());
+    lenient().when(admin.getClusterMetrics()).thenReturn(TestUtils.createDummyClusterMetrics());
     topScreenModel = new TopScreenModel(admin, Mode.REGION, null, null, null, null);
 
     fields =
