@@ -146,6 +146,11 @@ public class TestMultiTableInputFormatBase {
     }
 
     @Override
+    public TableName getMetaTableName() {
+      return null;
+    }
+
+    @Override
     public BufferedMutator getBufferedMutator(TableName tableName) throws IOException {
       return null;
     }

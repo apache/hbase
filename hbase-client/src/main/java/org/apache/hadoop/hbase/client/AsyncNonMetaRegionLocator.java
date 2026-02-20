@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.HConstants.EMPTY_END_ROW;
 import static org.apache.hadoop.hbase.HConstants.NINES;
 import static org.apache.hadoop.hbase.HConstants.USE_META_REPLICAS;
 import static org.apache.hadoop.hbase.HConstants.ZEROES;
-import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.createRegionLocations;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.isGood;
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_META_CACHE_INVALIDATE_INTERVAL;
@@ -238,14 +237,15 @@ class AsyncNonMetaRegionLocator {
             CatalogReplicaLoadBalanceSimpleSelector.class.getName());
 
         this.metaReplicaSelector = CatalogReplicaLoadBalanceSelectorFactory
-          .createSelector(replicaSelectorClass, META_TABLE_NAME, conn, () -> {
+          .createSelector(replicaSelectorClass, conn.getMetaTableName(), conn, () -> {
             int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
             try {
               RegionLocations metaLocations = conn.registry.getMetaRegionLocations()
                 .get(conn.connConf.getMetaReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
               numOfReplicas = metaLocations.size();
             } catch (Exception e) {
-              LOG.error("Failed to get table {}'s region replication, ", META_TABLE_NAME, e);
+              LOG.error("Failed to get table {}'s region replication, ", conn.getMetaTableName(),
+                e);
             }
             return numOfReplicas;
           });
@@ -427,7 +427,7 @@ class AsyncNonMetaRegionLocator {
         // do nothing
     }
 
-    conn.getTable(META_TABLE_NAME).scan(scan, new AdvancedScanResultConsumer() {
+    conn.getTable(conn.getMetaTableName()).scan(scan, new AdvancedScanResultConsumer() {
 
       private boolean completeNormally = false;
 
