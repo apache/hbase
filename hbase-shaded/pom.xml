@@ -537,6 +537,16 @@
                       <exclude>keytab.txt</exclude>
                     </excludes>
                   </filter>
+                  <filter>
+                    <!-- We are not ready to use JDK 25 yet, and these classes cause shading
+                         errors on older ASM versions.
+                         Safe to remove if upgrading the shade plugin to 3.6.1 or later.
+                    -->
+                    <artifact>com.dynatrace.hash4j:hash4j</artifact>
+                    <excludes>
+                      <exclude>META-INF/versions/25/**</exclude>
+                    </excludes>
+                  </filter>
                 </filters>
               </configuration>
             </execution>
