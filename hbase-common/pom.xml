@@ -97,6 +97,12 @@
       <artifactId>commons-validator</artifactId>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>com.dynatrace.hash4j</groupId>
+      <artifactId>hash4j</artifactId>
+      <scope>compile</scope>
+    </dependency>
+
     <!-- tracing Dependencies -->
     <dependency>
       <groupId>io.opentelemetry</groupId>
