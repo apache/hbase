@@ -18,37 +18,28 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Used to calculate the hash {@link Hash} algorithms for Bloomfilters.
+ * Interface for computing 64-bit hash values.
  */
 @InterfaceAudience.Private
-public abstract class HashKey<T> {
-  protected final T t;
-
-  public HashKey(T t) {
-    this.t = t;
+@InterfaceStability.Stable
+public interface Hash64 {
+  /**
+   * Computes a 64-bit hash from the given {@code HashKey} using a seed of 0.
+   * @param hashKey the input key providing byte access
+   * @return the computed 64-bit hash value
+   */
+  default <T> long hash64(HashKey<T> hashKey) {
+    return hash64(hashKey, 0L);
   }
 
-  /** Return The byte at the given position in this HashKey */
-  public abstract byte get(int pos);
-
-  /** Returns The number of bytes in this HashKey */
-  public abstract int length();
-
   /**
-   * Returns the little-endian 32-bit int value starting at the given position in this
-   * {@code HashKey}.
-   * @param pos the starting offset of the 4-byte little-endian int
-   * @return the 32-bit value decoded in little-endian order
+   * Computes a 64-bit hash from the given {@code HashKey} and seed.
+   * @param hashKey the input key providing byte access
+   * @param seed    the 64-bit seed value
+   * @return the computed 64-bit hash value
    */
-  public abstract int getIntLE(int pos);
-
-  /**
-   * Returns the little-endian 64-bit long value starting at the given position in this
-   * {@code HashKey}.
-   * @param pos the starting offset of the 8-byte little-endian long
-   * @return the 64-bit value decoded in little-endian order
-   */
-  public abstract long getLongLE(int pos);
+  <T> long hash64(HashKey<T> hashKey, long seed);
 }
