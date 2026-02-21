@@ -28,7 +28,7 @@ import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
@@ -54,7 +54,7 @@ public class TestRowStatisticsCompactionObserver {
   private static final Logger LOG =
     LoggerFactory.getLogger(TestRowStatisticsCompactionObserver.class);
 
-  public static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  public static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   public static final TestableRowStatisticsRecorder RECORDER = new TestableRowStatisticsRecorder();
   private static final TableName TABLE_NAME = TableName.valueOf("test-table");
   private static final byte[] FAMILY = Bytes.toBytes("0");
