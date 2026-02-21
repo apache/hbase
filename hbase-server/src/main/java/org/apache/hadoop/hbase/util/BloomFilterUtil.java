@@ -179,7 +179,8 @@ public final class BloomFilterUtil {
 
   private static <T> boolean contains(ByteBuff bloomBuf, int bloomOffset, int bloomSize, Hash hash,
     int hashCount, HashKey<T> hashKey) {
-    int hash1 = hash.hash(hashKey, 0);
+    Pair<Integer, Integer> hashPair = getHashPair(hash, hashKey);
+    int hash1 = hashPair.getFirst();
     int bloomBitSize = bloomSize << 3;
 
     int hash2 = 0;
@@ -188,7 +189,7 @@ public final class BloomFilterUtil {
     if (randomGeneratorForTest == null) {
       // Production mode
       compositeHash = hash1;
-      hash2 = hash.hash(hashKey, hash1);
+      hash2 = hashPair.getSecond();
     }
 
     for (int i = 0; i < hashCount; i++) {
@@ -277,5 +278,32 @@ public final class BloomFilterUtil {
       bloomParam = Bytes.toBytes(prefixLength);
     }
     return bloomParam;
+  }
+
+  /**
+   * Generate the two hash values needed for Bloom filter index generation. Bloom filters require a
+   * (hash1, hash2) pair to derive multiple probe locations.
+   * <ul>
+   * <li>If the hash implementation provides a 64-bit hash, we split the 64-bit value into two
+   * 32-bit hashes to avoid extra hashing cost.</li>
+   * <li>Otherwise, fall back to classic double hashing by rehashing with hash1 as the seed.</li>
+   * </ul>
+   * @param hash the hash function
+   * @param key  the hash key
+   * @return a pair of hash values (hash1, hash2)
+   */
+  public static Pair<Integer, Integer> getHashPair(Hash hash, HashKey<?> key) {
+    if (hash instanceof Hash64) {
+      long hash64 = ((Hash64) hash).hash64(key);
+      // Use lower 32 bits as first hash, upper 32 bits as second hash.
+      int hash1 = (int) hash64;
+      int hash2 = (int) (hash64 >>> 32);
+      return Pair.newPair(hash1, hash2);
+    } else {
+      // Use double hashing
+      int hash1 = hash.hash(key, 0);
+      int hash2 = hash.hash(key, hash1);
+      return Pair.newPair(hash1, hash2);
+    }
   }
 }
