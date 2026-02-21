@@ -21,16 +21,13 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ MapReduceTests.class, MediumTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestTableInputFormatScanEmptyToAPP extends TestTableInputFormatScanBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableInputFormatScanEmptyToAPP.class);
 
   /**
    * Tests a MR scan using specific start and stop rows.

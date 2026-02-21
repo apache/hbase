@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -64,24 +64,20 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.Utils.OutputFileUtils.OutputFilesFilter;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 
-@Category({ MapReduceTests.class, LargeTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestImportTSVWithVisibilityLabels implements Configurable {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestImportTSVWithVisibilityLabels.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestImportTSVWithVisibilityLabels.class);
@@ -107,9 +103,6 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   private static User SUPERUSER;
   private static Configuration conf;
 
-  @Rule
-  public TestName name = new TestName();
-
   @Override
   public Configuration getConf() {
     return util.getConfiguration();
@@ -120,7 +113,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     throw new IllegalArgumentException("setConf not supported");
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void provisionCluster() throws Exception {
     conf = util.getConfiguration();
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
@@ -153,14 +146,14 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     SUPERUSER.runAs(action);
   }
 
-  @AfterClass
+  @AfterAll
   public static void releaseCluster() throws Exception {
     util.shutdownMiniCluster();
   }
 
   @Test
-  public void testMROnTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
+  public void testMROnTable(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName() + util.getRandomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -174,8 +167,8 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   }
 
   @Test
-  public void testMROnTableWithDeletes() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
+  public void testMROnTableWithDeletes(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName() + util.getRandomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -226,8 +219,8 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   }
 
   @Test
-  public void testMROnTableWithBulkload() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
+  public void testMROnTableWithBulkload(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName() + util.getRandomUUID());
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
     String[] args = new String[] { "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + hfiles.toString(),
@@ -240,8 +233,8 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   }
 
   @Test
-  public void testBulkOutputWithTsvImporterTextMapper() throws Exception {
-    final TableName table = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
+  public void testBulkOutputWithTsvImporterTextMapper(TestInfo testInfo) throws Exception {
+    final TableName table = TableName.valueOf(testInfo.getTestMethod().get().getName() + util.getRandomUUID());
     String FAMILY = "FAM";
     Path bulkOutputPath = new Path(util.getDataTestDirOnTestFS(table.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
@@ -257,8 +250,8 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   }
 
   @Test
-  public void testMRWithOutputFormat() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
+  public void testMRWithOutputFormat(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName() + util.getRandomUUID());
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -273,8 +266,8 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   }
 
   @Test
-  public void testBulkOutputWithInvalidLabels() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
+  public void testBulkOutputWithInvalidLabels(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName() + util.getRandomUUID());
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
     String[] args = new String[] { "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + hfiles.toString(),
@@ -290,8 +283,8 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   }
 
   @Test
-  public void testBulkOutputWithTsvImporterTextMapperWithInvalidLabels() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
+  public void testBulkOutputWithTsvImporterTextMapperWithInvalidLabels(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName() + util.getRandomUUID());
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -391,12 +384,12 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
       String[] elements = cfStatus.getPath().toString().split(Path.SEPARATOR);
       String cf = elements[elements.length - 1];
       foundFamilies.add(cf);
-      assertTrue(String.format(
+      assertTrue(configFamilies.contains(cf), String.format(
         "HFile ouput contains a column family (%s) not present in input families (%s)", cf,
-        configFamilies), configFamilies.contains(cf));
+        configFamilies));
       for (FileStatus hfile : fs.listStatus(cfStatus.getPath())) {
-        assertTrue(String.format("HFile %s appears to contain no data.", hfile.getPath()),
-          hfile.getLen() > 0);
+        assertTrue(
+          hfile.getLen() > 0, String.format("HFile %s appears to contain no data.", hfile.getPath()));
         if (expectedKVCount > -1) {
           actualKVCount += getKVCountFromHfile(fs, hfile.getPath());
         }
@@ -404,9 +397,8 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     }
     if (expectedKVCount > -1) {
       assertTrue(
-        String.format("KV count in output hfile=<%d> doesn't match with expected KV count=<%d>",
-          actualKVCount, expectedKVCount),
-        actualKVCount == expectedKVCount);
+        actualKVCount == expectedKVCount, String.format("KV count in output hfile=<%d> doesn't match with expected KV count=<%d>",
+          actualKVCount, expectedKVCount));
     }
   }
 

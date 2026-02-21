@@ -18,12 +18,13 @@
 package org.apache.hadoop.hbase.mapred;
 
 import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_DEFAULT;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.util.Iterator;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -45,28 +46,19 @@ import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.lib.NullOutputFormat;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ VerySlowMapReduceTests.class, LargeTests.class })
+@Tag(VerySlowMapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableSnapshotInputFormat.class);
 
   private static final byte[] aaa = Bytes.toBytes("aaa");
   private static final byte[] after_zzz = Bytes.toBytes("zz{"); // 'z' + 1 => '{'
   private static final String COLUMNS =
     Bytes.toString(FAMILIES[0]) + " " + Bytes.toString(FAMILIES[1]);
-
-  @Rule
-  public TestName name = new TestName();
 
   @Override
   protected byte[] getStartRow() {
@@ -107,8 +99,8 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   }
 
   @Test
-  public void testInitTableSnapshotMapperJobConfig() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testInitTableSnapshotMapperJobConfig(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     String snapshotName = "foo";
 
     try {
@@ -122,11 +114,11 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
       // TODO: would be better to examine directly the cache instance that results from this
       // config. Currently this is not possible because BlockCache initialization is static.
-      Assert.assertEquals("Snapshot job should be configured for default LruBlockCache.",
-        HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT,
-        job.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, -1), 0.01);
-      Assert.assertEquals("Snapshot job should not use BucketCache.", 0,
-        job.getFloat("hbase.bucketcache.size", -1), 0.01);
+      assertEquals(HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT,
+        job.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, -1), 0.01,
+        "Snapshot job should be configured for default LruBlockCache.");
+      assertEquals(0, job.getFloat("hbase.bucketcache.size", -1), 0.01,
+        "Snapshot job should not use BucketCache.");
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
@@ -168,7 +160,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   @Override
   protected void testWithMockedMapReduce(HBaseTestingUtil util, String snapshotName, int numRegions,
     int numSplitsPerRegion, int expectedNumSplits, boolean setLocalityEnabledTo) throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf("testWithMockedMapReduce");
     try {
       createTableAndSnapshot(util, tableName, snapshotName, getStartRow(), getEndRow(), numRegions);
 
@@ -202,7 +194,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     TableSnapshotInputFormat tsif = new TableSnapshotInputFormat();
     InputSplit[] splits = tsif.getSplits(job, 0);
 
-    Assert.assertEquals(expectedNumSplits, splits.length);
+    assertEquals(expectedNumSplits, splits.length);
 
     HBaseTestingUtil.SeenRowTracker rowTracker =
       new HBaseTestingUtil.SeenRowTracker(startRow, stopRow);
@@ -214,7 +206,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     for (int i = 0; i < splits.length; i++) {
       // validate input split
       InputSplit split = splits[i];
-      Assert.assertTrue(split instanceof TableSnapshotInputFormat.TableSnapshotRegionSplit);
+      assertTrue(split instanceof TableSnapshotInputFormat.TableSnapshotRegionSplit);
       if (localityEnabled) {
         // When localityEnabled is true, meant to verify split.getLocations()
         // by the following statement:
@@ -222,9 +214,9 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
         // However, getLocations() of some splits could return an empty array (length is 0),
         // so drop the verification on length.
         // TODO: investigate how to verify split.getLocations() when localityEnabled is true
-        Assert.assertTrue(split.getLocations() != null);
+        assertTrue(split.getLocations() != null);
       } else {
-        Assert.assertTrue(split.getLocations() != null && split.getLocations().length == 0);
+        assertTrue(split.getLocations() != null && split.getLocations().length == 0);
       }
 
       // validate record reader
@@ -290,7 +282,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       jobConf.setOutputFormat(NullOutputFormat.class);
 
       RunningJob job = JobClient.runJob(jobConf);
-      Assert.assertTrue(job.isSuccessful());
+      assertTrue(job.isSuccessful());
     } finally {
       if (!shutdownCluster) {
         util.getAdmin().deleteSnapshot(snapshotName);
@@ -299,7 +291,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     }
   }
 
-  @Ignore // Ignored in mapred package because it keeps failing but allowed in mapreduce package.
+  @Disabled // Ignored in mapred package because it keeps failing but allowed in mapreduce package.
   @Test
   public void testWithMapReduceMultipleMappersPerRegion() throws Exception {
     testWithMapReduce(UTIL, "testWithMapReduceMultiRegion", 10, 5, 50, false);

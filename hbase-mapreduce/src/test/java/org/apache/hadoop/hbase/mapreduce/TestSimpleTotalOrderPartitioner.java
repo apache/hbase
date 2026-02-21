@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -29,17 +29,18 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
+import org.junit.jupiter.api.Test;
 import org.junit.experimental.categories.Category;
 
 /**
  * Test of simple partitioner.
  */
-@Category({ MapReduceTests.class, SmallTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestSimpleTotalOrderPartitioner {
 
-  @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestSimpleTotalOrderPartitioner.class);
 

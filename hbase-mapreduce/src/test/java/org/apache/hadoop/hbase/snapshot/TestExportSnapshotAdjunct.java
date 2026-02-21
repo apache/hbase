@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -30,16 +30,16 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,16 +49,11 @@ import org.slf4j.LoggerFactory;
  * TestExportSnapshot where possible.
  * @see TestExportSnapshot
  */
-@Ignore // HBASE-24493
-@Category({ VerySlowMapReduceTests.class, LargeTests.class })
+@Disabled // HBASE-24493
+@Tag(VerySlowMapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestExportSnapshotAdjunct {
   private static final Logger LOG = LoggerFactory.getLogger(TestExportSnapshotAdjunct.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestExportSnapshotAdjunct.class);
-  @Rule
-  public final TestName testName = new TestName();
 
   protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -68,7 +63,7 @@ public class TestExportSnapshotAdjunct {
   private int tableNumFiles;
   private Admin admin;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TestExportSnapshot.setUpBaseConf(TEST_UTIL.getConfiguration());
     TEST_UTIL.startMiniCluster(3);
@@ -98,11 +93,11 @@ public class TestExportSnapshotAdjunct {
       if (e.getValue().contains("hbase.tmp.dir")) {
         continue;
       }
-      assertFalse(e.getKey() + " " + e.getValue(), e.getValue().contains("tmp"));
+      assertFalse(e.getValue().contains("tmp"), e.getKey() + " " + e.getValue());
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniMapReduceCluster();
     TEST_UTIL.shutdownMiniCluster();
@@ -111,13 +106,13 @@ public class TestExportSnapshotAdjunct {
   /**
    * Create a table and take a snapshot of the table used by the export test.
    */
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
     this.admin = TEST_UTIL.getAdmin();
 
-    tableName = TableName.valueOf("testtb-" + testName.getMethodName());
-    snapshotName = "snaptb0-" + testName.getMethodName();
-    emptySnapshotName = "emptySnaptb0-" + testName.getMethodName();
+    tableName = TableName.valueOf("testtb-" + testInfo.getTestMethod().get().getName());
+    snapshotName = "snaptb0-" + testInfo.getTestMethod().get().getName();
+    emptySnapshotName = "emptySnaptb0-" + testInfo.getTestMethod().get().getName();
 
     // Create Table
     SnapshotTestingUtils.createPreSplitTable(TEST_UTIL, tableName, 2, TestExportSnapshot.FAMILY);
@@ -133,7 +128,7 @@ public class TestExportSnapshotAdjunct {
     admin.snapshot(snapshotName, tableName);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.deleteTable(tableName);
     SnapshotTestingUtils.deleteAllSnapshots(TEST_UTIL.getAdmin());

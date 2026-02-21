@@ -22,13 +22,12 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 
-@Category({ MapReduceTests.class, LargeTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestCopyTableToPeerClusterWithZkUri extends CopyTableToPeerClusterTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCopyTableToPeerClusterWithZkUri.class);
 
   @Override
   protected String[] getPeerClusterOptions() throws Exception {

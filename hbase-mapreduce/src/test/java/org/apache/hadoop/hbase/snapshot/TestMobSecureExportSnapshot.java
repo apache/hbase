@@ -17,28 +17,23 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.security.HadoopSecurityEnabledUserProviderForTesting;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
 /**
  * Reruns TestMobExportSnapshot using MobExportSnapshot in secure mode.
  */
-@Category({ VerySlowRegionServerTests.class, LargeTests.class })
+@Tag(VerySlowRegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMobSecureExportSnapshot extends TestMobExportSnapshot {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobSecureExportSnapshot.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     setUpBaseConf(TEST_UTIL.getConfiguration());
     // Setup separate test-data directory for MR cluster and set corresponding configurations.

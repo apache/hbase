@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -56,12 +56,11 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,16 +73,13 @@ public abstract class VerifyReplicationTestBase extends TestReplicationBase {
   private static final TableName peerTableName = TableName.valueOf("peerTest");
   private static Table htable3;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     cleanUp();
     UTIL2.deleteTableData(peerTableName);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TestReplicationBase.setUpBeforeClass();
 
@@ -150,10 +146,10 @@ public abstract class VerifyReplicationTestBase extends TestReplicationBase {
    * delete marker is replicated, run verify replication with and without raw to check the results.
    */
   @Test
-  public void testVerifyRepJobWithRawOptions() throws Exception {
-    LOG.info(name.getMethodName());
+  public void testVerifyRepJobWithRawOptions(TestInfo testInfo) throws Exception {
+    LOG.info(testInfo.getTestMethod().get().getName());
 
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     byte[] familyname = Bytes.toBytes("fam_raw");
     byte[] row = Bytes.toBytes("row_raw");
 
@@ -464,18 +460,15 @@ public abstract class VerifyReplicationTestBase extends TestReplicationBase {
       "--recompareSleep=1", "--peerTableName=" + peerTableName.getNameAsString(),
       getClusterKey(UTIL2), tableName.getNameAsString() };
     Counters counters = runVerifyReplication(args, NB_ROWS_IN_BATCH - 1, 3);
-    assertEquals(
-      counters.findCounter(VerifyReplication.Verifier.Counters.FAILED_RECOMPARE).getValue(), 9);
-    assertEquals(counters.findCounter(VerifyReplication.Verifier.Counters.RECOMPARES).getValue(),
-      9);
-    assertEquals(
-      counters.findCounter(VerifyReplication.Verifier.Counters.ONLY_IN_PEER_TABLE_ROWS).getValue(),
-      1);
-    assertEquals(
-      counters.findCounter(VerifyReplication.Verifier.Counters.CONTENT_DIFFERENT_ROWS).getValue(),
-      1);
-    assertEquals(counters.findCounter(VerifyReplication.Verifier.Counters.ONLY_IN_SOURCE_TABLE_ROWS)
-      .getValue(), 1);
+    assertEquals(9,
+      counters.findCounter(VerifyReplication.Verifier.Counters.FAILED_RECOMPARE).getValue());
+    assertEquals(9, counters.findCounter(VerifyReplication.Verifier.Counters.RECOMPARES).getValue());
+    assertEquals(1,
+      counters.findCounter(VerifyReplication.Verifier.Counters.ONLY_IN_PEER_TABLE_ROWS).getValue());
+    assertEquals(1,
+      counters.findCounter(VerifyReplication.Verifier.Counters.CONTENT_DIFFERENT_ROWS).getValue());
+    assertEquals(1, counters.findCounter(VerifyReplication.Verifier.Counters.ONLY_IN_SOURCE_TABLE_ROWS)
+      .getValue());
   }
 
   @Test
@@ -509,18 +502,15 @@ public abstract class VerifyReplicationTestBase extends TestReplicationBase {
       getClusterKey(UTIL2), tableName.getNameAsString() };
 
     Counters counters = runVerifyReplication(args, NB_ROWS_IN_BATCH - 1, 3);
-    assertEquals(
-      counters.findCounter(VerifyReplication.Verifier.Counters.FAILED_RECOMPARE).getValue(), 3);
-    assertEquals(counters.findCounter(VerifyReplication.Verifier.Counters.RECOMPARES).getValue(),
-      3);
-    assertEquals(
-      counters.findCounter(VerifyReplication.Verifier.Counters.ONLY_IN_PEER_TABLE_ROWS).getValue(),
-      1);
-    assertEquals(
-      counters.findCounter(VerifyReplication.Verifier.Counters.CONTENT_DIFFERENT_ROWS).getValue(),
-      1);
-    assertEquals(counters.findCounter(VerifyReplication.Verifier.Counters.ONLY_IN_SOURCE_TABLE_ROWS)
-      .getValue(), 1);
+    assertEquals(3,
+      counters.findCounter(VerifyReplication.Verifier.Counters.FAILED_RECOMPARE).getValue());
+    assertEquals(3, counters.findCounter(VerifyReplication.Verifier.Counters.RECOMPARES).getValue());
+    assertEquals(1,
+      counters.findCounter(VerifyReplication.Verifier.Counters.ONLY_IN_PEER_TABLE_ROWS).getValue());
+    assertEquals(1,
+      counters.findCounter(VerifyReplication.Verifier.Counters.CONTENT_DIFFERENT_ROWS).getValue());
+    assertEquals(1, counters.findCounter(VerifyReplication.Verifier.Counters.ONLY_IN_SOURCE_TABLE_ROWS)
+      .getValue());
   }
 
   @Test
@@ -547,21 +537,18 @@ public abstract class VerifyReplicationTestBase extends TestReplicationBase {
       "--peerTableName=" + peerTableName.getNameAsString(), getClusterKey(UTIL2),
       tableName.getNameAsString() };
     Counters counters = runVerifyReplication(args, NB_ROWS_IN_BATCH - 1, 3);
-    assertEquals(
-      counters.findCounter(VerifyReplication.Verifier.Counters.FAILED_RECOMPARE).getValue(), 9);
-    assertEquals(counters.findCounter(VerifyReplication.Verifier.Counters.RECOMPARES).getValue(),
-      9);
-    assertEquals(
-      counters.findCounter(VerifyReplication.Verifier.Counters.ONLY_IN_PEER_TABLE_ROWS).getValue(),
-      1);
-    assertEquals(
-      counters.findCounter(VerifyReplication.Verifier.Counters.CONTENT_DIFFERENT_ROWS).getValue(),
-      1);
-    assertEquals(counters.findCounter(VerifyReplication.Verifier.Counters.ONLY_IN_SOURCE_TABLE_ROWS)
-      .getValue(), 1);
+    assertEquals(9,
+      counters.findCounter(VerifyReplication.Verifier.Counters.FAILED_RECOMPARE).getValue());
+    assertEquals(9, counters.findCounter(VerifyReplication.Verifier.Counters.RECOMPARES).getValue());
+    assertEquals(1,
+      counters.findCounter(VerifyReplication.Verifier.Counters.ONLY_IN_PEER_TABLE_ROWS).getValue());
+    assertEquals(1,
+      counters.findCounter(VerifyReplication.Verifier.Counters.CONTENT_DIFFERENT_ROWS).getValue());
+    assertEquals(1, counters.findCounter(VerifyReplication.Verifier.Counters.ONLY_IN_SOURCE_TABLE_ROWS)
+      .getValue());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     htable3.close();
     TestReplicationBase.tearDownAfterClass();

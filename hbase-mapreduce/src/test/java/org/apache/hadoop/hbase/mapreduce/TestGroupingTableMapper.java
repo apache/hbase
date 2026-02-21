@@ -31,16 +31,12 @@ import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MapReduceTests.class, SmallTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestGroupingTableMapper {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestGroupingTableMapper.class);
 
   /**
    * Test GroupingTableMapper class

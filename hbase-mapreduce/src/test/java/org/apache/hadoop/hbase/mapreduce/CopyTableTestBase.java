@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.commons.lang3.ArrayUtils;
@@ -39,8 +39,7 @@ import org.apache.hadoop.hbase.mob.MobTestUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Rule;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Base class for testing CopyTable MR tool.
@@ -54,9 +53,6 @@ public abstract class CopyTableTestBase {
   protected static final byte[] FAMILY_A = Bytes.toBytes(FAMILY_A_STRING);
   protected static final byte[] FAMILY_B = Bytes.toBytes(FAMILY_B_STRING);
   protected static final byte[] QUALIFIER = Bytes.toBytes("q");
-
-  @Rule
-  public TestName name = new TestName();
 
   protected abstract Table createSourceTable(TableDescriptor desc) throws Exception;
 
@@ -91,9 +87,10 @@ public abstract class CopyTableTestBase {
     }
   }
 
-  protected final void doCopyTableTest(Configuration conf, boolean bulkload) throws Exception {
-    TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
-    TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
+  protected final void doCopyTableTest(Configuration conf, boolean bulkload, TestInfo testInfo)
+    throws Exception {
+    TableName tableName1 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "1");
+    TableName tableName2 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "2");
     byte[] family = Bytes.toBytes("family");
     byte[] column = Bytes.toBytes("c1");
     TableDescriptor desc1 = TableDescriptorBuilder.newBuilder(tableName1)
@@ -123,10 +120,10 @@ public abstract class CopyTableTestBase {
     }
   }
 
-  protected final void doCopyTableTestWithMob(Configuration conf, boolean bulkload)
-    throws Exception {
-    TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
-    TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
+  protected final void doCopyTableTestWithMob(Configuration conf, boolean bulkload,
+    TestInfo testInfo) throws Exception {
+    TableName tableName1 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "1");
+    TableName tableName2 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "2");
     byte[] family = Bytes.toBytes("mob");
     byte[] column = Bytes.toBytes("c1");
 
@@ -163,15 +160,15 @@ public abstract class CopyTableTestBase {
         Result r = t2.get(g);
         assertEquals(1, r.size());
         assertTrue(CellUtil.matchingQualifier(r.rawCells()[0], column));
-        assertEquals("compare row values between two tables",
-          t1.getDescriptor().getValue("row" + i), t2.getDescriptor().getValue("row" + i));
+        assertEquals(t1.getDescriptor().getValue("row" + i), t2.getDescriptor().getValue("row" + i),
+          "compare row values between two tables");
       }
 
-      assertEquals("compare count of mob rows after table copy", MobTestUtil.countMobRows(t1),
-        MobTestUtil.countMobRows(t2));
-      assertEquals("compare count of mob row values between two tables",
-        t1.getDescriptor().getValues().size(), t2.getDescriptor().getValues().size());
-      assertTrue("The mob row count is 0 but should be > 0", MobTestUtil.countMobRows(t2) > 0);
+      assertEquals(MobTestUtil.countMobRows(t1), MobTestUtil.countMobRows(t2),
+        "compare count of mob rows after table copy");
+      assertEquals(t1.getDescriptor().getValues().size(), t2.getDescriptor().getValues().size(),
+        "compare count of mob row values between two tables");
+      assertTrue(MobTestUtil.countMobRows(t2) > 0, "The mob row count is 0 but should be > 0");
     } finally {
       dropSourceTable(tableName1);
       dropTargetTable(tableName2);
@@ -183,9 +180,9 @@ public abstract class CopyTableTestBase {
     return status == 0;
   }
 
-  protected final void testStartStopRow(Configuration conf) throws Exception {
-    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
-    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
+  protected final void testStartStopRow(Configuration conf, TestInfo testInfo) throws Exception {
+    final TableName tableName1 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "1");
+    final TableName tableName2 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "2");
     final byte[] family = Bytes.toBytes("family");
     final byte[] column = Bytes.toBytes("c1");
     final byte[] row0 = Bytes.toBytesBinary("\\x01row0");
@@ -231,9 +228,11 @@ public abstract class CopyTableTestBase {
     }
   }
 
-  protected final void testRenameFamily(Configuration conf) throws Exception {
-    TableName sourceTable = TableName.valueOf(name.getMethodName() + "-source");
-    TableName targetTable = TableName.valueOf(name.getMethodName() + "-target");
+  protected final void testRenameFamily(Configuration conf, TestInfo testInfo) throws Exception {
+    TableName sourceTable =
+      TableName.valueOf(testInfo.getTestMethod().get().getName() + "-source");
+    TableName targetTable =
+      TableName.valueOf(testInfo.getTestMethod().get().getName() + "-target");
 
     TableDescriptor desc1 = TableDescriptorBuilder.newBuilder(sourceTable)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_A))
