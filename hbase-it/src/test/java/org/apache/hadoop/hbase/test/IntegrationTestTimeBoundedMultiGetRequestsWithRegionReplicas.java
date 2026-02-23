@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -43,7 +43,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * conjunction with multiget_batchsize would have different behaviors - the batch of gets goes to
  * the same region or to multiple regions.
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestTimeBoundedMultiGetRequestsWithRegionReplicas
   extends IntegrationTestTimeBoundedRequestsWithRegionReplicas {
 

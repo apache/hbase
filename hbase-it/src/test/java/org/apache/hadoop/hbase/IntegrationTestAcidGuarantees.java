@@ -28,8 +28,8 @@ import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
@@ -45,7 +45,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
  * -DnumGetters=2 -DnumScanners=2 -DnumUniqueRows=5
  * </pre>
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestAcidGuarantees extends IntegrationTestBase {
   private static final int SERVER_COUNT = 1; // number of slaves for the smallest cluster
 

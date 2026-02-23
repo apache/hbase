@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.security.InvalidParameterException;
 import java.util.Map;
 import java.util.Set;
@@ -42,11 +45,10 @@ import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
 import org.apache.hadoop.hbase.util.MultiThreadedWriter;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,7 +56,7 @@ import org.slf4j.LoggerFactory;
  * Integration test that verifies lazy CF loading during scans by doing repeated scans with this
  * feature while multiple threads are continuously writing values; and verifying the result.
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestLazyCfLoading {
   private static final TableName TABLE_NAME =
     TableName.valueOf(IntegrationTestLazyCfLoading.class.getSimpleName());
@@ -172,7 +174,7 @@ public class IntegrationTestLazyCfLoading {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     LOG.info("Initializing cluster with " + NUM_SERVERS + " servers");
     util.initializeCluster(NUM_SERVERS);
@@ -211,7 +213,7 @@ public class IntegrationTestLazyCfLoading {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     deleteTable();
     LOG.info("Restoring the cluster");
@@ -267,18 +269,17 @@ public class IntegrationTestLazyCfLoading {
       // Verify and count the results.
       while ((result = results.next()) != null) {
         boolean isOk = writer.verifyResultAgainstDataGenerator(result, true, true);
-        Assert.assertTrue("Failed to verify [" + Bytes.toString(result.getRow()) + "]", isOk);
+        assertTrue(isOk, "Failed to verify [" + Bytes.toString(result.getRow()) + "]");
         ++resultCount;
       }
       long timeTaken = EnvironmentEdgeManager.currentTime() - startTs;
       // Verify the result count.
       long onesGennedAfterScan = dataGen.getExpectedNumberOfKeys();
-      Assert.assertTrue(
-        "Read " + resultCount + " keys when at most " + onesGennedAfterScan + " were generated ",
-        onesGennedAfterScan >= resultCount);
+      assertTrue(onesGennedAfterScan >= resultCount,
+        "Read " + resultCount + " keys when at most " + onesGennedAfterScan + " were generated ");
       if (isWriterDone) {
-        Assert.assertTrue("Read " + resultCount + " keys; the writer is done and "
-          + onesGennedAfterScan + " keys were generated", onesGennedAfterScan == resultCount);
+        assertTrue(onesGennedAfterScan == resultCount, "Read " + resultCount
+          + " keys; the writer is done and " + onesGennedAfterScan + " keys were generated");
       } else if (onesGennedBeforeScan * 0.9 > resultCount) {
         LOG.warn("Read way too few keys (" + resultCount + "/" + onesGennedBeforeScan
           + ") - there might be a problem, or the writer might just be slow");
@@ -289,8 +290,8 @@ public class IntegrationTestLazyCfLoading {
         now = EnvironmentEdgeManager.currentTime();
       }
     }
-    Assert.assertEquals("There are write failures", 0, writer.getNumWriteFailures());
-    Assert.assertTrue("Writer is not done", isWriterDone);
+    assertEquals(0, writer.getNumWriteFailures(), "There are write failures");
+    assertTrue(isWriterDone, "Writer is not done");
     // Assert.fail("Boom!");
     connection.close();
   }

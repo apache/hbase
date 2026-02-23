@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import static java.lang.String.format;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,12 +50,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,7 +64,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 /**
  * Validate ImportTsv + BulkLoadFiles on a distributed cluster.
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestImportTsv extends Configured implements Tool {
 
   private static final String NAME = IntegrationTestImportTsv.class.getSimpleName();
@@ -76,9 +75,6 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
   protected static final String simple_tsv = "row1\t1\tc1\tc2\n" + "row2\t1\tc1\tc2\n"
     + "row3\t1\tc1\tc2\n" + "row4\t1\tc1\tc2\n" + "row5\t1\tc1\tc2\n" + "row6\t1\tc1\tc2\n"
     + "row7\t1\tc1\tc2\n" + "row8\t1\tc1\tc2\n" + "row9\t1\tc1\tc2\n" + "row10\t1\tc1\tc2\n";
-
-  @Rule
-  public TestName name = new TestName();
 
   protected static final Set<KeyValue> simple_expected =
     new TreeSet<KeyValue>(CellComparator.getInstance()) {
@@ -113,7 +109,7 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
     LOG.debug("Ignoring setConf call.");
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void provisionCluster() throws Exception {
     if (null == util) {
       util = new IntegrationTestingUtility();
@@ -125,7 +121,7 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void releaseCluster() throws Exception {
     util.restoreCluster();
     if (!util.isDistributedCluster()) {
@@ -141,8 +137,8 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
 
     String[] args = { hfiles.toString(), tableName.getNameAsString() };
     LOG.info(format("Running LoadIncrememntalHFiles with args: %s", Arrays.asList(args)));
-    assertEquals("Loading HFiles failed.", 0,
-      ToolRunner.run(new BulkLoadHFilesTool(getConf()), args));
+    assertEquals(0, ToolRunner.run(new BulkLoadHFilesTool(getConf()), args),
+      "Loading HFiles failed.");
 
     Table table = null;
     Scan scan = new Scan();
@@ -156,14 +152,14 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
       while (resultsIt.hasNext() && expectedIt.hasNext()) {
         Result r = resultsIt.next();
         for (Cell actual : r.rawCells()) {
-          assertTrue("Ran out of expected values prematurely!", expectedIt.hasNext());
+          assertTrue(expectedIt.hasNext(), "Ran out of expected values prematurely!");
           KeyValue expected = expectedIt.next();
-          assertEquals("Scan produced surprising result", 0,
-            CellComparator.getInstance().compare(expected, actual));
+          assertEquals(0, CellComparator.getInstance().compare(expected, actual),
+            "Scan produced surprising result");
         }
       }
-      assertFalse("Did not consume all expected values.", expectedIt.hasNext());
-      assertFalse("Did not consume all scan results.", resultsIt.hasNext());
+      assertFalse(expectedIt.hasNext(), "Did not consume all expected values.");
+      assertFalse(resultsIt.hasNext(), "Did not consume all scan results.");
     } finally {
       if (null != table) table.close();
     }
@@ -177,12 +173,12 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
 
     FileSystem fs = FileSystem.get(conf);
     Path partitionsFile = new Path(TotalOrderPartitioner.getPartitionFile(conf));
-    assertFalse("Failed to clean up partitions file.", fs.exists(partitionsFile));
+    assertFalse(fs.exists(partitionsFile), "Failed to clean up partitions file.");
   }
 
   @Test
-  public void testGenerateAndLoad() throws Exception {
-    generateAndLoad(TableName.valueOf(name.getMethodName()));
+  public void testGenerateAndLoad(TestInfo testInfo) throws Exception {
+    generateAndLoad(TableName.valueOf(testInfo.getTestMethod().get().getName()));
   }
 
   void generateAndLoad(final TableName table) throws Exception {

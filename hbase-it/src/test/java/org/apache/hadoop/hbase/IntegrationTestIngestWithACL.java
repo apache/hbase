@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGeneratorWithACL;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
@@ -39,7 +39,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
  * WRITE permissions are not read back and cells with READ permissions are read back. Every
  * operation happens in the user's specific context
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestIngestWithACL extends IntegrationTestIngest {
 
   private static final char COLON = ':';

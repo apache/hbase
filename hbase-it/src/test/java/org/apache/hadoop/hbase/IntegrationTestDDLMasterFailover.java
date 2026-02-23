@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -195,8 +197,8 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
     // iterating concurrent map
     for (String nsName : namespaceMap.keySet()) {
       try {
-        Assert.assertTrue("Namespace: " + nsName + " in namespaceMap does not exist",
-          admin.getNamespaceDescriptor(nsName) != null);
+        assertTrue(admin.getNamespaceDescriptor(nsName) != null,
+          "Namespace: " + nsName + " in namespaceMap does not exist");
       } catch (NamespaceNotFoundException nsnfe) {
         Assert
           .fail("Namespace: " + nsName + " in namespaceMap does not exist: " + nsnfe.getMessage());
@@ -210,12 +212,12 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
     Admin admin = connection.getAdmin();
     // iterating concurrent map
     for (TableName tableName : enabledTables.keySet()) {
-      Assert.assertTrue("Table: " + tableName + " in enabledTables is not enabled",
-        admin.isTableEnabled(tableName));
+      assertTrue(admin.isTableEnabled(tableName),
+        "Table: " + tableName + " in enabledTables is not enabled");
     }
     for (TableName tableName : disabledTables.keySet()) {
-      Assert.assertTrue("Table: " + tableName + " in disabledTables is not disabled",
-        admin.isTableDisabled(tableName));
+      assertTrue(admin.isTableDisabled(tableName),
+        "Table: " + tableName + " in disabledTables is not disabled");
     }
     for (TableName tableName : deletedTables.keySet()) {
       Assert.assertFalse("Table: " + tableName + " in deletedTables is not deleted",
@@ -291,7 +293,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         LOG.info("Creating namespace:" + nsd);
         admin.createNamespace(nsd);
         NamespaceDescriptor freshNamespaceDesc = admin.getNamespaceDescriptor(nsd.getName());
-        Assert.assertTrue("Namespace: " + nsd + " was not created", freshNamespaceDesc != null);
+        assertTrue(freshNamespaceDesc != null, "Namespace: " + nsd + " was not created");
         namespaceMap.put(nsd.getName(), freshNamespaceDesc);
         LOG.info("Created namespace:" + freshNamespaceDesc);
       } catch (Exception e) {
@@ -333,10 +335,10 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         modifiedNsd.setConfiguration(nsTestConfigKey, nsValueNew);
         admin.modifyNamespace(modifiedNsd);
         NamespaceDescriptor freshNamespaceDesc = admin.getNamespaceDescriptor(namespaceName);
-        Assert.assertTrue("Namespace: " + selected + " was not modified",
-          freshNamespaceDesc.getConfigurationValue(nsTestConfigKey).equals(nsValueNew));
-        Assert.assertTrue("Namespace: " + namespaceName + " does not exist",
-          admin.getNamespaceDescriptor(namespaceName) != null);
+        assertTrue(freshNamespaceDesc.getConfigurationValue(nsTestConfigKey).equals(nsValueNew),
+          "Namespace: " + selected + " was not modified");
+        assertTrue(admin.getNamespaceDescriptor(namespaceName) != null,
+          "Namespace: " + namespaceName + " does not exist");
         namespaceMap.put(namespaceName, freshNamespaceDesc);
         LOG.info("Modified namespace :" + freshNamespaceDesc);
       } catch (Exception e) {
@@ -364,7 +366,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         try {
           if (admin.getNamespaceDescriptor(namespaceName) != null) {
             // the namespace still exists.
-            Assert.assertTrue("Namespace: " + selected + " was not deleted", false);
+            assertTrue(false, "Namespace: " + selected + " was not deleted");
           } else {
             LOG.info("Deleted namespace :" + selected);
           }
@@ -415,10 +417,10 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         byte[] endKey = Bytes.toBytes("row-" + Integer.MAX_VALUE);
         LOG.info("Creating table:" + td);
         admin.createTable(td, startKey, endKey, numRegions);
-        Assert.assertTrue("Table: " + td + " was not created", admin.tableExists(tableName));
+        assertTrue(admin.tableExists(tableName), "Table: " + td + " was not created");
         TableDescriptor freshTableDesc = admin.getDescriptor(tableName);
-        Assert.assertTrue("After create, Table: " + tableName + " in not enabled",
-          admin.isTableEnabled(tableName));
+        assertTrue(admin.isTableEnabled(tableName),
+          "After create, Table: " + tableName + " in not enabled");
         enabledTables.put(tableName, freshTableDesc);
         LOG.info("Created table:" + freshTableDesc);
       } catch (Exception e) {
@@ -453,11 +455,10 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         TableName tableName = selected.getTableName();
         LOG.info("Disabling table :" + selected);
         admin.disableTable(tableName);
-        Assert.assertTrue("Table: " + selected + " was not disabled",
-          admin.isTableDisabled(tableName));
+        assertTrue(admin.isTableDisabled(tableName), "Table: " + selected + " was not disabled");
         TableDescriptor freshTableDesc = admin.getDescriptor(tableName);
-        Assert.assertTrue("After disable, Table: " + tableName + " is not disabled",
-          admin.isTableDisabled(tableName));
+        assertTrue(admin.isTableDisabled(tableName),
+          "After disable, Table: " + tableName + " is not disabled");
         disabledTables.put(tableName, freshTableDesc);
         LOG.info("Disabled table :" + freshTableDesc);
       } catch (Exception e) {
@@ -501,11 +502,10 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         TableName tableName = selected.getTableName();
         LOG.info("Enabling table :" + selected);
         admin.enableTable(tableName);
-        Assert.assertTrue("Table: " + selected + " was not enabled",
-          admin.isTableEnabled(tableName));
+        assertTrue(admin.isTableEnabled(tableName), "Table: " + selected + " was not enabled");
         TableDescriptor freshTableDesc = admin.getDescriptor(tableName);
-        Assert.assertTrue("After enable, Table: " + tableName + " in not enabled",
-          admin.isTableEnabled(tableName));
+        assertTrue(admin.isTableEnabled(tableName),
+          "After enable, Table: " + tableName + " in not enabled");
         enabledTables.put(tableName, freshTableDesc);
         LOG.info("Enabled table :" + freshTableDesc);
       } catch (Exception e) {
@@ -598,10 +598,10 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         admin.addColumnFamily(tableName, cfd);
         // assertion
         TableDescriptor freshTableDesc = admin.getDescriptor(tableName);
-        Assert.assertTrue("Column family: " + cfd + " was not added",
-          freshTableDesc.hasColumnFamily(cfd.getName()));
-        Assert.assertTrue("After add column family, Table: " + tableName + " is not disabled",
-          admin.isTableDisabled(tableName));
+        assertTrue(freshTableDesc.hasColumnFamily(cfd.getName()),
+          "Column family: " + cfd + " was not added");
+        assertTrue(admin.isTableDisabled(tableName),
+          "After add column family, Table: " + tableName + " is not disabled");
         disabledTables.put(tableName, freshTableDesc);
         LOG.info("Added column family: " + cfd + " to table: " + tableName);
       } catch (Exception e) {
@@ -652,9 +652,8 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
           freshColumnDesc.getMaxVersions(), versions);
         Assert.assertEquals("Column family: " + freshColumnDesc + " was not altered",
           freshColumnDesc.getMinVersions(), versions);
-        Assert.assertTrue(
-          "After alter versions of column family, Table: " + tableName + " is not disabled",
-          admin.isTableDisabled(tableName));
+        assertTrue(admin.isTableDisabled(tableName),
+          "After alter versions of column family, Table: " + tableName + " is not disabled");
         disabledTables.put(tableName, freshTableDesc);
         LOG.info("Altered versions of column family: " + columnDesc + " to: " + versions
           + " in table: " + tableName);
