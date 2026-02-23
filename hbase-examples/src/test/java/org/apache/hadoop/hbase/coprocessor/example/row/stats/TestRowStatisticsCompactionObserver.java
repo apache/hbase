@@ -17,16 +17,18 @@
  */
 package org.apache.hadoop.hbase.coprocessor.example.row.stats;
 
-import static org.apache.hadoop.hbase.util.TestRegionSplitCalculator.TEST_UTIL;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
@@ -36,14 +38,23 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.example.row.stats.recorder.RowStatisticsRecorder;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+@Tag(MediumTests.TAG)
 public class TestRowStatisticsCompactionObserver {
 
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestRowStatisticsCompactionObserver.class);
+
+  public static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   public static final TestableRowStatisticsRecorder RECORDER = new TestableRowStatisticsRecorder();
   private static final TableName TABLE_NAME = TableName.valueOf("test-table");
   private static final byte[] FAMILY = Bytes.toBytes("0");
@@ -51,7 +62,7 @@ public class TestRowStatisticsCompactionObserver {
   private static Connection connection;
   private static Table table;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpClass() throws Exception {
     cluster = TEST_UTIL.startMiniCluster(1);
     connection = ConnectionFactory.createConnection(cluster.getConf());
@@ -59,17 +70,17 @@ public class TestRowStatisticsCompactionObserver {
       HConstants.DEFAULT_BLOCKSIZE, TestableRowStatisticsCompactionObserver.class.getName());
   }
 
-  @Before
-  public void setUp() throws Exception {
-    RECORDER.clear();
-  }
-
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     cluster.close();
     TEST_UTIL.shutdownMiniCluster();
     table.close();
     connection.close();
+  }
+
+  @BeforeEach
+  public void setUp() throws Exception {
+    RECORDER.clear();
   }
 
   @Test
@@ -121,42 +132,29 @@ public class TestRowStatisticsCompactionObserver {
       table.delete(d);
     }
 
-    System.out.println("Final flush");
-    connection.getAdmin().flush(table.getName());
-    Thread.sleep(5000);
-    System.out.println("Compacting");
+    LOG.info("Final flush");
+    await().atMost(Duration.ofSeconds(10))
+      .untilAsserted(() -> connection.getAdmin().flush(table.getName()));
 
-    RowStatisticsImpl lastStats = RECORDER.getLastStats(); // Just initialize
-    Boolean lastIsMajor = RECORDER.getLastIsMajor();
+    LOG.info("Compacting");
     connection.getAdmin().compact(table.getName());
-    while (lastStats == null) {
-      Thread.sleep(1000);
-
-      System.out.println("Checking stats");
-      lastStats = RECORDER.getLastStats();
-      lastIsMajor = RECORDER.getLastIsMajor();
-    }
-    assertFalse(lastIsMajor);
-    assertEquals(lastStats.getTotalDeletesCount(), 10);
-    assertEquals(lastStats.getTotalRowsCount(), 10);
+    await().during(Duration.ofSeconds(1)).atMost(Duration.ofSeconds(10))
+      .until(() -> RECORDER.getLastStats() != null);
+    assertFalse(RECORDER.getLastIsMajor());
+    assertEquals(10, RECORDER.getLastStats().getTotalDeletesCount());
+    assertEquals(10, RECORDER.getLastStats().getTotalRowsCount());
 
     RECORDER.clear();
-    lastStats = RECORDER.getLastStats();
-    lastIsMajor = RECORDER.getLastIsMajor();
     connection.getAdmin().majorCompact(table.getName());
 
     // Must wait for async majorCompaction to complete
-    while (lastStats == null) {
-      Thread.sleep(1000);
-
-      System.out.println("Checking stats");
-      lastStats = RECORDER.getLastStats();
-      lastIsMajor = RECORDER.getLastIsMajor();
-    }
-    assertTrue(lastIsMajor);
+    await().during(Duration.ofSeconds(1)).atMost(Duration.ofSeconds(10))
+      .until(() -> RECORDER.getLastStats() != null);
+    assertTrue(RECORDER.getLastIsMajor());
     // no deletes after major compact
-    assertEquals(lastStats.getTotalDeletesCount(), 0);
-    assertEquals(lastStats.getTotalRowsCount(), 10);
+    RowStatisticsImpl lastStats = RECORDER.getLastStats();
+    assertEquals(0, lastStats.getTotalDeletesCount());
+    assertEquals(10, lastStats.getTotalRowsCount());
     // can only check largest values after major compact, since the above minor compact might not
     // contain all storefiles
     assertEquals(Bytes.toInt(lastStats.getLargestRow()), largestRowNum);
@@ -184,9 +182,10 @@ public class TestRowStatisticsCompactionObserver {
 
     @Override
     public void record(RowStatisticsImpl stats, Optional<byte[]> fullRegionName) {
-      System.out.println("Record called with isMajor=" + stats.isMajor() + ", stats=" + stats
-        + ", fullRegionName=" + fullRegionName);
+      LOG.info("Record called with isMajor={}, stats={}, fullRegionName={}", stats.isMajor(), stats,
+        fullRegionName);
       lastStats = stats;
+      lastIsMajor = stats.isMajor();
     }
 
     public void clear() {
