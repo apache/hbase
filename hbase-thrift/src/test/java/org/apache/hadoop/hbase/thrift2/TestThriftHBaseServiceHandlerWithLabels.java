@@ -18,10 +18,11 @@
 package org.apache.hadoop.hbase.thrift2;
 
 import static java.nio.ByteBuffer.wrap;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -31,7 +32,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -63,22 +63,17 @@ import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestThriftHBaseServiceHandlerWithLabels {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestThriftHBaseServiceHandlerWithLabels.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestThriftHBaseServiceHandlerWithLabels.class);
@@ -127,7 +122,7 @@ public class TestThriftHBaseServiceHandlerWithLabels {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
 
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
@@ -176,12 +171,12 @@ public class TestThriftHBaseServiceHandlerWithLabels {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
 
   }
@@ -232,7 +227,7 @@ public class TestThriftHBaseServiceHandlerWithLabels {
     int scanId = handler.openScanner(table, scan);
     List<TResult> results = handler.getScannerRows(scanId, 10);
     assertEquals(9, results.size());
-    Assert.assertFalse(Bytes.equals(results.get(5).getRow(), Bytes.toBytes("testScan" + 5)));
+    assertFalse(Bytes.equals(results.get(5).getRow(), Bytes.toBytes("testScan" + 5)));
     for (int i = 0; i < 9; i++) {
       if (i < 5) {
         assertArrayEquals(Bytes.toBytes("testScan" + i), results.get(i).getRow());

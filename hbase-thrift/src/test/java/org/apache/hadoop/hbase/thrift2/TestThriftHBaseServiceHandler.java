@@ -27,12 +27,12 @@ import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.getFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.incrementFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.putFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.scanFromThrift;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -54,7 +54,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -123,15 +122,13 @@ import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -142,12 +139,9 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
  * Unit testing for ThriftServer.HBaseServiceHandler, a part of the org.apache.hadoop.hbase.thrift2
  * package.
  */
-@Category({ ClientTests.class, LargeTests.class })
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestThriftHBaseServiceHandler {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestThriftHBaseServiceHandler.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestThriftHBaseServiceHandler.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -166,9 +160,6 @@ public class TestThriftHBaseServiceHandler {
 
   private static final MetricsAssertHelper metricsHelper =
     CompatibilityFactory.getInstance(MetricsAssertHelper.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   public void assertTColumnValuesEqual(List<TColumnValue> columnValuesA,
     List<TColumnValue> columnValuesB) {
@@ -196,7 +187,7 @@ public class TestThriftHBaseServiceHandler {
     assertArrayEquals(a.getValue(), b.getValue());
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     UTIL.getConfiguration().set("hbase.client.retries.number", "3");
     UTIL.getConfiguration().setBoolean("hbase.regionserver.slowlog.buffer.enabled", true);
@@ -210,12 +201,12 @@ public class TestThriftHBaseServiceHandler {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
 
   }
@@ -1278,12 +1269,12 @@ public class TestThriftHBaseServiceHandler {
   }
 
   @Test
-  public void testMetricsWithException() throws Exception {
+  public void testMetricsWithException(TestInfo testInfo) throws Exception {
     byte[] rowkey = Bytes.toBytes("row1");
     byte[] family = Bytes.toBytes("f");
     byte[] col = Bytes.toBytes("c");
     // create a table which will throw exceptions for requests
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     HTableDescriptor tableDesc = new HTableDescriptor(tableName);
     tableDesc.addCoprocessor(ErrorThrowingGetObserver.class.getName());
     tableDesc.addFamily(new HColumnDescriptor(family));
@@ -1579,8 +1570,9 @@ public class TestThriftHBaseServiceHandler {
     assertEquals(0, result.getColumnValuesSize());
 
     // checkAndMutate -- condition should fail because the value doesn't exist.
-    assertFalse("Expected condition to not pass", handler.checkAndMutate(table, row, family,
-      qualifier, TCompareOp.EQUAL, value, tRowMutations));
+    assertFalse(
+      handler.checkAndMutate(table, row, family, qualifier, TCompareOp.EQUAL, value, tRowMutations),
+      "Expected condition to not pass");
 
     List<TColumnValue> columnValuesA = new ArrayList<>(1);
     TColumnValue columnValueA = new TColumnValue(family, qualifier, value);
@@ -1595,8 +1587,9 @@ public class TestThriftHBaseServiceHandler {
     assertTColumnValueEqual(columnValueA, result.getColumnValues().get(0));
 
     // checkAndMutate -- condition should pass since we added the value
-    assertTrue("Expected condition to pass", handler.checkAndMutate(table, row, family, qualifier,
-      TCompareOp.EQUAL, value, tRowMutations));
+    assertTrue(
+      handler.checkAndMutate(table, row, family, qualifier, TCompareOp.EQUAL, value, tRowMutations),
+      "Expected condition to pass");
 
     result = handler.get(table, new TGet(row));
     assertEquals(2, result.getColumnValuesSize());
@@ -1770,18 +1763,18 @@ public class TestThriftHBaseServiceHandler {
     Set<TServerName> tServerNames =
       ThriftUtilities.getServerNamesFromHBase(new HashSet<>(serverNames));
     List<Boolean> clearedResponses = thriftHBaseServiceHandler.clearSlowLogResponses(tServerNames);
-    clearedResponses.forEach(Assert::assertTrue);
+    clearedResponses.forEach(Assertions::assertTrue);
     TLogQueryFilter tLogQueryFilter = new TLogQueryFilter();
     tLogQueryFilter.setLimit(15);
-    Assert.assertEquals(tLogQueryFilter.getFilterByOperator(), TFilterByOperator.OR);
+    assertEquals(TFilterByOperator.OR, tLogQueryFilter.getFilterByOperator());
     LogQueryFilter logQueryFilter = ThriftUtilities.getSlowLogQueryFromThrift(tLogQueryFilter);
-    Assert.assertEquals(logQueryFilter.getFilterByOperator(), LogQueryFilter.FilterByOperator.OR);
+    assertEquals(LogQueryFilter.FilterByOperator.OR, logQueryFilter.getFilterByOperator());
     tLogQueryFilter.setFilterByOperator(TFilterByOperator.AND);
     logQueryFilter = ThriftUtilities.getSlowLogQueryFromThrift(tLogQueryFilter);
-    Assert.assertEquals(logQueryFilter.getFilterByOperator(), LogQueryFilter.FilterByOperator.AND);
+    assertEquals(LogQueryFilter.FilterByOperator.AND, logQueryFilter.getFilterByOperator());
     List<TOnlineLogRecord> tLogRecords =
       thriftHBaseServiceHandler.getSlowLogResponses(tServerNames, tLogQueryFilter);
-    assertEquals(tLogRecords.size(), 0);
+    assertEquals(0, tLogRecords.size());
   }
 
   public static class DelayingRegionObserver implements RegionCoprocessor, RegionObserver {
