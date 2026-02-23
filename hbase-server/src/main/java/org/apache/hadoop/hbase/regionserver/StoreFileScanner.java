@@ -119,7 +119,7 @@ public class StoreFileScanner implements KeyValueScanner {
     boolean cacheBlocks, boolean usePread, boolean isCompaction, boolean useDropBehind, long readPt)
     throws IOException {
     return getScannersForStoreFiles(files, cacheBlocks, usePread, isCompaction, useDropBehind, null,
-      readPt);
+      readPt, false);
   }
 
   /**
@@ -128,7 +128,7 @@ public class StoreFileScanner implements KeyValueScanner {
    */
   public static List<StoreFileScanner> getScannersForStoreFiles(Collection<HStoreFile> files,
     boolean cacheBlocks, boolean usePread, boolean isCompaction, boolean canUseDrop,
-    ScanQueryMatcher matcher, long readPt) throws IOException {
+    ScanQueryMatcher matcher, long readPt, boolean reopenStoreFileReader) throws IOException {
     if (files.isEmpty()) {
       return Collections.emptyList();
     }
@@ -138,7 +138,7 @@ public class StoreFileScanner implements KeyValueScanner {
       new PriorityQueue<>(files.size(), StoreFileComparators.SEQ_ID);
     for (HStoreFile file : files) {
       // The sort function needs metadata so we need to open reader first before sorting the list.
-      file.initReader();
+      file.initReader(reopenStoreFileReader);
       sortedFiles.add(file);
     }
     boolean succ = false;

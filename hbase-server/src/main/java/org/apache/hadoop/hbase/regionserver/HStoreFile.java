@@ -534,14 +534,21 @@ public class HStoreFile implements StoreFile {
     comparator = initialReader.getComparator();
   }
 
+  public void initReader() throws IOException {
+    initReader(false);
+  }
+
   /**
    * Initialize the reader used for pread.
    */
-  public void initReader() throws IOException {
-    if (initialReader == null) {
+  public void initReader(boolean reopen) throws IOException {
+    if (initialReader == null || reopen) {
       synchronized (this) {
-        if (initialReader == null) {
+        if (initialReader == null || reopen) {
           try {
+            if (reopen) {
+              closeStoreFile(false);
+            }
             open();
           } catch (Exception e) {
             try {
