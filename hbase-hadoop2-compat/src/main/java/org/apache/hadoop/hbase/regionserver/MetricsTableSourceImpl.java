@@ -295,6 +295,14 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
             MetricsRegionServerSource.MEMSTORE_SIZE_DESC),
           tableWrapperAgg.getMemStoreSize(tableName.getNameAsString()));
         mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.MEMSTORE_HEAP_SIZE,
+            MetricsRegionServerSource.MEMSTORE_HEAP_SIZE_DESC),
+          tableWrapperAgg.getMemStoreHeapSize(tableName.getNameAsString()));
+        mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.MEMSTORE_OFFHEAP_SIZE,
+            MetricsRegionServerSource.MEMSTORE_OFFHEAP_SIZE_DESC),
+          tableWrapperAgg.getMemStoreOffHeapSize(tableName.getNameAsString()));
+        mrb.addGauge(
           Interns.info(tableNamePrefix + MetricsRegionServerSource.STOREFILE_COUNT,
             MetricsRegionServerSource.STOREFILE_COUNT_DESC),
           tableWrapperAgg.getNumStoreFiles(tableName.getNameAsString()));

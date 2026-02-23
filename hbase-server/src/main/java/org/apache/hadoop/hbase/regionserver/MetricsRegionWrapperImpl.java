@@ -51,6 +51,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private long storeRefCount;
   private long maxCompactedStoreFileRefCount;
   private long memstoreSize;
+  private long memstoreHeapSize;
+  private long memstoreOffHeapSize;
   private long storeFileSize;
   private long maxStoreFileAge;
   private long minStoreFileAge;
@@ -119,6 +121,16 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   @Override
   public long getMemStoreSize() {
     return memstoreSize;
+  }
+
+  @Override
+  public long getMemStoreHeapSize() {
+    return memstoreHeapSize;
+  }
+
+  @Override
+  public long getMemStoreOffHeapSize() {
+    return memstoreOffHeapSize;
   }
 
   @Override
@@ -255,6 +267,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       int tempStoreRefCount = 0;
       int tempMaxCompactedStoreFileRefCount = 0;
       long tempMemstoreSize = 0;
+      long tempMemstoreHeapSize = 0;
+      long tempMemstoreOffHeapSize = 0;
       long tempStoreFileSize = 0;
       long tempMaxStoreFileAge = 0;
       long tempMinStoreFileAge = Long.MAX_VALUE;
@@ -271,7 +285,10 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
           int currentMaxCompactedStoreFileRefCount = store.getMaxCompactedStoreFileRefCount();
           tempMaxCompactedStoreFileRefCount =
             Math.max(tempMaxCompactedStoreFileRefCount, currentMaxCompactedStoreFileRefCount);
-          tempMemstoreSize += store.getMemStoreSize().getDataSize();
+          final MemStoreSize memStore = store.getMemStoreSize();
+          tempMemstoreSize += memStore.getDataSize();
+          tempMemstoreHeapSize += memStore.getHeapSize();
+          tempMemstoreOffHeapSize += memStore.getOffHeapSize();
           tempStoreFileSize += store.getStorefilesSize();
           OptionalLong storeMaxStoreFileAge = store.getMaxStoreFileAge();
           if (
@@ -332,6 +349,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       storeRefCount = tempStoreRefCount;
       maxCompactedStoreFileRefCount = tempMaxCompactedStoreFileRefCount;
       memstoreSize = tempMemstoreSize;
+      memstoreHeapSize = tempMemstoreHeapSize;
+      memstoreOffHeapSize = tempMemstoreOffHeapSize;
       storeFileSize = tempStoreFileSize;
       maxStoreFileAge = tempMaxStoreFileAge;
       if (tempMinStoreFileAge != Long.MAX_VALUE) {
