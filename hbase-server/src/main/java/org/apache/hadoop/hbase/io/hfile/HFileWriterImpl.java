@@ -250,6 +250,7 @@ public class HFileWriterImpl implements HFile.Writer {
     HFile.updateWriteLatency(EnvironmentEdgeManager.currentTime() - startTime);
   }
 
+  @Override
   public long getPos() throws IOException {
     return outputStream.getPos();
 

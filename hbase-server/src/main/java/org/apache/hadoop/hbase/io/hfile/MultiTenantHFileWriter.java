@@ -184,7 +184,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   private static final byte[][] GLOBAL_FILE_INFO_KEYS =
     new byte[][] { HStoreFile.BULKLOAD_TIME_KEY, HStoreFile.BULKLOAD_TASK_KEY,
       HStoreFile.MAJOR_COMPACTION_KEY, HStoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY,
-      HStoreFile.COMPACTION_EVENT_KEY, HStoreFile.MAX_SEQ_ID_KEY,
+      HStoreFile.COMPACTION_EVENT_KEY, HStoreFile.MAX_SEQ_ID_KEY, HStoreFile.MOB_CELLS_COUNT,
       HFileDataBlockEncoder.DATA_BLOCK_ENCODING, HFileIndexBlockEncoder.INDEX_BLOCK_ENCODING,
       HFile.Writer.MAX_MEMSTORE_TS_KEY, HFileWriterImpl.KEY_VALUE_VERSION,
       org.apache.hadoop.hbase.regionserver.CustomTieringMultiFileWriter.CUSTOM_TIERING_TIME_RANGE };
@@ -1079,6 +1079,11 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     if (this.lastCell != null) {
       this.lastCell = KeyValueUtil.toNewKeyCell((ExtendedCell) this.lastCell);
     }
+  }
+
+  @Override
+  public long getPos() throws IOException {
+    return outputStream.getPos();
   }
 
   @Override

@@ -227,6 +227,11 @@ public final class HFile {
     public void appendCustomCellTimestampsToMetadata(TimeRangeTracker timeRangeTracker)
       throws IOException;
 
+    /**
+     * Returns the current write position.
+     */
+    long getPos() throws IOException;
+
     /** Returns the path to this {@link HFile} */
     Path getPath();
 

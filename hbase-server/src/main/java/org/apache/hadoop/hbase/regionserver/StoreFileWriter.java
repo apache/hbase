@@ -688,7 +688,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     }
 
     private long getPos() throws IOException {
-      return ((HFileWriterImpl) writer).getPos();
+      return writer.getPos();
     }
 
     /**
