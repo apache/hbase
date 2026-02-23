@@ -79,23 +79,6 @@ public interface MemStore extends Closeable {
   long timeOfOldestEdit();
 
   /**
-   * Update or insert the specified cells.
-   * <p>
-   * For each Cell, insert into MemStore. This will atomically upsert the value for that
-   * row/family/qualifier. If a Cell did already exist, it will then be removed.
-   * <p>
-   * Currently the memstoreTS is kept at 0 so as each insert happens, it will be immediately
-   * visible. May want to change this so it is atomic across all KeyValues.
-   * <p>
-   * This is called under row lock, so Get operations will still see updates atomically. Scans will
-   * only see each KeyValue update as atomic.
-   * @param readpoint      readpoint below which we can safely remove duplicate Cells.
-   * @param memstoreSizing The delta in memstore size will be passed back via this. This will
-   *                       include both data size and heap overhead delta.
-   */
-  void upsert(Iterable<ExtendedCell> cells, long readpoint, MemStoreSizing memstoreSizing);
-
-  /**
    * @return scanner over the memstore. This might include scanner over the snapshot when one is
    *         present.
    */
