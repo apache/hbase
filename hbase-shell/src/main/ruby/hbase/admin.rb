@@ -1411,7 +1411,7 @@ module Hbase
     def list_namespace(regex = '.*')
       pattern = java.util.regex.Pattern.compile(regex)
       list = @admin.listNamespaces
-      list.select { |s| pattern.match(s) }
+      list.select { |s| pattern.matcher(s).matches }
     end
 
     #----------------------------------------------------------------------------------------------
