@@ -1105,7 +1105,7 @@ public class HTable implements Table {
 
   // validate for well-formedness
   private void validatePut(final Put put) throws IllegalArgumentException {
-    ConnectionUtils.validatePut(put, connConfiguration.getMaxKeyValueSize());
+    ConnectionUtils.validateMutation(put, connConfiguration.getMaxKeyValueSize());
   }
 
   /**
