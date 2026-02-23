@@ -36,12 +36,16 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -808,6 +812,15 @@ public class MultiTenantHFileWriter implements HFile.Writer {
    * @throws IOException if trailer writing fails
    */
   private void finishClose(FixedFileTrailer trailer) throws IOException {
+    // Persist encryption metadata for v4 global blocks (section index/file-info), same as v3.
+    Encryption.Context cryptoContext = fileContext.getEncryptionContext();
+    if (cryptoContext != Encryption.Context.NONE) {
+      trailer.setEncryptionKey(EncryptionUtil.wrapKey(
+        cryptoContext.getConf(), cryptoContext.getConf()
+          .get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()),
+        cryptoContext.getKey()));
+    }
+
     // Set v4-specific trailer fields
     trailer.setNumDataIndexLevels(sectionIndexWriter.getNumLevels());
     trailer.setUncompressedDataIndexSize(sectionIndexWriter.getTotalUncompressedSize());

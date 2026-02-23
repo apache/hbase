@@ -85,7 +85,7 @@ public class TestEncryptionKeyRotation {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    conf.setInt("hfile.format.version", 3);
+    conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockAesKeyProvider.class.getName());
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
 
