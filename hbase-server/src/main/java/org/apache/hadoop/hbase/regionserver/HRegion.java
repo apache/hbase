@@ -65,6 +65,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -375,6 +376,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   final LongAdder flushesQueued = new LongAdder();
 
   private BlockCache blockCache;
+  private RowCache rowCache;
   private MobFileCache mobFileCache;
   private final WAL wal;
   private final HRegionFileSystem fs;
@@ -432,6 +434,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * The sequence ID that was enLongAddered when this region was opened.
    */
   private long openSeqNum = HConstants.NO_SEQNUM;
+
+  /**
+   * Basically the same as openSeqNum, but it is updated when bulk load is done.
+   */
+  private final AtomicLong rowCacheSeqNum = new AtomicLong(HConstants.NO_SEQNUM);
+
+  /**
+   * The setting for whether to enable row cache for this region.
+   */
+  private final boolean isRowCacheEnabled;
 
   /**
    * The default setting for whether to enable on-demand CF loading for scan requests to this
@@ -847,6 +859,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (this.rsServices != null) {
       this.blockCache = rsServices.getBlockCache().orElse(null);
       this.mobFileCache = rsServices.getMobFileCache().orElse(null);
+      this.rowCache = rsServices.getRowCache();
     }
     this.regionServicesForStores = new RegionServicesForStores(this, rsServices);
 
@@ -929,6 +942,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     minBlockSizeBytes = Arrays.stream(this.htableDescriptor.getColumnFamilies())
       .mapToInt(ColumnFamilyDescriptor::getBlocksize).min().orElse(HConstants.DEFAULT_BLOCKSIZE);
+
+    this.isRowCacheEnabled = checkRowCacheConfig();
+  }
+
+  private boolean checkRowCacheConfig() {
+    Boolean fromDescriptor = htableDescriptor.getRowCacheEnabled();
+    // The setting from TableDescriptor has higher priority than the global configuration
+    return fromDescriptor != null
+      ? fromDescriptor
+      : conf.getBoolean(HConstants.ROW_CACHE_ENABLED_KEY, HConstants.ROW_CACHE_ENABLED_DEFAULT);
   }
 
   private void setHTableSpecificConf() {
@@ -3236,6 +3259,31 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return getScanner(scan, null);
   }
 
+  RegionScannerImpl getScannerWithResults(Get get, Scan scan, List<Cell> results)
+    throws IOException {
+    if (!rowCache.canCacheRow(get, this)) {
+      return getScannerWithResults(scan, results);
+    }
+
+    // Try get from row cache
+    RowCacheKey key = new RowCacheKey(this, get.getRow());
+    if (rowCache.tryGetFromCache(key, get, results)) {
+      // Cache is hit, and then no scanner is created
+      return null;
+    }
+
+    RegionScannerImpl scanner = getScannerWithResults(scan, results);
+    rowCache.populateCache(results, key);
+    return scanner;
+  }
+
+  private RegionScannerImpl getScannerWithResults(Scan scan, List<Cell> results)
+    throws IOException {
+    RegionScannerImpl scanner = getScanner(scan);
+    scanner.next(results);
+    return scanner;
+  }
+
   @Override
   public RegionScannerImpl getScanner(Scan scan, List<KeyValueScanner> additionalScanners)
     throws IOException {
@@ -4775,9 +4823,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   OperationStatus[] batchMutate(Mutation[] mutations, boolean atomic) throws IOException {
-    return TraceUtil.trace(
-      () -> batchMutate(mutations, atomic, HConstants.NO_NONCE, HConstants.NO_NONCE),
-      () -> createRegionSpan("Region.batchMutate"));
+    OperationStatus[] operationStatuses =
+      rowCache.mutateWithRowCacheBarrier(this, Arrays.asList(mutations),
+        () -> this.batchMutate(mutations, atomic, HConstants.NO_NONCE, HConstants.NO_NONCE));
+    return TraceUtil.trace(() -> operationStatuses, () -> createRegionSpan("Region.batchMutate"));
   }
 
   /**
@@ -5062,7 +5111,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   public CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate, long nonceGroup,
     long nonce) throws IOException {
-    return TraceUtil.trace(() -> checkAndMutateInternal(checkAndMutate, nonceGroup, nonce),
+    CheckAndMutateResult checkAndMutateResult = rowCache.mutateWithRowCacheBarrier(this,
+      checkAndMutate.getRow(), () -> this.checkAndMutate(checkAndMutate, nonceGroup, nonce));
+    return TraceUtil.trace(() -> checkAndMutateResult,
       () -> createRegionSpan("Region.checkAndMutate"));
   }
 
@@ -5261,6 +5312,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private OperationStatus mutate(Mutation mutation, boolean atomic, long nonceGroup, long nonce)
     throws IOException {
+    return rowCache.mutateWithRowCacheBarrier(this, mutation.getRow(),
+      () -> this.mutateInternal(mutation, atomic, nonceGroup, nonce));
+  }
+
+  private OperationStatus mutateInternal(Mutation mutation, boolean atomic, long nonceGroup,
+    long nonce) throws IOException {
     OperationStatus[] status =
       this.batchMutate(new Mutation[] { mutation }, atomic, nonceGroup, nonce);
     if (status[0].getOperationStatusCode().equals(OperationStatusCode.SANITY_CHECK_FAILURE)) {
@@ -7881,6 +7938,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       LOG.debug("checking classloading for " + this.getRegionInfo().getEncodedName());
       TableDescriptorChecker.checkClassLoading(cConfig, htableDescriptor);
       this.openSeqNum = initialize(reporter);
+      this.rowCacheSeqNum.set(this.openSeqNum);
       this.mvcc.advanceTo(openSeqNum);
       // The openSeqNum must be increased every time when a region is assigned, as we rely on it to
       // determine whether a region has been successfully reopened. So here we always write open
@@ -8707,6 +8765,22 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /** Returns the latest sequence number that was read from storage when this region was opened */
   public long getOpenSeqNum() {
     return this.openSeqNum;
+  }
+
+  public long getRowCacheSeqNum() {
+    return this.rowCacheSeqNum.get();
+  }
+
+  @Override
+  public boolean isRowCacheEnabled() {
+    return isRowCacheEnabled;
+  }
+
+  /**
+   * This is used to invalidate the row cache of the bulk-loaded region.
+   */
+  public void increaseRowCacheSeqNum() {
+    this.rowCacheSeqNum.incrementAndGet();
   }
 
   @Override
