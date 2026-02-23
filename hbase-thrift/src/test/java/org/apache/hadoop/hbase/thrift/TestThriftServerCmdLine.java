@@ -22,17 +22,17 @@ import static org.apache.hadoop.hbase.thrift.Constants.COMPACT_OPTION;
 import static org.apache.hadoop.hbase.thrift.Constants.FRAMED_OPTION;
 import static org.apache.hadoop.hbase.thrift.Constants.INFOPORT_OPTION;
 import static org.apache.hadoop.hbase.thrift.Constants.PORT_OPTION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.function.Supplier;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.net.BoundSocketMaker;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -50,14 +50,11 @@ import org.apache.thrift.server.TServer;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.layered.TFramedTransport;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,13 +64,10 @@ import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
  * Start the HBase Thrift server on a random port through the command-line interface and talk to it
  * from client side.
  */
-@Category({ ClientTests.class, LargeTests.class })
-@RunWith(Parameterized.class)
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestThriftServerCmdLine {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestThriftServerCmdLine.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestThriftServerCmdLine.class);
 
@@ -84,9 +78,8 @@ public class TestThriftServerCmdLine {
 
   protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @Parameters
-  public static Collection<Object[]> getParameters() {
-    Collection<Object[]> parameters = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     for (ImplType implType : ImplType.values()) {
       for (boolean specifyFramed : new boolean[] { false, true }) {
         for (boolean specifyBindIP : new boolean[] { false, true }) {
@@ -94,12 +87,12 @@ public class TestThriftServerCmdLine {
             continue;
           }
           for (boolean specifyCompact : new boolean[] { false, true }) {
-            parameters.add(new Object[] { implType, specifyFramed, specifyBindIP, specifyCompact });
+            params.add(Arguments.of(implType, specifyFramed, specifyBindIP, specifyCompact));
           }
         }
       }
     }
-    return parameters;
+    return params.stream();
   }
 
   public TestThriftServerCmdLine(ImplType implType, boolean specifyFramed, boolean specifyBindIP,
@@ -116,7 +109,7 @@ public class TestThriftServerCmdLine {
       + "specifyBindIP=" + specifyBindIP + ", " + "specifyCompact=" + specifyCompact;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, false);
     TEST_UTIL.startMiniCluster();
@@ -125,7 +118,7 @@ public class TestThriftServerCmdLine {
     EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
     EnvironmentEdgeManager.reset();
@@ -276,7 +269,7 @@ public class TestThriftServerCmdLine {
     return false;
   }
 
-  @Test
+  @TestTemplate
   public void testRunThriftServer() throws Exception {
     // Add retries in case we see stuff like connection reset
     Exception clientSideException = null;
