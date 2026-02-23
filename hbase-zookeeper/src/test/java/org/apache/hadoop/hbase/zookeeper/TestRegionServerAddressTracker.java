@@ -19,11 +19,10 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseZKTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -32,26 +31,21 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.zookeeper.KeeperException;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ ZKTests.class, MediumTests.class })
+@Tag(ZKTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionServerAddressTracker {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerAddressTracker.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerAddressTracker.class);
 
@@ -61,28 +55,27 @@ public class TestRegionServerAddressTracker {
 
   private RegionServerAddressTracker tracker;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniZKCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniZKCluster();
   }
 
-  @Before
-  public void setUp() throws ZooKeeperConnectionException, IOException, KeeperException {
-    TEST_UTIL.getConfiguration().set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/" + name.getMethodName());
-    zk = new ZKWatcher(TEST_UTIL.getConfiguration(), name.getMethodName(), null);
+  @BeforeEach
+  public void setUp(TestInfo testInfo)
+    throws ZooKeeperConnectionException, IOException, KeeperException {
+    TEST_UTIL.getConfiguration().set(HConstants.ZOOKEEPER_ZNODE_PARENT,
+      "/" + testInfo.getDisplayName());
+    zk = new ZKWatcher(TEST_UTIL.getConfiguration(), testInfo.getDisplayName(), null);
     ZKUtil.createWithParents(zk, zk.getZNodePaths().rsZNode);
     tracker = new RegionServerAddressTracker(zk, new WarnOnlyAbortable());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     Closeables.close(zk, true);
   }
