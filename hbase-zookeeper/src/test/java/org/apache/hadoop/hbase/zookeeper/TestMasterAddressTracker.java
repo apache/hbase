@@ -17,36 +17,31 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.concurrent.Semaphore;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseZKTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ZKTests.class, MediumTests.class })
+@Tag(ZKTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMasterAddressTracker {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterAddressTracker.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterAddressTracker.class);
 
@@ -55,22 +50,26 @@ public class TestMasterAddressTracker {
   // Cleaned up after each unit test.
   private ZKWatcher zk;
 
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
-  @After
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    methodName = testInfo.getTestMethod().get().getName();
+  }
+
+  @AfterEach
   public void cleanUp() {
     if (zk != null) {
       zk.close();
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniZKCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniZKCluster();
   }
@@ -81,11 +80,12 @@ public class TestMasterAddressTracker {
       ServerName.valueOf("localhost", 1234, EnvironmentEdgeManager.currentTime());
     final MasterAddressTracker addressTracker = setupMasterTracker(sn, 1772);
     try {
-      assertFalse("shouldn't have deleted wrong master server.",
-        MasterAddressTracker.deleteIfEquals(addressTracker.getWatcher(), "some other string."));
+      assertFalse(
+        MasterAddressTracker.deleteIfEquals(addressTracker.getWatcher(), "some other string."),
+        "shouldn't have deleted wrong master server.");
     } finally {
-      assertTrue("Couldn't clean up master",
-        MasterAddressTracker.deleteIfEquals(addressTracker.getWatcher(), sn.toString()));
+      assertTrue(MasterAddressTracker.deleteIfEquals(addressTracker.getWatcher(), sn.toString()),
+        "Couldn't clean up master");
     }
   }
 
@@ -96,7 +96,7 @@ public class TestMasterAddressTracker {
    */
   private MasterAddressTracker setupMasterTracker(final ServerName sn, final int infoPort)
     throws Exception {
-    zk = new ZKWatcher(TEST_UTIL.getConfiguration(), name.getMethodName(), null);
+    zk = new ZKWatcher(TEST_UTIL.getConfiguration(), methodName, null);
     ZKUtil.createAndFailSilent(zk, zk.getZNodePaths().baseZNode);
     ZKUtil.createAndFailSilent(zk, zk.getZNodePaths().backupMasterAddressesZNode);
 
@@ -138,17 +138,17 @@ public class TestMasterAddressTracker {
     try {
       assertTrue(addressTracker.hasMaster());
       ServerName pulledAddress = addressTracker.getMasterAddress();
-      assertTrue(pulledAddress.equals(sn));
+      assertEquals(pulledAddress, sn);
       assertEquals(infoPort, addressTracker.getMasterInfoPort());
     } finally {
-      assertTrue("Couldn't clean up master",
-        MasterAddressTracker.deleteIfEquals(addressTracker.getWatcher(), sn.toString()));
+      assertTrue(MasterAddressTracker.deleteIfEquals(addressTracker.getWatcher(), sn.toString()),
+        "Couldn't clean up master");
     }
   }
 
   @Test
   public void testParsingNull() throws Exception {
-    assertNull("parse on null data should return null.", MasterAddressTracker.parse(null));
+    assertNull(MasterAddressTracker.parse(null), "parse on null data should return null.");
   }
 
   @Test
@@ -157,12 +157,12 @@ public class TestMasterAddressTracker {
       ServerName.valueOf("localhost", 1234, EnvironmentEdgeManager.currentTime());
     final MasterAddressTracker addressTracker = setupMasterTracker(sn, 1772);
     try {
-      assertEquals("Should receive 0 for backup not found.", 0,
-        addressTracker.getBackupMasterInfoPort(ServerName.valueOf("doesnotexist.example.com", 1234,
-          EnvironmentEdgeManager.currentTime())));
+      assertEquals(0, addressTracker.getBackupMasterInfoPort(
+        ServerName.valueOf("doesnotexist.example.com", 1234, EnvironmentEdgeManager.currentTime())),
+        "Should receive 0 for backup not found.");
     } finally {
-      assertTrue("Couldn't clean up master",
-        MasterAddressTracker.deleteIfEquals(addressTracker.getWatcher(), sn.toString()));
+      assertTrue(MasterAddressTracker.deleteIfEquals(addressTracker.getWatcher(), sn.toString()),
+        "Couldn't clean up master");
     }
   }
 
@@ -170,8 +170,8 @@ public class TestMasterAddressTracker {
   public void testNoMaster() throws Exception {
     final MasterAddressTracker addressTracker = setupMasterTracker(null, 1772);
     assertFalse(addressTracker.hasMaster());
-    assertNull("should get null master when none active.", addressTracker.getMasterAddress());
-    assertEquals("Should receive 0 for backup not found.", 0, addressTracker.getMasterInfoPort());
+    assertNull(addressTracker.getMasterAddress(), "should get null master when none active.");
+    assertEquals(0, addressTracker.getMasterInfoPort(), "Should receive 0 for backup not found.");
   }
 
   @Test
