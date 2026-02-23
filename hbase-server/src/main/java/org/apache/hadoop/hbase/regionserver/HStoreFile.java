@@ -525,9 +525,9 @@ public class HStoreFile implements StoreFile {
    * Initialize the reader used for pread.
    */
   public void initReader() throws IOException {
-    if (initialReader == null) {
+    if (initialReader == null || initialReader.isClosed()) {
       synchronized (this) {
-        if (initialReader == null) {
+        if (initialReader == null || initialReader.isClosed()) {
           try {
             open();
           } catch (Exception e) {

@@ -2163,15 +2163,14 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
   }
 
   /**
-   * For HFile v4 multi-tenant files, effective encoding is ignored.
-   * @param isCompaction whether this is for a compaction
-   * @return always NONE for multi-tenant HFiles
+   * Expose effective data block encoding using a representative section reader.
+   * <p>
+   * This preserves legacy reader semantics for v4 containers by delegating to one section's
+   * underlying v3 reader.
    */
   @Override
   public DataBlockEncoding getEffectiveEncodingInCache(boolean isCompaction) {
-    // HFile v4 multi-tenant files ignore effective encoding
-    LOG.debug("Effective encoding ignored for HFile v4 multi-tenant files");
-    return DataBlockEncoding.NONE;
+    return resolveSectionDataBlockEncoding(isCompaction);
   }
 
   /**
@@ -2274,14 +2273,74 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
   }
 
   /**
-   * For HFile v4 multi-tenant files, data block encoding is ignored at file level.
-   * @return always NONE for multi-tenant HFiles
+   * Expose data block encoding using a representative section reader.
+   * <p>
+   * This preserves v3-style expectations for callers that read encoding from the top-level reader.
    */
   @Override
   public DataBlockEncoding getDataBlockEncoding() {
-    // HFile v4 multi-tenant files ignore data block encoding at file level
-    LOG.debug("Data block encoding ignored for HFile v4 multi-tenant files");
+    return resolveSectionDataBlockEncoding(false);
+  }
+
+  private DataBlockEncoding resolveSectionDataBlockEncoding(boolean isCompaction) {
+    byte[] hint = dataBlockIndexSectionHint.get();
+    DataBlockEncoding hintedEncoding = loadDataBlockEncodingFromSection(hint, isCompaction);
+    if (hintedEncoding != null) {
+      return hintedEncoding;
+    }
+    if (hint != null) {
+      dataBlockIndexSectionHint.compareAndSet(hint, null);
+    }
+
+    if (sectionIds == null || sectionIds.isEmpty()) {
+      return DataBlockEncoding.NONE;
+    }
+
+    for (ImmutableBytesWritable sectionId : sectionIds) {
+      byte[] candidateSectionId = copySectionId(sectionId);
+      if (hint != null && Bytes.equals(candidateSectionId, hint)) {
+        continue;
+      }
+      DataBlockEncoding encoding =
+        loadDataBlockEncodingFromSection(candidateSectionId, isCompaction);
+      if (encoding != null) {
+        if (dataBlockIndexCacheEnabled) {
+          dataBlockIndexSectionHint.compareAndSet(null, candidateSectionId);
+        }
+        return encoding;
+      }
+    }
+
     return DataBlockEncoding.NONE;
+  }
+
+  private DataBlockEncoding loadDataBlockEncodingFromSection(byte[] sectionId, boolean isCompaction) {
+    if (sectionId == null) {
+      return null;
+    }
+    SectionReaderLease lease;
+    try {
+      lease = getSectionReader(sectionId);
+    } catch (IOException e) {
+      LOG.debug("Failed to get section reader for encoding in section {}",
+        Bytes.toStringBinary(sectionId), e);
+      return null;
+    }
+    if (lease == null) {
+      return null;
+    }
+    try (lease) {
+      HFileReaderImpl sectionReader = lease.getReader();
+      if (sectionReader == null) {
+        return null;
+      }
+      return isCompaction ? sectionReader.getEffectiveEncodingInCache(isCompaction)
+        : sectionReader.getDataBlockEncoding();
+    } catch (IOException e) {
+      LOG.debug("Failed to load data block encoding from section {}", Bytes.toStringBinary(sectionId),
+        e);
+      return null;
+    }
   }
 
   /**

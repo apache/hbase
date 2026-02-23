@@ -79,6 +79,11 @@ public class StoreFileReader {
   private KeyValue.KeyOnlyKeyValue lastBloomKeyOnlyKV = null;
   private boolean skipResetSeqId = true;
   private int prefixLength = -1;
+  /**
+   * True when bloom metrics need explicit tracking in this class because the loaded BloomFilter
+   * instance is sourced from a multi-tenant section reader and is not wired with metrics.
+   */
+  private boolean bloomMetricsTrackedExternally = false;
   protected Configuration conf;
 
   /**
@@ -88,11 +93,29 @@ public class StoreFileReader {
    */
   private final StoreFileInfo storeFileInfo;
   private final ReaderContext context;
+  private volatile boolean closed;
 
   private void incrementBloomEligible() {
     if (bloomFilterMetrics != null) {
       bloomFilterMetrics.incrementEligible();
     }
+  }
+
+  private void incrementBloomRequests(boolean passed) {
+    if (bloomFilterMetrics != null) {
+      bloomFilterMetrics.incrementRequests(passed);
+    }
+  }
+
+  private void recordExternalBloomMetric(boolean passed) {
+    if (!bloomMetricsTrackedExternally) {
+      return;
+    }
+    if (bloomFilterType == BloomType.NONE || generalBloomFilter == null) {
+      incrementBloomEligible();
+      return;
+    }
+    incrementBloomRequests(passed);
   }
 
   private StoreFileReader(HFile.Reader reader, StoreFileInfo storeFileInfo, ReaderContext context,
@@ -198,7 +221,20 @@ public class StoreFileReader {
   }
 
   public void close(boolean evictOnClose) throws IOException {
-    reader.close(evictOnClose);
+    if (closed) {
+      return;
+    }
+    try {
+      if (reader != null) {
+        reader.close(evictOnClose);
+      }
+    } finally {
+      closed = true;
+    }
+  }
+
+  boolean isClosed() {
+    return closed;
   }
 
   /**
@@ -305,10 +341,11 @@ public class StoreFileReader {
    */
   private boolean passesGeneralRowBloomFilter(byte[] row, int rowOffset, int rowLen) {
     if (reader instanceof MultiTenantBloomSupport) {
-      incrementBloomEligible();
       try {
-        return ((MultiTenantBloomSupport) reader).passesGeneralRowBloomFilter(row, rowOffset,
-          rowLen);
+        boolean passed =
+          ((MultiTenantBloomSupport) reader).passesGeneralRowBloomFilter(row, rowOffset, rowLen);
+        recordExternalBloomMetric(passed);
+        return passed;
       } catch (IOException e) {
         LOG.warn("Failed multi-tenant row bloom check, proceeding without", e);
         return true;
@@ -336,9 +373,10 @@ public class StoreFileReader {
    */
   public boolean passesGeneralRowColBloomFilter(ExtendedCell cell) {
     if (reader instanceof MultiTenantBloomSupport) {
-      incrementBloomEligible();
       try {
-        return ((MultiTenantBloomSupport) reader).passesGeneralRowColBloomFilter(cell);
+        boolean passed = ((MultiTenantBloomSupport) reader).passesGeneralRowColBloomFilter(cell);
+        recordExternalBloomMetric(passed);
+        return passed;
       } catch (IOException e) {
         LOG.warn("Failed multi-tenant row/col bloom check, proceeding without", e);
         return true;
@@ -444,6 +482,7 @@ public class StoreFileReader {
           exists = !keyIsAfterLast && bloomFilter.contains(key, 0, key.length, bloom);
         }
 
+        recordExternalBloomMetric(exists);
         return exists;
       }
     } catch (IOException e) {
@@ -549,6 +588,7 @@ public class StoreFileReader {
     try {
       this.bloomFilterMetrics = metrics;
       if (blockType == BlockType.GENERAL_BLOOM_META) {
+        bloomMetricsTrackedExternally = false;
         if (this.generalBloomFilter != null) return; // Bloom has been loaded
 
         DataInput bloomMeta = reader.getGeneralBloomFilterMetadata();
@@ -567,6 +607,7 @@ public class StoreFileReader {
         } else if (reader instanceof MultiTenantBloomSupport) {
           try {
             generalBloomFilter = ((MultiTenantBloomSupport) reader).getGeneralBloomFilterInstance();
+            bloomMetricsTrackedExternally = generalBloomFilter != null;
           } catch (IOException e) {
             LOG.debug("Failed to obtain general bloom filter from multi-tenant reader", e);
           }

@@ -177,6 +177,16 @@ public class MultiTenantHFileWriter implements HFile.Writer {
 
   /** Absolute offset where each section's load-on-open data begins (max across sections) */
   private long maxSectionDataEndOffset = 0;
+  /**
+   * Absolute offset of the first data block across all sections, if any.
+   * Compatibility envelope for legacy trailer consumers that expect a single global data range.
+   */
+  private long globalFirstDataBlockOffset = -1L;
+  /**
+   * Absolute offset of the last data block across all sections, if any.
+   * Compatibility envelope for legacy trailer consumers that expect a single global data range.
+   */
+  private long globalLastDataBlockOffset = -1L;
   /** Absolute offset where the global section index root block starts */
   private long sectionIndexRootOffset = -1;
   /** HFile v4 trailer */
@@ -189,6 +199,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     new byte[][] { HStoreFile.BULKLOAD_TIME_KEY, HStoreFile.BULKLOAD_TASK_KEY,
       HStoreFile.MAJOR_COMPACTION_KEY, HStoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY,
       HStoreFile.COMPACTION_EVENT_KEY, HStoreFile.MAX_SEQ_ID_KEY, HStoreFile.MOB_CELLS_COUNT,
+      HStoreFile.MOB_FILE_REFS,
       HFileDataBlockEncoder.DATA_BLOCK_ENCODING, HFileIndexBlockEncoder.INDEX_BLOCK_ENCODING,
       HFile.Writer.MAX_MEMSTORE_TS_KEY, HFileWriterImpl.KEY_VALUE_VERSION,
       org.apache.hadoop.hbase.regionserver.CustomTieringMultiFileWriter.CUSTOM_TIERING_TIME_RANGE };
@@ -556,6 +567,18 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       if (sectionDataEnd >= 0) {
         maxSectionDataEndOffset = Math.max(maxSectionDataEndOffset, sectionDataEnd);
       }
+      // Aggregate section-local data bounds into a global compatibility envelope.
+      long sectionFirstDataOffset = currentSectionWriter.getSectionFirstDataBlockOffset();
+      if (
+        sectionFirstDataOffset >= 0
+          && (globalFirstDataBlockOffset < 0 || sectionFirstDataOffset < globalFirstDataBlockOffset)
+      ) {
+        globalFirstDataBlockOffset = sectionFirstDataOffset;
+      }
+      long sectionLastDataOffset = currentSectionWriter.getSectionLastDataBlockOffset();
+      if (sectionLastDataOffset >= 0 && sectionLastDataOffset > globalLastDataBlockOffset) {
+        globalLastDataBlockOffset = sectionLastDataOffset;
+      }
 
       // Get current position to calculate section size
       long sectionEndOffset = outputStream.getPos();
@@ -830,9 +853,11 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     trailer.setMultiTenant(true);
     trailer.setTenantPrefixLength(tenantExtractor.getPrefixLength());
 
-    // For v4 files, these indicate no global data blocks (data is in sections)
-    trailer.setFirstDataBlockOffset(-1); // UNSET indicates no global data blocks
-    trailer.setLastDataBlockOffset(-1); // UNSET indicates no global data blocks
+    // Compatibility contract: expose global min/max bounds so v2/v3-style callers do not fail.
+    // For multi-section v4 files this is an envelope, not a contiguous data-only guarantee.
+    // TODO: Migrate remaining callers to section-aware traversal and retire this compatibility path.
+    trailer.setFirstDataBlockOffset(globalFirstDataBlockOffset);
+    trailer.setLastDataBlockOffset(globalLastDataBlockOffset);
 
     // Set other standard trailer fields
     trailer.setComparatorClass(fileContext.getCellComparator().getClass());
@@ -1169,6 +1194,10 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     private boolean closed = false;
     /** Absolute offset where this section's load-on-open data begins */
     private long sectionLoadOnOpenOffset = -1L;
+    /** Absolute offset of this section's first data block, or -1 if section is empty */
+    private long sectionFirstDataBlockOffset = -1L;
+    /** Absolute offset of this section's last data block, or -1 if section is empty */
+    private long sectionLastDataBlockOffset = -1L;
 
     /**
      * Creates a section writer for a specific tenant section.
@@ -1364,6 +1393,14 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       return sectionLoadOnOpenOffset;
     }
 
+    public long getSectionFirstDataBlockOffset() {
+      return sectionFirstDataBlockOffset;
+    }
+
+    public long getSectionLastDataBlockOffset() {
+      return sectionLastDataBlockOffset;
+    }
+
     @Override
     public Path getPath() {
       // Return the parent file path
@@ -1408,6 +1445,14 @@ public class MultiTenantHFileWriter implements HFile.Writer {
 
     @Override
     protected void finishClose(FixedFileTrailer trailer) throws IOException {
+      long firstDataBlockOffset = trailer.getFirstDataBlockOffset();
+      if (firstDataBlockOffset >= 0) {
+        sectionFirstDataBlockOffset = sectionStartOffset + firstDataBlockOffset;
+      }
+      long lastDataBlockOffset = trailer.getLastDataBlockOffset();
+      if (lastDataBlockOffset >= 0) {
+        sectionLastDataBlockOffset = sectionStartOffset + lastDataBlockOffset;
+      }
       sectionLoadOnOpenOffset = sectionStartOffset + trailer.getLoadOnOpenDataOffset();
       super.finishClose(trailer);
     }
