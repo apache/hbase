@@ -55,7 +55,7 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
 
   @Override
   protected void readWALEntries(WALEntryStream entryStream, WALEntryBatch batch)
-    throws InterruptedException {
+    throws InterruptedException, IOException {
     Path currentPath = entryStream.getCurrentPath();
     long positionBefore = entryStream.getPosition();
     for (;;) {
