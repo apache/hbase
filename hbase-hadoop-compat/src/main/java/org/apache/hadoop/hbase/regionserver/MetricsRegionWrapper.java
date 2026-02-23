@@ -61,6 +61,16 @@ public interface MetricsRegionWrapper {
   long getMemStoreSize();
 
   /**
+   * Get the size of the on heap memstore of this region
+   */
+  long getMemStoreHeapSize();
+
+  /**
+   * Get the size of the off heap memstore of this region
+   */
+  long getMemStoreOffHeapSize();
+
+  /**
    * Get the total size of the store files this region server is serving from.
    */
   long getStoreFileSize();
