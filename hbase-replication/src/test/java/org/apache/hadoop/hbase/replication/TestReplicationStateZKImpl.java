@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.replication;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterId;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseZKTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -31,26 +30,22 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.zookeeper.KeeperException;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 
-@Category({ ReplicationTests.class, MediumTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationStateZKImpl.class);
 
   private static Configuration conf;
   private static HBaseZKTestingUtility utility;
   private static ZKWatcher zkw;
   private static String replicationZNode;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     utility = new HBaseZKTestingUtility();
     utility.startMiniZKCluster();
@@ -76,20 +71,20 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
     return ZKConfig.getZooKeeperClusterKey(testConf);
   }
 
-  @Before
-  public void setUp() {
+  @BeforeEach
+  public void setUp() throws IOException {
     zkTimeoutCount = 0;
     rqs = ReplicationStorageFactory.getReplicationQueueStorage(zkw, conf);
     rp = ReplicationFactory.getReplicationPeers(zkw, conf);
     OUR_KEY = ZKConfig.getZooKeeperClusterKey(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws KeeperException, IOException {
     ZKUtil.deleteNodeRecursively(zkw, replicationZNode);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     utility.shutdownMiniZKCluster();
   }

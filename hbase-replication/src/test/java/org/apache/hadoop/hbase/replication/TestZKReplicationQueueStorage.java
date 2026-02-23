@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseZKTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -40,38 +39,34 @@ import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.zookeeper.KeeperException;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
-@Category({ ReplicationTests.class, MediumTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestZKReplicationQueueStorage {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZKReplicationQueueStorage.class);
 
   private static final HBaseZKTestingUtility UTIL = new HBaseZKTestingUtility();
 
   private static ZKReplicationQueueStorage STORAGE;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniZKCluster();
     STORAGE = new ZKReplicationQueueStorage(UTIL.getZooKeeperWatcher(), UTIL.getConfiguration());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     UTIL.shutdownMiniZKCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDownAfterTest() throws ReplicationException, KeeperException, IOException {
     for (ServerName serverName : STORAGE.getListOfReplicators()) {
       for (String queue : STORAGE.getAllQueues(serverName)) {
