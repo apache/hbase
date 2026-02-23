@@ -47,7 +47,15 @@ public class ScanMetrics extends ServerSideScanMetrics {
   public static final String REGIONS_SCANNED_METRIC_NAME = "REGIONS_SCANNED";
   public static final String RPC_RETRIES_METRIC_NAME = "RPC_RETRIES";
   public static final String REMOTE_RPC_RETRIES_METRIC_NAME = "REMOTE_RPC_RETRIES";
-
+  public static final String CLIENT_THREAD_POOL_WAIT_TIME_MS_METRIC_NAME =            "CLIENT_THREAD_POOL_WAIT_TIME_MS";
+  public static final String CLIENT_THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME =
+    "CLIENT_THREAD_POOL_EXECUTION_TIME_MS";
+  public static final String CLIENT_SCAN_PREPARE_TIME_MS_METRIC_NAME = "CLIENT_SCAN_PREPARE_TIME_MS";
+  public static final String CLIENT_SCAN_EXECUTION_TIME_MS_METRIC_NAME = "CLIENT_SCAN_EXECUTION_TIME_MS";
+  public static final String CLIENT_RPC_ROUND_TRIP_TIME_MS_METRIC_NAME =
+    "CLIENT_RPC_ROUND_TRIP_TIME_MS";
+  public static final String CLIENT_CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME =
+    "CLIENT_CACHE_LOAD_WAIT_TIME_MS";
   /**
    * number of RPC calls
    */
@@ -95,6 +103,23 @@ public class ScanMetrics extends ServerSideScanMetrics {
    */
   public final AtomicLong countOfRemoteRPCRetries = createCounter(REMOTE_RPC_RETRIES_METRIC_NAME);
 
+  public final AtomicLong clientThreadPoolWaitTimeMs =
+    createCounter(CLIENT_THREAD_POOL_WAIT_TIME_MS_METRIC_NAME);
+  
+  public final AtomicLong clientThreadPoolExecutionTimeMs =
+    createCounter(CLIENT_THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME);
+  
+  public final AtomicLong clientScanPrepareTimeMs =
+    createCounter(CLIENT_SCAN_PREPARE_TIME_MS_METRIC_NAME);
+  
+  public final AtomicLong clientScanExecutionTimeMs =
+    createCounter(CLIENT_SCAN_EXECUTION_TIME_MS_METRIC_NAME);
+  
+  public final AtomicLong clientRpcRoundTripTimeMs =
+    createCounter(CLIENT_RPC_ROUND_TRIP_TIME_MS_METRIC_NAME);
+  
+  public final AtomicLong clientCacheLoadWaitTimeMs =
+    createCounter(CLIENT_CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME);
   /**
    * Constructor
    */
@@ -113,5 +138,11 @@ public class ScanMetrics extends ServerSideScanMetrics {
     currentRegionScanMetricsData.createCounter(REGIONS_SCANNED_METRIC_NAME);
     currentRegionScanMetricsData.createCounter(RPC_RETRIES_METRIC_NAME);
     currentRegionScanMetricsData.createCounter(REMOTE_RPC_RETRIES_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(CLIENT_THREAD_POOL_WAIT_TIME_MS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(CLIENT_THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(CLIENT_SCAN_PREPARE_TIME_MS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(CLIENT_SCAN_EXECUTION_TIME_MS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(CLIENT_RPC_ROUND_TRIP_TIME_MS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(CLIENT_CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME);
   }
 }

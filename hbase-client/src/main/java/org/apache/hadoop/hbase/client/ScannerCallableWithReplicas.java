@@ -34,7 +34,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ResultBoundedCompletionService.QueueingFuture;
 import org.apache.hadoop.hbase.client.ScannerCallable.MoreResults;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -126,6 +128,17 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     return currentScannerCallable.moreResultsForScan();
   }
 
+  private void updateThreadPoolMetricsInScannerCallable(
+    ResultBoundedCompletionService<Pair<Result[], ScannerCallable>>.QueueingFuture<
+      Pair<Result[], ScannerCallable>> future,
+    ScannerCallable scannerCallable) {
+    if (future == null || scannerCallable == null) {
+      return;
+    }
+    scannerCallable.updateThreadPoolWaitTimeMs(future.getQueueWaitTimeMs());
+    scannerCallable.updateThreadPoolExecutionTimeMs(future.getExecutionTimeMs());
+  }
+
   @Override
   public Result[] call(int timeout) throws IOException {
     // If the active replica callable was closed somewhere, invoke the RPC to
@@ -198,15 +211,15 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     addCallsForCurrentReplica(cs, rpcTimeoutForCall);
     int startIndex = 0;
 
+    ResultBoundedCompletionService<Pair<Result[], ScannerCallable>>.QueueingFuture<Pair<Result[], ScannerCallable>> f = null;
     try {
       // wait for the timeout to see whether the primary responds back
-      Future<Pair<Result[], ScannerCallable>> f =
-        cs.poll(timeBeforeReplicas, TimeUnit.MICROSECONDS); // Yes, microseconds
+      f = cs.poll(timeBeforeReplicas, TimeUnit.MICROSECONDS); // Yes, microseconds
       if (f != null) {
         // After poll, if f is not null, there must be a completed task
         Pair<Result[], ScannerCallable> r = f.get();
         if (r != null && r.getSecond() != null) {
-          updateCurrentlyServingReplica(r.getSecond(), r.getFirst(), done, pool);
+          updateCurrentlyServingReplica(r.getSecond(), r.getFirst(), done, pool, f);
         }
         return r == null ? null : r.getFirst(); // great we got a response
       }
@@ -244,8 +257,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     }
 
     try {
-      Future<Pair<Result[], ScannerCallable>> f = cs.pollForFirstSuccessfullyCompletedTask(timeout,
-        TimeUnit.MILLISECONDS, startIndex, endIndex);
+      f = cs.pollForFirstSuccessfullyCompletedTask(timeout, TimeUnit.MILLISECONDS, startIndex, endIndex);
 
       if (f == null) {
         throw new IOException("Failed to get result within timeout, timeout=" + timeout + "ms");
@@ -253,7 +265,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
       Pair<Result[], ScannerCallable> r = f.get();
 
       if (r != null && r.getSecond() != null) {
-        updateCurrentlyServingReplica(r.getSecond(), r.getFirst(), done, pool);
+        updateCurrentlyServingReplica(r.getSecond(), r.getFirst(), done, pool, f);
       }
       return r == null ? null : r.getFirst(); // great we got an answer
 
@@ -274,10 +286,11 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
 
   @SuppressWarnings("FutureReturnValueIgnored")
   private void updateCurrentlyServingReplica(ScannerCallable scanner, Result[] result,
-    AtomicBoolean done, ExecutorService pool) {
+    AtomicBoolean done, ExecutorService pool, ResultBoundedCompletionService<Pair<Result[], ScannerCallable>>.QueueingFuture<Pair<Result[], ScannerCallable>> future) {
     if (done.compareAndSet(false, true)) {
       if (currentScannerCallable != scanner) replicaSwitched.set(true);
       currentScannerCallable = scanner;
+      updateThreadPoolMetricsInScannerCallable(future, currentScannerCallable);
       // store where to start the replica scanner from if we need to.
       if (result != null && result.length != 0) this.lastResult = result[result.length - 1];
       if (LOG.isTraceEnabled()) {
@@ -502,5 +515,11 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
 
   public HRegionLocation getLocation() {
     return currentScannerCallable.getLocation();
+  }
+
+  public void populateScanMetrics(ScanMetrics scanMetrics) {
+    if (currentScannerCallable != null) {
+      currentScannerCallable.populateScanMetrics(scanMetrics);
+    }
   }
 }

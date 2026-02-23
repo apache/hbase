@@ -44,6 +44,8 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,6 +78,11 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
   private boolean logScannerActivity = false;
   private int logCutOffLatency = 1000;
   protected final int id;
+  private long scanPrepareTimeMs = 0;
+  private long scanExecutionTimeMs = 0;
+  private long rpcCallTimeMs = 0;
+  private long threadPoolWaitTimeMs = 0;
+  private long threadPoolExecutionTimeMs = 0;
 
   enum MoreResults {
     YES,
@@ -155,25 +162,30 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
       throw new InterruptedIOException();
     }
 
-    if (
-      reload && getTableName() != null && !getTableName().equals(TableName.META_TABLE_NAME)
-        && getConnection().isTableDisabled(getTableName())
-    ) {
-      throw new TableNotEnabledException(getTableName().getNameAsString() + " is disabled.");
-    }
+    long prepareStartTimeMs = EnvironmentEdgeManager.currentTime();
+    try {
+      if (
+        reload && getTableName() != null && !getTableName().equals(TableName.META_TABLE_NAME)
+          && getConnection().isTableDisabled(getTableName())
+      ) {
+        throw new TableNotEnabledException(getTableName().getNameAsString() + " is disabled.");
+      }
 
-    RegionLocations rl = getRegionLocationsForPrepare(getRow());
-    location = getLocationForReplica(rl);
-    ServerName dest = location.getServerName();
-    setStub(super.getConnection().getClient(dest));
-    if (!instantiated || reload) {
-      checkIfRegionServerIsRemote();
-      instantiated = true;
-    }
-    cursor = null;
-    // check how often we retry.
-    if (reload) {
-      incRPCRetriesMetrics(scanMetrics, isRegionServerRemote);
+      RegionLocations rl = getRegionLocationsForPrepare(getRow());
+      location = getLocationForReplica(rl);
+      ServerName dest = location.getServerName();
+      setStub(super.getConnection().getClient(dest));
+      if (!instantiated || reload) {
+        checkIfRegionServerIsRemote();
+        instantiated = true;
+      }
+      cursor = null;
+      // check how often we retry.
+      if (reload) {
+        incRPCRetriesMetrics(scanMetrics, isRegionServerRemote);
+      }
+    } finally {
+      scanPrepareTimeMs += (EnvironmentEdgeManager.currentTime() - prepareStartTimeMs);
     }
   }
 
@@ -192,7 +204,7 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
     ScanRequest request = RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq,
       this.scanMetrics != null, renew, scan.getLimit());
     try {
-      ScanResponse response = getStub().scan(getRpcController(), request);
+      ScanResponse response = doScan(getRpcController(), request);
       nextCallSeq++;
       return response;
     } catch (Exception e) {
@@ -247,60 +259,75 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
     this.closed = true;
   }
 
+  private ScanResponse doScan(RpcController controller, ScanRequest request) throws ServiceException {
+    long rpcCallStartTimeMs = EnvironmentEdgeManager.currentTime();
+    try {
+      ScanResponse response = getStub().scan(controller, request);
+      return response;
+    } finally {
+      rpcCallTimeMs += (EnvironmentEdgeManager.currentTime() - rpcCallStartTimeMs);
+    }
+  }
+
   @Override
   protected Result[] rpcCall() throws Exception {
     if (Thread.interrupted()) {
       throw new InterruptedIOException();
     }
-    if (closed) {
-      close();
-      return null;
-    }
-    ScanResponse response;
-    if (this.scannerId == -1L) {
-      response = openScanner();
-    } else {
-      response = next();
-    }
-    long timestamp = EnvironmentEdgeManager.currentTime();
-    boolean isHeartBeat = response.hasHeartbeatMessage() && response.getHeartbeatMessage();
-    setHeartbeatMessage(isHeartBeat);
-    if (isHeartBeat && scan.isNeedCursorResult() && response.hasCursor()) {
-      cursor = ProtobufUtil.toCursor(response.getCursor());
-    }
-    Result[] rrs = ResponseConverter.getResults(getRpcControllerCellScanner(), response);
-    if (logScannerActivity) {
-      long now = EnvironmentEdgeManager.currentTime();
-      if (now - timestamp > logCutOffLatency) {
-        int rows = rrs == null ? 0 : rrs.length;
-        LOG.info(
-          "Took " + (now - timestamp) + "ms to fetch " + rows + " rows from scanner=" + scannerId);
+    long scanExecutionStartTimeMs = EnvironmentEdgeManager.currentTime();
+    try {
+      if (closed) {
+        close();
+        return null;
       }
-    }
-    updateServerSideMetrics(scanMetrics, response);
-    // moreResults is only used for the case where a filter exhausts all elements
-    if (response.hasMoreResults()) {
-      if (response.getMoreResults()) {
-        setMoreResultsForScan(MoreResults.YES);
+      ScanResponse response;
+      if (this.scannerId == -1L) {
+        response = openScanner();
       } else {
-        setMoreResultsForScan(MoreResults.NO);
-        setAlreadyClosed();
+        response = next();
       }
-    } else {
-      setMoreResultsForScan(MoreResults.UNKNOWN);
-    }
-    if (response.hasMoreResultsInRegion()) {
-      if (response.getMoreResultsInRegion()) {
-        setMoreResultsInRegion(MoreResults.YES);
+      long timestamp = EnvironmentEdgeManager.currentTime();
+      boolean isHeartBeat = response.hasHeartbeatMessage() && response.getHeartbeatMessage();
+      setHeartbeatMessage(isHeartBeat);
+      if (isHeartBeat && scan.isNeedCursorResult() && response.hasCursor()) {
+        cursor = ProtobufUtil.toCursor(response.getCursor());
+      }
+      Result[] rrs = ResponseConverter.getResults(getRpcControllerCellScanner(), response);
+      if (logScannerActivity) {
+        long now = EnvironmentEdgeManager.currentTime();
+        if (now - timestamp > logCutOffLatency) {
+          int rows = rrs == null ? 0 : rrs.length;
+          LOG.info(
+            "Took " + (now - timestamp) + "ms to fetch " + rows + " rows from scanner=" + scannerId);
+        }
+      }
+      updateServerSideMetrics(scanMetrics, response);
+      // moreResults is only used for the case where a filter exhausts all elements
+      if (response.hasMoreResults()) {
+        if (response.getMoreResults()) {
+          setMoreResultsForScan(MoreResults.YES);
+        } else {
+          setMoreResultsForScan(MoreResults.NO);
+          setAlreadyClosed();
+        }
       } else {
-        setMoreResultsInRegion(MoreResults.NO);
-        setAlreadyClosed();
+        setMoreResultsForScan(MoreResults.UNKNOWN);
       }
-    } else {
-      setMoreResultsInRegion(MoreResults.UNKNOWN);
+      if (response.hasMoreResultsInRegion()) {
+        if (response.getMoreResultsInRegion()) {
+          setMoreResultsInRegion(MoreResults.YES);
+        } else {
+          setMoreResultsInRegion(MoreResults.NO);
+          setAlreadyClosed();
+        }
+      } else {
+        setMoreResultsInRegion(MoreResults.UNKNOWN);
+      }
+      updateResultsMetrics(scanMetrics, rrs, isRegionServerRemote);
+      return rrs;
+    } finally {
+      scanExecutionTimeMs += (EnvironmentEdgeManager.currentTime() - scanExecutionStartTimeMs);
     }
-    updateResultsMetrics(scanMetrics, rrs, isRegionServerRemote);
-    return rrs;
   }
 
   /**
@@ -344,7 +371,7 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
       controller.setPriority(HConstants.HIGH_QOS);
 
       try {
-        getStub().scan(controller, request);
+        doScan(controller, request);
       } catch (Exception e) {
         throw ProtobufUtil.handleRemoteException(e);
       }
@@ -362,7 +389,7 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
     ScanRequest request = RequestConverter.buildScanRequest(
       getLocation().getRegionInfo().getRegionName(), this.scan, this.caching, false);
     try {
-      ScanResponse response = getStub().scan(getRpcController(), request);
+      ScanResponse response = doScan(getRpcController(), request);
       long id = response.getScannerId();
       if (logScannerActivity) {
         LOG.info("Open scanner=" + id + " for scan=" + scan.toString() + " on region "
@@ -450,5 +477,33 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
 
   void setMoreResultsForScan(MoreResults moreResults) {
     this.moreResultsForScan = moreResults;
+  }
+
+  void updateThreadPoolWaitTimeMs(long waitTimeMs) {
+    this.threadPoolWaitTimeMs += waitTimeMs;
+  }
+
+  void updateThreadPoolExecutionTimeMs(long executionTimeMs) {
+    this.threadPoolExecutionTimeMs += executionTimeMs;
+  }
+
+  void populateScanMetrics(ScanMetrics scanMetrics) {
+    if (scanMetrics == null) {
+      return;
+    }
+    scanMetrics.addToCounter(ScanMetrics.CLIENT_THREAD_POOL_WAIT_TIME_MS_METRIC_NAME,
+      threadPoolWaitTimeMs);
+    scanMetrics.addToCounter(ScanMetrics.CLIENT_THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME,
+      threadPoolExecutionTimeMs);
+    scanMetrics.addToCounter(ScanMetrics.CLIENT_SCAN_PREPARE_TIME_MS_METRIC_NAME,
+      scanPrepareTimeMs);
+    scanMetrics.addToCounter(ScanMetrics.CLIENT_SCAN_EXECUTION_TIME_MS_METRIC_NAME,
+      scanExecutionTimeMs);
+    scanMetrics.addToCounter(ScanMetrics.CLIENT_RPC_ROUND_TRIP_TIME_MS_METRIC_NAME, rpcCallTimeMs);
+    threadPoolWaitTimeMs = 0;
+    threadPoolExecutionTimeMs = 0;
+    scanPrepareTimeMs = 0;
+    scanExecutionTimeMs = 0;
+    rpcCallTimeMs = 0;
   }
 }
