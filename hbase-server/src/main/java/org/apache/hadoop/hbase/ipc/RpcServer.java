@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
@@ -54,6 +55,7 @@ import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.provider.SaslServerAuthenticationProviders;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
 import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -99,6 +101,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
   private final boolean authorize;
   private volatile boolean isOnlineLogProviderEnabled;
   protected boolean isSecurityEnabled;
+  protected final SaslServerAuthenticationProviders saslProviders;
 
   public static final byte CURRENT_VERSION = 0;
 
@@ -313,6 +316,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       saslProps = Collections.emptyMap();
       serverPrincipal = HConstants.EMPTY_STRING;
     }
+    this.saslProviders = new SaslServerAuthenticationProviders(conf);
 
     this.isOnlineLogProviderEnabled = getIsOnlineLogProviderEnabled(conf);
     this.scheduler = scheduler;
@@ -331,7 +335,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
     }
     refreshSlowLogConfiguration(newConf);
     if (
-      CoprocessorConfigurationUtil.checkConfigurationChange(getConf(), newConf,
+      CoprocessorConfigurationUtil.checkConfigurationChange(this.cpHost, newConf,
         CoprocessorHost.RPC_COPROCESSOR_CONF_KEY)
     ) {
       LOG.info("Update the RPC coprocessor(s) because the configuration has changed");
@@ -461,19 +465,18 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       int processingTime = (int) (endTime - startTime);
       int qTime = (int) (startTime - receiveTime);
       int totalTime = (int) (endTime - receiveTime);
+      long fsReadTime = ThreadLocalServerSideScanMetrics.getFsReadTimeCounter().get();
       if (LOG.isTraceEnabled()) {
         LOG.trace(
           "{}, response: {}, receiveTime: {}, queueTime: {}, processingTime: {}, "
             + "totalTime: {}, fsReadTime: {}",
           CurCall.get().toString(), TextFormat.shortDebugString(result),
-          CurCall.get().getReceiveTime(), qTime, processingTime, totalTime,
-          CurCall.get().getFsReadTime());
+          CurCall.get().getReceiveTime(), qTime, processingTime, totalTime, fsReadTime);
       }
       // Use the raw request call size for now.
       long requestSize = call.getSize();
       long responseSize = result.getSerializedSize();
       long responseBlockSize = call.getBlockBytesScanned();
-      long fsReadTime = call.getFsReadTime();
       if (call.isClientCellBlockSupported()) {
         // Include the payload size in HBaseRpcController
         responseSize += call.getResponseCellSize();
@@ -797,6 +800,16 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
   public static Optional<User> getRequestUser() {
     Optional<RpcCall> ctx = getCurrentCall();
     return ctx.isPresent() ? ctx.get().getRequestUser() : Optional.empty();
+  }
+
+  /**
+   * Returns the RPC connection attributes for the current RPC request. These attributes are sent by
+   * the client when initiating a new connection to the HBase server. The attributes are sent in
+   * {@code ConnectionHeader.attribute} protobuf message.
+   * @return the attribute map. It will be empty if the method is called outside of an RPC context.
+   */
+  public static Map<String, byte[]> getConnectionAttributes() {
+    return getCurrentCall().map(RpcCall::getConnectionAttributes).orElse(Map.of());
   }
 
   /**

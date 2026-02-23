@@ -836,7 +836,8 @@ public abstract class AbstractTestWALReplay {
 
     // Mock the WAL
     MockWAL wal = createMockWAL();
-
+    TEST_UTIL.createRegionDir(hri,
+      TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem());
     HRegion region = HRegion.openHRegion(this.conf, this.fs, hbaseRootDir, hri, htd, wal);
     for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
       addRegionEdits(rowName, hcd.getName(), countPerFamily, this.ee, region, "x");
@@ -1046,6 +1047,7 @@ public abstract class AbstractTestWALReplay {
   }
 
   private MockWAL createMockWAL() throws IOException {
+    fs.mkdirs(new Path(hbaseRootDir, logName));
     MockWAL wal = new MockWAL(fs, hbaseRootDir, logName, conf);
     wal.init();
     // Set down maximum recovery so we dfsclient doesn't linger retrying something

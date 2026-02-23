@@ -99,6 +99,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -109,6 +110,7 @@ import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -143,6 +145,7 @@ import org.apache.hadoop.hbase.zookeeper.EmptyWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -727,6 +730,11 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     createDirAndSetProperty("dfs.journalnode.edits.dir");
     createDirAndSetProperty("dfs.provided.aliasmap.inmemory.leveldb.dir");
     createDirAndSetProperty("fs.s3a.committer.staging.tmp.path");
+
+    // disable metrics logger since it depend on commons-logging internal classes and we do not want
+    // commons-logging on our classpath
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_METRICS_LOGGER_PERIOD_SECONDS_KEY, 0);
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_KEY, 0);
   }
 
   /**
@@ -2192,8 +2200,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     // The WAL subsystem will use the default rootDir rather than the passed in rootDir
     // unless I pass along via the conf.
     Configuration confForWAL = new Configuration(conf);
-    confForWAL.set(HConstants.HBASE_DIR, rootDir.toString());
-    return new WALFactory(confForWAL, "hregion-" + RandomStringUtils.randomNumeric(8)).getWAL(hri);
+    CommonFSUtils.setRootDir(confForWAL, rootDir);
+    return new WALFactory(confForWAL, "hregion-" + RandomStringUtils.insecure().nextNumeric(8))
+      .getWAL(hri);
   }
 
   /**
@@ -2338,10 +2347,14 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
         jvmOpts + " --add-opens java.base/java.lang=ALL-UNNAMED");
     }
 
+    // Disable fs cache for DistributedFileSystem, to avoid YARN RM close the shared FileSystem
+    // instance and cause trouble in HBase. See HBASE-29802 for more details.
+    JobConf mrClusterConf = new JobConf(conf);
+    mrClusterConf.setBoolean("fs.hdfs.impl.disable.cache", true);
     // Allow the user to override FS URI for this map-reduce cluster to use.
     mrCluster =
       new MiniMRCluster(servers, FS_URI != null ? FS_URI : FileSystem.get(conf).getUri().toString(),
-        1, null, null, new JobConf(this.conf));
+        1, null, null, mrClusterConf);
     JobConf jobConf = MapreduceTestingShim.getJobConf(mrCluster);
     if (jobConf == null) {
       jobConf = mrCluster.createJobConf();
@@ -3433,9 +3446,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     return new ExplainingPredicate<IOException>() {
       @Override
       public String explainFailure() throws IOException {
-        final RegionStates regionStates =
-          getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
-        return "found in transition: " + regionStates.getRegionsInTransition().toString();
+        final AssignmentManager am = getMiniHBaseCluster().getMaster().getAssignmentManager();
+        return "found in transition: " + am.getRegionsInTransition().toString();
       }
 
       @Override
@@ -3445,6 +3457,34 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
         AssignmentManager am = master.getAssignmentManager();
         if (am == null) return false;
         return !am.hasRegionsInTransition();
+      }
+    };
+  }
+
+  /**
+   * Returns a {@link Predicate} for checking that there are no procedure to region transition in
+   * master
+   */
+  public ExplainingPredicate<IOException> predicateNoRegionTransitScheduled() {
+    return new ExplainingPredicate<IOException>() {
+      @Override
+      public String explainFailure() throws IOException {
+        final AssignmentManager am = getMiniHBaseCluster().getMaster().getAssignmentManager();
+        return "Number of procedure scheduled for region transit: "
+          + am.getRegionTransitScheduledCount();
+      }
+
+      @Override
+      public boolean evaluate() throws IOException {
+        HMaster master = getMiniHBaseCluster().getMaster();
+        if (master == null) {
+          return false;
+        }
+        AssignmentManager am = master.getAssignmentManager();
+        if (am == null) {
+          return false;
+        }
+        return am.getRegionTransitScheduledCount() == 0;
       }
     };
   }
@@ -3527,10 +3567,25 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
+   * Wait until no regions in transition.
+   * @param timeout How long to wait.
+   */
+  public void waitUntilNoRegionTransitScheduled(final long timeout) throws IOException {
+    waitFor(timeout, predicateNoRegionTransitScheduled());
+  }
+
+  /**
    * Wait until no regions in transition. (time limit 15min)
    */
   public void waitUntilNoRegionsInTransition() throws IOException {
     waitUntilNoRegionsInTransition(15 * 60000);
+  }
+
+  /**
+   * Wait until no TRSP is present
+   */
+  public void waitUntilNoRegionTransitScheduled() throws IOException {
+    waitUntilNoRegionTransitScheduled(15 * 60000);
   }
 
   /**
@@ -3721,5 +3776,23 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       }
       throw e;
     }
+  }
+
+  public void createRegionDir(RegionInfo hri) throws IOException {
+    Path rootDir = getDataTestDir();
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, hri.getTable());
+    Path regionDir = new Path(tableDir, hri.getEncodedName());
+    FileSystem fs = getTestFileSystem();
+    if (!fs.exists(regionDir)) {
+      fs.mkdirs(regionDir);
+    }
+  }
+
+  public void createRegionDir(RegionInfo regionInfo, MasterFileSystem masterFileSystem)
+    throws IOException {
+    Path tableDir =
+      CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(conf), regionInfo.getTable());
+    HRegionFileSystem.createRegionOnFileSystem(conf, masterFileSystem.getFileSystem(), tableDir,
+      regionInfo);
   }
 }

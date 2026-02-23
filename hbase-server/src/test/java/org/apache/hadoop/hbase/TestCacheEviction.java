@@ -38,10 +38,11 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -49,7 +50,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MiscTests.class, MediumTests.class })
+@Category({ MiscTests.class, LargeTests.class })
 public class TestCacheEviction {
 
   @ClassRule
@@ -66,9 +67,14 @@ public class TestCacheEviction {
     UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     UTIL.getConfiguration().setBoolean(CACHE_BLOCKS_ON_WRITE_KEY, true);
     UTIL.getConfiguration().setBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, true);
-    UTIL.getConfiguration().set(BUCKET_CACHE_IOENGINE_KEY, "offheap");
     UTIL.getConfiguration().setInt(BUCKET_CACHE_SIZE_KEY, 200);
     UTIL.getConfiguration().set(StoreFileTrackerFactory.TRACKER_IMPL, "FILE");
+  }
+
+  @Before
+  public void testSetup() {
+    UTIL.getConfiguration().set(BUCKET_CACHE_IOENGINE_KEY,
+      "file:" + UTIL.getDataTestDir() + "/bucketcache");
   }
 
   @Test

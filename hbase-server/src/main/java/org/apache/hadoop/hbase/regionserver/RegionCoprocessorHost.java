@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.coprocessor.EndpointObserver;
 import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
 import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.ObserverRpcCallContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
@@ -500,12 +501,21 @@ public class RegionCoprocessorHost
       super(regionObserverGetter, user);
     }
 
+    public RegionObserverOperationWithoutResult(ObserverRpcCallContext rpcCallContext) {
+      super(regionObserverGetter, rpcCallContext);
+    }
+
     public RegionObserverOperationWithoutResult(boolean bypassable) {
-      super(regionObserverGetter, null, bypassable);
+      super(regionObserverGetter, (ObserverRpcCallContext) null, bypassable);
     }
 
     public RegionObserverOperationWithoutResult(User user, boolean bypassable) {
       super(regionObserverGetter, user, bypassable);
+    }
+
+    public RegionObserverOperationWithoutResult(ObserverRpcCallContext rpcCallContext,
+      boolean bypassable) {
+      super(regionObserverGetter, rpcCallContext, bypassable);
     }
   }
 
@@ -1422,6 +1432,31 @@ public class RegionCoprocessorHost
       @Override
       public void call(RegionObserver observer) throws IOException {
         observer.postReplayWALs(this, info, edits);
+      }
+    });
+  }
+
+  /**
+   * Supports Coprocessor 'bypass'.
+   * @return true if default behavior should be bypassed, false otherwise
+   */
+  public boolean preWALRestore(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
+    throws IOException {
+    return execOperation(
+      coprocEnvironments.isEmpty() ? null : new RegionObserverOperationWithoutResult(true) {
+        @Override
+        public void call(RegionObserver observer) throws IOException {
+          observer.preWALRestore(this, info, logKey, logEdit);
+        }
+      });
+  }
+
+  public void postWALRestore(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
+    throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionObserverOperationWithoutResult() {
+      @Override
+      public void call(RegionObserver observer) throws IOException {
+        observer.postWALRestore(this, info, logKey, logEdit);
       }
     });
   }

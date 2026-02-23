@@ -22,11 +22,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -232,6 +235,9 @@ public class AssignmentManager {
 
   private final int forceRegionRetainmentRetries;
 
+  private final RegionInTransitionTracker regionInTransitionTracker =
+    new RegionInTransitionTracker();
+
   public AssignmentManager(MasterServices master, MasterRegion masterRegion) {
     this(master, masterRegion, new RegionStateStore(master, masterRegion));
   }
@@ -331,6 +337,8 @@ public class AssignmentManager {
             regionNode.setLastHost(lastHost);
             regionNode.setRegionLocation(regionLocation);
             regionNode.setOpenSeqNum(openSeqNum);
+            regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
+
             if (regionNode.getProcedure() != null) {
               regionNode.getProcedure().stateLoaded(this, regionNode);
             }
@@ -382,9 +390,15 @@ public class AssignmentManager {
           return;
         }
       }
-      LOG.info("Attach {} to {} to restore RIT", proc, regionNode);
+      LOG.info("Attach {} to {}", proc, regionNode);
       regionNode.setProcedure(proc);
     });
+  }
+
+  public void initializationPostMetaOnline() {
+    // now that we are sure that meta is online, we can set TableStateManger in
+    // regionInTransitionTracker
+    regionInTransitionTracker.setTableStateManager(master.getTableStateManager());
   }
 
   public void stop() {
@@ -411,6 +425,7 @@ public class AssignmentManager {
 
     // Stop the RegionStateStore
     regionStates.clear();
+    regionInTransitionTracker.stop();
 
     // Update meta events (for testing)
     if (hasProcExecutor) {
@@ -1093,7 +1108,7 @@ public class AssignmentManager {
       regionNode.lock();
       try {
         if (shouldSubmit.apply(regionNode)) {
-          if (regionNode.isInTransition()) {
+          if (regionNode.isTransitionScheduled()) {
             logRIT.accept(regionNode);
             inTransitionCount++;
             continue;
@@ -1285,7 +1300,7 @@ public class AssignmentManager {
 
   private void updateRegionTransition(ServerStateNode serverNode, TransitionCode state,
     RegionInfo regionInfo, long seqId, long procId) throws IOException {
-    checkMetaLoaded(regionInfo);
+    checkMetaLoaded(regionInfo, procId);
 
     RegionStateNode regionNode = regionStates.getRegionStateNode(regionInfo);
     if (regionNode == null) {
@@ -1337,7 +1352,7 @@ public class AssignmentManager {
   private void updateRegionSplitTransition(final ServerStateNode serverNode,
     final TransitionCode state, final RegionInfo parent, final RegionInfo hriA,
     final RegionInfo hriB) throws IOException {
-    checkMetaLoaded(parent);
+    checkMetaLoaded(parent, Procedure.NO_PROC_ID);
 
     if (state != TransitionCode.READY_TO_SPLIT) {
       throw new UnexpectedStateException(
@@ -1391,7 +1406,7 @@ public class AssignmentManager {
   private void updateRegionMergeTransition(final ServerStateNode serverNode,
     final TransitionCode state, final RegionInfo merged, final RegionInfo hriA,
     final RegionInfo hriB) throws IOException {
-    checkMetaLoaded(merged);
+    checkMetaLoaded(merged, Procedure.NO_PROC_ID);
 
     if (state != TransitionCode.READY_TO_MERGE) {
       throw new UnexpectedStateException(
@@ -1702,10 +1717,8 @@ public class AssignmentManager {
     }
 
     protected void update(final AssignmentManager am) {
-      final RegionStates regionStates = am.getRegionStates();
       this.statTimestamp = EnvironmentEdgeManager.currentTime();
-      update(regionStates.getRegionsStateInTransition(), statTimestamp);
-      update(regionStates.getRegionFailedOpen(), statTimestamp);
+      update(am.getRegionsStateInTransition(), statTimestamp);
 
       if (LOG.isDebugEnabled() && ritsOverThreshold != null && !ritsOverThreshold.isEmpty()) {
         LOG.debug("RITs over threshold: {}",
@@ -1873,6 +1886,20 @@ public class AssignmentManager {
       if (regionNode.getProcedure() != null) {
         regionNode.getProcedure().stateLoaded(AssignmentManager.this, regionNode);
       }
+      // add regions to RIT while visiting the meta
+      regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
+      // If region location of region belongs to a dead server mark the region crashed
+      if (
+        regionNode.getRegionLocation() != null
+          && master.getServerManager().isServerDead(regionNode.getRegionLocation())
+      ) {
+        long timeOfCrash = master.getServerManager().getDeadServers()
+          .getDeathTimestamp(regionNode.getRegionLocation());
+        if (timeOfCrash != 0) {
+          regionNode.crashed(timeOfCrash);
+        }
+        regionInTransitionTracker.regionCrashed(regionNode);
+      }
     }
   };
 
@@ -1911,13 +1938,27 @@ public class AssignmentManager {
    * Used to check if the meta loading is done.
    * <p/>
    * if not we throw PleaseHoldException since we are rebuilding the RegionStates
-   * @param hri region to check if it is already rebuild
+   * @param hri    region to check if it is already rebuild
+   * @param procId the procedure id for this region operation, or NO_PROC_ID if not available
    * @throws PleaseHoldException if meta has not been loaded yet
    */
-  private void checkMetaLoaded(RegionInfo hri) throws PleaseHoldException {
+  private void checkMetaLoaded(RegionInfo hri, long procId) throws PleaseHoldException {
     if (!isRunning()) {
       throw new PleaseHoldException("AssignmentManager not running");
     }
+
+    // Check if the procedure is for a critical system table
+    // Critical system tables can proceed even if meta is not loaded yet
+    // We are currently making procId available only for the code path which can execute during the
+    // cluster boot up. In the future, if additional code paths execute during cluster boot up, we
+    // will need to make procId available for all those code paths.
+    if (procId != Procedure.NO_PROC_ID) {
+      Procedure<?> proc = master.getMasterProcedureExecutor().getProcedure(procId);
+      if (proc != null && proc.isCriticalSystemTable()) {
+        return;
+      }
+    }
+
     boolean meta = isMetaRegion(hri);
     boolean metaLoaded = isMetaLoaded();
     if (!meta && !metaLoaded) {
@@ -2046,15 +2087,52 @@ public class AssignmentManager {
     return new Pair<Integer, Integer>(ritCount, states.size());
   }
 
+  // This comparator sorts the RegionStates by time stamp then Region name.
+  // Comparing by timestamp alone can lead us to discard different RegionStates that happen
+  // to share a timestamp.
+  private final static class RegionStateStampComparator implements Comparator<RegionState> {
+    @Override
+    public int compare(final RegionState l, final RegionState r) {
+      int stampCmp = Long.compare(l.getStamp(), r.getStamp());
+      return stampCmp != 0 ? stampCmp : RegionInfo.COMPARATOR.compare(l.getRegion(), r.getRegion());
+    }
+  }
+
+  public final static RegionStateStampComparator REGION_STATE_STAMP_COMPARATOR =
+    new RegionStateStampComparator();
+
   // ============================================================================================
   // TODO: Region State In Transition
   // ============================================================================================
   public boolean hasRegionsInTransition() {
-    return regionStates.hasRegionsInTransition();
+    return regionInTransitionTracker.hasRegionsInTransition();
   }
 
   public List<RegionStateNode> getRegionsInTransition() {
-    return regionStates.getRegionsInTransition();
+    return regionInTransitionTracker.getRegionsInTransition();
+  }
+
+  public boolean isRegionInTransition(final RegionInfo regionInfo) {
+    return regionInTransitionTracker.isRegionInTransition(regionInfo);
+  }
+
+  public int getRegionTransitScheduledCount() {
+    return regionStates.getRegionTransitScheduledCount();
+  }
+
+  /**
+   * Get the number of regions in transition.
+   */
+  public int getRegionsInTransitionCount() {
+    return regionInTransitionTracker.getRegionsInTransition().size();
+  }
+
+  public SortedSet<RegionState> getRegionsStateInTransition() {
+    final SortedSet<RegionState> rit = new TreeSet<RegionState>(REGION_STATE_STAMP_COMPARATOR);
+    for (RegionStateNode node : getRegionsInTransition()) {
+      rit.add(node.toRegionState());
+    }
+    return rit;
   }
 
   public List<RegionInfo> getAssignedRegions() {
@@ -2122,6 +2200,8 @@ public class AssignmentManager {
       if (e != null) {
         // revert
         regionNode.setState(state);
+      } else {
+        regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
       }
     });
     return future;
@@ -2170,6 +2250,7 @@ public class AssignmentManager {
         if (regionLocation != null) {
           regionStates.removeRegionFromServer(regionLocation, regionNode);
         }
+        regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
       } else {
         // revert
         regionNode.setState(state);
@@ -2230,6 +2311,7 @@ public class AssignmentManager {
         // on table that contains state.
         setMetaAssigned(regionInfo, true);
       }
+      regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
     });
   }
 
@@ -2247,6 +2329,7 @@ public class AssignmentManager {
           regionNode.setLastHost(regionLocation);
           regionStates.removeRegionFromServer(regionLocation, regionNode);
         }
+        regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
       } else {
         // revert
         regionNode.setState(state);
@@ -2259,6 +2342,24 @@ public class AssignmentManager {
   // ============================================================================================
   // The above methods can only be called in TransitRegionStateProcedure(and related procedures)
   // ============================================================================================
+
+  // As soon as a server a crashed, region hosting on that are un-available, this method helps to
+  // track those un-available regions. This method can only be called from ServerCrashProcedure.
+  public void markRegionsAsCrashed(List<RegionInfo> regionsOnCrashedServer,
+    ServerCrashProcedure scp) {
+    ServerName crashedServerName = scp.getServerName();
+    assert crashedServerName != null;
+    for (RegionInfo regionInfo : regionsOnCrashedServer) {
+      RegionStateNode node = regionStates.getOrCreateRegionStateNode(regionInfo);
+      if (crashedServerName.equals(node.getRegionLocation())) {
+        node.crashed(scp.getSubmittedTime());
+        regionInTransitionTracker.regionCrashed(node);
+      } else {
+        LOG.warn("Region {} should be on crashed region server {} but is recorded on {}",
+          regionInfo, crashedServerName, node.getRegionLocation());
+      }
+    }
+  }
 
   public void markRegionAsSplit(final RegionInfo parent, final ServerName serverName,
     final RegionInfo daughterA, final RegionInfo daughterB) throws IOException {
@@ -2284,6 +2385,9 @@ public class AssignmentManager {
     // it is a split parent. And usually only one of them can match, as after restart, the region
     // state will be changed from SPLIT to CLOSED.
     regionStateStore.splitRegion(parent, daughterA, daughterB, serverName, td);
+    regionInTransitionTracker.handleRegionStateNodeOperation(node);
+    regionInTransitionTracker.handleRegionStateNodeOperation(nodeA);
+    regionInTransitionTracker.handleRegionStateNodeOperation(nodeB);
     if (shouldAssignFavoredNodes(parent)) {
       List<ServerName> onlineServers = this.master.getServerManager().getOnlineServersList();
       getFavoredNodePromoter().generateFavoredNodesForDaughter(onlineServers, parent, daughterA,
@@ -2303,12 +2407,14 @@ public class AssignmentManager {
   public void markRegionAsMerged(final RegionInfo child, final ServerName serverName,
     RegionInfo[] mergeParents) throws IOException {
     final RegionStateNode node = regionStates.getOrCreateRegionStateNode(child);
-    node.setState(State.MERGED);
     for (RegionInfo ri : mergeParents) {
       regionStates.deleteRegion(ri);
+      regionInTransitionTracker.handleRegionDelete(ri);
     }
+
     TableDescriptor td = master.getTableDescriptors().get(child.getTable());
     regionStateStore.mergeRegions(child, mergeParents, serverName, td);
+    regionInTransitionTracker.handleRegionStateNodeOperation(node);
     if (shouldAssignFavoredNodes(child)) {
       getFavoredNodePromoter().generateFavoredNodesForMergedRegion(child, mergeParents);
     }

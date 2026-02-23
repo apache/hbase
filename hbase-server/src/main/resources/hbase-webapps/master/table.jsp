@@ -124,7 +124,7 @@
     String hostNameEncoded = URLEncoder.encode(hostName, StandardCharsets.UTF_8);
     // This port might be wrong if RS actually ended up using something else.
     int serverInfoPort = master.getRegionServerInfoPort(serverName);
-    String urlRegionServer = "//" + hostNameEncoded + ":" + serverInfoPort + "/rs-status";
+    String urlRegionServer = "//" + hostNameEncoded + ":" + serverInfoPort + "/regionserver.jsp";
 
     return "<td><a href=\"" + urlRegionServer + "\">" + StringEscapeUtils.escapeHtml4(hostName)
       + ":" + serverInfoPort + "</a></td>";
@@ -377,7 +377,11 @@
                         writeReq = String.format("%,1d", load.getWriteRequestCount());
                         double rSize = load.getStoreFileSize().get(Size.Unit.BYTE);
                         if (rSize > 0) {
-                        fileSize = StringUtils.byteDesc((long) rSize);
+                          fileSize = StringUtils.byteDesc((long) rSize);
+                           // use the primary replica only for the total store file size calculation
+                           if (j == 0) {
+                             totalStoreFileSizeMB += load.getStoreFileSize().get(Size.Unit.MEGABYTE);
+                           }
                         }
                         double rSizeUncompressed = load.getUncompressedStoreFileSize().get(Size.Unit.BYTE);
                         if (rSizeUncompressed > 0) {
@@ -394,7 +398,7 @@
                 %>
               <tr>
                 <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-                <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
+                <td><a href="http://<%= hostAndPort %>/regionserver.jsp"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
                 <td><%= readReq%></td>
                 <td><%= writeReq%></td>
                 <td><%= fileSizeUncompressed%></td>
@@ -451,7 +455,7 @@
                  %>
                <tr>
                  <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-                 <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
+                 <td><a href="http://<%= hostAndPort %>/regionserver.jsp"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
                  <td><%= locality%></td>
                  <td><%= localityForSsd%></td>
                </tr>
@@ -508,7 +512,7 @@
             %>
               <tr>
                 <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-                <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
+                <td><a href="http://<%= hostAndPort %>/regionserver.jsp"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
                 <td><%= String.format("%,1d", compactingCells)%></td>
                 <td><%= String.format("%,1d", compactedCells)%></td>
                 <td><%= String.format("%,1d", compactingCells - compactedCells)%></td>
@@ -1170,7 +1174,7 @@
     for (Map.Entry<ServerName, Integer> rdEntry : regDistribution.entrySet()) {
       ServerName addr = rdEntry.getKey();
       String url = "//" + URLEncoder.encode(addr.getHostname(), StandardCharsets.UTF_8) + ":"
-        + master.getRegionServerInfoPort(addr) + "/rs-status";
+        + master.getRegionServerInfoPort(addr) + "/regionserver.jsp";
   %>
       <tr>
         <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml4(addr.getHostname())

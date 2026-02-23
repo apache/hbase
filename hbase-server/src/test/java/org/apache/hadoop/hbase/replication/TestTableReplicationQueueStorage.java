@@ -18,12 +18,13 @@
 package org.apache.hadoop.hbase.replication;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,15 +33,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
@@ -51,48 +51,41 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
 import org.hamcrest.Matchers;
 import org.hamcrest.collection.IsEmptyCollection;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
-@Category({ ReplicationTests.class, MediumTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestTableReplicationQueueStorage {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableReplicationQueueStorage.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTableReplicationQueueStorage.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
-  @Rule
-  public TableNameTestRule tableNameRule = new TableNameTestRule();
-
   private TableReplicationQueueStorage storage;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUpBeforeTest() throws Exception {
-    TableName tableName = tableNameRule.getTableName();
+  @BeforeEach
+  public void setUpBeforeTest(TestInfo testInfo) throws Exception {
+    TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TableDescriptor td = ReplicationStorageFactory.createReplicationQueueTableDescriptor(tableName);
     UTIL.getAdmin().createTable(td);
     UTIL.waitTableAvailable(tableName);
@@ -133,11 +126,6 @@ public class TestTableReplicationQueueStorage {
     for (int i = 5; i < 10; i++) {
       assertThat(replicators, hasItem(getServerName(i)));
     }
-  }
-
-  @Test
-  public void testGetSetOffset() {
-
   }
 
   private void assertQueueId(String peerId, ServerName serverName, ReplicationQueueId queueId) {
@@ -470,5 +458,24 @@ public class TestTableReplicationQueueStorage {
     }
     assertEquals(1, storage.getAllPeersFromHFileRefsQueue().size());
     assertEquals(3, storage.getReplicableHFiles(peerId2).size());
+  }
+
+  @Test
+  public void testListAllPeerIds() throws ReplicationException {
+    assertThat(storage.listAllPeerIds(), empty());
+
+    for (int i = 0; i < 20; i++) {
+      int numQueues = ThreadLocalRandom.current().nextInt(10, 100);
+      for (int j = 0; j < numQueues; j++) {
+        ReplicationQueueId queueId = new ReplicationQueueId(getServerName(j), "Peer_" + i);
+        storage.setOffset(queueId, "group-" + j, new ReplicationGroupOffset("file-" + j, j * 100),
+          Collections.emptyMap());
+      }
+    }
+    List<String> peerIds = storage.listAllPeerIds();
+    assertThat(peerIds, hasSize(20));
+    for (int i = 0; i < 20; i++) {
+      assertThat(peerIds, hasItem("Peer_" + i));
+    }
   }
 }

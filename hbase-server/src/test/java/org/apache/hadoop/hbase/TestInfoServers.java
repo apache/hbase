@@ -93,10 +93,12 @@ public class TestInfoServers {
     // give the cluster time to start up
     UTIL.getConnection().getTable(TableName.META_TABLE_NAME).close();
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
-    assertContainsContent(new URL("http://localhost:" + port + "/index.html"), "master-status");
+    assertContainsContent(new URL("http://localhost:" + port + "/index.html"), "master.jsp");
+    assertContainsContent(new URL("http://localhost:" + port + "/master-status"), "master.jsp");
     port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer().getInfoServer()
       .getPort();
-    assertContainsContent(new URL("http://localhost:" + port + "/index.html"), "rs-status");
+    assertContainsContent(new URL("http://localhost:" + port + "/index.html"), "regionserver.jsp");
+    assertContainsContent(new URL("http://localhost:" + port + "/rs-status"), "regionserver.jsp");
   }
 
   /**
@@ -107,10 +109,10 @@ public class TestInfoServers {
   @Test
   public void testInfoServersStatusPages() throws Exception {
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
-    assertContainsContent(new URL("http://localhost:" + port + "/master-status"), "meta");
+    assertContainsContent(new URL("http://localhost:" + port + "/master.jsp"), "meta");
     port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer().getInfoServer()
       .getPort();
-    assertContainsContent(new URL("http://localhost:" + port + "/rs-status"), "meta");
+    assertContainsContent(new URL("http://localhost:" + port + "/regionserver.jsp"), "meta");
   }
 
   @Test

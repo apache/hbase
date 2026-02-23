@@ -162,6 +162,16 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> reopenTableRegions(TableName tableName) {
+    return wrap(rawAdmin.reopenTableRegions(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Void> reopenTableRegions(TableName tableName, List<RegionInfo> regions) {
+    return wrap(rawAdmin.reopenTableRegions(tableName, regions));
+  }
+
+  @Override
   public CompletableFuture<Void> modifyTableStoreFileTracker(TableName tableName, String dstSFT) {
     return wrap(rawAdmin.modifyTableStoreFileTracker(tableName, dstSFT));
   }

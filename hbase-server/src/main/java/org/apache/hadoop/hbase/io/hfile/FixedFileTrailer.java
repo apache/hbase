@@ -144,6 +144,21 @@ public class FixedFileTrailer {
   private long sectionIndexOffset = -1L;
 
   /**
+   * The key namespace
+   */
+  private String keyNamespace;
+
+  /**
+   * The KEK checksum
+   */
+  private long kekChecksum;
+
+  /**
+   * The KEK metadata
+   */
+  private String kekMetadata;
+
+  /**
    * The {@link HFile} format major version.
    */
   private final int majorVersion;
@@ -231,6 +246,15 @@ public class FixedFileTrailer {
       if (sectionIndexOffset >= 0) {
         builder.setSectionIndexOffset(sectionIndexOffset);
       }
+    }
+    if (keyNamespace != null) {
+      builder.setKeyNamespace(keyNamespace);
+    }
+    if (kekMetadata != null) {
+      builder.setKekMetadata(kekMetadata);
+    }
+    if (kekChecksum != 0) {
+      builder.setKekChecksum(kekChecksum);
     }
     return builder.build();
   }
@@ -334,6 +358,7 @@ public class FixedFileTrailer {
     if (trailerProto.hasEncryptionKey()) {
       encryptionKey = trailerProto.getEncryptionKey().toByteArray();
     }
+
     if (trailerProto.hasMultiTenant()) {
       isMultiTenant = trailerProto.getMultiTenant();
     }
@@ -342,6 +367,15 @@ public class FixedFileTrailer {
     }
     if (trailerProto.hasSectionIndexOffset()) {
       sectionIndexOffset = trailerProto.getSectionIndexOffset();
+    }
+    if (trailerProto.hasKeyNamespace()) {
+      keyNamespace = trailerProto.getKeyNamespace();
+    }
+    if (trailerProto.hasKekMetadata()) {
+      kekMetadata = trailerProto.getKekMetadata();
+    }
+    if (trailerProto.hasKekChecksum()) {
+      kekChecksum = trailerProto.getKekChecksum();
     }
   }
 
@@ -392,12 +426,17 @@ public class FixedFileTrailer {
     if (majorVersion >= 3) {
       append(sb, "encryptionKey=" + (encryptionKey != null ? "PRESENT" : "NONE"));
     }
+
     if (majorVersion >= 4) {
       append(sb, "isMultiTenant=" + isMultiTenant);
       if (isMultiTenant) {
         append(sb, "tenantPrefixLength=" + tenantPrefixLength);
         append(sb, "sectionIndexOffset=" + sectionIndexOffset);
       }
+    }
+
+    if (keyNamespace != null) {
+      append(sb, "keyNamespace=" + keyNamespace);
     }
     append(sb, "majorVersion=" + majorVersion);
     append(sb, "minorVersion=" + minorVersion);
@@ -686,8 +725,32 @@ public class FixedFileTrailer {
     return encryptionKey;
   }
 
+  public String getKeyNamespace() {
+    return keyNamespace;
+  }
+
+  public void setKeyNamespace(String keyNamespace) {
+    this.keyNamespace = keyNamespace;
+  }
+
+  public void setKEKChecksum(long kekChecksum) {
+    this.kekChecksum = kekChecksum;
+  }
+
+  public long getKEKChecksum() {
+    return kekChecksum;
+  }
+
   public void setEncryptionKey(byte[] keyBytes) {
     this.encryptionKey = keyBytes;
+  }
+
+  public String getKEKMetadata() {
+    return kekMetadata;
+  }
+
+  public void setKEKMetadata(String kekMetadata) {
+    this.kekMetadata = kekMetadata;
   }
 
   /**

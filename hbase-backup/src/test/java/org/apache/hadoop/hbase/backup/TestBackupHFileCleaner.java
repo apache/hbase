@@ -108,11 +108,11 @@ public class TestBackupHFileCleaner {
     Iterable<FileStatus> deletable;
 
     // The first call will not allow any deletions because of the timestamp mechanism.
-    deletable = cleaner.getDeletableFiles(List.of(file1, file1Archived, file2, file3));
+    deletable = callCleaner(cleaner, List.of(file1, file1Archived, file2, file3));
     assertEquals(Set.of(), Sets.newHashSet(deletable));
 
     // No bulk loads registered, so all files can be deleted.
-    deletable = cleaner.getDeletableFiles(List.of(file1, file1Archived, file2, file3));
+    deletable = callCleaner(cleaner, List.of(file1, file1Archived, file2, file3));
     assertEquals(Set.of(file1, file1Archived, file2, file3), Sets.newHashSet(deletable));
 
     // Register some bulk loads.
@@ -125,8 +125,15 @@ public class TestBackupHFileCleaner {
     }
 
     // File 1 can no longer be deleted, because it is registered as a bulk load.
-    deletable = cleaner.getDeletableFiles(List.of(file1, file1Archived, file2, file3));
+    deletable = callCleaner(cleaner, List.of(file1, file1Archived, file2, file3));
     assertEquals(Set.of(file2, file3), Sets.newHashSet(deletable));
+  }
+
+  private Iterable<FileStatus> callCleaner(BackupHFileCleaner cleaner, Iterable<FileStatus> files) {
+    cleaner.preClean();
+    Iterable<FileStatus> deletable = cleaner.getDeletableFiles(files);
+    cleaner.postClean();
+    return deletable;
   }
 
   private FileStatus createFile(String fileName) throws IOException {

@@ -165,8 +165,9 @@ final class BucketProtoUtils {
       .comparing(BlockCacheKey::getHfileName).thenComparingLong(BlockCacheKey::getOffset));
     for (BucketCacheProtos.BackingMapEntry entry : backingMap.getEntryList()) {
       BucketCacheProtos.BlockCacheKey protoKey = entry.getKey();
-      BlockCacheKey key = new BlockCacheKey(protoKey.getHfilename(), protoKey.getOffset(),
-        protoKey.getPrimaryReplicaBlock(), fromPb(protoKey.getBlockType()));
+      BlockCacheKey key = new BlockCacheKey(protoKey.getHfilename(), protoKey.getFamilyName(),
+        protoKey.getRegionName(), protoKey.getOffset(), protoKey.getPrimaryReplicaBlock(),
+        fromPb(protoKey.getBlockType()), protoKey.getArchived());
       BucketCacheProtos.BucketEntry protoValue = entry.getValue();
       // TODO:We use ByteBuffAllocator.HEAP here, because we could not get the ByteBuffAllocator
       // which created by RpcServer elegantly.

@@ -173,6 +173,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>dieter</id>
+      <name>Dieter De Paepe</name>
+      <email>dieter@apache.org</email>
+      <timezone>+1</timezone>
+    </developer>
+    <developer>
       <id>dimaspivak</id>
       <name>Dima Spivak</name>
       <email>dimaspivak@apache.org</email>
@@ -810,6 +816,7 @@
     <module>hbase-compression</module>
     <module>hbase-extensions</module>
     <module>hbase-dev-generate-classpath</module>
+    <module>hbase-website</module>
   </modules>
   <scm>
     <connection>scm:git:git://gitbox.apache.org/repos/asf/hbase.git</connection>
@@ -874,7 +881,7 @@
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <audience-annotations.version>0.15.0</audience-annotations.version>
     <javadoc.audience-annotations.version>0.15.0</javadoc.audience-annotations.version>
-    <avro.version>1.11.4</avro.version>
+    <avro.version>1.11.5</avro.version>
     <caffeine.version>2.8.1</caffeine.version>
     <commons-codec.version>1.15</commons-codec.version>
     <commons-validator.version>1.7</commons-validator.version>
@@ -895,15 +902,16 @@
     <jaxb-api.version>2.3.1</jaxb-api.version>
     <servlet.api.version>4.0.1</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
-    <tomcat.jasper.version>9.0.108</tomcat.jasper.version>
-    <jruby.version>9.4.12.1</jruby.version>
+    <tomcat.jasper.version>9.0.110</tomcat.jasper.version>
+    <jruby.version>9.4.14.0</jruby.version>
     <junit.jupiter.version>5.13.4</junit.jupiter.version>
     <junit.vintage.version>5.13.4</junit.vintage.version>
+    <awaitility.version>4.3.0</awaitility.version>
     <hamcrest.version>1.3</hamcrest.version>
     <opentelemetry.version>1.49.0</opentelemetry.version>
     <opentelemetry-semconv.version>1.29.0-alpha</opentelemetry-semconv.version>
     <opentelemetry-javaagent.version>2.15.0</opentelemetry-javaagent.version>
-    <log4j2.version>2.17.2</log4j2.version>
+    <log4j2.version>2.25.3</log4j2.version>
     <mockito.version>4.11.0</mockito.version>
     <byte-buddy.version>1.15.11</byte-buddy.version>
     <!--
@@ -918,11 +926,10 @@
     <jline.version>2.11</jline.version>
     <slf4j.version>1.7.30</slf4j.version>
     <clover.version>4.0.3</clover.version>
-    <jamon-runtime.version>2.4.1</jamon-runtime.version>
     <jettison.version>1.5.4</jettison.version>
     <!--Make sure these joni/jcodings are compatible with the versions used by jruby-->
-    <joni.version>2.2.3</joni.version>
-    <jcodings.version>1.0.61</jcodings.version>
+    <joni.version>2.2.5</joni.version>
+    <jcodings.version>1.0.63</jcodings.version>
     <spy.version>2.12.3</spy.version>
     <bouncycastle.version>1.81</bouncycastle.version>
     <skyscreamer.version>1.5.1</skyscreamer.version>
@@ -935,22 +942,21 @@
     <!--
       When updating checkstyle.version, please make the same change in `.idea/checkstyle-idea.xml`
     -->
-    <checkstyle.version>8.29</checkstyle.version>
+    <checkstyle.version>11.0.1</checkstyle.version>
     <exec.maven.version>3.1.0</exec.maven.version>
     <error-prone.version>2.41.0</error-prone.version>
-    <jamon.plugin.version>2.4.2</jamon.plugin.version>
     <lifecycle.mapping.version>1.0.0</lifecycle.mapping.version>
     <maven.antrun.version>1.8</maven.antrun.version>
     <maven.bundle.version>3.3.0</maven.bundle.version>
-    <maven.checkstyle.version>3.1.0</maven.checkstyle.version>
+    <maven.checkstyle.version>3.6.0</maven.checkstyle.version>
     <maven.eclipse.version>2.10</maven.eclipse.version>
     <maven.gpg.version>3.0.1</maven.gpg.version>
     <maven.javadoc.version>3.4.0</maven.javadoc.version>
     <maven.dependency.version>3.8.1</maven.dependency.version>
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
-    <maven.project.info.report.version>3.1.2</maven.project.info.report.version>
+    <maven.project.info.report.version>3.9.0</maven.project.info.report.version>
     <maven-owasp-plugin.version>12.1.0</maven-owasp-plugin.version>
-    <os.maven.version>1.5.0.Final</os.maven.version>
+    <os.maven.version>1.7.1</os.maven.version>
     <findbugs-annotations.version>1.3.9-1</findbugs-annotations.version>
     <spotbugs.version>4.7.3</spotbugs.version>
     <spotbugs.maven.version>4.7.2.1</spotbugs.maven.version>
@@ -958,11 +964,23 @@
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
     <spotless.version>2.44.4</spotless.version>
-    <maven-site.version>3.12.0</maven-site.version>
+    <maven-site.version>3.21.0</maven-site.version>
+    <reflow-maven-skin.version>2.3.3</reflow-maven-skin.version>
+    <maven-download-plugin.version>1.2.1</maven-download-plugin.version>
+    <!-- Website static CSS, JS dependencies -->
+    <site.bootswatch.version>4.4.0</site.bootswatch.version>
+    <site.popperjs.version>1.16.0</site.popperjs.version>
+    <site.jquery.version>3.4.1</site.jquery.version>
+    <site.bootstrap.version>4.4.1</site.bootstrap.version>
+    <site.anchorjs.version>3.2.2</site.anchorjs.version>
+    <site.fontawesome.version>5.12.0</site.fontawesome.version>
+    <!-- RefGuide static CSS, JS dependencies -->
+    <refguide.fontawesome.version>4.7.0</refguide.fontawesome.version>
+    <refguide.mathjax.version>2.7.0</refguide.mathjax.version>
     <!-- compression -->
     <aircompressor.version>0.27</aircompressor.version>
     <brotli4j.version>1.11.0</brotli4j.version>
-    <lz4.version>1.8.0</lz4.version>
+    <lz4.version>1.10.1</lz4.version>
     <snappy.version>1.1.10.4</snappy.version>
     <zstd-jni.version>1.5.7-2</zstd-jni.version>
     <!--
@@ -1502,6 +1520,12 @@
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpclient</artifactId>
         <version>${httpclient.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.httpcomponents</groupId>
@@ -1517,6 +1541,12 @@
         <groupId>commons-validator</groupId>
         <artifactId>commons-validator</artifactId>
         <version>${commons-validator.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>commons-io</groupId>
@@ -1537,14 +1567,6 @@
         <groupId>commons-cli</groupId>
         <artifactId>commons-cli</artifactId>
         <version>${commons-cli.version}</version>
-      </dependency>
-      <dependency>
-        <!-- commons-logging is only used by hbase-http's HttpRequestLog and hbase-server's
-             HBaseTestingUtil.
-          -->
-        <groupId>commons-logging</groupId>
-        <artifactId>commons-logging</artifactId>
-        <version>1.2</version>
       </dependency>
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
@@ -1606,11 +1628,6 @@
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-databind</artifactId>
         <version>${jackson.databind.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jamon</groupId>
-        <artifactId>jamon-runtime</artifactId>
-        <version>${jamon-runtime.version}</version>
       </dependency>
       <!-- REST dependencies -->
       <dependency>
@@ -1695,6 +1712,12 @@
         <scope>test</scope>
       </dependency>
       <dependency>
+        <groupId>org.awaitility</groupId>
+        <artifactId>awaitility</artifactId>
+        <version>${awaitility.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
         <groupId>org.hamcrest</groupId>
         <artifactId>hamcrest-core</artifactId>
         <version>${hamcrest.version}</version>
@@ -1755,6 +1778,12 @@
         <scope>test</scope>
       </dependency>
       <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcutil-jdk18on</artifactId>
+        <version>${bouncycastle.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
         <groupId>org.skyscreamer</groupId>
         <artifactId>jsonassert</artifactId>
         <version>${skyscreamer.version}</version>
@@ -1788,8 +1817,13 @@
         <artifactId>aircompressor</artifactId>
         <version>${aircompressor.version}</version>
       </dependency>
+      <!--
+        The official lz4-java project has been discontinued, we have to move to
+        a community fork for addressing CVE-2025-12183 since 1.8.1+,
+        see: https://sites.google.com/sonatype.com/vulnerabilities/cve-2025-12183
+      -->
       <dependency>
-        <groupId>org.lz4</groupId>
+        <groupId>at.yawk.lz4</groupId>
         <artifactId>lz4-java</artifactId>
         <version>${lz4.version}</version>
       </dependency>
@@ -2031,11 +2065,6 @@
           <artifactId>maven-antrun-plugin</artifactId>
           <version>${maven.antrun.version}</version>
         </plugin>
-        <plugin>
-          <groupId>org.jamon</groupId>
-          <artifactId>jamon-maven-plugin</artifactId>
-          <version>${jamon.plugin.version}</version>
-        </plugin>
         <!-- Make a jar and put the sources in the jar.
         In the parent pom, so submodules will do the right thing. -->
         <plugin>
@@ -2139,6 +2168,8 @@
               <exclude>**/vote.tmpl</exclude>
               <!-- gzipped list of S3N URIs for hbase-it -->
               <exclude>**/CC-MAIN-2021-10-warc.paths.gz</exclude>
+              <!-- Cannot add ASF licence to JSON files as JSON files cannot have comments in them. -->
+              <exclude>**/*.json</exclude>
             </excludes>
           </configuration>
         </plugin>
@@ -2462,8 +2493,7 @@
                   <excludes>
                     <exclude>commons-logging:commons-logging</exclude>
                   </excludes>
-                  <message>We don't use commons-logging any more, so do not depend on it directly.</message>
-                  <searchTransitive>false</searchTransitive>
+                  <message>We don't use commons-logging any more, so do not depend on it directly. We are also using jcl-over-slf4j for libraries so exclude any transitive commons-logging dependencies.</message>
                 </bannedDependencies>
               </rules>
             </configuration>
@@ -2783,7 +2813,8 @@
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
-            <id>unpack-website-resources</id>
+            <!-- Required for the RefGuide (book.html) to use local resources (e.g. not from CDN). -->
+            <id>unpack-RefGuide-resources</id>
             <goals>
               <goal>unpack</goal>
             </goals>
@@ -2792,25 +2823,8 @@
               <artifactItems>
                 <artifactItem>
                   <groupId>org.webjars</groupId>
-                  <artifactId>bootstrap</artifactId>
-                  <version>2.3.2</version>
-                  <type>jar</type>
-                  <overWrite>true</overWrite>
-                  <includes>**/css/bootstrap-responsive.min.css</includes>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.webjars</groupId>
-                  <artifactId>highlightjs</artifactId>
-                  <version>8.7</version>
-                  <type>jar</type>
-                  <overWrite>true</overWrite>
-                  <includes>**/styles/github.min.css,
-                    **/highlight.min.js,</includes>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.webjars</groupId>
                   <artifactId>font-awesome</artifactId>
-                  <version>4.7.0</version>
+                  <version>${refguide.fontawesome.version}</version>
                   <type>jar</type>
                   <overWrite>true</overWrite>
                   <includes>**/css/font-awesome.css,
@@ -2823,7 +2837,7 @@
                 <artifactItem>
                   <groupId>org.webjars</groupId>
                   <artifactId>MathJax</artifactId>
-                  <version>2.7.0</version>
+                  <version>${refguide.mathjax.version}</version>
                   <type>jar</type>
                   <overWrite>true</overWrite>
                   <includes>**/MathJax.js,
@@ -2846,6 +2860,55 @@
                     **/fonts/HTML-CSS/TeX/otf/MathJax_Size1-Regular.otf,
                     **/fonts/HTML-CSS/TeX/otf/MathJax_Size3-Regular.otf,
                     **/fonts/HTML-CSS/TeX/otf/MathJax_SansSerif-Italic.otf,</includes>
+                </artifactItem>
+              </artifactItems>
+              <outputDirectory>${project.build.directory}</outputDirectory>
+            </configuration>
+          </execution>
+          <execution>
+            <!-- Required for the site to use local resources (e.g. not from CDN). -->
+            <id>unpack-site-resources</id>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>bootstrap</artifactId>
+                  <version>${site.bootstrap.version}</version>
+                  <includes>**/js/bootstrap.min.js</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars.npm</groupId>
+                  <artifactId>bootswatch</artifactId>
+                  <version>${site.bootswatch.version}</version>
+                  <includes>**/litera/bootstrap.min.css</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>popper.js</artifactId>
+                  <version>${site.popperjs.version}</version>
+                  <includes>**/umd/popper.min.js</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>jquery</artifactId>
+                  <version>${site.jquery.version}</version>
+                  <includes>**/jquery.min.js</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>anchorjs</artifactId>
+                  <version>${site.anchorjs.version}</version>
+                  <includes>**/anchor.min.js</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>font-awesome</artifactId>
+                  <version>${site.fontawesome.version}</version>
+                  <includes>**/css/all.min.css,**/webfonts/*</includes>
                 </artifactItem>
               </artifactItems>
               <outputDirectory>${project.build.directory}</outputDirectory>
@@ -2880,11 +2943,15 @@
         <version>${maven-site.version}</version>
         <configuration>
           <siteDirectory>${basedir}/src/site</siteDirectory>
-          <customBundle>${basedir}/src/site/custom/project-info-report.properties</customBundle>
           <inputEncoding>UTF-8</inputEncoding>
           <outputEncoding>UTF-8</outputEncoding>
         </configuration>
         <dependencies>
+          <dependency>
+            <groupId>io.github.devacfr.maven.skins</groupId>
+            <artifactId>reflow-velocity-tools</artifactId>
+            <version>${reflow-maven-skin.version}</version>
+          </dependency>
           <dependency>
             <!-- add support for ssh/scp -->
             <groupId>org.apache.maven.wagon</groupId>
@@ -2995,6 +3062,67 @@
               </resources>
             </configuration>
           </execution>
+          <execution>
+            <id>copy-website-resources</id>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/bootstrap/${site.bootstrap.version}/js</directory>
+                  <targetPath>${project.build.directory}/site/js</targetPath>
+                  <includes>
+                    <include>bootstrap.min.js</include>
+                  </includes>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/bootswatch/${site.bootswatch.version}/dist/litera</directory>
+                  <targetPath>${project.build.directory}/site/css/themes/litera</targetPath>
+                  <includes>
+                    <include>bootstrap.min.css</include>
+                  </includes>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/popper.js/${site.popperjs.version}/umd</directory>
+                  <targetPath>${project.build.directory}/site/js</targetPath>
+                  <includes>
+                    <include>popper.min.js</include>
+                  </includes>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/jquery/${site.jquery.version}</directory>
+                  <targetPath>${project.build.directory}/site/js</targetPath>
+                  <includes>
+                    <include>jquery.min.js</include>
+                  </includes>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/anchorjs/${site.anchorjs.version}</directory>
+                  <targetPath>${project.build.directory}/site/js</targetPath>
+                  <includes>
+                    <include>anchor.min.js</include>
+                  </includes>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/font-awesome/${site.fontawesome.version}/css</directory>
+                  <targetPath>${project.build.directory}/site/css/fontawesome</targetPath>
+                  <includes>
+                    <include>all.min.css</include>
+                  </includes>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/font-awesome/${site.fontawesome.version}</directory>
+                  <targetPath>${project.build.directory}/site/css</targetPath>
+                  <includes>
+                    <include>webfonts/*</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -3017,8 +3145,8 @@
             </configuration>
           </execution>
           <execution>
-            <!-- Copy static CSS and JS files for the website. -->
-            <id>copy-css-js-to-site</id>
+            <!-- Copy static CSS and JS files for the RefGuide (book.html). -->
+            <id>copy-css-js-for-RefGuide</id>
             <goals>
               <goal>run</goal>
             </goals>
@@ -3026,26 +3154,17 @@
             <configuration>
               <target>
                 <copy flatten="true" todir="${project.build.directory}/site/css">
-                  <fileset dir="${webjars-dir}/bootstrap/2.3.2/css">
-                    <include name="bootstrap-responsive.min.css"/>
-                  </fileset>
-                  <fileset dir="${webjars-dir}/highlightjs/8.7/styles">
-                    <include name="github.min.css"/>
-                  </fileset>
-                  <fileset dir="${webjars-dir}/font-awesome/4.7.0/css">
+                  <fileset dir="${webjars-dir}/font-awesome/${refguide.fontawesome.version}/css">
                     <include name="font-awesome.css"/>
                   </fileset>
                 </copy>
                 <copy flatten="true" todir="${project.build.directory}/site/js">
-                  <fileset dir="${webjars-dir}/highlightjs/8.7/">
-                    <include name="highlight.min.js"/>
-                  </fileset>
-                  <fileset dir="${webjars-dir}/MathJax/2.7.0">
+                  <fileset dir="${webjars-dir}/MathJax/${refguide.mathjax.version}">
                     <include name="MathJax.js"/>
                   </fileset>
                 </copy>
                 <copy flatten="false" todir="${project.build.directory}/site/js">
-                  <fileset dir="${webjars-dir}/MathJax/2.7.0">
+                  <fileset dir="${webjars-dir}/MathJax/${refguide.mathjax.version}">
                     <include name="config/TeX-MML-AM_HTMLorMML.js"/>
                     <include name="jax/output/HTML-CSS/jax.js"/>
                     <include name="jax/output/HTML-CSS/imageFonts.js"/>
@@ -3058,7 +3177,7 @@
                   </fileset>
                 </copy>
                 <copy flatten="true" todir="${project.build.directory}/site/fonts">
-                  <fileset dir="${webjars-dir}/font-awesome/4.7.0/fonts">
+                  <fileset dir="${webjars-dir}/font-awesome/${refguide.fontawesome.version}/fonts">
                     <include name="fontawesome-webfont.*"/>
                   </fileset>
                 </copy>
@@ -3185,6 +3304,7 @@
                 <exclude>**/target/**</exclude>
                 <exclude>**/dependency-reduced-pom.xml</exclude>
                 <exclude>**/.idea/**</exclude>
+                <exclude>**/node_modules/**</exclude>
               </excludes>
               <!-- define the steps to apply to those files -->
               <trimTrailingWhitespace/>
@@ -3216,6 +3336,7 @@
                 <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCOutputFormat.java</exclude>
                 <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCRecord.java</exclude>
                 <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCWritable.java</exclude>
+                <exclude>**/node_modules/**</exclude>
               </excludes>
               <licenseHeader>
                 <file>${session.executionRootDirectory}/dev-support/license-header</file>
@@ -3326,6 +3447,11 @@
                   <artifactId>jsr305</artifactId>
                   <version>3.0.2</version>
                 </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.osgi</groupId>
+                  <artifactId>osgi.annotation</artifactId>
+                  <version>8.1.0</version>
+                </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
             </configuration>
@@ -3376,6 +3502,11 @@
                   <groupId>com.google.code.findbugs</groupId>
                   <artifactId>jsr305</artifactId>
                   <version>3.0.2</version>
+                </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.osgi</groupId>
+                  <artifactId>osgi.annotation</artifactId>
+                  <version>8.1.0</version>
                 </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
@@ -3436,6 +3567,11 @@
                   <artifactId>jsr305</artifactId>
                   <version>3.0.2</version>
                 </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.osgi</groupId>
+                  <artifactId>osgi.annotation</artifactId>
+                  <version>8.1.0</version>
+                </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
             </configuration>
@@ -3494,6 +3630,11 @@
                   <artifactId>jsr305</artifactId>
                   <version>3.0.2</version>
                 </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.osgi</groupId>
+                  <artifactId>osgi.annotation</artifactId>
+                  <version>8.1.0</version>
+                </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
             </configuration>
@@ -3549,10 +3690,6 @@
         <argLine>${hbase-surefire.jdk17.flags}
           ${hbase-surefire.argLine}
           @{jacocoArgLine}</argLine>
-        <!--
-          Value to use for surefire when running jdk11.
-          TODO: replicate logic for windows
-        -->
         <surefire.Xmx>2200m</surefire.Xmx>
       </properties>
       <build>
@@ -3711,7 +3848,7 @@
       </activation>
       <properties>
         <build.platform>cygwin</build.platform>
-        <argLine>${hbase-surefire.cygwin-argLine} @{jacocoArgLine}</argLine>
+        <argLine>${hbase-surefire.jdk17.flags} ${hbase-surefire.cygwin-argLine} @{jacocoArgLine}</argLine>
       </properties>
     </profile>
     <!-- this profile should match the name of the release profile in the root asf pom -->
@@ -4040,6 +4177,10 @@
                 <groupId>org.openlabtesting.leveldbjni</groupId>
                 <artifactId>leveldbjni-all</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -4092,6 +4233,10 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -4196,6 +4341,10 @@
                 <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
               <exclusion>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
+              </exclusion>
+              <exclusion>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk15on</artifactId>
               </exclusion>
@@ -4255,6 +4404,10 @@
               <exclusion>
                 <groupId>javax.ws.rs</groupId>
                 <artifactId>jsr311-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>org.bouncycastle</groupId>
@@ -4336,6 +4489,10 @@
               <exclusion>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcpkix-jdk15on</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -4452,6 +4609,91 @@
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
         <surefire.secondPartGroups/>
       </properties>
+    </profile>
+    <profile>
+      <!--
+        Wave profiles for partitioning Large tests across parallel CI jobs.
+        Tests are split alphabetically by class name (after "Test" prefix):
+          Wave 1: Test[A-H]* classes
+          Wave 2: Test[I-R]* classes
+          Wave 3: Test[S-Z]* classes
+
+        Flaky test exclusion is handled separately via -Dtest.exclude.pattern
+        which is set by hbase-personality.sh from EXCLUDE_TESTS_URL.
+      -->
+      <id>runLargeTests-wave1</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
+        <surefire.secondPartGroups/>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>%regex[(?i).*/test[a-h].*]</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>runLargeTests-wave2</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
+        <surefire.secondPartGroups/>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>%regex[(?i).*/test[i-r].*]</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>runLargeTests-wave3</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
+        <surefire.secondPartGroups/>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>%regex[(?i).*/test[s-z].*]</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
     <profile>
       <!-- Use it to launch small & medium tests -->

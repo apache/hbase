@@ -32,9 +32,10 @@ import org.apache.yetus.audience.InterfaceStability;
 public interface AuthenticationProviderSelector {
 
   /**
-   * Initializes the implementation with configuration and a set of providers available. This method
-   * should be called exactly once per implementation prior to calling
-   * {@link #selectProvider(String, User)}.
+   * Initializes the implementation with configuration and a set of providers available.
+   * <p>
+   * This method is called once upon construction, before {@link #selectProvider(String, User)} is
+   * invoked.
    */
   void configure(Configuration conf,
     Collection<SaslClientAuthenticationProvider> availableProviders);

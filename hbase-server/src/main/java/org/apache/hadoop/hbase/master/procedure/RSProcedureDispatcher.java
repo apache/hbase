@@ -261,9 +261,9 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
     /**
      * The default retry limit. Waiting for more than {@value} attempts is not going to help much
      * for genuine connectivity errors. Therefore, consider fail-fast after {@value} retries. Value
-     * = {@value}
+     * = {@value}. 10 retries means we will wait for at least 28.5 seconds before killing RS.
      */
-    private static final int DEFAULT_RS_REMOTE_PROC_RETRY_LIMIT = 5;
+    private static final int DEFAULT_RS_REMOTE_PROC_RETRY_LIMIT = 10;
 
     private final int failFastRetryLimit;
 

@@ -112,6 +112,16 @@ public class TestMetricsRegionSourceImpl {
     }
 
     @Override
+    public long getMemStoreHeapSize() {
+      return 0;
+    }
+
+    @Override
+    public long getMemStoreOffHeapSize() {
+      return 0;
+    }
+
+    @Override
     public long getStoreFileSize() {
       return 0;
     }
@@ -236,6 +246,11 @@ public class TestMetricsRegionSourceImpl {
       Map<String, Long> map = new HashMap<String, Long>();
       map.put("info", 0L);
       return map;
+    }
+
+    @Override
+    public String getTableDescriptorHash() {
+      return "testhash";
     }
   }
 }

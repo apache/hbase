@@ -139,11 +139,6 @@ public class TestDataTieringManager {
   }
 
   @FunctionalInterface
-  interface DataTieringMethodCallerWithPath {
-    boolean call(DataTieringManager manager, Path path) throws DataTieringException;
-  }
-
-  @FunctionalInterface
   interface DataTieringMethodCallerWithKey {
     boolean call(DataTieringManager manager, BlockCacheKey key) throws DataTieringException;
   }
@@ -160,49 +155,12 @@ public class TestDataTieringManager {
     // Test with another valid key
     key = new BlockCacheKey(hStoreFiles.get(1).getPath(), 0, true, BlockType.DATA);
     testDataTieringMethodWithKeyNoException(methodCallerWithKey, key, false);
-
-    // Test with valid key with no HFile Path
-    key = new BlockCacheKey(hStoreFiles.get(0).getPath().getName(), 0);
-    testDataTieringMethodWithKeyExpectingException(methodCallerWithKey, key,
-      new DataTieringException("BlockCacheKey Doesn't Contain HFile Path"));
-  }
-
-  @Test
-  public void testDataTieringEnabledWithPath() throws IOException {
-    initializeTestEnvironment();
-    DataTieringMethodCallerWithPath methodCallerWithPath = DataTieringManager::isDataTieringEnabled;
-
-    // Test with valid path
-    Path hFilePath = hStoreFiles.get(1).getPath();
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, false);
-
-    // Test with another valid path
-    hFilePath = hStoreFiles.get(3).getPath();
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, true);
-
-    // Test with an incorrect path
-    hFilePath = new Path("incorrectPath");
-    testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("Incorrect HFile Path: " + hFilePath));
-
-    // Test with a non-existing HRegion path
-    Path basePath = hStoreFiles.get(0).getPath().getParent().getParent().getParent();
-    hFilePath = new Path(basePath, "incorrectRegion/cf1/filename");
-    testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("HRegion corresponding to " + hFilePath + " doesn't exist"));
-
-    // Test with a non-existing HStore path
-    basePath = hStoreFiles.get(0).getPath().getParent().getParent();
-    hFilePath = new Path(basePath, "incorrectCf/filename");
-    testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("HStore corresponding to " + hFilePath + " doesn't exist"));
   }
 
   @Test
   public void testHotDataWithKey() throws IOException {
     initializeTestEnvironment();
     DataTieringMethodCallerWithKey methodCallerWithKey = DataTieringManager::isHotData;
-
     // Test with valid key
     BlockCacheKey key = new BlockCacheKey(hStoreFiles.get(0).getPath(), 0, true, BlockType.DATA);
     testDataTieringMethodWithKeyNoException(methodCallerWithKey, key, true);
@@ -213,22 +171,55 @@ public class TestDataTieringManager {
   }
 
   @Test
-  public void testHotDataWithPath() throws IOException {
+  public void testGracePeriodMakesColdFileHot() throws IOException, DataTieringException {
     initializeTestEnvironment();
-    DataTieringMethodCallerWithPath methodCallerWithPath = DataTieringManager::isHotData;
 
-    // Test with valid path
-    Path hFilePath = hStoreFiles.get(2).getPath();
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, true);
+    long hotAge = 1 * DAY;
+    long gracePeriod = 3 * DAY;
 
-    // Test with another valid path
-    hFilePath = hStoreFiles.get(3).getPath();
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, false);
+    long currentTime = System.currentTimeMillis();
+    long fileTimestamp = currentTime - (2 * DAY);
 
-    // Test with a filename where corresponding HStoreFile in not present
-    hFilePath = new Path(hStoreFiles.get(0).getPath().getParent(), "incorrectFileName");
-    testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("Store file corresponding to " + hFilePath + " doesn't exist"));
+    Configuration conf = getConfWithGracePeriod(hotAge, gracePeriod);
+    HRegion region = createHRegion("tableGracePeriod", conf);
+    HStore hStore = createHStore(region, "cf1", conf);
+
+    HStoreFile file = createHStoreFile(hStore.getStoreContext().getFamilyStoreDirectoryPath(),
+      hStore.getReadOnlyConfiguration(), fileTimestamp, region.getRegionFileSystem());
+    file.initReader();
+
+    hStore.refreshStoreFiles();
+    region.stores.put(Bytes.toBytes("cf1"), hStore);
+    testOnlineRegions.put(region.getRegionInfo().getEncodedName(), region);
+    Path hFilePath = file.getPath();
+    BlockCacheKey key = new BlockCacheKey(hFilePath, 0, true, BlockType.DATA);
+    assertTrue("File should be hot due to grace period", dataTieringManager.isHotData(key));
+  }
+
+  @Test
+  public void testFileIsColdWithoutGracePeriod() throws IOException, DataTieringException {
+    initializeTestEnvironment();
+
+    long hotAge = 1 * DAY;
+    long gracePeriod = 0;
+    long currentTime = System.currentTimeMillis();
+    long fileTimestamp = currentTime - (2 * DAY);
+
+    Configuration conf = getConfWithGracePeriod(hotAge, gracePeriod);
+    HRegion region = createHRegion("tableNoGracePeriod", conf);
+    HStore hStore = createHStore(region, "cf1", conf);
+
+    HStoreFile file = createHStoreFile(hStore.getStoreContext().getFamilyStoreDirectoryPath(),
+      hStore.getReadOnlyConfiguration(), fileTimestamp, region.getRegionFileSystem());
+    file.initReader();
+
+    hStore.refreshStoreFiles();
+    region.stores.put(Bytes.toBytes("cf1"), hStore);
+    testOnlineRegions.put(region.getRegionInfo().getEncodedName(), region);
+
+    Path hFilePath = file.getPath();
+    BlockCacheKey key = new BlockCacheKey(hFilePath, 0, true, BlockType.DATA);
+    assertFalse("File should be cold without grace period", dataTieringManager.isHotData(key));
   }
 
   @Test
@@ -263,14 +254,16 @@ public class TestDataTieringManager {
     }
 
     // Verify hStoreFile3 is identified as cold data
-    DataTieringMethodCallerWithPath methodCallerWithPath = DataTieringManager::isHotData;
+    DataTieringMethodCallerWithKey methodCallerWithPath = DataTieringManager::isHotData;
     Path hFilePath = hStoreFiles.get(3).getPath();
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, false);
+    testDataTieringMethodWithKeyNoException(methodCallerWithPath,
+      new BlockCacheKey(hFilePath, 0, true, BlockType.DATA), false);
 
     // Verify all the other files in hStoreFiles are hot data
     for (int i = 0; i < hStoreFiles.size() - 1; i++) {
       hFilePath = hStoreFiles.get(i).getPath();
-      testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, true);
+      testDataTieringMethodWithKeyNoException(methodCallerWithPath,
+        new BlockCacheKey(hFilePath, 0, true, BlockType.DATA), true);
     }
 
     try {
@@ -651,22 +644,6 @@ public class TestDataTieringManager {
     assertEquals(expectedColdBlocks, numColdBlocks);
   }
 
-  private void testDataTieringMethodWithPath(DataTieringMethodCallerWithPath caller, Path path,
-    boolean expectedResult, DataTieringException exception) {
-    try {
-      boolean value = caller.call(dataTieringManager, path);
-      if (exception != null) {
-        fail("Expected DataTieringException to be thrown");
-      }
-      assertEquals(expectedResult, value);
-    } catch (DataTieringException e) {
-      if (exception == null) {
-        fail("Unexpected DataTieringException: " + e.getMessage());
-      }
-      assertEquals(exception.getMessage(), e.getMessage());
-    }
-  }
-
   private void testDataTieringMethodWithKey(DataTieringMethodCallerWithKey caller,
     BlockCacheKey key, boolean expectedResult, DataTieringException exception) {
     try {
@@ -681,16 +658,6 @@ public class TestDataTieringManager {
       }
       assertEquals(exception.getMessage(), e.getMessage());
     }
-  }
-
-  private void testDataTieringMethodWithPathExpectingException(
-    DataTieringMethodCallerWithPath caller, Path path, DataTieringException exception) {
-    testDataTieringMethodWithPath(caller, path, false, exception);
-  }
-
-  private void testDataTieringMethodWithPathNoException(DataTieringMethodCallerWithPath caller,
-    Path path, boolean expectedResult) {
-    testDataTieringMethodWithPath(caller, path, expectedResult, null);
   }
 
   private void testDataTieringMethodWithKeyExpectingException(DataTieringMethodCallerWithKey caller,
@@ -777,6 +744,8 @@ public class TestDataTieringManager {
       .setValue(DataTieringManager.DATATIERING_KEY, conf.get(DataTieringManager.DATATIERING_KEY))
       .setValue(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY,
         conf.get(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY))
+      .setValue(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY,
+        conf.get(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY))
       .build();
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).build();
 
@@ -804,6 +773,8 @@ public class TestDataTieringManager {
         .setValue(DataTieringManager.DATATIERING_KEY, conf.get(DataTieringManager.DATATIERING_KEY))
         .setValue(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY,
           conf.get(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY))
+        .setValue(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY,
+          conf.get(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY))
         .build();
 
     return new HStore(region, columnFamilyDescriptor, conf, false);
@@ -813,6 +784,13 @@ public class TestDataTieringManager {
     Configuration conf = new Configuration(defaultConf);
     conf.set(DataTieringManager.DATATIERING_KEY, DataTieringType.TIME_RANGE.name());
     conf.set(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY, String.valueOf(hotDataAge));
+    return conf;
+  }
+
+  private static Configuration getConfWithGracePeriod(long hotDataAge, long gracePeriod) {
+    Configuration conf = getConfWithTimeRangeDataTieringEnabled(hotDataAge);
+    conf.set(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY,
+      String.valueOf(gracePeriod));
     return conf;
   }
 

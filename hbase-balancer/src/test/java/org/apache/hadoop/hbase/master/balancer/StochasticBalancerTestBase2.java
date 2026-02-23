@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 public class StochasticBalancerTestBase2 extends StochasticBalancerTestBase {
 
-  @Before
+  @BeforeEach
   public void before() {
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 2000000L);
     conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
@@ -31,7 +31,7 @@ public class StochasticBalancerTestBase2 extends StochasticBalancerTestBase {
     loadBalancer.onConfigurationChange(conf);
   }
 
-  @After
+  @AfterEach
   public void after() {
     // reset config to make sure balancer run
     loadBalancer.onConfigurationChange(conf);

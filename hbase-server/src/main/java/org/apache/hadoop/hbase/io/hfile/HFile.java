@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.io.MetricsIO;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
-import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.regionserver.CellSink;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
@@ -193,7 +193,7 @@ public final class HFile {
   }
 
   public static final void updateReadLatency(long latencyMillis, boolean pread, boolean tooSlow) {
-    RpcServer.getCurrentCall().ifPresent(call -> call.updateFsReadTime(latencyMillis));
+    ThreadLocalServerSideScanMetrics.addFsReadTime(latencyMillis);
     if (pread) {
       MetricsIO.getInstance().updateFsPreadTime(latencyMillis);
     } else {
@@ -574,10 +574,12 @@ public final class HFile {
     boolean primaryReplicaReader, Configuration conf) throws IOException {
     Preconditions.checkNotNull(cacheConf, "Cannot create Reader with null CacheConf");
     FSDataInputStreamWrapper stream = new FSDataInputStreamWrapper(fs, path);
+    // Key management not yet implemented in precursor PR
     ReaderContext context =
       new ReaderContextBuilder().withFilePath(path).withInputStreamWrapper(stream)
         .withFileSize(fs.getFileStatus(path).getLen()).withFileSystem(stream.getHfs())
-        .withPrimaryReplicaReader(primaryReplicaReader).withReaderType(ReaderType.PREAD).build();
+        .withPrimaryReplicaReader(primaryReplicaReader).withReaderType(ReaderType.PREAD)
+        .withManagedKeyDataCache(null).withSystemKeyCache(null).build();
     HFileInfo fileInfo = new HFileInfo(context, conf);
     Reader reader = createReader(context, fileInfo, cacheConf, conf);
     if (fileInfo.getTrailer().getMajorVersion() != HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT) {

@@ -37,7 +37,9 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Store;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
@@ -60,14 +62,18 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * the tag.
  * <p>
  * It also controls the timeout for the whole test class running, while the timeout annotation in
- * JUnit5 can only enforce the timeout for each test method.
+ * JUnit5 can only enforce the timeout for each test method. When a test is timed out, a thread dump
+ * will be printed to log output.
  * <p>
- * Finally, it also forbid System.exit call in tests. TODO: need to find a new way as
- * SecurityManager has been removed since Java 21.
+ * It also implements resource check for each test method, using the {@link ResourceChecker} class.
+ * <p>
+ * Finally, it also forbid System.exit call in tests. <br>
+ * TODO: need to find a new way as SecurityManager was deprecated in Java 17 and permanently
+ * disabled since Java 24.
  */
 @InterfaceAudience.Private
-public class HBaseJupiterExtension
-  implements InvocationInterceptor, BeforeAllCallback, AfterAllCallback {
+public class HBaseJupiterExtension implements InvocationInterceptor, BeforeAllCallback,
+  AfterAllCallback, BeforeEachCallback, AfterEachCallback {
 
   private static final Logger LOG = LoggerFactory.getLogger(HBaseJupiterExtension.class);
 
@@ -83,6 +89,8 @@ public class HBaseJupiterExtension
   private static final String EXECUTOR = "executor";
 
   private static final String DEADLINE = "deadline";
+
+  private static final String RESOURCE_CHECK = "rc";
 
   private Duration pickTimeout(ExtensionContext ctx) {
     Set<String> timeoutTags = TAG_TO_TIMEOUT.keySet();
@@ -130,7 +138,8 @@ public class HBaseJupiterExtension
     System.setSecurityManager(null);
   }
 
-  private <T> T runWithTimeout(Invocation<T> invocation, ExtensionContext ctx) throws Throwable {
+  private <T> T runWithTimeout(Invocation<T> invocation, ExtensionContext ctx, String name)
+    throws Throwable {
     Store store = ctx.getStore(NAMESPACE);
     ExecutorService executor = store.get(EXECUTOR, ExecutorService.class);
     if (executor == null) {
@@ -139,12 +148,12 @@ public class HBaseJupiterExtension
     Instant deadline = store.get(DEADLINE, Instant.class);
     Instant now = Instant.now();
     if (!now.isBefore(deadline)) {
-      fail("Test " + ctx.getDisplayName() + " timed out, deadline is " + deadline);
+      fail("Test " + name + " timed out, deadline is " + deadline);
       return null;
     }
 
     Duration remaining = Duration.between(now, deadline);
-    LOG.info("remaining timeout for {} is {}", ctx.getDisplayName(), remaining);
+    LOG.info("remaining timeout for {} is {}", name, remaining);
     Future<T> future = executor.submit(() -> {
       try {
         return invocation.proceed();
@@ -157,56 +166,81 @@ public class HBaseJupiterExtension
       return future.get(remaining.toNanos(), TimeUnit.NANOSECONDS);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      fail("Test " + ctx.getDisplayName() + " interrupted");
+      fail("Test " + name + " interrupted");
       return null;
     } catch (ExecutionException e) {
       throw ExceptionUtils.throwAsUncheckedException(e.getCause());
     } catch (TimeoutException e) {
-
-      throw new JUnitException(
-        "Test " + ctx.getDisplayName() + " timed out, deadline is " + deadline, e);
+      printThreadDump();
+      throw new JUnitException("Test " + name + " timed out, deadline is " + deadline, e);
     }
+  }
+
+  private void printThreadDump() {
+    LOG.info("====> TEST TIMED OUT. PRINTING THREAD DUMP. <====");
+    LOG.info(TimedOutTestsListener.buildThreadDiagnosticString());
   }
 
   @Override
   public void interceptBeforeAllMethod(Invocation<Void> invocation,
     ReflectiveInvocationContext<Method> invocationContext, ExtensionContext extensionContext)
     throws Throwable {
-    runWithTimeout(invocation, extensionContext);
+    runWithTimeout(invocation, extensionContext, extensionContext.getDisplayName() + ".beforeAll");
   }
 
   @Override
   public void interceptBeforeEachMethod(Invocation<Void> invocation,
     ReflectiveInvocationContext<Method> invocationContext, ExtensionContext extensionContext)
     throws Throwable {
-    runWithTimeout(invocation, extensionContext);
+    runWithTimeout(invocation, extensionContext, extensionContext.getDisplayName() + ".beforeEach");
   }
 
   @Override
   public void interceptTestMethod(Invocation<Void> invocation,
     ReflectiveInvocationContext<Method> invocationContext, ExtensionContext extensionContext)
     throws Throwable {
-    runWithTimeout(invocation, extensionContext);
+    runWithTimeout(invocation, extensionContext, extensionContext.getDisplayName());
   }
 
   @Override
   public void interceptAfterEachMethod(Invocation<Void> invocation,
     ReflectiveInvocationContext<Method> invocationContext, ExtensionContext extensionContext)
     throws Throwable {
-    runWithTimeout(invocation, extensionContext);
+    runWithTimeout(invocation, extensionContext, extensionContext.getDisplayName() + ".afterEach");
   }
 
   @Override
   public void interceptAfterAllMethod(Invocation<Void> invocation,
     ReflectiveInvocationContext<Method> invocationContext, ExtensionContext extensionContext)
     throws Throwable {
-    runWithTimeout(invocation, extensionContext);
+    runWithTimeout(invocation, extensionContext, extensionContext.getDisplayName() + ".afterAll");
   }
 
   @Override
   public <T> T interceptTestClassConstructor(Invocation<T> invocation,
     ReflectiveInvocationContext<Constructor<T>> invocationContext,
     ExtensionContext extensionContext) throws Throwable {
-    return runWithTimeout(invocation, extensionContext);
+    return runWithTimeout(invocation, extensionContext,
+      extensionContext.getDisplayName() + ".constructor");
+  }
+
+  // below are for implementing resource checker around test method
+
+  @Override
+  public void beforeEach(ExtensionContext ctx) throws Exception {
+    ResourceChecker rc = new ResourceChecker(ctx.getDisplayName());
+    JUnitResourceCheckers.addResourceAnalyzer(rc);
+    Store store = ctx.getStore(NAMESPACE);
+    store.put(RESOURCE_CHECK, rc);
+    rc.start();
+  }
+
+  @Override
+  public void afterEach(ExtensionContext ctx) throws Exception {
+    Store store = ctx.getStore(NAMESPACE);
+    ResourceChecker rc = store.remove(RESOURCE_CHECK, ResourceChecker.class);
+    if (rc != null) {
+      rc.end();
+    }
   }
 }

@@ -95,7 +95,7 @@ public class FlushRegionProcedure extends Procedure<MasterProcedureEnv>
     }
     regionNode.lock();
     try {
-      if (!regionNode.isInState(State.OPEN) || regionNode.isInTransition()) {
+      if (!regionNode.isInState(State.OPEN) || regionNode.isTransitionScheduled()) {
         LOG.info("State of region {} is not OPEN or in transition. Skip {} ...", region, this);
         return null;
       }

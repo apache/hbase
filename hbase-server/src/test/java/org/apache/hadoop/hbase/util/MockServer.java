@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.slf4j.Logger;
@@ -118,5 +119,10 @@ public class MockServer implements Server {
   @Override
   public AsyncClusterConnection getAsyncClusterConnection() {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public KeyManagementService getKeyManagementService() {
+    return null;
   }
 }

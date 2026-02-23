@@ -33,7 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public interface RubyShellTest {
-  static Logger LOG = LoggerFactory.getLogger(RubyShellTest.class);
+  Logger LOG = LoggerFactory.getLogger(RubyShellTest.class);
 
   HBaseTestingUtil getTEST_UTIL();
 

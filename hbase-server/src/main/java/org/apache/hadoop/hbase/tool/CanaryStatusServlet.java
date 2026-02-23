@@ -18,29 +18,19 @@
 package org.apache.hadoop.hbase.tool;
 
 import java.io.IOException;
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.hadoop.hbase.tmpl.tool.CanaryStatusTmpl;
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * Only kept for redirecting to canary.jsp.
+ */
 @InterfaceAudience.Private
 public class CanaryStatusServlet extends HttpServlet {
+
   @Override
-  protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-    throws ServletException, IOException {
-    CanaryTool.RegionStdOutSink sink =
-      (CanaryTool.RegionStdOutSink) getServletContext().getAttribute("sink");
-    if (sink == null) {
-      throw new ServletException(
-        "RegionStdOutSink is null! The CanaryTool's InfoServer is not initialized correctly");
-    }
-
-    resp.setContentType("text/html");
-
-    CanaryStatusTmpl tmpl = new CanaryStatusTmpl();
-    tmpl.render(resp.getWriter(), sink);
+  protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    resp.sendRedirect(req.getContextPath() + "/canary.jsp");
   }
-
 }

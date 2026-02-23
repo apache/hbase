@@ -1223,6 +1223,10 @@ module Hbase
           cfdb.setEncryptionKey(org.apache.hadoop.hbase.security.EncryptionUtil.wrapKey(@conf, key,
                                                                                           algorithm))
         end
+        if arg.include?(ColumnFamilyDescriptorBuilder::ENCRYPTION_KEY_NAMESPACE)
+          cfdb.setEncryptionKeyNamespace(arg.delete(
+            ColumnFamilyDescriptorBuilder::ENCRYPTION_KEY_NAMESPACE))
+        end
       end
       if arg.include?(ColumnFamilyDescriptorBuilder::COMPRESSION_COMPACT)
         compression = arg.delete(ColumnFamilyDescriptorBuilder::COMPRESSION_COMPACT).upcase.to_sym
@@ -1480,7 +1484,7 @@ module Hbase
     def list_namespace(regex = '.*')
       pattern = java.util.regex.Pattern.compile(regex)
       list = @admin.listNamespaces
-      list.select { |s| pattern.match(s) }
+      list.select { |s| pattern.matcher(s).matches }
     end
 
     #----------------------------------------------------------------------------------------------

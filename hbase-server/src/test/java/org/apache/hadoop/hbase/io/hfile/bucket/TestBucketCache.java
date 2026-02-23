@@ -41,6 +41,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,6 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -60,7 +62,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
+import org.apache.hadoop.hbase.io.hfile.BlockPriority;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
+import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils.HFileBlockPair;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
@@ -657,6 +661,7 @@ public class TestBucketCache {
     assertEquals(0, cache.getStats().getEvictionCount());
 
     // add back
+    key = new BlockCacheKey("testEvictionCount", 0);
     CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithNextBlockMetadata, actualBuffer,
       block1Buffer);
     waitUntilFlushedToBucket(cache, key);
@@ -883,6 +888,7 @@ public class TestBucketCache {
 
       HFileBlockPair[] hfileBlockPairs =
         CacheTestUtils.generateHFileBlocks(constructedBlockSize, 10);
+      String[] names = CacheTestUtils.getHFileNames(hfileBlockPairs);
       // Add blocks
       for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
         bucketCache.cacheBlock(hfileBlockPair.getBlockName(), hfileBlockPair.getBlock(), false,
@@ -911,10 +917,9 @@ public class TestBucketCache {
         constructedBlockSizes, writeThreads, writerQLen, persistencePath);
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       assertEquals(usedByteSize, bucketCache.getAllocator().getUsedSize());
-
-      for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
-        BlockCacheKey blockCacheKey = hfileBlockPair.getBlockName();
-        bucketCache.evictBlock(blockCacheKey);
+      BlockCacheKey[] newKeys = CacheTestUtils.regenerateKeys(hfileBlockPairs, names);
+      for (BlockCacheKey key : newKeys) {
+        bucketCache.evictBlock(key);
       }
       assertEquals(0, bucketCache.getAllocator().getUsedSize());
       assertEquals(0, bucketCache.backingMap.size());
@@ -1097,9 +1102,9 @@ public class TestBucketCache {
       constructedBlockSize, new int[] { constructedBlockSize + 1024 }, 1, 1, null, 60 * 1000,
       HBASE_TESTING_UTILITY.getConfiguration(), onlineRegions);
     HFileBlockPair[] validBlockPairs =
-      CacheTestUtils.generateBlocksForPath(constructedBlockSize, 10, validFile);
+      CacheTestUtils.generateBlocksForPath(constructedBlockSize, 10, validFile, false);
     HFileBlockPair[] orphanBlockPairs =
-      CacheTestUtils.generateBlocksForPath(constructedBlockSize, 10, orphanFile);
+      CacheTestUtils.generateBlocksForPath(constructedBlockSize, 10, orphanFile, false);
     for (HFileBlockPair pair : validBlockPairs) {
       bucketCache.cacheBlockWithWait(pair.getBlockName(), pair.getBlock(), false, true);
     }
@@ -1114,5 +1119,30 @@ public class TestBucketCache {
     assertEquals(20, bucketCache.getBackingMap().size());
     bucketCache.freeSpace("test");
     return bucketCache;
+  }
+
+  @Test
+  public void testBlockPriority() throws Exception {
+    HFileBlockPair block = CacheTestUtils.generateHFileBlocks(BLOCK_SIZE, 1)[0];
+    cacheAndWaitUntilFlushedToBucket(cache, block.getBlockName(), block.getBlock(), true);
+    assertEquals(cache.backingMap.get(block.getBlockName()).getPriority(), BlockPriority.SINGLE);
+    cache.getBlock(block.getBlockName(), true, false, true);
+    assertEquals(cache.backingMap.get(block.getBlockName()).getPriority(), BlockPriority.MULTI);
+  }
+
+  @Test
+  public void testIOTimePerHitReturnsZeroWhenNoHits()
+    throws NoSuchFieldException, IllegalAccessException {
+    CacheStats cacheStats = cache.getStats();
+    assertTrue(cacheStats instanceof BucketCacheStats);
+    BucketCacheStats bucketCacheStats = (BucketCacheStats) cacheStats;
+
+    Field field = BucketCacheStats.class.getDeclaredField("ioHitCount");
+    field.setAccessible(true);
+    LongAdder ioHitCount = (LongAdder) field.get(bucketCacheStats);
+
+    assertEquals(0, ioHitCount.sum());
+    double ioTimePerHit = bucketCacheStats.getIOTimePerHit();
+    assertEquals(0, ioTimePerHit, 0.0);
   }
 }

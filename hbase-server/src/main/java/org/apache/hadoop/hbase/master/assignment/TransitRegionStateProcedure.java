@@ -206,6 +206,9 @@ public class TransitRegionStateProcedure
 
   @Override
   protected boolean waitInitialized(MasterProcedureEnv env) {
+    if (isCriticalSystemTable()) {
+      return false;
+    }
     if (TableName.isMetaTableName(getTableName())) {
       return false;
     }

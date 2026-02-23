@@ -103,6 +103,7 @@ import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
 import org.apache.hadoop.hbase.quotas.ActivePolicyEnforcement;
@@ -233,6 +234,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanReques
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BooleanMsg;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameInt64Pair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -2113,6 +2117,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         ServerRegionReplicaUtil.isDefaultReplica(region.getRegionInfo())
           ? region.getCoprocessorHost()
           : null; // do not invoke coprocessors if this is a secondary region replica
+      List<Pair<WALKey, WALEdit>> walEntries = new ArrayList<>();
 
       // Skip adding the edits to WAL if this is a secondary region replica
       boolean isPrimary = RegionReplicaUtil.isDefaultReplica(region.getRegionInfo());
@@ -2134,6 +2139,18 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         Pair<WALKey, WALEdit> walEntry = (coprocessorHost == null) ? null : new Pair<>();
         List<MutationReplay> edits =
           WALSplitUtil.getMutationsFromWALEntry(entry, cells, walEntry, durability);
+        if (coprocessorHost != null) {
+          // Start coprocessor replay here. The coprocessor is for each WALEdit instead of a
+          // KeyValue.
+          if (
+            coprocessorHost.preWALRestore(region.getRegionInfo(), walEntry.getFirst(),
+              walEntry.getSecond())
+          ) {
+            // if bypass this log entry, ignore it ...
+            continue;
+          }
+          walEntries.add(walEntry);
+        }
         if (edits != null && !edits.isEmpty()) {
           // HBASE-17924
           // sort to improve lock efficiency
@@ -2155,6 +2172,13 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       WAL wal = region.getWAL();
       if (wal != null) {
         wal.sync();
+      }
+
+      if (coprocessorHost != null) {
+        for (Pair<WALKey, WALEdit> entry : walEntries) {
+          coprocessorHost.postWALRestore(region.getRegionInfo(), entry.getFirst(),
+            entry.getSecond());
+        }
       }
       return ReplicateWALEntryResponse.newBuilder().build();
     } catch (IOException ie) {
@@ -3519,10 +3543,6 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
           // from block size progress before writing into the response
           scanMetrics.setCounter(ServerSideScanMetrics.BLOCK_BYTES_SCANNED_KEY_METRIC_NAME,
             scannerContext.getBlockSizeProgress());
-          if (rpcCall != null) {
-            scanMetrics.setCounter(ServerSideScanMetrics.FS_READ_TIME_METRIC_NAME,
-              rpcCall.getFsReadTime());
-          }
         }
       }
     } finally {
@@ -3588,6 +3608,11 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         }
       }
       throw new ServiceException(e);
+    }
+    boolean trackMetrics = request.hasTrackScanMetrics() && request.getTrackScanMetrics();
+    ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(trackMetrics);
+    if (trackMetrics) {
+      ThreadLocalServerSideScanMetrics.reset();
     }
     requestCount.increment();
     rpcScanRequestCount.increment();
@@ -3659,7 +3684,6 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     boolean scannerClosed = false;
     try {
       List<Result> results = new ArrayList<>(Math.min(rows, 512));
-      boolean trackMetrics = request.hasTrackScanMetrics() && request.getTrackScanMetrics();
       ServerSideScanMetrics scanMetrics = trackMetrics ? new ServerSideScanMetrics() : null;
       if (rows > 0) {
         boolean done = false;
@@ -3741,6 +3765,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
           scanMetrics.addToCounter(ServerSideScanMetrics.RPC_SCAN_QUEUE_WAIT_TIME_METRIC_NAME,
             rpcQueueWaitTime);
         }
+        ThreadLocalServerSideScanMetrics.populateServerSideScanMetrics(scanMetrics);
         Map<String, Long> metrics = scanMetrics.getMetricsMap();
         ScanMetrics.Builder metricBuilder = ScanMetrics.newBuilder();
         NameInt64Pair.Builder pairBuilder = NameInt64Pair.newBuilder();
@@ -4034,6 +4059,42 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       fullyCachedFiles.addAll(fcf.keySet());
     });
     return responseBuilder.addAllCachedFiles(fullyCachedFiles).build();
+  }
+
+  /**
+   * STUB - Refreshes the system key cache on the region server. Feature not yet implemented in
+   * precursor PR.
+   */
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public EmptyMsg refreshSystemKeyCache(final RpcController controller, final EmptyMsg request)
+    throws ServiceException {
+    throw new ServiceException(
+      new UnsupportedOperationException("Key management feature not yet implemented"));
+  }
+
+  /**
+   * STUB - Ejects a specific managed key entry from the cache. Feature not yet implemented in
+   * precursor PR.
+   */
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public BooleanMsg ejectManagedKeyDataCacheEntry(final RpcController controller,
+    final ManagedKeyEntryRequest request) throws ServiceException {
+    throw new ServiceException(
+      new UnsupportedOperationException("Key management feature not yet implemented"));
+  }
+
+  /**
+   * STUB - Clears all entries in the managed key data cache. Feature not yet implemented in
+   * precursor PR.
+   */
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public EmptyMsg clearManagedKeyDataCache(final RpcController controller, final EmptyMsg request)
+    throws ServiceException {
+    throw new ServiceException(
+      new UnsupportedOperationException("Key management feature not yet implemented"));
   }
 
   RegionScannerContext checkQuotaAndGetRegionScannerContext(ScanRequest request,

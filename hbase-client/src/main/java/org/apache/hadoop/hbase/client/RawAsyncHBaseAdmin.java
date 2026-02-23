@@ -263,6 +263,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineReg
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReopenTableRegionsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReopenTableRegionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RollAllWALWritersRequest;
@@ -752,6 +754,21 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         ng.newNonce(), reopenRegions),
       (s, c, req, done) -> s.modifyTable(c, req, done), (resp) -> resp.getProcId(),
       new ModifyTableProcedureBiConsumer(this, desc.getTableName()));
+  }
+
+  @Override
+  public CompletableFuture<Void> reopenTableRegions(TableName tableName) {
+    return reopenTableRegions(tableName, Collections.emptyList());
+  }
+
+  @Override
+  public CompletableFuture<Void> reopenTableRegions(TableName tableName, List<RegionInfo> regions) {
+    List<byte[]> regionNames = regions.stream().map(RegionInfo::getRegionName).toList();
+    return this.<ReopenTableRegionsRequest, ReopenTableRegionsResponse> procedureCall(tableName,
+      RequestConverter.buildReopenTableRegionsRequest(tableName, regionNames, ng.getNonceGroup(),
+        ng.newNonce()),
+      (s, c, req, done) -> s.reopenTableRegions(c, req, done), (resp) -> resp.getProcId(),
+      new ReopenTableRegionsProcedureBiConsumer(this, tableName));
   }
 
   @Override
@@ -1339,6 +1356,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           }
           if (locations == null || locations.isEmpty()) {
             future.completeExceptionally(new TableNotFoundException(tableName));
+            return;
           }
           CompletableFuture<?>[] compactFutures =
             locations.stream().filter(l -> l.getRegion() != null)
@@ -2832,6 +2850,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     }
   }
 
+  private static class ReopenTableRegionsProcedureBiConsumer extends TableProcedureBiConsumer {
+
+    ReopenTableRegionsProcedureBiConsumer(AsyncAdmin admin, TableName tableName) {
+      super(tableName);
+    }
+
+    @Override
+    String getOperationType() {
+      return "REOPEN_TABLE_REGIONS";
+    }
+  }
+
   private static class ModifyTableStoreFileTrackerProcedureBiConsumer
     extends TableProcedureBiConsumer {
 
@@ -3105,10 +3135,15 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         .call(),
       (response, error) -> {
         if (error != null) {
-          LOG.warn("failed to get the procedure result procId={}", procId,
-            ConnectionUtils.translateException(error));
-          retryTimer.newTimeout(t -> getProcedureResult(procId, converter, future, retries + 1),
-            ConnectionUtils.getPauseTime(pauseNs, retries), TimeUnit.NANOSECONDS);
+          Throwable exc = ConnectionUtils.translateException(error);
+          if (exc instanceof DoNotRetryIOException) {
+            // stop retrying on DNRIOE
+            future.completeExceptionally(exc);
+          } else {
+            LOG.warn("failed to get the procedure result procId={}", procId, exc);
+            retryTimer.newTimeout(t -> getProcedureResult(procId, converter, future, retries + 1),
+              ConnectionUtils.getPauseTime(pauseNs, retries), TimeUnit.NANOSECONDS);
+          }
           return;
         }
         if (response.getState() == GetProcedureResultResponse.State.RUNNING) {
