@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.backup.impl;
 import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
+import static org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2.MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY;
 
 import java.io.IOException;
 import java.net.URI;
@@ -33,6 +34,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -251,8 +253,12 @@ public class IncrementalTableBackupClient extends TableBackupClient {
   private void mergeSplitAndCopyBulkloadedHFiles(List<String> files, TableName tn, FileSystem tgtFs)
     throws IOException {
     MapReduceHFileSplitterJob player = new MapReduceHFileSplitterJob();
+    Configuration conf = new Configuration(this.conf);
     conf.set(MapReduceHFileSplitterJob.BULK_OUTPUT_CONF_KEY,
       getBulkOutputDirForTable(tn).toString());
+    if (backupInfo.isContinuousBackupEnabled()) {
+      conf.setBoolean(MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY, false);
+    }
     player.setConf(conf);
 
     String inputDirs = StringUtils.join(files, ",");
@@ -361,10 +367,26 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       setupRegionLocator();
       // convert WAL to HFiles and copy them to .tmp under BACKUP_ROOT
       convertWALsToHFiles(tablesToWALFileList, tablesToPrevBackupTs);
-      incrementalCopyHFiles(new String[] { getBulkOutputDir().toString() },
-        backupInfo.getBackupRootDir());
+
+      String[] bulkOutputFiles;
+      String backupDest = backupInfo.getBackupRootDir();
+      if (backupInfo.isContinuousBackupEnabled()) {
+        // For the continuous backup case, the WALs have been converted to HFiles in a separate
+        // map-reduce job for each table. In order to prevent MR job failures due to HBASE-29891,
+        // these HFiles were sent to a different output directory for each table. This means
+        // continuous backups require a list of source directories and a different destination
+        // directory when copying HFiles to the incremental backup directory.
+        List<String> uniqueNamespaces = tablesToWALFileList.keySet().stream()
+          .map(TableName::getNamespaceAsString).distinct().toList();
+        bulkOutputFiles = uniqueNamespaces.stream()
+          .map(ns -> new Path(getBulkOutputDir(), ns).toString()).toArray(String[]::new);
+        backupDest = backupDest + Path.SEPARATOR + backupId;
+      } else {
+        bulkOutputFiles = new String[] { getBulkOutputDir().toString() };
+      }
+      incrementalCopyHFiles(bulkOutputFiles, backupDest);
     } catch (Exception e) {
-      String msg = "Unexpected exception in incremental-backup: incremental copy " + backupId;
+      String msg = "Unexpected exception in incremental-backup: incremental copy " + backupId + " ";
       // fail the overall backup and return
       failBackup(conn, backupInfo, backupManager, e, msg, BackupType.INCREMENTAL, conf);
       throw new IOException(e);
@@ -418,7 +440,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       System.arraycopy(files, 0, strArr, 0, files.length);
       strArr[strArr.length - 1] = backupDest;
 
-      String jobname = "Incremental_Backup-HFileCopy-" + backupInfo.getBackupId();
+      String jobname = "Incremental_Backup-HFileCopy-" + backupInfo.getBackupId() + "-"
+        + System.currentTimeMillis();
       if (LOG.isDebugEnabled()) {
         LOG.debug("Setting incremental copy HFiles job name to : " + jobname);
       }
@@ -517,23 +540,25 @@ public class IncrementalTableBackupClient extends TableBackupClient {
   protected void walToHFiles(List<String> dirPaths, List<String> tableList, long previousBackupTs)
     throws IOException {
     Tool player = new WALPlayer();
+    Configuration conf = new Configuration(this.conf);
 
     // Player reads all files in arbitrary directory structure and creates
     // a Map task for each file. We use ';' as separator
     // because WAL file names contains ','
     String dirs = StringUtils.join(dirPaths, ';');
-    String jobname = "Incremental_Backup-" + backupId;
+    String jobname = "Incremental_Backup-" + backupId + "-" + System.currentTimeMillis();
 
-    Path bulkOutputPath = getBulkOutputDir();
-    conf.set(WALPlayer.BULK_OUTPUT_CONF_KEY, bulkOutputPath.toString());
+    setBulkOutputPath(conf, tableList);
     conf.set(WALPlayer.INPUT_FILES_SEPARATOR_KEY, ";");
     conf.setBoolean(WALPlayer.MULTI_TABLES_SUPPORT, true);
     conf.set(JOB_NAME_CONF_KEY, jobname);
-    boolean diskBasedSortingEnabledOriginalValue = HFileOutputFormat2.diskBasedSortingEnabled(conf);
     conf.setBoolean(HFileOutputFormat2.DISK_BASED_SORTING_ENABLED_KEY, true);
     if (backupInfo.isContinuousBackupEnabled()) {
       conf.set(WALInputFormat.START_TIME_KEY, Long.toString(previousBackupTs));
       conf.set(WALInputFormat.END_TIME_KEY, Long.toString(backupInfo.getIncrCommittedWalTs()));
+      // We do not want a multi-table HFile format here because continuous backups run the WALPlayer
+      // individually on each table in the backup set.
+      conf.setBoolean(MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY, false);
     }
     String[] playerArgs = { dirs, StringUtils.join(tableList, ",") };
 
@@ -548,43 +573,70 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     } catch (Exception ee) {
       throw new IOException("Can not convert from directory " + dirs
         + " (check Hadoop, HBase and WALPlayer M/R job logs) ", ee);
-    } finally {
-      conf.setBoolean(HFileOutputFormat2.DISK_BASED_SORTING_ENABLED_KEY,
-        diskBasedSortingEnabledOriginalValue);
-      conf.unset(WALPlayer.INPUT_FILES_SEPARATOR_KEY);
-      conf.unset(JOB_NAME_CONF_KEY);
     }
+  }
+
+  private void setBulkOutputPath(Configuration conf, List<String> tableList) {
+    Path bulkOutputPath = getBulkOutputDir();
+    if (backupInfo.isContinuousBackupEnabled()) {
+      if (tableList.size() != 1) {
+        // Continuous backups run the WALPlayer job on one table at a time, so the list of tables
+        // should have only one element.
+        throw new RuntimeException(
+          "Expected table list to have only one element, but got: " + tableList);
+      }
+      bulkOutputPath = getTmpBackupDirForTable(TableName.valueOf(tableList.get(0)));
+    }
+    conf.set(WALPlayer.BULK_OUTPUT_CONF_KEY, bulkOutputPath.toString());
   }
 
   private void incrementalCopyBulkloadHFiles(FileSystem tgtFs, TableName tn) throws IOException {
     Path bulkOutDir = getBulkOutputDirForTable(tn);
+    Configuration conf = new Configuration(this.conf);
 
     if (tgtFs.exists(bulkOutDir)) {
       conf.setInt(MapReduceBackupCopyJob.NUMBER_OF_LEVELS_TO_PRESERVE_KEY, 2);
       Path tgtPath = getTargetDirForTable(tn);
-      try {
-        RemoteIterator<LocatedFileStatus> locatedFiles = tgtFs.listFiles(bulkOutDir, true);
-        List<String> files = new ArrayList<>();
-        while (locatedFiles.hasNext()) {
-          LocatedFileStatus file = locatedFiles.next();
-          if (file.isFile() && HFile.isHFileFormat(tgtFs, file.getPath())) {
-            files.add(file.getPath().toString());
-          }
+      RemoteIterator<LocatedFileStatus> locatedFiles = tgtFs.listFiles(bulkOutDir, true);
+      List<String> files = new ArrayList<>();
+      while (locatedFiles.hasNext()) {
+        LocatedFileStatus file = locatedFiles.next();
+        if (file.isFile() && HFile.isHFileFormat(tgtFs, file.getPath())) {
+          files.add(file.getPath().toString());
         }
-        incrementalCopyHFiles(files.toArray(files.toArray(new String[0])), tgtPath.toString());
-      } finally {
-        conf.unset(MapReduceBackupCopyJob.NUMBER_OF_LEVELS_TO_PRESERVE_KEY);
       }
+      incrementalCopyHFiles(files.toArray(files.toArray(new String[0])), tgtPath.toString());
     }
   }
 
+  /**
+   * Creates a path to the bulk load output directory for a table. This directory will look like:
+   * .../backupRoot/.tmp/backupId/namespace/table/data
+   * @param table The table whose HFiles are being bulk loaded
+   * @return A Path object representing the directory
+   */
   protected Path getBulkOutputDirForTable(TableName table) {
-    Path tablePath = getBulkOutputDir();
-    tablePath = new Path(tablePath, table.getNamespaceAsString());
-    tablePath = new Path(tablePath, table.getQualifierAsString());
+    Path tablePath = getTmpBackupDirForTable(table);
     return new Path(tablePath, "data");
   }
 
+  /**
+   * Creates a path to a table's directory within the temporary directory. This directory will look
+   * like: .../backupRoot/.tmp/backupId/namespace/table
+   * @param table The table whose HFiles are being bulk loaded
+   * @return A Path object representing the directory
+   */
+  protected Path getTmpBackupDirForTable(TableName table) {
+    Path tablePath = getBulkOutputDir();
+    tablePath = new Path(tablePath, table.getNamespaceAsString());
+    return new Path(tablePath, table.getQualifierAsString());
+  }
+
+  /**
+   * Creates a path to a temporary backup directory. This directory will look like:
+   * .../backupRoot/.tmp/backupId
+   * @return A Path object representing the directory
+   */
   protected Path getBulkOutputDir() {
     String backupId = backupInfo.getBackupId();
     Path path = new Path(backupInfo.getBackupRootDir());
@@ -593,6 +645,12 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     return path;
   }
 
+  /**
+   * Creates a path to a destination directory for bulk loaded HFiles. This directory will look
+   * like: .../backupRoot/backupID/namespace/table
+   * @param table The table whose HFiles are being bulk loaded
+   * @return A Path object representing the directory
+   */
   private Path getTargetDirForTable(TableName table) {
     Path path = new Path(backupInfo.getBackupRootDir() + Path.SEPARATOR + backupInfo.getBackupId());
     path = new Path(path, table.getNamespaceAsString());
