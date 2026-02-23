@@ -17,10 +17,14 @@
  */
 package org.apache.hadoop.hbase.thrift2;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.function.Supplier;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.thrift.ImplType;
@@ -37,17 +41,19 @@ import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.layered.TFramedTransport;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.provider.Arguments;
 
-@Category({ ClientTests.class, LargeTests.class })
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestThrift2ServerCmdLine extends TestThriftServerCmdLine {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestThrift2ServerCmdLine.class);
 
   private static final String TABLENAME = "TestThrift2ServerCmdLineTable";
+
+  public static Stream<Arguments> parameters() {
+    return TestThriftServerCmdLine.parameters();
+  }
 
   public TestThrift2ServerCmdLine(ImplType implType, boolean specifyFramed, boolean specifyBindIP,
     boolean specifyCompact) {
@@ -80,7 +86,7 @@ public class TestThrift2ServerCmdLine extends TestThriftServerCmdLine {
       tTableName.setNs(Bytes.toBytes(""));
       tTableName.setQualifier(Bytes.toBytes(TABLENAME));
       if (!tableCreated) {
-        Assert.assertTrue(!client.tableExists(tTableName));
+        assertFalse(client.tableExists(tTableName));
         TTableDescriptor tTableDescriptor = new TTableDescriptor();
         tTableDescriptor.setTableName(tTableName);
         TColumnFamilyDescriptor columnFamilyDescriptor = new TColumnFamilyDescriptor();
@@ -89,7 +95,7 @@ public class TestThrift2ServerCmdLine extends TestThriftServerCmdLine {
         client.createTable(tTableDescriptor, new ArrayList<>());
         tableCreated = true;
       }
-      Assert.assertTrue("tableCreated " + tableCreated, client.tableExists(tTableName));
+      assertTrue(client.tableExists(tTableName), "tableCreated " + tableCreated);
     } finally {
       sock.close();
     }
