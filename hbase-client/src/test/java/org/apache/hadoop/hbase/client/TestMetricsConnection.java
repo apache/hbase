@@ -76,6 +76,10 @@ public class TestMetricsConnection {
 
   public boolean tableMetricsEnabled;
 
+  public TestMetricsConnection(boolean tableMetricsEnabled) {
+    this.tableMetricsEnabled = tableMetricsEnabled;
+  }
+
   public static Stream<Arguments> parameters() {
     return Stream.of(Arguments.of(true), Arguments.of(false));
   }
