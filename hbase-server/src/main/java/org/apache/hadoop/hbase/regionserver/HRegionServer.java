@@ -828,10 +828,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       if (!isStopped() && !isAborted()) {
         installShutdownHook();
 
-        if (
-          conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-            HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT)
-        ) {
+        if (isReadOnlyModeEnabled(conf)) {
           addReadOnlyCoprocessors(this.conf);
         }
 
@@ -1530,6 +1527,11 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     ZKUtil.deleteNode(this.zooKeeper, getMyEphemeralNodePath());
   }
 
+  private boolean isReadOnlyModeEnabled(Configuration conf) {
+    return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+  }
+
   private void addReadOnlyCoprocessors(Configuration conf) {
     String[] rsCoprocs = conf.getStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
 
@@ -1559,13 +1561,13 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
     String target = RegionServerReadOnlyController.class.getName();
 
-    String[] updated =
+    String[] updatedCoprocs =
       java.util.Arrays.stream(coprocessors).filter(cp -> !target.equals(cp)).toArray(String[]::new);
 
-    if (updated.length == 0) {
+    if (updatedCoprocs.length == 0) {
       conf.unset(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
-    } else if (updated.length != coprocessors.length) {
-      conf.setStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, updated);
+    } else if (updatedCoprocs.length != coprocessors.length) {
+      conf.setStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, updatedCoprocs);
     }
   }
 
@@ -3539,8 +3541,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       LOG.warn("Failed to initialize SuperUsers on reloading of the configuration");
     }
 
-    boolean readOnlyMode = newConf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+    boolean readOnlyMode = isReadOnlyModeEnabled(newConf);
     if (readOnlyMode) {
       addReadOnlyCoprocessors(newConf);
     } else {

@@ -889,10 +889,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     decorateRegionConfiguration(conf);
 
-    if (
-      conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT)
-    ) {
+    if (isReadOnlyModeEnabled(conf)) {
       addReadOnlyCoprocessors(this.baseConf);
       addReadOnlyCoprocessors(this.conf);
     } else {
@@ -1306,11 +1303,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
+  private boolean isReadOnlyModeEnabled(Configuration conf) {
+    return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+  }
+
   private String[] append(String[] original, String value) {
-    String[] updated = new String[original.length + 1];
-    System.arraycopy(original, 0, updated, 0, original.length);
-    updated[original.length] = value;
-    return updated;
+    List<String> list = original != null
+      ? new ArrayList<>(Arrays.asList(original))
+      : new ArrayList<>();
+
+    list.add(value);
+    return list.toArray(new String[0]);
   }
 
   private void addReadOnlyCoprocessors(Configuration conf) {
@@ -1352,18 +1356,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     String bulkCP = BulkLoadReadOnlyController.class.getName();
     String endpointCP = EndpointReadOnlyController.class.getName();
 
-    String[] updated = java.util.Arrays.stream(coprocessors)
+    String[] updatedCoprocs = java.util.Arrays.stream(coprocessors)
       .filter(cp -> !regionCP.equals(cp) && !bulkCP.equals(cp) && !endpointCP.equals(cp))
       .toArray(String[]::new);
 
-    if (updated.length == 0) {
+    if (updatedCoprocs.length == 0) {
       // As conf is CompoundConfiguration, we need to set it to empty string instead of null to
       // remove the coprocessors
       // Also conf.unset will not have any effect on CompoundConfiguration, unlike with Hmaster and
       // HRegionServer
       conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, new String[0]);
-    } else if (updated.length != coprocessors.length) {
-      conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, updated);
+    } else if (updatedCoprocs.length != coprocessors.length) {
+      conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, updatedCoprocs);
     }
   }
 
@@ -8903,8 +8907,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public void onConfigurationChange(Configuration conf) {
     this.storeHotnessProtector.update(conf);
 
-    boolean readOnlyMode = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+    boolean readOnlyMode = isReadOnlyModeEnabled(conf);
     if (readOnlyMode) {
       addReadOnlyCoprocessors(conf);
     } else {

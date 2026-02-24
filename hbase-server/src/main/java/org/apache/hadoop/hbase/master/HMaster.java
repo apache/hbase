@@ -1088,10 +1088,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (!maintenanceMode) {
       startupTaskGroup.addTask("Initializing master coprocessors");
       setQuotasObserver(conf);
-      if (
-        conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-          HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT)
-      ) {
+      if (isReadOnlyModeEnabled(conf)) {
         addReadOnlyCoprocessors(this.conf);
       }
       initializeCoprocessorHost(conf);
@@ -4431,8 +4428,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // append the quotas observer back to the master coprocessor key
     setQuotasObserver(newConf);
 
-    boolean readOnlyMode = newConf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+    boolean readOnlyMode = isReadOnlyModeEnabled(newConf);
     if (readOnlyMode) {
       addReadOnlyCoprocessors(newConf);
     } else {
@@ -4452,8 +4448,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       initializeCoprocessorHost(newConf);
       syncReadOnlyConfigurations(readOnlyMode);
       AbstractReadOnlyController
-        .manageActiveClusterIdFile(newConf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-          HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT), this.getMasterFileSystem());
+        .manageActiveClusterIdFile(isReadOnlyModeEnabled(newConf), this.getMasterFileSystem());
     }
   }
 
@@ -4552,6 +4547,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
   }
 
+  private boolean isReadOnlyModeEnabled(Configuration conf) {
+    return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+  }
+
   private void addReadOnlyCoprocessors(Configuration conf) {
     String[] masterCoprocs = conf.getStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
     // If already present, do nothing
@@ -4562,13 +4562,14 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       return;
     }
 
-    final int length = null == masterCoprocs ? 0 : masterCoprocs.length;
-    String[] updatedCoprocs = new String[length + 1];
-    if (length > 0) {
-      System.arraycopy(masterCoprocs, 0, updatedCoprocs, 0, masterCoprocs.length);
+    List<String> updatedCoprocs = new ArrayList<>();
+
+    if (masterCoprocs != null) {
+      updatedCoprocs.addAll(Arrays.asList(masterCoprocs));
     }
-    updatedCoprocs[length] = MasterReadOnlyController.class.getName();
-    conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, updatedCoprocs);
+
+    updatedCoprocs.add(MasterReadOnlyController.class.getName());
+    conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, updatedCoprocs.toArray(new String[0]));
   }
 
   private void removeReadOnlyCoprocessors(Configuration conf) {
@@ -4578,13 +4579,13 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
 
     String target = MasterReadOnlyController.class.getName();
-    String[] updated =
+    String[] updatedCoprocs =
       java.util.Arrays.stream(coprocessors).filter(cp -> !target.equals(cp)).toArray(String[]::new);
 
-    if (updated.length == 0) {
+    if (updatedCoprocs.length == 0) {
       conf.unset(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
-    } else if (updated.length != coprocessors.length) {
-      conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, updated);
+    } else if (updatedCoprocs.length != coprocessors.length) {
+      conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, updatedCoprocs);
     }
   }
 
