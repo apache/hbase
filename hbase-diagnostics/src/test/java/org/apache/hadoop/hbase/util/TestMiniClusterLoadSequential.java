@@ -17,16 +17,16 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -41,27 +41,21 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * A write/read/verify load test on a mini HBase cluster. Tests reading and then writing.
  */
-@Category({ MiscTests.class, LargeTests.class })
-@RunWith(Parameterized.class)
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestMiniClusterLoadSequential {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMiniClusterLoadSequential.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMiniClusterLoadSequential.class);
 
@@ -91,25 +85,24 @@ public class TestMiniClusterLoadSequential {
     conf.setFloat(HConstants.LOAD_BALANCER_SLOP_KEY, 10.0f);
   }
 
-  @Parameters
-  public static Collection<Object[]> parameters() {
-    List<Object[]> parameters = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     for (boolean multiPut : new boolean[] { false, true }) {
       for (DataBlockEncoding dataBlockEncoding : new DataBlockEncoding[] { DataBlockEncoding.NONE,
         DataBlockEncoding.PREFIX }) {
-        parameters.add(new Object[] { multiPut, dataBlockEncoding });
+        params.add(Arguments.of(multiPut, dataBlockEncoding));
       }
     }
-    return parameters;
+    return params.stream();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     LOG.debug("Test setup: isMultiPut=" + isMultiPut);
     TEST_UTIL.startMiniCluster(NUM_RS);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     LOG.debug("Test teardown: isMultiPut=" + isMultiPut);
     TEST_UTIL.shutdownMiniCluster();
@@ -128,7 +121,7 @@ public class TestMiniClusterLoadSequential {
     return writer;
   }
 
-  @Test
+  @TestTemplate
   public void loadTest() throws Exception {
     prepareForLoadTest();
     runLoadTestOnExistingTable();

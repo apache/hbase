@@ -17,24 +17,20 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,12 +39,9 @@ import org.slf4j.LoggerFactory;
  * was created as part of refactoring for hbase-diagnostics module creation in HBASE-28432 to break
  * cyclic dependency.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestFSHLogProviderWithConcurrentWrites {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFSHLogProviderWithConcurrentWrites.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestFSHLogProviderWithConcurrentWrites.class);
@@ -56,10 +49,7 @@ public class TestFSHLogProviderWithConcurrentWrites {
   private static FileSystem fs;
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @Rule
-  public final TestName currentTest = new TestName();
-
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     FileStatus[] entries = fs.listStatus(new Path("/"));
     for (FileStatus dir : entries) {
@@ -67,7 +57,7 @@ public class TestFSHLogProviderWithConcurrentWrites {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // Make block sizes small.
     TEST_UTIL.getConfiguration().setInt("dfs.blocksize", 1024 * 1024);
@@ -87,7 +77,7 @@ public class TestFSHLogProviderWithConcurrentWrites {
     fs = TEST_UTIL.getDFSCluster().getFileSystem();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }

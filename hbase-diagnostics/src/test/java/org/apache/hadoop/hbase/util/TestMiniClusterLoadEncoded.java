@@ -18,38 +18,34 @@
 package org.apache.hadoop.hbase.util;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * Runs a load test on a mini HBase cluster with data block encoding turned on. Compared to other
  * load-test-style unit tests, this one writes a smaller amount of data, but goes through all
  * available data block encoding algorithms.
  */
-@Category({ MiscTests.class, LargeTests.class })
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestMiniClusterLoadEncoded extends TestMiniClusterLoadParallel {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMiniClusterLoadEncoded.class);
 
   /** We do not alternate the multi-put flag in this test. */
   private static final boolean USE_MULTI_PUT = true;
 
-  @Parameters
-  public static Collection<Object[]> parameters() {
-    List<Object[]> parameters = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     for (DataBlockEncoding dataBlockEncoding : DataBlockEncoding.values()) {
-      parameters.add(new Object[] { dataBlockEncoding });
+      params.add(Arguments.of(dataBlockEncoding));
     }
-    return parameters;
+    return params.stream();
   }
 
   public TestMiniClusterLoadEncoded(DataBlockEncoding encoding) {

@@ -17,36 +17,36 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * A write/read/verify load test on a mini HBase cluster. Tests reading and writing at the same
  * time.
  */
-@Category({ MiscTests.class, LargeTests.class })
-@RunWith(Parameterized.class)
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestMiniClusterLoadParallel extends TestMiniClusterLoadSequential {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMiniClusterLoadParallel.class);
+  public static Stream<Arguments> parameters() {
+    return TestMiniClusterLoadSequential.parameters();
+  }
 
   public TestMiniClusterLoadParallel(boolean isMultiPut, DataBlockEncoding encoding) {
     super(isMultiPut, encoding);
   }
 
   @Override
-  @Test
+  @TestTemplate
   public void loadTest() throws Exception {
     prepareForLoadTest();
 
