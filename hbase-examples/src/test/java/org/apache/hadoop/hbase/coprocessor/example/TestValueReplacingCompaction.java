@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.coprocessor.example;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -39,18 +38,14 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestValueReplacingCompaction {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestValueReplacingCompaction.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final TableName NAME = TableName.valueOf("TestValueReplacement");
@@ -62,7 +57,7 @@ public class TestValueReplacingCompaction {
   private static final String value = "foo";
   private static final String replacedValue = "bar";
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(1);
     UTIL.getAdmin()
@@ -73,7 +68,7 @@ public class TestValueReplacingCompaction {
         .build());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -104,7 +99,7 @@ public class TestValueReplacingCompaction {
       try (ResultScanner scanner = t.getScanner(s)) {
         for (int i = 0; i < NUM_ROWS; i++) {
           Result result = scanner.next();
-          assertNotNull("The " + (i + 1) + "th result was unexpectedly null", result);
+          assertNotNull(result, "The " + (i + 1) + "th result was unexpectedly null");
           assertEquals(1, result.getFamilyMap(FAMILY).size());
           assertArrayEquals(Bytes.toBytes(i + 1), result.getRow());
           assertArrayEquals(Bytes.toBytes(replacedValue), result.getValue(FAMILY, QUALIFIER));
