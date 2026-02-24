@@ -978,11 +978,24 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
         org.apache.hadoop.hbase.regionserver.TimeRangeTracker.toByteArray(customTracker), false);
     }
 
-    if (globalMaxSeqId != Long.MIN_VALUE) {
-      fileInfo.put(HStoreFile.MAX_SEQ_ID_KEY, Bytes.toBytes(globalMaxSeqId));
+    byte[] existingMaxSeqIdBytes = fileInfo.get(HStoreFile.MAX_SEQ_ID_KEY);
+    long effectiveMaxSeqId = globalMaxSeqId;
+    if (existingMaxSeqIdBytes != null) {
+      effectiveMaxSeqId = Math.max(effectiveMaxSeqId, Bytes.toLong(existingMaxSeqIdBytes));
+    }
+    if (effectiveMaxSeqId != Long.MIN_VALUE) {
+      // Preserve externally provided metadata (for example flush sequence id), which can be larger
+      // than the max sequence id observed in the written cells.
+      fileInfo.put(HStoreFile.MAX_SEQ_ID_KEY, Bytes.toBytes(effectiveMaxSeqId));
     }
     if (fileContext.isIncludesMvcc()) {
-      fileInfo.put(HFile.Writer.MAX_MEMSTORE_TS_KEY, Bytes.toBytes(maxMemstoreTS));
+      byte[] existingMaxMemstoreTsBytes = fileInfo.get(HFile.Writer.MAX_MEMSTORE_TS_KEY);
+      long effectiveMaxMemstoreTs = maxMemstoreTS;
+      if (existingMaxMemstoreTsBytes != null) {
+        effectiveMaxMemstoreTs =
+          Math.max(effectiveMaxMemstoreTs, Bytes.toLong(existingMaxMemstoreTsBytes));
+      }
+      fileInfo.put(HFile.Writer.MAX_MEMSTORE_TS_KEY, Bytes.toBytes(effectiveMaxMemstoreTs));
     }
   }
 
