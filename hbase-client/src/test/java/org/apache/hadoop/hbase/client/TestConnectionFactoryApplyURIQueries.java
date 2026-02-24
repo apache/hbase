@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -26,24 +26,19 @@ import static org.mockito.Mockito.when;
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestConnectionFactoryApplyURIQueries {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestConnectionFactoryApplyURIQueries.class);
 
   private Configuration conf;
 
@@ -51,7 +46,7 @@ public class TestConnectionFactoryApplyURIQueries {
 
   private ConnectionRegistry registry;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     conf = HBaseConfiguration.create();
     mockedConnectionRegistryFactory = mockStatic(ConnectionRegistryFactory.class);
@@ -61,7 +56,7 @@ public class TestConnectionFactoryApplyURIQueries {
     when(registry.getClusterId()).thenReturn(CompletableFuture.completedFuture("cluster"));
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     mockedConnectionRegistryFactory.closeOnDemand();
   }

@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -25,7 +26,6 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.Collections;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
@@ -35,20 +35,17 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@RunWith(MockitoJUnitRunner.class)
-@Category({ ClientTests.class, SmallTests.class })
+@ExtendWith(MockitoExtension.class)
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestScannerCallable {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestScannerCallable.class);
 
   private static final TableName TABLE_NAME = TableName.valueOf("TestScannerCallable");
 
@@ -66,13 +63,13 @@ public class TestScannerCallable {
   @Mock
   private HRegionLocation regionLocation;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     when(connection.getConfiguration()).thenReturn(new Configuration());
-    when(regionLocations.size()).thenReturn(1);
-    when(regionLocations.getRegionLocation(0)).thenReturn(regionLocation);
-    when(regionLocation.getHostname()).thenReturn(HOSTNAME);
-    when(regionLocation.getServerName()).thenReturn(SERVERNAME);
+    lenient().when(regionLocations.size()).thenReturn(1);
+    lenient().when(regionLocations.getRegionLocation(0)).thenReturn(regionLocation);
+    lenient().when(regionLocation.getHostname()).thenReturn(HOSTNAME);
+    lenient().when(regionLocation.getServerName()).thenReturn(SERVERNAME);
   }
 
   @Test

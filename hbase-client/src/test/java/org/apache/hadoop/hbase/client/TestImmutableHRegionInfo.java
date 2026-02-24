@@ -17,41 +17,34 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Test ImmutableHRegionInfo
  */
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestImmutableHRegionInfo {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestImmutableHRegionInfo.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private final List<Consumer<ImmutableHRegionInfo>> TEST_FUNCTIONS =
     Arrays.asList(hri -> hri.setOffline(true), hri -> hri.setSplit(true));
 
   @Test
-  public void testImmutable() {
-    HRegionInfo hri = new HRegionInfo(TableName.valueOf(name.getMethodName()));
+  public void testImmutable(TestInfo testInfo) {
+    String methodName = testInfo.getTestMethod().map(Method::getName).orElse("default");
+    HRegionInfo hri = new HRegionInfo(TableName.valueOf(methodName));
     ImmutableHRegionInfo immutableHri = new ImmutableHRegionInfo(hri);
 
     TEST_FUNCTIONS.forEach(f -> {
