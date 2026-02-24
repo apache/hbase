@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -31,21 +30,15 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestImmutableHTableDescriptor {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestImmutableHTableDescriptor.class);
-
-  @Rule
-  public TestName name = new TestName();
   private static final List<Consumer<ImmutableHTableDescriptor>> TEST_FUNCTION = Arrays.asList(
     htd -> htd.setValue("a", "a"), htd -> htd.setValue(Bytes.toBytes("a"), Bytes.toBytes("a")),
     htd -> htd.setValue(new Bytes(Bytes.toBytes("a")), new Bytes(Bytes.toBytes("a"))),
@@ -66,9 +59,16 @@ public class TestImmutableHTableDescriptor {
       }
     });
 
+  private String methodName;
+
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    methodName = testInfo.getTestMethod().get().getName();
+  }
+
   @Test
   public void testImmutable() {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(methodName));
     ImmutableHTableDescriptor immutableHtd = new ImmutableHTableDescriptor(htd);
     TEST_FUNCTION.forEach(f -> {
       try {
@@ -81,7 +81,7 @@ public class TestImmutableHTableDescriptor {
 
   @Test
   public void testImmutableHColumnDescriptor() {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(methodName));
     htd.addFamily(new HColumnDescriptor(Bytes.toBytes("family")));
     ImmutableHTableDescriptor immutableHtd = new ImmutableHTableDescriptor(htd);
     for (HColumnDescriptor hcd : immutableHtd.getColumnFamilies()) {

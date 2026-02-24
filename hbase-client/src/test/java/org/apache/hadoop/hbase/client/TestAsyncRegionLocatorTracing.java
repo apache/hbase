@@ -33,14 +33,13 @@ import static org.hamcrest.Matchers.hasItem;
 
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
-import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
+import io.opentelemetry.sdk.testing.junit5.OpenTelemetryExtension;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -53,24 +52,20 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.hamcrest.Matcher;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestAsyncRegionLocatorTracing {
   private static final Logger LOG = LoggerFactory.getLogger(TestAsyncRegionLocatorTracing.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncRegionLocatorTracing.class);
 
   private static final Configuration CONF = HBaseConfiguration.create();
 
@@ -78,10 +73,10 @@ public class TestAsyncRegionLocatorTracing {
 
   private RegionLocations locs;
 
-  @Rule
-  public OpenTelemetryRule traceRule = OpenTelemetryRule.create();
+  @RegisterExtension
+  public static final OpenTelemetryExtension traceRule = OpenTelemetryExtension.create();
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     RegionInfo metaRegionInfo = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build();
     locs = new RegionLocations(
@@ -100,7 +95,7 @@ public class TestAsyncRegionLocatorTracing {
     }, "test", UserProvider.instantiate(CONF).getCurrent());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     Closeables.close(conn, true);
   }
