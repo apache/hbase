@@ -70,7 +70,7 @@ import org.slf4j.LoggerFactory;
  * Common functionality needed by all versions of {@link HFile} writers.
  */
 @InterfaceAudience.Private
-public class HFileWriterImpl implements HFile.Writer {
+public class HFileWriterImpl implements HFile.Writer, LastCellAwareWriter {
   private static final Logger LOG = LoggerFactory.getLogger(HFileWriterImpl.class);
 
   private static final long UNSET = -1;
@@ -826,6 +826,7 @@ public class HFileWriterImpl implements HFile.Writer {
     }
   }
 
+  @Override
   public Cell getLastCell() {
     return lastCell;
   }

@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -111,7 +112,7 @@ public class TestRSMobFileCleanerChore {
 
   private void initConf() {
 
-    conf.setInt("hfile.format.version", 3);
+    conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
     conf.setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, 0);
     conf.setInt("hbase.client.retries.number", 100);
     conf.setInt("hbase.hregion.max.filesize", 200000000);

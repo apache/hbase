@@ -74,7 +74,7 @@ import org.slf4j.LoggerFactory;
  * </ul>
  */
 @InterfaceAudience.Private
-public class MultiTenantHFileWriter implements HFile.Writer {
+public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter {
   private static final Logger LOG = LoggerFactory.getLogger(MultiTenantHFileWriter.class);
 
   /** Tenant identification configuration at cluster level */
@@ -970,10 +970,11 @@ public class MultiTenantHFileWriter implements HFile.Writer {
         org.apache.hadoop.hbase.regionserver.TimeRangeTracker.toByteArray(globalTimeRangeTracker),
         false);
     }
-    if (globalEarliestPutTs != org.apache.hadoop.hbase.HConstants.LATEST_TIMESTAMP) {
-      fileInfo.append(org.apache.hadoop.hbase.regionserver.HStoreFile.EARLIEST_PUT_TS,
-        Bytes.toBytes(globalEarliestPutTs), false);
-    }
+    // Keep parity with HFileWriterImpl: always emit EARLIEST_PUT_TS, using LATEST_TIMESTAMP as a
+    // sentinel when no Put was written. Compaction treats a missing key as an "old file" signal
+    // (OLDEST_TIMESTAMP), which would incorrectly retain delete markers for delete-only files.
+    fileInfo.append(org.apache.hadoop.hbase.regionserver.HStoreFile.EARLIEST_PUT_TS,
+      Bytes.toBytes(globalEarliestPutTs), false);
     if (globalCustomTimeRangePresent) {
       org.apache.hadoop.hbase.regionserver.TimeRangeTracker customTracker =
         org.apache.hadoop.hbase.regionserver.TimeRangeTracker.create(
@@ -1150,6 +1151,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     return entryCount;
   }
 
+  @Override
   public Cell getLastCell() {
     return lastCell; // Keep API, but note this won't be used in global structures
   }
