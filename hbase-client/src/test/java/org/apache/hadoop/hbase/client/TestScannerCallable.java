@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -65,10 +66,10 @@ public class TestScannerCallable {
   @BeforeEach
   public void setUp() throws Exception {
     when(connection.getConfiguration()).thenReturn(new Configuration());
-    when(regionLocations.size()).thenReturn(1);
-    when(regionLocations.getRegionLocation(0)).thenReturn(regionLocation);
-    when(regionLocation.getHostname()).thenReturn(HOSTNAME);
-    when(regionLocation.getServerName()).thenReturn(SERVERNAME);
+    lenient().when(regionLocations.size()).thenReturn(1);
+    lenient().when(regionLocations.getRegionLocation(0)).thenReturn(regionLocation);
+    lenient().when(regionLocation.getHostname()).thenReturn(HOSTNAME);
+    lenient().when(regionLocation.getServerName()).thenReturn(SERVERNAME);
   }
 
   @Test

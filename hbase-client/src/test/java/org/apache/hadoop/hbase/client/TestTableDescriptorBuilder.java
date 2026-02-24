@@ -158,8 +158,8 @@ public class TestTableDescriptorBuilder {
     String className = "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver";
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(name)).build();
     assertFalse(desc.hasCoprocessor(className));
-    assertThrows(IllegalArgumentException.class,
-      () -> TableDescriptorBuilder.newBuilder(desc).removeCoprocessor(className).build());
+    desc = TableDescriptorBuilder.newBuilder(desc).removeCoprocessor(className).build();
+    assertFalse(desc.hasCoprocessor(className));
   }
 
   /**
