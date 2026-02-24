@@ -1018,6 +1018,11 @@
           <artifactId>hadoop-minikdc</artifactId>
           <scope>test</scope>
         </dependency>
+        <!--
+          TODO: The below apacheds dependencies are for passing TestCheckTestClasses under JDK8,
+          see HBASE-29117 for more details. Once we finish the migration of JUnit5, which means
+          we do not need TestCheckTestClasses any more, we can remove these dependencies.
+		-->
         <dependency>
           <groupId>org.apache.directory.server</groupId>
           <artifactId>apacheds-core</artifactId>
