@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -31,7 +32,6 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
@@ -63,10 +63,8 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.GsonUtil;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.reflect.TypeToken;
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
@@ -78,11 +76,9 @@ import org.apache.hbase.thirdparty.com.google.gson.ToNumberPolicy;
  * Run tests that use the functionality of the Operation superclass for Puts, Gets, Deletes, Scans,
  * and MultiPuts.
  */
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestOperation {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestOperation.class);
 
   private static byte[] ROW = Bytes.toBytes("testRow");
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
@@ -270,8 +266,8 @@ public class TestOperation {
   };
 
   static {
-    assertEquals("The sizes of static arrays do not match: " + "[FILTERS: %d <=> FILTERS_INFO: %d]",
-      FILTERS.length, FILTERS_INFO.length);
+    assertEquals(FILTERS.length, FILTERS_INFO.length,
+      "The sizes of static arrays do not match: " + "[FILTERS: %d <=> FILTERS_INFO: %d]");
   }
 
   /**
@@ -290,14 +286,14 @@ public class TestOperation {
     }.getType();
     Map<String, Object> parsedJSON = GSON.fromJson(json, typeOfHashMap);
     // check for the row
-    assertEquals("startRow incorrect in Scan.toJSON()", Bytes.toStringBinary(ROW),
-      parsedJSON.get("startRow"));
+    assertEquals(Bytes.toStringBinary(ROW), parsedJSON.get("startRow"),
+      "startRow incorrect in Scan.toJSON()");
     // check for the family and the qualifier.
     List familyInfo = (List) ((Map) parsedJSON.get("families")).get(Bytes.toStringBinary(FAMILY));
-    assertNotNull("Family absent in Scan.toJSON()", familyInfo);
-    assertEquals("Qualifier absent in Scan.toJSON()", 1, familyInfo.size());
-    assertEquals("Qualifier incorrect in Scan.toJSON()", Bytes.toStringBinary(QUALIFIER),
-      familyInfo.get(0));
+    assertNotNull(familyInfo, "Family absent in Scan.toJSON()");
+    assertEquals(1, familyInfo.size(), "Qualifier absent in Scan.toJSON()");
+    assertEquals(Bytes.toStringBinary(QUALIFIER), familyInfo.get(0),
+      "Qualifier incorrect in Scan.toJSON()");
 
     // produce a Get Operation
     Get get = new Get(ROW);
@@ -306,13 +302,13 @@ public class TestOperation {
     json = get.toJSON();
     parsedJSON = GSON.fromJson(json, typeOfHashMap);
     // check for the row
-    assertEquals("row incorrect in Get.toJSON()", Bytes.toStringBinary(ROW), parsedJSON.get("row"));
+    assertEquals(Bytes.toStringBinary(ROW), parsedJSON.get("row"), "row incorrect in Get.toJSON()");
     // check for the family and the qualifier.
     familyInfo = (List) ((Map) parsedJSON.get("families")).get(Bytes.toStringBinary(FAMILY));
-    assertNotNull("Family absent in Get.toJSON()", familyInfo);
-    assertEquals("Qualifier absent in Get.toJSON()", 1, familyInfo.size());
-    assertEquals("Qualifier incorrect in Get.toJSON()", Bytes.toStringBinary(QUALIFIER),
-      familyInfo.get(0));
+    assertNotNull(familyInfo, "Family absent in Get.toJSON()");
+    assertEquals(1, familyInfo.size(), "Qualifier absent in Get.toJSON()");
+    assertEquals(Bytes.toStringBinary(QUALIFIER), familyInfo.get(0),
+      "Qualifier incorrect in Get.toJSON()");
 
     // produce a Put operation
     Put put = new Put(ROW);
@@ -321,16 +317,16 @@ public class TestOperation {
     json = put.toJSON();
     parsedJSON = GSON.fromJson(json, typeOfHashMap);
     // check for the row
-    assertEquals("row absent in Put.toJSON()", Bytes.toStringBinary(ROW), parsedJSON.get("row"));
+    assertEquals(Bytes.toStringBinary(ROW), parsedJSON.get("row"), "row absent in Put.toJSON()");
     // check for the family and the qualifier.
     familyInfo = (List) ((Map) parsedJSON.get("families")).get(Bytes.toStringBinary(FAMILY));
-    assertNotNull("Family absent in Put.toJSON()", familyInfo);
-    assertEquals("KeyValue absent in Put.toJSON()", 1, familyInfo.size());
+    assertNotNull(familyInfo, "Family absent in Put.toJSON()");
+    assertEquals(1, familyInfo.size(), "KeyValue absent in Put.toJSON()");
     Map kvMap = (Map) familyInfo.get(0);
-    assertEquals("Qualifier incorrect in Put.toJSON()", Bytes.toStringBinary(QUALIFIER),
-      kvMap.get("qualifier"));
-    assertEquals("Value length incorrect in Put.toJSON()", VALUE.length,
-      ((Number) kvMap.get("vlen")).intValue());
+    assertEquals(Bytes.toStringBinary(QUALIFIER), kvMap.get("qualifier"),
+      "Qualifier incorrect in Put.toJSON()");
+    assertEquals(VALUE.length, ((Number) kvMap.get("vlen")).intValue(),
+      "Value length incorrect in Put.toJSON()");
 
     // produce a Delete operation
     Delete delete = new Delete(ROW);
@@ -339,14 +335,14 @@ public class TestOperation {
     json = delete.toJSON();
     parsedJSON = GSON.fromJson(json, typeOfHashMap);
     // check for the row
-    assertEquals("row absent in Delete.toJSON()", Bytes.toStringBinary(ROW), parsedJSON.get("row"));
+    assertEquals(Bytes.toStringBinary(ROW), parsedJSON.get("row"), "row absent in Delete.toJSON()");
     // check for the family and the qualifier.
     familyInfo = (List) ((Map) parsedJSON.get("families")).get(Bytes.toStringBinary(FAMILY));
-    assertNotNull("Family absent in Delete.toJSON()", familyInfo);
-    assertEquals("KeyValue absent in Delete.toJSON()", 1, familyInfo.size());
+    assertNotNull(familyInfo, "Family absent in Delete.toJSON()");
+    assertEquals(1, familyInfo.size(), "KeyValue absent in Delete.toJSON()");
     kvMap = (Map) familyInfo.get(0);
-    assertEquals("Qualifier incorrect in Delete.toJSON()", Bytes.toStringBinary(QUALIFIER),
-      kvMap.get("qualifier"));
+    assertEquals(Bytes.toStringBinary(QUALIFIER), kvMap.get("qualifier"),
+      "Qualifier incorrect in Delete.toJSON()");
   }
 
   /**
@@ -390,57 +386,57 @@ public class TestOperation {
       .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create();
     Map<String, Object> parsedJSON = gson.fromJson(json, typeOfHashMap);
     // check for the row
-    assertEquals("startRow incorrect in Scan.toJSON()", Bytes.toStringBinary(ROW),
-      parsedJSON.get("startRow"));
+    assertEquals(Bytes.toStringBinary(ROW), parsedJSON.get("startRow"),
+      "startRow incorrect in Scan.toJSON()");
     // check for the family and the qualifier.
     List familyInfo = (List) ((Map) parsedJSON.get("families")).get(Bytes.toStringBinary(FAMILY));
-    assertNotNull("Family absent in Scan.toJSON()", familyInfo);
-    assertEquals("Qualifier absent in Scan.toJSON()", 1, familyInfo.size());
-    assertEquals("Qualifier incorrect in Scan.toJSON()", Bytes.toStringBinary(QUALIFIER),
-      familyInfo.get(0));
-    assertEquals("stopRow incorrect in Scan.toJSON()", Bytes.toStringBinary(ROW),
-      parsedJSON.get("stopRow"));
-    assertEquals("includeStartRow incorrect in Scan.toJSON()", true,
-      parsedJSON.get("includeStartRow"));
-    assertEquals("includeStopRow incorrect in Scan.toJSON()", true,
-      parsedJSON.get("includeStopRow"));
-    assertEquals("maxVersions incorrect in Scan.toJSON()", 5L, parsedJSON.get("maxVersions"));
-    assertEquals("batch incorrect in Scan.toJSON()", 10L, parsedJSON.get("batch"));
-    assertEquals("allowPartialResults incorrect in Scan.toJSON()", true,
-      parsedJSON.get("allowPartialResults"));
-    assertEquals("storeLimit incorrect in Scan.toJSON()", 3L, parsedJSON.get("storeLimit"));
-    assertEquals("storeOffset incorrect in Scan.toJSON()", 8L, parsedJSON.get("storeOffset"));
-    assertEquals("caching incorrect in Scan.toJSON()", 20L, parsedJSON.get("caching"));
-    assertEquals("maxResultSize incorrect in Scan.toJSON()", "50", parsedJSON.get("maxResultSize"));
-    assertEquals("cacheBlocks incorrect in Scan.toJSON()", true, parsedJSON.get("cacheBlocks"));
-    assertEquals("reversed incorrect in Scan.toJSON()", true, parsedJSON.get("reversed"));
+    assertNotNull(familyInfo, "Family absent in Scan.toJSON()");
+    assertEquals(1, familyInfo.size(), "Qualifier absent in Scan.toJSON()");
+    assertEquals(Bytes.toStringBinary(QUALIFIER), familyInfo.get(0),
+      "Qualifier incorrect in Scan.toJSON()");
+    assertEquals(Bytes.toStringBinary(ROW), parsedJSON.get("stopRow"),
+      "stopRow incorrect in Scan.toJSON()");
+    assertEquals(true, parsedJSON.get("includeStartRow"),
+      "includeStartRow incorrect in Scan.toJSON()");
+    assertEquals(true, parsedJSON.get("includeStopRow"),
+      "includeStopRow incorrect in Scan.toJSON()");
+    assertEquals(5L, parsedJSON.get("maxVersions"), "maxVersions incorrect in Scan.toJSON()");
+    assertEquals(10L, parsedJSON.get("batch"), "batch incorrect in Scan.toJSON()");
+    assertEquals(true, parsedJSON.get("allowPartialResults"),
+      "allowPartialResults incorrect in Scan.toJSON()");
+    assertEquals(3L, parsedJSON.get("storeLimit"), "storeLimit incorrect in Scan.toJSON()");
+    assertEquals(8L, parsedJSON.get("storeOffset"), "storeOffset incorrect in Scan.toJSON()");
+    assertEquals(20L, parsedJSON.get("caching"), "caching incorrect in Scan.toJSON()");
+    assertEquals("50", parsedJSON.get("maxResultSize"), "maxResultSize incorrect in Scan.toJSON()");
+    assertEquals(true, parsedJSON.get("cacheBlocks"), "cacheBlocks incorrect in Scan.toJSON()");
+    assertEquals(true, parsedJSON.get("reversed"), "reversed incorrect in Scan.toJSON()");
     List trList = (List) parsedJSON.get("timeRange");
-    assertEquals("timeRange incorrect in Scan.toJSON()", 2, trList.size());
-    assertEquals("timeRange incorrect in Scan.toJSON()", "1000", trList.get(0));
-    assertEquals("timeRange incorrect in Scan.toJSON()", "2000", trList.get(1));
+    assertEquals(2, trList.size(), "timeRange incorrect in Scan.toJSON()");
+    assertEquals("1000", trList.get(0), "timeRange incorrect in Scan.toJSON()");
+    assertEquals("2000", trList.get(1), "timeRange incorrect in Scan.toJSON()");
 
-    assertEquals("asyncPrefetch incorrect in Scan.toJSON()", true, parsedJSON.get("asyncPrefetch"));
-    assertEquals("mvccReadPoint incorrect in Scan.toJSON()", "123",
-      parsedJSON.get("mvccReadPoint"));
-    assertEquals("limit incorrect in Scan.toJSON()", 5L, parsedJSON.get("limit"));
-    assertEquals("readType incorrect in Scan.toJSON()", "PREAD", parsedJSON.get("readType"));
-    assertEquals("needCursorResult incorrect in Scan.toJSON()", true,
-      parsedJSON.get("needCursorResult"));
+    assertEquals(true, parsedJSON.get("asyncPrefetch"), "asyncPrefetch incorrect in Scan.toJSON()");
+    assertEquals("123", parsedJSON.get("mvccReadPoint"),
+      "mvccReadPoint incorrect in Scan.toJSON()");
+    assertEquals(5L, parsedJSON.get("limit"), "limit incorrect in Scan.toJSON()");
+    assertEquals("PREAD", parsedJSON.get("readType"), "readType incorrect in Scan.toJSON()");
+    assertEquals(true, parsedJSON.get("needCursorResult"),
+      "needCursorResult incorrect in Scan.toJSON()");
 
     Map colFamTimeRange = (Map) parsedJSON.get("colFamTimeRangeMap");
-    assertEquals("colFamTimeRangeMap incorrect in Scan.toJSON()", 1L, colFamTimeRange.size());
+    assertEquals(1L, colFamTimeRange.size(), "colFamTimeRangeMap incorrect in Scan.toJSON()");
     List testFamily = (List) colFamTimeRange.get("testFamily");
-    assertEquals("colFamTimeRangeMap incorrect in Scan.toJSON()", 2L, testFamily.size());
-    assertEquals("colFamTimeRangeMap incorrect in Scan.toJSON()", "2000", testFamily.get(0));
-    assertEquals("colFamTimeRangeMap incorrect in Scan.toJSON()", "3000", testFamily.get(1));
+    assertEquals(2L, testFamily.size(), "colFamTimeRangeMap incorrect in Scan.toJSON()");
+    assertEquals("2000", testFamily.get(0), "colFamTimeRangeMap incorrect in Scan.toJSON()");
+    assertEquals("3000", testFamily.get(1), "colFamTimeRangeMap incorrect in Scan.toJSON()");
 
-    assertEquals("targetReplicaId incorrect in Scan.toJSON()", 1L,
-      parsedJSON.get("targetReplicaId"));
-    assertEquals("consistency incorrect in Scan.toJSON()", "STRONG", parsedJSON.get("consistency"));
-    assertEquals("loadColumnFamiliesOnDemand incorrect in Scan.toJSON()", true,
-      parsedJSON.get("loadColumnFamiliesOnDemand"));
+    assertEquals(1L, parsedJSON.get("targetReplicaId"),
+      "targetReplicaId incorrect in Scan.toJSON()");
+    assertEquals("STRONG", parsedJSON.get("consistency"), "consistency incorrect in Scan.toJSON()");
+    assertEquals(true, parsedJSON.get("loadColumnFamiliesOnDemand"),
+      "loadColumnFamiliesOnDemand incorrect in Scan.toJSON()");
 
-    assertEquals("priority incorrect in Scan.toJSON()", 10L, parsedJSON.get("priority"));
+    assertEquals(10L, parsedJSON.get("priority"), "priority incorrect in Scan.toJSON()");
 
   }
 
@@ -448,48 +444,48 @@ public class TestOperation {
   public void testPutCreationWithByteBuffer() {
     Put p = new Put(ROW);
     List<Cell> c = p.get(FAMILY, QUALIFIER);
-    Assert.assertEquals(0, c.size());
-    Assert.assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimestamp());
+    assertEquals(0, c.size());
+    assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimestamp());
 
     p.addColumn(FAMILY, ByteBuffer.wrap(QUALIFIER), 1984L, ByteBuffer.wrap(VALUE));
     c = p.get(FAMILY, QUALIFIER);
-    Assert.assertEquals(1, c.size());
-    Assert.assertEquals(1984L, c.get(0).getTimestamp());
-    Assert.assertArrayEquals(VALUE, CellUtil.cloneValue(c.get(0)));
-    Assert.assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimestamp());
-    Assert.assertEquals(0,
+    assertEquals(1, c.size());
+    assertEquals(1984L, c.get(0).getTimestamp());
+    assertArrayEquals(VALUE, CellUtil.cloneValue(c.get(0)));
+    assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimestamp());
+    assertEquals(0,
       CellComparatorImpl.COMPARATOR.compare(c.get(0), new KeyValue((ExtendedCell) c.get(0))));
 
     p = new Put(ROW);
     p.addColumn(FAMILY, ByteBuffer.wrap(QUALIFIER), 2013L, null);
     c = p.get(FAMILY, QUALIFIER);
-    Assert.assertEquals(1, c.size());
-    Assert.assertEquals(2013L, c.get(0).getTimestamp());
-    Assert.assertArrayEquals(new byte[] {}, CellUtil.cloneValue(c.get(0)));
-    Assert.assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimestamp());
-    Assert.assertEquals(0,
+    assertEquals(1, c.size());
+    assertEquals(2013L, c.get(0).getTimestamp());
+    assertArrayEquals(new byte[] {}, CellUtil.cloneValue(c.get(0)));
+    assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimestamp());
+    assertEquals(0,
       CellComparatorImpl.COMPARATOR.compare(c.get(0), new KeyValue((ExtendedCell) c.get(0))));
 
     p = new Put(ByteBuffer.wrap(ROW));
     p.addColumn(FAMILY, ByteBuffer.wrap(QUALIFIER), 2001L, null);
     c = p.get(FAMILY, QUALIFIER);
-    Assert.assertEquals(1, c.size());
-    Assert.assertEquals(2001L, c.get(0).getTimestamp());
-    Assert.assertArrayEquals(new byte[] {}, CellUtil.cloneValue(c.get(0)));
-    Assert.assertArrayEquals(ROW, CellUtil.cloneRow(c.get(0)));
-    Assert.assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimestamp());
-    Assert.assertEquals(0,
+    assertEquals(1, c.size());
+    assertEquals(2001L, c.get(0).getTimestamp());
+    assertArrayEquals(new byte[] {}, CellUtil.cloneValue(c.get(0)));
+    assertArrayEquals(ROW, CellUtil.cloneRow(c.get(0)));
+    assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimestamp());
+    assertEquals(0,
       CellComparatorImpl.COMPARATOR.compare(c.get(0), new KeyValue((ExtendedCell) c.get(0))));
 
     p = new Put(ByteBuffer.wrap(ROW), 1970L);
     p.addColumn(FAMILY, ByteBuffer.wrap(QUALIFIER), 2001L, null);
     c = p.get(FAMILY, QUALIFIER);
-    Assert.assertEquals(1, c.size());
-    Assert.assertEquals(2001L, c.get(0).getTimestamp());
-    Assert.assertArrayEquals(new byte[] {}, CellUtil.cloneValue(c.get(0)));
-    Assert.assertArrayEquals(ROW, CellUtil.cloneRow(c.get(0)));
-    Assert.assertEquals(1970L, p.getTimestamp());
-    Assert.assertEquals(0,
+    assertEquals(1, c.size());
+    assertEquals(2001L, c.get(0).getTimestamp());
+    assertArrayEquals(new byte[] {}, CellUtil.cloneValue(c.get(0)));
+    assertArrayEquals(ROW, CellUtil.cloneRow(c.get(0)));
+    assertEquals(1970L, p.getTimestamp());
+    assertEquals(0,
       CellComparatorImpl.COMPARATOR.compare(c.get(0), new KeyValue((ExtendedCell) c.get(0))));
   }
 
@@ -543,42 +539,42 @@ public class TestOperation {
       .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create();
     Map<String, Object> parsedJSON = gson.fromJson(json, typeOfHashMap);
     // check for the row
-    assertEquals("row incorrect in Get.toJSON()", Bytes.toStringBinary(ROW), parsedJSON.get("row"));
+    assertEquals(Bytes.toStringBinary(ROW), parsedJSON.get("row"), "row incorrect in Get.toJSON()");
     // check for the family and the qualifier.
     List familyInfo = (List) ((Map) parsedJSON.get("families")).get(Bytes.toStringBinary(FAMILY));
-    assertNotNull("Family absent in Get.toJSON()", familyInfo);
-    assertEquals("Qualifier absent in Get.toJSON()", 1, familyInfo.size());
-    assertEquals("Qualifier incorrect in Get.toJSON()", Bytes.toStringBinary(QUALIFIER),
-      familyInfo.get(0));
+    assertNotNull(familyInfo, "Family absent in Get.toJSON()");
+    assertEquals(1, familyInfo.size(), "Qualifier absent in Get.toJSON()");
+    assertEquals(Bytes.toStringBinary(QUALIFIER), familyInfo.get(0),
+      "Qualifier incorrect in Get.toJSON()");
 
-    assertEquals("maxVersions incorrect in Get.toJSON()", 5L, parsedJSON.get("maxVersions"));
+    assertEquals(5L, parsedJSON.get("maxVersions"), "maxVersions incorrect in Get.toJSON()");
 
-    assertEquals("storeLimit incorrect in Get.toJSON()", 5L, parsedJSON.get("storeLimit"));
-    assertEquals("storeOffset incorrect in Get.toJSON()", 9L, parsedJSON.get("storeOffset"));
+    assertEquals(5L, parsedJSON.get("storeLimit"), "storeLimit incorrect in Get.toJSON()");
+    assertEquals(9L, parsedJSON.get("storeOffset"), "storeOffset incorrect in Get.toJSON()");
 
-    assertEquals("cacheBlocks incorrect in Get.toJSON()", true, parsedJSON.get("cacheBlocks"));
+    assertEquals(true, parsedJSON.get("cacheBlocks"), "cacheBlocks incorrect in Get.toJSON()");
 
     List trList = (List) parsedJSON.get("timeRange");
-    assertEquals("timeRange incorrect in Get.toJSON()", 2, trList.size());
-    assertEquals("timeRange incorrect in Get.toJSON()", "1000", trList.get(0));
-    assertEquals("timeRange incorrect in Get.toJSON()", "2000", trList.get(1));
+    assertEquals(2, trList.size(), "timeRange incorrect in Get.toJSON()");
+    assertEquals("1000", trList.get(0), "timeRange incorrect in Get.toJSON()");
+    assertEquals("2000", trList.get(1), "timeRange incorrect in Get.toJSON()");
 
     Map colFamTimeRange = (Map) parsedJSON.get("colFamTimeRangeMap");
-    assertEquals("colFamTimeRangeMap incorrect in Get.toJSON()", 1L, colFamTimeRange.size());
+    assertEquals(1L, colFamTimeRange.size(), "colFamTimeRangeMap incorrect in Get.toJSON()");
     List testFamily = (List) colFamTimeRange.get("testFamily");
-    assertEquals("colFamTimeRangeMap incorrect in Get.toJSON()", 2L, testFamily.size());
-    assertEquals("colFamTimeRangeMap incorrect in Get.toJSON()", "2000", testFamily.get(0));
-    assertEquals("colFamTimeRangeMap incorrect in Get.toJSON()", "3000", testFamily.get(1));
+    assertEquals(2L, testFamily.size(), "colFamTimeRangeMap incorrect in Get.toJSON()");
+    assertEquals("2000", testFamily.get(0), "colFamTimeRangeMap incorrect in Get.toJSON()");
+    assertEquals("3000", testFamily.get(1), "colFamTimeRangeMap incorrect in Get.toJSON()");
 
-    assertEquals("targetReplicaId incorrect in Get.toJSON()", 1L,
-      parsedJSON.get("targetReplicaId"));
-    assertEquals("consistency incorrect in Get.toJSON()", "STRONG", parsedJSON.get("consistency"));
-    assertEquals("loadColumnFamiliesOnDemand incorrect in Get.toJSON()", true,
-      parsedJSON.get("loadColumnFamiliesOnDemand"));
+    assertEquals(1L, parsedJSON.get("targetReplicaId"),
+      "targetReplicaId incorrect in Get.toJSON()");
+    assertEquals("STRONG", parsedJSON.get("consistency"), "consistency incorrect in Get.toJSON()");
+    assertEquals(true, parsedJSON.get("loadColumnFamiliesOnDemand"),
+      "loadColumnFamiliesOnDemand incorrect in Get.toJSON()");
 
-    assertEquals("priority incorrect in Get.toJSON()", 10L, parsedJSON.get("priority"));
-    assertEquals("checkExistenceOnly incorrect in Get.toJSON()", true,
-      parsedJSON.get("checkExistenceOnly"));
+    assertEquals(10L, parsedJSON.get("priority"), "priority incorrect in Get.toJSON()");
+    assertEquals(true, parsedJSON.get("checkExistenceOnly"),
+      "checkExistenceOnly incorrect in Get.toJSON()");
 
   }
 }
