@@ -2128,14 +2128,9 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     return null;
   }
 
-  /**
-   * For HFile v4 multi-tenant files, MVCC information is determined from file info only.
-   * @return true if file info indicates MVCC information is present
-   */
   @Override
   public boolean hasMVCCInfo() {
-    // HFile v4 multi-tenant files determine MVCC info from file info only
-    return fileInfo.shouldIncludeMemStoreTS() && fileInfo.isDecodeMemstoreTS();
+    return getFileContext().isIncludesMvcc();
   }
 
   /**
@@ -2314,7 +2309,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     return DataBlockEncoding.NONE;
   }
 
-  private DataBlockEncoding loadDataBlockEncodingFromSection(byte[] sectionId, boolean isCompaction) {
+  private DataBlockEncoding loadDataBlockEncodingFromSection(byte[] sectionId,
+    boolean isCompaction) {
     if (sectionId == null) {
       return null;
     }
@@ -2334,11 +2330,12 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       if (sectionReader == null) {
         return null;
       }
-      return isCompaction ? sectionReader.getEffectiveEncodingInCache(isCompaction)
+      return isCompaction
+        ? sectionReader.getEffectiveEncodingInCache(isCompaction)
         : sectionReader.getDataBlockEncoding();
     } catch (IOException e) {
-      LOG.debug("Failed to load data block encoding from section {}", Bytes.toStringBinary(sectionId),
-        e);
+      LOG.debug("Failed to load data block encoding from section {}",
+        Bytes.toStringBinary(sectionId), e);
       return null;
     }
   }

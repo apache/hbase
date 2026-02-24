@@ -168,8 +168,7 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
   private Supplier<org.apache.hadoop.hbase.regionserver.TimeRangeTracker> customTieringSupplier;
   /** Earliest put timestamp across the file */
   private long globalEarliestPutTs = org.apache.hadoop.hbase.HConstants.LATEST_TIMESTAMP;
-  /** Bulk load timestamp for file info */
-  private long bulkloadTime = 0;
+
   /** Total uncompressed bytes */
   private long totalUncompressedBytes = 0;
   /** Global maximum sequence id across sections */
@@ -178,13 +177,13 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
   /** Absolute offset where each section's load-on-open data begins (max across sections) */
   private long maxSectionDataEndOffset = 0;
   /**
-   * Absolute offset of the first data block across all sections, if any.
-   * Compatibility envelope for legacy trailer consumers that expect a single global data range.
+   * Absolute offset of the first data block across all sections, if any. Compatibility envelope for
+   * legacy trailer consumers that expect a single global data range.
    */
   private long globalFirstDataBlockOffset = -1L;
   /**
-   * Absolute offset of the last data block across all sections, if any.
-   * Compatibility envelope for legacy trailer consumers that expect a single global data range.
+   * Absolute offset of the last data block across all sections, if any. Compatibility envelope for
+   * legacy trailer consumers that expect a single global data range.
    */
   private long globalLastDataBlockOffset = -1L;
   /** Absolute offset where the global section index root block starts */
@@ -195,14 +194,13 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
   private HFileInfo fileInfo = new HFileInfo();
   /** Defaults to apply to each new section's FileInfo (e.g., compaction context) */
   private final HFileInfo sectionDefaultFileInfo = new HFileInfo();
-  private static final byte[][] GLOBAL_FILE_INFO_KEYS =
-    new byte[][] { HStoreFile.BULKLOAD_TIME_KEY, HStoreFile.BULKLOAD_TASK_KEY,
-      HStoreFile.MAJOR_COMPACTION_KEY, HStoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY,
-      HStoreFile.COMPACTION_EVENT_KEY, HStoreFile.MAX_SEQ_ID_KEY, HStoreFile.MOB_CELLS_COUNT,
-      HStoreFile.MOB_FILE_REFS,
-      HFileDataBlockEncoder.DATA_BLOCK_ENCODING, HFileIndexBlockEncoder.INDEX_BLOCK_ENCODING,
-      HFile.Writer.MAX_MEMSTORE_TS_KEY, HFileWriterImpl.KEY_VALUE_VERSION,
-      org.apache.hadoop.hbase.regionserver.CustomTieringMultiFileWriter.CUSTOM_TIERING_TIME_RANGE };
+  private static final byte[][] GLOBAL_FILE_INFO_KEYS = new byte[][] { HStoreFile.BULKLOAD_TIME_KEY,
+    HStoreFile.BULKLOAD_TASK_KEY, HStoreFile.MAJOR_COMPACTION_KEY,
+    HStoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY, HStoreFile.COMPACTION_EVENT_KEY,
+    HStoreFile.MAX_SEQ_ID_KEY, HStoreFile.MOB_CELLS_COUNT, HStoreFile.MOB_FILE_REFS,
+    HFileDataBlockEncoder.DATA_BLOCK_ENCODING, HFileIndexBlockEncoder.INDEX_BLOCK_ENCODING,
+    HFile.Writer.MAX_MEMSTORE_TS_KEY, HFileWriterImpl.KEY_VALUE_VERSION,
+    org.apache.hadoop.hbase.regionserver.CustomTieringMultiFileWriter.CUSTOM_TIERING_TIME_RANGE };
 
   /** Whether write verification is enabled */
   private boolean enableWriteVerification;
@@ -277,9 +275,6 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     this.outputStream = Objects.requireNonNull(outputStream, "outputStream");
     this.closeOutputStream = closeOutputStream;
     this.streamName = path != null ? path.toString() : this.outputStream.toString();
-
-    // Initialize bulk load timestamp for comprehensive file info
-    this.bulkloadTime = EnvironmentEdgeManager.currentTime();
 
     // initialize blockWriter and sectionIndexWriter after creating stream
     initialize();
@@ -855,7 +850,8 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
 
     // Compatibility contract: expose global min/max bounds so v2/v3-style callers do not fail.
     // For multi-section v4 files this is an envelope, not a contiguous data-only guarantee.
-    // TODO: Migrate remaining callers to section-aware traversal and retire this compatibility path.
+    // TODO: Migrate remaining callers to section-aware traversal and retire this compatibility
+    // path.
     trailer.setFirstDataBlockOffset(globalFirstDataBlockOffset);
     trailer.setLastDataBlockOffset(globalLastDataBlockOffset);
 
@@ -919,9 +915,6 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     if (lenOfBiggestCell > 0) {
       fileInfo.append(HFileInfo.LEN_OF_BIGGEST_CELL, Bytes.toBytes(lenOfBiggestCell), false);
     }
-
-    // Bulk load timestamp - when this file was created/written
-    fileInfo.append(HStoreFile.BULKLOAD_TIME_KEY, Bytes.toBytes(bulkloadTime), false);
 
     // Global block encoding metadata (applies to all sections)
     DataBlockEncoding dataBlockEncoding = fileContext.getDataBlockEncoding();
