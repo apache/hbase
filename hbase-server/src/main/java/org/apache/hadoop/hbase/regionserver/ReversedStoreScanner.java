@@ -87,7 +87,6 @@ public class ReversedStoreScanner extends StoreScanner implements KeyValueScanne
     return backwardSeek(kv);
   }
 
-  @Override
   protected void checkScanOrder(Cell prevKV, Cell kv, CellComparator comparator)
     throws IOException {
     // Check that the heap gives us KVs in an increasing order for same row and
