@@ -22,38 +22,33 @@ import static org.apache.hadoop.hbase.HConstants.CLIENT_CONNECTION_REGISTRY_IMPL
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestConnectionFactoryTracing extends TestTracingBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestConnectionFactoryTracing.class);
 
   private User currentUser;
   private Object connection;
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     currentUser = UserProvider.instantiate(conf).getCurrent();
     conf.set(CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, RegistryForTracingTest.class.getName());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     Closeables.close((Closeable) connection, true);
   }

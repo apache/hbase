@@ -17,25 +17,21 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
-import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(SmallTests.TAG)
+@Tag(SmallTests.TAG)
 public class RpcRetryingCallerImplTest {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(RpcRetryingCallerImplTest.class);
 
   @Test
   public void itTranslatesRemoteExceptionFromServiceException() throws DoNotRetryIOException {
@@ -44,7 +40,7 @@ public class RpcRetryingCallerImplTest {
       new RemoteWithExtrasException(CallDroppedException.class.getName(), message, false));
 
     Throwable result = RpcRetryingCallerImpl.translateException(exception);
-    Assert.assertTrue("Expect unwrap CallDroppedException", result instanceof CallDroppedException);
-    Assert.assertEquals(message, result.getMessage());
+    assertTrue(result instanceof CallDroppedException, "Expect unwrap CallDroppedException");
+    assertEquals(message, result.getMessage());
   }
 }
