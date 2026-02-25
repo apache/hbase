@@ -138,8 +138,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   }
 
   /** Returns true if the cell is expired */
-  private static boolean isCellTTLExpired(final Cell cell, final long oldestTimestamp,
-    final long now) {
+  private static boolean isCellTTLExpired(final Cell cell, final long now) {
     // Look for a TTL tag first. Use it instead of the family setting if
     // found. If a cell has multiple TTLs, resolve the conflict by using the
     // first tag encountered.
@@ -174,7 +173,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     }
 
     // check if the cell is expired by cell TTL
-    if (isCellTTLExpired(cell, this.oldestUnexpiredTS, this.now)) {
+    if (isCellTTLExpired(cell, this.now)) {
       return MatchCode.SKIP;
     }
 
