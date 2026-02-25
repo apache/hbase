@@ -421,6 +421,7 @@ HADOOP_CLASSPATH="${hbase_dep_classpath}" redirect_and_run "${working_dir}/mr-im
 EOF
 
 echo "Verifying row count from import."
+echo 'count "test:example"' | "${hbase_client}/bin/hbase" --config "${working_dir}/hbase-conf/" shell --noninteractive
 import_rowcount=$(echo 'count "test:example"' | "${hbase_client}/bin/hbase" --config "${working_dir}/hbase-conf/" shell --noninteractive 2>/dev/null | tail -n 1)
 if [ ! "${import_rowcount}" -eq 48 ]; then
   echo "ERROR: Instead of finding 48 rows, we found ${import_rowcount}."
@@ -534,6 +535,7 @@ echo "Checking on results of example program."
 EOF
 
 echo "Verifying row count from example."
+echo 'count "test:example"' | "${hbase_client}/bin/hbase" --config "${working_dir}/hbase-conf/" shell --noninteractive
 example_rowcount=$(echo 'count "test:example"' | "${hbase_client}/bin/hbase" --config "${working_dir}/hbase-conf/" shell --noninteractive 2>/dev/null | tail -n 1)
 if [ "${example_rowcount}" -gt "1050" ]; then
   echo "Found ${example_rowcount} rows, which is enough to cover 48 for import, 1000 example's use of user table regions, 2 for example's use of meta/namespace regions, and 1 for example's count record"
