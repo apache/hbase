@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.io.hfile.CacheConfig.EVICT_BLOCKS_ON_CLOSE
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.EVICT_BLOCKS_ON_SPLIT_KEY;
 import static org.apache.hadoop.hbase.master.LoadBalancer.BOGUS_SERVER_NAME;
 import static org.apache.hadoop.hbase.master.assignment.AssignmentManager.FORCE_REGION_RETAINMENT;
+import static org.apache.hadoop.hbase.master.assignment.AssignmentManager.STATES_EXPECTED_ON_CLOSING;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
@@ -374,6 +375,13 @@ public class TransitRegionStateProcedure
   }
 
   private void closeRegionAfterUpdatingMeta(MasterProcedureEnv env, RegionStateNode regionNode) {
+    // Absence of location indicates that this region was in FAILED_OPEN state.
+    // This happens when disabling a table with regions in FAILED_OPEN state.
+    if (regionNode.getRegionLocation() == null) {
+      setNextState(RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_CLOSED);
+      return;
+    }
+
     LOG.debug("Close region: isSplit: {}: evictOnSplit: {}: evictOnClose: {}", isSplit,
       env.getMasterConfiguration().getBoolean(EVICT_BLOCKS_ON_SPLIT_KEY, DEFAULT_EVICT_ON_SPLIT),
       evictCache);
@@ -394,10 +402,24 @@ public class TransitRegionStateProcedure
     ) {
       return;
     }
-    if (regionNode.isInState(State.OPEN, State.CLOSING, State.MERGING, State.SPLITTING)) {
-      // this is the normal case
-      ProcedureFutureUtil.suspendIfNecessary(this, this::setFuture,
-        env.getAssignmentManager().regionClosing(regionNode), env,
+
+    CompletableFuture<Void> future = null;
+    if (regionNode.isInState(STATES_EXPECTED_ON_CLOSING)) {
+      // This is the normal case
+      future = env.getAssignmentManager().regionClosing(regionNode);
+    } else if (regionNode.setState(State.CLOSED, State.FAILED_OPEN)) {
+      // If a region was in FAILED_OPEN state, it was not OPEN and effectively CLOSED.
+      // So we should not try to close it again. We just need to update the state to CLOSED.
+
+      // Remove the region from RIT list to prevent periodic "RITs over threshold" messages.
+      final AssignmentManager am = env.getAssignmentManager();
+      am.getRegionStates().removeFromFailedOpen(regionNode.getRegionInfo());
+
+      // Persistent CLOSED state to meta and proceed to the next state.
+      future = am.getRegionStateStore().updateRegionLocation(regionNode);
+    }
+    if (future != null) {
+      ProcedureFutureUtil.suspendIfNecessary(this, this::setFuture, future, env,
         () -> closeRegionAfterUpdatingMeta(env, regionNode));
     } else {
       forceNewPlan = true;
