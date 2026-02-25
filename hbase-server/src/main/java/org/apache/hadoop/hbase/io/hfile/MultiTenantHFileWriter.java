@@ -194,12 +194,30 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
   private HFileInfo fileInfo = new HFileInfo();
   /** Defaults to apply to each new section's FileInfo (e.g., compaction context) */
   private final HFileInfo sectionDefaultFileInfo = new HFileInfo();
-  private static final byte[][] GLOBAL_FILE_INFO_KEYS = new byte[][] { HStoreFile.BULKLOAD_TIME_KEY,
-    HStoreFile.BULKLOAD_TASK_KEY, HStoreFile.MAJOR_COMPACTION_KEY,
-    HStoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY, HStoreFile.COMPACTION_EVENT_KEY,
-    HStoreFile.MAX_SEQ_ID_KEY, HStoreFile.MOB_CELLS_COUNT, HStoreFile.MOB_FILE_REFS,
+  /**
+   * Metadata keys that belong in the global (v4-level) FileInfo block. Only these keys are
+   * propagated from external {@link #appendFileInfo} calls to the global file info; all other
+   * keys are section-local. Keys that require global aggregation (e.g.
+   * {@code TIMERANGE_KEY}, {@code EARLIEST_PUT_TS}) are handled separately in
+   * {@link #finishFileInfo()} and do not need to appear here.
+   */
+  private static final byte[][] GLOBAL_FILE_INFO_KEYS = new byte[][] {
+    // Bulk-load identifiers
+    HStoreFile.BULKLOAD_TIME_KEY, HStoreFile.BULKLOAD_TASK_KEY,
+    // Compaction & lifecycle markers
+    HStoreFile.MAJOR_COMPACTION_KEY, HStoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY,
+    HStoreFile.COMPACTION_EVENT_KEY, HStoreFile.HISTORICAL_KEY,
+    // Sequence & version metadata
+    HStoreFile.MAX_SEQ_ID_KEY, HFile.Writer.MAX_MEMSTORE_TS_KEY, HFileWriterImpl.KEY_VALUE_VERSION,
+    // Encoding metadata
     HFileDataBlockEncoder.DATA_BLOCK_ENCODING, HFileIndexBlockEncoder.INDEX_BLOCK_ENCODING,
-    HFile.Writer.MAX_MEMSTORE_TS_KEY, HFileWriterImpl.KEY_VALUE_VERSION,
+    // MOB metadata
+    HStoreFile.MOB_CELLS_COUNT, HStoreFile.MOB_FILE_REFS,
+    // Stripe store boundaries — file-level properties that describe how the HFile
+    // maps to stripes; required by StripeStoreFileManager for stripe assignment.
+    org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.STRIPE_START_KEY,
+    org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.STRIPE_END_KEY,
+    // Custom tiering
     org.apache.hadoop.hbase.regionserver.CustomTieringMultiFileWriter.CUSTOM_TIERING_TIME_RANGE };
 
   /** Whether write verification is enabled */
