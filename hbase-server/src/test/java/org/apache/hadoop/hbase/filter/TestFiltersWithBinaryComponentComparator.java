@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import static org.hamcrest.Matchers.isA;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -43,6 +44,7 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -146,6 +148,21 @@ public class TestFiltersWithBinaryComponentComparator {
       assertTrue(Bytes.toString(value).charAt(1) == 'y');
     }
     ht.close();
+  }
+
+  @Rule
+  public ExpectedException thrown = ExpectedException.none();
+
+  @Test
+  public void testThrowsExceptionOnOffsetOutOfBounds() {
+    thrown.expect(isA(BinaryComponentComparator.OffsetOutOfBoundsException.class));
+
+    byte[] componentValue = new byte[] { (byte) 'A' };
+    int offsetValue = 10;
+    byte[] valueTooShortForOffset = new byte[offsetValue];
+    BinaryComponentComparator comparator =
+      new BinaryComponentComparator(componentValue, offsetValue);
+    comparator.compareTo(valueTooShortForOffset);
   }
 
   /**
