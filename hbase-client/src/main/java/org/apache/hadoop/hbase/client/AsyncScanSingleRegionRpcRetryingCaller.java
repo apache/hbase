@@ -358,7 +358,6 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     this.future = new CompletableFuture<>();
     this.priority = priority;
     this.controller = conn.rpcControllerFactory.newController();
-    this.controller.setPriority(priority);
     this.controller.setRequestAttributes(requestAttributes);
     this.exceptions = new ArrayList<>();
     this.pauseManager =

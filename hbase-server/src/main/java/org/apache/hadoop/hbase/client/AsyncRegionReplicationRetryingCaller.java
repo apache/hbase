@@ -22,9 +22,12 @@ import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ExtendedCellScanner;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -45,6 +48,8 @@ public class AsyncRegionReplicationRetryingCaller extends AsyncRpcRetryingCaller
 
   private final Entry[] entries;
 
+  private final Optional<TableName> tableName;
+
   // whether to use replay instead of replicateToReplica, during rolling upgrading if the target
   // region server has not been upgraded then it will not have the replicateToReplica method, so we
   // could use replay method first, though it is not perfect.
@@ -53,12 +58,17 @@ public class AsyncRegionReplicationRetryingCaller extends AsyncRpcRetryingCaller
   public AsyncRegionReplicationRetryingCaller(HashedWheelTimer retryTimer,
     AsyncClusterConnectionImpl conn, int maxAttempts, long rpcTimeoutNs, long operationTimeoutNs,
     RegionInfo replica, List<Entry> entries) {
-    super(retryTimer, conn, ConnectionUtils.getPriority(replica.getTable()),
-      conn.connConf.getPauseNs(), conn.connConf.getPauseNsForServerOverloaded(), maxAttempts,
-      operationTimeoutNs, rpcTimeoutNs, conn.connConf.getStartLogErrorsCnt(),
-      Collections.emptyMap());
+    super(retryTimer, conn, HConstants.PRIORITY_UNSET, conn.connConf.getPauseNs(),
+      conn.connConf.getPauseNsForServerOverloaded(), maxAttempts, operationTimeoutNs, rpcTimeoutNs,
+      conn.connConf.getStartLogErrorsCnt(), Collections.emptyMap());
     this.replica = replica;
+    this.tableName = Optional.of(replica.getTable());
     this.entries = entries.toArray(new Entry[0]);
+  }
+
+  @Override
+  protected Optional<TableName> getTableName() {
+    return tableName;
   }
 
   @Override
