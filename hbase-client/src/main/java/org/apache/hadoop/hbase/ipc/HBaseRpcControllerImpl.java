@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 
@@ -131,6 +132,17 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
   public void setPriority(final TableName tn) {
     setPriority(
       tn != null && tn.isSystemTable() ? HConstants.SYSTEMTABLE_QOS : HConstants.NORMAL_QOS);
+  }
+
+  @Override
+  public void setPriority(int priority, @Nullable TableName tableName) {
+    if (priority != HConstants.PRIORITY_UNSET) {
+      this.priority = priority;
+    } else if (tableName != null && tableName.isSystemTable()) {
+      this.priority = HConstants.SYSTEMTABLE_QOS;
+    } else {
+      this.priority = HConstants.NORMAL_QOS;
+    }
   }
 
   @Override
