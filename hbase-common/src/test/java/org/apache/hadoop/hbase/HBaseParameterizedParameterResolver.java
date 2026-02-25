@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hbase.thirdparty.com.google.common.primitives.Primitives;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
 import org.junit.jupiter.params.provider.Arguments;
+
+import org.apache.hbase.thirdparty.com.google.common.primitives.Primitives;
 
 /**
  * @see HBaseParameterizedTestTemplate
