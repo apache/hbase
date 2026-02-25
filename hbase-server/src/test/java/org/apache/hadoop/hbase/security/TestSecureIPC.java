@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -325,10 +326,11 @@ public class TestSecureIPC {
     serverConf.setBoolean(RpcServer.FALLBACK_TO_INSECURE_CLIENT_AUTH, false);
     IOException error =
       assertThrows(IOException.class, () -> callRpcService(User.create(clientUgi)));
-    // server just closes the connection, so we could get broken pipe, or EOF, or connection closed
+    // server just closes the connection, so we could get broken pipe, or EOF, or connection closed,
+    // or socket exception
     if (error.getMessage() == null || !error.getMessage().contains("Broken pipe")) {
-      assertThat(error,
-        either(instanceOf(EOFException.class)).or(instanceOf(ConnectionClosedException.class)));
+      assertThat(error, either(instanceOf(EOFException.class))
+        .or(instanceOf(ConnectionClosedException.class)).or(instanceOf(SocketException.class)));
     }
   }
 
