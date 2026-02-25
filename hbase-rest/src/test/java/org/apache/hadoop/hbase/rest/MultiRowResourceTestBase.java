@@ -25,38 +25,29 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Base64.Encoder;
-import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.Response;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.http.Header;
 import org.apache.http.message.BasicHeader;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.TestTemplate;
-import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 
-@Tag(RestTests.TAG)
-@Tag(MediumTests.TAG)
-@HBaseParameterizedTestTemplate(name = "{index}: csrfEnabled = {0}")
-public class TestMultiRowResource {
+public class MultiRowResourceTestBase {
 
   private static final TableName TABLE = TableName.valueOf("TestRowResource");
   private static final String CFA = "a";
@@ -77,18 +68,9 @@ public class TestMultiRowResource {
   private static Configuration conf;
 
   private static Header extraHdr = null;
-  private static boolean csrfEnabled = true;
+  protected static boolean csrfEnabled = true;
 
-  public TestMultiRowResource(boolean csrf) {
-    csrfEnabled = csrf;
-  }
-
-  public static Stream<Arguments> parameters() {
-    return Stream.of(Arguments.of(false), Arguments.of(true));
-  }
-
-  @BeforeAll
-  public static void setUpBeforeClass() throws Exception {
+  protected static void initialize() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(RESTServer.REST_CSRF_ENABLED_KEY, csrfEnabled);
     if (csrfEnabled) {
@@ -102,19 +84,22 @@ public class TestMultiRowResource {
     if (admin.tableExists(TABLE)) {
       return;
     }
-    HTableDescriptor htd = new HTableDescriptor(TABLE);
-    htd.addFamily(new HColumnDescriptor(CFA));
-    htd.addFamily(new HColumnDescriptor(CFB));
-    admin.createTable(htd);
+    TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(TABLE);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFA)).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    columnFamilyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFB)).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    admin.createTable(tableDescriptorBuilder.build());
   }
 
   @AfterAll
-  public static void tearDownAfterClass() throws Exception {
+  public static void tearDownAfterAll() throws Exception {
     REST_TEST_UTIL.shutdownServletContainer();
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @TestTemplate
+  @Test
   public void testMultiCellGetJSON() throws IOException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
     String row_6_url = "/" + TABLE + "/" + ROW_2 + "/" + COLUMN_2;
@@ -167,7 +152,7 @@ public class TestMultiRowResource {
   }
 
   // See https://issues.apache.org/jira/browse/HBASE-28174
-  @TestTemplate
+  @Test
   public void testMultiCellGetJSONB64() throws IOException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
     String row_6_url = "/" + TABLE + "/" + ROW_2 + "/" + COLUMN_2;
@@ -213,7 +198,7 @@ public class TestMultiRowResource {
     client.delete(row_6_url, extraHdr);
   }
 
-  @TestTemplate
+  @Test
   public void testMultiCellGetNoKeys() throws IOException {
     StringBuilder path = new StringBuilder();
     path.append("/");
@@ -224,7 +209,7 @@ public class TestMultiRowResource {
     assertEquals(404, response.getCode());
   }
 
-  @TestTemplate
+  @Test
   public void testMultiCellGetXML() throws IOException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
     String row_6_url = "/" + TABLE + "/" + ROW_2 + "/" + COLUMN_2;
@@ -248,7 +233,7 @@ public class TestMultiRowResource {
     client.delete(row_6_url, extraHdr);
   }
 
-  @TestTemplate
+  @Test
   public void testMultiCellGetWithColsJSON() throws IOException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
     String row_6_url = "/" + TABLE + "/" + ROW_2 + "/" + COLUMN_2;
@@ -281,7 +266,7 @@ public class TestMultiRowResource {
     client.delete(row_6_url, extraHdr);
   }
 
-  @TestTemplate
+  @Test
   public void testMultiCellGetJSONNotFound() throws IOException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
 
@@ -305,7 +290,7 @@ public class TestMultiRowResource {
     client.delete(row_5_url, extraHdr);
   }
 
-  @TestTemplate
+  @Test
   public void testMultiCellGetWithColsInQueryPathJSON() throws IOException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
     String row_6_url = "/" + TABLE + "/" + ROW_2 + "/" + COLUMN_2;
@@ -338,7 +323,7 @@ public class TestMultiRowResource {
     client.delete(row_6_url, extraHdr);
   }
 
-  @TestTemplate
+  @Test
   public void testMultiCellGetFilterJSON() throws IOException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
     String row_6_url = "/" + TABLE + "/" + ROW_2 + "/" + COLUMN_2;
