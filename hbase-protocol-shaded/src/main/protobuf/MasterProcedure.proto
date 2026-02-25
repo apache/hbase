@@ -743,3 +743,10 @@ message ReloadQuotasProcedureStateData {
   required ServerName target_server = 1;
   optional ForeignExceptionMessage error = 2;
 }
+
+enum RestoreBackupSystemTableState {
+  RESTORE_BACKUP_SYSTEM_TABLE_PREPARE = 1;
+  RESTORE_BACKUP_SYSTEM_TABLE_DISABLE = 2;
+  RESTORE_BACKUP_SYSTEM_TABLE_RESTORE = 3;
+  RESTORE_BACKUP_SYSTEM_TABLE_ENABLE = 4;
+}
