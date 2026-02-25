@@ -55,10 +55,10 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.DefaultParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.PosixParser;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.FilterHolder;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.ServletContextHandler;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.ServletHolder;
@@ -132,7 +132,7 @@ public class RESTServer implements Constants {
     System.exit(exitCode);
   }
 
-  void addCSRFFilter(ServletContextHandler ctxHandler, Configuration conf) {
+  private void addCSRFFilter(ServletContextHandler ctxHandler, Configuration conf) {
     restCSRFEnabled = conf.getBoolean(REST_CSRF_ENABLED_KEY, REST_CSRF_ENABLED_DEFAULT);
     if (restCSRFEnabled) {
       Map<String, String> restCsrfParams =
@@ -181,7 +181,7 @@ public class RESTServer implements Constants {
 
     CommandLine commandLine = null;
     try {
-      commandLine = new PosixParser().parse(options, args);
+      commandLine = new DefaultParser().parse(options, args);
     } catch (ParseException e) {
       LOG.error("Could not parse: ", e);
       printUsageAndExit(options, -1);
