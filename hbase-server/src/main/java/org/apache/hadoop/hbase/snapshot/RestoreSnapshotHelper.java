@@ -493,8 +493,7 @@ public class RestoreSnapshotHelper {
     String tableName = tableDesc.getTableName().getNameAsString();
     final String snapshotName = snapshotDesc.getName();
 
-    Path regionPath = new Path(tableDir, regionInfo.getEncodedName());
-    HRegionFileSystem regionFS = (fs.exists(regionPath))
+    HRegionFileSystem regionFS = (fs.exists(regionDir))
       ? HRegionFileSystem.openRegionFromFileSystem(conf, fs, tableDir, regionInfo, false)
       : HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, regionInfo);
 
@@ -661,8 +660,7 @@ public class RestoreSnapshotHelper {
     for (SnapshotRegionManifest.FamilyFiles familyFiles : manifest.getFamilyFilesList()) {
       Path familyDir = new Path(regionDir, familyFiles.getFamilyName().toStringUtf8());
       List<StoreFileInfo> clonedFiles = new ArrayList<>();
-      Path regionPath = new Path(tableDir, newRegionInfo.getEncodedName());
-      HRegionFileSystem regionFS = (fs.exists(regionPath))
+      HRegionFileSystem regionFS = (fs.exists(regionDir))
         ? HRegionFileSystem.openRegionFromFileSystem(conf, fs, tableDir, newRegionInfo, false)
         : HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, newRegionInfo);
 
