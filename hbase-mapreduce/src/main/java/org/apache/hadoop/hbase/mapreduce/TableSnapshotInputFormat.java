@@ -94,10 +94,17 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
       this.delegate = delegate;
     }
 
+    /**
+     * @deprecated since 4.0.0. Use
+     *             {@link #TableSnapshotRegionSplit(TableSnapshotInputFormatImpl.InputSplit)}. This
+     *             constructor will be removed in a future.
+     * @see <a href="https://issues.apache.org/jira/browse/HBASE-29272">HBASE-29272</a>
+     */
+    @Deprecated
     public TableSnapshotRegionSplit(TableDescriptor htd, RegionInfo regionInfo,
       List<String> locations, Scan scan, Path restoreDir) {
-      this.delegate =
-        new TableSnapshotInputFormatImpl.InputSplit(htd, regionInfo, locations, scan, restoreDir);
+      this.delegate = new TableSnapshotInputFormatImpl.InputSplit(htd, regionInfo, locations, scan,
+        restoreDir, 1);
     }
 
     @Override
