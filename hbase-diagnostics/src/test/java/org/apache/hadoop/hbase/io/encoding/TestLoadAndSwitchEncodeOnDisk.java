@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.TestMiniClusterLoadSequential;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.jupiter.api.Tag;
@@ -43,7 +42,6 @@ import org.junit.jupiter.api.Test;
  * Uses the load tester
  */
 @Tag(IOTests.TAG)
-@Tag(MediumTests.TAG)
 public class TestLoadAndSwitchEncodeOnDisk extends TestMiniClusterLoadSequential {
 
   /** We do not alternate the multi-put flag in this test. */

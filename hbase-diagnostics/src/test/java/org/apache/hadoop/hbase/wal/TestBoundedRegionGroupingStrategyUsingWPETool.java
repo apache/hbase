@@ -22,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestTemplate;
@@ -34,7 +33,6 @@ import org.junit.jupiter.params.provider.Arguments;
  * HBASE-28432 to break cyclic dependency.
  */
 @Tag(RegionServerTests.TAG)
-@Tag(LargeTests.TAG)
 @HBaseParameterizedTestTemplate
 public class TestBoundedRegionGroupingStrategyUsingWPETool
   extends TestBoundedRegionGroupingStrategy {
