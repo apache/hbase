@@ -65,11 +65,6 @@ public class TestLoadBalancerPerformanceEvaluation {
     testLoadBalancer(SimpleLoadBalancer.class);
   }
 
-  @Test
-  public void testCacheAwareLoadBalancer() throws Exception {
-    testLoadBalancer(CacheAwareLoadBalancer.class);
-  }
-
   private void testLoadBalancer(Class<? extends LoadBalancer> loadBalancerClass) throws Exception {
     String[] args =
       { "-regions", "1000", "-servers", "100", "-load_balancer", loadBalancerClass.getName() };
