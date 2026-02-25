@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
@@ -57,7 +57,7 @@ import org.mockito.Mockito;
  * some write paths.
  */
 @Tag(ClientTests.TAG)
-@Tag(SmallTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestAsyncProcessWithRegionException {
 
   private static final Result EMPTY_RESULT = Result.create(null, true);
