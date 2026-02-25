@@ -18,25 +18,28 @@
 package org.apache.hadoop.hbase.trace;
 
 import io.opentelemetry.api.common.AttributeKey;
-import io.opentelemetry.semconv.SemanticAttributes;
+import io.opentelemetry.semconv.ExceptionAttributes;
+import io.opentelemetry.semconv.incubating.DbIncubatingAttributes;
+import io.opentelemetry.semconv.incubating.RpcIncubatingAttributes;
+import io.opentelemetry.semconv.incubating.NetIncubatingAttributes;
 import java.nio.ByteBuffer;
 import java.util.List;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The constants in this class correspond with the guidance outlined by the OpenTelemetry <a href=
- * "https://github.com/open-telemetry/opentelemetry-specification/tree/main/specification/trace/semantic_conventions">Semantic
+ * "https://github.com/open-telemetry/semantic-conventions/tree/main/docs#opentelemetry-semantic-conventions">Semantic
  * Conventions</a>.
  */
 @InterfaceAudience.Private
 public final class HBaseSemanticAttributes {
-  public static final AttributeKey<String> DB_SYSTEM = SemanticAttributes.DB_SYSTEM;
-  public static final String DB_SYSTEM_VALUE = SemanticAttributes.DbSystemValues.HBASE;
+  public static final AttributeKey<String> DB_SYSTEM = DbIncubatingAttributes.DB_SYSTEM;
+  public static final String DB_SYSTEM_VALUE = DbIncubatingAttributes.DbSystemIncubatingValues.HBASE;
   public static final AttributeKey<String> DB_CONNECTION_STRING =
-    SemanticAttributes.DB_CONNECTION_STRING;
-  public static final AttributeKey<String> DB_USER = SemanticAttributes.DB_USER;
-  public static final AttributeKey<String> DB_NAME = SemanticAttributes.DB_NAME;
-  public static final AttributeKey<String> DB_OPERATION = SemanticAttributes.DB_OPERATION;
+    DbIncubatingAttributes.DB_CONNECTION_STRING;
+  public static final AttributeKey<String> DB_USER = DbIncubatingAttributes.DB_USER;
+  public static final AttributeKey<String> DB_NAME = DbIncubatingAttributes.DB_NAME;
+  public static final AttributeKey<String> DB_OPERATION = DbIncubatingAttributes.DB_OPERATION;
   public static final AttributeKey<String> TABLE_KEY = AttributeKey.stringKey("db.hbase.table");
   /**
    * For operations that themselves ship one or more operations, such as {@link Operation#BATCH} and
@@ -46,20 +49,20 @@ public final class HBaseSemanticAttributes {
     AttributeKey.stringArrayKey("db.hbase.container_operations");
   public static final AttributeKey<List<String>> REGION_NAMES_KEY =
     AttributeKey.stringArrayKey("db.hbase.regions");
-  public static final AttributeKey<String> RPC_SYSTEM = SemanticAttributes.RPC_SYSTEM;
-  public static final AttributeKey<String> RPC_SERVICE = SemanticAttributes.RPC_SERVICE;
-  public static final AttributeKey<String> RPC_METHOD = SemanticAttributes.RPC_METHOD;
+  public static final AttributeKey<String> RPC_SYSTEM = RpcIncubatingAttributes.RPC_SYSTEM;
+  public static final AttributeKey<String> RPC_SERVICE = RpcIncubatingAttributes.RPC_SERVICE;
+  public static final AttributeKey<String> RPC_METHOD = RpcIncubatingAttributes.RPC_METHOD;
   public static final AttributeKey<String> SERVER_NAME_KEY =
     AttributeKey.stringKey("db.hbase.server.name");
-  public static final AttributeKey<String> NET_PEER_NAME = SemanticAttributes.NET_PEER_NAME;
-  public static final AttributeKey<Long> NET_PEER_PORT = SemanticAttributes.NET_PEER_PORT;
+  public static final AttributeKey<String> NET_PEER_NAME = NetIncubatingAttributes.NET_PEER_NAME;
+  public static final AttributeKey<Long> NET_PEER_PORT = NetIncubatingAttributes.NET_PEER_PORT;
   public static final AttributeKey<Boolean> ROW_LOCK_READ_LOCK_KEY =
     AttributeKey.booleanKey("db.hbase.rowlock.readlock");
   public static final AttributeKey<String> WAL_IMPL = AttributeKey.stringKey("db.hbase.wal.impl");
 
-  public static final AttributeKey<String> EXCEPTION_TYPE = SemanticAttributes.EXCEPTION_TYPE;
-  public static final AttributeKey<String> EXCEPTION_MESSAGE = SemanticAttributes.EXCEPTION_MESSAGE;
-  public static final String EXCEPTION_EVENT_NAME = SemanticAttributes.EXCEPTION_EVENT_NAME;
+  public static final AttributeKey<String> EXCEPTION_TYPE = ExceptionAttributes.EXCEPTION_TYPE;
+  public static final AttributeKey<String> EXCEPTION_MESSAGE = ExceptionAttributes.EXCEPTION_MESSAGE;
+  public static final String EXCEPTION_EVENT_NAME = "exception";
 
   /**
    * Indicates the amount of data was read into a {@link ByteBuffer} of type
