@@ -760,19 +760,24 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   private void fileNotFullyCached(BlockCacheKey key, BucketEntry entry) {
-    // Update the updateRegionCachedSize before removing the file from fullyCachedFiles.
-    // This computation should happen even if the file is not in fullyCachedFiles map.
-    updateRegionCachedSize(key, (entry.getLength() * -1));
-    fullyCachedFiles.remove(key.getHfileName());
+    // Keep region metrics in sync with backingMap updates.
+    updateRegionCachedSize(key, -entry.getLength());
+    String baseHFileName = BlockCacheUtil.getBaseHFileName(key.getHfileName());
+    if (baseHFileName != null) {
+      fullyCachedFiles.remove(baseHFileName);
+    }
   }
 
   public void fileCacheCompleted(Path filePath, long size) {
-    Pair<String, Long> pair = new Pair<>();
+    String baseHFileName = BlockCacheUtil.getBaseHFileName(filePath.getName());
+    if (baseHFileName == null) {
+      return;
+    }
+
     // sets the region name
     String regionName = filePath.getParent().getParent().getName();
-    pair.setFirst(regionName);
-    pair.setSecond(size);
-    fullyCachedFiles.put(filePath.getName(), pair);
+    Pair<String, Long> pair = new Pair<>(regionName, size);
+    fullyCachedFiles.put(baseHFileName, pair);
   }
 
   private void updateRegionCachedSize(BlockCacheKey key, long cachedSize) {
@@ -1959,9 +1964,22 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   private Set<BlockCacheKey> getAllCacheKeysForFile(String hfileName, long init, long end) {
-    // These keys are just for comparison and are short lived, so we need only file name and offset
-    return blocksByHFile.subSet(new BlockCacheKey(hfileName, init), true,
-      new BlockCacheKey(hfileName, end), true);
+    Set<BlockCacheKey> keys = new HashSet<>(blocksByHFile.subSet(new BlockCacheKey(hfileName, init),
+      true, new BlockCacheKey(hfileName, end), true));
+    if (!BlockCacheUtil.isMultiTenantSectionHFileName(hfileName)) {
+      String prefix = hfileName + BlockCacheUtil.MULTI_TENANT_HFILE_NAME_DELIMITER;
+      // For section-decorated names, offsets are section-relative; filter offsets explicitly as the
+      // NavigableSet ordering is by (hfileName, offset).
+      for (BlockCacheKey key : blocksByHFile.subSet(new BlockCacheKey(prefix, 0), true,
+        new BlockCacheKey(prefix + Character.MAX_VALUE, Long.MAX_VALUE), true)) {
+        if (
+          key.getHfileName().startsWith(prefix) && key.getOffset() >= init && key.getOffset() <= end
+        ) {
+          keys.add(key);
+        }
+      }
+    }
+    return keys;
   }
 
   /**
@@ -2389,6 +2407,12 @@ public class BucketCache implements BlockCache, HeapSize {
   @Override
   public void notifyFileCachingCompleted(Path fileName, int totalBlockCount, int dataBlockCount,
     long size) {
+    // Multi-tenant readers may pass section-decorated names (<hfile>#<tenantSectionId>) to the
+    // prefetch completion callback. When block cache keys are normalized to the container HFile
+    // name (base name) and absolute offsets, we must also normalize here, otherwise we will not
+    // find the cached blocks and we will never mark the file/region as cached.
+    final String requestedFileName = fileName.getName();
+    final String baseFileName = BlockCacheUtil.getBaseHFileName(requestedFileName);
     // block eviction may be happening in the background as prefetch runs,
     // so we need to count all blocks for this file in the backing map under
     // a read lock for the block offset
@@ -2398,15 +2422,14 @@ public class BucketCache implements BlockCache, HeapSize {
     try {
       int count = 0;
       LOG.debug("iterating over {} entries in the backing map", backingMap.size());
-      Set<BlockCacheKey> result = getAllCacheKeysForFile(fileName.getName(), 0, Long.MAX_VALUE);
-      if (result.isEmpty() && StoreFileInfo.isReference(fileName)) {
+      Set<BlockCacheKey> result = getAllCacheKeysForFile(baseFileName, 0, Long.MAX_VALUE);
+      if (result.isEmpty() && StoreFileInfo.isReference(baseFileName)) {
         result = getAllCacheKeysForFile(
-          StoreFileInfo.getReferredToRegionAndFile(fileName.getName()).getSecond(), 0,
-          Long.MAX_VALUE);
+          StoreFileInfo.getReferredToRegionAndFile(baseFileName).getSecond(), 0, Long.MAX_VALUE);
       }
       for (BlockCacheKey entry : result) {
         LOG.debug("found block for file {} in the backing map. Acquiring read lock for offset {}",
-          fileName.getName(), entry.getOffset());
+          baseFileName, entry.getOffset());
         ReentrantReadWriteLock lock = offsetLock.getLock(entry.getOffset());
         lock.readLock().lock();
         locks.add(lock);
@@ -2424,7 +2447,7 @@ public class BucketCache implements BlockCache, HeapSize {
             + "Total data blocks for file: {}. "
             + "Checking for blocks pending cache in cache writer queue.",
           fileName, count, dataBlockCount);
-        if (ramCache.hasBlocksForFile(fileName.getName())) {
+        if (ramCache.hasBlocksForFile(baseFileName)) {
           for (ReentrantReadWriteLock lock : locks) {
             lock.readLock().unlock();
           }
@@ -2471,7 +2494,11 @@ public class BucketCache implements BlockCache, HeapSize {
       return Optional.of(false);
     }
     // if we don't have the file in fullyCachedFiles, we should cache it
-    return Optional.of(!fullyCachedFiles.containsKey(fileName));
+    String baseHFileName = BlockCacheUtil.getBaseHFileName(fileName);
+    if (baseHFileName == null) {
+      return Optional.of(true);
+    }
+    return Optional.of(!fullyCachedFiles.containsKey(baseHFileName));
   }
 
   @Override

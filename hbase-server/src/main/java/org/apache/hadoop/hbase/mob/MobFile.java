@@ -68,7 +68,17 @@ public class MobFile {
    * @return The cell in the mob file.
    */
   public MobCell readCell(ExtendedCell search, boolean cacheMobBlocks) throws IOException {
-    return readCell(search, cacheMobBlocks, sf.getMaxMemStoreTS());
+    if (sf == null) {
+      throw new IOException("Mob file reader has been closed");
+    }
+    sf.initReader();
+    long readPoint = sf.getMaxMemStoreTS();
+    if (readPoint < 0) {
+      // Reader metadata (including MAX_MEMSTORE_TS_KEY) is loaded only after initReader().
+      // Fall back to disabling MVCC filtering when metadata is unavailable (e.g., legacy files).
+      readPoint = Long.MAX_VALUE;
+    }
+    return readCell(search, cacheMobBlocks, readPoint);
   }
 
   /**

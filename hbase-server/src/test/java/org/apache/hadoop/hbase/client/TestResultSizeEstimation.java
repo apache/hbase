@@ -57,7 +57,7 @@ public class TestResultSizeEstimation {
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     // Need HFileV3
-    conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MIN_FORMAT_VERSION_WITH_TAGS);
+    conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
     // effectively limit max result size to one entry if it has tags
     conf.setLong(HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY, SCANNER_DATA_LIMIT);
     conf.setBoolean(ConnectionConfiguration.LOG_SCANNER_ACTIVITY, true);

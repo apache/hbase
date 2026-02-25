@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -112,7 +113,7 @@ public class TestMobCompactionWithDefaults {
   protected void htuStart() throws Exception {
     HTU = new HBaseTestingUtil();
     conf = HTU.getConfiguration();
-    conf.setInt("hfile.format.version", 3);
+    conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
     // Disable automatic MOB compaction
     conf.setLong(MobConstants.MOB_COMPACTION_CHORE_PERIOD, 0);
     // Disable automatic MOB file cleaner chore

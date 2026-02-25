@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.io.DataInput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -326,10 +327,6 @@ public class TestBytesReadFromFs {
     throws IOException {
     Assert.assertTrue(keyValue == null || key == null);
 
-    // Assert that the bloom filter index was read and it's size is accounted in bytes read from
-    // fs
-    readLoadOnOpenDataSection(path, true);
-
     CacheConfig cacheConf = new CacheConfig(conf);
     StoreFileInfo storeFileInfo = StoreFileInfo.createStoreFileInfoForHFile(conf, fs, path, true);
     HStoreFile sf = new HStoreFile(storeFileInfo, bt, cacheConf);
@@ -343,37 +340,94 @@ public class TestBytesReadFromFs {
     ThreadLocalServerSideScanMetrics.getBlockReadOpsCountAndReset();
 
     StoreFileReader reader = sf.getReader();
-    BloomFilter bloomFilter = reader.getGeneralBloomFilter();
-    Assert.assertTrue(bloomFilter instanceof CompoundBloomFilter);
-    CompoundBloomFilter cbf = (CompoundBloomFilter) bloomFilter;
+    HFile.Reader hfileReader = reader.getHFileReader();
 
-    // Get the bloom filter index reader
-    HFileBlockIndex.BlockIndexReader index = cbf.getBloomIndex();
-    int block;
+    if (hfileReader instanceof AbstractMultiTenantReader) {
+      AbstractMultiTenantReader mtReader = (AbstractMultiTenantReader) hfileReader;
+      byte[][] sectionIds = mtReader.getAllTenantSectionIds();
+      Assert.assertTrue("Expected at least one tenant section", sectionIds.length > 0);
 
-    // Search for the key in the bloom filter index
-    if (keyValue != null) {
-      block = index.rootBlockContainingKey(keyValue);
+      long totalBloomKeys = 0;
+      long expectedBytesRead = 0;
+      int expectedBlockReads = 0;
+
+      for (byte[] sectionId : sectionIds) {
+        try (AbstractMultiTenantReader.SectionReaderLease lease =
+          mtReader.getSectionReader(sectionId)) {
+          if (lease == null) {
+            continue;
+          }
+          HFileReaderImpl sectionReader = lease.getReader();
+          DataInput bloomMeta = sectionReader.getGeneralBloomFilterMetadata();
+          Assert.assertNotNull("Expected bloom metadata for section", bloomMeta);
+          BloomFilter bloomFilter =
+            BloomFilterFactory.createFromMeta(bloomMeta, sectionReader, null);
+          Assert.assertTrue(bloomFilter instanceof CompoundBloomFilter);
+          CompoundBloomFilter cbf = (CompoundBloomFilter) bloomFilter;
+
+          totalBloomKeys += cbf.getKeyCount();
+
+          HFileBlockIndex.BlockIndexReader index = cbf.getBloomIndex();
+          Assert.assertTrue("Bloom index should have at least one block",
+            index.getRootBlockCount() > 0);
+
+          // Read the first bloom block for this section
+          HFileBlock bloomBlock = cbf.getBloomBlock(0);
+          long bytesRead = bloomBlock.getOnDiskSizeWithHeader();
+          if (bloomBlock.getNextBlockOnDiskSize() > 0) {
+            bytesRead += HFileBlock.headerSize(true);
+          }
+          Assert.assertEquals(BlockType.BLOOM_CHUNK, bloomBlock.getBlockType());
+          bloomBlock.release();
+
+          expectedBytesRead += bytesRead;
+          expectedBlockReads++;
+        }
+      }
+
+      reader.close(true);
+
+      Assert.assertEquals("Bloom key count mismatch", keyList.size(), totalBloomKeys);
+      Assert.assertEquals(expectedBytesRead,
+        ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
+      Assert.assertEquals(expectedBlockReads,
+        ThreadLocalServerSideScanMetrics.getBlockReadOpsCountAndReset());
     } else {
-      byte[] row = key;
-      block = index.rootBlockContainingKey(row, 0, row.length);
+      // Assert that the bloom filter index was read and accounted in metrics
+      readLoadOnOpenDataSection(path, true);
+
+      BloomFilter bloomFilter = reader.getGeneralBloomFilter();
+      Assert.assertTrue(bloomFilter instanceof CompoundBloomFilter);
+      CompoundBloomFilter cbf = (CompoundBloomFilter) bloomFilter;
+
+      // Get the bloom filter index reader
+      HFileBlockIndex.BlockIndexReader index = cbf.getBloomIndex();
+      int block;
+
+      // Search for the key in the bloom filter index
+      if (keyValue != null) {
+        block = index.rootBlockContainingKey(keyValue);
+      } else {
+        byte[] row = key;
+        block = index.rootBlockContainingKey(row, 0, row.length);
+      }
+
+      // Read the bloom block from FS
+      HFileBlock bloomBlock = cbf.getBloomBlock(block);
+      long bytesRead = bloomBlock.getOnDiskSizeWithHeader();
+      if (bloomBlock.getNextBlockOnDiskSize() > 0) {
+        bytesRead += HFileBlock.headerSize(true);
+      }
+      // Asser that the block read is a bloom block
+      Assert.assertEquals(bloomBlock.getBlockType(), BlockType.BLOOM_CHUNK);
+      bloomBlock.release();
+
+      // Close the reader
+      reader.close(true);
+
+      Assert.assertEquals(bytesRead, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
+      Assert.assertEquals(1, ThreadLocalServerSideScanMetrics.getBlockReadOpsCountAndReset());
     }
-
-    // Read the bloom block from FS
-    HFileBlock bloomBlock = cbf.getBloomBlock(block);
-    long bytesRead = bloomBlock.getOnDiskSizeWithHeader();
-    if (bloomBlock.getNextBlockOnDiskSize() > 0) {
-      bytesRead += HFileBlock.headerSize(true);
-    }
-    // Asser that the block read is a bloom block
-    Assert.assertEquals(bloomBlock.getBlockType(), BlockType.BLOOM_CHUNK);
-    bloomBlock.release();
-
-    // Close the reader
-    reader.close(true);
-
-    Assert.assertEquals(bytesRead, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
-    Assert.assertEquals(1, ThreadLocalServerSideScanMetrics.getBlockReadOpsCountAndReset());
   }
 
   private void writeBloomFilters(Path path, BloomType bt, int bloomBlockByteSize)
@@ -385,9 +439,6 @@ public class TestBytesReadFromFs {
       .withCompression(Compression.Algorithm.NONE).build();
     StoreFileWriter w = new StoreFileWriter.Builder(conf, cacheConf, fs).withFileContext(meta)
       .withBloomType(bt).withFilePath(path).build();
-    Assert.assertTrue(w.hasGeneralBloom());
-    Assert.assertTrue(w.getGeneralBloomWriter() instanceof CompoundBloomFilterWriter);
-    CompoundBloomFilterWriter cbbf = (CompoundBloomFilterWriter) w.getGeneralBloomWriter();
     byte[] cf = Bytes.toBytes("cf");
     byte[] cq = Bytes.toBytes("cq");
     for (int i = 0; i < NUM_KEYS; i++) {
@@ -400,7 +451,6 @@ public class TestBytesReadFromFs {
       keyList.add(keyBytes);
       keyValues.add(keyValue);
     }
-    Assert.assertEquals(keyList.size(), cbbf.getKeyCount());
     w.close();
   }
 

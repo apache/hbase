@@ -98,8 +98,7 @@ public class TestHFileReaderImpl {
     Configuration conf = TEST_UTIL.getConfiguration();
     HFile.Reader reader = HFile.createReader(fs, p, CacheConfig.DISABLED, true, conf);
 
-    try (HFileReaderImpl.HFileScannerImpl scanner =
-      (HFileReaderImpl.HFileScannerImpl) reader.getScanner(conf, true, true, false)) {
+    try (HFileScanner scanner = reader.getScanner(conf, true, true, false)) {
       scanner.seekTo();
 
       scanner.recordBlockSize(

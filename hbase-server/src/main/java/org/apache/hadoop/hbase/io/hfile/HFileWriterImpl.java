@@ -70,7 +70,7 @@ import org.slf4j.LoggerFactory;
  * Common functionality needed by all versions of {@link HFile} writers.
  */
 @InterfaceAudience.Private
-public class HFileWriterImpl implements HFile.Writer {
+public class HFileWriterImpl implements HFile.Writer, LastCellAwareWriter {
   private static final Logger LOG = LoggerFactory.getLogger(HFileWriterImpl.class);
 
   private static final long UNSET = -1;
@@ -251,6 +251,7 @@ public class HFileWriterImpl implements HFile.Writer {
     HFile.updateWriteLatency(EnvironmentEdgeManager.currentTime() - startTime);
   }
 
+  @Override
   public long getPos() throws IOException {
     return outputStream.getPos();
 
@@ -591,7 +592,13 @@ public class HFileWriterImpl implements HFile.Writer {
     });
   }
 
-  private BlockCacheKey buildCacheBlockKey(long offset, BlockType blockType) {
+  /**
+   * Builds a cache key for a block written at the given offset.
+   * <p>
+   * Subclasses that write into virtualized sections should override this to translate section
+   * offsets into container-file offsets.
+   */
+  protected BlockCacheKey buildCacheBlockKey(long offset, BlockType blockType) {
     if (path != null) {
       return new BlockCacheKey(path, offset, true, blockType);
     }
@@ -825,6 +832,7 @@ public class HFileWriterImpl implements HFile.Writer {
     }
   }
 
+  @Override
   public Cell getLastCell() {
     return lastCell;
   }

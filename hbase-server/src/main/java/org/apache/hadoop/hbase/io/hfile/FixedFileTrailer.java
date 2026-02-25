@@ -131,6 +131,19 @@ public class FixedFileTrailer {
   private byte[] encryptionKey;
 
   /**
+   * Flag indicating if this file is a multi-tenant HFile
+   */
+  private boolean isMultiTenant = false;
+
+  /**
+   * The tenant prefix length for multi-tenant HFiles
+   */
+  private int tenantPrefixLength = 0;
+
+  /** Offset of the multi-tenant section index root block */
+  private long sectionIndexOffset = -1L;
+
+  /**
    * The key namespace
    */
   private String keyNamespace;
@@ -225,6 +238,14 @@ public class FixedFileTrailer {
       .setCompressionCodec(compressionCodec.ordinal());
     if (encryptionKey != null) {
       builder.setEncryptionKey(UnsafeByteOperations.unsafeWrap(encryptionKey));
+    }
+    // Set multi-tenant fields for v4 files
+    if (isMultiTenant) {
+      builder.setMultiTenant(isMultiTenant);
+      builder.setTenantPrefixLength(tenantPrefixLength);
+      if (sectionIndexOffset >= 0) {
+        builder.setSectionIndexOffset(sectionIndexOffset);
+      }
     }
     if (keyNamespace != null) {
       builder.setKeyNamespace(keyNamespace);
@@ -337,6 +358,16 @@ public class FixedFileTrailer {
     if (trailerProto.hasEncryptionKey()) {
       encryptionKey = trailerProto.getEncryptionKey().toByteArray();
     }
+
+    if (trailerProto.hasMultiTenant()) {
+      isMultiTenant = trailerProto.getMultiTenant();
+    }
+    if (trailerProto.hasTenantPrefixLength()) {
+      tenantPrefixLength = trailerProto.getTenantPrefixLength();
+    }
+    if (trailerProto.hasSectionIndexOffset()) {
+      sectionIndexOffset = trailerProto.getSectionIndexOffset();
+    }
     if (trailerProto.hasKeyNamespace()) {
       keyNamespace = trailerProto.getKeyNamespace();
     }
@@ -395,6 +426,15 @@ public class FixedFileTrailer {
     if (majorVersion >= 3) {
       append(sb, "encryptionKey=" + (encryptionKey != null ? "PRESENT" : "NONE"));
     }
+
+    if (majorVersion >= 4) {
+      append(sb, "isMultiTenant=" + isMultiTenant);
+      if (isMultiTenant) {
+        append(sb, "tenantPrefixLength=" + tenantPrefixLength);
+        append(sb, "sectionIndexOffset=" + sectionIndexOffset);
+      }
+    }
+
     if (keyNamespace != null) {
       append(sb, "keyNamespace=" + keyNamespace);
     }
@@ -487,6 +527,14 @@ public class FixedFileTrailer {
 
   public void setLoadOnOpenOffset(long loadOnOpenDataOffset) {
     this.loadOnOpenDataOffset = loadOnOpenDataOffset;
+  }
+
+  public long getSectionIndexOffset() {
+    return sectionIndexOffset;
+  }
+
+  public void setSectionIndexOffset(long sectionIndexOffset) {
+    this.sectionIndexOffset = sectionIndexOffset;
   }
 
   public int getDataIndexCount() {
@@ -726,5 +774,21 @@ public class FixedFileTrailer {
    */
   static int materializeVersion(int majorVersion, int minorVersion) {
     return ((majorVersion & 0x00ffffff) | (minorVersion << 24));
+  }
+
+  public boolean isMultiTenant() {
+    return isMultiTenant;
+  }
+
+  public void setMultiTenant(boolean multiTenant) {
+    isMultiTenant = multiTenant;
+  }
+
+  public int getTenantPrefixLength() {
+    return tenantPrefixLength;
+  }
+
+  public void setTenantPrefixLength(int tenantPrefixLength) {
+    this.tenantPrefixLength = tenantPrefixLength;
   }
 }
