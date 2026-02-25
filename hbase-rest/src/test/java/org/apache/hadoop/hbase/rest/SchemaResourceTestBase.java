@@ -24,11 +24,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.util.stream.Stream;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -45,15 +43,12 @@ import org.apache.http.Header;
 import org.apache.http.message.BasicHeader;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.TestTemplate;
-import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.api.Test;
 
 @Tag(RestTests.TAG)
 @Tag(MediumTests.TAG)
-@HBaseParameterizedTestTemplate(name = "{index}: csrfEnabled = {0}")
-public class TestSchemaResource {
+public class SchemaResourceTestBase {
 
   private static String TABLE1 = "TestSchemaResource1";
   private static String TABLE2 = "TestSchemaResource2";
@@ -66,18 +61,9 @@ public class TestSchemaResource {
   private static TestTableSchemaModel testTableSchemaModel;
   private static Header extraHdr = null;
 
-  private static boolean csrfEnabled = true;
+  protected static boolean csrfEnabled = true;
 
-  public TestSchemaResource(boolean csrf) {
-    csrfEnabled = csrf;
-  }
-
-  public static Stream<Arguments> parameters() {
-    return Stream.of(Arguments.of(false), Arguments.of(true));
-  }
-
-  @BeforeAll
-  public static void setUpBeforeClass() throws Exception {
+  protected static void initialize() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(RESTServer.REST_CSRF_ENABLED_KEY, csrfEnabled);
     if (csrfEnabled) {
@@ -123,7 +109,7 @@ public class TestSchemaResource {
       .unmarshal(new ByteArrayInputStream(content));
   }
 
-  @TestTemplate
+  @Test
   public void testTableCreateAndDeleteXML() throws IOException, JAXBException {
     String schemaPath = "/" + TABLE1 + "/schema";
     TableSchemaModel model;
@@ -184,7 +170,7 @@ public class TestSchemaResource {
     assertFalse(admin.tableExists(TableName.valueOf(TABLE1)));
   }
 
-  @TestTemplate
+  @Test
   public void testTableCreateAndDeletePB() throws IOException {
     String schemaPath = "/" + TABLE2 + "/schema";
     TableSchemaModel model;
