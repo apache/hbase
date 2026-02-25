@@ -43,6 +43,10 @@ public class TestKeyOnlyFilter {
 
   public boolean lenAsVal;
 
+  public TestKeyOnlyFilter(boolean lenAsVal) {
+    this.lenAsVal = lenAsVal;
+  }
+
   public static Stream<Arguments> parameters() {
     return Stream.of(Arguments.of(true), Arguments.of(false));
   }
