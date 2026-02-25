@@ -308,7 +308,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
    */
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public BloomFilterWriter getGeneralBloomWriter() {
-    return liveFileWriter.generalBloomFilterWriter;
+    return liveFileWriter.getGeneralBloomWriter();
   }
 
   public void close() throws IOException {
@@ -582,7 +582,6 @@ public class StoreFileWriter implements CellSink, ShipperListener {
   private static class SingleStoreFileWriter {
     private final BloomFilterWriter generalBloomFilterWriter;
     private final BloomFilterWriter deleteFamilyBloomFilterWriter;
-    private final boolean multiTenantWriter;
     private final BloomType bloomType;
     private byte[] bloomParam = null;
     private long deleteFamilyCnt = 0;
@@ -622,11 +621,9 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       writer = writerFactory.withPath(fs, path).withFavoredNodes(favoredNodes)
         .withFileContext(fileContext).withShouldDropCacheBehind(shouldDropCacheBehind).create();
 
-      this.multiTenantWriter =
-        writer instanceof org.apache.hadoop.hbase.io.hfile.MultiTenantHFileWriter;
-
-      if (multiTenantWriter) {
-        // Multi-tenant writer manages per-section bloom filters internally.
+      if (writer.hasGeneralBloom()) {
+        // The writer manages Bloom filter lifecycle internally (e.g. per-section in HFile v4).
+        // No need to create a redundant Bloom filter at this level.
         this.generalBloomFilterWriter = null;
         this.deleteFamilyBloomFilterWriter = null;
         this.bloomType = bloomType;
@@ -801,7 +798,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     }
 
     private boolean hasGeneralBloom() {
-      return this.generalBloomFilterWriter != null;
+      return this.generalBloomFilterWriter != null || writer.hasGeneralBloom();
     }
 
     /**
@@ -809,7 +806,8 @@ public class StoreFileWriter implements CellSink, ShipperListener {
      * @return the Bloom filter used by this writer.
      */
     BloomFilterWriter getGeneralBloomWriter() {
-      return generalBloomFilterWriter;
+      return generalBloomFilterWriter != null ? generalBloomFilterWriter
+        : writer.getGeneralBloomWriter();
     }
 
     private boolean closeBloomFilter(BloomFilterWriter bfw) throws IOException {
@@ -831,13 +829,16 @@ public class StoreFileWriter implements CellSink, ShipperListener {
           writer.appendFileInfo(BLOOM_FILTER_PARAM_KEY, bloomParam);
         }
         bloomContext.addLastBloomKey(writer);
+      } else if (writer.hasGeneralBloom()) {
+        // Writer manages bloom lifecycle internally; report its state for logging.
+        hasGeneralBloom = true;
       }
       return hasGeneralBloom;
     }
 
     private boolean closeDeleteFamilyBloomFilter() throws IOException {
-      if (multiTenantWriter) {
-        // Multi-tenant writer already attached delete-family blooms per section.
+      if (deleteFamilyBloomFilterWriter == null && writer.hasGeneralBloom()) {
+        // Writer manages bloom lifecycle internally (including delete-family per section).
         return false;
       }
       boolean hasDeleteFamilyBloom = closeBloomFilter(deleteFamilyBloomFilterWriter);

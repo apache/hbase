@@ -210,7 +210,7 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
   /** Default write verification setting */
   private static final boolean DEFAULT_WRITE_VERIFICATION_ENABLED = false;
 
-  /** Current bloom filter writer - one per section */
+  /** Current bloom filter writer — one per section */
   private BloomFilterWriter currentBloomFilterWriter;
   /** Whether bloom filter is enabled */
   private boolean bloomFilterEnabled;
@@ -222,6 +222,12 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
   private org.apache.hadoop.hbase.util.BloomContext currentGeneralBloomContext;
   /** Per-section delete family bloom context */
   private org.apache.hadoop.hbase.util.BloomContext currentDeleteFamilyBloomContext;
+  /**
+   * Inline block writers buffered before the first section is created. Flushed to the first
+   * section writer during {@link #createNewSection}.
+   */
+  private final java.util.List<InlineBlockWriter> pendingInlineBlockWriters =
+    new java.util.ArrayList<>();
   /** Per-section time range tracker */
   private org.apache.hadoop.hbase.regionserver.TimeRangeTracker currentSectionTimeRangeTracker;
   /** Per-section earliest put timestamp */
@@ -381,6 +387,47 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
 
     LOG.info("Initialized MultiTenantHFileWriter with multi-level section indexing for {} "
       + "(maxChunkSize={}, minIndexNumEntries={})", streamName, maxChunkSize, minIndexNumEntries);
+
+    initializeEagerBloom();
+  }
+
+  /**
+   * Eagerly create the first Bloom filter writer so that
+   * {@link #hasGeneralBloom()} / {@link #getGeneralBloomWriter()} return valid state before
+   * the first section is created. The writer and its context are attached to the first section
+   * when {@link #createNewSection} runs.
+   */
+  private void initializeEagerBloom() {
+    if (!bloomFilterEnabled || bloomFilterType == BloomType.NONE) {
+      return;
+    }
+    currentBloomFilterWriter = BloomFilterFactory.createGeneralBloomAtWrite(conf, cacheConf,
+      bloomFilterType, 0, this);
+    if (currentBloomFilterWriter != null) {
+      currentGeneralBloomContext =
+        createBloomContext(currentBloomFilterWriter, bloomFilterType, fileContext);
+      currentGeneralBloomParam =
+        org.apache.hadoop.hbase.util.BloomFilterUtil.getBloomFilterParam(bloomFilterType, conf);
+    }
+  }
+
+  private org.apache.hadoop.hbase.util.BloomContext createBloomContext(
+    BloomFilterWriter bloomWriter, BloomType type, HFileContext ctx) {
+    switch (type) {
+      case ROW:
+        return new org.apache.hadoop.hbase.util.RowBloomContext(bloomWriter,
+          ctx.getCellComparator());
+      case ROWCOL:
+        return new org.apache.hadoop.hbase.util.RowColBloomContext(bloomWriter,
+          ctx.getCellComparator());
+      case ROWPREFIX_FIXED_LENGTH:
+        byte[] param =
+          org.apache.hadoop.hbase.util.BloomFilterUtil.getBloomFilterParam(type, conf);
+        return new org.apache.hadoop.hbase.util.RowPrefixFixedLengthBloomContext(bloomWriter,
+          ctx.getCellComparator(), org.apache.hadoop.hbase.util.Bytes.toInt(param));
+      default:
+        return null;
+    }
   }
 
   @Override
@@ -704,37 +751,33 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
       currentSectionWriter.appendFileInfo(e.getKey(), e.getValue());
     }
 
-    // Create a new general bloom filter and contexts for this section if enabled
+    // Flush any inline block writers that were buffered before the first section existed.
+    // This covers the eagerly-created Bloom filter writer added by initializeEagerBloom().
+    if (!pendingInlineBlockWriters.isEmpty()) {
+      for (InlineBlockWriter ibw : pendingInlineBlockWriters) {
+        currentSectionWriter.addInlineBlockWriter(ibw);
+      }
+      pendingInlineBlockWriters.clear();
+    }
+
+    // Initialize bloom filters for this section.
+    // The first section reuses the eagerly-created bloom writer (created in initializeEagerBloom);
+    // subsequent sections get fresh bloom writers attached to their section writer.
     if (bloomFilterEnabled) {
-      currentBloomFilterWriter = BloomFilterFactory.createGeneralBloomAtWrite(conf, cacheConf,
-        bloomFilterType, 0, currentSectionWriter);
-      if (currentBloomFilterWriter != null) {
-        // Create BloomContext matching type for dedupe and LAST_BLOOM_KEY
-        switch (bloomFilterType) {
-          case ROW:
-            currentGeneralBloomContext = new org.apache.hadoop.hbase.util.RowBloomContext(
-              currentBloomFilterWriter, fileContext.getCellComparator());
-            break;
-          case ROWCOL:
-            currentGeneralBloomContext = new org.apache.hadoop.hbase.util.RowColBloomContext(
-              currentBloomFilterWriter, fileContext.getCellComparator());
-            break;
-          case ROWPREFIX_FIXED_LENGTH:
+      boolean firstSection = (sectionCount == 0);
+      if (firstSection && currentBloomFilterWriter != null) {
+        LOG.debug("Reusing eagerly-created bloom for first section: {}",
+          tenantSectionId == null ? "null" : Bytes.toStringBinary(tenantSectionId));
+      } else {
+        currentBloomFilterWriter = BloomFilterFactory.createGeneralBloomAtWrite(conf, cacheConf,
+          bloomFilterType, 0, currentSectionWriter);
+        if (currentBloomFilterWriter != null) {
+          currentGeneralBloomContext =
+            createBloomContext(currentBloomFilterWriter, bloomFilterType, fileContext);
+          if (currentGeneralBloomParam == null) {
             currentGeneralBloomParam = org.apache.hadoop.hbase.util.BloomFilterUtil
               .getBloomFilterParam(bloomFilterType, conf);
-            currentGeneralBloomContext =
-              new org.apache.hadoop.hbase.util.RowPrefixFixedLengthBloomContext(
-                currentBloomFilterWriter, fileContext.getCellComparator(),
-                org.apache.hadoop.hbase.util.Bytes.toInt(currentGeneralBloomParam));
-            break;
-          default:
-            // Unsupported bloom type here should not happen as StoreFileWriter guards it
-            currentGeneralBloomContext = null;
-            break;
-        }
-        if (currentGeneralBloomParam == null) {
-          currentGeneralBloomParam =
-            org.apache.hadoop.hbase.util.BloomFilterUtil.getBloomFilterParam(bloomFilterType, conf);
+          }
         }
       }
       // Initialize delete family bloom filter unless ROWCOL per StoreFileWriter semantics
@@ -1074,22 +1117,26 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
   public void addInlineBlockWriter(InlineBlockWriter ibw) {
     if (currentSectionWriter != null) {
       currentSectionWriter.addInlineBlockWriter(ibw);
+    } else {
+      pendingInlineBlockWriters.add(ibw);
     }
   }
 
   @Override
   public void addGeneralBloomFilter(BloomFilterWriter bfw) {
-    // For multi-tenant files, bloom filters are only added at section level
-    // We create and add a bloom filter for each section separately
-    // This method is called externally but we ignore it since we handle bloom filters internally
-    if (bfw == null || bfw.getKeyCount() <= 0) {
-      LOG.debug("Ignoring empty or null general bloom filter at global level");
-      return;
-    }
+    // Per-section bloom filters are attached during closeCurrentSection().
+    // External callers (e.g. SingleStoreFileWriter) should not add a redundant global bloom.
+    LOG.debug("addGeneralBloomFilter ignored at global level; bloom managed per-section");
+  }
 
-    LOG.debug(
-      "Ignoring external bloom filter with {} keys - using per-section bloom filters instead",
-      bfw.getKeyCount());
+  @Override
+  public boolean hasGeneralBloom() {
+    return bloomFilterEnabled && bloomFilterType != BloomType.NONE;
+  }
+
+  @Override
+  public BloomFilterWriter getGeneralBloomWriter() {
+    return currentBloomFilterWriter;
   }
 
   @Override
