@@ -73,9 +73,9 @@ public class TestMetricsConnection {
 
   private static final String MOCK_CONN_STR = "mocked-connection";
 
-  public Boolean tableMetricsEnabled;
+  public boolean tableMetricsEnabled;
 
-  public TestMetricsConnection(Boolean tableMetricsEnabled) {
+  public TestMetricsConnection(boolean tableMetricsEnabled) {
     this.tableMetricsEnabled = tableMetricsEnabled;
   }
 

@@ -41,14 +41,14 @@ import org.junit.jupiter.params.provider.Arguments;
 @HBaseParameterizedTestTemplate
 public class TestKeyOnlyFilter {
 
-  private Boolean lenAsVal;
+  private boolean lenAsVal;
+
+  public TestKeyOnlyFilter(boolean lenAsVal) {
+    this.lenAsVal = lenAsVal;
+  }
 
   public static Stream<Arguments> parameters() {
     return Stream.of(Arguments.of(true), Arguments.of(false));
-  }
-
-  public TestKeyOnlyFilter(Boolean lenAsVal) {
-    this.lenAsVal = lenAsVal;
   }
 
   @TestTemplate
