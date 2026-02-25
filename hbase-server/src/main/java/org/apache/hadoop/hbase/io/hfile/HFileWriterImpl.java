@@ -592,7 +592,13 @@ public class HFileWriterImpl implements HFile.Writer, LastCellAwareWriter {
     });
   }
 
-  private BlockCacheKey buildCacheBlockKey(long offset, BlockType blockType) {
+  /**
+   * Builds a cache key for a block written at the given offset.
+   * <p>
+   * Subclasses that write into virtualized sections should override this to translate section
+   * offsets into container-file offsets.
+   */
+  protected BlockCacheKey buildCacheBlockKey(long offset, BlockType blockType) {
     if (path != null) {
       return new BlockCacheKey(path, offset, true, blockType);
     }

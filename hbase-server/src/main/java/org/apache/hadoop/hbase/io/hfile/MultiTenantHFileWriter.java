@@ -1222,7 +1222,7 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
       HFileContext fileContext, byte[] tenantSectionId, byte[] tenantId, long sectionStartOffset)
       throws IOException {
       // Create a section-aware output stream that handles position translation
-      super(conf, cacheConf, null,
+      super(conf, cacheConf, MultiTenantHFileWriter.this.path,
         new SectionOutputStream(outputStream, sectionStartOffset,
           MultiTenantHFileWriter.this.path != null
             ? MultiTenantHFileWriter.this.path.getName()
@@ -1246,6 +1246,19 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
         sectionStartOffset,
         tenantSectionId == null ? "default" : Bytes.toStringBinary(tenantSectionId),
         tenantId == null ? "default" : Bytes.toStringBinary(tenantId));
+    }
+
+    @Override
+    protected BlockCacheKey buildCacheBlockKey(long offset, BlockType blockType) {
+      // Section writer offsets are section-relative; block cache keys must use container offsets.
+      long absoluteOffset = sectionStartOffset + offset;
+      Path writerPath = MultiTenantHFileWriter.this.path;
+      if (writerPath != null) {
+        return new BlockCacheKey(writerPath, absoluteOffset, true, blockType);
+      }
+      String cacheKeyName =
+        MultiTenantHFileWriter.this.streamName != null ? MultiTenantHFileWriter.this.streamName : name;
+      return new BlockCacheKey(cacheKeyName, absoluteOffset, true, blockType);
     }
 
     /**
