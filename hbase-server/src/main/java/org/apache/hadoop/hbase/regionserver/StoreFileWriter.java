@@ -806,7 +806,8 @@ public class StoreFileWriter implements CellSink, ShipperListener {
      * @return the Bloom filter used by this writer.
      */
     BloomFilterWriter getGeneralBloomWriter() {
-      return generalBloomFilterWriter != null ? generalBloomFilterWriter
+      return generalBloomFilterWriter != null
+        ? generalBloomFilterWriter
         : writer.getGeneralBloomWriter();
     }
 

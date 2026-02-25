@@ -196,10 +196,10 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
   private final HFileInfo sectionDefaultFileInfo = new HFileInfo();
   /**
    * Metadata keys that belong in the global (v4-level) FileInfo block. Only these keys are
-   * propagated from external {@link #appendFileInfo} calls to the global file info; all other
-   * keys are section-local. Keys that require global aggregation (e.g.
-   * {@code TIMERANGE_KEY}, {@code EARLIEST_PUT_TS}) are handled separately in
-   * {@link #finishFileInfo()} and do not need to appear here.
+   * propagated from external {@link #appendFileInfo} calls to the global file info; all other keys
+   * are section-local. Keys that require global aggregation (e.g. {@code TIMERANGE_KEY},
+   * {@code EARLIEST_PUT_TS}) are handled separately in {@link #finishFileInfo()} and do not need to
+   * appear here.
    */
   private static final byte[][] GLOBAL_FILE_INFO_KEYS = new byte[][] {
     // Bulk-load identifiers
@@ -241,8 +241,8 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
   /** Per-section delete family bloom context */
   private org.apache.hadoop.hbase.util.BloomContext currentDeleteFamilyBloomContext;
   /**
-   * Inline block writers buffered before the first section is created. Flushed to the first
-   * section writer during {@link #createNewSection}.
+   * Inline block writers buffered before the first section is created. Flushed to the first section
+   * writer during {@link #createNewSection}.
    */
   private final java.util.List<InlineBlockWriter> pendingInlineBlockWriters =
     new java.util.ArrayList<>();
@@ -410,17 +410,16 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
   }
 
   /**
-   * Eagerly create the first Bloom filter writer so that
-   * {@link #hasGeneralBloom()} / {@link #getGeneralBloomWriter()} return valid state before
-   * the first section is created. The writer and its context are attached to the first section
-   * when {@link #createNewSection} runs.
+   * Eagerly create the first Bloom filter writer so that {@link #hasGeneralBloom()} /
+   * {@link #getGeneralBloomWriter()} return valid state before the first section is created. The
+   * writer and its context are attached to the first section when {@link #createNewSection} runs.
    */
   private void initializeEagerBloom() {
     if (!bloomFilterEnabled || bloomFilterType == BloomType.NONE) {
       return;
     }
-    currentBloomFilterWriter = BloomFilterFactory.createGeneralBloomAtWrite(conf, cacheConf,
-      bloomFilterType, 0, this);
+    currentBloomFilterWriter =
+      BloomFilterFactory.createGeneralBloomAtWrite(conf, cacheConf, bloomFilterType, 0, this);
     if (currentBloomFilterWriter != null) {
       currentGeneralBloomContext =
         createBloomContext(currentBloomFilterWriter, bloomFilterType, fileContext);
@@ -429,8 +428,8 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     }
   }
 
-  private org.apache.hadoop.hbase.util.BloomContext createBloomContext(
-    BloomFilterWriter bloomWriter, BloomType type, HFileContext ctx) {
+  private org.apache.hadoop.hbase.util.BloomContext
+    createBloomContext(BloomFilterWriter bloomWriter, BloomType type, HFileContext ctx) {
     switch (type) {
       case ROW:
         return new org.apache.hadoop.hbase.util.RowBloomContext(bloomWriter,
@@ -439,8 +438,7 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
         return new org.apache.hadoop.hbase.util.RowColBloomContext(bloomWriter,
           ctx.getCellComparator());
       case ROWPREFIX_FIXED_LENGTH:
-        byte[] param =
-          org.apache.hadoop.hbase.util.BloomFilterUtil.getBloomFilterParam(type, conf);
+        byte[] param = org.apache.hadoop.hbase.util.BloomFilterUtil.getBloomFilterParam(type, conf);
         return new org.apache.hadoop.hbase.util.RowPrefixFixedLengthBloomContext(bloomWriter,
           ctx.getCellComparator(), org.apache.hadoop.hbase.util.Bytes.toInt(param));
       default:
@@ -1321,8 +1319,9 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
       if (writerPath != null) {
         return new BlockCacheKey(writerPath, absoluteOffset, true, blockType);
       }
-      String cacheKeyName =
-        MultiTenantHFileWriter.this.streamName != null ? MultiTenantHFileWriter.this.streamName : name;
+      String cacheKeyName = MultiTenantHFileWriter.this.streamName != null
+        ? MultiTenantHFileWriter.this.streamName
+        : name;
       return new BlockCacheKey(cacheKeyName, absoluteOffset, true, blockType);
     }
 

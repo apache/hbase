@@ -267,8 +267,8 @@ public final class HFile {
 
     /**
      * Whether this writer manages general Bloom filters internally. Writers that handle Bloom
-     * filter lifecycle (creation, per-cell updates, and serialization) return {@code true} so
-     * that callers do not create a redundant external Bloom filter.
+     * filter lifecycle (creation, per-cell updates, and serialization) return {@code true} so that
+     * callers do not create a redundant external Bloom filter.
      * @return {@code true} if the writer owns the general Bloom filter lifecycle
      */
     default boolean hasGeneralBloom() {
