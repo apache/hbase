@@ -828,10 +828,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       if (!isStopped() && !isAborted()) {
         installShutdownHook();
 
-        if (isReadOnlyModeEnabled(conf)) {
-          addReadOnlyCoprocessors(this.conf);
-        }
-
+        syncReadOnlyConfigurations(isReadOnlyModeEnabled(conf), conf);
         // Initialize the RegionServerCoprocessorHost now that our ephemeral
         // node was created, in case any coprocessors want to use ZooKeeper
         this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
@@ -1533,23 +1530,21 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   }
 
   private void addReadOnlyCoprocessors(Configuration conf) {
-    String[] rsCoprocs = conf.getStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
+    String[] existing = conf.getStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
 
-    String cp = RegionServerReadOnlyController.class.getName();
+    List<String> rsCoprocs =
+      existing != null ? new ArrayList<>(Arrays.asList(existing)) : new ArrayList<>();
 
-    // Avoid duplicate
-    if (rsCoprocs != null && Arrays.asList(rsCoprocs).contains(cp)) {
+    String regionServerCP = RegionServerReadOnlyController.class.getName();
+
+    if (rsCoprocs.contains(regionServerCP)) {
       return;
     }
 
-    final int length = rsCoprocs == null ? 0 : rsCoprocs.length;
-    String[] updatedCoprocs = new String[length + 1];
+    rsCoprocs.add(regionServerCP);
 
-    if (length > 0) {
-      System.arraycopy(rsCoprocs, 0, updatedCoprocs, 0, length);
-    }
-    updatedCoprocs[length] = cp;
-    conf.setStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, updatedCoprocs);
+    conf.setStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
+      rsCoprocs.toArray(new String[0]));
   }
 
   private void removeReadOnlyCoprocessors(Configuration conf) {
@@ -1571,13 +1566,13 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     }
   }
 
-  private void syncReadOnlyConfigurations(boolean readOnlyMode) {
-    this.conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyMode);
+  private void syncReadOnlyConfigurations(boolean readOnlyMode, Configuration conf) {
+    conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyMode);
     // If readonly is true then add the coprocessor of master
     if (readOnlyMode) {
-      addReadOnlyCoprocessors(this.conf);
+      addReadOnlyCoprocessors(conf);
     } else {
-      removeReadOnlyCoprocessors(this.conf);
+      removeReadOnlyCoprocessors(conf);
     }
   }
 
@@ -3542,15 +3537,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     }
 
     boolean readOnlyMode = isReadOnlyModeEnabled(newConf);
-    if (readOnlyMode) {
-      addReadOnlyCoprocessors(newConf);
-    } else {
-      // Needed as safety measure in case the coprocessors are added in hbase-site.xml manually and
-      // the user toggles the read only mode on and off.
-      // This will ensure that we don't have the read only coprocessors loaded when read only mode
-      // is disabled.
-      removeReadOnlyCoprocessors(newConf);
-    }
+    syncReadOnlyConfigurations(readOnlyMode, newConf);
 
     // update region server coprocessor if the configuration has changed.
     if (
@@ -3559,7 +3546,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     ) {
       LOG.info("Update region server coprocessors because the configuration has changed");
       this.rsHost = new RegionServerCoprocessorHost(this, newConf);
-      syncReadOnlyConfigurations(readOnlyMode);
+      syncReadOnlyConfigurations(readOnlyMode, this.conf);
     }
   }
 

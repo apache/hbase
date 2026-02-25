@@ -108,10 +108,17 @@ public class TestReadOnlyControllerCoprocessorLoading {
   }
 
   private void setReadOnlyMode(boolean isReadOnlyEnabled) {
+    // Create a new configuration to micic client server behavior
+    // otherwise the existing conf object is shared with the cluster
+    // and can cause side effects on other tests if not reset properly.
+    // This way we can ensure that only the coprocessor loading is tested
+    // without impacting other tests.
+    HBaseTestingUtil NEW_TEST_UTIL = new HBaseTestingUtil();
+    Configuration newConf = NEW_TEST_UTIL.getConfiguration();
     // Set the read-only enabled config dynamically after cluster startup
-    conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, isReadOnlyEnabled);
-    master.getConfigurationManager().notifyAllObservers(conf);
-    regionServer.getConfigurationManager().notifyAllObservers(conf);
+    newConf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, isReadOnlyEnabled);
+    master.getConfigurationManager().notifyAllObservers(newConf);
+    regionServer.getConfigurationManager().notifyAllObservers(newConf);
   }
 
   private void verifyMasterReadOnlyControllerLoading(boolean isReadOnlyEnabled) throws Exception {

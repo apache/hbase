@@ -889,13 +889,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     decorateRegionConfiguration(conf);
 
-    if (isReadOnlyModeEnabled(conf)) {
-      addReadOnlyCoprocessors(this.baseConf);
-      addReadOnlyCoprocessors(this.conf);
-    } else {
-      removeReadOnlyCoprocessors(this.baseConf);
-      removeReadOnlyCoprocessors(this.conf);
-    }
+    syncReadOnlyConfigurations(isReadOnlyModeEnabled(conf), this.conf);
+    syncReadOnlyConfigurations(isReadOnlyModeEnabled(conf), this.baseConf);
+
     if (rsServices != null) {
       this.rsAccounting = this.rsServices.getRegionServerAccounting();
       // don't initialize coprocessors if not running within a regionserver
@@ -1308,40 +1304,32 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
   }
 
-  private String[] append(String[] original, String value) {
-    List<String> list = original != null
-      ? new ArrayList<>(Arrays.asList(original))
-      : new ArrayList<>();
-
-    list.add(value);
-    return list.toArray(new String[0]);
-  }
-
   private void addReadOnlyCoprocessors(Configuration conf) {
-    String[] regionCoprocs = conf.getStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
+    String[] regionCoprocsExisting = conf.getStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
 
-    if (regionCoprocs == null) {
-      regionCoprocs = new String[0];
-    }
+    List<String> regionCoprocs = regionCoprocsExisting != null
+      ? new ArrayList<>(Arrays.asList(regionCoprocsExisting))
+      : new ArrayList<>();
 
     String regionCP = RegionReadOnlyController.class.getName();
     String bulkCP = BulkLoadReadOnlyController.class.getName();
     String endpointCP = EndpointReadOnlyController.class.getName();
 
     // Add each CP independently if not present
-    if (!java.util.Arrays.asList(regionCoprocs).contains(regionCP)) {
-      regionCoprocs = append(regionCoprocs, regionCP);
+    if (!regionCoprocs.contains(regionCP)) {
+      regionCoprocs.add(regionCP);
     }
 
-    if (!java.util.Arrays.asList(regionCoprocs).contains(bulkCP)) {
-      regionCoprocs = append(regionCoprocs, bulkCP);
+    if (!regionCoprocs.contains(bulkCP)) {
+      regionCoprocs.add(bulkCP);
     }
 
-    if (!java.util.Arrays.asList(regionCoprocs).contains(endpointCP)) {
-      regionCoprocs = append(regionCoprocs, endpointCP);
+    if (!regionCoprocs.contains(endpointCP)) {
+      regionCoprocs.add(endpointCP);
     }
 
-    conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, regionCoprocs);
+    conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+      regionCoprocs.toArray(new String[0]));
   }
 
   private void removeReadOnlyCoprocessors(Configuration conf) {
@@ -1371,16 +1359,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  private void syncReadOnlyConfigurations(boolean readOnlyMode) {
-    this.baseConf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyMode);
-    this.conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyMode);
+  private void syncReadOnlyConfigurations(boolean readOnlyMode, Configuration conf) {
+    conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyMode);
     // If readonly is true then add the coprocessor of master
     if (readOnlyMode) {
-      addReadOnlyCoprocessors(this.baseConf);
-      addReadOnlyCoprocessors(this.conf);
+      addReadOnlyCoprocessors(conf);
     } else {
-      removeReadOnlyCoprocessors(this.baseConf);
-      removeReadOnlyCoprocessors(this.conf);
+      removeReadOnlyCoprocessors(conf);
     }
   }
 
@@ -8908,15 +8893,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.storeHotnessProtector.update(conf);
 
     boolean readOnlyMode = isReadOnlyModeEnabled(conf);
-    if (readOnlyMode) {
-      addReadOnlyCoprocessors(conf);
-    } else {
-      // Needed as safety measure in case the coprocessors are added in hbase-site.xml manually and
-      // the user toggles the read only mode on and off.
-      // This will ensure that we don't have the read only coprocessors loaded when read only mode
-      // is disabled.
-      removeReadOnlyCoprocessors(conf);
-    }
+    syncReadOnlyConfigurations(readOnlyMode, conf);
 
     // update coprocessorHost if the configuration has changed.
     if (
@@ -8927,7 +8904,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       LOG.info("Update the system coprocessors because the configuration has changed");
       decorateRegionConfiguration(conf);
       this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
-      syncReadOnlyConfigurations(readOnlyMode);
+      syncReadOnlyConfigurations(readOnlyMode, this.conf);
+      syncReadOnlyConfigurations(readOnlyMode, this.baseConf);
     }
   }
 

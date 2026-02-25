@@ -1088,9 +1088,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (!maintenanceMode) {
       startupTaskGroup.addTask("Initializing master coprocessors");
       setQuotasObserver(conf);
-      if (isReadOnlyModeEnabled(conf)) {
-        addReadOnlyCoprocessors(this.conf);
-      }
+      syncReadOnlyConfigurations(isReadOnlyModeEnabled(conf), conf);
       initializeCoprocessorHost(conf);
     } else {
       // start an in process region server for carrying system regions
@@ -4429,15 +4427,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     setQuotasObserver(newConf);
 
     boolean readOnlyMode = isReadOnlyModeEnabled(newConf);
-    if (readOnlyMode) {
-      addReadOnlyCoprocessors(newConf);
-    } else {
-      // Needed as safety measure in case the coprocessors are added in hbase-site.xml manually and
-      // the user toggles the read only mode on and off.
-      // This will ensure that we don't have the read only coprocessors loaded when read only mode
-      // is disabled.
-      removeReadOnlyCoprocessors(newConf);
-    }
+    syncReadOnlyConfigurations(readOnlyMode, newConf);
 
     // update region server coprocessor if the configuration has changed.
     if (
@@ -4446,9 +4436,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     ) {
       LOG.info("Update the master coprocessor(s) because the configuration has changed");
       initializeCoprocessorHost(newConf);
-      syncReadOnlyConfigurations(readOnlyMode);
-      AbstractReadOnlyController
-        .manageActiveClusterIdFile(isReadOnlyModeEnabled(newConf), this.getMasterFileSystem());
+      syncReadOnlyConfigurations(readOnlyMode, this.conf);
+      AbstractReadOnlyController.manageActiveClusterIdFile(isReadOnlyModeEnabled(newConf),
+        this.getMasterFileSystem());
     }
   }
 
@@ -4553,23 +4543,22 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   private void addReadOnlyCoprocessors(Configuration conf) {
-    String[] masterCoprocs = conf.getStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
-    // If already present, do nothing
-    if (
-      masterCoprocs != null
-        && Arrays.asList(masterCoprocs).contains(MasterReadOnlyController.class.getName())
-    ) {
+    String[] existing = conf.getStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+
+    List<String> masterCoprocs =
+      existing != null ? new ArrayList<>(Arrays.asList(existing)) : new ArrayList<>();
+
+    String masterCP = MasterReadOnlyController.class.getName();
+
+    // Avoid duplicate
+    if (masterCoprocs.contains(masterCP)) {
       return;
     }
 
-    List<String> updatedCoprocs = new ArrayList<>();
+    masterCoprocs.add(masterCP);
 
-    if (masterCoprocs != null) {
-      updatedCoprocs.addAll(Arrays.asList(masterCoprocs));
-    }
-
-    updatedCoprocs.add(MasterReadOnlyController.class.getName());
-    conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, updatedCoprocs.toArray(new String[0]));
+    conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      masterCoprocs.toArray(new String[0]));
   }
 
   private void removeReadOnlyCoprocessors(Configuration conf) {
@@ -4589,13 +4578,13 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
   }
 
-  private void syncReadOnlyConfigurations(boolean readOnlyMode) {
-    this.conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyMode);
+  private void syncReadOnlyConfigurations(boolean readOnlyMode, Configuration conf) {
+    conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyMode);
     // If readonly is true then add the coprocessor of master
     if (readOnlyMode) {
-      addReadOnlyCoprocessors(this.conf);
+      addReadOnlyCoprocessors(conf);
     } else {
-      removeReadOnlyCoprocessors(this.conf);
+      removeReadOnlyCoprocessors(conf);
     }
   }
 
