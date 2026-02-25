@@ -60,6 +60,17 @@ public final class ReplicationPeerConfigTestUtil {
     return map;
   }
 
+  private static Map<TableName, TableName> randSourceToTargetTables(Random rand) {
+    int size = rand.nextInt(5);
+    Map<TableName, TableName> map = new HashMap<>(size);
+    for (int i = 0; i < size; i++) {
+      TableName source = TableName.valueOf(Long.toHexString(rand.nextLong()));
+      TableName target = TableName.valueOf(Long.toHexString(rand.nextLong()));
+      map.put(source, target);
+    }
+    return map;
+  }
+
   public static ReplicationPeerConfig getConfig(int seed) {
     RNG.setSeed(seed);
     return ReplicationPeerConfig.newBuilder().setClusterKey(Long.toHexString(RNG.nextLong()))
@@ -67,7 +78,8 @@ public final class ReplicationPeerConfigTestUtil {
       .setRemoteWALDir(Long.toHexString(RNG.nextLong())).setNamespaces(randNamespaces(RNG))
       .setExcludeNamespaces(randNamespaces(RNG)).setTableCFsMap(randTableCFs(RNG))
       .setExcludeTableCFsMap(randTableCFs(RNG)).setReplicateAllUserTables(RNG.nextBoolean())
-      .setBandwidth(RNG.nextInt(1000)).build();
+      .setSourceTablesToTargetTable(randSourceToTargetTables(RNG)).setBandwidth(RNG.nextInt(1000))
+      .build();
   }
 
   private static void assertSetEquals(Set<String> expected, Set<String> actual) {
@@ -112,5 +124,6 @@ public final class ReplicationPeerConfigTestUtil {
     assertMapEquals(expected.getExcludeTableCFsMap(), actual.getExcludeTableCFsMap());
     assertEquals(expected.replicateAllUserTables(), actual.replicateAllUserTables());
     assertEquals(expected.getBandwidth(), actual.getBandwidth());
+    assertEquals(expected.getSourceTablesToTargetTables(), actual.getSourceTablesToTargetTables());
   }
 }

@@ -51,6 +51,7 @@ message ReplicationPeer {
   repeated bytes exclude_namespaces = 10;
   optional bool serial = 11;
   optional string remoteWALDir = 12;
+  repeated SourceTablesToTargetTables source_tables_to_target_tables = 13;
 }
 
 /**
@@ -195,4 +196,9 @@ message IsReplicationPeerModificationEnabledRequest {
 
 message IsReplicationPeerModificationEnabledResponse {
   required bool enabled = 1;
+}
+
+message SourceTablesToTargetTables {
+  required TableName source = 1;
+  required TableName target = 2;
 }
