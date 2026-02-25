@@ -67,7 +67,7 @@ public class RowFilter extends CompareFilter {
   }
 
   @Override
-  public boolean filterRowKey(Cell firstRowCell) {
+  public boolean filterRowKey(Cell firstRowCell) throws IOException {
     if (compareRow(getCompareOperator(), this.comparator, firstRowCell)) {
       this.filterOutRow = true;
     }
