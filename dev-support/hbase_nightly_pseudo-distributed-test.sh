@@ -322,6 +322,14 @@ echo "Listing HDFS contents"
 redirect_and_run "${working_dir}/hadoop_cluster_smoke" \
     "${hadoop_exec}" --config "${working_dir}/hbase-conf/" fs -ls -R /
 
+if [ "${hadoop_version%.*.*}" -gt 2 ]; then
+  # for now, all hbase branches are compiled with hadoop 3.4.x when using hadoop-3.0 profile, where
+  # the protobuf library has been shaded and relocated, so we always need to use ProtobufRpcEngine2
+  # at hbase side, even if the hadoop server side uses ProtobufRpcEngine, so here we will remove the
+  # config value to let the hadoop code pick the right rpc engine
+  sed -i "/<property>.*ProtobufRpcEngine.*<\/property>/d" "${working_dir}/hbase-conf/core-site.xml"
+fi
+
 echo "Starting up HBase"
 HBASE_CONF_DIR="${working_dir}/hbase-conf/" "${component_install}/bin/start-hbase.sh"
 
