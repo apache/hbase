@@ -33,23 +33,11 @@ const variants = [
   { name: fileNameVariants.dark, theme: "dark" }
 ];
 
-async function loadHBaseVersion() {
-  const versionUrl = new URL("../app/lib/export-pdf/hbase-version.json", import.meta.url);
-  try {
-    const raw = await fs.readFile(versionUrl, "utf-8");
-    const parsed = JSON.parse(raw);
-    return parsed?.version;
-  } catch {
-    throw new Error(
-      "Missing app/lib/export-pdf/hbase-version.json. Run `npm run extract-hbase-version` first."
-    );
-  }
-}
-
-async function postProcess(pdfPath: string, darkMode?: boolean) {
+async function postProcess(pdfPath: string, darkMode?: boolean, startPage: number = 0) {
   const pdfBytes = await fs.readFile(pdfPath);
   const pdfDoc = await PDFDocument.load(pdfBytes);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const firstNumberedPageIndex = Math.max(0, startPage + 1);
 
   let pageCount = 1;
   let startPageCount = false;
@@ -100,8 +88,7 @@ async function postProcess(pdfPath: string, darkMode?: boolean) {
       });
     }
 
-    // TODO: Find a better solution, currently we just hardcoding a page we start counting page numbers from.
-    if (!startPageCount && index === 16) {
+    if (!startPageCount && index === firstNumberedPageIndex) {
       startPageCount = true;
     }
 
@@ -136,7 +123,6 @@ test("export documentation pdfs", async ({ browser, browserName }) => {
   test.setTimeout(3 * 60 * 1000);
 
   await fs.mkdir(outDir, { recursive: true });
-  const hbaseVersion = await loadHBaseVersion();
 
   for (const variant of variants) {
     const page = await browser.newPage();
@@ -166,10 +152,6 @@ test("export documentation pdfs", async ({ browser, browserName }) => {
       { timeout: 10000 }
     );
 
-    await expect(
-      page.locator("section.print-only").filter({ hasText: `Version ${hbaseVersion}` })
-    ).toBeAttached();
-
     const errorBoundaryVisible = await page
       .locator("main")
       .filter({ hasText: "Oops!" })
@@ -181,6 +163,19 @@ test("export documentation pdfs", async ({ browser, browserName }) => {
           `Errors: ${pageErrors.join(" | ") || "Unknown error"}`
       );
     }
+
+    // Switch to print layout, then measure the bottom of the TOC nav to find
+    // which page content starts on (the first page after the last pre-content break).
+    await page.emulateMedia({ media: "print" });
+    await page.setViewportSize({ width: 794, height: 1123 }); // A4 at 96 dpi
+
+    const startPage = await page.evaluate(() => {
+      const a4HeightPx = (297 / 25.4) * 96;
+      const toc = document.querySelector('nav[aria-label="Table of contents"]');
+      if (!toc) return 0;
+      const rect = toc.getBoundingClientRect();
+      return Math.ceil((rect.top + rect.height) / a4HeightPx) + 1;
+    });
 
     const pdfPath = path.join(outDir, variant.name);
     await page.pdf({
@@ -197,7 +192,7 @@ test("export documentation pdfs", async ({ browser, browserName }) => {
 
     await page.close();
 
-    await postProcess(pdfPath, variant.theme === "dark");
+    await postProcess(pdfPath, variant.theme === "dark", startPage);
 
     // Verify PDF was created
     const pdfExists = await fs

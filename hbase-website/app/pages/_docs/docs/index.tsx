@@ -121,7 +121,7 @@ const renderer = toClientRenderer(
       "building-and-developing"
     ];
     const trimmedRoute = route?.endsWith("/") ? route?.slice(0, -1) : route;
-    const mdxFileRoute = `${isSinglePage ? "" : `${trimmedRoute === "" ? "preface" : trimmedRoute}.mdx`}`;
+    const mdxFileRoute = `${isSinglePage ? "" : `${trimmedRoute === "" ? "index" : trimmedRoute}.mdx`}`;
     const isGrouppedRoute = !!trimmedRoute && grouppedRoutes.includes(trimmedRoute);
 
     // Custom link component that transforms /docs/ links to anchors on single-page

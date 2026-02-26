@@ -350,7 +350,7 @@ The project uses [Vitest](https://vitest.dev/) and [Playwright](http://playwrigh
 
 #### Export Documentation PDF
 
-The docs PDF export is implemented as a Playwright e2e test in `e2e-tests/export-pdf.spec.ts`. It runs during `npm run ci` and generates static PDF assets for the documentation by rendering the single-page docs in both light and dark themes (HTML → PDF).
+The docs PDF export is implemented as a Playwright e2e test in `e2e-tests/export-pdf.spec.ts`. It runs during `npm run ci-skip-tests` and generates static PDF assets for the documentation by rendering the single-page docs in both light and dark themes (HTML -> PDF).
 
 The export quality depends heavily on the `@media print` styles defined in `app/app.css`, which control layout, pagination, and print-only behavior.
 
@@ -360,7 +360,7 @@ There is also a dedicated command you can run manually when needed:
 npm run export-pdf
 ```
 
-This command is not part of the CI pipeline and does not run automatically unless invoked directly.
+This command is part of `npm run ci-skip-tests` and is executed automatically by Maven only when `-DskipTests` is enabled.
 
 **Run tests:**
 
@@ -409,6 +409,14 @@ npm run ci
 
 This command runs all quality checks and builds the project. All checks must pass before code is considered ready.
 
+If you need the CI flow without unit/e2e test suites, use:
+
+```bash
+npm run ci-skip-tests
+```
+
+This runs extraction, docs initialization, Playwright browser installation, PDF export, and the production build (without lint/typecheck and without unit/e2e test suites).
+
 Generated files are located under the `build/` directory.
 
 ### Maven Integration
@@ -452,7 +460,11 @@ When you run `mvn site`, the website module automatically:
    - Creates `app/pages/team/developers.json`
    - Required for the Team page
 
-5. **Runs `npm run ci`** which executes:
+5. **Runs a website CI command**:
+   - Default (`mvn site`): `npm run ci`
+   - With test skipping (`mvn site -DskipTests`): `npm run ci-skip-tests`
+
+   `npm run ci` executes:
    - `npm run lint` - ESLint code quality checks
    - `npm run typecheck` - TypeScript type checking
    - `npm run extract-developers` - Extract developers from parent pom.xml
@@ -460,6 +472,14 @@ When you run `mvn site`, the website module automatically:
    - `npm run extract-hbase-version` - Extract version from root `pom.xml` to `app/lib/export-pdf/hbase-version.json`
    - `npm run test:unit:run` - Vitest unit tests
    - `npm run test:e2e` - Playwright e2e tests
+   - `npm run build` - Production build
+
+   `npm run ci-skip-tests` executes:
+   - `npm run extract-developers` - Extract developers from parent pom.xml
+   - `npm run extract-hbase-config` - Extract data from `hbase-default.xml` to `app/pages/_docs/docs/_mdx/(multi-page)/configuration/hbase-default.md`
+   - `npm run extract-hbase-version` - Extract version from root `pom.xml` to `app/lib/export-pdf/hbase-version.json`
+   - `npx playwright install` - Installs Playwright browsers
+   - `npm run export-pdf` - Generates docs PDF assets through Playwright
    - `npm run build` - Production build
 
 6. **Build Output**: Generated files are in `build/` directory
@@ -481,6 +501,15 @@ mvn site
 ```
 
 This generates the full HBase website including documentation and the React-based website.
+
+**Build the Website While Skipping Test Suites:**
+
+```bash
+# From HBase root or hbase-website directory
+mvn site -DskipTests
+```
+
+This runs `npm run ci-skip-tests` for the website module.
 
 **Build Website Only:**
 

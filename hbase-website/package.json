@@ -27,7 +27,8 @@
     "extract-all": "node scripts/extract-developers.js && node scripts/extract-hbase-config.js && node scripts/extract-hbase-version.js",
     "export-pdf": "playwright test e2e-tests/export-pdf.spec.ts --project=chromium --workers=1",
     "fumadocs-init": "fumadocs-mdx",
-    "ci": "npm run extract-all && npm run fumadocs-init && npm run lint && npm run typecheck && npm run test:unit:run && npx playwright install && npm run test:e2e && npm run build"
+    "ci": "npm run extract-all && npm run fumadocs-init && npm run lint && npm run typecheck && npm run test:unit:run && npx playwright install && npm run test:e2e && npm run build",
+    "ci-skip-tests": "npm run extract-all && npm run fumadocs-init && npx playwright install && npm run export-pdf && npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
