@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGeneratorWithACL;
 import org.apache.hadoop.util.ToolRunner;
@@ -121,7 +122,7 @@ public class IntegrationTestIngestWithACL extends IntegrationTestIngest {
       }
       if (authFileNotFound) {
         super.printUsage();
-        System.exit(EXIT_FAILURE);
+        ExitHandler.getInstance().exit(EXIT_FAILURE);
       }
     }
   }
@@ -130,6 +131,6 @@ public class IntegrationTestIngestWithACL extends IntegrationTestIngest {
     Configuration conf = HBaseConfiguration.create();
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     int ret = ToolRunner.run(conf, new IntegrationTestIngestWithACL(), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 }

@@ -17,33 +17,39 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
-/*
-* Test rules to prevent System.exit or Runtime.halt from exiting
-* the JVM - instead an exception is thrown.
-* */
+/**
+ * Test rules to prevent Exit calls in tests. This is useful to prevent tests from exiting the JVM
+ * and to ensure that tests can be run in a controlled environment. This rule replaces the default
+ * ExitHandler with a mock handler that throws an exception when exit is called.
+ */
 public class SystemExitRule implements TestRule {
-  final static SecurityManager securityManager = new TestSecurityManager();
+  private static final ExitHandler mockHandler = new ExitHandler() {
+    @Override
+    public void exit(int status) {
+      throw new SystemExitInTestException();
+    }
+  };
 
   @Override
   public Statement apply(final Statement s, Description d) {
     return new Statement() {
       @Override
       public void evaluate() throws Throwable {
-
+        ExitHandler originalHandler = ExitHandler.getInstance();
         try {
           forbidSystemExitCall();
           s.evaluate();
         } finally {
-          System.setSecurityManager(null);
+          ExitHandler.setInstance(originalHandler);
         }
       }
-
     };
-  };
+  }
 
   // Exiting the JVM is not allowed in tests and this exception is thrown instead
   // when it is done
@@ -51,6 +57,6 @@ public class SystemExitRule implements TestRule {
   }
 
   private static void forbidSystemExitCall() {
-    System.setSecurityManager(securityManager);
+    ExitHandler.setInstance(mockHandler);
   }
 }

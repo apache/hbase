@@ -82,6 +82,7 @@ import org.apache.hadoop.hbase.test.util.warc.WARCRecord;
 import org.apache.hadoop.hbase.test.util.warc.WARCWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -283,7 +284,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
     Configuration conf = HBaseConfiguration.create();
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     int ret = ToolRunner.run(conf, new IntegrationTestLoadCommonCrawl(), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 
   public static class HBaseKeyWritable implements Writable {
@@ -587,7 +588,8 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
     }
 
     public static void main(String[] args) throws Exception {
-      System.exit(ToolRunner.run(HBaseConfiguration.create(), new Loader(), args));
+      ExitHandler.getInstance()
+        .exit(ToolRunner.run(HBaseConfiguration.create(), new Loader(), args));
     }
 
     public static class LoaderMapper
@@ -812,7 +814,8 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
     }
 
     public static void main(String[] args) throws Exception {
-      System.exit(ToolRunner.run(HBaseConfiguration.create(), new Verify(), args));
+      ExitHandler.getInstance()
+        .exit(ToolRunner.run(HBaseConfiguration.create(), new Verify(), args));
     }
 
     public static class VerifyMapper

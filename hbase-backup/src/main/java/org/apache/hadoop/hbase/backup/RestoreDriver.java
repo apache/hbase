@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -222,7 +223,7 @@ public class RestoreDriver extends AbstractHBaseTool {
     URI defaultFs = hbasedir.getFileSystem(conf).getUri();
     CommonFSUtils.setFsDefault(conf, new Path(defaultFs));
     int ret = ToolRunner.run(conf, new RestoreDriver(), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 
   @Override

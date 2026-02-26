@@ -75,6 +75,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -384,7 +385,7 @@ public class TestHRegionServerBulkLoad {
       test.setConf(c);
       test.runAtomicBulkloadTest(TableName.valueOf("atomicTableTest"), 5 * 60 * 1000, 50);
     } finally {
-      System.exit(0); // something hangs (believe it is lru threadpool)
+      ExitHandler.getInstance().exit(0); // something hangs (believe it is lru threadpool)
     }
   }
 

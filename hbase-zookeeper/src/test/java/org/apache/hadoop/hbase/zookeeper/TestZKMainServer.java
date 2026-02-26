@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseZKTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.SystemExitRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
 import org.junit.jupiter.api.Tag;
@@ -68,7 +69,6 @@ public class TestZKMainServer {
    */
   @Test
   public void testCommandLineWorks() throws Exception {
-    System.setSecurityManager(new NoExitSecurityManager());
     HBaseZKTestingUtil htu = new HBaseZKTestingUtil();
     // Make it long so for sure succeeds.
     htu.getConfiguration().setInt(HConstants.ZK_SESSION_TIMEOUT, 30000);
@@ -82,7 +82,7 @@ public class TestZKMainServer {
       try {
         ZKMainServer.main(
           new String[] { "-server", htu.getZkCluster().getAddress().toString(), "delete", znode });
-      } catch (ExitException ee) {
+      } catch (SystemExitRule.SystemExitInTestException ee) {
         // ZKMS calls System.exit which should trigger this exception.
         exception = true;
       }
@@ -90,7 +90,6 @@ public class TestZKMainServer {
       assertEquals(-1, ZKUtil.checkExists(zkw, znode));
     } finally {
       htu.shutdownMiniZKCluster();
-      System.setSecurityManager(null); // or save and restore original
     }
   }
 

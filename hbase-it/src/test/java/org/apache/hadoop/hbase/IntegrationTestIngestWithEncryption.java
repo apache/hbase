@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.io.crypto.MockAesKeyProvider;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.EncryptionTest;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Before;
 import org.junit.experimental.categories.Category;
@@ -115,6 +116,6 @@ public class IntegrationTestIngestWithEncryption extends IntegrationTestIngest {
     Configuration conf = HBaseConfiguration.create();
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     int ret = ToolRunner.run(conf, new IntegrationTestIngestWithEncryption(), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 }

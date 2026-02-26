@@ -59,7 +59,7 @@ public class JenkinsHash extends Hash {
   public static void main(String[] args) throws IOException {
     if (args.length != 1) {
       System.err.println("Usage: JenkinsHash filename");
-      System.exit(-1);
+      ExitHandler.getInstance().exit(-1);
     }
     FileInputStream in = new FileInputStream(args[0]);
     byte[] bytes = new byte[512];

@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Counters;
@@ -390,6 +391,6 @@ public class ScanPerformanceEvaluation extends AbstractHBaseTool {
 
   public static void main(String[] args) throws Exception {
     int ret = ToolRunner.run(HBaseConfiguration.create(), new ScanPerformanceEvaluation(), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 }

@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.JsonMapper;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -105,7 +106,7 @@ public class ReplicationSyncUp extends Configured implements Tool {
    */
   public static void main(String[] args) throws Exception {
     int ret = ToolRunner.run(HBaseConfiguration.create(), new ReplicationSyncUp(), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 
   // Find region servers under wal directory
@@ -218,7 +219,7 @@ public class ReplicationSyncUp extends Configured implements Tool {
 
   private static void printUsageAndExit(final String message, final int exitCode) {
     printUsage(message);
-    System.exit(exitCode);
+    ExitHandler.getInstance().exit(exitCode);
   }
 
   private static void printUsage(final String message) {
@@ -249,7 +250,7 @@ public class ReplicationSyncUp extends Configured implements Tool {
         abort = true;
         System.err.println("Aborting because of " + why);
         e.printStackTrace();
-        System.exit(1);
+        ExitHandler.getInstance().exit(1);
       }
 
       @Override
@@ -340,7 +341,7 @@ public class ReplicationSyncUp extends Configured implements Tool {
       abort = true;
       System.err.println("Aborting because of " + why);
       e.printStackTrace();
-      System.exit(1);
+      ExitHandler.getInstance().exit(1);
     }
 
     @Override

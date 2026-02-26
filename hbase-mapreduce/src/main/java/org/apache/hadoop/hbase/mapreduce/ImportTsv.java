@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
@@ -531,7 +532,7 @@ public class ImportTsv extends Configured implements Tool {
                   + " column families " + familyNames + ".\n"
                   + "To disable column family check, use -D" + NO_STRICT_COL_FAMILY + "=true.\n";
                 usage(msg);
-                System.exit(-1);
+                ExitHandler.getInstance().exit(-1);
               }
             }
             if (mapperClass.equals(TsvImporterTextMapper.class)) {
@@ -575,7 +576,7 @@ public class ImportTsv extends Configured implements Tool {
             usage(TsvImporterTextMapper.class.toString()
               + " should not be used for non bulkloading case. use "
               + TsvImporterMapper.class.toString() + " or custom mapper whose value type is Put.");
-            System.exit(-1);
+            ExitHandler.getInstance().exit(-1);
           }
           if (!isDryRun) {
             // No reducers. Just write straight to table. Call initTableReducerJob
@@ -782,6 +783,6 @@ public class ImportTsv extends Configured implements Tool {
 
   public static void main(String[] args) throws Exception {
     int status = ToolRunner.run(HBaseConfiguration.create(), new ImportTsv(), args);
-    System.exit(status);
+    ExitHandler.getInstance().exit(status);
   }
 }

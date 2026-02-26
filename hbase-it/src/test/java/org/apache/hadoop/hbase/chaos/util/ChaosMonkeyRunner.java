@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
 import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,7 +77,7 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
             .load(this.getClass().getClassLoader().getResourceAsStream(chaosMonkeyPropsFile));
         } catch (IOException e) {
           LOG.warn(e.toString(), e);
-          System.exit(EXIT_FAILURE);
+          ExitHandler.getInstance().exit(EXIT_FAILURE);
         }
       }
     }
@@ -194,6 +195,6 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
     }
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     int ret = ToolRunner.run(conf, new ChaosMonkeyRunner(), actualArgs);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 }

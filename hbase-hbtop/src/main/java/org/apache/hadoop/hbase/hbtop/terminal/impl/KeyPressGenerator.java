@@ -30,6 +30,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hbase.hbtop.terminal.KeyPress;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -478,7 +479,7 @@ public class KeyPressGenerator {
       keyPress.isCtrl() && keyPress.getType() == KeyPress.Type.Character
         && keyPress.getCharacter() == 'c'
     ) {
-      System.exit(0);
+      ExitHandler.getInstance().exit(0);
     }
 
     keyPressQueue.offer(keyPress);

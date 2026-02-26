@@ -139,7 +139,7 @@ public abstract class ServerCommandLine extends Configured implements Tool {
     try {
       int ret = ToolRunner.run(HBaseConfiguration.create(), this, args);
       if (ret != 0) {
-        System.exit(ret);
+        ExitHandler.getInstance().exit(ret);
       }
       // Return code is 0 here.
       boolean forceStop = false;
@@ -153,11 +153,11 @@ public abstract class ServerCommandLine extends Configured implements Tool {
       }
       if (forceStop) {
         LOG.error("Failed to stop all non-daemon threads, so terminating JVM");
-        System.exit(-1);
+        ExitHandler.getInstance().exit(-1);
       }
     } catch (Exception e) {
       LOG.error("Failed to run", e);
-      System.exit(-1);
+      ExitHandler.getInstance().exit(-1);
     }
   }
 }

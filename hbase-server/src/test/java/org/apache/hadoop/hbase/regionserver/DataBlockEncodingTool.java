@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileReaderImpl;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
@@ -659,7 +660,7 @@ public class DataBlockEncodingTool {
       cmd = parser.parse(options, args);
     } catch (ParseException e) {
       System.err.println("Could not parse arguments!");
-      System.exit(-1);
+      ExitHandler.getInstance().exit(-1);
       return; // avoid warning
     }
 
@@ -675,7 +676,7 @@ public class DataBlockEncodingTool {
     if (!cmd.hasOption(OPT_HFILE_NAME)) {
       LOG.error("Please specify HFile name using the " + OPT_HFILE_NAME + " option");
       printUsage(options);
-      System.exit(-1);
+      ExitHandler.getInstance().exit(-1);
     }
 
     String pathName = cmd.getOptionValue(OPT_HFILE_NAME);
@@ -696,7 +697,7 @@ public class DataBlockEncodingTool {
       LOG.error("The number of times to run each benchmark (" + benchmarkNTimes
         + ") must be greater than the number of benchmark runs to exclude " + "from statistics ("
         + benchmarkNOmit + ")");
-      System.exit(1);
+      ExitHandler.getInstance().exit(1);
     }
     LOG.info("Running benchmark " + benchmarkNTimes + " times. " + "Excluding the first "
       + benchmarkNOmit + " times from statistics.");
