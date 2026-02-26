@@ -4246,6 +4246,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
    * @return procedure Id
    * @throws IOException if reopening region fails while running procedure
    */
+  @Deprecated
   long reopenRegions(final TableName tableName, final List<byte[]> regionNames,
     final long nonceGroup, final long nonce) throws IOException {
 
