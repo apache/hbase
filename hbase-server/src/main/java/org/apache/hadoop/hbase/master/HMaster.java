@@ -1089,6 +1089,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       setQuotasObserver(conf);
       CoprocessorConfigurationUtil.syncReadOnlyConfigurations(isReadOnlyModeEnabled(conf), conf,
         CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+      AbstractReadOnlyController.manageActiveClusterIdFile(isReadOnlyModeEnabled(conf), this.getMasterFileSystem());
       initializeCoprocessorHost(conf);
     } else {
       // start an in process region server for carrying system regions

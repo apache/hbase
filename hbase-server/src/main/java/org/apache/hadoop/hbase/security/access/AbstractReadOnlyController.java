@@ -60,8 +60,13 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
         LOG.debug("Global read-only mode is being ENABLED. Deleting active cluster file: {}",
           activeClusterFile);
         try {
-          fs.delete(activeClusterFile, false);
-          LOG.info("Successfully deleted active cluster file: {}", activeClusterFile);
+          if (fs.exists(activeClusterFile)) {
+            fs.delete(activeClusterFile, false);
+            LOG.info("Successfully deleted active cluster file: {}", activeClusterFile);
+          } else {
+            LOG.debug("Active cluster file does not exist at: {}. No need to delete.",
+              activeClusterFile);
+          }
         } catch (IOException e) {
           LOG.error(
             "Failed to delete active cluster file: {}. "
@@ -71,7 +76,12 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
       } else {
         // DISABLING READ-ONLY (true -> false), create the active cluster file id file
         int wait = mfs.getConfiguration().getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
-        FSUtils.setActiveClusterSuffix(fs, rootDir, mfs.getSuffixFileDataToWrite(), wait);
+        if (!fs.exists(activeClusterFile)) {
+          FSUtils.setActiveClusterSuffix(fs, rootDir, mfs.getSuffixFileDataToWrite(), wait);
+        } else {
+          LOG.debug("Active cluster file already exists at: {}. No need to create it again.",
+            activeClusterFile);
+        }
       }
     } catch (IOException e) {
       // We still update the flag, but log that the operation failed.
