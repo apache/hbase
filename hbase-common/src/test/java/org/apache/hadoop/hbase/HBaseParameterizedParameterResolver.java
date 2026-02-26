@@ -23,6 +23,8 @@ import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
 import org.junit.jupiter.params.provider.Arguments;
 
+import org.apache.hbase.thirdparty.com.google.common.primitives.Primitives;
+
 /**
  * @see HBaseParameterizedTestTemplate
  */
@@ -38,8 +40,20 @@ public class HBaseParameterizedParameterResolver implements ParameterResolver {
   public boolean supportsParameter(ParameterContext pc, ExtensionContext ec)
     throws ParameterResolutionException {
     int index = pc.getIndex();
-    return index < values.length
-      && pc.getParameter().getType().isAssignableFrom(values[index].getClass());
+    if (index >= values.length) {
+      return false;
+    }
+    Object value = values[index];
+    Class<?> expectedType = pc.getParameter().getType();
+    if (expectedType.isPrimitive()) {
+      // primitive type can not accept null value
+      if (value == null) {
+        return false;
+      }
+      // test with wrapper type, otherwise it will always return false
+      return Primitives.wrap(expectedType).isAssignableFrom(value.getClass());
+    }
+    return expectedType.isAssignableFrom(value.getClass());
   }
 
   @Override
