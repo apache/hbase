@@ -118,6 +118,10 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-auth-filters</artifactId>
+    </dependency>
     <!-- REST dependencies -->
     <dependency>
       <groupId>org.apache.hbase.thirdparty</groupId>
