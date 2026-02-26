@@ -251,7 +251,6 @@ import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AbstractReadOnlyController;
-import org.apache.hadoop.hbase.security.access.MasterReadOnlyController;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1088,7 +1087,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (!maintenanceMode) {
       startupTaskGroup.addTask("Initializing master coprocessors");
       setQuotasObserver(conf);
-      syncReadOnlyConfigurations(isReadOnlyModeEnabled(conf), conf);
+      CoprocessorConfigurationUtil.syncReadOnlyConfigurations(isReadOnlyModeEnabled(conf), conf,
+        CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
       initializeCoprocessorHost(conf);
     } else {
       // start an in process region server for carrying system regions
@@ -4427,7 +4427,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     setQuotasObserver(newConf);
 
     boolean readOnlyMode = isReadOnlyModeEnabled(newConf);
-    syncReadOnlyConfigurations(readOnlyMode, newConf);
+    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(readOnlyMode, newConf,
+      CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
 
     // update region server coprocessor if the configuration has changed.
     if (
@@ -4436,7 +4437,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     ) {
       LOG.info("Update the master coprocessor(s) because the configuration has changed");
       initializeCoprocessorHost(newConf);
-      syncReadOnlyConfigurations(readOnlyMode, this.conf);
+      CoprocessorConfigurationUtil.syncReadOnlyConfigurations(readOnlyMode, this.conf,
+        CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
       AbstractReadOnlyController.manageActiveClusterIdFile(isReadOnlyModeEnabled(newConf),
         this.getMasterFileSystem());
     }
@@ -4540,52 +4542,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private boolean isReadOnlyModeEnabled(Configuration conf) {
     return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
       HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
-  }
-
-  private void addReadOnlyCoprocessors(Configuration conf) {
-    String[] existing = conf.getStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
-
-    List<String> masterCoprocs =
-      existing != null ? new ArrayList<>(Arrays.asList(existing)) : new ArrayList<>();
-
-    String masterCP = MasterReadOnlyController.class.getName();
-
-    // Avoid duplicate
-    if (masterCoprocs.contains(masterCP)) {
-      return;
-    }
-
-    masterCoprocs.add(masterCP);
-
-    conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-      masterCoprocs.toArray(new String[0]));
-  }
-
-  private void removeReadOnlyCoprocessors(Configuration conf) {
-    String[] coprocessors = conf.getStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
-    if (coprocessors == null) {
-      return;
-    }
-
-    String target = MasterReadOnlyController.class.getName();
-    String[] updatedCoprocs =
-      java.util.Arrays.stream(coprocessors).filter(cp -> !target.equals(cp)).toArray(String[]::new);
-
-    if (updatedCoprocs.length == 0) {
-      conf.unset(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
-    } else if (updatedCoprocs.length != coprocessors.length) {
-      conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, updatedCoprocs);
-    }
-  }
-
-  private void syncReadOnlyConfigurations(boolean readOnlyMode, Configuration conf) {
-    conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyMode);
-    // If readonly is true then add the coprocessor of master
-    if (readOnlyMode) {
-      addReadOnlyCoprocessors(conf);
-    } else {
-      removeReadOnlyCoprocessors(conf);
-    }
   }
 
   private void initializeCoprocessorHost(Configuration conf) {

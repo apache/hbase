@@ -42,7 +42,6 @@ import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -159,7 +158,6 @@ import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.security.access.RegionServerReadOnlyController;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
@@ -828,7 +826,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       if (!isStopped() && !isAborted()) {
         installShutdownHook();
 
-        syncReadOnlyConfigurations(isReadOnlyModeEnabled(conf), conf);
+        CoprocessorConfigurationUtil.syncReadOnlyConfigurations(isReadOnlyModeEnabled(conf), conf,
+          CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
         // Initialize the RegionServerCoprocessorHost now that our ephemeral
         // node was created, in case any coprocessors want to use ZooKeeper
         this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
@@ -1527,53 +1526,6 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   private boolean isReadOnlyModeEnabled(Configuration conf) {
     return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
       HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
-  }
-
-  private void addReadOnlyCoprocessors(Configuration conf) {
-    String[] existing = conf.getStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
-
-    List<String> rsCoprocs =
-      existing != null ? new ArrayList<>(Arrays.asList(existing)) : new ArrayList<>();
-
-    String regionServerCP = RegionServerReadOnlyController.class.getName();
-
-    if (rsCoprocs.contains(regionServerCP)) {
-      return;
-    }
-
-    rsCoprocs.add(regionServerCP);
-
-    conf.setStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
-      rsCoprocs.toArray(new String[0]));
-  }
-
-  private void removeReadOnlyCoprocessors(Configuration conf) {
-    String[] coprocessors = conf.getStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
-
-    if (coprocessors == null) {
-      return;
-    }
-
-    String target = RegionServerReadOnlyController.class.getName();
-
-    String[] updatedCoprocs =
-      java.util.Arrays.stream(coprocessors).filter(cp -> !target.equals(cp)).toArray(String[]::new);
-
-    if (updatedCoprocs.length == 0) {
-      conf.unset(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
-    } else if (updatedCoprocs.length != coprocessors.length) {
-      conf.setStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, updatedCoprocs);
-    }
-  }
-
-  private void syncReadOnlyConfigurations(boolean readOnlyMode, Configuration conf) {
-    conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyMode);
-    // If readonly is true then add the coprocessor of master
-    if (readOnlyMode) {
-      addReadOnlyCoprocessors(conf);
-    } else {
-      removeReadOnlyCoprocessors(conf);
-    }
   }
 
   @Override
@@ -3537,7 +3489,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     }
 
     boolean readOnlyMode = isReadOnlyModeEnabled(newConf);
-    syncReadOnlyConfigurations(readOnlyMode, newConf);
+    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(readOnlyMode, newConf,
+      CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
 
     // update region server coprocessor if the configuration has changed.
     if (
@@ -3546,7 +3499,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     ) {
       LOG.info("Update region server coprocessors because the configuration has changed");
       this.rsHost = new RegionServerCoprocessorHost(this, newConf);
-      syncReadOnlyConfigurations(readOnlyMode, this.conf);
+      CoprocessorConfigurationUtil.syncReadOnlyConfigurations(readOnlyMode, this.conf,
+        CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
     }
   }
 
