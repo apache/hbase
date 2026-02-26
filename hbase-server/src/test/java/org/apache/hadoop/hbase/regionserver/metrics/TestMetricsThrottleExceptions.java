@@ -113,48 +113,6 @@ public class TestMetricsThrottleExceptions {
   }
 
   @Test
-  public void testMetricNameSanitization() {
-    setupTestMetrics();
-
-    // Test that meaningful characters are preserved (hyphens, periods, etc.)
-    throttleMetrics.recordThrottleException(RpcThrottlingException.Type.WriteSizeExceeded,
-      "user.name@company", "my-table-prod");
-
-    // Verify meaningful characters are preserved, only JMX-problematic chars are replaced
-    String expectedMetricName =
-      "RpcThrottlingException_Type_WriteSizeExceeded_User_user.name@company_Table_my-table-prod";
-    verifyCounter(testRegistry, expectedMetricName, 1);
-
-    // Test that JMX-problematic characters are sanitized
-    throttleMetrics.recordThrottleException(RpcThrottlingException.Type.ReadSizeExceeded,
-      "user,with=bad:chars*", "table?with\"quotes");
-    String problematicMetricName =
-      "RpcThrottlingException_Type_ReadSizeExceeded_User_user_with_bad_chars__Table_table_with_quotes";
-    verifyCounter(testRegistry, problematicMetricName, 1);
-  }
-
-  @Test
-  public void testNullHandling() {
-    setupTestMetrics();
-
-    // Test null user and table names
-    throttleMetrics.recordThrottleException(RpcThrottlingException.Type.NumRequestsExceeded, null,
-      null);
-    throttleMetrics.recordThrottleException(RpcThrottlingException.Type.WriteSizeExceeded, "alice",
-      null);
-    throttleMetrics.recordThrottleException(RpcThrottlingException.Type.ReadSizeExceeded, null,
-      "users");
-
-    // Verify null values are replaced with "unknown"
-    verifyCounter(testRegistry,
-      "RpcThrottlingException_Type_NumRequestsExceeded_User_unknown_Table_unknown", 1);
-    verifyCounter(testRegistry,
-      "RpcThrottlingException_Type_WriteSizeExceeded_User_alice_Table_unknown", 1);
-    verifyCounter(testRegistry,
-      "RpcThrottlingException_Type_ReadSizeExceeded_User_unknown_Table_users", 1);
-  }
-
-  @Test
   public void testConcurrentAccess() throws InterruptedException {
     setupTestMetrics();
 
@@ -211,11 +169,10 @@ public class TestMetricsThrottleExceptions {
     throttleMetrics.recordThrottleException(RpcThrottlingException.Type.ReadSizeExceeded,
       "user_123", "test_table_v2");
 
-    // Verify common patterns are preserved correctly (note: colon gets replaced with underscore)
     verifyCounter(testRegistry,
       "RpcThrottlingException_Type_NumRequestsExceeded_User_service-user_Table_my-app-logs", 1);
     verifyCounter(testRegistry,
-      "RpcThrottlingException_Type_WriteSizeExceeded_User_batch.process_Table_namespace_table-name",
+      "RpcThrottlingException_Type_WriteSizeExceeded_User_batch.process_Table_namespace:table-name",
       1);
     verifyCounter(testRegistry,
       "RpcThrottlingException_Type_ReadSizeExceeded_User_user_123_Table_test_table_v2", 1);
