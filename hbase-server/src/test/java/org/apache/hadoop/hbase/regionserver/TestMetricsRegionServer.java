@@ -80,6 +80,7 @@ public class TestMetricsRegionServer {
     HELPER.assertTag("serverName", "test", serverSource);
     HELPER.assertTag("clusterId", "tClusterId", serverSource);
     HELPER.assertTag("zookeeperQuorum", "zk", serverSource);
+    HELPER.assertTag("hbaseVersion", "version", serverSource);
     HELPER.assertGauge("regionServerStartTime", 100, serverSource);
     HELPER.assertGauge("regionCount", 101, serverSource);
     HELPER.assertGauge("storeCount", 2, serverSource);
