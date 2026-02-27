@@ -78,7 +78,7 @@ public final class CoprocessorConfigurationUtil {
     }
 
     if (isModified) {
-      conf.setStrings(configurationKey, existing.toArray(new String[existing.size()]));
+      conf.setStrings(configurationKey, existing.toArray(new String[0]));
     }
   }
 
@@ -100,7 +100,7 @@ public final class CoprocessorConfigurationUtil {
     }
 
     if (isModified) {
-      conf.setStrings(configurationKey, existing.toArray(new String[existing.size()]));
+      conf.setStrings(configurationKey, existing.toArray(new String[0]));
     }
   }
 
