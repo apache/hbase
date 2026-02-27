@@ -284,6 +284,8 @@ public class AssignmentManager {
       DEFAULT_FORCE_REGION_RETAINMENT_WAIT_INTERVAL);
     forceRegionRetainmentRetries =
       conf.getInt(FORCE_REGION_RETAINMENT_RETRIES, DEFAULT_FORCE_REGION_RETAINMENT_RETRIES);
+
+    this.setRitDurationConsumer();
   }
 
   private void mirrorMetaLocations() throws IOException, KeeperException {
@@ -757,6 +759,10 @@ public class AssignmentManager {
       return Collections.emptyList();
     }
     return serverNode.getSystemRegionInfoList();
+  }
+
+  private void setRitDurationConsumer() {
+    regionInTransitionTracker.setRitDurationConsumer(metrics::updateRitDuration);
   }
 
   private void preTransitCheck(RegionStateNode regionNode, RegionState.State[] expectedStates)
@@ -1743,7 +1749,7 @@ public class AssignmentManager {
             ritsOverThreshold = new HashMap<String, RegionState>();
           }
           ritsOverThreshold.put(state.getRegion().getEncodedName(), state);
-          totalRITsTwiceThreshold += (ritTime > (ritThreshold * 2)) ? 1 : 0;
+          totalRITsTwiceThreshold += (ritTime > (ritThreshold * 2L)) ? 1 : 0;
         }
         if (oldestRITTime < ritTime) {
           oldestRITTime = ritTime;
