@@ -328,6 +328,16 @@
       <artifactId>mockito-inline</artifactId>
       <scope>test</scope>
     </dependency>
+    <!--
+      TODO: The below dependencies are for passing TestCheckTestClasses under JDK8,
+      see HBASE-29925 for more details. Once we finish the migration of JUnit5, which means
+      we do not need TestCheckTestClasses any more, we can remove these dependencies.
+    -->
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>jcl-over-slf4j</artifactId>
