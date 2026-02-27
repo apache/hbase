@@ -25,18 +25,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.RefreshHFilesTableProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.security.access.BulkLoadReadOnlyController;
-import org.apache.hadoop.hbase.security.access.EndpointReadOnlyController;
-import org.apache.hadoop.hbase.security.access.MasterReadOnlyController;
-import org.apache.hadoop.hbase.security.access.RegionReadOnlyController;
-import org.apache.hadoop.hbase.security.access.RegionServerReadOnlyController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.slf4j.Logger;
@@ -124,14 +118,6 @@ public class TestRefreshHFilesBase {
 
   private void setupReadOnlyConf(boolean addReadOnlyConf) {
     if (!addReadOnlyConf) return;
-    // Configure the cluster with ReadOnlyControllers
-    TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-      MasterReadOnlyController.class.getName());
-    TEST_UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-      String.join(",", RegionReadOnlyController.class.getName(),
-        BulkLoadReadOnlyController.class.getName(), EndpointReadOnlyController.class.getName()));
-    TEST_UTIL.getConfiguration().set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
-      RegionServerReadOnlyController.class.getName());
     // Keep ReadOnly property to false at the beginning so that create table succeed.
     conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, false);
   }

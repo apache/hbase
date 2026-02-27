@@ -17,13 +17,11 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -46,8 +44,6 @@ public class TestReadOnlyControllerEndpointObserver {
     HBaseClassTestRule.forClass(TestReadOnlyControllerEndpointObserver.class);
 
   EndpointReadOnlyController endpointReadOnlyController;
-  HBaseConfiguration readOnlyConf;
-
   // Region Server Coprocessor mocking variables.
   ObserverContext<? extends RegionCoprocessorEnvironment> ctx;
   Service service;
@@ -57,8 +53,6 @@ public class TestReadOnlyControllerEndpointObserver {
   @Before
   public void setup() throws Exception {
     endpointReadOnlyController = new EndpointReadOnlyController();
-    readOnlyConf = new HBaseConfiguration();
-    readOnlyConf.setBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
 
     // mocking variables initialization
     ctx = mock(ObserverContext.class);
@@ -76,12 +70,6 @@ public class TestReadOnlyControllerEndpointObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreEndpointInvocationReadOnlyException() throws IOException {
-    endpointReadOnlyController.onConfigurationChange(readOnlyConf);
-    endpointReadOnlyController.preEndpointInvocation(ctx, service, methodName, request);
-  }
-
-  @Test
-  public void testPreEndpointInvocationNoException() throws IOException {
     endpointReadOnlyController.preEndpointInvocation(ctx, service, methodName, request);
   }
 }

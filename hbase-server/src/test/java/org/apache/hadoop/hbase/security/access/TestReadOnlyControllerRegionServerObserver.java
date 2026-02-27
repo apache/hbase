@@ -17,13 +17,11 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
@@ -49,7 +47,6 @@ public class TestReadOnlyControllerRegionServerObserver {
     HBaseClassTestRule.forClass(TestReadOnlyControllerRegionServerObserver.class);
 
   RegionServerReadOnlyController regionServerReadOnlyController;
-  HBaseConfiguration readOnlyConf;
 
   // Region Server Coprocessor mocking variables
   ObserverContext<RegionServerCoprocessorEnvironment> ctx;
@@ -59,8 +56,6 @@ public class TestReadOnlyControllerRegionServerObserver {
   @Before
   public void setup() throws Exception {
     regionServerReadOnlyController = new RegionServerReadOnlyController();
-    readOnlyConf = new HBaseConfiguration();
-    readOnlyConf.setBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
 
     // mocking variables initialization
     ctx = mock(ObserverContext.class);
@@ -79,34 +74,16 @@ public class TestReadOnlyControllerRegionServerObserver {
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreRollWALWriterRequestReadOnlyException() throws IOException {
-    regionServerReadOnlyController.onConfigurationChange(readOnlyConf);
-    regionServerReadOnlyController.preRollWALWriterRequest(ctx);
-  }
-
-  @Test
-  public void testPreRollWALWriterRequestNoException() throws IOException {
     regionServerReadOnlyController.preRollWALWriterRequest(ctx);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreReplicationSinkBatchMutateReadOnlyException() throws IOException {
-    regionServerReadOnlyController.onConfigurationChange(readOnlyConf);
-    regionServerReadOnlyController.preReplicationSinkBatchMutate(ctx, walEntry, mutation);
-  }
-
-  @Test
-  public void testPreReplicationSinkBatchMutateNoException() throws IOException {
     regionServerReadOnlyController.preReplicationSinkBatchMutate(ctx, walEntry, mutation);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testPreReplicateLogEntriesReadOnlyException() throws IOException {
-    regionServerReadOnlyController.onConfigurationChange(readOnlyConf);
-    regionServerReadOnlyController.preReplicateLogEntries(ctx);
-  }
-
-  @Test
-  public void testPreReplicateLogEntriesNoException() throws IOException {
     regionServerReadOnlyController.preReplicateLogEntries(ctx);
   }
 }

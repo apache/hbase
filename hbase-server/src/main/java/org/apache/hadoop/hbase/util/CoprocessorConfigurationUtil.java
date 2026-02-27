@@ -17,8 +17,18 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.security.access.BulkLoadReadOnlyController;
+import org.apache.hadoop.hbase.security.access.EndpointReadOnlyController;
+import org.apache.hadoop.hbase.security.access.MasterReadOnlyController;
+import org.apache.hadoop.hbase.security.access.RegionReadOnlyController;
+import org.apache.hadoop.hbase.security.access.RegionServerReadOnlyController;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
@@ -46,5 +56,81 @@ public final class CoprocessorConfigurationUtil {
       }
     }
     return isConfigurationChange;
+  }
+
+  private static List<String> getCoprocessorsFromConfig(Configuration conf,
+    String configurationKey) {
+    String[] existing = conf.getStrings(configurationKey);
+    return existing != null ? new ArrayList<>(Arrays.asList(existing)) : new ArrayList<>();
+  }
+
+  public static void addCoprocessors(Configuration conf, String configurationKey,
+    List<String> coprocessorsToAdd) {
+    List<String> existing = getCoprocessorsFromConfig(conf, configurationKey);
+
+    boolean isModified = false;
+
+    for (String coprocessor : coprocessorsToAdd) {
+      if (!existing.contains(coprocessor)) {
+        existing.add(coprocessor);
+        isModified = true;
+      }
+    }
+
+    if (isModified) {
+      conf.setStrings(configurationKey, existing.toArray(new String[0]));
+    }
+  }
+
+  public static void removeCoprocessors(Configuration conf, String configurationKey,
+    List<String> coprocessorsToRemove) {
+    List<String> existing = getCoprocessorsFromConfig(conf, configurationKey);
+
+    if (existing.isEmpty()) {
+      return;
+    }
+
+    boolean isModified = false;
+
+    for (String coprocessor : coprocessorsToRemove) {
+      if (existing.contains(coprocessor)) {
+        existing.remove(coprocessor);
+        isModified = true;
+      }
+    }
+
+    if (isModified) {
+      conf.setStrings(configurationKey, existing.toArray(new String[0]));
+    }
+  }
+
+  private static List<String> getReadOnlyCoprocessors(String configurationKey) {
+    return switch (configurationKey) {
+      case CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY -> List
+        .of(MasterReadOnlyController.class.getName());
+
+      case CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY -> List
+        .of(RegionServerReadOnlyController.class.getName());
+
+      case CoprocessorHost.REGION_COPROCESSOR_CONF_KEY -> List.of(
+        RegionReadOnlyController.class.getName(), BulkLoadReadOnlyController.class.getName(),
+        EndpointReadOnlyController.class.getName());
+
+      default -> throw new IllegalArgumentException(
+        "Unsupported coprocessor configuration key: " + configurationKey);
+    };
+  }
+
+  public static void syncReadOnlyConfigurations(boolean readOnlyMode, Configuration conf,
+    String configurationKey) {
+    conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyMode);
+
+    List<String> cpList = getReadOnlyCoprocessors(configurationKey);
+    // If readonly is true then add the coprocessor of master
+    if (readOnlyMode) {
+      CoprocessorConfigurationUtil.addCoprocessors(conf, configurationKey, cpList);
+    } else {
+      CoprocessorConfigurationUtil.removeCoprocessors(conf, configurationKey, cpList);
+    }
   }
 }

@@ -38,15 +38,14 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -65,7 +64,7 @@ public class TestReadOnlyController {
     HBaseClassTestRule.forClass(TestReadOnlyController.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReadOnlyController.class);
-  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final TableName TEST_TABLE = TableName.valueOf("read_only_test_table");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("read_only_table_col_fam");
   private static HRegionServer hRegionServer;
@@ -81,8 +80,8 @@ public class TestReadOnlyController {
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  @BeforeClass
-  public static void beforeClass() throws Exception {
+  @Before
+  public void beforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
 
     // Shorten the run time of failed unit tests by limiting retries and the session timeout
@@ -92,15 +91,6 @@ public class TestReadOnlyController {
 
     // Set up test class with Read-Only mode disabled so a table can be created
     conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, false);
-
-    // Add ReadOnlyController coprocessors to the master, region server, and regions
-    TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-      MasterReadOnlyController.class.getName());
-    TEST_UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-      String.join(",", RegionReadOnlyController.class.getName(),
-        BulkLoadReadOnlyController.class.getName(), EndpointReadOnlyController.class.getName()));
-    TEST_UTIL.getConfiguration().set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
-      RegionServerReadOnlyController.class.getName());
 
     try {
       // Start the test cluster
@@ -123,8 +113,8 @@ public class TestReadOnlyController {
     }
   }
 
-  @AfterClass
-  public static void afterClass() throws Exception {
+  @After
+  public void afterClass() throws Exception {
     if (connection != null) {
       connection.close();
     }
