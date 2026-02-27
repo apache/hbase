@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -30,7 +30,6 @@ import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.MetricsRegionServer;
@@ -39,21 +38,16 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 /**
  * Test class for {@link RegionServerRpcQuotaManager}.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestRegionServerRpcQuotaManager {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerRpcQuotaManager.class);
-
   private static void setQuotaCache(RegionServerRpcQuotaManager manager, QuotaCache quotaCache)
     throws Exception {
     Field field = RegionServerRpcQuotaManager.class.getDeclaredField("quotaCache");
