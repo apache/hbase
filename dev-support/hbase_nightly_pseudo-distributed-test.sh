@@ -16,7 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
+set -e -x
 function usage {
   echo "Usage: ${0} [options] /path/to/component/bin-install /path/to/hadoop/executable /path/to/share/hadoop/yarn/timelineservice /path/to/hadoop/hadoop-yarn-server-tests-tests.jar /path/to/hadoop/hadoop-mapreduce-client-jobclient-tests.jar /path/to/mapred/executable"
   echo ""
