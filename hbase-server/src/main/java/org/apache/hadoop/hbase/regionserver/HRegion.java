@@ -178,6 +178,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -939,6 +940,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       : this.htableDescriptor.getDurability();
 
     decorateRegionConfiguration(conf);
+
+    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(
+      ConfigurationUtil.isReadOnlyModeEnabled(conf), this.conf,
+      CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
+
     if (rsServices != null) {
       this.rsAccounting = this.rsServices.getRegionServerAccounting();
       // don't initialize coprocessors if not running within a regionserver
@@ -8982,6 +8988,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public void onConfigurationChange(Configuration conf) {
     this.storeHotnessProtector.update(conf);
+
+    boolean readOnlyMode = ConfigurationUtil.isReadOnlyModeEnabled(conf);
+    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(readOnlyMode, conf,
+      CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
+
     // update coprocessorHost if the configuration has changed.
     if (
       CoprocessorConfigurationUtil.checkConfigurationChange(this.coprocessorHost, conf,
@@ -8991,6 +9002,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       LOG.info("Update the system coprocessors because the configuration has changed");
       decorateRegionConfiguration(conf);
       this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
+      CoprocessorConfigurationUtil.syncReadOnlyConfigurations(readOnlyMode, this.conf,
+        CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
     }
   }
 
