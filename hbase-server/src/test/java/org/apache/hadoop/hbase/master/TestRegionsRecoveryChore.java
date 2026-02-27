@@ -129,8 +129,8 @@ public class TestRegionsRecoveryChore {
     regionsRecoveryChore.chore();
 
     // Verify that we need to reopen regions of 2 tables
-    Mockito.verify(hMaster, Mockito.times(2)).reopenRegionsThrottled(Mockito.any(), Mockito.anyList(),
-      Mockito.anyLong(), Mockito.anyLong());
+    Mockito.verify(hMaster, Mockito.times(2)).reopenRegionsThrottled(Mockito.any(),
+      Mockito.anyList(), Mockito.anyLong(), Mockito.anyLong());
     Mockito.verify(hMaster, Mockito.times(1)).getClusterMetrics();
 
     // Verify that we need to reopen total 3 regions that have refCount > 300
@@ -164,8 +164,8 @@ public class TestRegionsRecoveryChore {
     regionsRecoveryChore.chore();
 
     // Verify that we need to reopen regions of only 1 table
-    Mockito.verify(hMaster, Mockito.times(1)).reopenRegionsThrottled(Mockito.any(), Mockito.anyList(),
-      Mockito.anyLong(), Mockito.anyLong());
+    Mockito.verify(hMaster, Mockito.times(1)).reopenRegionsThrottled(Mockito.any(),
+      Mockito.anyList(), Mockito.anyLong(), Mockito.anyLong());
     Mockito.verify(hMaster, Mockito.times(1)).getClusterMetrics();
 
     // Verify that we need to reopen only 1 region with refCount > 400
@@ -200,8 +200,8 @@ public class TestRegionsRecoveryChore {
 
     // Verify that by default the feature is turned off so no regions
     // should be reopened
-    Mockito.verify(hMaster, Mockito.times(0)).reopenRegionsThrottled(Mockito.any(), Mockito.anyList(),
-      Mockito.anyLong(), Mockito.anyLong());
+    Mockito.verify(hMaster, Mockito.times(0)).reopenRegionsThrottled(Mockito.any(),
+      Mockito.anyList(), Mockito.anyLong(), Mockito.anyLong());
 
     // default maxCompactedStoreFileRefCount is -1 (no regions to be reopened using AM)
     Mockito.verify(hMaster, Mockito.times(0)).getAssignmentManager();

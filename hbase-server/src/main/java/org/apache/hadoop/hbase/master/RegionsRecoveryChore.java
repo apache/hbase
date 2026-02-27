@@ -94,8 +94,8 @@ public class RegionsRecoveryChore extends ScheduledChore {
             try {
               LOG.warn("Reopening regions due to high storeFileRefCount. "
                 + "TableName: {}, numOfRegions: {}", tableName, regionNames.size());
-              hMaster.reopenRegionsThrottled(tableName, regionNames, NONCE_GENERATOR.getNonceGroup(),
-                NONCE_GENERATOR.newNonce());
+              hMaster.reopenRegionsThrottled(tableName, regionNames,
+                NONCE_GENERATOR.getNonceGroup(), NONCE_GENERATOR.newNonce());
             } catch (IOException e) {
               LOG.error("{} tableName: {}, regionNames: {}", ERROR_REOPEN_REGIONS_MSG, tableName,
                 regionNames, e);
