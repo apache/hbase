@@ -243,7 +243,7 @@ Region replication is a per-table property. All tables have `REGION_REPLICATION 
 
 There is another per-table property `REGION_MEMSTORE_REPLICATION`.All tables have `REGION_MEMSTORE_REPLICATION = true` by default, which means the new data written to the primary region should be replicated. If you set this to `false`, replicas do not receive memstore updates from the primary RegionServer,they will only receive updates for events like flushes and bulkloads, and will not have access to data which the primary has not yet flushed. Please note that if you set `REGION_MEMSTORE_REPLICATION` to false,`hbase.region.replica.wait.for.primary.flush` will be ignored.
 
-### Shell
+### Shell [#timeline-consistent-reads-shell-create]
 
 ```ruby
 create 't1', 'f1', {REGION_REPLICATION => 2}
@@ -268,7 +268,7 @@ You can also use `setRegionReplication()` and alter table to increase, decrease 
 
 ## Read API and Usage
 
-### Shell
+### Shell [#timeline-consistent-reads-shell-read-api]
 
 You can do reads in shell using a the Consistency.TIMELINE semantics as follows
 

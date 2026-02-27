@@ -245,7 +245,7 @@ A MemStore flush can be triggered under any of the conditions listed below. The 
 
 StoreFiles are where your data lives.
 
-#### HFile Format
+#### HFile Format [#architecture-regions-hfile-format]
 
 The _HFile_ file format is based on the SSTable file described in the [BigTable \[2006](http://research.google.com/archive/bigtable.html)\] paper and on Hadoop's [TFile](https://hadoop.apache.org/docs/current/api/org/apache/hadoop/io/file/tfile/TFile.html) (The unit test suite and the compression harness were taken directly from TFile). Schubert Zhang's blog post on [HFile: A Block-Indexed File Format to Store Sorted Key-Value Pairs](http://cloudepr.blogspot.com/2009/09/hfile-block-indexed-file-format-to.html) makes for a thorough introduction to HBase's HFile. Matteo Bertozzi has also put up a helpful description, [HBase I/O: HFile](http://th30z.blogspot.com/2011/02/hbase-io-hfile.html?spref=tw).
 

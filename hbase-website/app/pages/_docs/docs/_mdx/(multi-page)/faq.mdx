@@ -25,7 +25,7 @@ See [HBase History](/docs/hbase-history).
 
 Large cells don't fit well into HBase's approach to buffering data. First, the large cells bypass the MemStoreLAB when they are written. Then, they cannot be cached in the L2 block cache during read operations. Instead, HBase has to allocate on-heap memory for them each time. This can have a significant impact on the garbage collector within the RegionServer process.
 
-## Upgrading
+## Upgrading [#faq-upgrading]
 
 #### How do I upgrade Maven-managed projects from HBase 0.94 to HBase 0.96+?
 
@@ -61,7 +61,7 @@ In HBase 0.96, the project moved to a modular structure. Adjust your project's d
 </dependency>
 ```
 
-## Architecture
+## Architecture [#faq-architecture]
 
 #### How does HBase handle Region-RegionServer assignment and locality?
 

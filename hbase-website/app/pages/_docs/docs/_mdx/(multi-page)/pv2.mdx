@@ -47,7 +47,7 @@ the bulk are done as processing _steps_ in-Procedure; each invocation of the exe
 What comprises a sub-task, or _step_ in the execution is up to the Procedure author but generally it is a small piece of work that cannot be further decomposed and that moves the processing forward toward its end state. Having procedures made of many small steps rather than a few large ones allows the Procedure framework give out insight on where we are in the processing. It also allows the framework be more fair in its execution. As stated per above, each step may be called multiple times (failure/restart) so steps must be implemented idempotent.
 It is easy to confuse the state that the Procedure itself is keeping with that of the Framework itself. Try to keep them distinct.
 
-### Rollback
+### Rollback [#pv2-rollback]
 
 Rollback is called when the procedure or one of the sub-procedures has failed. The rollback step is supposed to cleanup the resources created during the execute() step. In case of failure and restart, rollback() may be called multiple times, so again the code must be idempotent.
 

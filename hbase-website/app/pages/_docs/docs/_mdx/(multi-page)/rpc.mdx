@@ -24,7 +24,7 @@ For more background on how we arrived at this spec., see [HBase RPC: WIP](https:
    Currently we have these words and the content of the rpc protobuf idl but a grammar for the back and forth would help with groking rpc.
    Also, a little state machine on client/server interactions would help with understanding (and ensuring correct implementation).
 
-## RPC
+## RPC [#rpc-overview]
 
 The client will send setup information on connection establish.
 Thereafter, the client invokes methods against the remote server sending a protobuf Message and receiving a protobuf Message in response.
