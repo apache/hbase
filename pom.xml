@@ -935,8 +935,6 @@
     <skyscreamer.version>1.5.1</skyscreamer.version>
     <commons-crypto.version>1.1.0</commons-crypto.version>
     <!-- Plugin Dependencies -->
-    <asciidoctor.plugin.version>2.2.2</asciidoctor.plugin.version>
-    <asciidoctorj.pdf.version>2.0.6</asciidoctorj.pdf.version>
     <build.helper.maven.version>3.0.0</build.helper.maven.version>
     <buildnumber.maven.version>1.4</buildnumber.maven.version>
     <!--
@@ -961,22 +959,8 @@
     <spotbugs.version>4.7.3</spotbugs.version>
     <spotbugs.maven.version>4.7.2.1</spotbugs.maven.version>
     <surefire.version>3.5.3</surefire.version>
-    <wagon.ssh.version>2.12</wagon.ssh.version>
-    <xml.maven.version>1.0.1</xml.maven.version>
     <spotless.version>2.44.4</spotless.version>
-    <maven-site.version>3.21.0</maven-site.version>
-    <reflow-maven-skin.version>2.3.3</reflow-maven-skin.version>
     <maven-download-plugin.version>1.2.1</maven-download-plugin.version>
-    <!-- Website static CSS, JS dependencies -->
-    <site.bootswatch.version>4.4.0</site.bootswatch.version>
-    <site.popperjs.version>1.16.0</site.popperjs.version>
-    <site.jquery.version>3.4.1</site.jquery.version>
-    <site.bootstrap.version>4.4.1</site.bootstrap.version>
-    <site.anchorjs.version>3.2.2</site.anchorjs.version>
-    <site.fontawesome.version>5.12.0</site.fontawesome.version>
-    <!-- RefGuide static CSS, JS dependencies -->
-    <refguide.fontawesome.version>4.7.0</refguide.fontawesome.version>
-    <refguide.mathjax.version>2.7.0</refguide.mathjax.version>
     <!-- compression -->
     <aircompressor.version>0.27</aircompressor.version>
     <brotli4j.version>1.11.0</brotli4j.version>
@@ -1096,7 +1080,6 @@
     <!-- Required for testing LDAP integration -->
     <apacheds.version>2.0.0.AM27</apacheds.version>
     <ldap-api.version>2.1.7</ldap-api.version>
-    <webjars-dir>${project.build.directory}/META-INF/resources/webjars</webjars-dir>
     <!-- Web UI dependencies -->
     <bootstrap.version>5.3.3</bootstrap.version>
     <jquery.version>3.7.1</jquery.version>
@@ -2159,7 +2142,6 @@
               <exclude>.svn/**</exclude>
               <exclude>**/.settings/**</exclude>
               <exclude>**/patchprocess/**</exclude>
-              <exclude>src/site/resources/repo/**</exclude>
               <exclude>**/dependency-reduced-pom.xml</exclude>
               <exclude>**/rat.txt</exclude>
               <!-- exclude the shaded protobuf files -->
@@ -2430,7 +2412,7 @@
   HBase requires at least version ${maven.min.version} of Maven to properly build from source.
   You appear to be using an older version. You can use either "mvn -version" or
   "mvn enforcer:display-info" to verify what version is active.
-  See the reference guide on building for more information: https://hbase.apache.org/book.html#build</message>
+  See the documentation for more information: https://hbase.apache.org/docs/building-and-developing/building</message>
                 </requireMavenVersion>
                 <!-- The earliest JVM version we verify builds for via ASF Jenkins -->
                 <requireJavaVersion>
@@ -2439,7 +2421,7 @@
   HBase requires at least version ${java.min.version} of the JDK to properly build from source.
   You appear to be using an older version. You can use either "mvn -version" or
   "mvn enforcer:display-info" to verify what version is active.
-  See the reference guide on building for more information: https://hbase.apache.org/book.html#build</message>
+  See the documentation for more information: https://hbase.apache.org/docs/building-and-developing/building</message>
                 </requireJavaVersion>
                 <bannedDependencies>
                   <excludes>
@@ -2772,150 +2754,6 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
       </plugin>
-      <!-- parent-module only plugins -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>xml-maven-plugin</artifactId>
-        <version>${xml.maven.version}</version>
-        <inherited>false</inherited>
-        <configuration>
-          <transformationSets>
-            <!-- For asciidoc -->
-            <transformationSet>
-              <!--Reaching up and over into common sub-module for hbase-default.xml-->
-              <dir>${basedir}/hbase-common/src/main/resources/</dir>
-              <includes>
-                <include>hbase-default.xml</include>
-              </includes>
-              <stylesheet>${basedir}/src/main/xslt/configuration_to_asciidoc_chapter.xsl</stylesheet>
-              <fileMappers>
-                <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.RegExpFileMapper">
-                  <pattern>^(.*)\.xml$</pattern>
-                  <replacement>$1.adoc</replacement>
-                </fileMapper>
-              </fileMappers>
-              <outputDir>${basedir}/target/asciidoc</outputDir>
-            </transformationSet>
-          </transformationSets>
-        </configuration>
-        <executions>
-          <execution>
-            <!-- Run the hbase-default.xml through a stylesheet so can show it in doc-->
-            <goals>
-              <goal>transform</goal>
-            </goals>
-            <phase>site</phase>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
-          <execution>
-            <!-- Required for the RefGuide (book.html) to use local resources (e.g. not from CDN). -->
-            <id>unpack-RefGuide-resources</id>
-            <goals>
-              <goal>unpack</goal>
-            </goals>
-            <phase>pre-site</phase>
-            <configuration>
-              <artifactItems>
-                <artifactItem>
-                  <groupId>org.webjars</groupId>
-                  <artifactId>font-awesome</artifactId>
-                  <version>${refguide.fontawesome.version}</version>
-                  <type>jar</type>
-                  <overWrite>true</overWrite>
-                  <includes>**/css/font-awesome.css,
-                    **/fonts/fontawesome-webfont.eot,
-                    **/fonts/fontawesome-webfont.svg,
-                    **/fonts/fontawesome-webfont.ttf,
-                    **/fonts/fontawesome-webfont.woff,
-                    **/fonts/fontawesome-webfont.woff2,</includes>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.webjars</groupId>
-                  <artifactId>MathJax</artifactId>
-                  <version>${refguide.mathjax.version}</version>
-                  <type>jar</type>
-                  <overWrite>true</overWrite>
-                  <includes>**/MathJax.js,
-                    **/config/TeX-MML-AM_HTMLorMML.js,
-                    **/jax/output/HTML-CSS/jax.js,
-                    **/jax/output/HTML-CSS/imageFonts.js,
-                    **/jax/output/HTML-CSS/fonts/TeX/fontdata.js,
-                    **/jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/Main.js,
-                    **/jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/BasicLatin.js,
-                    **/extensions/MathMenu.js,
-                    **/fonts/HTML-CSS/TeX/woff/MathJax_Main-Regular.woff,
-                    **/fonts/HTML-CSS/TeX/woff/MathJax_Main-Italic.woff,
-                    **/fonts/HTML-CSS/TeX/woff/MathJax_Math-Italic.woff,
-                    **/fonts/HTML-CSS/TeX/woff/MathJax_Size1-Regular.woff,
-                    **/fonts/HTML-CSS/TeX/woff/MathJax_Size3-Regular.woff,
-                    **/fonts/HTML-CSS/TeX/woff/MathJax_SansSerif-Italic.woff,
-                    **/fonts/HTML-CSS/TeX/otf/MathJax_Main-Regular.otf,
-                    **/fonts/HTML-CSS/TeX/otf/MathJax_Main-Italic.otf,
-                    **/fonts/HTML-CSS/TeX/otf/MathJax_Math-Italic.otf,
-                    **/fonts/HTML-CSS/TeX/otf/MathJax_Size1-Regular.otf,
-                    **/fonts/HTML-CSS/TeX/otf/MathJax_Size3-Regular.otf,
-                    **/fonts/HTML-CSS/TeX/otf/MathJax_SansSerif-Italic.otf,</includes>
-                </artifactItem>
-              </artifactItems>
-              <outputDirectory>${project.build.directory}</outputDirectory>
-            </configuration>
-          </execution>
-          <execution>
-            <!-- Required for the site to use local resources (e.g. not from CDN). -->
-            <id>unpack-site-resources</id>
-            <goals>
-              <goal>unpack</goal>
-            </goals>
-            <phase>pre-site</phase>
-            <configuration>
-              <artifactItems>
-                <artifactItem>
-                  <groupId>org.webjars</groupId>
-                  <artifactId>bootstrap</artifactId>
-                  <version>${site.bootstrap.version}</version>
-                  <includes>**/js/bootstrap.min.js</includes>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.webjars.npm</groupId>
-                  <artifactId>bootswatch</artifactId>
-                  <version>${site.bootswatch.version}</version>
-                  <includes>**/litera/bootstrap.min.css</includes>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.webjars</groupId>
-                  <artifactId>popper.js</artifactId>
-                  <version>${site.popperjs.version}</version>
-                  <includes>**/umd/popper.min.js</includes>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.webjars</groupId>
-                  <artifactId>jquery</artifactId>
-                  <version>${site.jquery.version}</version>
-                  <includes>**/jquery.min.js</includes>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.webjars</groupId>
-                  <artifactId>anchorjs</artifactId>
-                  <version>${site.anchorjs.version}</version>
-                  <includes>**/anchor.min.js</includes>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.webjars</groupId>
-                  <artifactId>font-awesome</artifactId>
-                  <version>${site.fontawesome.version}</version>
-                  <includes>**/css/all.min.css,**/webfonts/*</includes>
-                </artifactItem>
-              </artifactItems>
-              <outputDirectory>${project.build.directory}</outputDirectory>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
       <!-- Special configuration for spotbugs just in the parent so
       the filter file location can be more general (see definition in pluginManagement) -->
       <plugin>
@@ -2936,255 +2774,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-site-plugin</artifactId>
-        <version>${maven-site.version}</version>
-        <configuration>
-          <siteDirectory>${basedir}/src/site</siteDirectory>
-          <inputEncoding>UTF-8</inputEncoding>
-          <outputEncoding>UTF-8</outputEncoding>
-        </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>io.github.devacfr.maven.skins</groupId>
-            <artifactId>reflow-velocity-tools</artifactId>
-            <version>${reflow-maven-skin.version}</version>
-          </dependency>
-          <dependency>
-            <!-- add support for ssh/scp -->
-            <groupId>org.apache.maven.wagon</groupId>
-            <artifactId>wagon-ssh</artifactId>
-            <version>${wagon.ssh.version}</version>
-          </dependency>
-        </dependencies>
-      </plugin>
-      <!-- For AsciiDoc docs building -->
-      <plugin>
-        <groupId>org.asciidoctor</groupId>
-        <artifactId>asciidoctor-maven-plugin</artifactId>
-        <version>${asciidoctor.plugin.version}</version>
-        <inherited>false</inherited>
-        <configuration>
-          <outputDirectory>${project.reporting.outputDirectory}/</outputDirectory>
-          <doctype>book</doctype>
-          <attributes>
-            <docVersion>${project.version}</docVersion>
-            <imagesdir>images</imagesdir>
-            <source-highlighter>coderay</source-highlighter>
-            <iconfont-remote>false</iconfont-remote>
-            <stylesdir>css</stylesdir>
-          </attributes>
-        </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>org.asciidoctor</groupId>
-            <artifactId>asciidoctorj-pdf</artifactId>
-            <version>${asciidoctorj.pdf.version}</version>
-          </dependency>
-        </dependencies>
-        <executions>
-          <execution>
-            <id>output-html</id>
-            <goals>
-              <goal>process-asciidoc</goal>
-            </goals>
-            <phase>site</phase>
-            <configuration>
-              <attributes>
-                <stylesheet>hbase.css</stylesheet>
-              </attributes>
-              <backend>html5</backend>
-            </configuration>
-          </execution>
-          <execution>
-            <id>output-pdf</id>
-            <goals>
-              <goal>process-asciidoc</goal>
-            </goals>
-            <phase>site</phase>
-            <configuration>
-              <backend>pdf</backend>
-              <attributes>
-                <pagenums/>
-                <toc/>
-                <idprefix/>
-                <idseparator>-</idseparator>
-              </attributes>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-resources-plugin</artifactId>
-        <!--$NO-MVN-MAN-VER$ -->
-        <inherited>false</inherited>
-        <configuration>
-          <escapeString>\</escapeString>
-        </configuration>
-        <executions>
-          <execution>
-            <id>copy-htaccess</id>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <phase>site</phase>
-            <configuration>
-              <outputDirectory>${project.reporting.outputDirectory}/</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${basedir}/src/site/resources/</directory>
-                  <includes>
-                    <include>.htaccess</include>
-                  </includes>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-          <!-- needed to make the redirect above work -->
-          <execution>
-            <id>copy-empty-book-dir</id>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <phase>site</phase>
-            <configuration>
-              <outputDirectory>${project.reporting.outputDirectory}/</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${basedir}/src/site/resources/</directory>
-                  <includes>
-                    <include>book/**</include>
-                  </includes>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-          <execution>
-            <id>copy-website-resources</id>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <phase>pre-site</phase>
-            <configuration>
-              <outputDirectory>${project.build.outputDirectory}</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${project.build.directory}/META-INF/resources/webjars/bootstrap/${site.bootstrap.version}/js</directory>
-                  <targetPath>${project.build.directory}/site/js</targetPath>
-                  <includes>
-                    <include>bootstrap.min.js</include>
-                  </includes>
-                </resource>
-                <resource>
-                  <directory>${project.build.directory}/META-INF/resources/webjars/bootswatch/${site.bootswatch.version}/dist/litera</directory>
-                  <targetPath>${project.build.directory}/site/css/themes/litera</targetPath>
-                  <includes>
-                    <include>bootstrap.min.css</include>
-                  </includes>
-                </resource>
-                <resource>
-                  <directory>${project.build.directory}/META-INF/resources/webjars/popper.js/${site.popperjs.version}/umd</directory>
-                  <targetPath>${project.build.directory}/site/js</targetPath>
-                  <includes>
-                    <include>popper.min.js</include>
-                  </includes>
-                </resource>
-                <resource>
-                  <directory>${project.build.directory}/META-INF/resources/webjars/jquery/${site.jquery.version}</directory>
-                  <targetPath>${project.build.directory}/site/js</targetPath>
-                  <includes>
-                    <include>jquery.min.js</include>
-                  </includes>
-                </resource>
-                <resource>
-                  <directory>${project.build.directory}/META-INF/resources/webjars/anchorjs/${site.anchorjs.version}</directory>
-                  <targetPath>${project.build.directory}/site/js</targetPath>
-                  <includes>
-                    <include>anchor.min.js</include>
-                  </includes>
-                </resource>
-                <resource>
-                  <directory>${project.build.directory}/META-INF/resources/webjars/font-awesome/${site.fontawesome.version}/css</directory>
-                  <targetPath>${project.build.directory}/site/css/fontawesome</targetPath>
-                  <includes>
-                    <include>all.min.css</include>
-                  </includes>
-                </resource>
-                <resource>
-                  <directory>${project.build.directory}/META-INF/resources/webjars/font-awesome/${site.fontawesome.version}</directory>
-                  <targetPath>${project.build.directory}/site/css</targetPath>
-                  <includes>
-                    <include>webfonts/*</include>
-                  </includes>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>${maven.antrun.version}</version>
-        <inherited>false</inherited>
-        <executions>
-          <execution>
-            <!-- Rename the book.pdf generated by asciidoctor -->
-            <id>rename-pdf</id>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <phase>site</phase>
-            <configuration>
-              <target name="rename file">
-                <move file="${project.reporting.outputDirectory}/book.pdf" tofile="${project.reporting.outputDirectory}/apache_hbase_reference_guide.pdf"/>
-              </target>
-            </configuration>
-          </execution>
-          <execution>
-            <!-- Copy static CSS and JS files for the RefGuide (book.html). -->
-            <id>copy-css-js-for-RefGuide</id>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <phase>pre-site</phase>
-            <configuration>
-              <target>
-                <copy flatten="true" todir="${project.build.directory}/site/css">
-                  <fileset dir="${webjars-dir}/font-awesome/${refguide.fontawesome.version}/css">
-                    <include name="font-awesome.css"/>
-                  </fileset>
-                </copy>
-                <copy flatten="true" todir="${project.build.directory}/site/js">
-                  <fileset dir="${webjars-dir}/MathJax/${refguide.mathjax.version}">
-                    <include name="MathJax.js"/>
-                  </fileset>
-                </copy>
-                <copy flatten="false" todir="${project.build.directory}/site/js">
-                  <fileset dir="${webjars-dir}/MathJax/${refguide.mathjax.version}">
-                    <include name="config/TeX-MML-AM_HTMLorMML.js"/>
-                    <include name="jax/output/HTML-CSS/jax.js"/>
-                    <include name="jax/output/HTML-CSS/imageFonts.js"/>
-                    <include name="jax/output/HTML-CSS/fonts/TeX/fontdata.js"/>
-                    <include name="jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/Main.js"/>
-                    <include name="jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/BasicLatin.js"/>
-                    <include name="extensions/MathMenu.js"/>
-                    <include name="fonts/HTML-CSS/TeX/woff/MathJax_*.woff"/>
-                    <include name="fonts/HTML-CSS/TeX/otf/MathJax_*.otf"/>
-                  </fileset>
-                </copy>
-                <copy flatten="true" todir="${project.build.directory}/site/fonts">
-                  <fileset dir="${webjars-dir}/font-awesome/${refguide.fontawesome.version}/fonts">
-                    <include name="fontawesome-webfont.*"/>
-                  </fileset>
-                </copy>
-              </target>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>

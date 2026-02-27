@@ -1,0 +1,16 @@
+{
+  "title": "Building and Developing Apache HBase",
+  "pages": [
+    "getting-involved",
+    "repositories",
+    "ides",
+    "building",
+    "releasing",
+    "voting",
+    "announcing",
+    "generating-documentation",
+    "updating-landing",
+    "tests",
+    "developer-guidelines"
+  ]
+}
