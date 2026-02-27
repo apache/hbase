@@ -29,7 +29,6 @@ import java.security.GeneralSecurityException;
 import javax.net.ssl.HttpsURLConnection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
