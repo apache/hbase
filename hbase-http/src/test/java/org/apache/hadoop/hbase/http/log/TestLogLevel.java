@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.http.log;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -58,20 +58,17 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test LogLevel.
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestLogLevel {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLogLevel.class);
 
   private static String keystoresDir;
   private static String sslConfDir;
@@ -120,7 +117,7 @@ public class TestLogLevel {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     serverConf = new Configuration();
     serverConf.setStrings(LogLevel.READONLY_LOGGERS_CONF_KEY, protectedPrefix);
@@ -200,7 +197,7 @@ public class TestLogLevel {
     return sslConf;
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (kdc != null) {
       kdc.stop();
@@ -295,14 +292,14 @@ public class TestLogLevel {
     String expectedLevel) throws Exception {
     withLogLevelServer(protocol, isSpnego, (authority) -> {
       final String level = getLevel(protocol.client, authority, loggerName);
-      assertEquals("Log level not equal to expected: ", expectedLevel, level);
+      assertEquals(expectedLevel, level, "Log level not equal to expected: ");
     });
   }
 
   private void testSetLogLevel(Protocol protocol, boolean isSpnego, String loggerName,
     String newLevel) throws Exception {
     String oldLevel = Log4jUtils.getEffectiveLevel(loggerName);
-    assertNotEquals("New level is same as old level: ", newLevel, oldLevel);
+    assertNotEquals(newLevel, oldLevel, "New level is same as old level: ");
 
     try {
       withLogLevelServer(protocol, isSpnego, (authority) -> {
@@ -388,8 +385,8 @@ public class TestLogLevel {
     final String response = cli.fetchSetLevelResponse();
     final String responseLevel = extractEffectiveLevel(response);
     final String currentLevel = Log4jUtils.getEffectiveLevel(logName);
-    assertEquals("new level not equal to expected: ", newLevel, currentLevel);
-    assertSame("new level not equal to response level: ", newLevel, responseLevel);
+    assertEquals(newLevel, currentLevel, "new level not equal to expected: ");
+    assertSame(newLevel, responseLevel, "new level not equal to response level: ");
   }
 
   /**

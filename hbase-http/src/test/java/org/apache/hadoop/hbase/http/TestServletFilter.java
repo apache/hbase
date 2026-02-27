@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Random;
@@ -32,24 +33,19 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestServletFilter extends HttpServerFunctionalTest {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestServletFilter.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(HttpServer.class);
   private static volatile String uri = null;
@@ -94,12 +90,12 @@ public class TestServletFilter extends HttpServerFunctionalTest {
 
   private static void assertExceptionContains(String string, Throwable t) {
     String msg = t.getMessage();
-    Assert.assertTrue("Expected to find '" + string + "' but got unexpected exception:"
-      + StringUtils.stringifyException(t), msg.contains(string));
+    assertTrue(msg.contains(string), "Expected to find '" + string
+      + "' but got unexpected exception:" + StringUtils.stringifyException(t));
   }
 
   @Test
-  @Ignore
+  @Disabled
   // From stack
   // Its a 'foreign' test, one that came in from hadoop when we copy/pasted http
   // It's second class. Could comment it out if only failing test (as per @nkeywal – sort of)
@@ -169,12 +165,8 @@ public class TestServletFilter extends HttpServerFunctionalTest {
     // start an http server with ErrorFilter
     conf.set(HttpServer.FILTER_INITIALIZERS_PROPERTY, ErrorFilter.Initializer.class.getName());
     HttpServer http = createTestServer(conf);
-    try {
-      http.start();
-      fail("expecting exception");
-    } catch (IOException e) {
-      assertExceptionContains("Problem starting http server", e);
-    }
+    IOException e = assertThrows(IOException.class, () -> http.start());
+    assertExceptionContains("Problem starting http server", e);
   }
 
   /**
@@ -187,11 +179,7 @@ public class TestServletFilter extends HttpServerFunctionalTest {
     HttpServer http = createTestServer(conf);
     HttpServer.defineFilter(http.webAppContext, "ErrorFilter", ErrorFilter.class.getName(), null,
       null);
-    try {
-      http.start();
-      fail("expecting exception");
-    } catch (IOException e) {
-      assertExceptionContains("Unable to initialize WebAppContext", e);
-    }
+    IOException e = assertThrows(IOException.class, () -> http.start());
+    assertExceptionContains("Unable to initialize WebAppContext", e);
   }
 }
