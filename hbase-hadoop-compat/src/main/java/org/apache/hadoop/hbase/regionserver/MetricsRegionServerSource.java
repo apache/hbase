@@ -673,4 +673,6 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
     "Count of slow/connect error DataNodes excluded during WAL write operation";
   String EXCLUDE_DATA_NODES_DETAILS = "excludedDataNodesDetails";
   String EXCLUDE_DATA_NODES_DETAILS_DESC = "Excluded DataNodes info";
+  String HBASE_VERSION_NAME = "hbaseVersion";
+  String HBASE_VERSION_DESC = "The version of HBase";
 }

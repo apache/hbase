@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import org.apache.hadoop.hbase.util.VersionInfo;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -86,7 +87,10 @@ public class TestMasterMetricsWrapper {
     assertEquals(master.getServerManager().getOnlineServersList().size(),
       info.getNumRegionServers());
     assertEquals(master.getMasterWalManager().getOldWALsDirSize(), info.getOldWALsDirSize());
+    assertEquals(VersionInfo.getVersion() + ", r" + VersionInfo.getRevision(),
+      info.getSoftwareVersion());
     int regionServerCount = NUM_RS;
+
     assertEquals(regionServerCount, info.getNumRegionServers());
 
     String zkServers = info.getZookeeperQuorum();

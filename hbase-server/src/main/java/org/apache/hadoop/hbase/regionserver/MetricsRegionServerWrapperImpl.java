@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWALSource;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
@@ -774,6 +775,11 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   @Override
   public int getActiveScanners() {
     return regionServer.getRpcServices().getScannersCount();
+  }
+
+  @Override
+  public String getSoftwareVersion() {
+    return VersionInfo.getVersion() + ", r" + VersionInfo.getRevision();
   }
 
   private static final class RegionMetricAggregate {

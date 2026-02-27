@@ -502,7 +502,8 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
         .tag(Interns.info(ZOOKEEPER_QUORUM_NAME, ZOOKEEPER_QUORUM_DESC),
           rsWrap.getZookeeperQuorum())
         .tag(Interns.info(SERVER_NAME_NAME, SERVER_NAME_DESC), rsWrap.getServerName())
-        .tag(Interns.info(CLUSTER_ID_NAME, CLUSTER_ID_DESC), rsWrap.getClusterId());
+        .tag(Interns.info(CLUSTER_ID_NAME, CLUSTER_ID_DESC), rsWrap.getClusterId())
+        .tag(Interns.info(HBASE_VERSION_NAME, HBASE_VERSION_DESC), rsWrap.getSoftwareVersion());
       if (!rsWrap.getWALExcludeDNs().isEmpty()) {
         metricsRecordBuilder.tag(
           Interns.info(EXCLUDE_DATA_NODES_DETAILS, EXCLUDE_DATA_NODES_DETAILS_DESC),
