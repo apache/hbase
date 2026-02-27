@@ -19,12 +19,15 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.function.Consumer;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.TableStateManager;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,8 +46,11 @@ public class RegionInTransitionTracker {
 
   private final ConcurrentSkipListMap<RegionInfo, RegionStateNode> regionInTransition =
     new ConcurrentSkipListMap<>(RegionInfo.COMPARATOR);
+  private final ConcurrentHashMap<RegionInfo, Long> regionEnterTimestamp =
+    new ConcurrentHashMap<>();
 
   private TableStateManager tableStateManager;
+  private Consumer<Long> ritDurationConsumer;
 
   public boolean isRegionInTransition(final RegionInfo regionInfo) {
     return regionInTransition.containsKey(regionInfo);
@@ -131,15 +137,29 @@ public class RegionInTransitionTracker {
   }
 
   private boolean addRegionInTransition(final RegionStateNode regionStateNode) {
-    return regionInTransition.putIfAbsent(regionStateNode.getRegionInfo(), regionStateNode) == null;
+    boolean added =
+      regionInTransition.putIfAbsent(regionStateNode.getRegionInfo(), regionStateNode) == null;
+    if (added) {
+      regionEnterTimestamp.putIfAbsent(regionStateNode.getRegionInfo(),
+        EnvironmentEdgeManager.currentTime());
+    }
+    return added;
   }
 
   private boolean removeRegionInTransition(final RegionInfo regionInfo) {
-    return regionInTransition.remove(regionInfo) != null;
+    boolean removed = regionInTransition.remove(regionInfo) != null;
+    if (removed) {
+      Long enter = regionEnterTimestamp.remove(regionInfo);
+      if (enter != null && ritDurationConsumer != null) {
+        ritDurationConsumer.accept(EnvironmentEdgeManager.currentTime() - enter);
+      }
+    }
+    return removed;
   }
 
   public void stop() {
     regionInTransition.clear();
+    regionEnterTimestamp.clear();
   }
 
   public boolean hasRegionsInTransition() {
@@ -152,5 +172,9 @@ public class RegionInTransitionTracker {
 
   public void setTableStateManager(TableStateManager tableStateManager) {
     this.tableStateManager = tableStateManager;
+  }
+
+  public void setRitDurationConsumer(Consumer<Long> ritDurationConsumer) {
+    this.ritDurationConsumer = ritDurationConsumer;
   }
 }
