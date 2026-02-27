@@ -17,41 +17,40 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * Tests for TestBoundedRegionGroupingStrategy which use WALPerformanceEvaluation for WAL data
  * creation. This class was created as part of refactoring for hbase-diagnostics module creation in
  * HBASE-28432 to break cyclic dependency.
  */
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestBoundedRegionGroupingStrategyUsingWPETool
   extends TestBoundedRegionGroupingStrategy {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBoundedRegionGroupingStrategyUsingWPETool.class);
+  public TestBoundedRegionGroupingStrategyUsingWPETool(String walProvider) {
+    super(walProvider);
+  }
 
-  private static final Logger LOG =
-    LoggerFactory.getLogger(TestBoundedRegionGroupingStrategyUsingWPETool.class);
+  public static Stream<Arguments> parameters() {
+    return TestBoundedRegionGroupingStrategy.parameters();
+  }
 
   /**
    * Write to a log file with three concurrent threads and verifying all data is written.
    */
-  @Test
+  @TestTemplate
   public void testConcurrentWrites() throws Exception {
     // Run the WPE tool with three threads writing 3000 edits each concurrently.
     // When done, verify that all edits were written.
@@ -63,7 +62,7 @@ public class TestBoundedRegionGroupingStrategyUsingWPETool
   /**
    * Make sure we can successfully run with more regions then our bound.
    */
-  @Test
+  @TestTemplate
   public void testMoreRegionsThanBound() throws Exception {
     final String parallelism =
       Integer.toString(BoundedGroupingStrategy.DEFAULT_NUM_REGION_GROUPS * 2);
@@ -73,7 +72,7 @@ public class TestBoundedRegionGroupingStrategyUsingWPETool
     assertEquals(0, errCode);
   }
 
-  @Test
+  @TestTemplate
   public void testBoundsGreaterThanDefault() throws Exception {
     final int temp = CONF.getInt(BoundedGroupingStrategy.NUM_REGION_GROUPS,
       BoundedGroupingStrategy.DEFAULT_NUM_REGION_GROUPS);
@@ -89,7 +88,7 @@ public class TestBoundedRegionGroupingStrategyUsingWPETool
     }
   }
 
-  @Test
+  @TestTemplate
   public void testMoreRegionsThanBoundWithBoundsGreaterThanDefault() throws Exception {
     final int temp = CONF.getInt(BoundedGroupingStrategy.NUM_REGION_GROUPS,
       BoundedGroupingStrategy.DEFAULT_NUM_REGION_GROUPS);
