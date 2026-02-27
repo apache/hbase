@@ -85,11 +85,13 @@ public class DelegatingHBaseRpcController implements HBaseRpcController {
     delegate.setCellScanner(cellScanner);
   }
 
+  @Deprecated
   @Override
   public void setPriority(int priority) {
     delegate.setPriority(priority);
   }
 
+  @Deprecated
   @Override
   public void setPriority(TableName tn) {
     delegate.setPriority(tn);
