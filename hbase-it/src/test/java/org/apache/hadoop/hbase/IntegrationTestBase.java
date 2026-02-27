@@ -27,8 +27,8 @@ import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
 import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -159,13 +159,13 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
     return result;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     setUpCluster();
     setUpMonkey();
   }
 
-  @After
+  @AfterEach
   public void cleanUp() throws Exception {
     cleanUpMonkey();
     cleanUpCluster();

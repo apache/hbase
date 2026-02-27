@@ -112,8 +112,8 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -210,7 +210,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
  * </pre>
  * </p>
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestBigLinkedList extends IntegrationTestBase {
   protected static final byte[] NO_KEY = new byte[1];
   protected static String TABLE_NAME_KEY = "IntegrationTestBigLinkedList.table";
@@ -1872,7 +1872,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     }
     int ret = ToolRunner.run(conf, new Loop(), new String[] { "1", "1", "2000000",
       util.getDataTestDirOnTestFS("IntegrationTestBigLinkedList").toString(), "1" });
-    org.junit.Assert.assertEquals(0, ret);
+    org.junit.jupiter.api.Assertions.assertEquals(0, ret);
   }
 
   private void usage() {
