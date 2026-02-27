@@ -17,25 +17,20 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Ignore("Hangs on occasion; see HBASE-14430")
-@Category({ MiscTests.class, SmallTests.class })
+@Disabled("Hangs on occasion; see HBASE-14430")
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHttpServerLifecycle.class);
 
   /**
    * Check that a server is alive by probing the {@link HttpServer#isAlive()} method and the text of
@@ -43,12 +38,12 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
    * @param server server
    */
   private void assertAlive(HttpServer server) {
-    assertTrue("Server is not alive", server.isAlive());
+    assertTrue(server.isAlive(), "Server is not alive");
     assertToStringContains(server, HttpServer.STATE_DESCRIPTION_ALIVE);
   }
 
   private void assertNotLive(HttpServer server) {
-    assertTrue("Server should not be live", !server.isAlive());
+    assertTrue(!server.isAlive(), "Server should not be live");
     assertToStringContains(server, HttpServer.STATE_DESCRIPTION_NOT_LIVE);
   }
 
@@ -88,8 +83,8 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
    */
   private void assertToStringContains(HttpServer server, String text) {
     String description = server.toString();
-    assertTrue("Did not find \"" + text + "\" in \"" + description + "\"",
-      description.contains(text));
+    assertTrue(description.contains(text),
+      "Did not find \"" + text + "\" in \"" + description + "\"");
   }
 
   /**
@@ -132,6 +127,6 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
     assertAlive(server);
     assertEquals(value, server.getAttribute(key));
     stop(server);
-    assertNull("Server context should have cleared", server.getAttribute(key));
+    assertNull(server.getAttribute(key), "Server context should have cleared");
   }
 }

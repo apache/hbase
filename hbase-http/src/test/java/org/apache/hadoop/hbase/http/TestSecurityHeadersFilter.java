@@ -28,25 +28,19 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.hamcrest.core.Is;
 import org.hamcrest.core.IsEqual;
-import org.junit.After;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ HttpServerFunctionalTest.class, MediumTests.class })
+@Tag(MediumTests.TAG)
 public class TestSecurityHeadersFilter {
   private static URL baseUrl;
   private HttpServer http;
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSecurityHeadersFilter.class);
-
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     http.stop();
   }
