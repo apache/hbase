@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.http;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.HttpCookie;
@@ -35,25 +37,20 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.ssl.SSLFactory;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHttpCookieFlag {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHttpCookieFlag.class);
 
   private static final String BASEDIR = System.getProperty("test.build.dir", "target/test-dir")
     + "/" + org.apache.hadoop.hbase.http.TestHttpCookieFlag.class.getSimpleName();
@@ -89,7 +86,7 @@ public class TestHttpCookieFlag {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = new Configuration();
     conf.set(HttpServer.FILTER_INITIALIZERS_PROPERTY, DummyFilterInitializer.class.getName());
@@ -127,11 +124,11 @@ public class TestHttpCookieFlag {
     HttpURLConnection conn = (HttpURLConnection) new URL(base, "/echo").openConnection();
 
     String header = conn.getHeaderField("Set-Cookie");
-    Assert.assertTrue(header != null);
+    assertTrue(header != null);
     List<HttpCookie> cookies = HttpCookie.parse(header);
-    Assert.assertTrue(!cookies.isEmpty());
-    Assert.assertTrue(header.contains("; HttpOnly"));
-    Assert.assertTrue("token".equals(cookies.get(0).getValue()));
+    assertTrue(!cookies.isEmpty());
+    assertTrue(header.contains("; HttpOnly"));
+    assertTrue("token".equals(cookies.get(0).getValue()));
   }
 
   @Test
@@ -141,13 +138,13 @@ public class TestHttpCookieFlag {
     conn.setSSLSocketFactory(clientSslFactory.createSSLSocketFactory());
 
     String header = conn.getHeaderField("Set-Cookie");
-    Assert.assertTrue(header != null);
+    assertTrue(header != null);
 
     List<HttpCookie> cookies = HttpCookie.parse(header);
-    Assert.assertTrue(!cookies.isEmpty());
-    Assert.assertTrue(header.contains("; HttpOnly"));
-    Assert.assertTrue(cookies.get(0).getSecure());
-    Assert.assertTrue("token".equals(cookies.get(0).getValue()));
+    assertTrue(!cookies.isEmpty());
+    assertTrue(header.contains("; HttpOnly"));
+    assertTrue(cookies.get(0).getSecure());
+    assertTrue("token".equals(cookies.get(0).getValue()));
   }
 
   @Test
@@ -162,16 +159,16 @@ public class TestHttpCookieFlag {
       conn.setSSLSocketFactory(clientSslFactory.createSSLSocketFactory());
 
       String header = conn.getHeaderField("Set-Cookie");
-      Assert.assertTrue(header != null);
+      assertTrue(header != null);
       List<HttpCookie> cookies = HttpCookie.parse(header);
-      Assert.assertTrue(!cookies.isEmpty());
-      Assert.assertTrue(header.contains("; HttpOnly"));
-      Assert.assertTrue(cookies.get(0).getSecure());
-      Assert.assertTrue("token".equals(cookies.get(0).getValue()));
+      assertTrue(!cookies.isEmpty());
+      assertTrue(header.contains("; HttpOnly"));
+      assertTrue(cookies.get(0).getSecure());
+      assertTrue("token".equals(cookies.get(0).getValue()));
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws Exception {
     server.stop();
     FileUtil.fullyDelete(new File(BASEDIR));
