@@ -525,4 +525,10 @@ public interface MasterServices extends Server, KeyManagementService {
    * @return procedure id
    */
   long rollAllWALWriters(long nonceGroup, long nonce) throws IOException;
+
+  /**
+   * Return cluster's meta table name
+   * @return meta table name
+   */
+  TableName getMetaTableName();
 }

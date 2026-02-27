@@ -187,7 +187,7 @@ public class TestWALEntrySinkFilter {
     private final Configuration conf;
 
     public DevNullAsyncClusterConnection(Configuration conf, Object registry, String clusterId,
-      SocketAddress localAddress, User user) {
+      TableName metaTableName, SocketAddress localAddress, User user) {
       this.conf = conf;
     }
 

@@ -698,4 +698,16 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   protected abstract boolean cacheTableDescriptor();
 
   protected abstract boolean clusterMode();
+
+  protected TableName getDefaultMetaTableName() {
+    return TableName.META_TABLE_NAME;
+  }
+
+  @Override
+  public TableName getMetaTableName() {
+    // For now, it is hbase:meta because we don't support custom meta table name.
+    // After adding support for custom meta table names, we can calculate this from conf and use it
+    // downstream to persist it in Master Region.
+    return getDefaultMetaTableName();
+  }
 }

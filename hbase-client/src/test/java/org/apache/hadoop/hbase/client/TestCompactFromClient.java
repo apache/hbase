@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -93,8 +92,9 @@ public class TestCompactFromClient {
       AsyncConnectionImpl connection = mock(AsyncConnectionImpl.class)) {
       mockedMeta.when(() -> ClientMetaTableAccessor.getTableHRegionLocations(any(AsyncTable.class),
         any(TableName.class))).thenReturn(nullLocationsFuture);
+      when(connection.getMetaTableName()).thenReturn(TableName.META_TABLE_NAME);
       AsyncTable<AdvancedScanResultConsumer> metaTable = mock(AsyncTable.class);
-      when(connection.getTable(META_TABLE_NAME)).thenReturn(metaTable);
+      when(connection.getTable(connection.getMetaTableName())).thenReturn(metaTable);
 
       HashedWheelTimer hashedWheelTimer = mock(HashedWheelTimer.class);
       AsyncAdminBuilderBase asyncAdminBuilderBase = mock(AsyncAdminBuilderBase.class);

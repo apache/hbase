@@ -109,8 +109,8 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
       Set<byte[]> cfs = this.modifiedTableDescriptor.getColumnFamilyNames();
       for (byte[] family : UNDELETABLE_META_COLUMNFAMILIES) {
         if (!cfs.contains(family)) {
-          throw new HBaseIOException(
-            "Delete of hbase:meta column family " + Bytes.toString(family));
+          throw new HBaseIOException("Invalid deletion of " + env.getMetaTableName()
+            + " column family: " + Bytes.toString(family));
         }
       }
     }

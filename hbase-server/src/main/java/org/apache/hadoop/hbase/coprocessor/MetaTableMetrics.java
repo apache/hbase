@@ -133,7 +133,7 @@ public class MetaTableMetrics implements RegionCoprocessor {
     }
 
     private boolean isMetaTableOp(ObserverContext<? extends RegionCoprocessorEnvironment> e) {
-      return TableName.META_TABLE_NAME.equals(e.getEnvironment().getRegionInfo().getTable());
+      return TableName.isMetaTableName(e.getEnvironment().getRegionInfo().getTable());
     }
 
     private void clientMetricRegisterAndMark() {
@@ -267,8 +267,8 @@ public class MetaTableMetrics implements RegionCoprocessor {
     if (
       env instanceof RegionCoprocessorEnvironment
         && ((RegionCoprocessorEnvironment) env).getRegionInfo().getTable() != null
-        && ((RegionCoprocessorEnvironment) env).getRegionInfo().getTable()
-          .equals(TableName.META_TABLE_NAME)
+        && TableName
+          .isMetaTableName(((RegionCoprocessorEnvironment) env).getRegionInfo().getTable())
     ) {
       RegionCoprocessorEnvironment regionCoprocessorEnv = (RegionCoprocessorEnvironment) env;
       registry = regionCoprocessorEnv.getMetricRegistryForRegionServer();

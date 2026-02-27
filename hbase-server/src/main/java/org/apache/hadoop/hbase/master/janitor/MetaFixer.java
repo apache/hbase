@@ -203,19 +203,20 @@ public class MetaFixer {
         .flatMap(List::stream).collect(Collectors.toList());
     final List<IOException> createMetaEntriesFailures = addMetaEntriesResults.stream()
       .filter(Either::hasRight).map(Either::getRight).collect(Collectors.toList());
-    LOG.debug("Added {}/{} entries to hbase:meta", createMetaEntriesSuccesses.size(),
-      newRegionInfos.size());
+    LOG.debug("Added {}/{} entries to {}", createMetaEntriesSuccesses.size(), newRegionInfos.size(),
+      TableName.META_TABLE_NAME.getNameAsString());
 
     if (!createMetaEntriesFailures.isEmpty()) {
       LOG.warn(
-        "Failed to create entries in hbase:meta for {}/{} RegionInfo descriptors. First"
+        "Failed to create entries in {} for {}/{} RegionInfo descriptors. First"
           + " failure message included; full list of failures with accompanying stack traces is"
           + " available at log level DEBUG. message={}",
-        createMetaEntriesFailures.size(), addMetaEntriesResults.size(),
-        createMetaEntriesFailures.get(0).getMessage());
+        TableName.META_TABLE_NAME.getNameAsString(), createMetaEntriesFailures.size(),
+        addMetaEntriesResults.size(), createMetaEntriesFailures.get(0).getMessage());
       if (LOG.isDebugEnabled()) {
         createMetaEntriesFailures
-          .forEach(ioe -> LOG.debug("Attempt to fix region hole in hbase:meta failed.", ioe));
+          .forEach(ioe -> LOG.debug("Attempt to fix region hole in {} failed.",
+            TableName.META_TABLE_NAME.getNameAsString(), ioe));
       }
     }
 
