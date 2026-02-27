@@ -255,6 +255,7 @@ import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -1087,9 +1088,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (!maintenanceMode) {
       startupTaskGroup.addTask("Initializing master coprocessors");
       setQuotasObserver(conf);
-      CoprocessorConfigurationUtil.syncReadOnlyConfigurations(isReadOnlyModeEnabled(conf), conf,
+      CoprocessorConfigurationUtil.syncReadOnlyConfigurations(
+        ConfigurationUtil.isReadOnlyModeEnabled(conf), conf,
         CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
-      AbstractReadOnlyController.manageActiveClusterIdFile(isReadOnlyModeEnabled(conf), this.getMasterFileSystem());
+      AbstractReadOnlyController.manageActiveClusterIdFile(
+        ConfigurationUtil.isReadOnlyModeEnabled(conf), this.getMasterFileSystem());
       initializeCoprocessorHost(conf);
     } else {
       // start an in process region server for carrying system regions
@@ -4427,7 +4430,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // append the quotas observer back to the master coprocessor key
     setQuotasObserver(newConf);
 
-    boolean readOnlyMode = isReadOnlyModeEnabled(newConf);
+    boolean readOnlyMode = ConfigurationUtil.isReadOnlyModeEnabled(newConf);
     CoprocessorConfigurationUtil.syncReadOnlyConfigurations(readOnlyMode, newConf,
       CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
 
@@ -4440,8 +4443,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       initializeCoprocessorHost(newConf);
       CoprocessorConfigurationUtil.syncReadOnlyConfigurations(readOnlyMode, this.conf,
         CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
-      AbstractReadOnlyController.manageActiveClusterIdFile(isReadOnlyModeEnabled(newConf),
-        this.getMasterFileSystem());
+      AbstractReadOnlyController.manageActiveClusterIdFile(
+        ConfigurationUtil.isReadOnlyModeEnabled(newConf), this.getMasterFileSystem());
     }
   }
 
@@ -4538,11 +4541,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (QuotaUtil.isQuotaEnabled(conf)) {
       updateConfigurationForQuotasObserver(conf);
     }
-  }
-
-  private boolean isReadOnlyModeEnabled(Configuration conf) {
-    return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
   }
 
   private void initializeCoprocessorHost(Configuration conf) {

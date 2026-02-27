@@ -161,6 +161,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
+import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -826,7 +827,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       if (!isStopped() && !isAborted()) {
         installShutdownHook();
 
-        CoprocessorConfigurationUtil.syncReadOnlyConfigurations(isReadOnlyModeEnabled(conf), conf,
+        CoprocessorConfigurationUtil.syncReadOnlyConfigurations(
+          ConfigurationUtil.isReadOnlyModeEnabled(conf), conf,
           CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
         // Initialize the RegionServerCoprocessorHost now that our ephemeral
         // node was created, in case any coprocessors want to use ZooKeeper
@@ -1521,11 +1523,6 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   private void deleteMyEphemeralNode() throws KeeperException {
     ZKUtil.deleteNode(this.zooKeeper, getMyEphemeralNodePath());
-  }
-
-  private boolean isReadOnlyModeEnabled(Configuration conf) {
-    return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
   }
 
   @Override
@@ -3488,7 +3485,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       LOG.warn("Failed to initialize SuperUsers on reloading of the configuration");
     }
 
-    boolean readOnlyMode = isReadOnlyModeEnabled(newConf);
+    boolean readOnlyMode = ConfigurationUtil.isReadOnlyModeEnabled(newConf);
     CoprocessorConfigurationUtil.syncReadOnlyConfigurations(readOnlyMode, newConf,
       CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
 

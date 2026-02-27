@@ -174,6 +174,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -886,7 +887,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     decorateRegionConfiguration(conf);
 
-    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(isReadOnlyModeEnabled(conf), this.conf,
+    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(
+      ConfigurationUtil.isReadOnlyModeEnabled(conf), this.conf,
       CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
 
     if (rsServices != null) {
@@ -1294,11 +1296,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       WALSplitUtil.writeRegionSequenceIdFile(getWalFileSystem(), getWALRegionDir(),
         mvcc.getReadPoint());
     }
-  }
-
-  private boolean isReadOnlyModeEnabled(Configuration conf) {
-    return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
   }
 
   /** Returns True if this region has references. */
@@ -8824,7 +8821,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public void onConfigurationChange(Configuration conf) {
     this.storeHotnessProtector.update(conf);
 
-    boolean readOnlyMode = isReadOnlyModeEnabled(conf);
+    boolean readOnlyMode = ConfigurationUtil.isReadOnlyModeEnabled(conf);
     CoprocessorConfigurationUtil.syncReadOnlyConfigurations(readOnlyMode, conf,
       CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
 
