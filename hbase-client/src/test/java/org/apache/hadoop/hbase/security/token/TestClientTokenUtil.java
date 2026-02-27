@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.security.token;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -26,38 +26,32 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestClientTokenUtil {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClientTokenUtil.class);
 
   private URLClassLoader cl;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     URL urlPU = ProtobufUtil.class.getProtectionDomain().getCodeSource().getLocation();
     URL urlCTU = ClientTokenUtil.class.getProtectionDomain().getCodeSource().getLocation();
     cl = new URLClassLoader(new URL[] { urlPU, urlCTU }, getClass().getClassLoader());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     Closeables.close(cl, true);
   }
@@ -96,6 +90,6 @@ public class TestClientTokenUtil {
     }
     Boolean loaded = (Boolean) cl.loadClass(ProtobufUtil.class.getCanonicalName())
       .getDeclaredMethod("isClassLoaderLoaded").invoke(null);
-    assertFalse("Should not have loaded DynamicClassLoader", loaded);
+    assertFalse(loaded, "Should not have loaded DynamicClassLoader");
   }
 }

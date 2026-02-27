@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.http.Header;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -244,7 +243,6 @@ public class TestNamespacesInstanceResource {
     assertEquals(503, response.getCode());
   }
 
-  @Disabled("HBASE-19210")
   @Test
   public void testInvalidNamespacePostsAndPuts() throws IOException, JAXBException {
     String namespacePath1 = "/namespaces/" + NAMESPACE1;

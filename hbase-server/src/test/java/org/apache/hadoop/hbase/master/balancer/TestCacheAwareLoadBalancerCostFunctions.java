@@ -17,32 +17,27 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCacheAwareLoadBalancerCostFunctions extends StochasticBalancerTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCacheAwareLoadBalancerCostFunctions.class);
 
   // Mapping of test -> expected cache cost
   private final float[] expectedCacheCost = { 0.0f, 0.0f, 0.5f, 1.0f, 0.0f, 0.572f, 0.0f, 0.075f };
@@ -185,12 +180,12 @@ public class TestCacheAwareLoadBalancerCostFunctions extends StochasticBalancerT
 
   private CacheAwareLoadBalancer loadBalancer = new CacheAwareLoadBalancer();
 
-  @BeforeClass
+  @BeforeAll
   public static void saveInitialConfiguration() {
     storedConfiguration = new Configuration(conf);
   }
 
-  @Before
+  @BeforeEach
   public void beforeEachTest() {
     conf = new Configuration(storedConfiguration);
     loadBalancer.loadConf(conf);

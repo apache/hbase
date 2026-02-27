@@ -17,17 +17,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 
-@Category({ ClientTests.class, LargeTests.class })
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestQuotasShell extends AbstractTestShell {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestQuotasShell.class);
 
   @Override
   public String getIncludeList() {

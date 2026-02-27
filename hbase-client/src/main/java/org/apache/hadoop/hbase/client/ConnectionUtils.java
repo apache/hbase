@@ -205,7 +205,7 @@ public final class ConnectionUtils {
       controller.setCallTimeout(
         (int) Math.min(Integer.MAX_VALUE, TimeUnit.NANOSECONDS.toMillis(timeoutNs)));
     }
-    controller.setPriority(priority);
+    controller.setPriority(priority, tableName);
     if (tableName != null) {
       controller.setTableName(tableName);
     }
@@ -480,13 +480,20 @@ public final class ConnectionUtils {
     return future;
   }
 
-  // validate for well-formedness
-  static void validatePut(Put put, int maxKeyValueSize) {
-    if (put.isEmpty()) {
-      throw new IllegalArgumentException("No columns to insert");
+  // Validate individual Mutation
+  static void validateMutation(Mutation mutation, int maxKeyValueSize) {
+    // Skip Delete
+    if (mutation instanceof Delete) return;
+
+    // 1. Check if empty
+    if (mutation.isEmpty()) {
+      throw new IllegalArgumentException(
+        "No columns to " + mutation.getClass().getSimpleName().toLowerCase());
     }
+
+    // 2. Check if size exceeds maxKeyValueSize
     if (maxKeyValueSize > 0) {
-      for (List<Cell> list : put.getFamilyCellMap().values()) {
+      for (List<Cell> list : mutation.getFamilyCellMap().values()) {
         for (Cell cell : list) {
           if (cell.getSerializedSize() > maxKeyValueSize) {
             throw new IllegalArgumentException("KeyValue size too large");
@@ -496,39 +503,10 @@ public final class ConnectionUtils {
     }
   }
 
-  static void validatePutsInRowMutations(RowMutations rowMutations, int maxKeyValueSize) {
+  // Validate RowMutations
+  static void validateRowMutations(RowMutations rowMutations, int maxKeyValueSize) {
     for (Mutation mutation : rowMutations.getMutations()) {
-      if (mutation instanceof Put) {
-        validatePut((Put) mutation, maxKeyValueSize);
-      }
-    }
-  }
-
-  /**
-   * Select the priority for the rpc call.
-   * <p/>
-   * The rules are:
-   * <ol>
-   * <li>If user set a priority explicitly, then just use it.</li>
-   * <li>For system table, use {@link HConstants#SYSTEMTABLE_QOS}.</li>
-   * <li>For other tables, use {@link HConstants#NORMAL_QOS}.</li>
-   * </ol>
-   * @param priority  the priority set by user, can be {@link HConstants#PRIORITY_UNSET}.
-   * @param tableName the table we operate on
-   */
-  static int calcPriority(int priority, TableName tableName) {
-    if (priority != HConstants.PRIORITY_UNSET) {
-      return priority;
-    } else {
-      return getPriority(tableName);
-    }
-  }
-
-  static int getPriority(TableName tableName) {
-    if (tableName.isSystemTable()) {
-      return HConstants.SYSTEMTABLE_QOS;
-    } else {
-      return HConstants.NORMAL_QOS;
+      validateMutation(mutation, maxKeyValueSize);
     }
   }
 

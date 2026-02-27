@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -28,28 +28,23 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestProcedureCleanup {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcedureCleanup.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProcedureCleanup.class);
 
@@ -65,18 +60,17 @@ public class TestProcedureCleanup {
   private static Path testDir;
   private static Path logDir;
 
-  @Rule
-  public final TestName name = new TestName();
+  private String methodName;
 
   private void createProcExecutor() throws Exception {
-    logDir = new Path(testDir, name.getMethodName());
+    logDir = new Path(testDir, methodName);
     procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), logDir);
     procExecutor = new ProcedureExecutor<>(htu.getConfiguration(), null, procStore);
     procStore.start(PROCEDURE_EXECUTOR_SLOTS);
     ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, true, true);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     htu = new HBaseCommonTestingUtil();
     htu.getConfiguration().setBoolean(WALProcedureStore.EXEC_WAL_CLEANUP_ON_LOAD_CONF_KEY, true);
@@ -84,6 +78,11 @@ public class TestProcedureCleanup {
     testDir = htu.getDataTestDir();
     fs = testDir.getFileSystem(htu.getConfiguration());
     assertTrue(testDir.depth() > 1);
+  }
+
+  @BeforeEach
+  public void setUpEach(TestInfo testInfo) throws Exception {
+    methodName = testInfo.getTestMethod().get().getName();
   }
 
   @Test
