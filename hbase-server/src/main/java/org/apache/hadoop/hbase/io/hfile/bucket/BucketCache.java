@@ -1947,9 +1947,22 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   private Set<BlockCacheKey> getAllCacheKeysForFile(String hfileName, long init, long end) {
+    Set<BlockCacheKey> cacheKeys = new HashSet<>();
+    // At this moment, Some Bucket Entries may be in the WriterThread queue, and not yet put into
+    // the backingMap. So, when executing this method, we should check both the RAMCache and
+    // backingMap to ensure all CacheKeys are obtained.
+    // For more details, please refer to HBASE-29862.
+    Set<BlockCacheKey> ramCacheKeySet = ramCache.getRamBlockCacheKeysForHFile(hfileName);
+    for (BlockCacheKey key : ramCacheKeySet) {
+      if (key.getOffset() >= init && key.getOffset() <= end) {
+        cacheKeys.add(key);
+      }
+    }
+
     // These keys are just for comparison and are short lived, so we need only file name and offset
-    return blocksByHFile.subSet(new BlockCacheKey(hfileName, init), true,
-      new BlockCacheKey(hfileName, end), true);
+    cacheKeys.addAll(blocksByHFile.subSet(new BlockCacheKey(hfileName, init), true,
+      new BlockCacheKey(hfileName, end), true));
+    return cacheKeys;
   }
 
   /**
@@ -2328,6 +2341,16 @@ public class BucketCache implements BlockCache, HeapSize {
     public boolean hasBlocksForFile(String fileName) {
       return delegate.keySet().stream().filter(key -> key.getHfileName().equals(fileName))
         .findFirst().isPresent();
+    }
+
+    public Set<BlockCacheKey> getRamBlockCacheKeysForHFile(String fileName) {
+      Set<BlockCacheKey> ramCacheKeySet = new HashSet<>();
+      for (BlockCacheKey blockCacheKey : delegate.keySet()) {
+        if (blockCacheKey.getHfileName().equals(fileName)) {
+          ramCacheKeySet.add(blockCacheKey);
+        }
+      }
+      return ramCacheKeySet;
     }
   }
 
