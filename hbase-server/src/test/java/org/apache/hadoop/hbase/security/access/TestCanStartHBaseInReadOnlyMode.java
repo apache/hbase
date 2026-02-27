@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_RETRIES_NUMBER;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.junit.*;
@@ -54,15 +53,6 @@ public class TestCanStartHBaseInReadOnlyMode {
 
     // Enable Read-Only mode to prove the cluster can be started in this state
     conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
-
-    // Add ReadOnlyController coprocessors to the master, region server, and regions
-    TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-      MasterReadOnlyController.class.getName());
-    TEST_UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-      String.join(",", RegionReadOnlyController.class.getName(),
-        BulkLoadReadOnlyController.class.getName(), EndpointReadOnlyController.class.getName()));
-    TEST_UTIL.getConfiguration().set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
-      RegionServerReadOnlyController.class.getName());
   }
 
   @AfterClass

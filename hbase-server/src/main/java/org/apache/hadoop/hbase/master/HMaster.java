@@ -251,10 +251,12 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.AbstractReadOnlyController;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -1088,6 +1090,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (!maintenanceMode) {
       startupTaskGroup.addTask("Initializing master coprocessors");
       setQuotasObserver(conf);
+      CoprocessorConfigurationUtil.syncReadOnlyConfigurations(
+        ConfigurationUtil.isReadOnlyModeEnabled(conf), conf,
+        CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+      AbstractReadOnlyController.manageActiveClusterIdFile(
+        ConfigurationUtil.isReadOnlyModeEnabled(conf), this.getMasterFileSystem());
       initializeCoprocessorHost(conf);
     } else {
       // start an in process region server for carrying system regions
@@ -4493,6 +4500,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
     // append the quotas observer back to the master coprocessor key
     setQuotasObserver(newConf);
+
+    boolean readOnlyMode = ConfigurationUtil.isReadOnlyModeEnabled(newConf);
+    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(readOnlyMode, newConf,
+      CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+
     // update region server coprocessor if the configuration has changed.
     if (
       CoprocessorConfigurationUtil.checkConfigurationChange(this.cpHost, newConf,
@@ -4500,6 +4512,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     ) {
       LOG.info("Update the master coprocessor(s) because the configuration has changed");
       initializeCoprocessorHost(newConf);
+      CoprocessorConfigurationUtil.syncReadOnlyConfigurations(readOnlyMode, this.conf,
+        CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+      AbstractReadOnlyController.manageActiveClusterIdFile(
+        ConfigurationUtil.isReadOnlyModeEnabled(newConf), this.getMasterFileSystem());
     }
   }
 
