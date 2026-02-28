@@ -34,11 +34,11 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.TestBackupBase;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.util.BackupBoundaries;
-import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -225,10 +225,6 @@ public class TestBackupLogCleaner extends TestBackupBase {
       List<FileStatus> walsAfterB1 = getListOfWALFiles(TEST_UTIL.getConfiguration());
       LOG.info("WALs after B1: {}", walsAfterB1.size());
 
-      String startCodeStr = systemTable.readBackupStartCode(backupRoot1.toString());
-      long b1StartCode = Long.parseLong(startCodeStr);
-      LOG.info("B1 startCode: {}", b1StartCode);
-
       // Add a new RegionServer to the cluster
       LOG.info("Adding new RegionServer to cluster");
       rsThread = TEST_UTIL.getMiniHBaseCluster().startRegionServer();
@@ -295,13 +291,15 @@ public class TestBackupLogCleaner extends TestBackupBase {
 
   @Test
   public void testCanDeleteFileWithNewServerWALs() {
-    long backupStartCode = 1000000L;
+    BackupInfo backup = new BackupInfo();
+    backup.setState(BackupInfo.BackupState.COMPLETE);
+    backup.setTableSetTimestampMap(
+      Map.of(TableName.valueOf("table1"), Map.of("server1:60020", 1000000L)));
+    BackupBoundaries boundaries =
+      BackupLogCleaner.calculatePreservationBoundary(List.of(backup), 0L);
+
     // Old WAL from before the backup
     Path oldWAL = new Path("/hbase/oldWALs/server1%2C60020%2C12345.500000");
-    String host = BackupUtils.parseHostNameFromLogFile(oldWAL);
-    BackupBoundaries boundaries = BackupBoundaries.builder(0L)
-      .addBackupTimestamps(host, backupStartCode, backupStartCode).build();
-
     assertTrue("WAL older than backup should be deletable",
       BackupLogCleaner.canDeleteFile(boundaries, oldWAL));
 
@@ -310,10 +308,55 @@ public class TestBackupLogCleaner extends TestBackupBase {
     assertTrue("WAL at boundary should be deletable",
       BackupLogCleaner.canDeleteFile(boundaries, boundaryWAL));
 
-    // WAL from a server that joined AFTER the backup
+    // WAL created after the backup boundary
+    Path newWal = new Path("/hbase/oldWALs/server1%2C60020%2C12345.1500000");
+    assertFalse("WAL newer than backup should not be deletable",
+      BackupLogCleaner.canDeleteFile(boundaries, newWal));
+
+    // WAL from a new server that joined AFTER the backup
     Path newServerWAL = new Path("/hbase/oldWALs/newserver%2C60020%2C99999.1500000");
     assertFalse("WAL from new server (after backup) should NOT be deletable",
       BackupLogCleaner.canDeleteFile(boundaries, newServerWAL));
+  }
+
+  @Test
+  public void testFirstBackupProtectsFiles() {
+    BackupInfo backup = new BackupInfo();
+    backup.setBackupId("backup_1");
+    backup.setState(BackupInfo.BackupState.RUNNING);
+    backup.setStartTs(100L);
+    // Running backups have no TableSetTimestampMap
+
+    BackupBoundaries boundaries =
+      BackupLogCleaner.calculatePreservationBoundary(List.of(backup), 5L);
+
+    // There's only a single backup, and it is still running, so it's a FULL backup.
+    // We expect files preceding the snapshot are deletable, but files after the start are not.
+    // Because this is not region-server-specific, the buffer is taken into account.
+    Path path = new Path("/hbase/oldWALs/server1%2C60020%2C12345.94");
+    assertTrue(BackupLogCleaner.canDeleteFile(boundaries, path));
+    path = new Path("/hbase/oldWALs/server1%2C60020%2C12345.95");
+    assertTrue(BackupLogCleaner.canDeleteFile(boundaries, path));
+    path = new Path("/hbase/oldWALs/server1%2C60020%2C12345.96");
+    assertFalse(BackupLogCleaner.canDeleteFile(boundaries, path));
+
+    // If there is an already completed backup in the same root, only that one matters.
+    // In this case, a region-server-specific timestamp is available, so the buffer is not used.
+    BackupInfo backup2 = new BackupInfo();
+    backup2.setBackupId("backup_2");
+    backup2.setState(BackupInfo.BackupState.COMPLETE);
+    backup2.setStartTs(80L);
+    backup2
+      .setTableSetTimestampMap(Map.of(TableName.valueOf("table1"), Map.of("server1:60020", 90L)));
+
+    boundaries = BackupLogCleaner.calculatePreservationBoundary(List.of(backup, backup2), 5L);
+
+    path = new Path("/hbase/oldWALs/server1%2C60020%2C12345.89");
+    assertTrue(BackupLogCleaner.canDeleteFile(boundaries, path));
+    path = new Path("/hbase/oldWALs/server1%2C60020%2C12345.90");
+    assertTrue(BackupLogCleaner.canDeleteFile(boundaries, path));
+    path = new Path("/hbase/oldWALs/server1%2C60020%2C12345.91");
+    assertFalse(BackupLogCleaner.canDeleteFile(boundaries, path));
   }
 
   @Test

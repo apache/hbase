@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.backup.master;
 
-import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
-
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
@@ -91,10 +89,11 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
    * Calculates the timestamp boundary up to which all backup roots have already included the WAL.
    * I.e. WALs with a lower (= older) or equal timestamp are no longer needed for future incremental
    * backups.
+   * @param backups  all completed or running backups to use for the calculation of the boundary
+   * @param tsBuffer a buffer (in ms) to lower the boundary for the default bound
    */
-  private BackupBoundaries serverToPreservationBoundaryTs(BackupSystemTable sysTable)
-    throws IOException {
-    List<BackupInfo> backups = sysTable.getBackupHistory(withState(BackupState.COMPLETE));
+  protected static BackupBoundaries calculatePreservationBoundary(List<BackupInfo> backups,
+    long tsBuffer) {
     if (LOG.isDebugEnabled()) {
       LOG.debug(
         "Cleaning WALs if they are older than the WAL cleanup time-boundary. "
@@ -103,11 +102,12 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
         backups.stream().map(BackupInfo::getBackupId).sorted().collect(Collectors.joining(", ")));
     }
 
-    // This map tracks, for every backup root, the most recent created backup (= highest timestamp)
+    // This map tracks, for every backup root, the most recent (= highest timestamp) completed
+    // backup, or if there is no such one, the currently running backup (if any)
     Map<String, BackupInfo> newestBackupPerRootDir = new HashMap<>();
     for (BackupInfo backup : backups) {
       BackupInfo existingEntry = newestBackupPerRootDir.get(backup.getBackupRootDir());
-      if (existingEntry == null || existingEntry.getStartTs() < backup.getStartTs()) {
+      if (existingEntry == null || existingEntry.getState() == BackupState.RUNNING) {
         newestBackupPerRootDir.put(backup.getBackupRootDir(), backup);
       }
     }
@@ -119,24 +119,12 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
           .collect(Collectors.joining(", ")));
     }
 
-    BackupBoundaries.BackupBoundariesBuilder builder =
-      BackupBoundaries.builder(getConf().getLong(TS_BUFFER_KEY, TS_BUFFER_DEFAULT));
-    for (BackupInfo backupInfo : newestBackupPerRootDir.values()) {
-      long startCode = Long.parseLong(sysTable.readBackupStartCode(backupInfo.getBackupRootDir()));
-      // Iterate over all tables in the timestamp map, which contains all tables covered in the
-      // backup root, not just the tables included in that specific backup (which could be a subset)
-      for (TableName table : backupInfo.getTableSetTimestampMap().keySet()) {
-        for (Map.Entry<String, Long> entry : backupInfo.getTableSetTimestampMap().get(table)
-          .entrySet()) {
-          builder.addBackupTimestamps(entry.getKey(), entry.getValue(), startCode);
-        }
-      }
-    }
-
+    BackupBoundaries.BackupBoundariesBuilder builder = BackupBoundaries.builder(tsBuffer);
+    newestBackupPerRootDir.values().forEach(builder::update);
     BackupBoundaries boundaries = builder.build();
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Boundaries oldestStartCode: {}", boundaries.getOldestStartCode());
+      LOG.debug("Boundaries defaultBoundary: {}", boundaries.getDefaultBoundary());
       for (Map.Entry<Address, Long> entry : boundaries.getBoundaries().entrySet()) {
         LOG.debug("Server: {}, WAL cleanup boundary: {}", entry.getKey().getHostName(),
           entry.getValue());
@@ -159,10 +147,11 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     }
 
     BackupBoundaries boundaries;
-    try {
-      try (BackupSystemTable sysTable = new BackupSystemTable(conn)) {
-        boundaries = serverToPreservationBoundaryTs(sysTable);
-      }
+    try (BackupSystemTable sysTable = new BackupSystemTable(conn)) {
+      long tsBuffer = getConf().getLong(TS_BUFFER_KEY, TS_BUFFER_DEFAULT);
+      List<BackupInfo> backupHistory = sysTable.getBackupHistory(
+        i -> EnumSet.of(BackupState.COMPLETE, BackupState.RUNNING).contains(i.getState()));
+      boundaries = calculatePreservationBoundary(backupHistory, tsBuffer);
     } catch (IOException ex) {
       LOG.error("Failed to analyse backup history with exception: {}. Retaining all logs",
         ex.getMessage(), ex);
