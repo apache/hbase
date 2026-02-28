@@ -19,7 +19,10 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -53,6 +56,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
   RegionScanner scanner;
   List<Cell> values;
   boolean hasMore = true;
+  private final Set<Path> filesRead;
 
   public ClientSideRegionScanner(Configuration conf, FileSystem fs, Path rootDir,
     TableDescriptor htd, RegionInfo hri, Scan scan, ScanMetrics scanMetrics) throws IOException {
@@ -85,6 +89,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
 
     // create an internal region scanner
     this.scanner = region.getScanner(scan);
+    this.filesRead = new HashSet<>();
     values = new ArrayList<>();
 
     if (scanMetrics == null) {
@@ -129,6 +134,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
     if (this.scanner != null) {
       try {
         this.scanner.close();
+        this.filesRead.addAll(this.scanner.getFilesRead());
         this.scanner = null;
       } catch (IOException ex) {
         LOG.warn("Exception while closing scanner", ex);
@@ -160,6 +166,14 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
 
   HRegion getRegion() {
     return region;
+  }
+
+  /**
+   * Returns the set of store file paths that were successfully read by the underlying region
+   * scanner. Populated when this scanner is closed.
+   */
+  public Set<Path> getFilesRead() {
+    return Collections.unmodifiableSet(this.filesRead);
   }
 
   @Override
