@@ -1451,7 +1451,6 @@ public class BucketCache implements BlockCache, HeapSize {
     return cacheKeys;
   }
 
-
   /**
    * Used to group bucket entries into priority buckets. There will be a BucketEntryGroup for each
    * priority (single, multi, memory). Once bucketed, the eviction algorithm takes the appropriate
