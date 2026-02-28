@@ -287,7 +287,12 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
   }
 
   private void unattach(MasterProcedureEnv env) {
-    getParent(env).unattachRemoteProc(this);
+    TransitRegionStateProcedure parent = getParent(env);
+    if (parent != null) {
+      parent.unattachRemoteProc(this);
+    }
+    // If parent is null, it means parent has already completed and been moved to 'completed' map.
+    // No need to unattach in this case.
   }
 
   private CompletableFuture<Void> getFuture() {
@@ -429,7 +434,21 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
 
   @Override
   protected void afterReplay(MasterProcedureEnv env) {
-    getParent(env).attachRemoteProc(this);
+    TransitRegionStateProcedure parent = getParent(env);
+    if (parent != null) {
+      parent.attachRemoteProc(this);
+    } else {
+      // Parent procedure has already completed. This can happen if:
+      // 1. Parent TRSP completed and was moved to 'completed' map
+      // 2. Master crashed before this child procedure was cleaned up
+      // 3. On restart, parent is in 'completed' map, child is in 'procedures' map
+      // 4. getProcedure() only checks 'procedures' map, so returns null
+      // This orphaned child procedure will be cleaned up by the procedure executor.
+      LOG.warn(
+        "Parent procedure {} not found for {}, region={}. "
+          + "Parent may have already completed. This procedure will be cleaned up.",
+        getParentProcId(), this, region.getEncodedName());
+    }
   }
 
   @Override
