@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.hbase.regionserver.wal.WALHeaderEOFException;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -154,6 +155,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
       int attempt = 0;
       Exception ee = null;
       WALStreamReader reader = null;
+      boolean supressException = false;
       while (reader == null && attempt++ < maxAttempts) {
         try {
           // Detect if this is a new file, if so get a new reader else
@@ -161,6 +163,14 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
           reader =
             WALFactory.createStreamReader(path.getFileSystem(conf), path, conf, startPosition);
           return reader;
+        } catch (WALHeaderEOFException wheofe) {
+          // we hit EOF while reading the WAL header, usually this means we can just skip over this
+          // file, but we need to be careful that whether this file is still being written, if so we
+          // should retry instead of skipping.
+          LOG.warn("Got WALHeaderEOFException opening reader for {}, will retry.", path);
+          reader = null;
+          supressException = true;
+          ee = wheofe;
         } catch (LeaseNotRecoveredException lnre) {
           // HBASE-15019 the WAL was not closed due to some hiccup.
           LOG.warn("Try to recover the WAL lease " + path, lnre);
@@ -183,6 +193,10 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
             Thread.currentThread().interrupt();
           }
         }
+      }
+      if (supressException) {
+        LOG.warn("Skipping WAL file {}", path, ee);
+        return null;
       }
       throw new IOException("Could not open reader", ee);
     }
