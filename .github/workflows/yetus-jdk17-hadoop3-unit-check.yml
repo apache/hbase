@@ -56,19 +56,20 @@ jobs:
 
     steps:
       - name: Checkout HBase
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4 # zizmor: ignore[unpinned-uses]
         with:
           path: src
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v4 # zizmor: ignore[unpinned-uses]
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Maven cache
-        uses: actions/cache@v4
+        uses: actions/cache@v4 # zizmor: ignore[unpinned-uses]
         with:
           path: ~/.m2
           key: hbase-m2-${{ hashFiles('**/pom.xml') }}
@@ -121,7 +122,7 @@ jobs:
 
       - name: Publish Test Results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4 # zizmor: ignore[unpinned-uses]
         with:
           name: yetus-jdk17-hadoop3-unit-check-${{ matrix.name }}
           path: ${{ github.workspace }}/yetus-jdk17-hadoop3-unit-check/output
