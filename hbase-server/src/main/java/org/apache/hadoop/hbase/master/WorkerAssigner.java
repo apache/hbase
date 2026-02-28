@@ -23,8 +23,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -80,7 +82,13 @@ public class WorkerAssigner implements ServerListener {
   @Override
   public synchronized void serverAdded(ServerName worker) {
     if (!event.isReady()) {
-      event.wake(master.getMasterProcedureExecutor().getEnvironment().getProcedureScheduler());
+      ProcedureExecutor<MasterProcedureEnv> executor = master.getMasterProcedureExecutor();
+      if (executor != null) {
+        MasterProcedureEnv env = executor.getEnvironment();
+        if (env != null) {
+          event.wake(env.getProcedureScheduler());
+        }
+      }
     }
   }
 
@@ -92,5 +100,16 @@ public class WorkerAssigner implements ServerListener {
 
   public Integer getAvailableWorker(ServerName serverName) {
     return currentWorkers.get(serverName);
+  }
+
+  /**
+   * Stop the WorkerAssigner and unregister it from ServerManager. This should be called during
+   * shutdown to prevent NPE when serverAdded() is triggered after procedureExecutor is set to null.
+   */
+  public void stop() {
+    ServerManager sm = this.master.getServerManager();
+    if (sm != null) {
+      sm.unregisterListener(this);
+    }
   }
 }
