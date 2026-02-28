@@ -871,22 +871,16 @@ public class HttpServer implements FilterContainer {
     } else {
       addUnprivilegedServlet("conf", "/conf", ConfServlet.class);
     }
-    final String asyncProfilerHome = ProfileServlet.getAsyncProfilerHome();
-    if (asyncProfilerHome != null && !asyncProfilerHome.trim().isEmpty()) {
-      addPrivilegedServlet("prof", "/prof", ProfileServlet.class);
-      Path tmpDir = Paths.get(ProfileServlet.OUTPUT_DIR);
-      if (Files.notExists(tmpDir)) {
-        Files.createDirectories(tmpDir);
-      }
-      ServletContextHandler genCtx = new ServletContextHandler(contexts, "/prof-output-hbase");
-      genCtx.addServlet(ProfileOutputServlet.class, "/*");
-      genCtx.setResourceBase(tmpDir.toAbsolutePath().toString());
-      genCtx.setDisplayName("prof-output-hbase");
-    } else {
-      addUnprivilegedServlet("prof", "/prof", ProfileServlet.DisabledServlet.class);
-      LOG.info("ASYNC_PROFILER_HOME environment variable and async.profiler.home system property "
-        + "not specified. Disabling /prof endpoint.");
+
+    addPrivilegedServlet("prof", "/prof", ProfileServlet.class);
+    Path tmpDir = Paths.get(ProfileServlet.OUTPUT_DIR);
+    if (Files.notExists(tmpDir)) {
+      Files.createDirectories(tmpDir);
     }
+    ServletContextHandler genCtx = new ServletContextHandler(contexts, "/prof-output-hbase");
+    genCtx.addServlet(ProfileOutputServlet.class, "/*");
+    genCtx.setResourceBase(tmpDir.toAbsolutePath().toString());
+    genCtx.setDisplayName("prof-output-hbase");
 
     /* register metrics servlets */
     String[] enabledServlets = conf.getStrings(METRIC_SERVLETS_CONF_KEY, METRICS_SERVLETS_DEFAULT);
