@@ -17,35 +17,24 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.yetus.audience.InterfaceAudience;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.Mockito.mockStatic;
 
-@InterfaceAudience.Private
-public class RowBloomHashKey extends CellHashKey {
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.mockito.MockedStatic;
 
-  public RowBloomHashKey(Cell cell) {
-    super(cell);
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
+public class TestLittleEndianBytesWoUnsafe extends TestLittleEndianBytesBase {
+  @BeforeAll
+  public static void disableUnsafe() {
+    try (MockedStatic<HBasePlatformDependent> mocked = mockStatic(HBasePlatformDependent.class)) {
+      mocked.when(HBasePlatformDependent::unaligned).thenReturn(false);
+      assertFalse(LittleEndianBytes.UNSAFE_UNALIGNED);
+    }
   }
-
-  @Override
-  public byte get(int offset) {
-    return PrivateCellUtil.getRowByte(t, offset);
-  }
-
-  @Override
-  public int length() {
-    return this.t.getRowLength();
-  }
-
-  @Override
-  public int getIntLE(int offset) {
-    return LittleEndianBytes.getRowAsInt(t, offset);
-  }
-
-  @Override
-  public long getLongLE(int offset) {
-    return LittleEndianBytes.getRowAsLong(t, offset);
-  }
-
 }

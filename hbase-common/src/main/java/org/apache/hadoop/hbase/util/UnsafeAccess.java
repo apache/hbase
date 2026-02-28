@@ -82,6 +82,21 @@ public final class UnsafeAccess {
   }
 
   /**
+   * Converts a byte array to an int value considering it was written in little-endian format.
+   * @param bytes  byte array
+   * @param offset offset into array
+   * @return the int value
+   */
+  public static int toIntLE(byte[] bytes, int offset) {
+    if (LITTLE_ENDIAN) {
+      return HBasePlatformDependent.getInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET);
+    } else {
+      return Integer
+        .reverseBytes(HBasePlatformDependent.getInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
+    }
+  }
+
+  /**
    * Converts a byte array to a long value considering it was written in big-endian format.
    * @param bytes  byte array
    * @param offset offset into array
@@ -93,6 +108,21 @@ public final class UnsafeAccess {
         .reverseBytes(HBasePlatformDependent.getLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
     } else {
       return HBasePlatformDependent.getLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET);
+    }
+  }
+
+  /**
+   * Converts a byte array to a long value considering it was written in little-endian format.
+   * @param bytes  byte array
+   * @param offset offset into array
+   * @return the long value
+   */
+  public static long toLongLE(byte[] bytes, int offset) {
+    if (LITTLE_ENDIAN) {
+      return HBasePlatformDependent.getLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET);
+    } else {
+      return Long
+        .reverseBytes(HBasePlatformDependent.getLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
     }
   }
 
@@ -128,6 +158,21 @@ public final class UnsafeAccess {
   }
 
   /**
+   * Put an int value out to the specified byte array position in little-endian format.
+   * @param bytes  the byte array
+   * @param offset position in the array
+   * @param val    int to write out
+   * @return incremented offset
+   */
+  public static int putIntLE(byte[] bytes, int offset, int val) {
+    if (!LITTLE_ENDIAN) {
+      val = Integer.reverseBytes(val);
+    }
+    HBasePlatformDependent.putInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET, val);
+    return offset + Bytes.SIZEOF_INT;
+  }
+
+  /**
    * Put a long value out to the specified byte array position in big-endian format.
    * @param bytes  the byte array
    * @param offset position in the array
@@ -136,6 +181,21 @@ public final class UnsafeAccess {
    */
   public static int putLong(byte[] bytes, int offset, long val) {
     if (LITTLE_ENDIAN) {
+      val = Long.reverseBytes(val);
+    }
+    HBasePlatformDependent.putLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET, val);
+    return offset + Bytes.SIZEOF_LONG;
+  }
+
+  /**
+   * Put a long value out to the specified byte array position in little-endian format.
+   * @param bytes  the byte array
+   * @param offset position in the array
+   * @param val    long to write out
+   * @return incremented offset
+   */
+  public static int putLongLE(byte[] bytes, int offset, long val) {
+    if (!LITTLE_ENDIAN) {
       val = Long.reverseBytes(val);
     }
     HBasePlatformDependent.putLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET, val);
@@ -192,6 +252,18 @@ public final class UnsafeAccess {
   }
 
   /**
+   * Reads an int value at the given buffer's offset considering it was written in little-endian
+   * format.
+   * @return int value at offset
+   */
+  public static int toIntLE(ByteBuffer buf, int offset) {
+    if (LITTLE_ENDIAN) {
+      return getAsInt(buf, offset);
+    }
+    return Integer.reverseBytes(getAsInt(buf, offset));
+  }
+
+  /**
    * Reads a int value at the given Object's offset considering it was written in big-endian format.
    * @return int value at offset
    */
@@ -224,6 +296,13 @@ public final class UnsafeAccess {
       return Long.reverseBytes(getAsLong(buf, offset));
     }
     return getAsLong(buf, offset);
+  }
+
+  public static long toLongLE(ByteBuffer buf, int offset) {
+    if (LITTLE_ENDIAN) {
+      return getAsLong(buf, offset);
+    }
+    return Long.reverseBytes(getAsLong(buf, offset));
   }
 
   /**
