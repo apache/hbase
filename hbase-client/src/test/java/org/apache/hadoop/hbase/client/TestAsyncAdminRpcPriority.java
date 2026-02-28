@@ -31,7 +31,6 @@ import static org.mockito.Mockito.verify;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -39,12 +38,10 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.ArgumentMatcher;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -68,12 +65,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMaster
 /**
  * Confirm that we will set the priority in {@link HBaseRpcController} for several admin operations.
  */
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestAsyncAdminRpcPriority {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncAdminRpcPriority.class);
 
   private static Configuration CONF = HBaseConfiguration.create();
 
@@ -83,11 +77,11 @@ public class TestAsyncAdminRpcPriority {
 
   private AsyncConnection conn;
 
-  @Rule
-  public TestName name = new TestName();
+  public String name;
 
-  @Before
-  public void setUp() throws IOException {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
+    name = testInfo.getTestMethod().get().getName();
     masterStub = mock(MasterService.Interface.class);
     adminStub = mock(AdminService.Interface.class);
     doAnswer(new Answer<Void>() {
@@ -169,10 +163,8 @@ public class TestAsyncAdminRpcPriority {
 
   @Test
   public void testCreateNormalTable() {
-    conn.getAdmin()
-      .createTable(TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build())
-      .join();
+    conn.getAdmin().createTable(TableDescriptorBuilder.newBuilder(TableName.valueOf(name))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build()).join();
     verify(masterStub, times(1)).createTable(assertPriority(NORMAL_QOS),
       any(CreateTableRequest.class), any());
   }
@@ -182,9 +174,9 @@ public class TestAsyncAdminRpcPriority {
   @Test
   public void testCreateSystemTable() {
     conn.getAdmin()
-      .createTable(TableDescriptorBuilder
-        .newBuilder(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build())
+      .createTable(
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name))
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build())
       .join();
     verify(masterStub, times(1)).createTable(assertPriority(SYSTEMTABLE_QOS),
       any(CreateTableRequest.class), any());

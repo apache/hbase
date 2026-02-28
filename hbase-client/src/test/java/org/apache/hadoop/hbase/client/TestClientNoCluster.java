@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
@@ -39,7 +39,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -61,11 +60,10 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,12 +103,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpeci
  * Test client behavior w/o setting up a cluster. Mock up cluster emissions. See below for a method
  * that tests retries/timeouts currently commented out.
  */
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestClientNoCluster extends Configured implements Tool {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClientNoCluster.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClientNoCluster.class);
   private Configuration conf;
@@ -123,7 +118,7 @@ public class TestClientNoCluster extends Configured implements Tool {
   public static final ServerName META_SERVERNAME =
     ServerName.valueOf("meta.example.org", 16010, 12345);
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     this.conf = HBaseConfiguration.create();
     // Run my Connection overrides. Use my little ConnectionImplementation below which
@@ -157,7 +152,7 @@ public class TestClientNoCluster extends Configured implements Tool {
   /**
    * Remove the @Ignore to try out timeout and retry settings
    */
-  @Ignore
+  @Disabled
   @Test
   public void testTimeoutAndRetries() throws IOException {
     Configuration localConfig = HBaseConfiguration.create(this.conf);

@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -31,11 +30,10 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,17 +46,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotRe
 /**
  * Test snapshot logic from the client
  */
-@Category({ SmallTests.class, ClientTests.class })
+@Tag(SmallTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestSnapshotFromAdmin {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotFromAdmin.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotFromAdmin.class);
 
-  @Rule
-  public TestName name = new TestName();
+  private String name;
+
+  @BeforeEach
+  public void setup(TestInfo testInfo) {
+    name = testInfo.getTestMethod().get().getName();
+  }
 
   /**
    * Test that the logic for doing 'correct' back-off based on exponential increase and the max-time
@@ -78,8 +77,9 @@ public class TestSnapshotFromAdmin {
     }
     // the correct wait time, capping at the maxTime/tries + fudge room
     final long time = pauseTime * 3L + ((maxWaitTime / numRetries) * 3) + 300L;
-    assertTrue("Capped snapshot wait time isn't less that the uncapped backoff time "
-      + "- further testing won't prove anything.", time < ignoreExpectedTime);
+    assertTrue(time < ignoreExpectedTime,
+      "Capped snapshot wait time isn't less that the uncapped backoff time "
+        + "- further testing won't prove anything.");
 
     // setup the mocks
     ConnectionImplementation mockConnection = Mockito.mock(ConnectionImplementation.class);
@@ -116,13 +116,13 @@ public class TestSnapshotFromAdmin {
     // setup the admin and run the test
     Admin admin = new HBaseAdmin(mockConnection);
     String snapshot = "snapshot";
-    final TableName table = TableName.valueOf(name.getMethodName());
+    final TableName table = TableName.valueOf(name);
     // get start time
     long start = EnvironmentEdgeManager.currentTime();
     admin.snapshot(snapshot, table);
     long finish = EnvironmentEdgeManager.currentTime();
     long elapsed = (finish - start);
-    assertTrue("Elapsed time:" + elapsed + " is more than expected max:" + time, elapsed <= time);
+    assertTrue(elapsed <= time, "Elapsed time:" + elapsed + " is more than expected max:" + time);
     admin.close();
   }
 
@@ -168,7 +168,7 @@ public class TestSnapshotFromAdmin {
       .thenReturn(doneResponse);
 
     // make sure that we can use valid names
-    admin.snapshot(new SnapshotDescription("snapshot", TableName.valueOf(name.getMethodName())));
+    admin.snapshot(new SnapshotDescription("snapshot", TableName.valueOf(name)));
   }
 
   private void failSnapshotStart(Admin admin, SnapshotDescription snapshot) throws IOException {

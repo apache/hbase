@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
-import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
+import io.opentelemetry.sdk.testing.junit5.OpenTelemetryExtension;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Waiter;
@@ -34,21 +33,17 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestAsyncConnectionTracing {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncConnectionTracing.class);
 
   private static Configuration CONF = HBaseConfiguration.create();
 
@@ -57,10 +52,10 @@ public class TestAsyncConnectionTracing {
 
   private AsyncConnection conn;
 
-  @Rule
-  public OpenTelemetryRule traceRule = OpenTelemetryRule.create();
+  @RegisterExtension
+  public static final OpenTelemetryExtension traceRule = OpenTelemetryExtension.create();
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     ConnectionRegistry registry = new DoNothingConnectionRegistry(CONF) {
 
@@ -73,7 +68,7 @@ public class TestAsyncConnectionTracing {
       new AsyncConnectionImpl(CONF, registry, "test", UserProvider.instantiate(CONF).getCurrent());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     Closeables.close(conn, true);
   }

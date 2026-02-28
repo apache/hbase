@@ -17,26 +17,20 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestDelayingRunner {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDelayingRunner.class);
 
   private static final TableName DUMMY_TABLE = TableName.valueOf("DUMMY_TABLE");
   private static final byte[] DUMMY_BYTES_1 = Bytes.toBytes("DUMMY_BYTES_1");
@@ -61,8 +55,8 @@ public class TestDelayingRunner {
     long startTime = EnvironmentEdgeManager.currentTime();
     runner.run();
     long delay = endTime.get() - startTime;
-    assertTrue("DelayingRunner did not delay long enough", delay >= sleepTime);
-    assertFalse("DelayingRunner delayed too long", delay > sleepTime + sleepTime * 0.2);
+    assertTrue(delay >= sleepTime, "DelayingRunner did not delay long enough");
+    assertFalse(delay > sleepTime + sleepTime * 0.2, "DelayingRunner delayed too long");
   }
 
 }

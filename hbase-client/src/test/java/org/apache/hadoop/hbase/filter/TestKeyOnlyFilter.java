@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.ByteBuffer;
-import java.util.Collection;
+import java.util.stream.Stream;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter.KeyOnlyByteBufferExtendedCell;
@@ -33,31 +32,28 @@ import org.apache.hadoop.hbase.filter.KeyOnlyFilter.KeyOnlyCell;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
-@Category({ MiscTests.class, SmallTests.class })
-@RunWith(Parameterized.class)
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestKeyOnlyFilter {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestKeyOnlyFilter.class);
+  private boolean lenAsVal;
 
-  @Parameterized.Parameter
-  public boolean lenAsVal;
-
-  @Parameters
-  public static Collection<Object[]> parameters() {
-    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
+  public TestKeyOnlyFilter(boolean lenAsVal) {
+    this.lenAsVal = lenAsVal;
   }
 
-  @Test
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(true), Arguments.of(false));
+  }
+
+  @TestTemplate
   public void testKeyOnly() throws Exception {
+    System.out.println("lenAsVal = " + lenAsVal);
     byte[] r = Bytes.toBytes("row1");
     byte[] f = Bytes.toBytes("cf1");
     byte[] q = Bytes.toBytes("qual1");

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -84,7 +84,7 @@ public final class BuilderStyleTest {
         String errorMsg = "All setXXX()|addXX() methods in " + clazz.getSimpleName()
           + " should return a " + clazz.getSimpleName() + " object in builder style. "
           + "Offending method:" + e.getValue().iterator().next().getName();
-        assertTrue(errorMsg, found);
+        assertTrue(found, errorMsg);
       }
     }
   }

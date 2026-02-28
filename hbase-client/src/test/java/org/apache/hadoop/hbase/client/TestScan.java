@@ -17,16 +17,16 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Set;
 import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.filter.FilterList;
@@ -35,19 +35,16 @@ import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 // TODO: cover more test cases
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestScan {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestScan.class);
 
   @Test
   public void testAttributesSerialization() throws IOException {
@@ -60,11 +57,11 @@ public class TestScan {
 
     Scan scan2 = ProtobufUtil.toScan(scanProto);
 
-    Assert.assertNull(scan2.getAttribute("absent"));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), scan2.getAttribute("attribute1")));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"), scan2.getAttribute("attribute2")));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value3"), scan2.getAttribute("attribute3")));
-    Assert.assertEquals(3, scan2.getAttributesMap().size());
+    assertNull(scan2.getAttribute("absent"));
+    assertTrue(Arrays.equals(Bytes.toBytes("value1"), scan2.getAttribute("attribute1")));
+    assertTrue(Arrays.equals(Bytes.toBytes("value2"), scan2.getAttribute("attribute2")));
+    assertTrue(Arrays.equals(Bytes.toBytes("value3"), scan2.getAttribute("attribute3")));
+    assertEquals(3, scan2.getAttributesMap().size());
   }
 
   @Test
@@ -106,51 +103,48 @@ public class TestScan {
   @Test
   public void testScanAttributes() {
     Scan scan = new Scan();
-    Assert.assertTrue(scan.getAttributesMap().isEmpty());
-    Assert.assertNull(scan.getAttribute("absent"));
+    assertTrue(scan.getAttributesMap().isEmpty());
+    assertNull(scan.getAttribute("absent"));
 
     scan.setAttribute("absent", null);
-    Assert.assertTrue(scan.getAttributesMap().isEmpty());
-    Assert.assertNull(scan.getAttribute("absent"));
+    assertTrue(scan.getAttributesMap().isEmpty());
+    assertNull(scan.getAttribute("absent"));
 
     // adding attribute
     scan.setAttribute("attribute1", Bytes.toBytes("value1"));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), scan.getAttribute("attribute1")));
-    Assert.assertEquals(1, scan.getAttributesMap().size());
-    Assert.assertTrue(
-      Arrays.equals(Bytes.toBytes("value1"), scan.getAttributesMap().get("attribute1")));
+    assertTrue(Arrays.equals(Bytes.toBytes("value1"), scan.getAttribute("attribute1")));
+    assertEquals(1, scan.getAttributesMap().size());
+    assertTrue(Arrays.equals(Bytes.toBytes("value1"), scan.getAttributesMap().get("attribute1")));
 
     // overriding attribute value
     scan.setAttribute("attribute1", Bytes.toBytes("value12"));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"), scan.getAttribute("attribute1")));
-    Assert.assertEquals(1, scan.getAttributesMap().size());
-    Assert.assertTrue(
-      Arrays.equals(Bytes.toBytes("value12"), scan.getAttributesMap().get("attribute1")));
+    assertTrue(Arrays.equals(Bytes.toBytes("value12"), scan.getAttribute("attribute1")));
+    assertEquals(1, scan.getAttributesMap().size());
+    assertTrue(Arrays.equals(Bytes.toBytes("value12"), scan.getAttributesMap().get("attribute1")));
 
     // adding another attribute
     scan.setAttribute("attribute2", Bytes.toBytes("value2"));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"), scan.getAttribute("attribute2")));
-    Assert.assertEquals(2, scan.getAttributesMap().size());
-    Assert.assertTrue(
-      Arrays.equals(Bytes.toBytes("value2"), scan.getAttributesMap().get("attribute2")));
+    assertTrue(Arrays.equals(Bytes.toBytes("value2"), scan.getAttribute("attribute2")));
+    assertEquals(2, scan.getAttributesMap().size());
+    assertTrue(Arrays.equals(Bytes.toBytes("value2"), scan.getAttributesMap().get("attribute2")));
 
     // removing attribute
     scan.setAttribute("attribute2", null);
-    Assert.assertNull(scan.getAttribute("attribute2"));
-    Assert.assertEquals(1, scan.getAttributesMap().size());
-    Assert.assertNull(scan.getAttributesMap().get("attribute2"));
+    assertNull(scan.getAttribute("attribute2"));
+    assertEquals(1, scan.getAttributesMap().size());
+    assertNull(scan.getAttributesMap().get("attribute2"));
 
     // removing non-existed attribute
     scan.setAttribute("attribute2", null);
-    Assert.assertNull(scan.getAttribute("attribute2"));
-    Assert.assertEquals(1, scan.getAttributesMap().size());
-    Assert.assertNull(scan.getAttributesMap().get("attribute2"));
+    assertNull(scan.getAttribute("attribute2"));
+    assertEquals(1, scan.getAttributesMap().size());
+    assertNull(scan.getAttributesMap().get("attribute2"));
 
     // removing another attribute
     scan.setAttribute("attribute1", null);
-    Assert.assertNull(scan.getAttribute("attribute1"));
-    Assert.assertTrue(scan.getAttributesMap().isEmpty());
-    Assert.assertNull(scan.getAttributesMap().get("attribute1"));
+    assertNull(scan.getAttribute("attribute1"));
+    assertTrue(scan.getAttributesMap().isEmpty());
+    assertNull(scan.getAttributesMap().get("attribute1"));
   }
 
   @Test
@@ -159,7 +153,7 @@ public class TestScan {
     byte[] family = Bytes.toBytes("family");
     scan.addColumn(family, null);
     Set<byte[]> qualifiers = scan.getFamilyMap().get(family);
-    Assert.assertEquals(1, qualifiers.size());
+    assertEquals(1, qualifiers.size());
   }
 
   @Test
@@ -254,8 +248,8 @@ public class TestScan {
     assertEquals(scan.getStopRow(), scanCopy.getStopRow());
     assertEquals(scan.getTimeRange(), scanCopy.getTimeRange());
 
-    assertTrue("Make sure copy constructor adds all the fields in the copied object",
-      EqualsBuilder.reflectionEquals(scan, scanCopy));
+    assertTrue(EqualsBuilder.reflectionEquals(scan, scanCopy),
+      "Make sure copy constructor adds all the fields in the copied object");
   }
 
   @Test

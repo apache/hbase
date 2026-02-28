@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.RatioGauge;
@@ -31,8 +33,9 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.security.User;
@@ -40,12 +43,11 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 
@@ -59,11 +61,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanReques
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 
-@Category({ ClientTests.class, MetricsTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MetricsTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestMetricsConnection {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricsConnection.class);
 
   private static MetricsConnection METRICS;
   private static final ThreadPoolExecutor BATCH_POOL =
@@ -71,17 +73,27 @@ public class TestMetricsConnection {
 
   private static final String MOCK_CONN_STR = "mocked-connection";
 
-  @BeforeClass
-  public static void beforeClass() {
+  public boolean tableMetricsEnabled;
+
+  public TestMetricsConnection(boolean tableMetricsEnabled) {
+    this.tableMetricsEnabled = tableMetricsEnabled;
+  }
+
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(true), Arguments.of(false));
+  }
+
+  @BeforeEach
+  public void before() {
     METRICS = MetricsConnection.getMetricsConnection(MOCK_CONN_STR, () -> BATCH_POOL, () -> null);
   }
 
-  @AfterClass
-  public static void afterClass() {
+  @AfterEach
+  public void after() {
     MetricsConnection.deleteMetricsConnection(MOCK_CONN_STR);
   }
 
-  @Test
+  @TestTemplate
   public void testMetricsConnectionScopeAsyncClient() throws IOException {
     Configuration conf = new Configuration();
     String clusterId = "foo";
@@ -90,18 +102,18 @@ public class TestMetricsConnection {
 
     AsyncConnectionImpl impl = new AsyncConnectionImpl(conf, null, "foo", User.getCurrent());
     Optional<MetricsConnection> metrics = impl.getConnectionMetrics();
-    assertTrue("Metrics should be present", metrics.isPresent());
+    assertTrue(metrics.isPresent(), "Metrics should be present");
     assertEquals(clusterId + "@" + Integer.toHexString(impl.hashCode()),
       metrics.get().getMetricScope());
     conf.set(MetricsConnection.METRICS_SCOPE_KEY, scope);
     impl = new AsyncConnectionImpl(conf, null, "foo", User.getCurrent());
 
     metrics = impl.getConnectionMetrics();
-    assertTrue("Metrics should be present", metrics.isPresent());
+    assertTrue(metrics.isPresent(), "Metrics should be present");
     assertEquals(scope, metrics.get().getMetricScope());
   }
 
-  @Test
+  @TestTemplate
   public void testMetricsWithMutiConnections() throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
@@ -121,11 +133,11 @@ public class TestMetricsConnection {
     /* verify metrics presence */
     impl = connList.get(0);
     Optional<MetricsConnection> metrics = impl.getConnectionMetrics();
-    assertTrue("Metrics should be present", metrics.isPresent());
+    assertTrue(metrics.isPresent(), "Metrics should be present");
 
     /* verify connection count in a shared metrics */
     long count = metrics.get().getConnectionCount();
-    assertEquals("Failed to verify connection count." + count, count, num);
+    assertEquals(count, num, "Failed to verify connection count." + count);
 
     /* close some connections */
     for (int i = 0; i < num - 1; i++) {
@@ -135,42 +147,41 @@ public class TestMetricsConnection {
     /* verify metrics presence again */
     impl = connList.get(num - 1);
     metrics = impl.getConnectionMetrics();
-    assertTrue("Metrics should be present after some of connections are closed.",
-      metrics.isPresent());
+    assertTrue(metrics.isPresent(),
+      "Metrics should be present after some of connections are closed.");
 
     /* verify count of remaining connections */
     count = metrics.get().getConnectionCount();
-    assertEquals("Connection count suppose to be 1 but got: " + count, count, 1);
+    assertEquals(count, 1, "Connection count suppose to be 1 but got: " + count);
 
     /* shutdown */
     impl.close();
   }
 
-  @Test
+  @TestTemplate
   public void testMetricsConnectionScopeBlockingClient() throws IOException {
     Configuration conf = new Configuration();
     String clusterId = "foo";
     String scope = "testScope";
     conf.setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
 
-    ConnectionRegistry mockRegistry = Mockito.mock(ConnectionRegistry.class);
-    Mockito.when(mockRegistry.getClusterId())
-      .thenReturn(CompletableFuture.completedFuture(clusterId));
+    ConnectionRegistry mockRegistry = mock(ConnectionRegistry.class);
+    when(mockRegistry.getClusterId()).thenReturn(CompletableFuture.completedFuture(clusterId));
 
     ConnectionImplementation impl =
       new ConnectionImplementation(conf, null, User.getCurrent(), mockRegistry);
     MetricsConnection metrics = impl.getConnectionMetrics();
-    assertNotNull("Metrics should be present", metrics);
+    assertNotNull(metrics, "Metrics should be present");
     assertEquals(clusterId + "@" + Integer.toHexString(impl.hashCode()), metrics.getMetricScope());
     conf.set(MetricsConnection.METRICS_SCOPE_KEY, scope);
     impl = new ConnectionImplementation(conf, null, User.getCurrent(), mockRegistry);
 
     metrics = impl.getConnectionMetrics();
-    assertNotNull("Metrics should be present", metrics);
+    assertNotNull(metrics, "Metrics should be present");
     assertEquals(scope, metrics.getMetricScope());
   }
 
-  @Test
+  @TestTemplate
   public void testStaticMetrics() throws IOException {
     final byte[] foo = Bytes.toBytes("foo");
     final RegionSpecifier region = RegionSpecifier.newBuilder().setValue(ByteString.EMPTY)
@@ -218,17 +229,17 @@ public class TestMetricsConnection {
     for (String method : new String[] { "Get", "Scan", "Multi", "Mutate" }) {
       metricKey = rpcCountPrefix + method;
       metricVal = METRICS.getRpcCounters().get(metricKey).getCount();
-      assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal >= loop);
+      assertTrue(metricVal >= loop, "metric: " + metricKey + " val: " + metricVal);
 
       metricKey = rpcFailureCountPrefix + method;
       counter = METRICS.getRpcCounters().get(metricKey);
       metricVal = (counter != null) ? counter.getCount() : 0;
       if (method.equals("Get") || method.equals("Mutate")) {
         // no failure
-        assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == 0);
+        assertTrue(metricVal == 0, "metric: " + metricKey + " val: " + metricVal);
       } else {
         // has failure
-        assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
+        assertTrue(metricVal == loop, "metric: " + metricKey + " val: " + metricVal);
       }
     }
 
@@ -236,27 +247,27 @@ public class TestMetricsConnection {
     metricKey = "rpcRemoteExceptions_IOException";
     counter = METRICS.getRpcCounters().get(metricKey);
     metricVal = (counter != null) ? counter.getCount() : 0;
-    assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
+    assertTrue(metricVal == loop, "metric: " + metricKey + " val: " + metricVal);
 
     // local exception
     metricKey = "rpcLocalExceptions_CallTimeoutException";
     counter = METRICS.getRpcCounters().get(metricKey);
     metricVal = (counter != null) ? counter.getCount() : 0;
-    assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
+    assertTrue(metricVal == loop, "metric: " + metricKey + " val: " + metricVal);
 
     // total exception
     metricKey = "rpcTotalExceptions";
     counter = METRICS.getRpcCounters().get(metricKey);
     metricVal = (counter != null) ? counter.getCount() : 0;
-    assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop * 2);
+    assertTrue(metricVal == loop * 2, "metric: " + metricKey + " val: " + metricVal);
 
     for (MetricsConnection.CallTracker t : new MetricsConnection.CallTracker[] {
       METRICS.getGetTracker(), METRICS.getScanTracker(), METRICS.getMultiTracker(),
       METRICS.getAppendTracker(), METRICS.getDeleteTracker(), METRICS.getIncrementTracker(),
       METRICS.getPutTracker() }) {
-      assertEquals("Failed to invoke callTimer on " + t, loop, t.callTimer.getCount());
-      assertEquals("Failed to invoke reqHist on " + t, loop, t.reqHist.getCount());
-      assertEquals("Failed to invoke respHist on " + t, loop, t.respHist.getCount());
+      assertEquals(loop, t.callTimer.getCount(), "Failed to invoke callTimer on " + t);
+      assertEquals(loop, t.reqHist.getCount(), "Failed to invoke reqHist on " + t);
+      assertEquals(loop, t.respHist.getCount(), "Failed to invoke respHist on " + t);
     }
     RatioGauge executorMetrics =
       (RatioGauge) METRICS.getMetricRegistry().getMetrics().get(METRICS.getExecutorPoolName());

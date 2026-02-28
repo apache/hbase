@@ -21,10 +21,10 @@ import static org.apache.hadoop.hbase.HConstants.HIGH_QOS;
 import static org.apache.hadoop.hbase.HConstants.NORMAL_QOS;
 import static org.apache.hadoop.hbase.HConstants.SYSTEMTABLE_QOS;
 import static org.apache.hadoop.hbase.NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.atLeast;
@@ -43,7 +43,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -54,12 +53,10 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.ArgumentMatcher;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -73,21 +70,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
  * Test that correct rpc priority is sent to server from blocking Table calls. Currently only
  * implements checks for scans, but more could be added here.
  */
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestTableRpcPriority {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableRpcPriority.class);
-
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
   private ClientProtos.ClientService.BlockingInterface stub;
   private Connection conn;
 
-  @Before
-  public void setUp() throws IOException, ServiceException {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException, ServiceException {
+    methodName = testInfo.getTestMethod().get().getName();
     stub = mock(ClientProtos.ClientService.BlockingInterface.class);
 
     Configuration conf = HBaseConfiguration.create();
@@ -122,7 +116,7 @@ public class TestTableRpcPriority {
   @Test
   public void testScan() throws Exception {
     mockScan(19);
-    testForTable(TableName.valueOf(name.getMethodName()), Optional.of(19));
+    testForTable(TableName.valueOf(methodName), Optional.of(19));
   }
 
   /**
@@ -132,20 +126,19 @@ public class TestTableRpcPriority {
   @Test
   public void testScanSuperHighPriority() throws Exception {
     mockScan(1000);
-    testForTable(TableName.valueOf(name.getMethodName()), Optional.of(1000));
+    testForTable(TableName.valueOf(methodName), Optional.of(1000));
   }
 
   @Test
   public void testScanNormalTable() throws Exception {
     mockScan(NORMAL_QOS);
-    testForTable(TableName.valueOf(name.getMethodName()), Optional.of(NORMAL_QOS));
+    testForTable(TableName.valueOf(methodName), Optional.of(NORMAL_QOS));
   }
 
   @Test
   public void testScanSystemTable() throws Exception {
     mockScan(SYSTEMTABLE_QOS);
-    testForTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()),
-      Optional.empty());
+    testForTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, methodName), Optional.empty());
   }
 
   @Test
@@ -188,8 +181,8 @@ public class TestTableRpcPriority {
       @Override
       public ClientProtos.ScanResponse answer(InvocationOnMock invocation) throws Throwable {
         ClientProtos.ScanRequest req = invocation.getArgument(1);
-        assertFalse("close scanner should not come in with scan priority " + scanPriority,
-          req.hasCloseScanner() && req.getCloseScanner());
+        assertFalse(req.hasCloseScanner() && req.getCloseScanner(),
+          "close scanner should not come in with scan priority " + scanPriority);
         ClientProtos.ScanResponse.Builder builder = ClientProtos.ScanResponse.newBuilder();
 
         if (!req.hasScannerId()) {
@@ -212,10 +205,10 @@ public class TestTableRpcPriority {
       @Override
       public ClientProtos.ScanResponse answer(InvocationOnMock invocation) throws Throwable {
         ClientProtos.ScanRequest req = invocation.getArgument(1);
-        assertTrue("close request should have scannerId", req.hasScannerId());
-        assertEquals("close request's scannerId should match", scannerId, req.getScannerId());
-        assertTrue("close request should have closerScanner set",
-          req.hasCloseScanner() && req.getCloseScanner());
+        assertTrue(req.hasScannerId(), "close request should have scannerId");
+        assertEquals(scannerId, req.getScannerId(), "close request's scannerId should match");
+        assertTrue(req.hasCloseScanner() && req.getCloseScanner(),
+          "close request should have closerScanner set");
 
         return ClientProtos.ScanResponse.getDefaultInstance();
       }
