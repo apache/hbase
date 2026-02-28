@@ -66,9 +66,6 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -120,7 +117,6 @@ public class TestBackupBase {
     }
 
     @BeforeEach
-    @Before
     public void ensurePreviousBackupTestsAreCleanedUp() throws Exception {
       // Every operation here may not be necessary for any given test,
       // some often being no-ops. the goal is to help ensure atomicity
@@ -348,7 +344,6 @@ public class TestBackupBase {
    * @throws Exception if starting the mini cluster or setting up the tables fails
    */
   @BeforeAll
-  @BeforeClass
   public static void setUp() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
     conf1 = TEST_UTIL.getConfiguration();
@@ -366,7 +361,6 @@ public class TestBackupBase {
   }
 
   @AfterAll
-  @AfterClass
   public static void tearDown() throws Exception {
     try {
       SnapshotTestingUtils.deleteAllSnapshots(TEST_UTIL.getAdmin());
