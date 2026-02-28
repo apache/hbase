@@ -17,30 +17,26 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.backoff.ExponentialClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestClientExponentialBackoff {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClientExponentialBackoff.class);
 
   ServerName server = Mockito.mock(ServerName.class);
   byte[] regionname = Bytes.toBytes("region");
@@ -105,8 +101,8 @@ public class TestClientExponentialBackoff {
     for (int i = 1; i <= 100; i++) {
       update(stats, i);
       long next = backoff.getBackoffTime(server, regionname, stats);
-      assertTrue("Previous backoff time" + previous + " >= " + next + ", the next backoff time for "
-        + "load " + i, previous < next);
+      assertTrue(previous < next, "Previous backoff time" + previous + " >= " + next
+        + ", the next backoff time for " + "load " + i);
       previous = next;
     }
   }
@@ -121,18 +117,18 @@ public class TestClientExponentialBackoff {
 
     update(stats, 0, 95, 0);
     backoffTime = backoff.getBackoffTime(server, regionname, stats);
-    assertTrue("Heap occupancy at low watermark had no effect", backoffTime > 0);
+    assertTrue(backoffTime > 0, "Heap occupancy at low watermark had no effect");
 
     long previous = backoffTime;
     update(stats, 0, 96, 0);
     backoffTime = backoff.getBackoffTime(server, regionname, stats);
-    assertTrue("Increase above low watermark should have increased backoff",
-      backoffTime > previous);
+    assertTrue(backoffTime > previous,
+      "Increase above low watermark should have increased backoff");
 
     update(stats, 0, 98, 0);
     backoffTime = backoff.getBackoffTime(server, regionname, stats);
-    assertEquals("We should be using max backoff when at high watermark",
-      ExponentialClientBackoffPolicy.DEFAULT_MAX_BACKOFF, backoffTime);
+    assertEquals(ExponentialClientBackoffPolicy.DEFAULT_MAX_BACKOFF, backoffTime,
+      "We should be using max backoff when at high watermark");
   }
 
   @Test
@@ -145,17 +141,17 @@ public class TestClientExponentialBackoff {
 
     update(stats, 0, 0, 0);
     backoffTime = backoff.getBackoffTime(server, regionname, stats);
-    assertTrue("Compaction pressure has no effect", backoffTime == 0);
+    assertTrue(backoffTime == 0, "Compaction pressure has no effect");
 
     long previous = backoffTime;
     update(stats, 0, 0, 50);
     backoffTime = backoff.getBackoffTime(server, regionname, stats);
-    assertTrue("Compaction pressure should be bigger", backoffTime > previous);
+    assertTrue(backoffTime > previous, "Compaction pressure should be bigger");
 
     update(stats, 0, 0, 100);
     backoffTime = backoff.getBackoffTime(server, regionname, stats);
-    assertEquals("under heavy compaction pressure",
-      ExponentialClientBackoffPolicy.DEFAULT_MAX_BACKOFF, backoffTime);
+    assertEquals(ExponentialClientBackoffPolicy.DEFAULT_MAX_BACKOFF, backoffTime,
+      "under heavy compaction pressure");
   }
 
   private void update(ServerStatistics stats, int load) {

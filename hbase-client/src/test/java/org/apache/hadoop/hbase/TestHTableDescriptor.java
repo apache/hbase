@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -31,11 +32,10 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,25 +44,26 @@ import org.slf4j.LoggerFactory;
  * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 together with
  *             {@link HTableDescriptor}.
  */
-@Category({ MiscTests.class, SmallTests.class })
 @Deprecated
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHTableDescriptor {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHTableDescriptor.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHTableDescriptor.class);
 
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
-  @Test(expected = IOException.class)
+  @BeforeEach
+  public void setUpBeforeEach(TestInfo testInfo) {
+    methodName = testInfo.getTestMethod().get().getName();
+  }
+
+  @Test
   public void testAddCoprocessorTwice() throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.META_TABLE_NAME);
     String cpName = "a.b.c.d";
     htd.addCoprocessor(cpName);
-    htd.addCoprocessor(cpName);
+    assertThrows(IOException.class, () -> htd.addCoprocessor(cpName));
   }
 
   @Test
@@ -120,7 +121,7 @@ public class TestHTableDescriptor {
    */
   @Test
   public void testGetSetRemoveCP() throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(methodName));
     // simple CP
     String className = "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver";
     // add and check that it is present
@@ -137,7 +138,7 @@ public class TestHTableDescriptor {
    */
   @Test
   public void testSetListRemoveCP() throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(methodName));
     // simple CP
     String className1 = "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver";
     String className2 = "org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver";
@@ -173,7 +174,7 @@ public class TestHTableDescriptor {
    */
   @Test
   public void testAddGetRemoveString() {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(methodName));
     String key = "Some";
     String value = "value";
     desc.setValue(key, value);
@@ -234,8 +235,8 @@ public class TestHTableDescriptor {
   public void testLegalHTableNamesRegex() {
     for (String tn : legalTableNames) {
       TableName tName = TableName.valueOf(tn);
-      assertTrue("Testing: '" + tn + "'",
-        Pattern.matches(TableName.VALID_USER_TABLE_REGEX, tName.getNameAsString()));
+      assertTrue(Pattern.matches(TableName.VALID_USER_TABLE_REGEX, tName.getNameAsString()),
+        "Testing: '" + tn + "'");
     }
   }
 
@@ -252,7 +253,7 @@ public class TestHTableDescriptor {
    */
   @Test
   public void testGetMaxFileSize() {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(methodName));
     assertEquals(-1, desc.getMaxFileSize());
     desc.setMaxFileSize(1111L);
     assertEquals(1111L, desc.getMaxFileSize());
@@ -263,7 +264,7 @@ public class TestHTableDescriptor {
    */
   @Test
   public void testGetMemStoreFlushSize() {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(methodName));
     assertEquals(-1, desc.getMemStoreFlushSize());
     desc.setMemStoreFlushSize(1111L);
     assertEquals(1111L, desc.getMemStoreFlushSize());
@@ -274,7 +275,7 @@ public class TestHTableDescriptor {
    */
   @Test
   public void testAddGetRemoveConfiguration() throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(methodName));
     String key = "Some";
     String value = "value";
     desc.setConfiguration(key, value);
@@ -297,7 +298,7 @@ public class TestHTableDescriptor {
 
   @Test
   public void testModifyFamily() {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(methodName));
     byte[] familyName = Bytes.toBytes("cf");
     HColumnDescriptor hcd = new HColumnDescriptor(familyName);
     hcd.setBlocksize(1000);
@@ -313,17 +314,17 @@ public class TestHTableDescriptor {
     assertEquals(1, htd.getFamily(familyName).getDFSReplication());
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testModifyInexistentFamily() {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(methodName));
     byte[] familyName = Bytes.toBytes("cf");
     HColumnDescriptor hcd = new HColumnDescriptor(familyName);
-    htd.modifyFamily(hcd);
+    assertThrows(IllegalArgumentException.class, () -> htd.modifyFamily(hcd));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testAddDuplicateFamilies() {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(methodName));
     byte[] familyName = Bytes.toBytes("cf");
     HColumnDescriptor hcd = new HColumnDescriptor(familyName);
     hcd.setBlocksize(1000);
@@ -331,12 +332,13 @@ public class TestHTableDescriptor {
     assertEquals(1000, htd.getFamily(familyName).getBlocksize());
     hcd = new HColumnDescriptor(familyName);
     hcd.setBlocksize(2000);
-    htd.addFamily(hcd);
+    HColumnDescriptor finalHcd = hcd;
+    assertThrows(IllegalArgumentException.class, () -> htd.addFamily(finalHcd));
   }
 
   @Test
   public void testPriority() {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(methodName));
     htd.setPriority(42);
     assertEquals(42, htd.getPriority());
   }

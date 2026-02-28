@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -26,22 +26,17 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ SmallTests.class, ClientTests.class })
+@Tag(SmallTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestMutation {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMutation.class);
 
   @Test
   public void testAppendCopyConstructor() throws IOException {
@@ -122,11 +117,11 @@ public class TestMutation {
   }
 
   private void assertEquals(Mutation origin, Mutation clone) {
-    Assert.assertEquals(origin.getFamilyCellMap().size(), clone.getFamilyCellMap().size());
+    Assertions.assertEquals(origin.getFamilyCellMap().size(), clone.getFamilyCellMap().size());
     for (byte[] family : origin.getFamilyCellMap().keySet()) {
       List<Cell> originCells = origin.getCellList(family);
       List<Cell> cloneCells = clone.getCellList(family);
-      Assert.assertEquals(originCells.size(), cloneCells.size());
+      Assertions.assertEquals(originCells.size(), cloneCells.size());
       for (int i = 0; i != cloneCells.size(); ++i) {
         Cell originCell = originCells.get(i);
         Cell cloneCell = cloneCells.get(i);
@@ -134,14 +129,14 @@ public class TestMutation {
         assertTrue(CellUtil.matchingValue(originCell, cloneCell));
       }
     }
-    Assert.assertEquals(origin.getAttributesMap().size(), clone.getAttributesMap().size());
+    Assertions.assertEquals(origin.getAttributesMap().size(), clone.getAttributesMap().size());
     for (String name : origin.getAttributesMap().keySet()) {
       byte[] originValue = origin.getAttributesMap().get(name);
       byte[] cloneValue = clone.getAttributesMap().get(name);
       assertTrue(Bytes.equals(originValue, cloneValue));
     }
-    Assert.assertEquals(origin.getTimestamp(), clone.getTimestamp());
-    Assert.assertEquals(origin.getPriority(), clone.getPriority());
+    Assertions.assertEquals(origin.getTimestamp(), clone.getTimestamp());
+    Assertions.assertEquals(origin.getPriority(), clone.getPriority());
     if (origin instanceof Append) {
       assertEquals(((Append) origin).getTimeRange(), ((Append) clone).getTimeRange());
     }
@@ -151,8 +146,8 @@ public class TestMutation {
   }
 
   private static void assertEquals(TimeRange origin, TimeRange clone) {
-    Assert.assertEquals(origin.getMin(), clone.getMin());
-    Assert.assertEquals(origin.getMax(), clone.getMax());
+    Assertions.assertEquals(origin.getMin(), clone.getMin());
+    Assertions.assertEquals(origin.getMax(), clone.getMax());
   }
 
   // HBASE-14881

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -36,12 +35,11 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 /**
@@ -58,12 +56,9 @@ import org.mockito.Mockito;
  * encounter this issue. We still backport the fix to branch-1.3 and branch-1.2 in case we ignore
  * some write paths.
  */
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestAsyncProcessWithRegionException {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncProcessWithRegionException.class);
 
   private static final Result EMPTY_RESULT = Result.create(null, true);
   private static final IOException IOE = new IOException("YOU CAN'T PASS");
@@ -84,7 +79,7 @@ public class TestAsyncProcessWithRegionException {
   private static final HRegionLocation REGION_LOCATION =
     new HRegionLocation(REGION_INFO, SERVER_NAME);
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() {
     // disable the retry
     CONF.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);

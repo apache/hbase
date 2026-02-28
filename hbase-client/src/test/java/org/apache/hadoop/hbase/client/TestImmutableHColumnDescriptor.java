@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
@@ -33,21 +33,14 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestImmutableHColumnDescriptor {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestImmutableHColumnDescriptor.class);
-
-  @Rule
-  public TestName name = new TestName();
   private static final List<Consumer<ImmutableHColumnDescriptor>> TEST_FUNCTION = Arrays.asList(
     hcd -> hcd.setValue("a", "a"), hcd -> hcd.setValue(Bytes.toBytes("a"), Bytes.toBytes("a")),
     hcd -> hcd.setConfiguration("aaa", "ccc"), hcd -> hcd.remove(Bytes.toBytes("aaa")),
@@ -71,9 +64,10 @@ public class TestImmutableHColumnDescriptor {
     hcd -> hcd.setVersions(1, 10));
 
   @Test
-  public void testImmutable() {
+  public void testImmutable(TestInfo testInfo) {
+    String methodName = testInfo.getTestMethod().map(Method::getName).orElse("default");
     ImmutableHColumnDescriptor hcd =
-      new ImmutableHColumnDescriptor(new HColumnDescriptor(Bytes.toBytes(name.getMethodName())));
+      new ImmutableHColumnDescriptor(new HColumnDescriptor(Bytes.toBytes(methodName)));
     for (int i = 0; i != TEST_FUNCTION.size(); ++i) {
       try {
         TEST_FUNCTION.get(i).accept(hcd);

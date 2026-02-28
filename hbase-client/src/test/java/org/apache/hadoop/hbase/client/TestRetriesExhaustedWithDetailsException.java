@@ -17,37 +17,27 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 
-@Category({ SmallTests.class })
+@Tag(SmallTests.TAG)
 public class TestRetriesExhaustedWithDetailsException {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRetriesExhaustedWithDetailsException.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   /**
    * Assert that a RetriesExhaustedException that has RegionTooBusyException outputs region name.
    */
   @Test
-  public void testRegionTooBusyException() {
+  public void testRegionTooBusyException(TestInfo testInfo) {
+    final String regionName = testInfo.getTestMethod().get().getName();
     List<Throwable> ts = new ArrayList<>(1);
-    final String regionName = this.name.getMethodName();
     ts.add(new RegionTooBusyException(regionName));
     List<Row> rows = new ArrayList<>(1);
     rows.add(Mockito.mock(Row.class));
