@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -38,22 +38,16 @@ import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestRemoteBackup extends TestBackupBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRemoteBackup.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRemoteBackup.class);
 
@@ -61,7 +55,7 @@ public class TestRemoteBackup extends TestBackupBase {
    * Setup Cluster with appropriate configurations before running tests.
    * @throws Exception if starting the mini cluster or setting up the tables fails
    */
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
     conf1 = TEST_UTIL.getConfiguration();
@@ -120,10 +114,10 @@ public class TestRemoteBackup extends TestBackupBase {
     assertTrue(checkSucceeded(backupId));
 
     LOG.info("backup complete " + backupId);
-    Assert.assertEquals(TEST_UTIL.countRows(t1, famName), NB_ROWS_IN_BATCH);
+    assertEquals(NB_ROWS_IN_BATCH, TEST_UTIL.countRows(t1, famName));
 
     t.join();
-    Assert.assertEquals(TEST_UTIL.countRows(t1, fam3Name), NB_ROWS_IN_FAM3);
+    assertEquals(NB_ROWS_IN_FAM3, TEST_UTIL.countRows(t1, fam3Name));
     t1.close();
 
     TableName[] tablesRestoreFull = new TableName[] { table1 };
@@ -140,12 +134,12 @@ public class TestRemoteBackup extends TestBackupBase {
 
     // #5.2 - checking row count of tables for full restore
     Table hTable = conn.getTable(table1_restore);
-    Assert.assertEquals(TEST_UTIL.countRows(hTable, famName), NB_ROWS_IN_BATCH);
+    assertEquals(NB_ROWS_IN_BATCH, TEST_UTIL.countRows(hTable, famName));
     int cnt3 = TEST_UTIL.countRows(hTable, fam3Name);
-    Assert.assertTrue(cnt3 >= 0 && cnt3 <= NB_ROWS_IN_FAM3);
+    assertTrue(cnt3 >= 0 && cnt3 <= NB_ROWS_IN_FAM3);
 
     int rows1 = MobSnapshotTestingUtils.countMobRows(t1, fam2Name);
-    Assert.assertEquals(rows0, rows1);
+    assertEquals(rows0, rows1);
     hTable.close();
 
     hAdmin.close();

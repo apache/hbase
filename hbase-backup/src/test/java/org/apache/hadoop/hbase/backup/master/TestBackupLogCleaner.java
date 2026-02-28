@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.backup.master;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -49,26 +48,21 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestBackupLogCleaner extends TestBackupBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupLogCleaner.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupLogCleaner.class);
 
   // implements all test cases in 1 test since incremental full backup/
   // incremental backup has dependencies
 
-  @BeforeClass
+  @BeforeAll
   public static void before() {
     TEST_UTIL.getConfiguration().setLong(BackupLogCleaner.TS_BUFFER_KEY, 0);
   }
@@ -268,12 +262,12 @@ public class TestBackupLogCleaner extends TestBackupBase {
 
       List<FileStatus> walsAfterNewServer = getListOfWALFiles(TEST_UTIL.getConfiguration());
       LOG.info("WALs after adding new server: {}", walsAfterNewServer.size());
-      assertTrue("Should have more WALs after new server",
-        walsAfterNewServer.size() > walsAfterB1.size());
+      assertTrue(walsAfterNewServer.size() > walsAfterB1.size(),
+        "Should have more WALs after new server");
 
       List<FileStatus> newServerWALs = new ArrayList<>(walsAfterNewServer);
       newServerWALs.removeAll(walsAfterB1);
-      assertFalse("Should have WALs from new server", newServerWALs.isEmpty());
+      assertFalse(newServerWALs.isEmpty(), "Should have WALs from new server");
 
       BackupLogCleaner cleaner = new BackupLogCleaner();
       cleaner.setConf(TEST_UTIL.getConfiguration());
@@ -283,8 +277,8 @@ public class TestBackupLogCleaner extends TestBackupBase {
 
       Set<FileStatus> deletable = toSet(cleaner.getDeletableFiles(walsAfterNewServer));
       for (FileStatus newWAL : newServerWALs) {
-        assertFalse("WAL from new server should NOT be deletable: " + newWAL.getPath(),
-          deletable.contains(newWAL));
+        assertFalse(deletable.contains(newWAL),
+          "WAL from new server should NOT be deletable: " + newWAL.getPath());
       }
     } finally {
       TEST_UTIL.truncateTable(BackupSystemTable.getTableName(TEST_UTIL.getConfiguration())).close();
@@ -308,18 +302,18 @@ public class TestBackupLogCleaner extends TestBackupBase {
     BackupBoundaries boundaries = BackupBoundaries.builder(0L)
       .addBackupTimestamps(host, backupStartCode, backupStartCode).build();
 
-    assertTrue("WAL older than backup should be deletable",
-      BackupLogCleaner.canDeleteFile(boundaries, oldWAL));
+    assertTrue(BackupLogCleaner.canDeleteFile(boundaries, oldWAL),
+      "WAL older than backup should be deletable");
 
     // WAL from exactly at the backup boundary
     Path boundaryWAL = new Path("/hbase/oldWALs/server1%2C60020%2C12345.1000000");
-    assertTrue("WAL at boundary should be deletable",
-      BackupLogCleaner.canDeleteFile(boundaries, boundaryWAL));
+    assertTrue(BackupLogCleaner.canDeleteFile(boundaries, boundaryWAL),
+      "WAL at boundary should be deletable");
 
     // WAL from a server that joined AFTER the backup
     Path newServerWAL = new Path("/hbase/oldWALs/newserver%2C60020%2C99999.1500000");
-    assertFalse("WAL from new server (after backup) should NOT be deletable",
-      BackupLogCleaner.canDeleteFile(boundaries, newServerWAL));
+    assertFalse(BackupLogCleaner.canDeleteFile(boundaries, newServerWAL),
+      "WAL from new server (after backup) should NOT be deletable");
   }
 
   @Test

@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.client.Admin;
@@ -33,10 +32,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,12 +42,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 /**
  * Create multiple backups for two tables: table1, table2 then perform 1 delete
  */
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestBackupMultipleDeletes extends TestBackupBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupMultipleDeletes.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupMultipleDeletes.class);
 
@@ -73,7 +66,7 @@ public class TestBackupMultipleDeletes extends TestBackupBase {
       p1.addColumn(famName, qualName, Bytes.toBytes("val" + i));
       t1.put(p1);
     }
-    Assert.assertEquals(TEST_UTIL.countRows(t1), NB_ROWS_IN_BATCH * 2);
+    assertEquals(NB_ROWS_IN_BATCH * 2, TEST_UTIL.countRows(t1));
     t1.close();
     // #3 - incremental backup for table1
     tables = Lists.newArrayList(table1);
