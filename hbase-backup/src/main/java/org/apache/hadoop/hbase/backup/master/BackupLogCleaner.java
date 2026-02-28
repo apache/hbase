@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.backup.master;
 
 import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
-
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -26,6 +25,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.IterableUtils;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 
@@ -119,13 +118,30 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
           .collect(Collectors.joining(", ")));
     }
 
+    // Load the active backup table set for each backup root, so we can then skip
+    // tables that are no longer part of the backup set. The incrbackupset is populated
+    // on every full backup and pruned when backups are deleted, so it accurately reflects
+    // which tables still have backups and may need future incrementals.
+    Map<String, Set<TableName>> activeTablesPerRoot = new HashMap<>();
+    for (String backupRoot : newestBackupPerRootDir.keySet()) {
+      activeTablesPerRoot.put(backupRoot, sysTable.getIncrementalBackupTableSet(backupRoot));
+    }
+
     BackupBoundaries.BackupBoundariesBuilder builder =
       BackupBoundaries.builder(getConf().getLong(TS_BUFFER_KEY, TS_BUFFER_DEFAULT));
-    for (BackupInfo backupInfo : newestBackupPerRootDir.values()) {
+    for (Map.Entry<String, BackupInfo> rootEntry : newestBackupPerRootDir.entrySet()) {
+      String backupRoot = rootEntry.getKey();
+      BackupInfo backupInfo = rootEntry.getValue();
+      Set<TableName> activeTables = activeTablesPerRoot.get(backupRoot);
       long startCode = Long.parseLong(sysTable.readBackupStartCode(backupInfo.getBackupRootDir()));
       // Iterate over all tables in the timestamp map, which contains all tables covered in the
       // backup root, not just the tables included in that specific backup (which could be a subset)
       for (TableName table : backupInfo.getTableSetTimestampMap().keySet()) {
+        if (activeTables != null && !activeTables.contains(table)) {
+          LOG.debug("Skipping stale table {} in backup root {}: not in incremental backup set",
+            table, backupRoot);
+          continue;
+        }
         for (Map.Entry<String, Long> entry : backupInfo.getTableSetTimestampMap().get(table)
           .entrySet()) {
           builder.addBackupTimestamps(entry.getKey(), entry.getValue(), startCode);
