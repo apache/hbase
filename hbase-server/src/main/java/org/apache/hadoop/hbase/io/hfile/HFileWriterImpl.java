@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
@@ -878,23 +879,33 @@ public class HFileWriterImpl implements HFile.Writer {
     // Write out encryption metadata before finalizing if we have a valid crypto context
     Encryption.Context cryptoContext = hFileContext.getEncryptionContext();
     if (cryptoContext != Encryption.Context.NONE) {
-      // key management is not yet implemented, so kekData is always null
-      // Use traditional encryption with master key
-      String wrapperSubject = cryptoContext.getConf().get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
-        User.getCurrent().getShortName());
-      Key encKey = cryptoContext.getKey();
-
-      // Wrap the context's key and write it as the encryption metadata
+      String wrapperSubject = null;
+      Key encKey = null;
+      Key wrapperKey = null;
+      ManagedKeyData kekData = cryptoContext.getKEKData();
+      String keyNamespace = cryptoContext.getKeyNamespace();
+      String kekMetadata = null;
+      long kekChecksum = 0;
+      if (kekData != null) {
+        kekMetadata = kekData.getKeyMetadata();
+        kekChecksum = kekData.getKeyChecksum();
+        wrapperKey = kekData.getTheKey();
+        encKey = cryptoContext.getKey();
+      } else {
+        wrapperSubject = cryptoContext.getConf().get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
+          User.getCurrent().getShortName());
+        encKey = cryptoContext.getKey();
+      }
+      // Wrap the context's key and write it as the encryption metadata, the wrapper includes
+      // all information needed for decryption
       if (encKey != null) {
         byte[] wrappedKey =
-          EncryptionUtil.wrapKey(cryptoContext.getConf(), wrapperSubject, encKey, null);
+          EncryptionUtil.wrapKey(cryptoContext.getConf(), wrapperSubject, encKey, wrapperKey);
         trailer.setEncryptionKey(wrappedKey);
       }
-
-      // Key management fields - not yet implemented, set to defaults
-      trailer.setKeyNamespace(null);
-      trailer.setKEKMetadata(null);
-      trailer.setKEKChecksum(0);
+      trailer.setKeyNamespace(keyNamespace);
+      trailer.setKEKMetadata(kekMetadata);
+      trailer.setKEKChecksum(kekChecksum);
     }
     // Now we can finish the close
     trailer.setMetaIndexCount(metaNames.size());

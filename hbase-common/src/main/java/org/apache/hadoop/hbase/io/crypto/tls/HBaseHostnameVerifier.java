@@ -81,11 +81,11 @@ final class HBaseHostnameVerifier implements HostnameVerifier {
       this.type = type;
     }
 
-    public int getType() {
+    private int getType() {
       return type;
     }
 
-    public String getValue() {
+    private String getValue() {
       return value;
     }
 
