@@ -20,12 +20,11 @@ package org.apache.hadoop.hbase.io;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.util.Dictionary;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
+import org.apache.hadoop.hbase.io.util.UndoableLRUDictionary;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -38,18 +37,27 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class TagCompressionContext {
-  private final Dictionary tagDict;
+  private final UndoableLRUDictionary tagDict;
 
-  public TagCompressionContext(Class<? extends Dictionary> dictType, int dictCapacity)
-    throws SecurityException, NoSuchMethodException, InstantiationException, IllegalAccessException,
-    InvocationTargetException {
-    Constructor<? extends Dictionary> dictConstructor = dictType.getConstructor();
-    tagDict = dictConstructor.newInstance();
+  public TagCompressionContext(Class<? extends Dictionary> dictType, int dictCapacity) {
+    tagDict = new UndoableLRUDictionary();
     tagDict.init(dictCapacity);
   }
 
   public void clear() {
     tagDict.clear();
+  }
+
+  public void checkpoint() {
+    tagDict.checkpoint();
+  }
+
+  public void commit() {
+    tagDict.commit();
+  }
+
+  public void rollback() {
+    tagDict.rollback();
   }
 
   /**
