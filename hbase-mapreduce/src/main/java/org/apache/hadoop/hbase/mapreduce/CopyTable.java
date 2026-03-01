@@ -251,6 +251,35 @@ public class CopyTable extends Configured implements Tool {
     System.err.println(" To copy data from 'sourceTableSnapshot' and bulk load to 'destTable': ");
     System.err.println(" $ hbase org.apache.hadoop.hbase.mapreduce.CopyTable "
       + "--new.name=destTable --snapshot --bulkload sourceTableSnapshot");
+    System.err.println();
+    System.err.println(
+      " To copy the data of 'TestTable' between the secured cluster and insecure cluster-b");
+    System.err.println(" $ hbase org.apache.hadoop.hbase.mapreduce.CopyTable "
+      + "-Dhbase.mapred.output.hbase.security.authentication=simple "
+      + "--peer.adr=cluster-b-1.example.com,cluster-b-2.example.com,cluster-b-3.example.com:"
+      + "2181:/cluster-b" + " TestTable");
+    System.err.println();
+    System.err.println(" To copy the data of 'TestTable' between different realm secured cluster.");
+    System.err.println(" Assume cluster-b uses different kerberos principal, "
+      + "cluster-b/_HOST@EXAMPLE.COM, for master and regionserver kerberos principal from another "
+      + "cluster");
+    System.err.println(" $ hbase org.apache.hadoop.hbase.mapreduce.CopyTable "
+      + "-Dhbase.mapred.output.hbase.regionserver.kerberos.principal="
+      + "cluster-b/_HOST@EXAMPLE.COM "
+      + "-Dhbase.mapred.output.hbase.master.kerberos.principal=cluster-b/_HOST@EXAMPLE.COM "
+      + "--peer.adr=cluster-b-1.example.com,cluster-b-2.example.com,cluster-b-3.example.com:"
+      + "2181:/cluster-b" + " TestTable");
+    System.err.println();
+    System.err.println(
+      " To copy the data of 'TestTable' between the insecure cluster and secured cluster-b");
+    System.err.println(" $ hbase org.apache.hadoop.hbase.mapreduce.CopyTable "
+      + "-Dhbase.mapred.output.hbase.security.authentication=kerberos "
+      + "-Dhbase.mapred.output.hbase.regionserver.kerberos.principal="
+      + "cluster-b/_HOST@EXAMPLE.COM "
+      + "-Dhbase.mapred.output.hbase.master.kerberos.principal=cluster-b/_HOST@EXAMPLE.COM "
+      + "--peer.adr=cluster-b-1.example.com,cluster-b-2.example.com,cluster-b-3.example.com:"
+      + "2181:/cluster-b" + " TestTable");
+    System.err.println();
     System.err.println("For performance consider the following general option:\n"
       + "  It is recommended that you set the following to >=100. A higher value uses more memory but\n"
       + "  decreases the round trip time to the server and may increase performance.\n"
