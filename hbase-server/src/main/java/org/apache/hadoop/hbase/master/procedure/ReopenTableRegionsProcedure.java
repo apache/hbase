@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.conf.ConfigKey;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -91,7 +92,7 @@ public class ReopenTableRegionsProcedure
   /**
    * Create a new ReopenTableRegionsProcedure respecting the throttling configuration for the table.
    * First check the table descriptor, then fall back to the global configuration. Only used in
-   * ModifyTableProcedure and in {@link HMaster#reopenRegionsThrottled}.
+   * ModifyTableProcedure and in {@link HMaster}#reopenRegionsThrottled.
    */
   public static ReopenTableRegionsProcedure throttled(final Configuration conf,
     final TableDescriptor desc) {
@@ -108,7 +109,7 @@ public class ReopenTableRegionsProcedure
   /**
    * Create a new ReopenTableRegionsProcedure for specific regions, respecting the throttling
    * configuration for the table. First check the table descriptor, then fall back to the global
-   * configuration. Only used in {@link HMaster#reopenRegionsThrottled}.
+   * configuration. Only used in {@link HMaster}#reopenRegionsThrottled.
    */
   public static ReopenTableRegionsProcedure throttled(final Configuration conf,
     final TableDescriptor desc, final List<byte[]> regionNames) {
