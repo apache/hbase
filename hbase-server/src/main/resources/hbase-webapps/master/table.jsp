@@ -770,33 +770,37 @@
   <tr>
     <td>Space Quota</td>
     <td>
-      <table>
+      <table class="table table-bordered table-sm table-light small mb-2">
+        <thead class="table-secondary text-body-secondary">
         <tr>
-          <th>Property</th>
-          <th>Value</th>
+          <th class="px-1 py-1 align-middle">Property</th>
+          <th class="px-1 py-1 align-middle">Value</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td class="px-1 py-1 align-middle">Limit</td>
+          <td class="px-1 py-1 align-middle"><%= StringUtils.byteDesc(spaceQuota.getSoftLimit()) %></td>
         </tr>
         <tr>
-          <td>Limit</td>
-          <td><%= StringUtils.byteDesc(spaceQuota.getSoftLimit()) %></td>
-        </tr>
-        <tr>
-          <td>Policy</td>
-          <td><%= spaceQuota.getViolationPolicy() %></td>
+          <td class="px-1 py-1 align-middle">Policy</td>
+          <td class="px-1 py-1 align-middle"><%= spaceQuota.getViolationPolicy() %></td>
         </tr>
 <%
       if (masterSnapshot != null) {
 %>
         <tr>
-          <td>Usage</td>
-          <td><%= StringUtils.byteDesc(masterSnapshot.getUsage()) %></td>
+          <td class="px-1 py-1 align-middle">Usage</td>
+          <td class="px-1 py-1 align-middle"><%= StringUtils.byteDesc(masterSnapshot.getUsage()) %></td>
         </tr>
         <tr>
-          <td>State</td>
-          <td><%= masterSnapshot.getQuotaStatus().isInViolation() ? "In Violation" : "In Observance" %></td>
+          <td class="px-1 py-1 align-middle">State</td>
+          <td class="px-1 py-1 align-middle"><%= masterSnapshot.getQuotaStatus().isInViolation() ? "In Violation" : "In Observance" %></td>
         </tr>
 <%
       }
 %>
+        </tbody>
       </table>
     </td>
     <td>Information about a Space Quota on this table, if set.</td>
@@ -810,25 +814,29 @@
   <tr>
     <td>Throttle Quota</td>
     <td>
-      <table>
+      <table class="table table-bordered table-sm table-light small mb-2">
+        <thead class="table-secondary text-body-secondary">
         <tr>
-          <th>Limit</th>
-          <th>Type</th>
-          <th>TimeUnit</th>
-          <th>Scope</th>
+            <th class="px-1 py-1 align-middle">Type</th>
+            <th class="px-1 py-1 align-middle">Limit</th>
+            <th class="px-1 py-1 align-middle">TimeUnit</th>
+            <th class="px-1 py-1 align-middle">Scope</th>
         </tr>
+        </thead>
+        <tbody>
 <%
-    for (ThrottleSettings throttle : throttles) {
+   for (ThrottleSettings throttle : throttles) {
 %>
         <tr>
-          <td><%= throttle.getSoftLimit() %></td>
-          <td><%= throttle.getThrottleType() %></td>
-          <td><%= throttle.getTimeUnit() %></td>
-          <td><%= throttle.getQuotaScope() %></td>
+            <td class="px-1 py-1 align-middle"><%= throttle.getThrottleType() %></td>
+            <td class="px-1 py-1 align-middle"><%= throttle.getSoftLimit() %></td>
+            <td class="px-1 py-1 align-middle"><%= throttle.getTimeUnit() %></td>
+            <td class="px-1 py-1 align-middle"><%= throttle.getQuotaScope() %></td>
         </tr>
 <%
-    }
+   }
 %>
+        </tbody>
       </table>
     </td>
     <td>Information about a Throttle Quota on this table, if set.</td>
