@@ -862,7 +862,7 @@
     <maven.min.version>3.5.0</maven.min.version>
     <java.min.version>${compileSource}</java.min.version>
     <!-- Dependencies -->
-    <hadoop-three.version>3.4.2</hadoop-three.version>
+    <hadoop-three.version>3.4.3</hadoop-three.version>
     <!-- These must be defined here for downstream build tools that don't look at profiles.
     -->
     <hadoop.version>${hadoop-three.version}</hadoop.version>
@@ -914,6 +914,7 @@
     <log4j2.version>2.25.3</log4j2.version>
     <mockito.version>4.11.0</mockito.version>
     <byte-buddy.version>1.15.11</byte-buddy.version>
+    <jcip-annotations.version>1.0-1</jcip-annotations.version>
     <!--
       Version of protobuf that hbase uses internally (we shade our pb) Must match what is out
       in hbase-thirdparty include.
@@ -1448,6 +1449,11 @@
         <groupId>com.github.stephenc.findbugs</groupId>
         <artifactId>findbugs-annotations</artifactId>
         <version>${findbugs-annotations.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.stephenc.jcip</groupId>
+        <artifactId>jcip-annotations</artifactId>
+        <version>${jcip-annotations.version}</version>
       </dependency>
       <!--
         Logging dependencies. In general, we use slf4j as the log facade in HBase, so all sub
