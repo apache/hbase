@@ -664,7 +664,7 @@
     <spotless.version>2.44.4</spotless.version>
     <maven-site.version>3.21.0</maven-site.version>
     <!-- compression -->
-    <aircompressor.version>0.27</aircompressor.version>
+    <aircompressor.version>2.0.3</aircompressor.version>
     <brotli4j.version>1.11.0</brotli4j.version>
     <lz4.version>1.10.1</lz4.version>
     <snappy.version>1.1.10.4</snappy.version>
