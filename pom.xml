@@ -897,7 +897,7 @@
       Note that the version of jackson-[annotations,core,databind] must be kept in sync with the
       version of jackson-jaxrs-json-provider shipped in hbase-thirdparty.
     -->
-    <jackson.version>2.19.2</jackson.version>
+    <jackson.version>2.21.1</jackson.version>
     <jackson.databind.version>2.19.2</jackson.databind.version>
     <jaxb-api.version>2.3.1</jaxb-api.version>
     <servlet.api.version>4.0.1</servlet.api.version>
