@@ -30,7 +30,9 @@ import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -44,6 +46,8 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetricsRegionInfo;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.IndexOnlyLruBlockCache;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -54,8 +58,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({ SmallTests.class, ClientTests.class })
 public class TestClientSideRegionScanner {
@@ -73,6 +79,9 @@ public class TestClientSideRegionScanner {
   private TableDescriptor htd;
   private RegionInfo hri;
   private Scan scan;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -262,6 +271,75 @@ public class TestClientSideRegionScanner {
   @Test
   public void testScanMetricsByRegionWithScanMetricsAsInput() throws IOException {
     testScanMetricByRegion(new ScanMetrics());
+  }
+
+  @Test
+  public void testGetFilesRead() throws Exception {
+    // Create a table and add some data
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAM_NAME })) {
+      TableDescriptor tableHtd = TEST_UTIL.getAdmin().getDescriptor(tableName);
+      RegionInfo tableHri = TEST_UTIL.getAdmin().getRegions(tableName).get(0);
+
+      // Add some data
+      for (int i = 0; i < 5; i++) {
+        byte[] row = Bytes.toBytes(i);
+        Put put = new Put(row);
+        put.addColumn(FAM_NAME, row, row);
+        table.put(put);
+      }
+
+      // Flush contents to disk so we can scan the fs
+      TEST_UTIL.getAdmin().flush(tableName);
+
+      // Create ClientSideRegionScanner with the correct table descriptor and region info
+      Configuration copyConf = new Configuration(conf);
+      Scan tableScan = new Scan();
+      ClientSideRegionScanner clientSideRegionScanner =
+        new ClientSideRegionScanner(copyConf, fs, rootDir, tableHtd, tableHri, tableScan, null);
+
+      // Get expected file paths from the region before closing
+      // (after closing, the region will be closed too)
+      Set<Path> expectedFilePaths = new HashSet<>();
+      HStore store = clientSideRegionScanner.getRegion().getStore(FAM_NAME);
+      for (HStoreFile storeFile : store.getStorefiles()) {
+        Path qualifiedPath = fs.makeQualified(storeFile.getPath());
+        expectedFilePaths.add(qualifiedPath);
+      }
+      int expectedFileCount = expectedFilePaths.size();
+      assertTrue("Should have at least one store file after flush", expectedFileCount >= 1);
+
+      // Before closing, should return empty set
+      Set<Path> filesReadBeforeClose = clientSideRegionScanner.getFilesRead();
+      assertTrue("Should return empty set before closing", filesReadBeforeClose.isEmpty());
+
+      // Scan through some results
+      Result result;
+      int count = 0;
+      while ((result = clientSideRegionScanner.next()) != null && count < 3) {
+        assertNotNull("Result should not be null", result);
+        count++;
+      }
+
+      // Still should return empty set before closing
+      filesReadBeforeClose = clientSideRegionScanner.getFilesRead();
+      assertTrue("Should return empty set before closing even after scanning",
+        filesReadBeforeClose.isEmpty());
+
+      // Close the scanner - this should collect files from the underlying scanner
+      clientSideRegionScanner.close();
+
+      // After closing, should return files from the underlying scanner
+      Set<Path> filesReadAfterClose = clientSideRegionScanner.getFilesRead();
+      // Verify exact file count
+      assertEquals("Should have exact file count after closing", expectedFileCount,
+        filesReadAfterClose.size());
+      // Verify exact file names match
+      assertEquals("Should contain all expected file paths", expectedFilePaths,
+        filesReadAfterClose);
+    } finally {
+      TEST_UTIL.deleteTable(tableName);
+    }
   }
 
   private static Put createPut(int rowAsInt) {

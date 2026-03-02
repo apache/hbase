@@ -25,13 +25,16 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
@@ -444,6 +447,103 @@ public class TestHMobStore {
     Assert.assertEquals(Bytes.toString(value), Bytes.toString(CellUtil.cloneValue(resultCell1)));
     Assert.assertEquals(Bytes.toString(value), Bytes.toString(CellUtil.cloneValue(resultCell2)));
     Assert.assertEquals(Bytes.toString(value2), Bytes.toString(CellUtil.cloneValue(resultCell3)));
+  }
+
+  @Test
+  public void testMobStoreScannerGetFilesRead() throws IOException {
+    doTestMobStoreScannerGetFilesRead(false);
+  }
+
+  @Test
+  public void testReversedMobStoreScannerGetFilesRead() throws IOException {
+    doTestMobStoreScannerGetFilesRead(true);
+  }
+
+  /**
+   * Utility method for getFilesRead tests on MOB store scanners. Uses values above mob
+   * threshold so DefaultMobStoreFlusher creates the mob file and refs.
+   */
+  private void doTestMobStoreScannerGetFilesRead(boolean reversed) throws IOException {
+    // Setup: conf, root dir, and MOB store init (mob threshold causes large values to go to MOB).
+    final Configuration conf = HBaseConfiguration.create();
+    Path basedir = new Path(DIR + name.getMethodName());
+    CommonFSUtils.setRootDir(conf, basedir);
+    init(name.getMethodName(), conf, false);
+
+    // Add values above MOB threshold and flush so DefaultMobStoreFlusher creates mob file and refs.
+    byte[] valueAboveThreshold = Bytes.toBytes("value"); // threshold in setup is 3 bytes
+    this.store.add(new KeyValue(row, family, qf1, 1, valueAboveThreshold), null);
+    this.store.add(new KeyValue(row, family, qf2, 1, valueAboveThreshold), null);
+    this.store.add(new KeyValue(row2, family, qf3, 1, valueAboveThreshold), null);
+    flush(1);
+
+    // Collect expected paths: store files (refs) plus actual MOB files under mob family path.
+    FileSystem storeFs = store.getFileSystem();
+    Set<Path> expectedFilePaths = new HashSet<>();
+    for (HStoreFile storeFile : this.store.getStorefiles()) {
+      expectedFilePaths.add(storeFs.makeQualified(storeFile.getPath()));
+    }
+    Path mobFamilyPath =
+      MobUtils.getMobFamilyPath(conf, TableName.valueOf(table), Bytes.toString(family));
+    if (storeFs.exists(mobFamilyPath)) {
+      FileStatus[] mobFiles = storeFs.listStatus(mobFamilyPath);
+      for (FileStatus f : mobFiles) {
+        if (!f.isDirectory()) {
+          expectedFilePaths.add(storeFs.makeQualified(f.getPath()));
+        }
+      }
+    }
+    Assert.assertTrue("Should have at least one store file and one mob file",
+      expectedFilePaths.size() >= 2);
+
+    // Build scan (optionally reversed) and target columns; get store scanner and verify type.
+    Scan scan = new Scan();
+    if (reversed) {
+      scan.setReversed(true);
+    }
+    scan.addColumn(family, qf1);
+    scan.addColumn(family, qf2);
+    scan.addColumn(family, qf3);
+    NavigableSet<byte[]> targetCols = new ConcurrentSkipListSet<>(Bytes.BYTES_COMPARATOR);
+    targetCols.add(qf1);
+    targetCols.add(qf2);
+    targetCols.add(qf3);
+
+    KeyValueScanner kvScanner = store.getScanner(scan, targetCols, 0);
+    if (reversed) {
+      Assert.assertTrue("Store scanner should be ReversedMobStoreScanner",
+        kvScanner instanceof ReversedMobStoreScanner);
+    } else {
+      Assert.assertTrue("Store scanner should be MobStoreScanner",
+        kvScanner instanceof MobStoreScanner);
+    }
+
+    // Before close: getFilesRead must be empty; then drain scanner to resolve MOB refs.
+    try {
+      Set<Path> filesReadBeforeClose = kvScanner.getFilesRead();
+      Assert.assertTrue("Should return empty set before closing", filesReadBeforeClose.isEmpty());
+      Assert.assertEquals("Should have 0 files before closing", 0, filesReadBeforeClose.size());
+
+      List<Cell> results = new ArrayList<>();
+      StoreScanner storeScanner = (StoreScanner) kvScanner;
+      while (storeScanner.next(results)) {
+        results.clear();
+      }
+
+      // Still before close: set must remain empty until scanner is closed.
+      filesReadBeforeClose = kvScanner.getFilesRead();
+      Assert.assertTrue("Should return empty set before closing even after reading",
+        filesReadBeforeClose.isEmpty());
+    } finally {
+      kvScanner.close();
+    }
+
+    // After close: set must contain exactly the expected store + MOB file paths.
+    Set<Path> filesReadAfterClose = kvScanner.getFilesRead();
+    Assert.assertEquals("Should have exact file count after closing", expectedFilePaths.size(),
+      filesReadAfterClose.size());
+    Assert.assertEquals("Should contain all expected file paths", expectedFilePaths,
+      filesReadAfterClose);
   }
 
   /**

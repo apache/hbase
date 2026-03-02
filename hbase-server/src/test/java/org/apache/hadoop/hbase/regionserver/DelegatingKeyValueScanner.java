@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.function.IntConsumer;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ExtendedCell;
@@ -94,6 +95,11 @@ public class DelegatingKeyValueScanner implements KeyValueScanner {
   @Override
   public Path getFilePath() {
     return delegate.getFilePath();
+  }
+
+  @Override
+  public Set<Path> getFilesRead() {
+    return delegate.getFilesRead();
   }
 
   @Override

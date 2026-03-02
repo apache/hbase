@@ -19,15 +19,21 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
@@ -256,5 +262,88 @@ public class TestSwitchToStreamRead {
   @Test
   public void testFilterRow() throws IOException {
     testFilter(new MatchLastRowFilterRowFilter());
+  }
+
+  /**
+   * Verifies that when the store scanner switches from pread to stream read successfully, all store
+   * files that were read (including those closed during the switch) are reported by
+   * {@link StoreScanner#getFilesRead()} after close.
+   */
+  @Test
+  public void testGetFilesReadOnTrySwitchToStreamRead() throws Exception {
+    HStore store = REGION.getStore(FAMILY);
+    FileSystem fs = REGION.getFilesystem();
+
+    // Set a very small preadMaxBytes so that trySwitchToStreamRead is triggered during scan.
+    long originalPreadMaxBytes =
+      UTIL.getConfiguration().getLong(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, 2048);
+    try {
+      UTIL.getConfiguration().setLong(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, 10L);
+
+      ScanInfo scanInfo =
+        new ScanInfo(UTIL.getConfiguration(), FAMILY, 0, Integer.MAX_VALUE, Long.MAX_VALUE,
+          org.apache.hadoop.hbase.KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0,
+          org.apache.hadoop.hbase.CellComparator.getInstance(), false);
+      Scan scan = new Scan().setReadType(Scan.ReadType.DEFAULT);
+      long readPt =
+        REGION.getReadPoint(org.apache.hadoop.hbase.client.IsolationLevel.READ_COMMITTED);
+
+      StoreScanner storeScanner = new StoreScanner(store, scanInfo, scan, null, readPt);
+
+      // Collect expected store file paths (qualified) for assertion after close.
+      Set<Path> expectedFilePaths = new HashSet<>();
+      for (HStoreFile sf : store.getStorefiles()) {
+        expectedFilePaths.add(fs.makeQualified(sf.getPath()));
+      }
+      assertFalse("Should have at least one store file", expectedFilePaths.isEmpty());
+
+      // Verify scanners start in PREAD mode before the switch.
+      for (KeyValueScanner kvs : storeScanner.getAllScannersForTesting()) {
+        if (kvs instanceof StoreFileScanner) {
+          StoreFileScanner sfScanner = (StoreFileScanner) kvs;
+          assertSame("Scanner should start in PREAD mode", ReaderType.PREAD,
+            sfScanner.getReader().getReaderContext().getReaderType());
+        }
+      }
+
+      // Scan a few rows and call shipped() to trigger trySwitchToStreamRead.
+      List<Cell> results = new ArrayList<>();
+      ScannerContext scannerContext = ScannerContext.newBuilder().build();
+      boolean switchVerified = false;
+      while (storeScanner.next(results, scannerContext)) {
+        results.clear();
+        storeScanner.shipped();
+
+        // Check mid-scan, whether the switch happened.
+        if (!switchVerified) {
+          boolean allSwitched = true;
+          for (KeyValueScanner kvs : storeScanner.getAllScannersForTesting()) {
+            if (kvs instanceof StoreFileScanner) {
+              StoreFileScanner sfScanner = (StoreFileScanner) kvs;
+              if (sfScanner.getReader().getReaderContext().getReaderType() == ReaderType.PREAD) {
+                allSwitched = false;
+                break;
+              }
+            }
+          }
+          if (allSwitched) {
+            switchVerified = true;
+          }
+        }
+      }
+      assertTrue("trySwitchToStreamRead should have been invoked and scanners switched to stream",
+        switchVerified);
+
+      // Not closing the scanners explicitly, because those must be closed during trySwitchToStreamRead
+
+      // After close: files that were read (including those closed during switch) must be tracked.
+      Set<Path> filesRead = storeScanner.getFilesRead();
+      assertEquals("Should have exact file count after close", expectedFilePaths.size(),
+        filesRead.size());
+      assertEquals("Should contain all expected store file paths", expectedFilePaths, filesRead);
+    } finally {
+      UTIL.getConfiguration().setLong(StoreScanner.STORESCANNER_PREAD_MAX_BYTES,
+        originalPreadMaxBytes);
+    }
   }
 }

@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.IntConsumer;
 import org.apache.hadoop.fs.Path;
@@ -82,6 +83,9 @@ public class StoreFileScanner implements KeyValueScanner {
   // Order of this scanner relative to other scanners when duplicate key-value is found.
   // Higher values means scanner has newer data.
   private final long scannerOrder;
+
+  // The single file path when this scanner is closed (successfully read).
+  private Path fileRead;
 
   /**
    * Implements a {@link KeyValueScanner} on top of the specified {@link HFileScanner}
@@ -313,9 +317,21 @@ public class StoreFileScanner implements KeyValueScanner {
     cur = null;
     this.hfs.close();
     if (this.reader != null) {
+      this.fileRead = this.reader.getHFileReader().getPath();
       this.reader.readCompleted();
     }
     closed = true;
+  }
+
+  /**
+   * Returns the set of store file paths that were successfully read by this scanner. Contains the
+   * single store file path if this scanner successfully read it; typically set at close.
+   */
+  @Override
+  public Set<Path> getFilesRead() {
+    return fileRead != null
+      ? Collections.singleton(fileRead)
+      : Collections.emptySet();
   }
 
   /** Returns false if not found or if k is after the end. */

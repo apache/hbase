@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.function.IntConsumer;
 import org.apache.commons.lang3.NotImplementedException;
@@ -300,6 +302,15 @@ public class SegmentScanner implements KeyValueScanner {
   @Override
   public Path getFilePath() {
     return null;
+  }
+
+  /**
+   * Returns the set of store file paths that were successfully read by this scanner. This
+   * implementation always returns an empty set (segment scanners do not track file paths).
+   */
+  @Override
+  public Set<Path> getFilesRead() {
+    return Collections.emptySet();
   }
 
   /**

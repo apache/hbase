@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.KeyValueTestUtil.create;
 import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.scanFixture;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -31,9 +32,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
@@ -48,12 +52,21 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -67,6 +80,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1093,4 +1107,203 @@ public class TestStoreScanner {
       assertFalse(memStoreScanner.closed);
     }
   }
+
+  @Test
+  public void testGetFilesRead() throws Exception {
+    // Setup: test util, conf, fs, cache, region fs, and HFile context.
+    HBaseTestingUtil testUtil = new HBaseTestingUtil();
+    Configuration conf = testUtil.getConfiguration();
+    Path testDir = testUtil.getDataTestDir(name.getMethodName() + "_directory");
+    FileSystem fs = testDir.getFileSystem(conf);
+    CacheConfig cacheConf = new CacheConfig(conf);
+    final String TEST_FAMILY = "cf";
+
+    final RegionInfo hri =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
+      new Path(testDir, hri.getTable().getNameAsString()), hri);
+    HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
+
+    StoreFileTracker sft = StoreFileTrackerFactory.create(conf, false,
+      StoreContext.getBuilder()
+        .withFamilyStoreDirectoryPath(new Path(regionFs.getRegionDir(), TEST_FAMILY))
+        .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY))
+        .withRegionFileSystem(regionFs).build());
+
+    long now = EnvironmentEdgeManager.currentTime();
+    List<Path> filePaths = new ArrayList<>();
+    List<HStoreFile> storeFiles = new ArrayList<>();
+
+    // File 1: rows "row01" to "row05" - in scan key range, fresh timestamp
+    StoreFileWriter writer1 = new StoreFileWriter.Builder(conf, cacheConf, fs)
+      .withFilePath(regionFs.createTempName()).withFileContext(meta).build();
+    for (int i = 1; i <= 5; i++) {
+      writer1.append(new KeyValue(Bytes.toBytes(String.format("row%02d", i)), CF,
+        Bytes.toBytes("col"), now, Bytes.toBytes("value" + i)));
+    }
+    Path path1 = regionFs.commitStoreFile(TEST_FAMILY, writer1.getPath());
+    writer1.close();
+    filePaths.add(fs.makeQualified(path1));
+    HStoreFile file1 = new HStoreFile(fs, path1, conf, cacheConf, BloomType.NONE, true, sft);
+    file1.initReader();
+    storeFiles.add(file1);
+
+    // File 2: rows "row06" to "row10" - in scan key range, fresh timestamp
+    StoreFileWriter writer2 = new StoreFileWriter.Builder(conf, cacheConf, fs)
+      .withFilePath(regionFs.createTempName()).withFileContext(meta).build();
+    for (int i = 6; i <= 10; i++) {
+      writer2.append(new KeyValue(Bytes.toBytes(String.format("row%02d", i)), CF,
+        Bytes.toBytes("col"), now, Bytes.toBytes("value" + i)));
+    }
+    Path path2 = regionFs.commitStoreFile(TEST_FAMILY, writer2.getPath());
+    writer2.close();
+    filePaths.add(fs.makeQualified(path2));
+    HStoreFile file2 = new HStoreFile(fs, path2, conf, cacheConf, BloomType.NONE, true, sft);
+    file2.initReader();
+    storeFiles.add(file2);
+
+    // File 3: rows "row20" to "row25" - OUT of scan key range (after stop row)
+    StoreFileWriter writer3 = new StoreFileWriter.Builder(conf, cacheConf, fs)
+      .withFilePath(regionFs.createTempName()).withFileContext(meta).build();
+    for (int i = 20; i <= 25; i++) {
+      writer3.append(new KeyValue(Bytes.toBytes(String.format("row%02d", i)), CF,
+        Bytes.toBytes("col"), now, Bytes.toBytes("value" + i)));
+    }
+    Path path3 = regionFs.commitStoreFile(TEST_FAMILY, writer3.getPath());
+    writer3.close();
+    filePaths.add(fs.makeQualified(path3));
+    HStoreFile file3 = new HStoreFile(fs, path3, conf, cacheConf, BloomType.NONE, true, sft);
+    file3.initReader();
+    storeFiles.add(file3);
+
+    // File 4: row "row00" - OUT of key range (before start row)
+    StoreFileWriter writer4 = new StoreFileWriter.Builder(conf, cacheConf, fs)
+      .withFilePath(regionFs.createTempName()).withFileContext(meta).build();
+    writer4.append(new KeyValue(Bytes.toBytes("row00"), CF, Bytes.toBytes("col"),
+      now, Bytes.toBytes("value0")));
+    Path path4 = regionFs.commitStoreFile(TEST_FAMILY, writer4.getPath());
+    writer4.close();
+    filePaths.add(fs.makeQualified(path4));
+    HStoreFile file4 = new HStoreFile(fs, path4, conf, cacheConf, BloomType.NONE, true, sft);
+    file4.initReader();
+    storeFiles.add(file4);
+
+    // File 5: row "row11" with expired timestamp (1 hour ago); TTL-filtered but still tracked.
+    long expiredTime = now - (1000 * 60 * 60);
+    StoreFileWriter writer5 = new StoreFileWriter.Builder(conf, cacheConf, fs)
+      .withFilePath(regionFs.createTempName()).withFileContext(meta).build();
+    writer5.append(new KeyValue(Bytes.toBytes("row11"), CF, Bytes.toBytes("col"), expiredTime,
+      Bytes.toBytes("expired_value")));
+    Path path5 = regionFs.commitStoreFile(TEST_FAMILY, writer5.getPath());
+    writer5.close();
+    filePaths.add(fs.makeQualified(path5));
+    HStoreFile file5 = new HStoreFile(fs, path5, conf, cacheConf, BloomType.NONE, true, sft);
+    file5.initReader();
+    storeFiles.add(file5);
+
+    // Create StoreFileScanners from all five files.
+    List<KeyValueScanner> scanners = new ArrayList<>();
+    for (HStoreFile storeFile : storeFiles) {
+      StoreFileReader reader = storeFile.getReader();
+      StoreFileScanner scanner = reader.getStoreFileScanner(false, false, false, 0, 0, false);
+      scanners.add(scanner);
+    }
+
+    // Scan row01–row15 with 30-minute TTL so file 5's expired cell is filtered after read.
+    Scan scan =
+      new Scan().withStartRow(Bytes.toBytes("row01")).withStopRow(Bytes.toBytes("row15"), false);
+    long ttl = 30 * 60 * 1000;
+    ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, Integer.MAX_VALUE, ttl,
+      KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
+
+    // Create StoreScanner; drain with next(), then close.
+    StoreScanner storeScanner = new StoreScanner(scan, scanInfo, null, scanners);
+
+    List<Cell> results = new ArrayList<>();
+    while (storeScanner.next(results)) {
+      results.clear();
+    }
+    storeScanner.close();
+
+    // After close: all 5 files must be tracked (in-range, out-of-range, and TTL-expired).
+    Set<Path> filesRead = storeScanner.getFilesRead();
+
+    assertTrue("File 1 (in range) should be tracked", filesRead.contains(filePaths.get(0)));
+    assertTrue("File 2 (in range) should be tracked", filesRead.contains(filePaths.get(1)));
+    assertTrue("File 3 (out of key range) should be tracked", filesRead.contains(filePaths.get(2)));
+    assertTrue("File 4 (before start row) should be tracked", filesRead.contains(filePaths.get(3)));
+    assertTrue("File 5 (expired TTL, filtered after read) should be tracked",
+      filesRead.contains(filePaths.get(4)));
+    assertEquals("Should have all 5 files read", 5, filesRead.size());
+  }
+
+  /**
+   * Test that when StoreScanner initialization fails after scanners are created, files are not
+   * tracked
+   */
+  @Test
+  public void testGetFilesReadOnInitializationFailure() throws Exception {
+    HStore mockStore = Mockito.mock(HStore.class);
+    ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, Integer.MAX_VALUE, Long.MAX_VALUE,
+      KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
+    Scan scan = new Scan();
+    NavigableSet<byte[]> columns = null;
+    long readPt = 100L;
+
+    // Create mock scanners that will be returned by getScanners
+    KeyValueScanner mockScanner1 = Mockito.mock(StoreFileScanner.class);
+    KeyValueScanner mockScanner2 = Mockito.mock(StoreFileScanner.class);
+    Path filePath1 = new Path("/test/file1");
+    Path filePath2 = new Path("/test/file2");
+    Mockito.when(mockScanner1.isFileScanner()).thenReturn(true);
+    Mockito.when(mockScanner2.isFileScanner()).thenReturn(true);
+    Mockito.doReturn(true).when(mockScanner1).shouldUseScanner(Mockito.any(), Mockito.any(),
+      Mockito.anyLong());
+    Mockito.doReturn(true).when(mockScanner2).shouldUseScanner(Mockito.any(), Mockito.any(),
+      Mockito.anyLong());
+    Mockito.when(mockScanner1.getFilesRead())
+      .thenReturn(Collections.singleton(filePath1));
+    Mockito.when(mockScanner2.getFilesRead())
+      .thenReturn(Collections.singleton(filePath2));
+
+    List<KeyValueScanner> mockScanners = new ArrayList<>();
+    mockScanners.add(mockScanner1);
+    mockScanners.add(mockScanner2);
+
+    // Make getScanners return the mock scanners
+    Mockito.when(mockStore.getScanners(Mockito.anyBoolean(), Mockito.anyBoolean(),
+      Mockito.anyBoolean(), Mockito.any(), Mockito.any(), Mockito.anyBoolean(), Mockito.any(),
+      Mockito.anyBoolean(), Mockito.anyLong(), Mockito.anyBoolean())).thenReturn(mockScanners);
+
+    Mockito.when(mockStore.getCoprocessorHost()).thenReturn(null);
+
+    // Make seek throw IOException on one scanner to simulate failure during seekScanners
+    Mockito.doThrow(new IOException("Test seek failure")).when(mockScanner1).seek(Mockito.any());
+
+    // Verify that IOException is thrown during construction
+    StoreScanner storeScanner = null;
+    IOException caughtException = null;
+    try {
+      storeScanner = new StoreScanner(mockStore, scanInfo, scan, columns, readPt);
+    } catch (IOException e) {
+      caughtException = e;
+    }
+
+    // Verify that exception was thrown
+    assertNotNull("Should have thrown IOException during initialization", caughtException);
+
+    // Verify that store methods were called (cleanup happened in catch block)
+    Mockito.verify(mockStore, Mockito.times(1)).addChangedReaderObserver(Mockito.any());
+    Mockito.verify(mockStore, Mockito.times(1)).deleteChangedReaderObserver(Mockito.any());
+
+    // Verify that scanners were closed (clearAndClose was called in catch block)
+    Mockito.verify(mockScanner1, Mockito.times(1)).close();
+    Mockito.verify(mockScanner2, Mockito.times(1)).close();
+
+    // Verify that getFilesRead was NOT called on the scanners
+    // (because trackFiles=false was passed to clearAndClose, so files weren't tracked)
+    Mockito.verify(mockScanner1, Mockito.never()).getFilesRead();
+    Mockito.verify(mockScanner2, Mockito.never()).getFilesRead();
+  }
+
 }

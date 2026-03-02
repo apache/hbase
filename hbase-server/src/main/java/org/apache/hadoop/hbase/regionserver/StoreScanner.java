@@ -20,13 +20,17 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Set;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.IntConsumer;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -107,6 +111,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   // before sending data to client, the chunk may be reclaimed by other
   // updates and the data will be corrupt.
   private final List<KeyValueScanner> scannersForDelayedClose = new ArrayList<>();
+
+  // Tracks file paths successfully read (scanners closed) by this store scanner.
+  private final Set<Path> filesRead = new HashSet<>();
 
   /**
    * The number of KVs seen by the scanner. Includes explicitly skipped KVs, but not KVs skipped via
@@ -271,6 +278,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // key does not exist, then to the start of the next matching Row).
       // Always check bloom filter to optimize the top row seek for delete
       // family marker.
+
       seekScanners(scanners, matcher.getStartKey(), explicitColumnQuery && lazySeekEnabledGlobally,
         parallelSeekEnabled);
 
@@ -283,7 +291,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // Combine all seeked scanners with a heap
       resetKVHeap(scanners, comparator);
     } catch (IOException e) {
-      clearAndClose(scanners);
+      clearAndClose(scanners, false); // do not track files when closing due to exception
       // remove us from the HStore#changedReaderObservers here or we'll have no chance to
       // and might cause memory leak
       store.deleteChangedReaderObserver(this);
@@ -467,7 +475,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       memOnly = false;
       filesOnly = false;
     }
-
     List<KeyValueScanner> scanners = new ArrayList<>(allScanners.size());
 
     // We can only exclude store files based on TTL if minVersions is set to 0.
@@ -479,6 +486,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       boolean isFile = kvs.isFileScanner();
       if ((!isFile && filesOnly) || (isFile && memOnly)) {
         kvs.close();
+        filesRead.addAll(kvs.getFilesRead());
         continue;
       }
 
@@ -486,6 +494,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         scanners.add(kvs);
       } else {
         kvs.close();
+        filesRead.addAll(kvs.getFilesRead());
       }
     }
     return scanners;
@@ -528,6 +537,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         clearAndClose(flushedstoreFileScanners);
         if (this.heap != null) {
           this.heap.close();
+          this.filesRead.addAll(this.heap.getFilesRead());
           this.currentScanners.clear();
           this.heap = null; // CLOSED!
         }
@@ -976,12 +986,19 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     return this.readPt;
   }
 
-  private static void clearAndClose(List<KeyValueScanner> scanners) {
+  private void clearAndClose(List<KeyValueScanner> scanners) {
+    clearAndClose(scanners, true);
+  }
+
+  private void clearAndClose(List<KeyValueScanner> scanners, boolean trackFiles) {
     if (scanners == null) {
       return;
     }
     for (KeyValueScanner s : scanners) {
       s.close();
+      if (trackFiles) {
+        this.filesRead.addAll(s.getFilesRead());
+      }
     }
     scanners.clear();
   }
@@ -1188,7 +1205,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     addCurrentScanners(newCurrentScanners);
     this.heap = newHeap;
     resetQueryMatcher(lastTop);
-    scannersToClose.forEach(KeyValueScanner::close);
+    for (KeyValueScanner scanner : scannersToClose) {
+      scanner.close();
+      this.filesRead.addAll(scanner.getFilesRead());
+    }
     if (hasSwitchedToStreamRead != null) {
       hasSwitchedToStreamRead.set(true);
     }
@@ -1268,6 +1288,15 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   /** Returns The estimated number of KVs seen by this scanner (includes some skipped KVs). */
   public long getEstimatedNumberOfKvsScanned() {
     return this.kvsScanned;
+  }
+
+  /**
+   * Returns the set of store file paths that were successfully read by this scanner. Populated at
+   * close from the key-value heap and any closed child scanners.
+   */
+  @Override
+  public Set<Path> getFilesRead() {
+    return Collections.unmodifiableSet(filesRead);
   }
 
   @Override
