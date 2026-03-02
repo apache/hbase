@@ -20,5 +20,5 @@
 .*/gen-cpp/.*
 .*/gen-perl/.*
 .*/gen-php/.*
-.*/gen-py/.*
+.*/gen_py/.*
 .*/gen-rb/.*
