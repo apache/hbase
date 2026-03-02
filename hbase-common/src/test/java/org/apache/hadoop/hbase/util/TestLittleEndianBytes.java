@@ -17,35 +17,12 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.jupiter.api.Tag;
 
-@InterfaceAudience.Private
-public class RowBloomHashKey extends CellHashKey {
-
-  public RowBloomHashKey(Cell cell) {
-    super(cell);
-  }
-
-  @Override
-  public byte get(int offset) {
-    return PrivateCellUtil.getRowByte(t, offset);
-  }
-
-  @Override
-  public int length() {
-    return this.t.getRowLength();
-  }
-
-  @Override
-  public int getIntLE(int offset) {
-    return LittleEndianBytes.getRowAsInt(t, offset);
-  }
-
-  @Override
-  public long getLongLE(int offset) {
-    return LittleEndianBytes.getRowAsLong(t, offset);
-  }
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
+public class TestLittleEndianBytes extends TestLittleEndianBytesBase {
 
 }

@@ -17,35 +17,27 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.yetus.audience.InterfaceAudience;
+import com.dynatrace.hash4j.hashing.ByteAccess;
 
-@InterfaceAudience.Private
-public class RowBloomHashKey extends CellHashKey {
+/**
+ * Provides direct byte-level access to a {@link HashKey} so it can be hashed using hash4j's
+ * {@link ByteAccess} interface.
+ */
+class HashKeyByteAccess implements ByteAccess<HashKey<?>> {
+  static final HashKeyByteAccess INSTANCE = new HashKeyByteAccess();
 
-  public RowBloomHashKey(Cell cell) {
-    super(cell);
+  @Override
+  public byte getByte(HashKey<?> hashKey, long offset) {
+    return hashKey.get((int) offset);
   }
 
   @Override
-  public byte get(int offset) {
-    return PrivateCellUtil.getRowByte(t, offset);
+  public int getInt(HashKey<?> hashKey, long offset) {
+    return hashKey.getIntLE((int) offset);
   }
 
   @Override
-  public int length() {
-    return this.t.getRowLength();
+  public long getLong(HashKey<?> hashKey, long offset) {
+    return hashKey.getLongLE((int) offset);
   }
-
-  @Override
-  public int getIntLE(int offset) {
-    return LittleEndianBytes.getRowAsInt(t, offset);
-  }
-
-  @Override
-  public long getLongLE(int offset) {
-    return LittleEndianBytes.getRowAsLong(t, offset);
-  }
-
 }
