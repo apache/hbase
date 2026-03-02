@@ -119,9 +119,11 @@ import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.MasterRpcServices.BalanceSwitchMode;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -246,6 +248,7 @@ import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SecurityConstants;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.TraceUtil;
@@ -357,6 +360,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   // file system manager for the master FS operations
   private MasterFileSystem fileSystemManager;
   private MasterWalManager walManager;
+  private SystemKeyManager systemKeyManager;
 
   // manager to manage procedure-based WAL splitting, can be null if current
   // is zk-based WAL splitting. SplitWALManager will replace SplitLogManager
@@ -994,6 +998,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
     this.clusterId = clusterId.toString();
 
+    systemKeyManager = new SystemKeyManager(this);
+    systemKeyManager.ensureSystemKeyInitialized();
+    buildSystemKeyCache();
+
     // Precaution. Put in place the old hbck1 lock file to fence out old hbase1s running their
     // hbck1s against an hbase2 cluster; it could do damage. To skip this behavior, set
     // hbase.write.hbck1.lock.file to false.
@@ -1156,14 +1164,23 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       return;
     }
 
+    this.assignmentManager.initializationPostMetaOnline();
+    this.assignmentManager.joinCluster();
+
+    // If key management is enabled, wait for keymeta table regions to be assigned and online,
+    // which includes creating the table the very first time.
+    // This is to ensure that the encrypted tables can successfully initialize Encryption.Context as
+    // part of the store opening process when processOfflineRegions is called.
+    // Without this, we can end up with race condition where a user store is opened before the
+    // keymeta table regions are online, which would cause the store opening to fail.
+    initKeymetaIfEnabled();
+
     TableDescriptor metaDescriptor = tableDescriptors.get(TableName.META_TABLE_NAME);
     final ColumnFamilyDescriptor tableFamilyDesc =
       metaDescriptor.getColumnFamily(HConstants.TABLE_FAMILY);
     final ColumnFamilyDescriptor replBarrierFamilyDesc =
       metaDescriptor.getColumnFamily(HConstants.REPLICATION_BARRIER_FAMILY);
 
-    this.assignmentManager.initializationPostMetaOnline();
-    this.assignmentManager.joinCluster();
     // The below depends on hbase:meta being online.
     this.assignmentManager.processOfflineRegions();
     // this must be called after the above processOfflineRegions to prevent race
@@ -1526,6 +1543,80 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   /**
+   * Creates the keymeta table and waits for all its regions to be online.
+   */
+  private void initKeymetaIfEnabled() throws IOException {
+    if (!SecurityUtil.isKeyManagementEnabled(conf)) {
+      return;
+    }
+
+    String keymetaTableName =
+      KeymetaTableAccessor.KEY_META_TABLE_NAME.getNameWithNamespaceInclAsString();
+    if (!getTableDescriptors().exists(KeymetaTableAccessor.KEY_META_TABLE_NAME)) {
+      LOG.info("initKeymetaIfEnabled: {} table not found. Creating.", keymetaTableName);
+      long keymetaTableProcId =
+        createSystemTable(KeymetaTableAccessor.TABLE_DESCRIPTOR_BUILDER.build(), true);
+
+      LOG.info("initKeymetaIfEnabled: Waiting for {} table creation procedure {} to complete",
+        keymetaTableName, keymetaTableProcId);
+      waitForProcedureToComplete(keymetaTableProcId,
+        "Failed to create keymeta table and add to meta");
+    }
+
+    List<RegionInfo> ris = this.assignmentManager.getRegionStates()
+      .getRegionsOfTable(KeymetaTableAccessor.KEY_META_TABLE_NAME);
+    if (ris.isEmpty()) {
+      throw new RuntimeException(
+        "initKeymetaIfEnabled: No " + keymetaTableName + " table regions found");
+    }
+
+    // First, create assignment procedures for all keymeta regions
+    List<TransitRegionStateProcedure> procs = new ArrayList<>();
+    for (RegionInfo ri : ris) {
+      RegionStateNode regionNode =
+        assignmentManager.getRegionStates().getOrCreateRegionStateNode(ri);
+      regionNode.lock();
+      try {
+        // Only create if region is in CLOSED or OFFLINE state and no procedure is already attached.
+        // The check for server online is really needed only for the sake of mini cluster as there
+        // are outdated ONLINE entries being returned after a cluster restart that point to the old
+        // RS.
+        if (
+          (regionNode.isInState(RegionState.State.CLOSED, RegionState.State.OFFLINE)
+            || !this.serverManager.isServerOnline(regionNode.getRegionLocation()))
+            && regionNode.getProcedure() == null
+        ) {
+          TransitRegionStateProcedure proc = TransitRegionStateProcedure
+            .assign(getMasterProcedureExecutor().getEnvironment(), ri, null);
+          proc.setCriticalSystemTable(true);
+          regionNode.setProcedure(proc);
+          procs.add(proc);
+        }
+      } finally {
+        regionNode.unlock();
+      }
+    }
+    // Then, trigger assignment for all keymeta regions
+    if (!procs.isEmpty()) {
+      LOG.info("initKeymetaIfEnabled: Submitting {} assignment procedures for {} table regions",
+        procs.size(), keymetaTableName);
+      getMasterProcedureExecutor()
+        .submitProcedures(procs.toArray(new TransitRegionStateProcedure[procs.size()]));
+    }
+
+    // Then wait for all regions to come online
+    LOG.info("initKeymetaIfEnabled: Checking/Waiting for {} table {} regions to be online",
+      keymetaTableName, ris.size());
+    for (RegionInfo ri : ris) {
+      if (!isRegionOnline(ri)) {
+        throw new RuntimeException(keymetaTableName + " table region " + ri.getRegionNameAsString()
+          + " could not be brought online");
+      }
+    }
+    LOG.info("initKeymetaIfEnabled: All {} table regions are online", keymetaTableName);
+  }
+
+  /**
    * Adds the {@code MasterQuotasObserver} to the list of configured Master observers to
    * automatically remove quotas for a table when that table is deleted.
    */
@@ -1638,7 +1729,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   @Override
   public boolean rotateSystemKeyIfChanged() throws IOException {
-    // STUB - Feature not yet implemented
+    ManagedKeyData newKey = this.systemKeyManager.rotateSystemKeyIfChanged();
+    if (newKey != null) {
+      this.systemKeyCache = null;
+      buildSystemKeyCache();
+      return true;
+    }
     return false;
   }
 

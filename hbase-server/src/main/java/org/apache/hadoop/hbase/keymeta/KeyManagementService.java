@@ -17,51 +17,62 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.yetus.audience.InterfaceAudience;
 
-/**
- * STUB INTERFACE - Feature not yet complete. This interface will be fully implemented in
- * HBASE-29368 feature PR.
- */
 @InterfaceAudience.Private
 public interface KeyManagementService {
+  class DefaultKeyManagementService implements KeyManagementService {
+    private final Configuration configuration;
+    private final ManagedKeyDataCache managedKeyDataCache;
+    private final SystemKeyCache systemKeyCache;
 
-  /**
-   * No-op implementation for precursor PR.
-   */
-  KeyManagementService NONE = new KeyManagementService() {
-  };
+    public DefaultKeyManagementService(Configuration configuration, FileSystem fs) {
+      this.configuration = configuration;
+      this.managedKeyDataCache = new ManagedKeyDataCache(configuration, null);
+      try {
+        this.systemKeyCache = SystemKeyCache.createCache(configuration, fs);
+      } catch (IOException e) {
+        throw new RuntimeException("Failed to create system key cache", e);
+      }
+    }
 
-  /**
-   * Creates a default key management service. Returns NONE for precursor PR.
-   */
-  static KeyManagementService createDefault(Configuration conf, FileSystem fs) {
-    return NONE;
+    @Override
+    public SystemKeyCache getSystemKeyCache() {
+      return systemKeyCache;
+    }
+
+    @Override
+    public ManagedKeyDataCache getManagedKeyDataCache() {
+      return managedKeyDataCache;
+    }
+
+    @Override
+    public KeymetaAdmin getKeymetaAdmin() {
+      throw new UnsupportedOperationException("KeymetaAdmin is not supported");
+    }
+
+    @Override
+    public Configuration getConfiguration() {
+      return configuration;
+    }
   }
 
-  /**
-   * Returns the managed key data cache.
-   * @return the managed key data cache, or null if not available
-   */
-  default ManagedKeyDataCache getManagedKeyDataCache() {
-    return null;
+  static KeyManagementService createDefault(Configuration configuration, FileSystem fs) {
+    return new DefaultKeyManagementService(configuration, fs);
   }
 
-  /**
-   * Returns the system key cache.
-   * @return the system key cache, or null if not available
-   */
-  default SystemKeyCache getSystemKeyCache() {
-    return null;
-  }
+  /** Returns the cache for cluster keys. */
+  public SystemKeyCache getSystemKeyCache();
 
-  /**
-   * Returns the keymeta admin.
-   * @return the keymeta admin, or null if not available
-   */
-  default KeymetaAdmin getKeymetaAdmin() {
-    return null;
-  }
+  /** Returns the cache for managed keys. */
+  public ManagedKeyDataCache getManagedKeyDataCache();
+
+  /** Returns the admin for keymeta. */
+  public KeymetaAdmin getKeymetaAdmin();
+
+  /** Returns the configuration. */
+  public Configuration getConfiguration();
 }
