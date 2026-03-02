@@ -89,7 +89,7 @@ pipeline {
             exit 1
           fi
           if [[ "${BRANCH_NAME}" == *"branch-2"* ]]; then
-            if [ 2 -ne $(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-hadoop3-*-bin.tar.gz | wc -l) ]; then
+            if [ 2 -eq $(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-hadoop3-*-bin.tar.gz | wc -l) ]; then
                echo '(x) {color:red}-1 testing binary artifact{color}\n-- source tarball did not produce the expected hadoop3 binaries.' >>output-srctarball/commentfile
                exit 1
             fi
