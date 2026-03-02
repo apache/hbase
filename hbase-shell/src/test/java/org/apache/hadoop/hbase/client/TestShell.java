@@ -27,6 +27,6 @@ public class TestShell extends AbstractTestShell {
 
   @Override
   public String getSuitePattern() {
-    return "**/reopen_regions_test_cluster.rb";
+    return "**/*_test_cluster.rb";
   }
 }

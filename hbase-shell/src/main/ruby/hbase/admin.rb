@@ -616,6 +616,34 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Reopen regions of a table
+    def reopen_regions(table_name, regions = nil)
+      table_name_obj = TableName.valueOf(table_name)
+      if regions.nil? || regions.empty?
+        @admin.reopenTableRegions(table_name_obj)
+      else
+        # Get all regions of the table
+        all_regions = @admin.getRegions(table_name_obj)
+        target_regions = java.util.ArrayList.new
+
+        regions.each do |r|
+          # r could be encoded name or full name
+          found = false
+          all_regions.each do |region_info|
+            if region_info.getEncodedName == r || region_info.getRegionNameAsString == r
+              target_regions.add(region_info)
+              found = true
+              break
+            end
+          end
+          raise ArgumentError, "Region #{r} not found in table #{table_name}" unless found
+        end
+
+        @admin.reopenTableRegions(table_name_obj, target_regions)
+      end
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Merge multiple regions
     def merge_region(regions, force)
       unless regions.is_a?(Array)
@@ -1440,34 +1468,6 @@ module Hbase
       end
 
       servernames
-    end
-
-    #----------------------------------------------------------------------------------------------
-    # Reopen regions of a table
-    def reopen_regions(table_name, regions = nil)
-      table_name_obj = TableName.valueOf(table_name)
-      if regions.nil? || regions.empty?
-        @admin.reopenTableRegions(table_name_obj)
-      else
-        # Get all regions of the table
-        all_regions = @admin.getRegions(table_name_obj)
-        target_regions = java.util.ArrayList.new
-
-        regions.each do |r|
-          # r could be encoded name or full name
-          found = false
-          all_regions.each do |region_info|
-            if region_info.getEncodedName == r || region_info.getRegionNameAsString == r
-              target_regions.add(region_info)
-              found = true
-              break
-            end
-          end
-          raise ArgumentError, "Region #{r} not found in table #{table_name}" unless found
-        end
-
-        @admin.reopenTableRegions(table_name_obj, target_regions)
-      end
     end
 
     # Apply config specific to a table/column to its descriptor
