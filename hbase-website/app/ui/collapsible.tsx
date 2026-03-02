@@ -52,3 +52,7 @@ function CollapsibleContent({
 }
 
 export { Collapsible, CollapsibleTrigger, CollapsibleContent };
+
+export type CollapsibleProps = CollapsiblePrimitive.CollapsibleProps;
+export type CollapsibleContentProps = CollapsiblePrimitive.CollapsibleContentProps;
+export type CollapsibleTriggerProps = CollapsiblePrimitive.CollapsibleTriggerProps;

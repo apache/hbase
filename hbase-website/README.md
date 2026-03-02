@@ -40,14 +40,16 @@ The official website for Apache HBase, built with modern web technologies to pro
 
 ## Content Editing
 
-Most pages (except the home page) store content in **Markdown (`.md`)** or **JSON (`.json`)** files located in `app/pages/[page-name]/`. This makes it easy to update content without touching code.
+Most landing pages store content in **Markdown (`.md`)** or **JSON (`.json`)** files located in `app/pages/_landing/[page-name]/`. Docs content lives under `app/pages/_docs/` and is authored in MDX.
+
+Legacy documentation is preserved for those users who have old bookmarked links and notes: the old book lives at `/public/book.html`, and its static assets are in `public/old-book-static-files/`.
 
 **Examples:**
-- `app/pages/team/content.md` - Markdown content for team page
-- `app/pages/powered-by-hbase/companies.json` - JSON data for companies
-- `app/pages/news/events.json` - JSON data for news/events
 
-Edit these files with any text editor, then run `npm run build` to regenerate the site.
+- `app/pages/_landing/team/content.md` - Markdown content for team page
+- `app/pages/_landing/powered-by-hbase/companies.json` - JSON data for companies
+- `app/pages/_landing/news/events.json` - JSON data for news/events
+- `app/pages/_docs/docs/_mdx/(multi-page)/...` - MDX content for documentation
 
 ---
 
@@ -70,11 +72,20 @@ Before you begin, ensure you have the following installed:
 This website uses modern web technologies. Here's what each one does (with Java analogies):
 
 #### Core Framework
+
 - **React Router** - Full-stack web framework with Server-Side Generation (SSG)
   - Handles routing (like Spring MVC controllers)
   - Provides server-side rendering for better performance and SEO
   - Enables progressive enhancement (see below)
   - [Documentation](https://reactrouter.com/)
+
+#### Documentation Framework
+
+- **Fumadocs** - Documentation framework used for the docs section
+  - Provides MDX-based docs structure and navigation
+  - Lives alongside the landing pages in the same React Router app
+  - Supports multi-page and single-page docs from the same MDX sources
+  - [Documentation](https://fumadocs.com/)
 
 #### Progressive Enhancement
 
@@ -93,29 +104,26 @@ The website uses **progressive enhancement** ([learn more](https://reactrouter.c
 This approach ensures the website works for all users, regardless of their browser capabilities or connection speed.
 
 #### UI Components
+
 - **shadcn/ui** - Pre-built, accessible UI components
-  - Built on top of Radix UI primitives
   - Similar to a component library like PrimeFaces or Vaadin in Java
   - Provides buttons, cards, navigation menus, etc.
   - [Documentation](https://ui.shadcn.com/)
 
-- **Radix UI** - Low-level, accessible UI primitives
-  - The foundation that shadcn/ui builds upon
-  - Handles complex accessibility (ARIA) requirements automatically
-  - Think of it as the "Spring Framework" for UI components
-
 #### Styling
-- **TailwindCSS** - Utility-first CSS framework
+
+- **TailwindCSS** - Utility-first CSS framework, aka Bootstrap on steroids
   - Instead of writing CSS files, you apply classes directly in components
   - Example: `className="text-blue-500 font-bold"` makes blue, bold text
 
 #### Code Quality Tools
+
 - **TypeScript** - Typed superset of JavaScript
   - Similar to Java's type system
   - Catches errors at compile-time instead of runtime
   - Provides autocomplete and better IDE support
 
-- **ESLint + Prettier** - Code linting and formatting (like Checkstyle + google-java-format)
+- **ESLint + Prettier** - Code linting and formatting (like Checkstyle)
   - ESLint analyzes code for potential errors and enforces coding standards
   - Prettier handles automatic code formatting (spacing, indentation, etc.)
   - Integrated together: `npm run lint:fix` handles both linting and formatting
@@ -127,47 +135,55 @@ The project follows a clear directory structure with separation of concerns:
 
 ```
 my-react-router-app/
-├── app/                          # Application source code
-│   ├── ui/                       # Reusable UI components (no business logic)
-│   │   ├── button.tsx            # Generic button component
-│   │   ├── card.tsx              # Card container component
-│   │   └── ...                   # Other UI primitives
+├── app/                               # Application source code
+│   ├── ui/                            # Reusable UI components (no business logic)
+│   │   ├── button.tsx                 # Generic button component
+│   │   ├── card.tsx                   # Card container component
+│   │   └── ...                        # Other UI primitives
 │   │
-│   ├── components/               # Reusable components WITH business logic
-│   │   ├── site-navbar.tsx       # Website navigation bar
-│   │   ├── site-footer.tsx       # Website footer
-│   │   ├── theme-toggle.tsx      # Dark/light mode toggle
-│   │   └── markdown-layout.tsx   # Layout for markdown content pages
+│   ├── components/                    # Reusable components WITH business logic
+│   │   ├── site-navbar.tsx            # Website navigation bar
+│   │   ├── site-footer.tsx            # Website footer
+│   │   ├── theme-toggle.tsx           # Dark/light mode toggle
+│   │   └── markdown-layout.tsx        # Layout for markdown content pages
 │   │
-│   ├── pages/                    # Complete pages (composed of ui + components)
-│   │   ├── home/                 # Home page
-│   │   │   ├── index.tsx         # Main page component (exported)
-│   │   │   ├── hero.tsx          # Hero section (not exported)
-│   │   │   ├── features.tsx      # Features section (not exported)
+│   ├── pages/                         # Complete pages (composed of ui + components)
+│   │   ├── _landing/                  # Landing pages + layout
+│   │   │   ├── home/                  # Home page
+│   │   │   │   ├── index.tsx          # Main page component (exported)
+│   │   │   │   ├── hero.tsx           # Hero section (not exported)
+│   │   │   │   ├── features.tsx       # Features section (not exported)
+│   │   │   │   └── ...
+│   │   │   ├── team/                  # Landing page content
 │   │   │   └── ...
-│   │   ├── downloads/            # Downloads page
-│   │   │   ├── index.tsx         # Main page component (exported)
-│   │   │   └── content.md        # Markdown content
+│   │   ├── _docs/                     # Documentation (Fumadocs)
+│   │   │   ├── docs/                  # MDX content and structure
+│   │   │   ├── docs-layout.tsx        # Fumadocs layout wrapper
+│   │   │   └── ...
+│   │
+│   ├── routes/                        # Route definitions and metadata
+│   │   ├── home.tsx                   # Home route configuration
+│   │   ├── team.tsx                   # Team route configuration
 │   │   └── ...
 │   │
-│   ├── routes/                   # Route definitions and metadata
-│   │   ├── home.tsx              # Home route configuration
-│   │   ├── download.tsx          # Downloads route configuration
-│   │   └── ...
+│   ├── lib/                           # Utility functions and integrations
+│   │   ├── utils.ts                   # Helper functions
+│   │   └── theme-provider.tsx         # Theme management
 │   │
-│   ├── lib/                      # Utility functions and integrations
-│   │   ├── utils.ts              # Helper functions
-│   │   └── theme-provider.tsx    # Theme management
-│   │
-│   ├── routes.ts                 # Main routing configuration
-│   ├── root.tsx                  # Root layout component
-│   └── app.css                   # Global styles
+│   ├── routes.ts                      # Main routing configuration
+│   ├── root.tsx                       # Root layout component
+│   └── app.css                        # Global styles
 │
 ├── build/                        # Generated files (DO NOT EDIT)
+│   ├── client/                   # Browser-side assets
+│   │   ├── index.html            # HTML files for each page
+│   │   ├── assets/               # JavaScript, CSS bundles
+│   │   └── images/               # Optimized images
 │
 ├── public/                       # Static files (copied as-is to build/)
 │   ├── favicon.ico               # Website icon
-│   └── images/                   # Images and other static assets
+│   ├── images/                   # Image assets
+|   └── ...
 │
 ├── node_modules/                 # Dependencies (like Maven's .m2 directory)
 ├── package.json                  # Project metadata and dependencies (like pom.xml)
@@ -194,6 +210,15 @@ my-react-router-app/
 4. **Routes (`/routes`)**: Define routing and metadata
    - Maps URLs to pages
    - Sets page titles, meta tags, etc.
+
+5. **Two Layout Systems in One App**:
+   - **Landing pages** live under `app/pages/_landing/` and use the landing layout.
+   - **Docs pages** live under `app/pages/_docs/` and use Fumadocs layouts.
+   - Both are part of the same React Router application, but render with different layouts and visual styles.
+
+6. **Documentation Versions**:
+   - **Multi-page docs** live under `app/pages/_docs/docs/_mdx/(multi-page)/` and are the source of truth.
+   - **Single-page docs** live under `app/pages/_docs/docs/_mdx/single-page/` and import content from the multi-page docs.
 
 #### Important Conventions
 
@@ -237,7 +262,7 @@ npm install
 
 This downloads all required packages from npm (similar to Maven Central).
 
-#### 2. Generate Developers Data
+#### 2. Generate Developers and Config Data
 
 **Important:** Before starting the development server, generate the `developers.json` file from the root `pom.xml`:
 
@@ -245,7 +270,23 @@ This downloads all required packages from npm (similar to Maven Central).
 npm run extract-developers
 ```
 
-This extracts the developer information from the parent `pom.xml` file and creates `app/pages/team/developers.json`, which is required for the Team page to work properly. Re-run this command whenever the developers section in `pom.xml` changes.
+This extracts the developer information from the parent `pom.xml` file and creates `app/pages/team/developers.json`, which is required for the Team page to work properly. Re-run this command whenever the developers section in `pom.xml` changes. The output json is ignored by git, and this command also runs at a build time, so there is no need to `git commit` the generated file.
+
+**Important:** Generate the HBase configuration markdown before starting the development server:
+
+```bash
+npm run extract-hbase-config
+```
+
+This extracts data from `hbase-default.xml` and creates `app/pages/_docs/docs/_mdx/(multi-page)/configuration/hbase-default.md`, which is required for the documentation page to work properly. Re-run this command whenever `hbase-default.xml` changes. The generated markdown is ignored by git, and this command also runs at build time, so there is no need to `git commit` the generated file.
+
+**Important:** Generate the HBase version metadata before starting the development server:
+
+```bash
+npm run extract-hbase-version
+```
+
+This extracts the `<revision>` value from the root `pom.xml` and creates `app/lib/export-pdf/hbase-version.json`, which is used on the docs PDF cover. Re-run this command whenever the root `pom.xml` version changes. The generated json is ignored by git, and this command also runs at build time, so there is no need to `git commit` the generated file.
 
 #### 3. Start Development Server
 
@@ -254,6 +295,7 @@ npm run dev
 ```
 
 This starts a local development server with:
+
 - **Hot Module Replacement (HMR)**: Code changes appear instantly without full page reload
 - **Live at**: `http://localhost:5173`
 
@@ -263,55 +305,81 @@ This starts a local development server with:
 
 1. **Edit code** in the `app/` directory
 2. **Save the file** - changes appear automatically in the browser
-3. **Check for errors** in the terminal where `npm run dev` is running
+3. **Check for errors** in the terminal where `npm run dev` is running and in browser console
 
 #### Common Tasks
 
 **Add a new page:**
+
 1. Create directory in `app/pages/my-new-page/`
 2. Create `index.tsx` in that directory
 3. Create route file in `app/routes/my-new-page.tsx`
 4. Register route in `app/routes.ts`
 
+**Add a new documentation page:**
+
+1. Create a new `.mdx` file in `app/pages/_docs/docs/_mdx/(multi-page)/` (for example `my-topic.mdx`).
+2. Add the new file to the relevant `meta.json` in the same section folder so it appears in navigation.
+3. Import the page into `app/pages/_docs/docs/_mdx/single-page/index.mdx` and add an `#` header so it renders in the single-page docs.
+
 **Update content:**
+
 - Edit the appropriate `.md` or `.json` file
 - Changes appear automatically
 
 **Add a UI component:**
+
 - Check if shadcn/ui has what you need first
 - Only create custom components if necessary
 
 **Check code quality:**
+
 ```bash
 npm run lint
 ```
 
 **Fix linting and formatting issues:**
+
 ```bash
 npm run lint:fix
 ```
 
 ### Testing
 
-The project uses [Vitest](https://vitest.dev/) for testing React components.
+The project uses [Vitest](https://vitest.dev/) and [Playwright](http://playwright.dev/) for testing. Vitest is for unit testing, while Playwright is for e2e testing.
 
-**Run tests:**
+#### Export Documentation PDF
+
+The docs PDF export is implemented as a Playwright e2e test in `e2e-tests/export-pdf.spec.ts`. It runs during `npm run ci-skip-tests` and generates static PDF assets for the documentation by rendering the single-page docs in both light and dark themes (HTML -> PDF).
+
+The export quality depends heavily on the `@media print` styles defined in `app/app.css`, which control layout, pagination, and print-only behavior.
+
+There is also a dedicated command you can run manually when needed:
+
 ```bash
-# Run tests in watch mode (for development)
-npm test
-
-# Run tests once (for CI/CD)
-npm run test:run
-
-# Run tests with UI
-npm run test:ui
+npm run export-pdf
 ```
 
-**Test coverage includes:**
-- Home Page - Hero section, buttons, features, use cases, community sections
-- Theme Toggle - Light/dark mode switching
-- Navigation - Navbar, dropdown menus, links
-- Markdown Rendering - Headings, lists, code blocks, tables, links
+This command is part of `npm run ci-skip-tests` and is executed automatically by Maven only when `-DskipTests` is enabled.
+
+**Run tests:**
+
+```bash
+# Run all tests
+npm test
+
+# Run unit tests once (for CI/CD)
+npm run test:run
+
+# Run unit tests with UI
+npm run test:ui
+
+# Run e2e tests
+npm run test:e2e
+
+# Run e2e tests with UI
+npm run test:e2e:ui
+```
 
 **Writing new tests:**
 
@@ -329,6 +397,8 @@ describe('MyComponent', () => {
 })
 ```
 
+### Building for Production
+
 **CI/CD Workflow:**
 
 Before merging or deploying, run the full CI pipeline:
@@ -337,49 +407,17 @@ Before merging or deploying, run the full CI pipeline:
 npm run ci
 ```
 
-This command runs all quality checks and builds the project:
-1. `npm run lint` - Check linting
-2. `npm run typecheck` - Check types
-3. `npm run test:run` - Run tests
-4. `npm run build` - Build for production
+This command runs all quality checks and builds the project. All checks must pass before code is considered ready.
 
-All checks must pass before code is considered ready for deployment.
-
-**CI/CD Pipeline Example:**
-```yaml
-# Example for GitHub Actions, GitLab CI, etc.
-- npm run ci  # Runs all checks and build
-```
-
-### Building for Production
-
-Create an optimized production build:
+If you need the CI flow without unit/e2e test suites, use:
 
 ```bash
-npm run build
+npm run ci-skip-tests
 ```
 
-This command:
-1. Compiles TypeScript to JavaScript
-2. Bundles and minifies all code
-3. Optimizes images and assets
-4. Generates static HTML files
-5. Outputs everything to `build/` directory
+This runs extraction, docs initialization, Playwright browser installation, PDF export, and the production build (without lint/typecheck and without unit/e2e test suites).
 
-**Generated files location:**
-```
-build/
-├── client/           # Everything needed for the website
-│   ├── *.html        # Pre-rendered HTML pages
-│   ├── assets/       # Optimized JavaScript and CSS
-│   │   ├── *.js      # JavaScript bundles (minified)
-│   │   ├── *.css     # Stylesheets (minified)
-│   │   └── manifest-*.js  # Asset manifest
-│   └── images/       # Optimized images
-└── server/           # Server-side code (if applicable)
-```
-
-The `build/client/` directory contains everything needed to deploy the website to any static file host.
+Generated files are located under the `build/` directory.
 
 ### Maven Integration
 
@@ -394,6 +432,7 @@ mvn site
 ```
 
 The website will **NOT** build during regular commands like:
+
 - `mvn clean install`
 - `mvn package`
 - `mvn compile`
@@ -421,10 +460,26 @@ When you run `mvn site`, the website module automatically:
    - Creates `app/pages/team/developers.json`
    - Required for the Team page
 
-5. **Runs `npm run ci`** which executes:
+5. **Runs a website CI command**:
+   - Default (`mvn site`): `npm run ci`
+   - With test skipping (`mvn site -DskipTests`): `npm run ci-skip-tests`
+
+   `npm run ci` executes:
    - `npm run lint` - ESLint code quality checks
    - `npm run typecheck` - TypeScript type checking
-   - `npm run test:run` - Vitest unit tests
+   - `npm run extract-developers` - Extract developers from parent pom.xml
+   - `npm run extract-hbase-config` - Extract data from `hbase-default.xml` to `app/pages/_docs/docs/_mdx/(multi-page)/configuration/hbase-default.md`
+   - `npm run extract-hbase-version` - Extract version from root `pom.xml` to `app/lib/export-pdf/hbase-version.json`
+   - `npm run test:unit:run` - Vitest unit tests
+   - `npm run test:e2e` - Playwright e2e tests
+   - `npm run build` - Production build
+
+   `npm run ci-skip-tests` executes:
+   - `npm run extract-developers` - Extract developers from parent pom.xml
+   - `npm run extract-hbase-config` - Extract data from `hbase-default.xml` to `app/pages/_docs/docs/_mdx/(multi-page)/configuration/hbase-default.md`
+   - `npm run extract-hbase-version` - Extract version from root `pom.xml` to `app/lib/export-pdf/hbase-version.json`
+   - `npx playwright install` - Installs Playwright browsers
+   - `npm run export-pdf` - Generates docs PDF assets through Playwright
    - `npm run build` - Production build
 
 6. **Build Output**: Generated files are in `build/` directory
@@ -432,12 +487,14 @@ When you run `mvn site`, the website module automatically:
 #### Maven Commands
 
 **Build HBase WITHOUT the Website (default):**
+
 ```bash
 # From HBase root directory
 mvn clean install
 ```
 
 **Build the Website:**
+
 ```bash
 # From HBase root or hbase-website directory
 mvn site
@@ -445,88 +502,30 @@ mvn site
 
 This generates the full HBase website including documentation and the React-based website.
 
+**Build the Website While Skipping Test Suites:**
+
+```bash
+# From HBase root or hbase-website directory
+mvn site -DskipTests
+```
+
+This runs `npm run ci-skip-tests` for the website module.
+
 **Build Website Only:**
+
 ```bash
 # From hbase-website directory
 cd hbase-website
-mvn site
+mvn clean install
 ```
 
-#### Maven Lifecycle Phases
+**Skip Website Build:**
 
-The frontend-maven-plugin binds to these **site-specific** Maven phases:
-
-- **pre-site**: Installs Node.js/npm, runs `npm install`, and extracts developers data
-- **site**: Runs `npm run ci` (lint, typecheck, test, build)
-
-#### Integration with CI/CD
-
-The Maven configuration ensures consistent builds across different environments:
-
-- **Local Development**: Developers can build HBase with `mvn clean install` (website not included)
-- **Website Generation**: Use `mvn site` to generate the full website and documentation
-- **CI/CD Pipelines**: Automated builds work out-of-the-box with Maven
-- **No Manual Steps**: No need to manually run `npm install` or `npm run ci` when using `mvn site`
-
-#### Maven Troubleshooting
-
-**Build Fails During npm install:**
+If you want to build HBase but skip the website:
 
 ```bash
-# Clean and rebuild
-cd hbase-website
-mvn clean site
-```
-
-This will:
-- Remove `build/` directory
-- Remove `node_modules/` directory
-- Remove `target/` directory
-- Reinstall Node.js and npm
-- Install all dependencies fresh
-- Run the full build pipeline
-
-**Build Fails During npm run ci:**
-
-This usually indicates:
-- ESLint errors (code quality issues)
-- TypeScript type errors
-- Failing unit tests
-- Build configuration issues
-
-To diagnose, run the commands directly:
-```bash
-cd hbase-website
-npm install
-npm run lint      # Check linting
-npm run typecheck # Check types
-npm run test:run  # Check tests
-npm run build     # Check build
-```
-
-Fix any errors and try the Maven build again.
-
-#### Configuration Files
-
-- **pom.xml**: Maven configuration using frontend-maven-plugin
-- **package.json**: npm scripts and dependencies
-- **.gitignore**: Excludes `target/`, `node/`, `node_modules/`, `build/`
-
-#### For HBase Developers
-
-The website only builds when you explicitly run `mvn site`.
-
-If you're working on the website:
-
-```bash
-# Use npm for faster development iteration
-cd hbase-website
-npm install
-npm run dev      # Start dev server with hot reload
-
-# Or use Maven to build the website
-cd hbase-website
-mvn site
+# From HBase root directory
+mvn clean install -DskipSite
 ```
 
 ### Deployment
@@ -560,15 +559,24 @@ lsof -ti:5173 | xargs kill -9
 # Or change the port in vite.config.ts
 ```
 
-#### Need to Clean Everything
+#### Build Fails
 
-Nuclear option - removes all generated files:
+1. **Clear generated files:**
 
-```bash
-rm -rf node_modules/ build/ .react-router/
-npm install
-npm run build
-```
+   ```bash
+   rm -rf build/ node_modules/ .vite/ .react-router/ .source/
+   ```
+
+2. **Reinstall dependencies:**
+
+   ```bash
+   npm i
+   ```
+
+3. **Try building again:**
+   ```bash
+   npm run build
+   ```
 
 ---
 

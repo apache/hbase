@@ -16,11 +16,21 @@
 // limitations under the License.
 //
 
-import type { Config } from "@react-router/dev/config";
+import type { Config } from '@react-router/dev/config';
+import { glob } from 'node:fs/promises';
+import { createGetUrl, getSlugs } from 'fumadocs-core/source';
+
+const getUrl = createGetUrl('/docs');
 
 export default {
   // Config options...
   // Server-side render by default, to enable SPA mode set this to `false`
   ssr: false,
-  prerender: true
+  async prerender({ getStaticPaths }) {
+    const paths: string[] = [...getStaticPaths()];
+    for await (const entry of glob("**/*.mdx", { cwd: "app/pages/_docs/docs/_mdx" })) {
+      paths.push(getUrl(getSlugs(entry)));
+    }
+    return paths;
+  }
 } satisfies Config;
