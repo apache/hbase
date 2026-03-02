@@ -959,6 +959,7 @@
     <spotbugs.version>4.7.3</spotbugs.version>
     <spotbugs.maven.version>4.7.2.1</spotbugs.maven.version>
     <surefire.version>3.5.3</surefire.version>
+    <xml.maven.version>1.0.1</xml.maven.version>
     <spotless.version>2.44.4</spotless.version>
     <maven-download-plugin.version>1.2.1</maven-download-plugin.version>
     <!-- compression -->
