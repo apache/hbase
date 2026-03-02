@@ -34,8 +34,6 @@ function usage {
   exit 1
 }
 
-set -e
-
 MVN="mvn"
 if ! command -v mvn &>/dev/null; then
   MVN=$MAVEN_HOME/bin/mvn
@@ -160,6 +158,7 @@ echo "Checking against things we don't expect to include in the source tarball (
 # e.g. prior to HBASE-19152 we'd have the following lines (ignoring the bash comment marker):
 #Only in .: .gitattributes
 #Only in .: .gitignore
+#Only in .: hbase-native-client
 cat >known_excluded <<END
 Only in .: .git
 END
@@ -219,10 +218,8 @@ function build_tarball {
 
 cd "${unpack_dir}"
 
-if ${MVN} -Dmaven.repo.local="${m2_tarbuild}" help:active-profiles | grep -q hadoop-3.0; then
-  echo "The hadoop-3.0 profile is activated by default, build a default tarball."
-  build_tarball 0
-else
+${MVN} -Dmaven.repo.local="${m2_tarbuild}" help:active-profiles | grep -q hadoop-3.0
+if [ $? -ne 0 ]; then
   echo "The hadoop-3.0 profile is not activated by default, build a default tarball first."
   # use java 8 to build with hadoop2
   JAVA_HOME="/usr/lib/jvm/java-8" build_tarball 0
@@ -239,4 +236,7 @@ else
   fi
   # move tarballs back
   mv "${unpack_dir}"/hbase-*-bin.tar.gz "${unpack_dir}"/hbase-assembly/target/
+else
+  echo "The hadoop-3.0 profile is activated by default, build a default tarball."
+  build_tarball 0
 fi
