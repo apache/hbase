@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
@@ -118,7 +119,15 @@ public final class StoreFileTrackerFactory {
 
   public static StoreFileTracker create(Configuration conf, boolean isPrimaryReplica,
     StoreContext ctx) {
-    Class<? extends StoreFileTracker> tracker = getTrackerClass(conf);
+    Class<? extends StoreFileTracker> tracker;
+    if (
+      ctx != null && ctx.getRegionInfo().getEncodedName()
+        .equals(MobUtils.getMobRegionInfo(ctx.getTableName()).getEncodedName())
+    ) {
+      tracker = Trackers.DEFAULT.clazz;
+    } else {
+      tracker = getTrackerClass(conf);
+    }
     LOG.debug("instantiating StoreFileTracker impl {}", tracker.getName());
     return ReflectionUtils.newInstance(tracker, conf, isPrimaryReplica, ctx);
   }

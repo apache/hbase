@@ -27,11 +27,16 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 
 public class CloneSnapshotFromClientAfterSplittingRegionTestBase
   extends CloneSnapshotFromClientTestBase {
+
+  private static final org.slf4j.Logger LOG =
+    LoggerFactory.getLogger(CloneSnapshotFromClientTestBase.class);
 
   private void splitRegion() throws IOException {
     try (Table k = TEST_UTIL.getConnection().getTable(tableName);
@@ -45,6 +50,7 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
 
   @Test
   public void testCloneSnapshotAfterSplittingRegion() throws IOException, InterruptedException {
+    System.out.println("Start - testCloneSnapshotAfterSplittingRegion");
     // Turn off the CatalogJanitor
     admin.catalogJanitorSwitch(false);
 
@@ -52,16 +58,31 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
       List<RegionInfo> regionInfos = admin.getRegions(tableName);
       RegionReplicaUtil.removeNonDefaultRegions(regionInfos);
 
+      System.out.println("Print FS state before split of the table: ");
+      CommonFSUtils.logFileSystemState(TEST_UTIL.getHBaseCluster().getMaster().getFileSystem(),
+        TEST_UTIL.getHBaseCluster().getMaster().getDataRootDir(), LOG);
+
       // Split a region
       splitRegion();
 
+      System.out.println("Print FS state before taking snapshot of the table: ");
+      CommonFSUtils.logFileSystemState(TEST_UTIL.getHBaseCluster().getMaster().getFileSystem(),
+        TEST_UTIL.getHBaseCluster().getMaster().getDataRootDir(), LOG);
       // Take a snapshot
       admin.snapshot(snapshotName2, tableName);
-
+      Thread.currentThread().sleep(1000);
+      System.out.println("Print FS state after taking snapshot of the table: ");
+      CommonFSUtils.logFileSystemState(TEST_UTIL.getHBaseCluster().getMaster().getFileSystem(),
+        TEST_UTIL.getHBaseCluster().getMaster().getDataRootDir(), LOG);
       // Clone the snapshot to another table
       TableName clonedTableName =
         TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
       admin.cloneSnapshot(snapshotName2, clonedTableName);
+
+      System.out.println("Print FS state after cloning snapshot of the table: ");
+      CommonFSUtils.logFileSystemState(TEST_UTIL.getHBaseCluster().getMaster().getFileSystem(),
+        TEST_UTIL.getHBaseCluster().getMaster().getDataRootDir(), LOG);
+
       SnapshotTestingUtils.waitForTableToBeOnline(TEST_UTIL, clonedTableName);
 
       verifyRowCount(TEST_UTIL, clonedTableName, snapshot1Rows);
@@ -91,15 +112,21 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
         }
       }
 
+      System.out.println("Calling delete table");
+      System.out.println("this testCloneSnapshotAfterSplittingRegion is successful!!");
+      System.out
+        .println("End - testCloneSnapshotAfterSplittingRegion before finall/del and is successful");
       TEST_UTIL.deleteTable(clonedTableName);
     } finally {
       admin.catalogJanitorSwitch(true);
+      System.out.println("End - testCloneSnapshotAfterSplittingRegion ");
     }
   }
 
   @Test
   public void testCloneSnapshotBeforeSplittingRegionAndDroppingTable()
     throws IOException, InterruptedException {
+    System.out.println("Start - testCloneSnapshotBeforeSplittingRegionAndDroppingTable");
     // Turn off the CatalogJanitor
     admin.catalogJanitorSwitch(false);
 
@@ -128,8 +155,13 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
       SnapshotTestingUtils.waitForTableToBeOnline(TEST_UTIL, clonedTableName);
 
       verifyRowCount(TEST_UTIL, clonedTableName, snapshot1Rows);
+      System.out
+        .println("this testCloneSnapshotBeforeSplittingRegionAndDroppingTable is successful!!");
+      System.out
+        .println("End before finally - testCloneSnapshotBeforeSplittingRegionAndDroppingTable");
     } finally {
       admin.catalogJanitorSwitch(true);
+      System.out.println("End - testCloneSnapshotBeforeSplittingRegionAndDroppingTable");
     }
   }
 }

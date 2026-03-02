@@ -25,9 +25,11 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
+import "server/io/FS.proto";
 message StoreFileEntry {
   required string name = 1;
   required uint64 size = 2;
+  optional Reference reference = 3;
 }
 
 message StoreFileList {

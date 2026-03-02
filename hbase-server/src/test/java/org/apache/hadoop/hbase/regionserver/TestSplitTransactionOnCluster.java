@@ -957,11 +957,13 @@ public class TestSplitTransactionOnCluster {
       HRegionFileSystem hfs = region.getRegionFileSystem();
       StoreFileTracker sft = StoreFileTrackerFactory.create(TESTING_UTIL.getConfiguration(), true,
         store.getStoreContext());
-      Path referencePath = hfs.splitStoreFile(region.getRegionInfo(), "f",
-        storefiles.iterator().next(), Bytes.toBytes("row1"), false, region.getSplitPolicy(), sft);
+      Path referencePath =
+        hfs.splitStoreFile(region.getRegionInfo(), "f", storefiles.iterator().next(),
+          Bytes.toBytes("row1"), false, region.getSplitPolicy(), sft).getPath();
       assertNull(referencePath);
-      referencePath = hfs.splitStoreFile(region.getRegionInfo(), "i_f",
-        storefiles.iterator().next(), Bytes.toBytes("row1"), false, region.getSplitPolicy(), sft);
+      referencePath =
+        hfs.splitStoreFile(region.getRegionInfo(), "i_f", storefiles.iterator().next(),
+          Bytes.toBytes("row1"), false, region.getSplitPolicy(), sft).getPath();
       assertNotNull(referencePath);
     } finally {
       TESTING_UTIL.deleteTable(tableName);

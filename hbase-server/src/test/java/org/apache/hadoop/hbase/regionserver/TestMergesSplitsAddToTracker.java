@@ -122,7 +122,7 @@ public class TestMergesSplitsAddToTracker {
       .setEndKey(region.getRegionInfo().getEndKey()).setSplit(false)
       .setRegionId(region.getRegionInfo().getRegionId()).build();
     HStoreFile file = (HStoreFile) region.getStore(FAMILY_NAME).getStorefiles().toArray()[0];
-    List<Path> splitFilesA = new ArrayList<>();
+    List<StoreFileInfo> splitFilesA = new ArrayList<>();
     HRegionFileSystem regionFs = region.getRegionFileSystem();
     StoreFileTracker sft = StoreFileTrackerFactory.create(region.getBaseConf(), true,
       StoreContext.getBuilder()
@@ -130,7 +130,7 @@ public class TestMergesSplitsAddToTracker {
         .withRegionFileSystem(regionFs).build());
     splitFilesA.add(regionFS.splitStoreFile(daughterA, Bytes.toString(FAMILY_NAME), file,
       Bytes.toBytes("002"), false, region.getSplitPolicy(), sft));
-    List<Path> splitFilesB = new ArrayList<>();
+    List<StoreFileInfo> splitFilesB = new ArrayList<>();
     splitFilesB.add(regionFS.splitStoreFile(daughterB, Bytes.toString(FAMILY_NAME), file,
       Bytes.toBytes("002"), true, region.getSplitPolicy(), sft));
     MasterProcedureEnv env =
@@ -164,7 +164,7 @@ public class TestMergesSplitsAddToTracker {
       TEST_UTIL.getHBaseCluster().getMaster().getConfiguration(), regionFS.getFileSystem(),
       regionFS.getTableDir(), mergeResult);
 
-    List<Path> mergedFiles = new ArrayList<>();
+    List<StoreFileInfo> mergedFiles = new ArrayList<>();
     // merge file from first region
     mergedFiles.add(mergeFileFromRegion(first, mergeFS));
     // merge file from second region
@@ -256,7 +256,7 @@ public class TestMergesSplitsAddToTracker {
     }
   }
 
-  private Path mergeFileFromRegion(HRegion regionToMerge, HRegionFileSystem mergeFS)
+  private StoreFileInfo mergeFileFromRegion(HRegion regionToMerge, HRegionFileSystem mergeFS)
     throws IOException {
     HStoreFile file = (HStoreFile) regionToMerge.getStore(FAMILY_NAME).getStorefiles().toArray()[0];
     HRegionFileSystem regionFs = regionToMerge.getRegionFileSystem();
