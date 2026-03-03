@@ -126,6 +126,33 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
     }
   };
 
+  /**
+   * Watcher for recreating the ephemeral znode of agent if it is deleted
+   */
+  Watcher ephemeralZnodeWatcher = new Watcher() {
+    @Override
+    public void process(WatchedEvent watchedEvent) {
+      if (watchedEvent.getType() == Event.EventType.NodeDeleted) {
+        String deletedPath = watchedEvent.getPath();
+        LOG.warn("Ephemeral znode deleted: {}, attempting to recreate", deletedPath);
+
+        // Try to recreate the ephemeral znode
+        try {
+          createEphemeralZNode(deletedPath, new byte[0]);
+        } catch (Exception e) {
+          LOG.warn("Failed to recreate ephemeral znode: {}", deletedPath, e);
+        }
+
+        // Re-establish the watch
+        try {
+          zk.exists(deletedPath, this);
+        } catch (KeeperException | InterruptedException e) {
+          LOG.warn("Failed to re-establish watch on ephemeral znode: {}", deletedPath, e);
+        }
+      }
+    }
+  };
+
   // CALLBACKS: Below are the Callbacks used by Chaos Agent
 
   /**
@@ -384,8 +411,16 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
     createIfZNodeNotExists(ChaosConstants.CHAOS_AGENT_STATUS_PERSISTENT_ZNODE
       + ChaosConstants.ZNODE_PATH_SEPARATOR + agentName);
 
-    createEphemeralZNode(ChaosConstants.CHAOS_AGENT_REGISTRATION_EPIMERAL_ZNODE
-      + ChaosConstants.ZNODE_PATH_SEPARATOR + agentName, new byte[0]);
+    String agentEphemeralPath = ChaosConstants.CHAOS_AGENT_REGISTRATION_EPIMERAL_ZNODE
+      + ChaosConstants.ZNODE_PATH_SEPARATOR + agentName;
+
+    createEphemeralZNode(agentEphemeralPath, new byte[0]);
+
+    try {
+      zk.exists(agentEphemeralPath, ephemeralZnodeWatcher);
+    } catch (KeeperException | InterruptedException e) {
+      LOG.error("Failed to establish watch on ephemeral znode: {}", agentEphemeralPath, e);
+    }
   }
 
   /***
