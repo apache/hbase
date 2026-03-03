@@ -270,7 +270,7 @@ It was introduced in [HBASE-29842](https://issues.apache.org/jira/browse/HBASE-2
 You can enable Ribbon Filter by setting `BLOOMFILTER_IMPL` to `RIBBON`:
 
 ```
-hbase> create 'mytable',{NAME => 'colfam1', BLOOMFILTER => 'ROW', BLOOMFILTER_IMPL => 'RIBBON'}
+hbase> create 'mytable', { NAME => 'colfam1', BLOOMFILTER => 'ROW', BLOOMFILTER_IMPL => 'RIBBON' }
 ```
 
 Ribbon Filter uses existing Bloom Filter settings. See [Configuring Server-Wide Behavior of Bloom Filters](/docs/performance#bloom-server-config) for details.
