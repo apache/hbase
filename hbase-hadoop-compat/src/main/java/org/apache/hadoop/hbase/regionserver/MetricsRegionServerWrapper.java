@@ -164,6 +164,11 @@ public interface MetricsRegionServerWrapper {
   long getFilteredReadRequestsCount();
 
   /**
+   * Get the number of deleted row read requests to regions hosted on this region server.
+   */
+  long getDeletedReadRequestsCount();
+
+  /**
    * Get the number of write requests to regions hosted on this region server.
    */
   long getWriteRequestsCount();

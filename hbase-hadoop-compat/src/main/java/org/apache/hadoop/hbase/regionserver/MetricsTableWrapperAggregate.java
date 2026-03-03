@@ -44,6 +44,11 @@ public interface MetricsTableWrapperAggregate {
   long getFilteredReadRequestCount(String table);
 
   /**
+   * Get the total number of deleted row read requests that have been issued against this table
+   */
+  long getDeletedReadRequestCount(String table);
+
+  /**
    * Get the number of write requests that have been issued for this table
    */
   long getWriteRequestCount(String table);
