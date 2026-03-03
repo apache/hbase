@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.mob.MobStoreEngine;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Before;
@@ -236,7 +237,7 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
           Thread.sleep(120000);
         } catch (Exception e) {
           LOG.error("MOB Stress Test FAILED", e);
-          System.exit(-1);
+          ExitHandler.getInstance().exit(-1);
         }
       }
     }
@@ -298,7 +299,7 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
         run = false;
       } catch (Exception e) {
         LOG.error("MOB Stress Test FAILED", e);
-        System.exit(-1);
+        ExitHandler.getInstance().exit(-1);
       }
     }
   }
@@ -387,7 +388,7 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
       if (util != null) {
         assertTrue(false);
       } else {
-        System.exit(-1);
+        ExitHandler.getInstance().exit(-1);
       }
     }
   }
@@ -397,6 +398,6 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
     initConf(conf);
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     int status = ToolRunner.run(conf, new IntegrationTestMobCompaction(), args);
-    System.exit(status);
+    ExitHandler.getInstance().exit(status);
   }
 }

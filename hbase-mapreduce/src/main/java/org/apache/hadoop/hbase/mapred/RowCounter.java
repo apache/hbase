@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
@@ -104,6 +105,6 @@ public class RowCounter extends Configured implements Tool {
 
   public static void main(String[] args) throws Exception {
     int errCode = ToolRunner.run(HBaseConfiguration.create(), new RowCounter(), args);
-    System.exit(errCode);
+    ExitHandler.getInstance().exit(errCode);
   }
 }

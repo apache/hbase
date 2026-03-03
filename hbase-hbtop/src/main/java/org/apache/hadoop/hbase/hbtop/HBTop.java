@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.hbtop.field.Field;
 import org.apache.hadoop.hbase.hbtop.field.FieldInfo;
 import org.apache.hadoop.hbase.hbtop.mode.Mode;
 import org.apache.hadoop.hbase.hbtop.screen.Screen;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -248,6 +249,6 @@ public class HBTop extends Configured implements Tool {
 
   public static void main(String[] args) throws Exception {
     int res = ToolRunner.run(new HBTop(), args);
-    System.exit(res);
+    ExitHandler.getInstance().exit(res);
   }
 }

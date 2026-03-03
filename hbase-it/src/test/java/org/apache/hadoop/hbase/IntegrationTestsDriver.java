@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.internal.TextListener;
 import org.junit.runner.JUnitCore;
@@ -44,7 +45,7 @@ public class IntegrationTestsDriver extends AbstractHBaseTool {
 
   public static void main(String[] args) throws Exception {
     int ret = ToolRunner.run(new IntegrationTestsDriver(), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 
   private static class IntegrationTestFilter extends ClassTestFinder.TestClassFilter {

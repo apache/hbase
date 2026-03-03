@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractProtobufWALReader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -432,7 +433,7 @@ public class WALPrettyPrinter {
       if (files.isEmpty() || cmd.hasOption("h")) {
         HelpFormatter formatter = new HelpFormatter();
         formatter.printHelp("WAL <filename...>", options, true);
-        System.exit(-1);
+        ExitHandler.getInstance().exit(-1);
       }
       // configure the pretty printer using command line options
       if (cmd.hasOption("p")) {
@@ -472,7 +473,7 @@ public class WALPrettyPrinter {
       LOG.error("Failed to parse commandLine arguments", e);
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp("HFile filename(s) ", options, true);
-      System.exit(-1);
+      ExitHandler.getInstance().exit(-1);
     }
     // get configuration, file system, and process the given files
     Configuration conf = HBaseConfiguration.create();
