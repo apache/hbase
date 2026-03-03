@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -44,29 +44,24 @@ import net.spy.memcached.ops.OperationState;
 import net.spy.memcached.ops.OperationStatus;
 import net.spy.memcached.transcoders.Transcoder;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils.HFileBlockPair;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMemcachedBlockCache {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMemcachedBlockCache.class);
 
   private MemcachedBlockCache cache;
 
   private ConcurrentMap<String, CachedData> backingMap;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     int port = ThreadLocalRandom.current().nextInt(1024, 65536);
     Configuration conf = new Configuration();
@@ -153,5 +148,4 @@ public class TestMemcachedBlockCache {
     }
     Waiter.waitFor(new Configuration(), 10000, () -> backingMap.size() == 0);
   }
-
 }
