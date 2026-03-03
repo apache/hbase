@@ -151,7 +151,8 @@ class IPCUtil {
    * @return RemoteException made from passed <code>e</code>
    */
   static RemoteException createRemoteException(final ExceptionResponse e) {
-    String innerExceptionClassName = e.getExceptionClassName();
+    String innerExceptionClassName =
+      ShadedPrefixUtil.getInstance().applyShadedPrefix(e.getExceptionClassName());
     boolean doNotRetry = e.getDoNotRetry();
     boolean serverOverloaded = e.hasServerOverloaded() && e.getServerOverloaded();
     return e.hasHostname() ?
@@ -164,16 +165,18 @@ class IPCUtil {
 
   /** Returns True if the exception is a fatal connection exception. */
   static boolean isFatalConnectionException(ExceptionResponse e) {
-    if (e.getExceptionClassName().equals(FatalConnectionException.class.getName())) {
+    String exceptionClassName =
+      ShadedPrefixUtil.getInstance().applyShadedPrefix(e.getExceptionClassName());
+    if (FatalConnectionException.class.getName().equals(exceptionClassName)) {
       return true;
     }
     // try our best to check for sub classes of FatalConnectionException
     try {
-      return e.getExceptionClassName() != null && FatalConnectionException.class.isAssignableFrom(
-        Class.forName(e.getExceptionClassName(), false, IPCUtil.class.getClassLoader()));
+      return exceptionClassName != null && FatalConnectionException.class
+        .isAssignableFrom(Class.forName(exceptionClassName, false, IPCUtil.class.getClassLoader()));
       // Class.forName may throw ExceptionInInitializerError so we have to catch Throwable here
     } catch (Throwable t) {
-      LOG.debug("Can not get class object for {}", e.getExceptionClassName(), t);
+      LOG.debug("Can not get class object for {}", exceptionClassName, t);
       return false;
     }
   }
