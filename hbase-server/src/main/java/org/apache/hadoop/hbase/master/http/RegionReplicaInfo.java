@@ -70,13 +70,14 @@ public final class RegionReplicaInfo {
       (result != null) ? MetaTableAccessor.getMergeRegionsWithName(result.rawCells()) : null;
 
     if (result != null) {
-      PairOfSameType<RegionInfo> daughterRegions = MetaTableAccessor.getDaughterRegions(result);
+      List<RegionInfo> daughterRegions = MetaTableAccessor.getDaughterRegions(result);
       this.splitRegionInfo = new LinkedHashMap<>();
-      if (daughterRegions.getFirst() != null) {
-        splitRegionInfo.put(HConstants.SPLITA_QUALIFIER_STR, daughterRegions.getFirst());
-      }
-      if (daughterRegions.getSecond() != null) {
-        splitRegionInfo.put(HConstants.SPLITB_QUALIFIER_STR, daughterRegions.getSecond());
+      for(RegionInfo daughterRegion : daughterRegions) {
+        if(daughterRegion != null) {
+          // TODO - Ensure that splitRegionInfo is consumed correctly by table.jsp and table_info.jsp page
+          // TODO - Ensure key is correctly set as daughter region column qualifier
+          splitRegionInfo.put(HConstants.MULTIPLE_REGIONS_QUALIFIER_PREFIX_STR + regionInfo.getEncodedName(), daughterRegion);
+        }
       }
     } else {
       this.splitRegionInfo = null;
