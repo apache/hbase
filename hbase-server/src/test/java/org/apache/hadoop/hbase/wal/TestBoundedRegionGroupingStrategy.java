@@ -17,17 +17,17 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -35,27 +35,20 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestBoundedRegionGroupingStrategy {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBoundedRegionGroupingStrategy.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestBoundedRegionGroupingStrategy.class);
@@ -65,20 +58,22 @@ public class TestBoundedRegionGroupingStrategy {
   protected static Configuration CONF;
   protected static DistributedFileSystem FS;
 
-  @Parameter
   public String walProvider;
 
-  @Parameters(name = "{index}: delegate-provider={0}")
-  public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[] { "defaultProvider" }, new Object[] { "asyncfs" });
+  public TestBoundedRegionGroupingStrategy(String walProvider) {
+    this.walProvider = walProvider;
   }
 
-  @Before
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of("defaultProvider"), Arguments.of("asyncfs"));
+  }
+
+  @BeforeEach
   public void setUp() throws Exception {
     CONF.set(RegionGroupingProvider.DELEGATE_PROVIDER, walProvider);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     FileStatus[] entries = FS.listStatus(new Path("/"));
     for (FileStatus dir : entries) {
@@ -86,7 +81,7 @@ public class TestBoundedRegionGroupingStrategy {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     CONF = TEST_UTIL.getConfiguration();
     // Make block sizes small.
@@ -110,7 +105,7 @@ public class TestBoundedRegionGroupingStrategy {
     FS = TEST_UTIL.getDFSCluster().getFileSystem();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -118,7 +113,7 @@ public class TestBoundedRegionGroupingStrategy {
   /**
    * Ensure that we can use Set.add to deduplicate WALs
    */
-  @Test
+  @TestTemplate
   public void setMembershipDedups() throws IOException {
     final int temp = CONF.getInt(BoundedGroupingStrategy.NUM_REGION_GROUPS,
       BoundedGroupingStrategy.DEFAULT_NUM_REGION_GROUPS);
@@ -140,8 +135,9 @@ public class TestBoundedRegionGroupingStrategy {
           count++;
         }
       }
-      assertEquals("received back a different number of WALs that are not equal() to each other "
-        + "than the bound we placed.", temp * 4, count);
+      assertEquals(temp * 4, count,
+        "received back a different number of WALs that are not equal() to each other "
+          + "than the bound we placed.");
     } finally {
       if (wals != null) {
         wals.close();
