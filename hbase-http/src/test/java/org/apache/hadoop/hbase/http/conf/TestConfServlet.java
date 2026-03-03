@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.http.conf;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -29,12 +29,10 @@ import java.util.Set;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -47,12 +45,9 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ajax.JSON;
  * Basic test case that the ConfServlet can write configuration to its output in XML and JSON
  * format.
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestConfServlet {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestConfServlet.class);
 
   private static final String TEST_KEY = "testconfservlet.key";
   private static final String TEST_VAL = "testval";
@@ -125,12 +120,8 @@ public class TestConfServlet {
   @Test
   public void testBadFormat() throws Exception {
     StringWriter sw = new StringWriter();
-    try {
-      ConfServlet.writeResponse(getTestConf(), sw, "not a format");
-      fail("writeResponse with bad format didn't throw!");
-    } catch (ConfServlet.BadFormatException bfe) {
-      // expected
-    }
+    assertThrows(ConfServlet.BadFormatException.class,
+      () -> ConfServlet.writeResponse(getTestConf(), sw, "not a format"));
     assertEquals("", sw.toString());
   }
 }
