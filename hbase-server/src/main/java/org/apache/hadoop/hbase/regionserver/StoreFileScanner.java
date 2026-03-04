@@ -317,7 +317,9 @@ public class StoreFileScanner implements KeyValueScanner {
     cur = null;
     this.hfs.close();
     if (this.reader != null) {
-      this.fileRead = this.reader.getHFileReader().getPath();
+      if (this.reader.getHFileReader() != null) {
+        this.fileRead = this.reader.getHFileReader().getPath();
+      }
       this.reader.readCompleted();
     }
     closed = true;
@@ -329,9 +331,7 @@ public class StoreFileScanner implements KeyValueScanner {
    */
   @Override
   public Set<Path> getFilesRead() {
-    return fileRead != null
-      ? Collections.singleton(fileRead)
-      : Collections.emptySet();
+    return fileRead != null ? Collections.singleton(fileRead) : Collections.emptySet();
   }
 
   /** Returns false if not found or if k is after the end. */

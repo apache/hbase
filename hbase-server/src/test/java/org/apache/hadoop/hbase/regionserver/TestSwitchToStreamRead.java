@@ -334,7 +334,8 @@ public class TestSwitchToStreamRead {
       assertTrue("trySwitchToStreamRead should have been invoked and scanners switched to stream",
         switchVerified);
 
-      // Not closing the scanners explicitly, because those must be closed during trySwitchToStreamRead
+      // Not closing the scanners explicitly, because those must be closed during
+      // trySwitchToStreamRead
 
       // After close: files that were read (including those closed during switch) must be tracked.
       Set<Path> filesRead = storeScanner.getFilesRead();

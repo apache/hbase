@@ -228,8 +228,8 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       recordReader.close();
 
       // After close: getFilesRead() must match expected store file set
-      Set<String> filesReadAfterClose = recordReader.getFilesRead().stream()
-        .map(Path::getName).collect(Collectors.toSet());
+      Set<String> filesReadAfterClose =
+        recordReader.getFilesRead().stream().map(Path::getName).collect(Collectors.toSet());
 
       Assert.assertEquals("Should contain all expected file paths", expectedFiles,
         filesReadAfterClose);

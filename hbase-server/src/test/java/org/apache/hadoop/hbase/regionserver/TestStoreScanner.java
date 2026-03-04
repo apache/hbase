@@ -53,8 +53,8 @@ import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
@@ -1179,8 +1179,8 @@ public class TestStoreScanner {
     // File 4: row "row00" - OUT of key range (before start row)
     StoreFileWriter writer4 = new StoreFileWriter.Builder(conf, cacheConf, fs)
       .withFilePath(regionFs.createTempName()).withFileContext(meta).build();
-    writer4.append(new KeyValue(Bytes.toBytes("row00"), CF, Bytes.toBytes("col"),
-      now, Bytes.toBytes("value0")));
+    writer4.append(
+      new KeyValue(Bytes.toBytes("row00"), CF, Bytes.toBytes("col"), now, Bytes.toBytes("value0")));
     Path path4 = regionFs.commitStoreFile(TEST_FAMILY, writer4.getPath());
     writer4.close();
     filePaths.add(fs.makeQualified(path4));
@@ -1213,8 +1213,8 @@ public class TestStoreScanner {
     Scan scan =
       new Scan().withStartRow(Bytes.toBytes("row01")).withStopRow(Bytes.toBytes("row15"), false);
     long ttl = 30 * 60 * 1000;
-    ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, Integer.MAX_VALUE, ttl,
-      KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
+    ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, Integer.MAX_VALUE, ttl, KeepDeletedCells.FALSE,
+      HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
 
     // Create StoreScanner; drain with next(), then close.
     StoreScanner storeScanner = new StoreScanner(scan, scanInfo, null, scanners);
@@ -1261,10 +1261,8 @@ public class TestStoreScanner {
       Mockito.anyLong());
     Mockito.doReturn(true).when(mockScanner2).shouldUseScanner(Mockito.any(), Mockito.any(),
       Mockito.anyLong());
-    Mockito.when(mockScanner1.getFilesRead())
-      .thenReturn(Collections.singleton(filePath1));
-    Mockito.when(mockScanner2.getFilesRead())
-      .thenReturn(Collections.singleton(filePath2));
+    Mockito.when(mockScanner1.getFilesRead()).thenReturn(Collections.singleton(filePath1));
+    Mockito.when(mockScanner2.getFilesRead()).thenReturn(Collections.singleton(filePath2));
 
     List<KeyValueScanner> mockScanners = new ArrayList<>();
     mockScanners.add(mockScanner1);

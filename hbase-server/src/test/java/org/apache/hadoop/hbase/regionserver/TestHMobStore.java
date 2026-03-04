@@ -460,8 +460,8 @@ public class TestHMobStore {
   }
 
   /**
-   * Utility method for getFilesRead tests on MOB store scanners. Uses values above mob
-   * threshold so DefaultMobStoreFlusher creates the mob file and refs.
+   * Utility method for getFilesRead tests on MOB store scanners. Uses values above mob threshold so
+   * DefaultMobStoreFlusher creates the mob file and refs.
    */
   private void doTestMobStoreScannerGetFilesRead(boolean reversed) throws IOException {
     // Setup: conf, root dir, and MOB store init (mob threshold causes large values to go to MOB).
@@ -525,7 +525,7 @@ public class TestHMobStore {
       Assert.assertEquals("Should have 0 files before closing", 0, filesReadBeforeClose.size());
 
       List<Cell> results = new ArrayList<>();
-      StoreScanner storeScanner = (StoreScanner) kvScanner;
+      InternalScanner storeScanner = (InternalScanner) kvScanner;
       while (storeScanner.next(results)) {
         results.clear();
       }
