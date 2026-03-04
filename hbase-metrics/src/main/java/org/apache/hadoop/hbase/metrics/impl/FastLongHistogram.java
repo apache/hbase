@@ -310,8 +310,16 @@ public class FastLongHistogram {
    * Resets the histogram for new counting.
    */
   public Snapshot snapshotAndReset() {
-    final Bins oldBins = this.bins;
+    Snapshot snapshot = snapshot();
     this.bins = new Bins(this.bins, this.bins.counts.length - 3, 0.01, 0.99);
+    return snapshot;
+  }
+
+  /**
+   * do snapshot without reset
+   */
+  public Snapshot snapshot() {
+    final Bins oldBins = this.bins;
     final long[] percentiles = oldBins.getQuantiles(DEFAULT_QUANTILES);
     final long count = oldBins.count.sum();
 
