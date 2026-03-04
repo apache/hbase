@@ -112,15 +112,17 @@ public class TestAsyncTableScan extends AbstractTestAsyncTableScan {
       stringTraceRenderer.render(logger::debug);
     }
 
-    final String parentSpanId =
-      spanStream().filter(parentSpanMatcher::matches).map(SpanData::getSpanId).findAny().get();
+    final String parentSpanId = spanStream().filter(parentSpanMatcher::matches)
+      .max((a, b) -> Long.compare(a.getEndEpochNanos(), b.getEndEpochNanos()))
+      .map(SpanData::getSpanId).get();
 
     final Matcher<SpanData> scanOperationSpanMatcher =
       allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
         hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.OK), hasEnded());
     waitForSpan(scanOperationSpanMatcher);
     final String scanOperationSpanId = spanStream().filter(scanOperationSpanMatcher::matches)
-      .map(SpanData::getSpanId).findAny().get();
+      .max((a, b) -> Long.compare(a.getEndEpochNanos(), b.getEndEpochNanos()))
+      .map(SpanData::getSpanId).get();
 
     final Matcher<SpanData> onNextMatcher = hasName("TracedScanResultConsumer#onNext");
     waitForSpan(onNextMatcher);
@@ -148,8 +150,9 @@ public class TestAsyncTableScan extends AbstractTestAsyncTableScan {
       stringTraceRenderer.render(logger::debug);
     }
 
-    final String parentSpanId =
-      spanStream().filter(parentSpanMatcher::matches).map(SpanData::getSpanId).findAny().get();
+    final String parentSpanId = spanStream().filter(parentSpanMatcher::matches)
+      .max((a, b) -> Long.compare(a.getEndEpochNanos(), b.getEndEpochNanos()))
+      .map(SpanData::getSpanId).get();
 
     final Matcher<SpanData> scanOperationSpanMatcher =
       allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
@@ -157,7 +160,8 @@ public class TestAsyncTableScan extends AbstractTestAsyncTableScan {
         hasException(exceptionMatcher), hasEnded());
     waitForSpan(scanOperationSpanMatcher);
     final String scanOperationSpanId = spanStream().filter(scanOperationSpanMatcher::matches)
-      .map(SpanData::getSpanId).findAny().get();
+      .max((a, b) -> Long.compare(a.getEndEpochNanos(), b.getEndEpochNanos()))
+      .map(SpanData::getSpanId).get();
 
     final Matcher<SpanData> onErrorMatcher = hasName("TracedScanResultConsumer#onError");
     waitForSpan(onErrorMatcher);
