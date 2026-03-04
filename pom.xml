@@ -2130,6 +2130,12 @@
               <exclude>**/src/main/resources/hbase-webapps/static/*/bootstrap*</exclude>
               <!-- BSD 3-clause: Vega, Vega-Lite, Vega-Embed -->
               <exclude>**/hbase-webapps/static/js/vega*.min.js</exclude>
+              <!-- MIT: https://github.com/rubychan/coderay/blob/master/MIT-LICENSE -->
+              <exclude>**/public/old-book-static-files/coderay-asciidoctor.css</exclude>
+              <!-- MIT: Asciidoctor default stylesheet https://github.com/asciidoctor/asciidoctor/blob/HEAD/LICENSE -->
+              <exclude>**/public/old-book-static-files/hbase.css</exclude>
+              <!-- http://fontawesome.io/license (Font: SIL OFL 1.1, CSS: MIT License -->
+              <exclude>**/public/old-book-static-files/font-awesome.css</exclude>
               <!-- vector graphics -->
               <exclude>**/*.vm</exclude>
               <!-- apache doxia generated -->
@@ -2153,6 +2159,8 @@
               <exclude>**/CC-MAIN-2021-10-warc.paths.gz</exclude>
               <!-- Cannot add ASF licence to JSON files as JSON files cannot have comments in them. -->
               <exclude>**/*.json</exclude>
+              <!-- MDX documentation pages -->
+              <exclude>**/*.mdx</exclude>
             </excludes>
           </configuration>
         </plugin>
@@ -2895,6 +2903,7 @@
                 <exclude>**/dependency-reduced-pom.xml</exclude>
                 <exclude>**/.idea/**</exclude>
                 <exclude>**/node_modules/**</exclude>
+                <exclude>**/hbase-default.md</exclude>
               </excludes>
               <!-- define the steps to apply to those files -->
               <trimTrailingWhitespace/>
