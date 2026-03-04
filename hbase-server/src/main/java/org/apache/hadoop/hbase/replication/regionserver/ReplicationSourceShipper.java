@@ -23,14 +23,12 @@ import static org.apache.hadoop.hbase.replication.ReplicationUtils.sleepForRetri
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
-import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -79,8 +77,8 @@ public class ReplicationSourceShipper extends Thread {
   private final int shipEditsTimeout;
   private long accumulatedSizeSinceLastUpdate = 0L;
   private long lastOffsetUpdateTime = EnvironmentEdgeManager.currentTime();
-  private final long offsetUpdateIntervalMs;
-  private final long offsetUpdateSizeThresholdBytes;
+  private long offsetUpdateIntervalMs;
+  private long offsetUpdateSizeThresholdBytes;
   private WALEntryBatch lastShippedBatch;
   private final List<Entry> entriesForCleanUpHFileRefs = new ArrayList<>();
 
@@ -99,22 +97,10 @@ public class ReplicationSourceShipper extends Thread {
       this.conf.getInt("replication.source.getEntries.timeout", DEFAULT_TIMEOUT);
     this.shipEditsTimeout = this.conf.getInt(HConstants.REPLICATION_SOURCE_SHIPEDITS_TIMEOUT,
       HConstants.REPLICATION_SOURCE_SHIPEDITS_TIMEOUT_DFAULT);
-    ReplicationPeer peer = source.getPeer();
-    if (peer != null && peer.getPeerConfig() != null) {
-      Map<String, String> configMap = peer.getPeerConfig().getConfiguration();
-      this.offsetUpdateIntervalMs = (configMap != null
-        && configMap.containsKey("hbase.replication.shipper.offset.update.interval.ms"))
-          ? Long.parseLong(configMap.get("hbase.replication.shipper.offset.update.interval.ms"))
-          : Long.MAX_VALUE;
-      this.offsetUpdateSizeThresholdBytes = (configMap != null
-        && configMap.containsKey("hbase.replication.shipper.offset.update.size.threshold"))
-          ? Long.parseLong(configMap.get("hbase.replication.shipper.offset.update.size.threshold"))
-          : -1L;
-    } else {
-      // If peer is not initialized
-      this.offsetUpdateIntervalMs = Long.MAX_VALUE;
-      this.offsetUpdateSizeThresholdBytes = -1;
-    }
+    this.offsetUpdateIntervalMs =
+      conf.getLong("hbase.replication.shipper.offset.update.interval.ms", Long.MAX_VALUE);
+    this.offsetUpdateSizeThresholdBytes =
+      conf.getLong("hbase.replication.shipper.offset.update.size.threshold", -1L);
   }
 
   @Override
@@ -130,14 +116,23 @@ public class ReplicationSourceShipper extends Thread {
         sleepForRetries("Replication is disabled", sleepForRetries, 1, maxRetriesMultiplier);
         continue;
       }
-      // check time-based offset persistence
-      if (shouldPersistLogPosition()) {
-        // Trigger offset persistence via existing retry/backoff mechanism in shipEdits()
-        WALEntryBatch emptyBatch = createEmptyBatchForTimeBasedFlush();
-        if (emptyBatch != null) shipEdits(emptyBatch);
-      }
       try {
-        WALEntryBatch entryBatch = entryReader.poll(getEntriesTimeout);
+        // check time-based offset persistence
+        if (shouldPersistLogPosition()) {
+          // Trigger offset persistence via existing retry/backoff mechanism in shipEdits()
+          WALEntryBatch emptyBatch = createEmptyBatchForTimeBasedFlush();
+          if (emptyBatch != null) shipEdits(emptyBatch);
+        }
+
+        long pollTimeout = getEntriesTimeout;
+        if (offsetUpdateIntervalMs != Long.MAX_VALUE) {
+          long elapsed = EnvironmentEdgeManager.currentTime() - lastOffsetUpdateTime;
+          long remaining = offsetUpdateIntervalMs - elapsed;
+          if (remaining > 0) {
+            pollTimeout = Math.min(getEntriesTimeout, remaining);
+          }
+        }
+        WALEntryBatch entryBatch = entryReader.poll(pollTimeout);
         LOG.debug("Shipper from source {} got entry batch from reader: {}", source.getQueueId(),
           entryBatch);
 
@@ -258,6 +253,13 @@ public class ReplicationSourceShipper extends Thread {
             entryBatch.getNbOperations(), (endTimeNs - startTimeNs) / 1000000);
         }
         break;
+      } catch (IOException ioe) {
+        // Offset-Persist failure is treated as fatal to this worker since it might come from
+        // beforePersistingReplicationOffset.
+        // ReplicationSource will restart the Shipper, and WAL reading
+        // will resume from the last successfully persisted offset
+        throw new ReplicationRuntimeException(
+          "Failed to persist replication offset; restarting shipper for WAL replay", ioe);
       } catch (Exception ex) {
         source.getSourceMetrics().incrementFailedBatches();
         LOG.warn("{} threw unknown exception:",
