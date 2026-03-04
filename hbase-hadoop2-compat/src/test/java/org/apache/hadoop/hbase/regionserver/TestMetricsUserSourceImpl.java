@@ -17,24 +17,20 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MetricsTests.class, SmallTests.class })
+@Tag(MetricsTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMetricsUserSourceImpl {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricsUserSourceImpl.class);
 
   @SuppressWarnings("SelfComparison")
   @Test
@@ -56,11 +52,13 @@ public class TestMetricsUserSourceImpl {
     assertTrue(two.compareTo(two) == 0);
   }
 
-  @Test(expected = RuntimeException.class)
+  @Test
   public void testNoGetRegionServerMetricsSourceImpl() throws Exception {
     // This should throw an exception because MetricsUserSourceImpl should only
     // be created by a factory.
-    CompatibilitySingletonFactory.getInstance(MetricsUserSource.class);
+    assertThrows(RuntimeException.class, () -> {
+      CompatibilitySingletonFactory.getInstance(MetricsUserSource.class);
+    });
   }
 
   @Test
