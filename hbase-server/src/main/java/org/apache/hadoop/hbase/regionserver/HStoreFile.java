@@ -96,6 +96,9 @@ public class HStoreFile implements StoreFile {
   /** Bloom filter Type in FileInfo */
   public static final byte[] BLOOM_FILTER_TYPE_KEY = Bytes.toBytes("BLOOM_FILTER_TYPE");
 
+  /** Bloom filter implementation in FileInfo */
+  public static final byte[] BLOOM_FILTER_IMPL_KEY = Bytes.toBytes("BLOOM_FILTER_IMPL");
+
   /** Bloom filter param in FileInfo */
   public static final byte[] BLOOM_FILTER_PARAM_KEY = Bytes.toBytes("BLOOM_FILTER_PARAM");
 

@@ -338,7 +338,8 @@ public class HStore
     return new StoreContext.Builder().withBlockSize(family.getBlocksize())
       .withEncryptionContext(SecurityUtil.createEncryptionContext(conf, region.getTableDescriptor(),
         family, region.getManagedKeyDataCache(), region.getSystemKeyCache()))
-      .withBloomType(family.getBloomFilterType()).withCacheConfig(createCacheConf(family))
+      .withBloomType(family.getBloomFilterType()).withBloomFilterImpl(family.getBloomFilterImpl())
+      .withCacheConfig(createCacheConf(family))
       .withCellComparator(region.getTableDescriptor().isMetaTable() || conf
         .getBoolean(HRegion.USE_META_CELL_COMPARATOR, HRegion.DEFAULT_USE_META_CELL_COMPARATOR)
           ? MetaCellComparator.META_COMPARATOR
