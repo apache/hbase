@@ -330,13 +330,10 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
     String snapshotName = tableName.getNameAsString() + "snap1";
 
     try {
-      try {
-        // Create snapshot without creating table
-        TEST_UTIL.getAdmin().snapshot(snapshotName, tableName);
-        fail("Snapshot operation should fail, table doesn't exist");
-      } catch (Exception e) {
-        assertTrue(e instanceof SnapshotCreationException);
-      }
+      // Create snapshot without creating table
+      assertThrows("Snapshot operation should fail, table doesn't exist",
+        SnapshotCreationException.class,
+        () -> TEST_UTIL.getAdmin().snapshot(snapshotName, tableName));
 
       // Create the table
       TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName).build();
