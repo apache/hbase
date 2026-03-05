@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.metrics;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.metrics.Counter;
@@ -110,14 +111,14 @@ public class MetricsTableRequests {
   private MetricRegistryInfo registryInfo;
 
   private boolean enableTableLatenciesMetrics;
-  private boolean enabTableQueryMeterMetrics;
+  private boolean enableTableQueryMeterMetrics;
 
   public boolean isEnableTableLatenciesMetrics() {
     return enableTableLatenciesMetrics;
   }
 
-  public boolean isEnabTableQueryMeterMetrics() {
-    return enabTableQueryMeterMetrics;
+  public boolean isEnableTableQueryMeterMetrics() {
+    return enableTableQueryMeterMetrics;
   }
 
   public MetricsTableRequests(TableName tableName, Configuration conf) {
@@ -129,9 +130,9 @@ public class MetricsTableRequests {
     this.conf = conf;
     enableTableLatenciesMetrics = this.conf.getBoolean(ENABLE_TABLE_LATENCIES_METRICS_KEY,
       ENABLE_TABLE_LATENCIES_METRICS_DEFAULT);
-    enabTableQueryMeterMetrics = this.conf.getBoolean(ENABLE_TABLE_QUERY_METER_METRICS_KEY,
+    enableTableQueryMeterMetrics = this.conf.getBoolean(ENABLE_TABLE_QUERY_METER_METRICS_KEY,
       ENABLE_TABLE_QUERY_METER_METRICS_KEY_DEFAULT);
-    if (enableTableLatenciesMetrics || enabTableQueryMeterMetrics) {
+    if (enableTableLatenciesMetrics || enableTableQueryMeterMetrics) {
       registry = createRegistryForTableRequests();
       if (enableTableLatenciesMetrics) {
         getTimeHistogram = registry.histogram(GET_TIME);
@@ -155,7 +156,7 @@ public class MetricsTableRequests {
         scanBlockBytesScanned = registry.histogram(SCAN_BLOCK_BYTES_SCANNED_KEY);
       }
 
-      if (enabTableQueryMeterMetrics) {
+      if (enableTableQueryMeterMetrics) {
         readMeter = registry.meter(TABLE_READ_QUERY_PER_SECOND);
         writeMeter = registry.meter(TABLE_WRITE_QUERY_PER_SECOND);
       }
@@ -173,7 +174,7 @@ public class MetricsTableRequests {
   }
 
   public void removeRegistry() {
-    if (enableTableLatenciesMetrics || enabTableQueryMeterMetrics) {
+    if (enableTableLatenciesMetrics || enableTableQueryMeterMetrics) {
       MetricRegistries.global().remove(registry.getMetricRegistryInfo());
     }
   }
@@ -327,17 +328,8 @@ public class MetricsTableRequests {
    * @param count Number of occurrences to record
    */
   public void updateTableReadQueryMeter(long count) {
-    if (isEnabTableQueryMeterMetrics()) {
+    if (isEnableTableQueryMeterMetrics()) {
       readMeter.mark(count);
-    }
-  }
-
-  /**
-   * Update table read QPS
-   */
-  public void updateTableReadQueryMeter() {
-    if (isEnabTableQueryMeterMetrics()) {
-      readMeter.mark();
     }
   }
 
@@ -346,22 +338,20 @@ public class MetricsTableRequests {
    * @param count Number of occurrences to record
    */
   public void updateTableWriteQueryMeter(long count) {
-    if (isEnabTableQueryMeterMetrics()) {
+    if (isEnableTableQueryMeterMetrics()) {
       writeMeter.mark(count);
     }
   }
 
-  /**
-   * Update table write QPS
-   */
-  public void updateTableWriteQueryMeter() {
-    if (isEnabTableQueryMeterMetrics()) {
-      writeMeter.mark();
-    }
-  }
-
-  // Visible for testing
+  @RestrictedApi(explanation = "Should only be called in TestMetricsTableRequests", link = "",
+      allowedOnPath = ".*/TestMetricsTableRequests.java")
   public MetricRegistryInfo getMetricRegistryInfo() {
     return registryInfo;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in TestMetricsTableRequests", link = "",
+      allowedOnPath = ".*/TestMetricsTableRequests.java")
+  public MetricRegistry getMetricRegistry() {
+    return registry;
   }
 }

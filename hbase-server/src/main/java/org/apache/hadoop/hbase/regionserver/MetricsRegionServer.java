@@ -282,15 +282,6 @@ public class MetricsRegionServer {
     }
   }
 
-  public void updateWriteQueryMeter(HRegion region) {
-    if (region.getMetricsTableRequests() != null) {
-      region.getMetricsTableRequests().updateTableWriteQueryMeter();
-    }
-    if (serverWriteQueryMeter != null) {
-      serverWriteQueryMeter.mark();
-    }
-  }
-
   public void incrScannerLeaseExpired() {
     serverSource.incrScannerLeaseExpired();
   }
