@@ -292,7 +292,8 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     // Initialize bloom filter configuration using existing HBase properties
     // This reuses the standard io.storefile.bloom.enabled property instead of creating
     // a new multi-tenant specific property, ensuring consistency with existing HBase behavior
-    this.bloomFilterEnabled = BloomFilterFactory.isGeneralBloomEnabled(conf);
+    this.bloomFilterEnabled =
+      bloomType != BloomType.NONE && BloomFilterFactory.isGeneralBloomEnabled(conf);
     // Bloom filter type is passed from table properties, respecting column family configuration
     this.bloomFilterType = bloomType;
 
