@@ -21,9 +21,9 @@ import static org.apache.hadoop.hbase.backup.BackupInfo.BackupState.COMPLETE;
 import static org.apache.hadoop.hbase.backup.BackupTestUtil.enableBackup;
 import static org.apache.hadoop.hbase.backup.BackupTestUtil.verifyBackup;
 import static org.apache.hadoop.hbase.backup.BackupType.FULL;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -33,13 +33,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
@@ -59,35 +59,31 @@ import org.apache.hadoop.hbase.testing.TestingHBaseCluster;
 import org.apache.hadoop.hbase.testing.TestingHBaseClusterOption;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(LargeTests.class)
-@RunWith(Parameterized.class)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: useBulkLoad={0}")
 public class TestBackupRestoreWithModifications {
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestBackupRestoreWithModifications.class);
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupRestoreWithModifications.class);
+  public boolean useBulkLoad;
 
-  @Parameterized.Parameters(name = "{index}: useBulkLoad={0}")
-  public static Iterable<Object[]> data() {
-    return HBaseCommonTestingUtil.BOOLEAN_PARAMETERIZED;
+  public TestBackupRestoreWithModifications(boolean useBulkLoad) {
+    this.useBulkLoad = useBulkLoad;
   }
 
-  @Parameterized.Parameter(0)
-  public boolean useBulkLoad;
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(true), Arguments.of(false));
+  }
 
   private TableName sourceTable;
   private TableName targetTable;
@@ -97,7 +93,7 @@ public class TestBackupRestoreWithModifications {
   private static final Path BACKUP_ROOT_DIR = new Path("backupIT");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("0");
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     enableBackup(conf);
@@ -105,12 +101,12 @@ public class TestBackupRestoreWithModifications {
     cluster.start();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     cluster.stop();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     sourceTable = TableName.valueOf("table-" + useBulkLoad);
     targetTable = TableName.valueOf("another-table-" + useBulkLoad);
@@ -119,7 +115,7 @@ public class TestBackupRestoreWithModifications {
     createTable(targetTable);
   }
 
-  @Test
+  @TestTemplate
   public void testModificationsOnTable() throws Exception {
     Instant timestamp = Instant.now();
 
