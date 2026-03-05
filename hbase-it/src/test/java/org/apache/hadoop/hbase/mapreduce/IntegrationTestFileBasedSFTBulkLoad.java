@@ -23,8 +23,8 @@ import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
  * hbase.IntegrationTestBulkLoad.replicaCount How many region replicas to configure for the table
  * under test.
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestFileBasedSFTBulkLoad extends IntegrationTestBulkLoad {
 
   private static final Logger LOG =

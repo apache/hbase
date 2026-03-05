@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,35 +29,53 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.function.Consumer;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.client.AsyncConnection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ShellExecEndpoint.ShellExecRequest;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ShellExecEndpoint.ShellExecResponse;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ShellExecEndpoint.ShellExecService;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test for the {@link ShellExecEndpointCoprocessor}.
  */
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestShellExecEndpointCoprocessor {
 
-  @ClassRule
-  public static final HBaseClassTestRule testRule =
-    HBaseClassTestRule.forClass(TestShellExecEndpointCoprocessor.class);
+  private static HBaseTestingUtil testingUtility;
+  private AsyncConnection conn;
 
-  @ClassRule
-  public static final MiniClusterRule miniClusterRule =
-    MiniClusterRule.newBuilder().setConfiguration(createConfiguration()).build();
+  @BeforeAll
+  public static void setUp() throws Exception {
+    testingUtility = new HBaseTestingUtil();
+    testingUtility.getConfiguration().set("hbase.coprocessor.master.classes",
+      ShellExecEndpointCoprocessor.class.getName());
+    testingUtility.startMiniCluster();
+  }
 
-  @Rule
-  public final ConnectionRule connectionRule =
-    ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
+  @AfterAll
+  public static void tearDown() throws Exception {
+    testingUtility.shutdownMiniCluster();
+  }
+
+  @BeforeEach
+  public void setUpConnection() throws Exception {
+    conn = ConnectionFactory.createAsyncConnection(testingUtility.getConfiguration()).get();
+  }
+
+  @AfterEach
+  public void tearDownConnection() throws IOException {
+    if (conn != null) {
+      conn.close();
+    }
+  }
 
   @Test
   public void testShellExecUnspecified() {
@@ -71,7 +89,6 @@ public class TestShellExecEndpointCoprocessor {
   }
 
   private void testShellExecForeground(final Consumer<ShellExecRequest.Builder> consumer) {
-    final AsyncConnection conn = connectionRule.getAsyncConnection();
     final AsyncAdmin admin = conn.getAdmin();
 
     final String command = "echo -n \"hello world\"";
@@ -87,10 +104,9 @@ public class TestShellExecEndpointCoprocessor {
 
   @Test
   public void testShellExecBackground() throws IOException {
-    final AsyncConnection conn = connectionRule.getAsyncConnection();
     final AsyncAdmin admin = conn.getAdmin();
 
-    final File testDataDir = ensureTestDataDirExists(miniClusterRule.getTestingUtility());
+    final File testDataDir = ensureTestDataDirExists(testingUtility);
     final File testFile = new File(testDataDir, "shell_exec_background.txt");
     assertTrue(testFile.createNewFile());
     assertEquals(0, testFile.length());
@@ -102,9 +118,9 @@ public class TestShellExecEndpointCoprocessor {
       admin.<ShellExecService.Stub, ShellExecResponse> coprocessorService(ShellExecService::newStub,
         (stub, controller, callback) -> stub.shellExec(controller, req, callback)).join();
 
-    assertFalse("the response from a background task should have no exit code", resp.hasExitCode());
-    assertFalse("the response from a background task should have no stdout", resp.hasStdout());
-    assertFalse("the response from a background task should have no stderr", resp.hasStderr());
+    assertFalse(resp.hasExitCode(), "the response from a background task should have no exit code");
+    assertFalse(resp.hasStdout(), "the response from a background task should have no stdout");
+    assertFalse(resp.hasStderr(), "the response from a background task should have no stderr");
 
     Waiter.waitFor(conn.getConfiguration(), 5_000, () -> testFile.length() > 0);
     final String content =
@@ -120,11 +136,5 @@ public class TestShellExecEndpointCoprocessor {
     final File testDataDirFile = Files.createDirectories(testDataDir).toFile();
     assertTrue(testDataDirFile.exists());
     return testDataDirFile;
-  }
-
-  private static Configuration createConfiguration() {
-    final Configuration conf = HBaseConfiguration.create();
-    conf.set("hbase.coprocessor.master.classes", ShellExecEndpointCoprocessor.class.getName());
-    return conf;
   }
 }
