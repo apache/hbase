@@ -308,7 +308,11 @@ fi
 
 if [ "${hadoop_version%.*.*}" -gt 2 ]; then
   echo "Verifying configs"
-  "${hadoop_exec}" --config "${working_dir}/hbase-conf/" conftest
+  hadoop_conf_files=""
+  for f in "${working_dir}"/hbase-conf/*-site.xml; do
+    hadoop_conf_files="$hadoop_conf_files -conffile $f"
+  done
+  "${hadoop_exec}" --config "${working_dir}/hbase-conf/" conftest $hadoop_conf_files
 fi
 
 if [ -n "${clean}" ]; then
@@ -321,6 +325,14 @@ fi
 echo "Listing HDFS contents"
 redirect_and_run "${working_dir}/hadoop_cluster_smoke" \
     "${hadoop_exec}" --config "${working_dir}/hbase-conf/" fs -ls -R /
+
+if [ "${hadoop_version%.*.*}" -gt 2 ]; then
+  # for now, all hbase branches are compiled with hadoop 3.4.x when using hadoop-3.0 profile, where
+  # the protobuf library has been shaded and relocated, so we always need to use ProtobufRpcEngine2
+  # at hbase side, even if the hadoop server side uses ProtobufRpcEngine, so here we will remove the
+  # config value to let the hadoop code pick the right rpc engine
+  sed -i "/<property>.*ProtobufRpcEngine.*<\/property>/d" "${working_dir}/hbase-conf/core-site.xml"
+fi
 
 echo "Starting up HBase"
 HBASE_CONF_DIR="${working_dir}/hbase-conf/" HBASE_LOG_DIR="${working_dir}" "${component_install}/bin/start-hbase.sh"
@@ -413,7 +425,7 @@ HADOOP_CLASSPATH="${hbase_dep_classpath}" redirect_and_run "${working_dir}/mr-im
 EOF
 
 echo "Verifying row count from import."
-import_rowcount=$(echo 'count "test:example"' | "${hbase_client}/bin/hbase" --config "${working_dir}/hbase-conf/" shell --noninteractive 2>/dev/null | tail -n 1)
+import_rowcount=$(echo 'count "test:example"' | "${hbase_client}/bin/hbase" --config "${working_dir}/hbase-conf/" shell --noninteractive 2>/dev/null | grep "row(s)" | awk '{print $1}')
 if [ ! "${import_rowcount}" -eq 48 ]; then
   echo "ERROR: Instead of finding 48 rows, we found ${import_rowcount}."
   exit 2
@@ -526,7 +538,7 @@ echo "Checking on results of example program."
 EOF
 
 echo "Verifying row count from example."
-example_rowcount=$(echo 'count "test:example"' | "${hbase_client}/bin/hbase" --config "${working_dir}/hbase-conf/" shell --noninteractive 2>/dev/null | tail -n 1)
+example_rowcount=$(echo 'count "test:example"' | "${hbase_client}/bin/hbase" --config "${working_dir}/hbase-conf/" shell --noninteractive 2>/dev/null | grep "row(s)" | awk '{print $1}')
 if [ "${example_rowcount}" -gt "1050" ]; then
   echo "Found ${example_rowcount} rows, which is enough to cover 48 for import, 1000 example's use of user table regions, 2 for example's use of meta/namespace regions, and 1 for example's count record"
 else
