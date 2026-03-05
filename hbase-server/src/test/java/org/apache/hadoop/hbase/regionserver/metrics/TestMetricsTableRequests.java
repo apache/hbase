@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.metrics.MetricRegistryInfo;
 import org.apache.hadoop.hbase.metrics.Snapshot;
 import org.apache.hadoop.hbase.metrics.impl.DropwizardMeter;
 import org.apache.hadoop.hbase.metrics.impl.HistogramImpl;
-import org.apache.hadoop.hbase.regionserver.metrics.MetricsTableRequests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.AfterEach;
@@ -128,6 +127,26 @@ public class TestMetricsTableRequests {
     requests.updateTableReadQueryMeter(500L);
     read = registry.get().get("tableReadQueryPerSecond");
     assertTrue(read.isPresent());
-    assertEquals(((DropwizardMeter) read.get()).getCount(), 500);
+    assertEquals(500, ((DropwizardMeter) read.get()).getCount());
+  }
+
+  @Test
+  public void testSameRegistryInstanceRefCounting(TestInfo testInfo) {
+    TableName tn1 = TableName.valueOf(testInfo.getTestMethod().get().getName());
+
+    // create registry twice, should return same instance due to ref-counting
+    MetricsTableRequests requests1 = new MetricsTableRequests(tn1, new Configuration());
+    MetricsTableRequests requests2 = new MetricsTableRequests(tn1, new Configuration());
+
+    MetricRegistry metricRegistry1 = requests1.getMetricRegistry();
+    MetricRegistry metricRegistry2 = requests2.getMetricRegistry();
+    // verify ref-counting returns same instance
+    assertEquals(metricRegistry1, metricRegistry2);
+
+    MetricRegistryInfo registryInfo = metricRegistry1.getMetricRegistryInfo();
+    MetricRegistries.global().remove(registryInfo);
+    assertTrue(MetricRegistries.global().get(registryInfo).isPresent());
+    MetricRegistries.global().remove(registryInfo);
+    assertFalse(MetricRegistries.global().get(registryInfo).isPresent());
   }
 }
