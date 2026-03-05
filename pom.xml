@@ -961,6 +961,7 @@
     <surefire.version>3.5.3</surefire.version>
     <xml.maven.version>1.0.1</xml.maven.version>
     <spotless.version>2.44.4</spotless.version>
+    <maven-site.version>3.21.0</maven-site.version>
     <maven-download-plugin.version>1.2.1</maven-download-plugin.version>
     <!-- compression -->
     <aircompressor.version>2.0.3</aircompressor.version>
@@ -2783,6 +2784,15 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-site-plugin</artifactId>
+        <version>${maven-site.version}</version>
+        <configuration>
+          <inputEncoding>UTF-8</inputEncoding>
+          <outputEncoding>UTF-8</outputEncoding>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
