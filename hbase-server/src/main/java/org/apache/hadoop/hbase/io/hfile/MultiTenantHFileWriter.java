@@ -616,11 +616,7 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
 
       // Finish writing the current section
       currentSectionWriter.close();
-      try {
-        outputStream.hsync(); // Ensure section data (incl. trailer) is synced to disk
-      } catch (UnsupportedOperationException uoe) {
-        outputStream.flush();
-      }
+      outputStream.flush();
 
       long sectionDataEnd = currentSectionWriter.getSectionDataEndOffset();
       if (sectionDataEnd >= 0) {
