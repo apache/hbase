@@ -63,15 +63,17 @@ public final class GlobalMetricRegistriesAdapter {
   private static final Logger LOG = LoggerFactory.getLogger(GlobalMetricRegistriesAdapter.class);
 
   private class MetricsSourceAdapter implements MetricsSource {
-    private final MetricRegistry registry;
+    private final MetricRegistryInfo info;
 
-    MetricsSourceAdapter(MetricRegistry registry) {
-      this.registry = registry;
+    MetricsSourceAdapter(MetricRegistryInfo info) {
+      this.info = info;
     }
 
     @Override
     public void getMetrics(MetricsCollector collector, boolean all) {
-      metricsAdapter.snapshotAllMetrics(registry, collector);
+      Optional<MetricRegistry> registryOpt = MetricRegistries.global().get(info);
+      registryOpt
+        .ifPresent(metricRegistry -> metricsAdapter.snapshotAllMetrics(metricRegistry, collector));
     }
   }
 
@@ -115,7 +117,7 @@ public final class GlobalMetricRegistriesAdapter {
     for (MetricRegistry registry : registries) {
       MetricRegistryInfo info = registry.getMetricRegistryInfo();
 
-      LOG.trace("MetricRegistryInfo : " + info.getMetricsName());
+      LOG.trace("MetricRegistryInfo : {}", info.getMetricsName());
       if (info.isExistingSource()) {
         // If there is an already existing BaseSource for this MetricRegistry, skip it here. These
         // types of registries are there only due to existing BaseSource implementations in the
@@ -128,10 +130,10 @@ public final class GlobalMetricRegistriesAdapter {
 
       if (!registeredSources.containsKey(info)) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Registering adapter for the MetricRegistry: " + info.getMetricsJmxContext());
+          LOG.debug("Registering adapter for the MetricRegistry: {}", info.getMetricsJmxContext());
         }
         // register this as a MetricSource under different JMX Context'es.
-        MetricsSourceAdapter adapter = new MetricsSourceAdapter(registry);
+        MetricsSourceAdapter adapter = new MetricsSourceAdapter(info);
         LOG.info("Registering " + info.getMetricsJmxContext() + " " + info.getMetricsDescription());
         DefaultMetricsSystem.instance().register(info.getMetricsJmxContext(),
           info.getMetricsDescription(), adapter);
@@ -148,9 +150,9 @@ public final class GlobalMetricRegistriesAdapter {
       Entry<MetricRegistryInfo, MetricsSourceAdapter> entry = it.next();
       MetricRegistryInfo info = entry.getKey();
       Optional<MetricRegistry> found = MetricRegistries.global().get(info);
-      if (!found.isPresent()) {
+      if (found.isEmpty()) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Removing adapter for the MetricRegistry: " + info.getMetricsJmxContext());
+          LOG.debug("Removing adapter for the MetricRegistry: {}", info.getMetricsJmxContext());
         }
         synchronized (DefaultMetricsSystem.instance()) {
           DefaultMetricsSystem.instance().unregisterSource(info.getMetricsJmxContext());
