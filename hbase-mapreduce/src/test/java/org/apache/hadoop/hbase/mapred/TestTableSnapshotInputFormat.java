@@ -46,6 +46,7 @@ import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.lib.NullOutputFormat;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -59,6 +60,13 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   private static final byte[] after_zzz = Bytes.toBytes("zz{"); // 'z' + 1 => '{'
   private static final String COLUMNS =
     Bytes.toString(FAMILIES[0]) + " " + Bytes.toString(FAMILIES[1]);
+
+  private String methodName;
+
+  @BeforeEach
+  public void beforeEach(TestInfo testInfo) {
+    methodName = testInfo.getTestMethod().get().getName();
+  }
 
   @Override
   protected byte[] getStartRow() {
@@ -99,8 +107,8 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   }
 
   @Test
-  public void testInitTableSnapshotMapperJobConfig(TestInfo testInfo) throws Exception {
-    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
+  public void testInitTableSnapshotMapperJobConfig() throws Exception {
+    final TableName tableName = TableName.valueOf(methodName);
     String snapshotName = "foo";
 
     try {
@@ -160,7 +168,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   @Override
   protected void testWithMockedMapReduce(HBaseTestingUtil util, String snapshotName, int numRegions,
     int numSplitsPerRegion, int expectedNumSplits, boolean setLocalityEnabledTo) throws Exception {
-    final TableName tableName = TableName.valueOf("testWithMockedMapReduce");
+    final TableName tableName = TableName.valueOf(methodName);
     try {
       createTableAndSnapshot(util, tableName, snapshotName, getStartRow(), getEndRow(), numRegions);
 

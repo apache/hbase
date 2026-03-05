@@ -203,19 +203,8 @@ public class TestImportTsvParser {
     assertEquals(1, parser.getTimestampKeyColumnIndex());
     byte[] line = Bytes.toBytes("rowkey\ttimestamp\tval_a");
     ParsedLine parsed = parser.parse(line, line.length);
-    assertEquals(-1, parsed.getTimestamp(-1));
-    // The original test expected BadTsvLineException, but the code above doesn't seem to trigger it explicitly
-    // unless parsed.getTimestamp(-1) throws it or checkParsing does.
-    // However, looking at the original code:
-    // @Test(expected = BadTsvLineException.class)
-    // public void testTsvParserInvalidTimestamp() ...
-    // So it MUST throw.
-    // Let's wrap the part that is expected to throw.
-    // It seems getTimestamp() or checkParsing() might throw if timestamp is invalid string?
-    // "timestamp" string cannot be parsed as long. So getTimestamp will throw NumberFormatException?
-    // Wait, TsvParser likely throws BadTsvLineException on bad timestamp format.
-    // Let's assume parsed.getTimestamp(-1) throws it.
     assertThrows(BadTsvLineException.class, () -> parsed.getTimestamp(-1));
+    checkParsing(parsed, Splitter.on("\t").split(Bytes.toString(line)));
   }
 
   @Test
