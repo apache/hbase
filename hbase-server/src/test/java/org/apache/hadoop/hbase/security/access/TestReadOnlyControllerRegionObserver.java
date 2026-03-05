@@ -454,6 +454,12 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.preReplayWALs(ctx, info, edits);
   }
 
+  @Test
+  public void testPreReplayWALsReadOnlyMetaNoException() throws IOException {
+    mockOperationForMetaTable();
+    regionReadOnlyController.preReplayWALs(ctx, info, edits);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPreBulkLoadHFileReadOnlyException() throws IOException {
     regionReadOnlyController.preBulkLoadHFile(ctx, familyPaths);
