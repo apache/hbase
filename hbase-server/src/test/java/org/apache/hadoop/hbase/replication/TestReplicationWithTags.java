@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -102,7 +103,7 @@ public class TestReplicationWithTags {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    conf1.setInt("hfile.format.version", 3);
+    conf1.setInt("hfile.format.version", HFile.MAX_FORMAT_VERSION);
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
     conf1.setInt("replication.source.size.capacity", 10240);
     conf1.setLong("replication.source.sleepforretries", 100);
@@ -127,7 +128,7 @@ public class TestReplicationWithTags {
 
     // Base conf2 on conf1 so it gets the right zk cluster.
     conf2 = HBaseConfiguration.create(conf1);
-    conf2.setInt("hfile.format.version", 3);
+    conf2.setInt("hfile.format.version", HFile.MAX_FORMAT_VERSION);
     conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
     conf2.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
     conf2.setBoolean("hbase.tests.use.shortcircuit.reads", false);

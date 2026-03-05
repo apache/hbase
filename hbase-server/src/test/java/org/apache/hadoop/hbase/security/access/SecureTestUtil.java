@@ -103,7 +103,7 @@ public class SecureTestUtil {
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, AccessController.class.getName());
     conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, AccessController.class.getName());
     // Need HFile V3 for tags for security features
-    conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
+    conf.setInt(HFile.FORMAT_VERSION_KEY, 4);
     conf.set(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, "true");
     configureSuperuser(conf);
   }

@@ -578,7 +578,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
   public int evictBlocksByHfileName(String hfileName) {
     int numEvicted = 0;
     for (BlockCacheKey key : map.keySet()) {
-      if (key.getHfileName().equals(hfileName)) {
+      if (BlockCacheUtil.matchesHFileName(key.getHfileName(), hfileName)) {
         if (evictBlock(key)) {
           ++numEvicted;
         }

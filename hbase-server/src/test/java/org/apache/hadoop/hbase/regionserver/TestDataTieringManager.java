@@ -597,7 +597,7 @@ public class TestDataTieringManager {
     initializeTestEnvironment();
     // hStoreFiles[3] is a cold file. the blocks should not get loaded after a readBlock call.
     HStoreFile hStoreFile = hStoreFiles.get(3);
-    BlockCacheKey cacheKey = new BlockCacheKey(hStoreFile.getPath(), 0, true, BlockType.DATA);
+    BlockCacheKey cacheKey = createBlockCacheKey(hStoreFile, 0, BlockType.DATA);
     testCacheOnRead(hStoreFile, cacheKey, -1, false);
   }
 
@@ -606,8 +606,7 @@ public class TestDataTieringManager {
     initializeTestEnvironment();
     // hStoreFiles[0] is a hot file. the blocks should get loaded after a readBlock call.
     HStoreFile hStoreFile = hStoreFiles.get(0);
-    BlockCacheKey cacheKey =
-      new BlockCacheKey(hStoreFiles.get(0).getPath(), 0, true, BlockType.DATA);
+    BlockCacheKey cacheKey = createBlockCacheKey(hStoreFile, 0, BlockType.DATA);
     testCacheOnRead(hStoreFile, cacheKey, -1, true);
   }
 
@@ -630,7 +629,6 @@ public class TestDataTieringManager {
     int numHotBlocks = 0, numColdBlocks = 0;
 
     Waiter.waitFor(defaultConf, 10000, 100, () -> (expectedTotalKeys == keys.size()));
-    int iter = 0;
     for (BlockCacheKey key : keys) {
       try {
         if (dataTieringManager.isHotData(key)) {
@@ -670,6 +668,15 @@ public class TestDataTieringManager {
   private void testDataTieringMethodWithKeyNoException(DataTieringMethodCallerWithKey caller,
     BlockCacheKey key, boolean expectedResult) {
     testDataTieringMethodWithKey(caller, key, expectedResult, null);
+  }
+
+  private BlockCacheKey createBlockCacheKey(HStoreFile hStoreFile, long blockOffset,
+    BlockType blockType) {
+    // For multi-tenant (v4) HFiles, section readers may use section-specific paths (e.g.
+    // "<hfile>#<sectionId>") for internal routing, but block cache keys are always based on the
+    // container file path to avoid caching the same physical block multiple times under different
+    // names.
+    return new BlockCacheKey(hStoreFile.getPath(), blockOffset, true, blockType);
   }
 
   private static void initializeTestEnvironment() throws IOException {

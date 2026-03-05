@@ -33,7 +33,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
-import org.apache.hadoop.hbase.io.hfile.HFileWriterImpl;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.LastCellAwareWriter;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -129,8 +130,10 @@ public class TestCompactorMemLeak {
     @Override
     protected List<Path> commitWriter(StoreFileWriter writer, FileDetails fd,
       CompactionRequestImpl request) throws IOException {
-      HFileWriterImpl writerImpl = (HFileWriterImpl) writer.getLiveFileWriter();
-      Cell cell = writerImpl.getLastCell();
+      HFile.Writer liveFileWriter = writer.getLiveFileWriter();
+      Assert.assertTrue("Writer must expose last-cell capability",
+        liveFileWriter instanceof LastCellAwareWriter);
+      Cell cell = ((LastCellAwareWriter) liveFileWriter).getLastCell();
       // The cell should be backend with an KeyOnlyKeyValue.
       IS_LAST_CELL_ON_HEAP.set(cell instanceof KeyOnlyKeyValue);
       return super.commitWriter(writer, fd, request);

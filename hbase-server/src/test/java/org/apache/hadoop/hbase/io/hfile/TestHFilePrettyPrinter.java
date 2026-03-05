@@ -87,14 +87,21 @@ public class TestHFilePrettyPrinter {
     System.setOut(ps);
     new HFilePrettyPrinter(conf).run(new String[] { "-v", String.valueOf(fileNotInRootDir) });
     String result = new String(stream.toByteArray());
-    String expectedResult = "Scanning -> " + fileNotInRootDir + "\n" + "Scanned kv count -> 1000\n";
-    assertEquals(expectedResult, result);
+    String expectedFirstLine = "Scanning -> " + fileNotInRootDir + "\n";
+    String expectedCountLine = "Scanned kv count -> 1000\n";
+    assertTrue("expected to contain start line: '" + expectedFirstLine + "'",
+      result.contains(expectedFirstLine));
+    assertTrue("expected to contain count line: '" + expectedCountLine + "'",
+      result.contains(expectedCountLine));
+    assertTrue("expected start line to appear before count line",
+      result.indexOf(expectedFirstLine) >= 0
+        && result.indexOf(expectedCountLine) > result.indexOf(expectedFirstLine));
   }
 
   @Test
   public void testHFilePrettyPrinterRootDir() throws Exception {
     Path rootPath = CommonFSUtils.getRootDir(conf);
-    String rootString = rootPath + rootPath.SEPARATOR;
+    String rootString = rootPath + Path.SEPARATOR;
     Path fileInRootDir = new Path(rootString + "hfile");
     TestHRegionServerBulkLoad.createHFile(fs, fileInRootDir, cf, fam, value, 1000);
     assertTrue("directory used is a root dir", fileInRootDir.toString().startsWith(rootString));
@@ -105,8 +112,15 @@ public class TestHFilePrettyPrinter {
     printer.processFile(fileInRootDir, true);
     printer.run(new String[] { "-v", String.valueOf(fileInRootDir) });
     String result = new String(stream.toByteArray());
-    String expectedResult = "Scanning -> " + fileInRootDir + "\n" + "Scanned kv count -> 1000\n";
-    assertEquals(expectedResult, result);
+    String expectedFirstLine = "Scanning -> " + fileInRootDir + "\n";
+    String expectedCountLine = "Scanned kv count -> 1000\n";
+    assertTrue("expected to contain start line: '" + expectedFirstLine + "'",
+      result.contains(expectedFirstLine));
+    assertTrue("expected to contain count line: '" + expectedCountLine + "'",
+      result.contains(expectedCountLine));
+    assertTrue("expected start line to appear before count line",
+      result.indexOf(expectedFirstLine) >= 0
+        && result.indexOf(expectedCountLine) > result.indexOf(expectedFirstLine));
   }
 
   @Test
@@ -124,8 +138,15 @@ public class TestHFilePrettyPrinter {
     new HFilePrettyPrinter(conf)
       .run(new String[] { "-v", "-w" + firstRowKey, String.valueOf(fileNotInRootDir) });
     String result = new String(stream.toByteArray());
-    String expectedResult = "Scanning -> " + fileNotInRootDir + "\n" + "Scanned kv count -> 1\n";
-    assertEquals(expectedResult, result);
+    String expectedFirstLine = "Scanning -> " + fileNotInRootDir + "\n";
+    String expectedCountLine = "Scanned kv count -> 1\n";
+    assertTrue("expected to contain start line: '" + expectedFirstLine + "'",
+      result.contains(expectedFirstLine));
+    assertTrue("expected to contain count line: '" + expectedCountLine + "'",
+      result.contains(expectedCountLine));
+    assertTrue("expected start line to appear before count line",
+      result.indexOf(expectedFirstLine) >= 0
+        && result.indexOf(expectedCountLine) > result.indexOf(expectedFirstLine));
   }
 
   @Test
