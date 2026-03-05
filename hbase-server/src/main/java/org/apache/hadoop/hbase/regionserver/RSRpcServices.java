@@ -668,7 +668,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
           result = region.getCoprocessorHost().preCheckAndMutate(checkAndMutate);
         }
         if (result == null) {
-          result = region.checkAndMutate(checkAndMutate, nonceGroup, nonce);
+          result = region.checkAndMutate(mutations, checkAndMutate, nonceGroup, nonce);
           if (region.getCoprocessorHost() != null) {
             result = region.getCoprocessorHost().postCheckAndMutate(checkAndMutate, result);
           }
@@ -2347,8 +2347,21 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       return bulkLoadHFileInternal(request);
     }
 
-    // TODO: implement row cache logic for bulk load
-    return bulkLoadHFileInternal(request);
+    RowCache rowCache = region.getRegionServerServices().getRowCache();
+
+    // Since bulkload modifies the store files, the row cache should be disabled until the bulkload
+    // is finished.
+    rowCache.createRegionLevelBarrier(region);
+    try {
+      // We do not invalidate the entire row cache directly, as it contains a large number of
+      // entries and takes a long time. Instead, we increment rowCacheSeqNum, which is used when
+      // constructing a RowCacheKey, thereby making the existing row cache entries stale.
+      rowCache.increaseRowCacheSeqNum(region);
+      return bulkLoadHFileInternal(request);
+    } finally {
+      // The row cache for the region has been enabled again
+      rowCache.removeTableLevelBarrier(region);
+    }
   }
 
   BulkLoadHFileResponse bulkLoadHFileInternal(final BulkLoadHFileRequest request)
@@ -2609,7 +2622,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     RegionScannerImpl scanner = null;
     long blockBytesScannedBefore = context.getBlockBytesScanned();
     try {
-      scanner = region.getScannerWithResults(get, scan, results);
+      scanner = region.getScannerWithResults(get, scan, results, context);
     } finally {
       if (scanner != null) {
         if (closeCallBack == null) {

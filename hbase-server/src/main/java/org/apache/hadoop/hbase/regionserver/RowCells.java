@@ -39,8 +39,7 @@ public class RowCells implements HeapSize {
         // To garbage collect the objects referenced by the cells
         this.cells.add(extCell.deepClone());
       } catch (RuntimeException e) {
-        // throw new CloneNotSupportedException("Deep clone failed");
-        this.cells.add(extCell);
+        throw new CloneNotSupportedException("Deep clone failed");
       }
     }
   }

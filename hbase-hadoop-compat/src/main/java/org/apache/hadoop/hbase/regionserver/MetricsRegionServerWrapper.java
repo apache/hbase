@@ -635,6 +635,16 @@ public interface MetricsRegionServerWrapper {
 
   long getTrailerHitCount();
 
+  long getRowCacheHitCount();
+
+  long getRowCacheMissCount();
+
+  long getRowCacheSize();
+
+  long getRowCacheCount();
+
+  long getRowCacheEvictedRowCount();
+
   long getTotalRowActionRequestCount();
 
   long getByteBuffAllocatorHeapAllocationBytes();
