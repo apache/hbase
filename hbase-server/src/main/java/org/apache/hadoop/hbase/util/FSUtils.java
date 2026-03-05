@@ -710,7 +710,7 @@ public final class FSUtils {
     final Path idFile = new Path(rootdir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
     final Path tempDir = new Path(rootdir, HConstants.HBASE_TEMP_DIRECTORY);
     final Path tempIdFile = new Path(tempDir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
-
+    
     LOG.debug("[Read-replica feature] id file [{}] is present and contains cluster id: {}", idFile,
       cs);
     writeClusterInfo(fs, rootdir, idFile, tempIdFile, cs.toByteArray(), wait);
