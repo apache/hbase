@@ -616,14 +616,14 @@ public final class FSUtils {
           data = in.readUTF();
           cs = new ActiveClusterSuffix(data);
         } catch (EOFException eof) {
-          LOG.warn("Active Cluster Suffix File {} is empty ", idPath);
+          LOG.warn("Read Replica Cluster id file {} is empty ", idPath);
         } finally {
           in.close();
         }
       }
       return cs;
     } else {
-      throw new FileNotFoundException("Active Cluster Suffix File " + idPath + " not found");
+      throw new FileNotFoundException("Read Replica Cluster id file " + idPath + " not found");
     }
   }
 
@@ -675,7 +675,8 @@ public final class FSUtils {
     final Path tempIdFile = new Path(tempDir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
     String fsuffix = new String(bdata, StandardCharsets.US_ASCII);
 
-    LOG.debug("Create Active cluster Suffix file [{}] with Suffix: {}", idFile, fsuffix);
+    LOG.debug("Read Replica Cluster id file [{}] present and contains cluster id: {}", idFile,
+      fsuffix);
     writeClusterInfo(fs, rootdir, idFile, tempIdFile, bdata, wait);
   }
 

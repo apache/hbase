@@ -405,14 +405,14 @@ public class MasterFileSystem {
           this.activeClusterSuffix = acs;
         } else {
           // throw error
-          LOG.info("rootdir {} : Active Cluster File Suffix {} ", rootdir, acs);
+          LOG.info("rootdir {} : Read replica active cluster file suffix {} ", rootdir, acs);
           throw new IOException("Cannot start master, because another cluster is running in active "
-            + "(read-write) mode on this storage location. Active Cluster Id: {} " + acs
-            + " This cluster Id: " + getClusterId());
+            + "(read-write) mode on this storage location. Active Cluster Id: " + acs
+            + ", This cluster Id: " + getClusterId());
         }
         LOG.info(
-          "This is the active cluster on this storage location, " + "File Suffix {} : Suffix {} : ",
-          acs, getActiveClusterSuffix());
+          "Read Replica Cluster: This is the active cluster on this storage location with cluster id: {}",
+          getClusterId());
       } catch (FileNotFoundException fnfe) {
         // this is the active cluster, create active cluster suffix file if it does not exist
         FSUtils.setActiveClusterSuffix(fs, rootdir, getSuffixFileDataToWrite(), wait);
