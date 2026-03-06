@@ -865,8 +865,14 @@ abstract class ServerRpcConnection implements Closeable {
     }
 
     @Override
+    public long readLong(int offset) {
+      return this.buf.getLong(offset);
+    }
+
+    @Override
     public int size() {
       return this.length;
     }
+
   }
 }
