@@ -143,24 +143,30 @@ public class FSTableDescriptors implements TableDescriptors {
       CommonFSUtils.getRootDir(conf));
   }
 
+  private static TableName getMetaTableNameFromConf(Configuration conf) {
+    // TODO: Support replica-specific meta table names.
+    return TableName.META_TABLE_NAME;
+  }
+
   public static TableDescriptor tryUpdateAndGetMetaTableDescriptor(Configuration conf,
     FileSystem fs, Path rootdir) throws IOException {
     // see if we already have meta descriptor on fs. Write one if not.
-    Optional<Pair<FileStatus, TableDescriptor>> opt = getTableDescriptorFromFs(fs,
-      CommonFSUtils.getTableDir(rootdir, TableName.META_TABLE_NAME), false);
+    TableName metaTableName = getMetaTableNameFromConf(conf);
+    Optional<Pair<FileStatus, TableDescriptor>> opt =
+      getTableDescriptorFromFs(fs, CommonFSUtils.getTableDir(rootdir, metaTableName), false);
     if (opt.isPresent()) {
       return opt.get().getSecond();
     }
     TableDescriptorBuilder builder = createMetaTableDescriptorBuilder(conf);
     TableDescriptor td = StoreFileTrackerFactory.updateWithTrackerConfigs(conf, builder.build());
-    LOG.info("Creating new hbase:meta table descriptor {}", td);
+    LOG.info("Creating new {} table descriptor {}", metaTableName, td);
     TableName tableName = td.getTableName();
     Path tableDir = CommonFSUtils.getTableDir(rootdir, tableName);
     Path p = writeTableDescriptor(fs, td, tableDir, null);
     if (p == null) {
-      throw new IOException("Failed update hbase:meta table descriptor");
+      throw new IOException("Failed update " + metaTableName + " table descriptor");
     }
-    LOG.info("Updated hbase:meta table descriptor to {}", p);
+    LOG.info("Updated {} table descriptor to {}", metaTableName, p);
     return td;
   }
 
@@ -198,7 +204,7 @@ public class FSTableDescriptors implements TableDescriptors {
     // TODO We used to set CacheDataInL1 for META table. When we have BucketCache in file mode, now
     // the META table data goes to File mode BC only. Test how that affect the system. If too much,
     // we have to rethink about adding back the setCacheDataInL1 for META table CFs.
-    return TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME)
+    return TableDescriptorBuilder.newBuilder(getMetaTableNameFromConf(conf))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY)
         .setMaxVersions(
           conf.getInt(HConstants.HBASE_META_VERSIONS, HConstants.DEFAULT_HBASE_META_VERSIONS))

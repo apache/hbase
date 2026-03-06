@@ -67,6 +67,8 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
 
   @Override
   public TableName getTableName() {
+    // Always returns default "hbase:meta" for now
+    // Future: will support replica-specific names (e.g., "hbase:meta_replica1")
     return TableName.META_TABLE_NAME;
   }
 
@@ -75,11 +77,11 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     return TableOperationType.CREATE;
   }
 
-  private static TableDescriptor writeFsLayout(Path rootDir, MasterProcedureEnv env)
-    throws IOException {
+  private static TableDescriptor writeFsLayout(Path rootDir, MasterProcedureEnv env,
+    TableName metaTableName) throws IOException {
     LOG.info("BOOTSTRAP: creating hbase:meta region");
     FileSystem fs = rootDir.getFileSystem(env.getMasterConfiguration());
-    Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.META_TABLE_NAME);
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, metaTableName);
     if (fs.exists(tableDir) && !deleteMetaTableDirectoryIfPartial(fs, tableDir)) {
       LOG.warn("Can not delete partial created meta table, continue...");
     }
@@ -105,7 +107,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
         case INIT_META_WRITE_FS_LAYOUT:
           Configuration conf = env.getMasterConfiguration();
           Path rootDir = CommonFSUtils.getRootDir(conf);
-          TableDescriptor td = writeFsLayout(rootDir, env);
+          TableDescriptor td = writeFsLayout(rootDir, env, env.getMetaTableName());
           env.getMasterServices().getTableDescriptors().update(td, true);
           setNextState(InitMetaState.INIT_META_ASSIGN_META);
           return Flow.HAS_MORE_STATE;
