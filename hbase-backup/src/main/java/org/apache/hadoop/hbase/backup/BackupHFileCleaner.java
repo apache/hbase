@@ -23,7 +23,6 @@ import java.util.HashSet;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
@@ -52,12 +51,37 @@ public class BackupHFileCleaner extends BaseHFileCleanerDelegate implements Abor
   private boolean stopped = false;
   private boolean aborted = false;
   private Connection connection;
-  // timestamp of most recent completed cleaning run
   private volatile long previousCleaningCompletionTimestamp = 0;
+  private volatile Set<String> bulkLoadedHFilesNeedingBackup = null;
+
+  @Override
+  public void preClean() {
+    if (stopped) {
+      return;
+    }
+    try (BackupSystemTable tbl = new BackupSystemTable(connection)) {
+      Set<TableName> tablesIncludedInBackups = fetchFullyBackedUpTables(tbl);
+      Set<String> hfileFilenames = new HashSet<>();
+      for (BulkLoad bulkLoad : tbl.readBulkloadRows(tablesIncludedInBackups)) {
+        String path = bulkLoad.getHfilePath();
+        hfileFilenames.add(path.substring(path.lastIndexOf('/') + 1));
+      }
+      bulkLoadedHFilesNeedingBackup = hfileFilenames;
+      LOG.debug("Cached {} unique HFile filenames registered as bulk loads.",
+        hfileFilenames.size());
+    } catch (IOException ioe) {
+      LOG.error(
+        "Failed to read registered bulk load references from backup system table, "
+          + "marking all files as non-deletable.",
+        ioe);
+      bulkLoadedHFilesNeedingBackup = null;
+    }
+  }
 
   @Override
   public void postClean() {
     previousCleaningCompletionTimestamp = EnvironmentEdgeManager.currentTime();
+    bulkLoadedHFilesNeedingBackup = null;
   }
 
   @Override
@@ -66,34 +90,20 @@ public class BackupHFileCleaner extends BaseHFileCleanerDelegate implements Abor
       return Collections.emptyList();
     }
 
-    // We use filenames because the HFile will have been moved to the archive since it
-    // was registered.
-    final Set<String> hfileFilenames = new HashSet<>();
-    try (BackupSystemTable tbl = new BackupSystemTable(connection)) {
-      Set<TableName> tablesIncludedInBackups = fetchFullyBackedUpTables(tbl);
-      for (BulkLoad bulkLoad : tbl.readBulkloadRows(tablesIncludedInBackups)) {
-        hfileFilenames.add(new Path(bulkLoad.getHfilePath()).getName());
-      }
-      LOG.debug("Found {} unique HFile filenames registered as bulk loads.", hfileFilenames.size());
-    } catch (IOException ioe) {
-      LOG.error(
-        "Failed to read registered bulk load references from backup system table, marking all files as non-deletable.",
-        ioe);
+    final Set<String> hfilesNeedingBackup = bulkLoadedHFilesNeedingBackup;
+    if (hfilesNeedingBackup == null) {
       return Collections.emptyList();
     }
 
-    // Pin the threshold, we don't want the result to change depending on evaluation time.
     final long recentFileThreshold = previousCleaningCompletionTimestamp;
 
     return Iterables.filter(files, file -> {
-      // If the file is recent, be conservative and wait for one more scan of the bulk loads
       if (file.getModificationTime() > recentFileThreshold) {
         LOG.debug("Preventing deletion due to timestamp: {}", file.getPath().toString());
         return false;
       }
-      // A file can be deleted if it is not registered as a backup bulk load.
       String hfile = file.getPath().getName();
-      if (hfileFilenames.contains(hfile)) {
+      if (hfilesNeedingBackup.contains(hfile)) {
         LOG.debug("Preventing deletion due to bulk load registration in backup system table: {}",
           file.getPath().toString());
         return false;
