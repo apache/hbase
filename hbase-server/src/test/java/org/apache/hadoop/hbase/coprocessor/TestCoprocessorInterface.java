@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -112,6 +113,11 @@ public class TestCoprocessorInterface {
     public boolean nextRaw(List<? super ExtendedCell> result, ScannerContext context)
       throws IOException {
       return delegate.nextRaw(result, context);
+    }
+
+    @Override
+    public Set<Path> getFilesRead() {
+      return delegate.getFilesRead();
     }
 
     @Override
