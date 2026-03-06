@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -57,7 +57,7 @@ import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
@@ -74,7 +74,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
  * line. Originally taken from Apache Bigtop. Issue user names as comma seperated list. ./hbase
  * IntegrationTestWithCellVisibilityLoadAndVerify -u usera,userb
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationTestLoadAndVerify {
   private static final String ERROR_STR =
     "Two user names are to be specified seperated by a ',' like 'usera,userb'";
