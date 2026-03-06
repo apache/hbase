@@ -19,33 +19,32 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.util.Arrays;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-@RunWith(Parameterized.class)
-@Category({ MapReduceTests.class, LargeTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMRIncrementalLoadWithLocality extends MRIncrementalLoadTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMRIncrementalLoadWithLocality.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     setupCluster(true);
   }
 
-  @Parameters(name = "{index}: shouldChangeRegions={0}, putSortReducer={1}," + " tableStr={2}")
   public static List<Object[]> params() {
     return Arrays.asList(
       new Object[] { false, false, Arrays.asList("testMRIncrementalLoadWithLocality1") },
       new Object[] { true, false, Arrays.asList("testMRIncrementalLoadWithLocality2") });
+  }
+
+  @ParameterizedTest
+  @MethodSource("params")
+  public void testMRIncrementalLoadWithLocality(boolean shouldChangeRegions, boolean putSortReducer,
+      List<String> tableStr) throws Exception {
+    runTest(shouldChangeRegions, putSortReducer, tableStr);
   }
 }

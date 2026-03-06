@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,7 +28,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -44,9 +44,8 @@ import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,12 +55,9 @@ import org.slf4j.LoggerFactory;
  * to the table.
  */
 
-@Category({ VerySlowMapReduceTests.class, LargeTests.class })
+@Tag(VerySlowMapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestTableMapReduce extends TestTableMapReduceBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableMapReduce.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTableMapReduce.class);
 
@@ -142,27 +138,27 @@ public class TestTableMapReduce extends TestTableMapReduceBase {
     Counters counters = job.getCounters();
     Counter counter =
       counters.findCounter(TableRecordReaderImpl.HBASE_COUNTER_GROUP_NAME, "RPC_CALLS");
-    assertNotNull("Unable to find Job counter for HBase scan metrics, RPC_CALLS", counter);
-    assertTrue("Counter value for RPC_CALLS should be larger than 0", counter.getValue() > 0);
+    assertNotNull(counter, "Unable to find Job counter for HBase scan metrics, RPC_CALLS");
+    assertTrue(counter.getValue() > 0, "Counter value for RPC_CALLS should be larger than 0");
   }
 
-  @Test(expected = TableNotEnabledException.class)
+  @Test
   public void testWritingToDisabledTable() throws IOException {
-
-    try (Admin admin = UTIL.getConnection().getAdmin();
-      Table table = UTIL.getConnection().getTable(TABLE_FOR_NEGATIVE_TESTS)) {
-      admin.disableTable(table.getName());
-      runTestOnTable(table);
-      fail("Should not have reached here, should have thrown an exception");
-    }
+    assertThrows(TableNotEnabledException.class, () -> {
+      try (Admin admin = UTIL.getConnection().getAdmin();
+        Table table = UTIL.getConnection().getTable(TABLE_FOR_NEGATIVE_TESTS)) {
+        admin.disableTable(table.getName());
+        runTestOnTable(table);
+      }
+    });
   }
 
-  @Test(expected = TableNotFoundException.class)
+  @Test
   public void testWritingToNonExistentTable() throws IOException {
-
-    try (Table table = UTIL.getConnection().getTable(TableName.valueOf("table-does-not-exist"))) {
-      runTestOnTable(table);
-      fail("Should not have reached here, should have thrown an exception");
-    }
+    assertThrows(TableNotFoundException.class, () -> {
+      try (Table table = UTIL.getConnection().getTable(TableName.valueOf("table-does-not-exist"))) {
+        runTestOnTable(table);
+      }
+    });
   }
 }

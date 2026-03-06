@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import static org.apache.hadoop.security.UserGroupInformation.loginUserFromKeytab;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.Closeable;
 import java.io.File;
@@ -42,20 +42,17 @@ import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HFileOutputFormat2} with secure mode.
  */
-@Category({ VerySlowMapReduceTests.class, LargeTests.class })
+@Tag(VerySlowMapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestHFileOutputFormat2WithSecurity extends HFileOutputFormat2TestBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHFileOutputFormat2WithSecurity.class);
 
   private static final byte[] FAMILIES = Bytes.toBytes("test_cf");
 
@@ -71,7 +68,7 @@ public class TestHFileOutputFormat2WithSecurity extends HFileOutputFormat2TestBa
 
   private List<Closeable> clusters = new ArrayList<>();
 
-  @Before
+  @BeforeEach
   public void setupSecurityClusters() throws Exception {
     utilA = new HBaseTestingUtil();
     confA = utilA.getConfiguration();
@@ -93,7 +90,7 @@ public class TestHFileOutputFormat2WithSecurity extends HFileOutputFormat2TestBa
     clusters.add(utilB.startSecureMiniCluster(kdc, userPrincipal, HTTP_PRINCIPAL));
   }
 
-  @After
+  @AfterEach
   public void teardownSecurityClusters() {
     IOUtils.closeQuietly(clusters);
     clusters.clear();

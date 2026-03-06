@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,21 +38,17 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-@Category({ MapReduceTests.class, MediumTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestWALInputFormat {
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALInputFormat.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     TEST_UTIL.startMiniCluster();
     TEST_UTIL.createWALRootDir();

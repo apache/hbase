@@ -55,28 +55,21 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 /**
  * Tests of MultiTableInputFormatBase.
  */
-@Category({ SmallTests.class })
+@Tag(SmallTests.TAG)
 public class TestMultiTableInputFormatBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultiTableInputFormatBase.class);
-
-  @Rule
-  public final TestName name = new TestName();
 
   /**
    * Test getSplits only puts up one Connection. In past it has put up many Connections. Each
@@ -84,7 +77,7 @@ public class TestMultiTableInputFormatBase {
    * only do one Connection when doing getSplits even if a MultiTableInputFormat.
    */
   @Test
-  public void testMRSplitsConnectionCount() throws IOException {
+  public void testMRSplitsConnectionCount(TestInfo testInfo) throws IOException {
     // Make instance of MTIFB.
     MultiTableInputFormatBase mtif = new MultiTableInputFormatBase() {
       @Override
@@ -104,17 +97,17 @@ public class TestMultiTableInputFormatBase {
     List<Scan> scans = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
       Scan scan = new Scan();
-      String tableName = this.name.getMethodName() + i;
+      String tableName = testInfo.getTestMethod().get().getName() + i;
       scan.setAttribute(SCAN_ATTRIBUTES_TABLE_NAME, Bytes.toBytes(tableName));
       scans.add(scan);
     }
     mtif.setScans(scans);
     // Get splits. Assert that that more than one.
     List<InputSplit> splits = mtif.getSplits(mockedJobContext);
-    Assert.assertTrue(splits.size() > 0);
+    assertTrue(splits.size() > 0);
     // Assert only one Connection was made (see the static counter we have in the mocked
     // Connection MRSplitsConnection Constructor.
-    Assert.assertEquals(1, MRSplitsConnection.creations.get());
+    assertEquals(1, MRSplitsConnection.creations.get());
   }
 
   /**

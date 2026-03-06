@@ -36,17 +36,14 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.LoggerFactory;
 
 /**
  * This file was forked from hadoop/common/branches/branch-2@1350012.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestJarFinder {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestJarFinder.class);
 
   @Test
   public void testJar() throws Exception {

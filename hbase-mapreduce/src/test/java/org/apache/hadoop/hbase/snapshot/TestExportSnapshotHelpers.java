@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -26,25 +26,20 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotFileInfo;
 
 /**
  * Test Export Snapshot Tool helpers
  */
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestExportSnapshotHelpers {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestExportSnapshotHelpers.class);
 
   /**
    * Verfy the result of getBalanceSplits() method. The result are groups of files, used as input
@@ -112,7 +107,7 @@ public class TestExportSnapshotHelpers {
     Collection<List<Pair<SnapshotFileInfo, Long>>> groups =
       inputFormat.groupFilesForSplits(conf, files);
 
-    assertEquals("Should create 3 groups", 3, groups.size());
+    assertEquals(3, groups.size(), "Should create 3 groups");
 
     long totalSize = 0;
     int totalFiles = 0;
@@ -123,8 +118,8 @@ public class TestExportSnapshotHelpers {
       }
     }
 
-    assertEquals("All files should be included", 10, totalFiles);
-    assertEquals("Total size should be preserved", 450, totalSize);
+    assertEquals(10, totalFiles, "All files should be included");
+    assertEquals(450, totalSize, "Total size should be preserved");
   }
 
   @Test
@@ -146,7 +141,7 @@ public class TestExportSnapshotHelpers {
     Collection<List<Pair<SnapshotFileInfo, Long>>> groups =
       inputFormat.groupFilesForSplits(conf, files);
 
-    assertEquals("Should create splits based on custom grouper output", 4, groups.size());
+    assertEquals(4, groups.size(), "Should create splits based on custom grouper output");
 
     long totalSize = 0;
     int totalFiles = 0;
@@ -157,8 +152,8 @@ public class TestExportSnapshotHelpers {
       }
     }
 
-    assertEquals("All files should be included", 8, totalFiles);
-    assertEquals("Total size should be preserved", 140, totalSize);
+    assertEquals(8, totalFiles, "All files should be included");
+    assertEquals(140, totalSize, "Total size should be preserved");
   }
 
   @Test
@@ -174,7 +169,7 @@ public class TestExportSnapshotHelpers {
       new ExportSnapshot.NoopFileLocationResolver();
     Set<String> locations = resolver.getLocationsForInputFiles(files);
 
-    assertTrue("NoopFileLocationResolver should return empty locations", locations.isEmpty());
+    assertTrue(locations.isEmpty(), "NoopFileLocationResolver should return empty locations");
   }
 
   @Test
@@ -189,9 +184,9 @@ public class TestExportSnapshotHelpers {
     TestFileLocationResolver resolver = new TestFileLocationResolver();
     Set<String> locations = resolver.getLocationsForInputFiles(files);
 
-    assertEquals("Should return expected locations", 2, locations.size());
-    assertTrue("Should contain rack1", locations.contains("rack1"));
-    assertTrue("Should contain rack2", locations.contains("rack2"));
+    assertEquals(2, locations.size(), "Should return expected locations");
+    assertTrue(locations.contains("rack1"), "Should contain rack1");
+    assertTrue(locations.contains("rack2"), "Should contain rack2");
   }
 
   @Test
@@ -209,7 +204,7 @@ public class TestExportSnapshotHelpers {
 
     try {
       String[] locations = split.getLocations();
-      assertEquals("Should return 2 locations", 2, locations.length);
+      assertEquals(2, locations.length, "Should return 2 locations");
 
       boolean hasRack1 = false;
       boolean hasRack2 = false;
@@ -222,8 +217,8 @@ public class TestExportSnapshotHelpers {
         }
       }
 
-      assertTrue("Should contain rack1", hasRack1);
-      assertTrue("Should contain rack2", hasRack2);
+      assertTrue(hasRack1, "Should contain rack1");
+      assertTrue(hasRack2, "Should contain rack2");
     } catch (Exception e) {
       throw new RuntimeException("Failed to get locations", e);
     }

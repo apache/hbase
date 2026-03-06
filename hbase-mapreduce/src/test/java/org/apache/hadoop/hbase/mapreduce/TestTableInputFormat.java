@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -57,11 +58,11 @@ import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -71,10 +72,9 @@ import org.slf4j.LoggerFactory;
 /**
  * This tests the TableInputFormat and its recovery semantics
  */
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestTableInputFormat {
 
-  @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestTableInputFormat.class);
 
@@ -86,17 +86,17 @@ public class TestTableInputFormat {
 
   private static final byte[][] columns = new byte[][] { FAMILY };
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws IOException {
     LOG.info("before");
     UTIL.ensureSomeRegionServersAvailable(1);
@@ -266,11 +266,11 @@ public class TestTableInputFormat {
   /**
    * Run test assuming Scanner IOException failure using newer mapreduce api
    */
-  @Test(expected = IOException.class)
+  @Test
   public void testTableRecordReaderScannerFailMapreduceTwice()
     throws IOException, InterruptedException {
     Table htable = createIOEScannerTable(Bytes.toBytes("table3-mr"), 2);
-    runTestMapreduce(htable);
+    assertThrows(IOException.class, () -> runTestMapreduce(htable));
   }
 
   /**
@@ -286,11 +286,12 @@ public class TestTableInputFormat {
   /**
    * Run test assuming NotServingRegionException using newer mapreduce api
    */
-  @Test(expected = org.apache.hadoop.hbase.NotServingRegionException.class)
+  @Test
   public void testTableRecordReaderScannerTimeoutMapreduceTwice()
     throws IOException, InterruptedException {
     Table htable = createDNRIOEScannerTable(Bytes.toBytes("table5-mr"), 2);
-    runTestMapreduce(htable);
+    assertThrows(org.apache.hadoop.hbase.NotServingRegionException.class,
+      () -> runTestMapreduce(htable));
   }
 
   /**
@@ -334,19 +335,19 @@ public class TestTableInputFormat {
     job.setNumReduceTasks(0);
 
     LOG.debug("submitting job.");
-    assertTrue("job failed!", job.waitForCompletion(true));
-    assertEquals("Saw the wrong number of instances of the filtered-for row.", 2, job.getCounters()
-      .findCounter(TestTableInputFormat.class.getName() + ":row", "aaa").getValue());
-    assertEquals("Saw any instances of the filtered out row.", 0, job.getCounters()
-      .findCounter(TestTableInputFormat.class.getName() + ":row", "bbb").getValue());
-    assertEquals("Saw the wrong number of instances of columnA.", 1, job.getCounters()
-      .findCounter(TestTableInputFormat.class.getName() + ":family", "columnA").getValue());
-    assertEquals("Saw the wrong number of instances of columnB.", 1, job.getCounters()
-      .findCounter(TestTableInputFormat.class.getName() + ":family", "columnB").getValue());
-    assertEquals("Saw the wrong count of values for the filtered-for row.", 2, job.getCounters()
-      .findCounter(TestTableInputFormat.class.getName() + ":value", "value aaa").getValue());
-    assertEquals("Saw the wrong count of values for the filtered-out row.", 0, job.getCounters()
-      .findCounter(TestTableInputFormat.class.getName() + ":value", "value bbb").getValue());
+    assertTrue(job.waitForCompletion(true), "job failed!");
+    assertEquals(2, job.getCounters()
+      .findCounter(TestTableInputFormat.class.getName() + ":row", "aaa").getValue(), "Saw the wrong number of instances of the filtered-for row.");
+    assertEquals(0, job.getCounters()
+      .findCounter(TestTableInputFormat.class.getName() + ":row", "bbb").getValue(), "Saw any instances of the filtered out row.");
+    assertEquals(1, job.getCounters()
+      .findCounter(TestTableInputFormat.class.getName() + ":family", "columnA").getValue(), "Saw the wrong number of instances of columnA.");
+    assertEquals(1, job.getCounters()
+      .findCounter(TestTableInputFormat.class.getName() + ":family", "columnB").getValue(), "Saw the wrong number of instances of columnB.");
+    assertEquals(2, job.getCounters()
+      .findCounter(TestTableInputFormat.class.getName() + ":value", "value aaa").getValue(), "Saw the wrong count of values for the filtered-for row.");
+    assertEquals(0, job.getCounters()
+      .findCounter(TestTableInputFormat.class.getName() + ":value", "value bbb").getValue(), "Saw the wrong count of values for the filtered-out row.");
   }
 
   public static class ExampleVerifier extends TableMapper<NullWritable, NullWritable> {

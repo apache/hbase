@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import static org.apache.hadoop.util.ToolRunner.run;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -58,15 +58,13 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,21 +76,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 /**
  * Test Export Snapshot Tool
  */
-@Category({ VerySlowMapReduceTests.class, LargeTests.class })
+@Tag(VerySlowMapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestExportSnapshot {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestExportSnapshot.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestExportSnapshot.class);
 
   protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   protected final static byte[] FAMILY = Bytes.toBytes("cf");
-
-  @Rule
-  public final TestName testName = new TestName();
 
   protected TableName tableName;
   private String emptySnapshotName;
@@ -108,14 +100,14 @@ public class TestExportSnapshot {
     conf.setInt("mapreduce.job.maxtaskfailures.per.tracker", 100);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     setUpBaseConf(TEST_UTIL.getConfiguration());
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.startMiniMapReduceCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniMapReduceCluster();
     TEST_UTIL.shutdownMiniCluster();
@@ -124,13 +116,13 @@ public class TestExportSnapshot {
   /**
    * Create a table and take a snapshot of the table used by the export test.
    */
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
     this.admin = TEST_UTIL.getAdmin();
 
-    tableName = TableName.valueOf("testtb-" + testName.getMethodName());
-    snapshotName = "snaptb0-" + testName.getMethodName();
-    emptySnapshotName = "emptySnaptb0-" + testName.getMethodName();
+    tableName = TableName.valueOf("testtb-" + testInfo.getTestMethod().get().getName());
+    snapshotName = "snaptb0-" + testInfo.getTestMethod().get().getName();
+    emptySnapshotName = "emptySnaptb0-" + testInfo.getTestMethod().get().getName();
 
     // create Table
     createTable(this.tableName);
@@ -158,7 +150,7 @@ public class TestExportSnapshot {
     return null;
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.deleteTable(tableName);
     SnapshotTestingUtils.deleteAllSnapshots(TEST_UTIL.getAdmin());
@@ -174,13 +166,14 @@ public class TestExportSnapshot {
   }
 
   @Test
-  public void testExportFileSystemStateWithMergeRegion() throws Exception {
+  public void testExportFileSystemStateWithMergeRegion(TestInfo testInfo) throws Exception {
     // disable compaction
     admin.compactionSwitch(false,
       admin.getRegionServers().stream().map(a -> a.getServerName()).collect(Collectors.toList()));
     // create Table
-    TableName tableName0 = TableName.valueOf("testtb-" + testName.getMethodName() + "-1");
-    String snapshotName0 = "snaptb0-" + testName.getMethodName() + "-1";
+    TableName tableName0 =
+      TableName.valueOf("testtb-" + testInfo.getTestMethod().get().getName() + "-1");
+    String snapshotName0 = "snaptb0-" + testInfo.getTestMethod().get().getName() + "-1";
     admin.createTable(
       TableDescriptorBuilder.newBuilder(tableName0)
         .setColumnFamilies(
@@ -207,13 +200,13 @@ public class TestExportSnapshot {
   }
 
   @Test
-  public void testExportFileSystemStateWithSplitRegion() throws Exception {
+  public void testExportFileSystemStateWithSplitRegion(TestInfo testInfo) throws Exception {
     // disable compaction
     admin.compactionSwitch(false,
       admin.getRegionServers().stream().map(a -> a.getServerName()).collect(Collectors.toList()));
     // create Table
-    TableName splitTableName = TableName.valueOf(testName.getMethodName());
-    String splitTableSnap = "snapshot-" + testName.getMethodName();
+    TableName splitTableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
+    String splitTableSnap = "snapshot-" + testInfo.getTestMethod().get().getName();
     admin.createTable(TableDescriptorBuilder.newBuilder(splitTableName).setColumnFamilies(
       Lists.newArrayList(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build())).build());
 
@@ -397,11 +390,11 @@ public class TestExportSnapshot {
     // Export Snapshot
     int res = runExportSnapshot(conf, snapshotName, targetName, srcDir, rawTgtDir, overwrite,
       resetTtl, checksumVerify, true, true);
-    assertEquals("success " + success + ", res=" + res, success ? 0 : 1, res);
+    assertEquals(success ? 0 : 1, res, "success " + success + ", res=" + res);
     if (!success) {
       final Path targetDir = new Path(HConstants.SNAPSHOT_DIR_NAME, targetName);
-      assertFalse(tgtDir.toString() + " " + targetDir.toString(),
-        tgtFs.exists(new Path(tgtDir, targetDir)));
+      assertFalse(
+        tgtFs.exists(new Path(tgtDir, targetDir)), tgtDir.toString() + " " + targetDir.toString());
       return;
     }
     LOG.info("Exported snapshot");
@@ -411,9 +404,9 @@ public class TestExportSnapshot {
     assertEquals(filesExpected > 0 ? 2 : 1, rootFiles.length);
     for (FileStatus fileStatus : rootFiles) {
       String name = fileStatus.getPath().getName();
-      assertTrue(fileStatus.toString(), fileStatus.isDirectory());
-      assertTrue(name.toString(), name.equals(HConstants.SNAPSHOT_DIR_NAME)
-        || name.equals(HConstants.HFILE_ARCHIVE_DIRECTORY));
+      assertTrue(fileStatus.isDirectory(), fileStatus.toString());
+      assertTrue(name.equals(HConstants.SNAPSHOT_DIR_NAME)
+        || name.equals(HConstants.HFILE_ARCHIVE_DIRECTORY), name.toString());
     }
     LOG.info("Verified filesystem state");
 
@@ -472,8 +465,8 @@ public class TestExportSnapshot {
         }
 
         private void verifyNonEmptyFile(final Path path) throws IOException {
-          assertTrue(path + " should exists", fs.exists(path));
-          assertTrue(path + " should not be empty", fs.getFileStatus(path).getLen() > 0);
+          assertTrue(fs.exists(path), path + " should exists");
+          assertTrue(fs.getFileStatus(path).getLen() > 0, path + " should not be empty");
         }
       });
 

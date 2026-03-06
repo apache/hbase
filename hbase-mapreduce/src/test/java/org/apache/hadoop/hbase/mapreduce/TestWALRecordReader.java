@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.List;
@@ -56,24 +57,20 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * JUnit tests for the WALRecordReader
  */
-@Category({ MapReduceTests.class, MediumTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestWALRecordReader {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALRecordReader.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWALRecordReader.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -102,14 +99,14 @@ public class TestWALRecordReader {
     return serverName.toString();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fs.delete(hbaseDir, true);
     walFs.delete(walRootDir, true);
     mvcc = new MultiVersionConcurrencyControl();
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // Make block sizes small.
     conf = TEST_UTIL.getConfiguration();
@@ -126,7 +123,7 @@ public class TestWALRecordReader {
     logDir = new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     fs.delete(hbaseDir, true);
     walFs.delete(walRootDir, true);
@@ -316,10 +313,8 @@ public class TestWALRecordReader {
         !Bytes.equals(column, 0, column.length, cell.getQualifierArray(), cell.getQualifierOffset(),
           cell.getQualifierLength())
       ) {
-        assertTrue(
-          "expected [" + Bytes.toString(column) + "], actual [" + Bytes.toString(
-            cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()) + "]",
-          false);
+        fail("expected [" + Bytes.toString(column) + "], actual [" + Bytes.toString(
+          cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()) + "]");
       }
     }
     assertFalse(reader.nextKeyValue());
@@ -340,10 +335,8 @@ public class TestWALRecordReader {
       !Bytes.equals(col1, 0, col1.length, cell.getQualifierArray(), cell.getQualifierOffset(),
         cell.getQualifierLength())
     ) {
-      assertTrue(
-        "expected [" + Bytes.toString(col1) + "], actual [" + Bytes.toString(
-          cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()) + "]",
-        false);
+      fail("expected [" + Bytes.toString(col1) + "], actual [" + Bytes.toString(
+        cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()) + "]");
     }
     // Move log file to archive directory
     // While WAL record reader is open
@@ -364,10 +357,8 @@ public class TestWALRecordReader {
       !Bytes.equals(col2, 0, col2.length, cell.getQualifierArray(), cell.getQualifierOffset(),
         cell.getQualifierLength())
     ) {
-      assertTrue(
-        "expected [" + Bytes.toString(col2) + "], actual [" + Bytes.toString(
-          cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()) + "]",
-        false);
+      fail("expected [" + Bytes.toString(col2) + "], actual [" + Bytes.toString(
+        cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()) + "]");
     }
     reader.close();
   }

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -44,15 +44,11 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runners.Parameterized.Parameter;
+import org.junit.jupiter.api.AfterAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MRIncrementalLoadTestBase extends HFileOutputFormat2TestBase {
+public abstract class MRIncrementalLoadTestBase extends HFileOutputFormat2TestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(MRIncrementalLoadTestBase.class);
 
@@ -60,13 +56,10 @@ public class MRIncrementalLoadTestBase extends HFileOutputFormat2TestBase {
 
   private static String[] HOSTNAMES;
 
-  @Parameter(0)
   public boolean shouldChangeRegions;
 
-  @Parameter(1)
   public boolean putSortReducer;
 
-  @Parameter(2)
   public List<String> tableStr;
 
   private Map<String, Table> allTables;
@@ -94,12 +87,11 @@ public class MRIncrementalLoadTestBase extends HFileOutputFormat2TestBase {
 
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws IOException {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
   public void setUp() throws IOException {
     int regionNum = SHOULD_KEEP_LOCALITY ? 20 : 5;
     allTables = new HashMap<>(tableStr.size());
@@ -110,9 +102,9 @@ public class MRIncrementalLoadTestBase extends HFileOutputFormat2TestBase {
       Table table = UTIL.createTable(tableName, FAMILIES, splitKeys);
 
       RegionLocator r = UTIL.getConnection().getRegionLocator(tableName);
-      assertEquals("Should start with empty table", 0, HBaseTestingUtil.countRows(table));
+      assertEquals(0, HBaseTestingUtil.countRows(table), "Should start with empty table");
       int numRegions = r.getStartKeys().length;
-      assertEquals("Should make " + regionNum + " regions", numRegions, regionNum);
+      assertEquals(numRegions, regionNum, "Should make " + regionNum + " regions");
 
       allTables.put(tableStrSingle, table);
       tableInfo.add(new HFileOutputFormat2.TableInfo(table.getDescriptor(), r));
@@ -120,7 +112,6 @@ public class MRIncrementalLoadTestBase extends HFileOutputFormat2TestBase {
     testDir = UTIL.getDataTestDirOnTestFS(tableStr.get(0));
   }
 
-  @After
   public void tearDown() throws IOException {
     for (HFileOutputFormat2.TableInfo tableInfoSingle : tableInfo) {
       tableInfoSingle.getRegionLocator().close();
@@ -132,7 +123,19 @@ public class MRIncrementalLoadTestBase extends HFileOutputFormat2TestBase {
     }
   }
 
-  @Test
+  protected void runTest(boolean shouldChangeRegions, boolean putSortReducer,
+      List<String> tableStr) throws Exception {
+    this.shouldChangeRegions = shouldChangeRegions;
+    this.putSortReducer = putSortReducer;
+    this.tableStr = tableStr;
+    setUp();
+    try {
+      doIncrementalLoadTest();
+    } finally {
+      tearDown();
+    }
+  }
+
   public void doIncrementalLoadTest() throws Exception {
     boolean writeMultipleTables = tableStr.size() > 1;
     // Generate the bulk load files
@@ -143,8 +146,8 @@ public class MRIncrementalLoadTestBase extends HFileOutputFormat2TestBase {
 
     for (Table tableSingle : allTables.values()) {
       // This doesn't write into the table, just makes files
-      assertEquals("HFOF should not touch actual table", 0,
-        HBaseTestingUtil.countRows(tableSingle));
+      assertEquals(0, HBaseTestingUtil.countRows(tableSingle),
+        "HFOF should not touch actual table");
     }
     int numTableDirs = 0;
     FileStatus[] fss = testDir.getFileSystem(UTIL.getConfiguration()).listStatus(testDir);
@@ -169,10 +172,10 @@ public class MRIncrementalLoadTestBase extends HFileOutputFormat2TestBase {
           }
         }
       }
-      assertEquals("Column family not found in FS.", FAMILIES.length, dir);
+      assertEquals(FAMILIES.length, dir, "Column family not found in FS.");
     }
     if (writeMultipleTables) {
-      assertEquals("Dir for all input tables not created", numTableDirs, allTables.size());
+      assertEquals(numTableDirs, allTables.size(), "Dir for all input tables not created");
     }
 
     Admin admin = UTIL.getAdmin();
@@ -207,12 +210,12 @@ public class MRIncrementalLoadTestBase extends HFileOutputFormat2TestBase {
       int expectedRows = 0;
       if (putSortReducer) {
         // no rows should be extracted
-        assertEquals("BulkLoadHFiles should put expected data in table", expectedRows,
-          HBaseTestingUtil.countRows(currentTable));
+        assertEquals(expectedRows, HBaseTestingUtil.countRows(currentTable),
+          "BulkLoadHFiles should put expected data in table");
       } else {
         expectedRows = NMapInputFormat.getNumMapTasks(UTIL.getConfiguration()) * ROWSPERSPLIT;
-        assertEquals("BulkLoadHFiles should put expected data in table", expectedRows,
-          HBaseTestingUtil.countRows(currentTable));
+        assertEquals(expectedRows, HBaseTestingUtil.countRows(currentTable),
+          "BulkLoadHFiles should put expected data in table");
         Scan scan = new Scan();
         ResultScanner results = currentTable.getScanner(scan);
         for (Result res : results) {
@@ -245,8 +248,8 @@ public class MRIncrementalLoadTestBase extends HFileOutputFormat2TestBase {
       }
       admin.enableTable(currentTableName);
       UTIL.waitTableAvailable(currentTableName);
-      assertEquals("Data should remain after reopening of regions", tableDigestBefore,
-        UTIL.checksumRows(currentTable));
+      assertEquals(tableDigestBefore, UTIL.checksumRows(currentTable),
+        "Data should remain after reopening of regions");
     }
   }
 }

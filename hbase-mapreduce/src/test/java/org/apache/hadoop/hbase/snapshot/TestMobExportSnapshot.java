@@ -18,35 +18,30 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
 
 /**
  * Test Export Snapshot Tool
  */
-@Ignore // HBASE-24493
-@Category({ VerySlowRegionServerTests.class, LargeTests.class })
+@Disabled // HBASE-24493
+@Tag(VerySlowRegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMobExportSnapshot extends TestExportSnapshot {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobExportSnapshot.class);
 
   public static void setUpBaseConf(Configuration conf) {
     TestExportSnapshot.setUpBaseConf(conf);
     conf.setInt(MobConstants.MOB_FILE_CACHE_SIZE_KEY, 0);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     setUpBaseConf(TEST_UTIL.getConfiguration());
     TEST_UTIL.startMiniCluster(3);
