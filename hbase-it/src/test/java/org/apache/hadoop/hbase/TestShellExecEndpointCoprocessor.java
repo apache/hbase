@@ -49,12 +49,12 @@ import org.junit.jupiter.api.Test;
 @Tag(MediumTests.TAG)
 public class TestShellExecEndpointCoprocessor {
 
-  private static HBaseTestingUtil testingUtility;
+  private static HBaseTestingUtility testingUtility;
   private AsyncConnection conn;
 
   @BeforeAll
   public static void setUp() throws Exception {
-    testingUtility = new HBaseTestingUtil();
+    testingUtility = new HBaseTestingUtility();
     testingUtility.getConfiguration().set("hbase.coprocessor.master.classes",
       ShellExecEndpointCoprocessor.class.getName());
     testingUtility.startMiniCluster();
