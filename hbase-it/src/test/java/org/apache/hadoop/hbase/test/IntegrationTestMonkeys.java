@@ -24,14 +24,14 @@ import org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner;
 import org.apache.hadoop.hbase.chaos.util.Monkeys;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * This is an integration test for showing a simple usage of how to use {@link Monkeys} to control
  * {@link ChaosMonkeyRunner}.
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestMonkeys extends ChaosMonkeyRunner {
   private static final int RUN_SECS = 15 * 1000;
   private static final int WAIT_SECS = 10 * 1000;
