@@ -71,6 +71,8 @@ public interface MetricsMasterSource extends BaseSource {
   String CLUSTER_READ_REQUESTS_NAME = "clusterReadRequests";
   String CLUSTER_WRITE_REQUESTS_NAME = "clusterWriteRequests";
   String OLD_WAL_DIR_SIZE_NAME = "oldWALsDirSize";
+  String HBASE_VERSION_NAME = "hbaseVersion";
+
   String MASTER_ACTIVE_TIME_DESC = "Master Active Time";
   String MASTER_START_TIME_DESC = "Master Start Time";
   String MASTER_FINISHED_INITIALIZATION_TIME_DESC =
@@ -93,6 +95,7 @@ public interface MetricsMasterSource extends BaseSource {
 
   String SERVER_CRASH_METRIC_PREFIX = "serverCrash";
   String OLD_WAL_DIR_SIZE_DESC = "size of old WALs directory in bytes";
+  String HBASE_VERSION_DESC = "HBase Version";
 
   /**
    * Increment the number of requests the cluster has seen.

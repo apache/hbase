@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -180,6 +181,8 @@ public class TestMasterMetrics {
     metricsHelper.assertTag("serverName", master.getServerName().toString(), masterSource);
     metricsHelper.assertTag("clusterId", master.getClusterId(), masterSource);
     metricsHelper.assertTag("zookeeperQuorum", master.getZooKeeper().getQuorum(), masterSource);
+    metricsHelper.assertTag("hbaseVersion",
+      VersionInfo.getVersion() + ", r" + VersionInfo.getRevision(), masterSource);
 
     metricsHelper.assertCounter(MetricsMasterSource.SERVER_CRASH_METRIC_PREFIX + "SubmittedCount",
       0, masterSource);

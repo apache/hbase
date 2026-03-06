@@ -688,4 +688,6 @@ public interface MetricsRegionServerWrapper {
   long getByteBuffAllocatorUsedBufferCount();
 
   int getActiveScanners();
+
+  String getSoftwareVersion();
 }
