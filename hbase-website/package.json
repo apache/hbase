@@ -108,7 +108,7 @@
     "pdf-lib": "^1.17.1",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.6.14",
-    "serve": "^14.2.6",
+    "serve": "^14.2.5",
     "tailwindcss": "^4.1.13",
     "tsx": "^4.21.0",
     "tw-animate-css": "1.3.3",
