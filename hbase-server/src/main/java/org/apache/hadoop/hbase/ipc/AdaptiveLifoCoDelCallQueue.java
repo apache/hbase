@@ -44,7 +44,7 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
   private LinkedBlockingDeque<CallRunner> queue;
 
   // so we can calculate actual threshold to switch to LIFO under load
-  private int currentQueueLimit;
+  private volatile int currentQueueLimit;
 
   // metrics (shared across all queues)
   private LongAdder numGeneralCallsDropped;
