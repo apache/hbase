@@ -199,6 +199,8 @@ class AsyncRpcRetryingCallerFactory {
 
     private long rpcTimeoutNs;
 
+    private long lastNextCallNanos = System.nanoTime();
+
     private int priority = PRIORITY_UNSET;
 
     public ScanSingleRegionCallerBuilder id(long scannerId) {
@@ -263,6 +265,11 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
+    public ScanSingleRegionCallerBuilder lastNextCallNanos(long nanos) {
+      this.lastNextCallNanos = nanos;
+      return this;
+    }
+
     public ScanSingleRegionCallerBuilder pauseForServerOverloaded(long pause, TimeUnit unit) {
       this.pauseNsForServerOverloaded = unit.toNanos(pause);
       return this;
@@ -293,7 +300,7 @@ class AsyncRpcRetryingCallerFactory {
       return new AsyncScanSingleRegionRpcRetryingCaller(retryTimer, conn, scan, scanMetrics,
         scannerId, resultCache, consumer, stub, loc, isRegionServerRemote, priority,
         scannerLeaseTimeoutPeriodNs, pauseNs, pauseNsForServerOverloaded, maxAttempts,
-        scanTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
+        scanTimeoutNs, rpcTimeoutNs, lastNextCallNanos, startLogErrorsCnt);
     }
 
     /**

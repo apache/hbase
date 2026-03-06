@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.SLEEP_DELTA_NS;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getPauseTime;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.incMillisBetweenNextsMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.incRPCCallsMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.incRPCRetriesMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.noMoreResultsForReverseScan;
@@ -123,7 +124,9 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
   private boolean includeNextStartRowWhenError;
 
-  private long nextCallStartNs;
+  private long lastNextCallNanos;
+
+  private long nextCallStartNanos;
 
   private int tries;
 
@@ -318,7 +321,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     AdvancedScanResultConsumer consumer, Interface stub, HRegionLocation loc,
     boolean isRegionServerRemote, int priority, long scannerLeaseTimeoutPeriodNs, long pauseNs,
     long pauseNsForServerOverloaded, int maxAttempts, long scanTimeoutNs, long rpcTimeoutNs,
-    int startLogErrorsCnt) {
+    long lastNextCallNanos, int startLogErrorsCnt) {
     this.retryTimer = retryTimer;
     this.conn = conn;
     this.scan = scan;
@@ -335,6 +338,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     this.maxAttempts = maxAttempts;
     this.scanTimeoutNs = scanTimeoutNs;
     this.rpcTimeoutNs = rpcTimeoutNs;
+    this.lastNextCallNanos = lastNextCallNanos;
     this.startLogErrorsCnt = startLogErrorsCnt;
     if (scan.isReversed()) {
       completeWhenNoMoreResultsInRegion = this::completeReversedWhenNoMoreResultsInRegion;
@@ -348,12 +352,16 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     this.exceptions = new ArrayList<>();
   }
 
+  public long getLastNextCallNanos() {
+    return lastNextCallNanos;
+  }
+
   private long elapsedMs() {
-    return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - nextCallStartNs);
+    return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - nextCallStartNanos);
   }
 
   private long remainingTimeNs() {
-    return scanTimeoutNs - (System.nanoTime() - nextCallStartNs);
+    return scanTimeoutNs - (System.nanoTime() - nextCallStartNanos);
   }
 
   private void closeScanner() {
@@ -569,7 +577,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     // new one.
     long callTimeoutNs;
     if (scanTimeoutNs > 0) {
-      long remainingNs = scanTimeoutNs - (System.nanoTime() - nextCallStartNs);
+      long remainingNs = scanTimeoutNs - (System.nanoTime() - nextCallStartNanos);
       if (remainingNs <= 0) {
         completeExceptionally(true);
         return;
@@ -597,7 +605,10 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     nextCallSeq++;
     tries = 1;
     exceptions.clear();
-    nextCallStartNs = System.nanoTime();
+    nextCallStartNanos = System.nanoTime();
+    incMillisBetweenNextsMetrics(scanMetrics,
+      TimeUnit.NANOSECONDS.toMillis(nextCallStartNanos - lastNextCallNanos));
+    lastNextCallNanos = nextCallStartNanos;
     call();
   }
 
