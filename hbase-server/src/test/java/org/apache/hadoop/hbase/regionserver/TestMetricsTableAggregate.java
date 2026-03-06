@@ -161,6 +161,13 @@ public class TestMetricsTableAggregate {
     HELPER.assertCounter(pre + "majorCompactedoutputBytes", 500, agg);
   }
 
+  @Test
+  public void testSplitRequest() {
+    rsm.incrSplitRequest(null);
+    rsm.incrSplitRequest(tableName);
+    HELPER.assertCounter(pre + "splitRequestCount", 1, agg);
+  }
+
   private void update(AtomicBoolean succ, int round, CyclicBarrier barrier) {
     try {
       for (int i = 0; i < round; i++) {
