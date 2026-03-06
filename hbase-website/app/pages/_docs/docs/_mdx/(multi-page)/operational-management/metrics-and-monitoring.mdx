@@ -5,7 +5,7 @@ description: "HBase metrics system configuration, JMX monitoring, master and Reg
 
 ## HBase Metrics
 
-HBase emits metrics which adhere to the [Hadoop Metrics](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/Metrics.html) API. Starting with HBase 0.95[^1], HBase is configured to emit a default set of metrics with a default sampling period of every 10 seconds. You can use HBase metrics in conjunction with Ganglia. You can also filter which metrics are emitted and extend the metrics framework to capture custom metrics appropriate for your environment.
+HBase emits metrics which adhere to the [Hadoop Metrics](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/Metrics.html) API. Starting with HBase 0.95 [^5], HBase is configured to emit a default set of metrics with a default sampling period of every 10 seconds. You can use HBase metrics in conjunction with Ganglia. You can also filter which metrics are emitted and extend the metrics framework to capture custom metrics appropriate for your environment.
 
 ### Metric Setup
 
@@ -601,3 +601,5 @@ The format of Archived Storefile Size is NNN(MMM). NNN is the total Storefile si
 
 **_Empty Snapshot Storfile Stats Example_**
 ![empty snapshots](/docs-images/empty-snapshots.png)
+
+[^5]: The Metrics system was redone in HBase 0.96. See Migration to the New Metrics Hotness – Metrics2 by Elliot Clark for detail.
