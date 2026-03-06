@@ -269,8 +269,7 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
     new PerfEvalCallable(util.getAdmin(), writeOpts).call();
 
     // one last sanity check, then send in the clowns!
-    assertEquals(
-      DisabledRegionSplitPolicy.class.getName(),
+    assertEquals(DisabledRegionSplitPolicy.class.getName(),
       util.getAdmin().getTableDescriptor(tableName).getRegionSplitPolicyClassName(),
       "Table must be created with DisabledRegionSplitPolicy. Broken test.");
     startMonkey();

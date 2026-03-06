@@ -137,8 +137,8 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
 
     String[] args = { hfiles.toString(), tableName.getNameAsString() };
     LOG.info(format("Running LoadIncrememntalHFiles with args: %s", Arrays.asList(args)));
-    assertEquals(0,
-      ToolRunner.run(new LoadIncrementalHFiles(new Configuration(getConf())), args), "Loading HFiles failed.");
+    assertEquals(0, ToolRunner.run(new LoadIncrementalHFiles(new Configuration(getConf())), args),
+      "Loading HFiles failed.");
 
     Table table = null;
     Scan scan = new Scan();
