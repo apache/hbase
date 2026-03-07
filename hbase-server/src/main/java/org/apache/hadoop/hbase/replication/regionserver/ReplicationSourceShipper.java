@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.replication.ReplicationUtils.getAdaptiveTi
 import static org.apache.hadoop.hbase.replication.ReplicationUtils.sleepForRetries;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -74,6 +75,12 @@ public class ReplicationSourceShipper extends Thread {
   private final int DEFAULT_TIMEOUT = 20000;
   private final int getEntriesTimeout;
   private final int shipEditsTimeout;
+  private long accumulatedSizeSinceLastUpdate = 0L;
+  private long lastOffsetUpdateTime = EnvironmentEdgeManager.currentTime();
+  private long offsetUpdateIntervalMs;
+  private long offsetUpdateSizeThresholdBytes;
+  private WALEntryBatch lastShippedBatch;
+  private final List<Entry> entriesForCleanUpHFileRefs = new ArrayList<>();
 
   public ReplicationSourceShipper(Configuration conf, String walGroupId, ReplicationSource source,
     ReplicationSourceWALReader walReader) {
@@ -90,6 +97,10 @@ public class ReplicationSourceShipper extends Thread {
       this.conf.getInt("replication.source.getEntries.timeout", DEFAULT_TIMEOUT);
     this.shipEditsTimeout = this.conf.getInt(HConstants.REPLICATION_SOURCE_SHIPEDITS_TIMEOUT,
       HConstants.REPLICATION_SOURCE_SHIPEDITS_TIMEOUT_DFAULT);
+    this.offsetUpdateIntervalMs =
+      conf.getLong("hbase.replication.shipper.offset.update.interval.ms", Long.MAX_VALUE);
+    this.offsetUpdateSizeThresholdBytes =
+      conf.getLong("hbase.replication.shipper.offset.update.size.threshold", -1L);
   }
 
   @Override
@@ -106,9 +117,25 @@ public class ReplicationSourceShipper extends Thread {
         continue;
       }
       try {
-        WALEntryBatch entryBatch = entryReader.poll(getEntriesTimeout);
+        // check time-based offset persistence
+        if (shouldPersistLogPosition()) {
+          // Trigger offset persistence via existing retry/backoff mechanism in shipEdits()
+          WALEntryBatch emptyBatch = createEmptyBatchForTimeBasedFlush();
+          if (emptyBatch != null) shipEdits(emptyBatch);
+        }
+
+        long pollTimeout = getEntriesTimeout;
+        if (offsetUpdateIntervalMs != Long.MAX_VALUE) {
+          long elapsed = EnvironmentEdgeManager.currentTime() - lastOffsetUpdateTime;
+          long remaining = offsetUpdateIntervalMs - elapsed;
+          if (remaining > 0) {
+            pollTimeout = Math.min(getEntriesTimeout, remaining);
+          }
+        }
+        WALEntryBatch entryBatch = entryReader.poll(pollTimeout);
         LOG.debug("Shipper from source {} got entry batch from reader: {}", source.getQueueId(),
           entryBatch);
+
         if (entryBatch == null) {
           continue;
         }
@@ -133,6 +160,16 @@ public class ReplicationSourceShipper extends Thread {
     }
   }
 
+  private WALEntryBatch createEmptyBatchForTimeBasedFlush() {
+    // Reuse last shipped WAL position with 0 entries
+    if (lastShippedBatch == null) {
+      return null;
+    }
+    WALEntryBatch batch = new WALEntryBatch(0, lastShippedBatch.getLastWalPath());
+    batch.setLastWalPosition(lastShippedBatch.getLastWalPosition());
+    return batch;
+  }
+
   private void noMoreData() {
     if (source.isRecovered()) {
       LOG.debug("Finished recovering queue for group {} of peer {}", walGroupId,
@@ -154,15 +191,16 @@ public class ReplicationSourceShipper extends Thread {
   private void shipEdits(WALEntryBatch entryBatch) {
     List<Entry> entries = entryBatch.getWalEntries();
     int sleepMultiplier = 0;
-    if (entries.isEmpty()) {
-      updateLogPosition(entryBatch);
-      return;
-    }
     int currentSize = (int) entryBatch.getHeapSize();
     source.getSourceMetrics()
       .setTimeStampNextToReplicate(entries.get(entries.size() - 1).getKey().getWriteTime());
     while (isActive()) {
       try {
+        if (entries.isEmpty()) {
+          lastShippedBatch = entryBatch;
+          persistLogPosition();
+          return;
+        }
         try {
           source.tryThrottle(currentSize);
         } catch (InterruptedException e) {
@@ -190,13 +228,13 @@ public class ReplicationSourceShipper extends Thread {
         } else {
           sleepMultiplier = Math.max(sleepMultiplier - 1, 0);
         }
-        // Clean up hfile references
-        for (Entry entry : entries) {
-          cleanUpHFileRefs(entry.getEdit());
-          LOG.trace("shipped entry {}: ", entry);
+
+        accumulatedSizeSinceLastUpdate += currentSize;
+        entriesForCleanUpHFileRefs.addAll(entries);
+        lastShippedBatch = entryBatch;
+        if (shouldPersistLogPosition()) {
+          persistLogPosition();
         }
-        // Log and clean up WAL logs
-        updateLogPosition(entryBatch);
 
         // offsets totalBufferUsed by deducting shipped batchSize (excludes bulk load size)
         // this sizeExcludeBulkLoad has to use same calculation that when calling
@@ -215,6 +253,13 @@ public class ReplicationSourceShipper extends Thread {
             entryBatch.getNbOperations(), (endTimeNs - startTimeNs) / 1000000);
         }
         break;
+      } catch (IOException ioe) {
+        // Offset-Persist failure is treated as fatal to this worker since it might come from
+        // beforePersistingReplicationOffset.
+        // ReplicationSource will restart the Shipper, and WAL reading
+        // will resume from the last successfully persisted offset
+        throw new ReplicationRuntimeException(
+          "Failed to persist replication offset; restarting shipper for WAL replay", ioe);
       } catch (Exception ex) {
         source.getSourceMetrics().incrementFailedBatches();
         LOG.warn("{} threw unknown exception:",
@@ -227,6 +272,41 @@ public class ReplicationSourceShipper extends Thread {
         }
       }
     }
+  }
+
+  private boolean shouldPersistLogPosition() {
+    if (accumulatedSizeSinceLastUpdate == 0 || lastShippedBatch == null) {
+      return false;
+    }
+
+    // Default behaviour to update offset immediately after replicate()
+    if (offsetUpdateSizeThresholdBytes == -1 && offsetUpdateIntervalMs == Long.MAX_VALUE) {
+      return true;
+    }
+
+    return (accumulatedSizeSinceLastUpdate >= offsetUpdateSizeThresholdBytes)
+      || (EnvironmentEdgeManager.currentTime() - lastOffsetUpdateTime >= offsetUpdateIntervalMs);
+  }
+
+  private void persistLogPosition() throws IOException {
+    if (lastShippedBatch == null) {
+      return;
+    }
+
+    ReplicationEndpoint endpoint = source.getReplicationEndpoint();
+    endpoint.beforePersistingReplicationOffset();
+
+    // Clean up hfile references
+    for (Entry entry : entriesForCleanUpHFileRefs) {
+      cleanUpHFileRefs(entry.getEdit());
+    }
+    entriesForCleanUpHFileRefs.clear();
+
+    accumulatedSizeSinceLastUpdate = 0;
+    lastOffsetUpdateTime = EnvironmentEdgeManager.currentTime();
+
+    // Log and clean up WAL logs
+    updateLogPosition(lastShippedBatch);
   }
 
   private void cleanUpHFileRefs(WALEdit edit) throws IOException {
