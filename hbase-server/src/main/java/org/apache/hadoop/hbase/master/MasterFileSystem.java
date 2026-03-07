@@ -408,11 +408,12 @@ public class MasterFileSystem {
           LOG.info("rootdir {} : Read replica active cluster file suffix {} ", rootdir, acs);
           throw new IOException("Cannot start master, because another cluster is running in active "
             + "(read-write) mode on this storage location. Active Cluster Id: " + acs
-            + ", This cluster Id: " + getClusterId());
+            + ", This cluster Id: "
+            + new String(getSuffixFileDataToWrite(), StandardCharsets.UTF_8));
         }
         LOG.info(
           "Read Replica Cluster: This is the active cluster on this storage location with cluster id: {}",
-          getClusterId());
+          new String(getSuffixFileDataToWrite(), StandardCharsets.UTF_8));
       } catch (FileNotFoundException fnfe) {
         // this is the active cluster, create active cluster suffix file if it does not exist
         FSUtils.setActiveClusterSuffix(fs, rootdir, getSuffixFileDataToWrite(), wait);

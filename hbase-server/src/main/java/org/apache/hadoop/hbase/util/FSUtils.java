@@ -675,7 +675,7 @@ public final class FSUtils {
     final Path tempIdFile = new Path(tempDir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
     String fsuffix = new String(bdata, StandardCharsets.US_ASCII);
 
-    LOG.debug("Read Replica Cluster id file [{}] present and contains cluster id: {}", idFile,
+    LOG.debug("Read Replica Cluster id file [{}] is present and contains cluster id: {}", idFile,
       fsuffix);
     writeClusterInfo(fs, rootdir, idFile, tempIdFile, bdata, wait);
   }
