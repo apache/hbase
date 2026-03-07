@@ -99,6 +99,28 @@ public abstract class FilterBase extends Filter {
   }
 
   /**
+   * Filters that cannot provide a seek hint after row-key rejection can inherit this no-op
+   * implementation. Subclasses whose row-key logic (e.g. a range pointer advanced inside
+   * {@link #filterRowKey(Cell)}) makes a better seek target available should override this.
+   * {@inheritDoc}
+   */
+  @Override
+  public Cell getHintForRejectedRow(Cell firstRowCell) throws IOException {
+    return null;
+  }
+
+  /**
+   * Filters that cannot provide a structural-skip seek hint can inherit this no-op implementation.
+   * Subclasses with purely configuration-driven, stateless hint computation (e.g. a fixed column
+   * range or fuzzy-row pattern) may override this to avoid cell-by-cell advancement when the
+   * time-range, column, or version gate fires. {@inheritDoc}
+   */
+  @Override
+  public Cell getSkipHint(Cell skippedCell) throws IOException {
+    return null;
+  }
+
+  /**
    * By default, we require all scan's column families to be present. Our subclasses may be more
    * precise. {@inheritDoc}
    */

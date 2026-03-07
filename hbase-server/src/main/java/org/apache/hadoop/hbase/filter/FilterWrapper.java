@@ -95,6 +95,27 @@ final public class FilterWrapper extends Filter {
     return this.filter.getNextCellHint(currentCell);
   }
 
+  /**
+   * Delegates to the wrapped filter's {@link Filter#getHintForRejectedRow(Cell)} so that the scan
+   * pipeline can seek directly past a rejected row rather than iterating cell-by-cell via
+   * {@code nextRow()}.
+   * {@inheritDoc}
+   */
+  @Override
+  public Cell getHintForRejectedRow(Cell firstRowCell) throws IOException {
+    return this.filter.getHintForRejectedRow(firstRowCell);
+  }
+
+  /**
+   * Delegates to the wrapped filter's {@link Filter#getSkipHint(Cell)} so that the scan pipeline
+   * can seek ahead when a cell is structurally skipped before {@code filterCell} is reached.
+   * {@inheritDoc}
+   */
+  @Override
+  public Cell getSkipHint(Cell skippedCell) throws IOException {
+    return this.filter.getSkipHint(skippedCell);
+  }
+
   @Override
   public boolean filterRowKey(Cell cell) throws IOException {
     if (filterAllRemaining()) return true;
