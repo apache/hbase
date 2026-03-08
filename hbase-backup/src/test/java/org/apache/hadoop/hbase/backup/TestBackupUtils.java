@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.security.PrivilegedAction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -33,18 +36,14 @@ import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestBackupUtils {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupUtils.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupUtils.class);
 
   protected static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -82,7 +81,7 @@ public class TestBackupUtils {
       }
     });
     // Make sure the directory is in foo1234's home directory
-    Assert.assertTrue(bulkOutputDir.toString().startsWith(fooHomeDirectory.toString()));
+    assertTrue(bulkOutputDir.toString().startsWith(fooHomeDirectory.toString()));
   }
 
   @Test
@@ -99,18 +98,18 @@ public class TestBackupUtils {
 
       Path testOldWalPath = new Path(oldLogDir,
         serverName + BackupUtils.LOGNAME_SEPARATOR + EnvironmentEdgeManager.currentTime());
-      Assert.assertEquals(host + Addressing.HOSTNAME_PORT_SEPARATOR + port,
+      assertEquals(host + Addressing.HOSTNAME_PORT_SEPARATOR + port,
         BackupUtils.parseHostFromOldLog(testOldWalPath));
 
       Path testMasterWalPath =
         new Path(oldLogDir, testOldWalPath.getName() + MasterRegionFactory.ARCHIVED_WAL_SUFFIX);
-      Assert.assertNull(BackupUtils.parseHostFromOldLog(testMasterWalPath));
+      assertNull(BackupUtils.parseHostFromOldLog(testMasterWalPath));
 
       // org.apache.hadoop.hbase.wal.BoundedGroupingStrategy does this
       Path testOldWalWithRegionGroupingPath = new Path(oldLogDir,
         serverName + BackupUtils.LOGNAME_SEPARATOR + serverName + BackupUtils.LOGNAME_SEPARATOR
           + "regiongroup-0" + BackupUtils.LOGNAME_SEPARATOR + EnvironmentEdgeManager.currentTime());
-      Assert.assertEquals(host + Addressing.HOSTNAME_PORT_SEPARATOR + port,
+      assertEquals(host + Addressing.HOSTNAME_PORT_SEPARATOR + port,
         BackupUtils.parseHostFromOldLog(testOldWalWithRegionGroupingPath));
     }
 

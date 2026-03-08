@@ -69,7 +69,7 @@ public class TestIncrementalBackupRestoreWithOriginalSplits
 
       // Check that the backup files are the same before and after the restore process
       assertEquals(postRestoreBackupFiles, preRestoreBackupFiles);
-      assertEquals(TEST_UTIL.countRows(table1_restore), NB_ROWS_IN_BATCH);
+      assertEquals(NB_ROWS_IN_BATCH, TEST_UTIL.countRows(table1_restore));
 
       int ROWS_TO_ADD = 1_000;
       // different IDs so that rows don't overlap
