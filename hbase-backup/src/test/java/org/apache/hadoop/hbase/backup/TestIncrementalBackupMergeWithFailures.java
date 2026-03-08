@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.backup;
 
 import static org.apache.hadoop.hbase.backup.util.BackupUtils.succeeded;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,7 +28,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.impl.BackupCommands;
@@ -42,21 +41,16 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIncrementalBackupMergeWithFailures.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestIncrementalBackupMergeWithFailures.class);
@@ -80,7 +74,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
       if (val != null) {
         failurePhase = FailurePhase.valueOf(val);
       } else {
-        Assert.fail("Failure phase is not set");
+        Assertions.fail("Failure phase is not set");
       }
     }
 
@@ -248,13 +242,13 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
     Table t1 = insertIntoTable(conn, table1, famName, 1, ADD_ROWS);
     LOG.debug("writing " + ADD_ROWS + " rows to " + table1);
 
-    Assert.assertEquals(TEST_UTIL.countRows(t1), NB_ROWS_IN_BATCH + ADD_ROWS);
+    Assertions.assertEquals(NB_ROWS_IN_BATCH + ADD_ROWS, TEST_UTIL.countRows(t1));
     t1.close();
     LOG.debug("written " + ADD_ROWS + " rows to " + table1);
 
     Table t2 = insertIntoTable(conn, table2, famName, 1, ADD_ROWS);
 
-    Assert.assertEquals(TEST_UTIL.countRows(t2), NB_ROWS_IN_BATCH + ADD_ROWS);
+    Assertions.assertEquals(NB_ROWS_IN_BATCH + ADD_ROWS, TEST_UTIL.countRows(t2));
     t2.close();
     LOG.debug("written " + ADD_ROWS + " rows to " + table2);
 
@@ -285,7 +279,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
       try (BackupAdmin bAdmin = new BackupAdminImpl(conn)) {
         String[] backups = new String[] { backupIdIncMultiple, backupIdIncMultiple2 };
         bAdmin.mergeBackups(backups);
-        Assert.fail("Expected IOException");
+        Assertions.fail("Expected IOException");
       } catch (IOException e) {
         BackupSystemTable table = new BackupSystemTable(conn);
         if (phase.ordinal() < FailurePhase.PHASE4.ordinal()) {
@@ -294,7 +288,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
           assertFalse(table.isMergeInProgress());
           try {
             table.finishBackupExclusiveOperation();
-            Assert.fail("IOException is expected");
+            Assertions.fail("IOException is expected");
           } catch (IOException ee) {
             // Expected
           }
@@ -303,7 +297,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
           assertTrue(table.isMergeInProgress());
           try {
             table.startBackupExclusiveOperation();
-            Assert.fail("IOException is expected");
+            Assertions.fail("IOException is expected");
           } catch (IOException ee) {
             // Expected - clean up before proceeding
             // table.finishMergeOperation();
@@ -336,12 +330,12 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
     Table hTable = conn.getTable(table1_restore);
     LOG.debug("After incremental restore: " + hTable.getDescriptor());
     LOG.debug("f1 has " + TEST_UTIL.countRows(hTable, famName) + " rows");
-    Assert.assertEquals(TEST_UTIL.countRows(hTable, famName), NB_ROWS_IN_BATCH + 2 * ADD_ROWS);
+    Assertions.assertEquals(NB_ROWS_IN_BATCH + 2 * ADD_ROWS, TEST_UTIL.countRows(hTable, famName));
 
     hTable.close();
 
     hTable = conn.getTable(table2_restore);
-    Assert.assertEquals(TEST_UTIL.countRows(hTable), NB_ROWS_IN_BATCH + 2 * ADD_ROWS);
+    Assertions.assertEquals(NB_ROWS_IN_BATCH + 2 * ADD_ROWS, TEST_UTIL.countRows(hTable));
     hTable.close();
 
     admin.close();
