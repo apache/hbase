@@ -17,39 +17,33 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLongArray;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestBackupManager {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupManager.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupManager.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   protected static Configuration conf = UTIL.getConfiguration();
@@ -57,7 +51,7 @@ public class TestBackupManager {
   protected static Connection conn;
   protected BackupManager backupManager;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     conf.setBoolean(BackupRestoreConstants.BACKUP_ENABLE_KEY, true);
     BackupManager.decorateMasterConfiguration(conf);
@@ -66,19 +60,19 @@ public class TestBackupManager {
     conn = UTIL.getConnection();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
-  @Before
+  @BeforeEach
   public void before() throws IOException {
     backupManager = new BackupManager(conn, conn.getConfiguration());
   }
 
-  @After
+  @AfterEach
   public void after() {
     backupManager.close();
   }
