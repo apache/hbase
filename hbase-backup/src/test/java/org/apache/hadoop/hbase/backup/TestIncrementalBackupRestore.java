@@ -194,15 +194,15 @@ public class TestIncrementalBackupRestore extends IncrementalBackupRestoreTestBa
         LOG.debug("After incremental restore: {}", hTable.getDescriptor());
         int countFamName = TEST_UTIL.countRows(hTable, famName);
         LOG.debug("f1 has " + countFamName + " rows");
-        assertEquals(countFamName, NB_ROWS_IN_BATCH + ADD_ROWS);
+        assertEquals(NB_ROWS_IN_BATCH + ADD_ROWS, countFamName);
 
         int countFam2Name = TEST_UTIL.countRows(hTable, fam2Name);
         LOG.debug("f2 has {} rows", countFam2Name);
-        assertEquals(countFam2Name, NB_ROWS_FAM2);
+        assertEquals(NB_ROWS_FAM2, countFam2Name);
 
         int countMobName = TEST_UTIL.countRows(hTable, mobName);
         LOG.debug("mob has {} rows", countMobName);
-        assertEquals(countMobName, NB_ROWS_MOB);
+        assertEquals(NB_ROWS_MOB, countMobName);
       }
 
       try (Table hTable = conn.getTable(table2_restore)) {
