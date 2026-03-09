@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.backup.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
@@ -58,7 +59,6 @@ public class IncrementalBackupManager extends BackupManager {
    */
   public Map<String, Long> getIncrBackupLogFileMap() throws IOException {
     List<String> logList;
-    Map<String, Long> newTimestamps;
     Map<String, Long> previousTimestampMins;
 
     String savedStartCode = readBackupStartCode();
@@ -83,12 +83,41 @@ public class IncrementalBackupManager extends BackupManager {
     LOG.info("Execute roll log procedure for incremental backup ...");
     BackupUtils.logRoll(conn, backupInfo.getBackupRootDir(), conf);
 
-    newTimestamps = readRegionServerLastLogRollResult();
+    Map<String, Long> newTimestamps = new HashMap<>();
+    Map<String, Long> latestLogRollByHost = readRegionServerLastLogRollResult();
+    for (Map.Entry<String, Long> entry : latestLogRollByHost.entrySet()) {
+      String host = entry.getKey();
+      long latestLogRoll = entry.getValue();
+      Long earliestTimestampToIncludeInBackup = previousTimestampMins.get(host);
+
+      boolean isInactive = earliestTimestampToIncludeInBackup != null
+        && earliestTimestampToIncludeInBackup > latestLogRoll;
+
+      if (isInactive) {
+        LOG.debug("Skipping inactive host {} from newTimestamps (boundary={} > latestLogRoll={})",
+          host, earliestTimestampToIncludeInBackup, latestLogRoll);
+      } else {
+        newTimestamps.put(host, latestLogRoll);
+      }
+    }
 
     logList = getLogFilesForNewBackup(previousTimestampMins, newTimestamps, conf, savedStartCode);
     logList = excludeProcV2WALs(logList);
     backupInfo.setIncrBackupFileList(logList);
 
+    // Update boundaries based on WALs that will be backed up
+    for (String logFile : logList) {
+      Path logPath = new Path(logFile);
+      String logHost = BackupUtils.parseHostNameFromLogFile(logPath);
+      if (logHost != null) {
+        long logTs = BackupUtils.getCreationTime(logPath);
+        Long latestTimestampToIncludeInBackup = newTimestamps.get(logHost);
+        if (latestTimestampToIncludeInBackup == null || logTs > latestTimestampToIncludeInBackup) {
+          LOG.debug("Updating backup boundary for inactive host {}: timestamp={}", logHost, logTs);
+          newTimestamps.put(logHost, logTs);
+        }
+      }
+    }
     return newTimestamps;
   }
 
@@ -227,15 +256,6 @@ public class IncrementalBackupManager extends BackupManager {
         }
       } else if (currentLogTS > oldTimeStamp) {
         resultLogFiles.add(currentLogFile);
-      }
-
-      // It is possible that a host in .oldlogs is an obsolete region server
-      // so newestTimestamps.get(host) here can be null.
-      // Even if these logs belong to a obsolete region server, we still need
-      // to include they to avoid loss of edits for backup.
-      Long newTimestamp = newestTimestamps.get(host);
-      if (newTimestamp == null || currentLogTS > newTimestamp) {
-        newestLogs.add(currentLogFile);
       }
     }
     // remove newest log per host because they are still in use
