@@ -642,7 +642,7 @@ public final class FSUtils {
           data = in.readUTF();
           cs = new ActiveClusterSuffix(data);
         } catch (EOFException eof) {
-          LOG.warn("Read Replica Cluster id file {} is empty ", idPath);
+          LOG.warn("[Read Replica Feature] Active Cluster id file {} is empty ", idPath);
         } finally {
           in.close();
         }
