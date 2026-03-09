@@ -1122,7 +1122,7 @@ public class TestStoreScanner {
       RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
       new Path(testDir, hri.getTable().getNameAsString()), hri);
-    HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
+    HFileContext hFileContext = new HFileContextBuilder().withBlockSize(8 * 1024).build();
 
     StoreFileTracker sft = StoreFileTrackerFactory.create(conf, false,
       StoreContext.getBuilder()
@@ -1136,7 +1136,7 @@ public class TestStoreScanner {
 
     // File 1: rows "row01" to "row05" - in scan key range, fresh timestamp
     StoreFileWriter writer1 = new StoreFileWriter.Builder(conf, cacheConf, fs)
-      .withFilePath(regionFs.createTempName()).withFileContext(meta).build();
+      .withFilePath(regionFs.createTempName()).withFileContext(hFileContext).build();
     for (int i = 1; i <= 5; i++) {
       writer1.append(new KeyValue(Bytes.toBytes(String.format("row%02d", i)), CF,
         Bytes.toBytes("col"), now, Bytes.toBytes("value" + i)));
@@ -1150,7 +1150,7 @@ public class TestStoreScanner {
 
     // File 2: rows "row06" to "row10" - in scan key range, fresh timestamp
     StoreFileWriter writer2 = new StoreFileWriter.Builder(conf, cacheConf, fs)
-      .withFilePath(regionFs.createTempName()).withFileContext(meta).build();
+      .withFilePath(regionFs.createTempName()).withFileContext(hFileContext).build();
     for (int i = 6; i <= 10; i++) {
       writer2.append(new KeyValue(Bytes.toBytes(String.format("row%02d", i)), CF,
         Bytes.toBytes("col"), now, Bytes.toBytes("value" + i)));
@@ -1164,7 +1164,7 @@ public class TestStoreScanner {
 
     // File 3: rows "row20" to "row25" - OUT of scan key range (after stop row)
     StoreFileWriter writer3 = new StoreFileWriter.Builder(conf, cacheConf, fs)
-      .withFilePath(regionFs.createTempName()).withFileContext(meta).build();
+      .withFilePath(regionFs.createTempName()).withFileContext(hFileContext).build();
     for (int i = 20; i <= 25; i++) {
       writer3.append(new KeyValue(Bytes.toBytes(String.format("row%02d", i)), CF,
         Bytes.toBytes("col"), now, Bytes.toBytes("value" + i)));
@@ -1178,7 +1178,7 @@ public class TestStoreScanner {
 
     // File 4: row "row00" - OUT of key range (before start row)
     StoreFileWriter writer4 = new StoreFileWriter.Builder(conf, cacheConf, fs)
-      .withFilePath(regionFs.createTempName()).withFileContext(meta).build();
+      .withFilePath(regionFs.createTempName()).withFileContext(hFileContext).build();
     writer4.append(
       new KeyValue(Bytes.toBytes("row00"), CF, Bytes.toBytes("col"), now, Bytes.toBytes("value0")));
     Path path4 = regionFs.commitStoreFile(TEST_FAMILY, writer4.getPath());
@@ -1191,7 +1191,7 @@ public class TestStoreScanner {
     // File 5: row "row11" with expired timestamp (1 hour ago); TTL-filtered but still tracked.
     long expiredTime = now - (1000 * 60 * 60);
     StoreFileWriter writer5 = new StoreFileWriter.Builder(conf, cacheConf, fs)
-      .withFilePath(regionFs.createTempName()).withFileContext(meta).build();
+      .withFilePath(regionFs.createTempName()).withFileContext(hFileContext).build();
     writer5.append(new KeyValue(Bytes.toBytes("row11"), CF, Bytes.toBytes("col"), expiredTime,
       Bytes.toBytes("expired_value")));
     Path path5 = regionFs.commitStoreFile(TEST_FAMILY, writer5.getPath());

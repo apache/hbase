@@ -599,7 +599,7 @@ public class TestHMobStore {
 
     // Scan the values
     Scan scan = new Scan(get);
-    InternalScanner scanner = (InternalScanner) store.getScanner(scan,
+    StoreScanner scanner = (StoreScanner) store.getScanner(scan,
       scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
 
     List<Cell> results = new ArrayList<>();
