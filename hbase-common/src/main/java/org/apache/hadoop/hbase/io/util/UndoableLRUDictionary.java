@@ -78,25 +78,18 @@ public class UndoableLRUDictionary extends LRUDictionary {
       node.prev = snap.savedPrev;
       node.next = snap.savedNext;
       if (snap.savedContents != null) {
-        backingStore.nodeToIndex.remove(node);
         node.setContents(snap.savedContents, snap.savedOffset, snap.savedLength);
-        backingStore.nodeToIndex.put(node, findIndexForNode(node));
       }
     }
     backingStore.head = savedHead;
     backingStore.tail = savedTail;
     backingStore.currSize = savedCurrSize;
+    backingStore.nodeToIndex.clear();
+    for (short i = 0; i < savedCurrSize; i++) {
+      backingStore.nodeToIndex.put(backingStore.indexToNode[i], i);
+    }
     snapshots.clear();
     tracking = false;
-  }
-
-  private short findIndexForNode(BidirectionalLRUMap.Node node) {
-    for (short i = 0; i < backingStore.currSize; i++) {
-      if (backingStore.indexToNode[i] == node) {
-        return i;
-      }
-    }
-    return -1;
   }
 
   private void saveIfNeeded(BidirectionalLRUMap.Node node) {

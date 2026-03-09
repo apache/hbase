@@ -39,7 +39,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class TagCompressionContext {
   private final UndoableLRUDictionary tagDict;
 
-  public TagCompressionContext(Class<? extends Dictionary> dictType, int dictCapacity) {
+  public TagCompressionContext(int dictCapacity) {
     tagDict = new UndoableLRUDictionary();
     tagDict.init(dictCapacity);
   }

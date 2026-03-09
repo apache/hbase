@@ -336,4 +336,24 @@ public class TestUndoableLRUDictionary {
     assertArrayEquals(entry("c"), dict.getEntry(idxC));
     assertArrayEquals(entry("d"), dict.getEntry(idxD));
   }
+
+  @Test
+  public void itHandlesRollbackWhenEvictedValueReaddedToAnotherSlot() {
+    short idxA = add("a");
+    short idxB = add("b");
+    short idxC = add("c");
+    short idxD = add("d");
+
+    dict.checkpoint();
+    short idxE = add("e");
+    assertEquals(idxA, idxE);
+    short idxA2 = add("a");
+    assertEquals(idxB, idxA2);
+    dict.rollback();
+
+    assertArrayEquals(entry("a"), dict.getEntry(idxA));
+    assertArrayEquals(entry("b"), dict.getEntry(idxB));
+    assertArrayEquals(entry("c"), dict.getEntry(idxC));
+    assertArrayEquals(entry("d"), dict.getEntry(idxD));
+  }
 }
