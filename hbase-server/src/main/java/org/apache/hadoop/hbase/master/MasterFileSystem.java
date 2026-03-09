@@ -412,7 +412,7 @@ public class MasterFileSystem {
             + new String(getSuffixFileDataToWrite(), StandardCharsets.UTF_8));
         }
         LOG.info(
-          "Read Replica Cluster: This is the active cluster on this storage location with cluster id: {}",
+          "[Read-replica feature] This cluster is the active (read-write) cluster on this shared storage location, cluster id: {}",
           new String(getSuffixFileDataToWrite(), StandardCharsets.UTF_8));
       } catch (FileNotFoundException fnfe) {
         // this is the active cluster, create active cluster suffix file if it does not exist
