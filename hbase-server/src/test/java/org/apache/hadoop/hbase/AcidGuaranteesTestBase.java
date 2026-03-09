@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 import static org.apache.hadoop.hbase.AcidGuaranteesTestTool.FAMILIES;
 import static org.apache.hadoop.hbase.AcidGuaranteesTestTool.TABLE_NAME;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
@@ -28,11 +29,11 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -47,9 +48,17 @@ public abstract class AcidGuaranteesTestBase {
 
   private AcidGuaranteesTestTool tool = new AcidGuaranteesTestTool();
 
-  protected abstract MemoryCompactionPolicy getMemoryCompactionPolicy();
+  private MemoryCompactionPolicy policy;
 
-  @BeforeClass
+  protected AcidGuaranteesTestBase(MemoryCompactionPolicy policy) {
+    this.policy = policy;
+  }
+
+  public static Stream<Arguments> parameters() {
+    return Arrays.stream(MemoryCompactionPolicy.values()).map(Arguments::of);
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // Set small flush size for minicluster so we exercise reseeking scanners
     Configuration conf = UTIL.getConfiguration();
@@ -61,14 +70,13 @@ public abstract class AcidGuaranteesTestBase {
     UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
-    MemoryCompactionPolicy policy = getMemoryCompactionPolicy();
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TABLE_NAME)
       .setValue(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY, policy.name());
     if (policy == MemoryCompactionPolicy.EAGER) {
@@ -77,22 +85,26 @@ public abstract class AcidGuaranteesTestBase {
     }
     Stream.of(FAMILIES).map(ColumnFamilyDescriptorBuilder::of)
       .forEachOrdered(builder::setColumnFamily);
+    for (int i = 0; i < 10; i++) {
+      // try to delete the table several times
+      if (UTIL.getAdmin().tableExists(TABLE_NAME)) {
+        UTIL.deleteTable(TABLE_NAME);
+        Thread.sleep(1000);
+      } else {
+        break;
+      }
+    }
     UTIL.getAdmin().createTable(builder.build());
     tool.setConf(UTIL.getConfiguration());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     UTIL.deleteTable(TABLE_NAME);
   }
 
-  private void runTestAtomicity(long millisToRun, int numWriters, int numGetters, int numScanners,
-    int numUniqueRows) throws Exception {
-    runTestAtomicity(millisToRun, numWriters, numGetters, numScanners, numUniqueRows, false);
-  }
-
-  private void runTestAtomicity(long millisToRun, int numWriters, int numGetters, int numScanners,
-    int numUniqueRows, boolean useMob) throws Exception {
+  protected final void runTestAtomicity(long millisToRun, int numWriters, int numGetters,
+    int numScanners, int numUniqueRows, boolean useMob) throws Exception {
     List<String> args = Lists.newArrayList("-millis", String.valueOf(millisToRun), "-numWriters",
       String.valueOf(numWriters), "-numGetters", String.valueOf(numGetters), "-numScanners",
       String.valueOf(numScanners), "-numUniqueRows", String.valueOf(numUniqueRows), "-crazyFlush");
@@ -102,33 +114,4 @@ public abstract class AcidGuaranteesTestBase {
     tool.run(args.toArray(new String[0]));
   }
 
-  @Test
-  public void testGetAtomicity() throws Exception {
-    runTestAtomicity(20000, 5, 5, 0, 3);
-  }
-
-  @Test
-  public void testScanAtomicity() throws Exception {
-    runTestAtomicity(20000, 5, 0, 5, 3);
-  }
-
-  @Test
-  public void testMixedAtomicity() throws Exception {
-    runTestAtomicity(20000, 5, 2, 2, 3);
-  }
-
-  @Test
-  public void testMobGetAtomicity() throws Exception {
-    runTestAtomicity(20000, 5, 5, 0, 3, true);
-  }
-
-  @Test
-  public void testMobScanAtomicity() throws Exception {
-    runTestAtomicity(20000, 5, 0, 5, 3, true);
-  }
-
-  @Test
-  public void testMobMixedAtomicity() throws Exception {
-    runTestAtomicity(20000, 5, 2, 2, 3, true);
-  }
 }
