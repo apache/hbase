@@ -18,18 +18,19 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
 
-@Category(LargeTests.class)
-public class TestAcidGuaranteesWithEagerPolicy extends AcidGuaranteesTestBase {
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: policy = {0}")
+public class TestScanAtomicity extends AcidGuaranteesTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAcidGuaranteesWithEagerPolicy.class);
+  public TestScanAtomicity(MemoryCompactionPolicy policy) {
+    super(policy);
+  }
 
-  @Override
-  protected MemoryCompactionPolicy getMemoryCompactionPolicy() {
-    return MemoryCompactionPolicy.EAGER;
+  @TestTemplate
+  public void testScanAtomicity() throws Exception {
+    runTestAtomicity(20000, 5, 0, 5, 3, false);
   }
 }

@@ -27,6 +27,8 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.TestTemplateInvocationContext;
 import org.junit.jupiter.api.extension.TestTemplateInvocationContextProvider;
 import org.junit.jupiter.params.provider.Arguments;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The entry point class for supporting JUnit4 like Parameterized test, where we can use constructor
@@ -48,6 +50,9 @@ import org.junit.jupiter.params.provider.Arguments;
 @InterfaceAudience.Private
 public class HBaseParameterizedTemplateProvider implements TestTemplateInvocationContextProvider {
 
+  private static final Logger LOG =
+    LoggerFactory.getLogger(HBaseParameterizedTemplateProvider.class);
+
   private static final String PARAMETERS_METHOD_NAME = "parameters";
 
   @Override
@@ -56,19 +61,31 @@ public class HBaseParameterizedTemplateProvider implements TestTemplateInvocatio
       .map(c -> c.isAnnotationPresent(HBaseParameterizedTestTemplate.class)).orElse(false);
   }
 
+  private Method findParametersMethod(final Class<?> testClass) {
+    Class<?> clazz = testClass;
+    for (;;) {
+      try {
+        return clazz.getDeclaredMethod(PARAMETERS_METHOD_NAME);
+      } catch (NoSuchMethodException e) {
+        Class<?> parentClass = clazz.getSuperclass();
+        LOG.debug("Can not find method {} in class {}, try its parent class {}",
+          PARAMETERS_METHOD_NAME, clazz, parentClass);
+        if (parentClass == null) {
+          throw new ExtensionConfigurationException("Can not find a static "
+            + PARAMETERS_METHOD_NAME + " method in class " + testClass + "or its super classes");
+        }
+        clazz = parentClass;
+      }
+    }
+
+  }
+
   @Override
   public Stream<TestTemplateInvocationContext>
     provideTestTemplateInvocationContexts(ExtensionContext context) {
     Class<?> testClass = context.getRequiredTestClass();
     // get parameters
-    Method method;
-    try {
-      method = testClass.getDeclaredMethod(PARAMETERS_METHOD_NAME);
-    } catch (NoSuchMethodException e) {
-      throw new ExtensionConfigurationException(
-        "Test class must declare static " + PARAMETERS_METHOD_NAME + " method");
-    }
-
+    Method method = findParametersMethod(testClass);
     if (!Modifier.isStatic(method.getModifiers())) {
       throw new ExtensionConfigurationException(PARAMETERS_METHOD_NAME + " method must be static");
     }
