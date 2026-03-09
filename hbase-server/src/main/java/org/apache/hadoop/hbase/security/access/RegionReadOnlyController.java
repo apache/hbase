@@ -339,7 +339,9 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
   @Override
   public void preReplayWALs(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     RegionInfo info, Path edits) throws IOException {
-    internalReadOnlyGuard();
+    if (!isOnMeta(ctx)) {
+      internalReadOnlyGuard();
+    }
     RegionObserver.super.preReplayWALs(ctx, info, edits);
   }
 
