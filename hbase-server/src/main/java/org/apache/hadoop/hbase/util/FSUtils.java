@@ -623,7 +623,7 @@ public final class FSUtils {
       }
       return cs;
     } else {
-      throw new FileNotFoundException("Read Replica Cluster id file " + idPath + " not found");
+      throw new FileNotFoundException("[Read-replica feature] Active Cluster Suffix File " + idPath + " not found");
     }
   }
 
