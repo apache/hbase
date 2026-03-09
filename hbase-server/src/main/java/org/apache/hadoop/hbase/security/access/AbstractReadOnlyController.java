@@ -69,8 +69,8 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
             byte[] expectedClusterFileData = mfs.getSuffixFileDataToWrite();
             if (Arrays.equals(actualClusterFileData, expectedClusterFileData)) {
               fs.delete(activeClusterFile, false);
+              LOG.info("Successfully deleted active cluster file: {}", activeClusterFile);
             }
-            LOG.info("Successfully deleted active cluster file: {}", activeClusterFile);
           } else {
             LOG.debug("Active cluster file does not exist at: {}. No need to delete.",
               activeClusterFile);
