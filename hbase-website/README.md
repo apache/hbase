@@ -322,6 +322,11 @@ This starts a local development server with:
 2. Add the new file to the relevant `meta.json` in the same section folder so it appears in navigation.
 3. Import the page into `app/pages/_docs/docs/_mdx/single-page/index.mdx` and add an `#` header so it renders in the single-page docs.
 
+> **Important:** All heading IDs and all footnote reference IDs must be **unique across every multi-page MDX file**. This is because all files are combined into a single page (see `single-page/index.mdx`), so any duplicate ID would collide in the combined document. There are automated unit tests that enforce both constraints — `unit-tests/validate-headings.test.ts` for heading IDs and `unit-tests/validate-references.test.ts` for footnote reference IDs.
+>
+> - **Headings**: Use an explicit `[#page-specific-id]` anchor suffix on any heading whose auto-generated slug would clash with a heading in another file. For example: `## Overview [#my-topic-overview]`.
+> - **Footnotes**: Use page-specific numeric or named identifiers so they remain unique globally. For example, instead of `[^1]` in every file, simply continue the global numbering (e.g. if existing files already use `[^1]`–`[^5]`, start at `[^6]` in a new file).
+
 **Update content:**
 
 - Edit the appropriate `.md` or `.json` file
