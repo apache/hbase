@@ -85,7 +85,7 @@ pipeline {
               // can't just do a simple echo or the directory won't be created. :(
               sh '''#!/usr/bin/env bash
                 echo "Make sure we have a directory for downloading dependencies: $(pwd)"
-'''
+              '''
             }
             sh  '''#!/usr/bin/env bash
               set -e
@@ -127,77 +127,8 @@ pipeline {
             }
             stash name: 'yetus', includes: "yetus-*/*,yetus-*/**/*,tools/personality.sh"
           }
-        }
-        stage ('hadoop 2 cache') {
-          environment {
-            HADOOP2_VERSION="2.10.2"
-          }
-          steps {
-            // directory must be unique for each parallel stage, because jenkins runs them in the same workspace :(
-            dir('downloads-hadoop-2') {
-              sh '''#!/usr/bin/env bash
-                echo "Make sure we have a directory for downloading dependencies: $(pwd)"
-'''
-            }
-            sh '''#!/usr/bin/env bash
-              set -e
-              echo "Ensure we have a copy of Hadoop ${HADOOP2_VERSION}"
-              "${WORKSPACE}/component/dev-support/jenkins-scripts/cache-apache-project-artifact.sh" \
-                  --working-dir "${WORKSPACE}/downloads-hadoop-2" \
-                  --keys 'https://downloads.apache.org/hadoop/common/KEYS' \
-                  --verify-tar-gz \
-                  "${WORKSPACE}/hadoop-${HADOOP2_VERSION}-bin.tar.gz" \
-                  "hadoop/common/hadoop-${HADOOP2_VERSION}/hadoop-${HADOOP2_VERSION}.tar.gz"
-              for stale in $(ls -1 "${WORKSPACE}"/hadoop-2*.tar.gz | grep -v ${HADOOP2_VERSION}); do
-                echo "Delete stale hadoop 2 cache ${stale}"
-                rm -rf $stale
-              done
-            '''
-            stash name: 'hadoop-2', includes: "hadoop-${HADOOP2_VERSION}-bin.tar.gz"
-          }
-        }
-        stage ('hadoop 3 cache') {
-          steps {
-            script {
-              hadoop3_versions = env.HADOOP3_VERSIONS.split(",");
-              env.HADOOP3_VERSIONS_REGEX = "[" + hadoop3_versions.join("|") + "]";
-              for (hadoop3_version in hadoop3_versions) {
-                env.HADOOP3_VERSION = hadoop3_version;
-                echo "env.HADOOP3_VERSION" + env.hadoop3_version;
-                stage ('Hadoop 3 cache inner stage') {
-                  // directory must be unique for each parallel stage, because jenkins runs them in the same workspace :(
-                  dir("downloads-hadoop-${HADOOP3_VERSION}") {
-                    sh '''#!/usr/bin/env bash
-                      echo "Make sure we have a directory for downloading dependencies: $(pwd)"
-'''
-                  } //dir
-                  sh '''#!/usr/bin/env bash
-                    set -e
-                    echo "Ensure we have a copy of Hadoop ${HADOOP3_VERSION}"
-                    "${WORKSPACE}/component/dev-support/jenkins-scripts/cache-apache-project-artifact.sh" \
-                        --working-dir "${WORKSPACE}/downloads-hadoop-${HADOOP3_VERSION}" \
-                        --keys 'https://downloads.apache.org/hadoop/common/KEYS' \
-                        --verify-tar-gz \
-                        "${WORKSPACE}/hadoop-${HADOOP3_VERSION}-bin.tar.gz" \
-                        "hadoop/common/hadoop-${HADOOP3_VERSION}/hadoop-${HADOOP3_VERSION}.tar.gz"
-                    for stale in $(ls -1 "${WORKSPACE}"/hadoop-3*.tar.gz | grep -v ${HADOOP3_VERSION}); do
-                      echo "Delete stale hadoop 3 cache ${stale}"
-                      rm -rf $stale
-                    done
-                  '''
-                  stash name: "hadoop-${HADOOP3_VERSION}", includes: "hadoop-${HADOOP3_VERSION}-bin.tar.gz"
-                  script {
-                    if (env.HADOOP3_VERSION == env.HADOOP3_DEFAULT_VERSION) {
-                      // FIXME: we never unstash this, because we run the packaging tests with the version-specific stashes
-                      stash(name: "hadoop-3", includes: "hadoop-${HADOOP3_VERSION}-bin.tar.gz")
-                    } //if
-                  } //script
-                } //stage ('Hadoop 3 cache inner stage')
-              } //for
-            } //script
-          } //steps
-        } //stage ('hadoop 3 cache') {
-      } //parallel
+        } // stage ('yetus install')
+      } // parallel
     } //stage ('thirdparty installs')
     stage ('init health results') {
       steps {
@@ -209,6 +140,7 @@ pipeline {
         stash name: 'jdk11-hadoop3-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK11_HADOOP3}/doesn't-match"
         stash name: 'jdk17-hadoop3-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK17_HADOOP3}/doesn't-match"
         script {
+          hadoop3_versions = env.HADOOP3_VERSIONS.split(",");
           for (hadoop3_version in hadoop3_versions) {
             // confusing environment vs Groovy variables
             stash(name: "jdk17-hadoop3-backwards-result-${hadoop3_version}", allowEmpty: true, includes: "${env.OUTPUT_DIR_RELATIVE_JDK17_HADOOP3_BACKWARDS}-${hadoop3_version}/doesn't-match")
