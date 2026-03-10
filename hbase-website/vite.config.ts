@@ -45,5 +45,13 @@ export default defineConfig({
       "@": resolve(__dirname, "app")
     }
   },
-  customLogger: logger
+  customLogger: logger,
+  optimizeDeps: {
+    force: true
+  },
+  server: {
+    warmup: {
+      clientFiles: ["./app/**/*.{ts,tsx,js,jsx}"]
+    }
+  }
 });
