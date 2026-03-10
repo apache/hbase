@@ -428,6 +428,21 @@ Although splitting the region is a local decision made by the RegionServer, the 
 10. The RegionServer updates znode `/hbase/region-in-transition/region-name` in ZooKeeper to state `SPLIT`, so that the master can learn about it. The balancer can freely re-assign the daughter regions to other region servers if necessary. **THE SPLIT TRANSACTION IS NOW FINISHED.**
 11. After the split, `.META.` and HDFS will still contain references to the parent region. Those references will be removed when compactions in daughter regions rewrite the data files. Garbage collection tasks in the master periodically check whether the daughter regions still refer to the parent region's files. If not, the parent region will be removed.
 
+### Note on split directory behavior (HBASE-26187)
+
+<Callout type="info" title="Behavior change in newer split implementation">
+  The numbered split procedure above documents the original, pre-HBASE-26187 implementation, in
+  which daughter regions are first created under a `.splits` sub-directory of the parent region
+  directory. In newer HBase implementations that include
+  [HBASE-26187](https://issues.apache.org/jira/browse/HBASE-26187), this on-disk layout has changed:
+  daughter region directories are created directly under the table directory, rather than under a
+  parent region's `.splits` directory. When reading the numbered procedure for such newer versions,
+  interpret any steps that mention creating or using a `.splits` directory as instead preparing and
+  promoting daughter region files directly under the table directory. This update does not change
+  the high-level split semantics (references, meta updates, and online transition of daughters); it
+  only affects where temporary/initial daughter files are prepared in HDFS.
+</Callout>
+
 ## Write Ahead Log (WAL)
 
 ### Purpose
