@@ -131,7 +131,9 @@ public final class GlobalMetricRegistriesAdapter {
         }
         // register this as a MetricSource under different JMX Context'es.
         MetricsSourceAdapter adapter = new MetricsSourceAdapter(registry);
-        LOG.info("Registering " + info.getMetricsJmxContext() + " " + info.getMetricsDescription());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Registering {} {}", info.getMetricsJmxContext(), info.getMetricsDescription());
+        }
         DefaultMetricsSystem.instance().register(info.getMetricsJmxContext(),
           info.getMetricsDescription(), adapter);
         registeredSources.put(info, adapter);
