@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.security.access;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Arrays;
+import java.nio.charset.StandardCharsets;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -64,9 +64,9 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
         LOG.debug("Global read-only mode is being ENABLED. Deleting active cluster file: {}",
           activeClusterFile);
         try (FSDataInputStream in = fs.open(activeClusterFile)) {
-          byte[] actualClusterFileData = IOUtils.toByteArray(in);
-          byte[] expectedClusterFileData = mfs.getSuffixFileDataToWrite();
-          if (Arrays.equals(actualClusterFileData, expectedClusterFileData)) {
+          String actualClusterFileData = IOUtils.toString(in, StandardCharsets.UTF_8);
+          String expectedClusterFileData = mfs.getSuffixFromConfig();
+          if (actualClusterFileData.equals(expectedClusterFileData)) {
             fs.delete(activeClusterFile, false);
             LOG.info("Successfully deleted active cluster file: {}", activeClusterFile);
           } else {
@@ -89,7 +89,7 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
         // DISABLING READ-ONLY (true -> false), create the active cluster file id file
         int wait = mfs.getConfiguration().getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
         if (!fs.exists(activeClusterFile)) {
-          FSUtils.setActiveClusterSuffix(fs, rootDir, mfs.getSuffixFileDataToWrite(), wait);
+          FSUtils.setActiveClusterSuffix(fs, rootDir, mfs.computeAndSetSuffixFileDataToWrite(), wait);
         } else {
           LOG.debug("Active cluster file already exists at: {}. No need to create it again.",
             activeClusterFile);
