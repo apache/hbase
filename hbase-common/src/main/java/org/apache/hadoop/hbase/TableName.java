@@ -139,6 +139,7 @@ public final class TableName implements Comparable<TableName> {
   private final boolean systemTable;
   private final boolean backupsTable;
   private final int hashCode;
+  private final boolean writableInReadOnlyMode;
 
   /**
    * Check passed byte array, "tableName", is legal user-space table name.
@@ -305,6 +306,10 @@ public final class TableName implements Comparable<TableName> {
     return backupsTable;
   }
 
+  public boolean isWritableInReadOnlyMode() {
+    return writableInReadOnlyMode;
+  }
+
   @Override
   public String toString() {
     return nameAsString;
@@ -329,6 +334,7 @@ public final class TableName implements Comparable<TableName> {
       this.namespaceAsString = NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR;
       this.systemTable = false;
       this.backupsTable = false;
+      this.writableInReadOnlyMode = false;
 
       // The name does not include the namespace when it's the default one.
       this.nameAsString = qualifierAsString;
@@ -339,17 +345,20 @@ public final class TableName implements Comparable<TableName> {
         this.namespaceAsString = NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR;
         this.systemTable = true;
         this.backupsTable = false;
+        this.writableInReadOnlyMode = true;
       } else if (Bytes.equals(NamespaceDescriptor.BACKUP_NAMESPACE_NAME, namespace)) {
         this.namespace = NamespaceDescriptor.BACKUP_NAMESPACE_NAME;
         this.namespaceAsString = NamespaceDescriptor.BACKUP_NAMESPACE_NAME_STR;
         this.systemTable = true;
         this.backupsTable = true;
+        this.writableInReadOnlyMode = false;
       } else {
         this.namespace = new byte[namespace.remaining()];
         namespace.duplicate().get(this.namespace);
         this.namespaceAsString = Bytes.toString(this.namespace);
         this.systemTable = false;
         this.backupsTable = false;
+        this.writableInReadOnlyMode = Bytes.equals(Bytes.toBytes("master"), namespace);
       }
       this.nameAsString = namespaceAsString + NAMESPACE_DELIM + qualifierAsString;
       this.name = Bytes.toBytes(nameAsString);
@@ -370,6 +379,7 @@ public final class TableName implements Comparable<TableName> {
     this.namespaceAsString = NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR;
     this.systemTable = true;
     this.backupsTable = false;
+    this.writableInReadOnlyMode = true;
 
     // WARNING: nameAsString is different than name for old meta & root!
     // This is by design.

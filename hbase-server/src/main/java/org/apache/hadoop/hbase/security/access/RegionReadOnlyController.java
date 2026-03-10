@@ -23,7 +23,6 @@ import java.util.Optional;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.CheckAndMutateResult;
@@ -60,8 +59,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class RegionReadOnlyController extends AbstractReadOnlyController
   implements RegionCoprocessor, RegionObserver {
 
-  private boolean isOnMeta(final ObserverContext<? extends RegionCoprocessorEnvironment> c) {
-    return TableName.isMetaTableName(c.getEnvironment().getRegionInfo().getTable());
+  private boolean
+    isWritableInReadOnlyMode(final ObserverContext<? extends RegionCoprocessorEnvironment> c) {
+    return c.getEnvironment().getRegionInfo().getTable().isWritableInReadOnlyMode();
   }
 
   @Override
@@ -72,7 +72,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
   @Override
   public void preFlushScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     Store store, ScanOptions options, FlushLifeCycleTracker tracker) throws IOException {
-    if (!isOnMeta(c)) {
+    if (!isWritableInReadOnlyMode(c)) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.preFlushScannerOpen(c, store, options, tracker);
@@ -81,7 +81,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
   @Override
   public void preFlush(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     FlushLifeCycleTracker tracker) throws IOException {
-    if (!isOnMeta(c)) {
+    if (!isWritableInReadOnlyMode(c)) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.preFlush(c, tracker);
@@ -90,7 +90,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
   @Override
   public InternalScanner preFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     Store store, InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
-    if (!isOnMeta(c)) {
+    if (!isWritableInReadOnlyMode(c)) {
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preFlush(c, store, scanner, tracker);
@@ -123,7 +123,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
   public void preCompactSelection(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     Store store, List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker)
     throws IOException {
-    if (!isOnMeta(c)) {
+    if (!isWritableInReadOnlyMode(c)) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.preCompactSelection(c, store, candidates, tracker);
@@ -133,7 +133,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
   public void preCompactScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     Store store, ScanType scanType, ScanOptions options, CompactionLifeCycleTracker tracker,
     CompactionRequest request) throws IOException {
-    if (!isOnMeta(c)) {
+    if (!isWritableInReadOnlyMode(c)) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.preCompactScannerOpen(c, store, scanType, options, tracker, request);
@@ -143,7 +143,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
   public InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     Store store, InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
     CompactionRequest request) throws IOException {
-    if (!isOnMeta(c)) {
+    if (!isWritableInReadOnlyMode(c)) {
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCompact(c, store, scanner, scanType, tracker, request);
@@ -152,7 +152,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
   @Override
   public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
     WALEdit edit, Durability durability) throws IOException {
-    if (!isOnMeta(c)) {
+    if (!isWritableInReadOnlyMode(c)) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.prePut(c, put, edit, durability);
@@ -161,7 +161,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
   @Override
   public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
     WALEdit edit) throws IOException {
-    if (!isOnMeta(c)) {
+    if (!isWritableInReadOnlyMode(c)) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.prePut(c, put, edit);
@@ -170,7 +170,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
   @Override
   public void preDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c, Delete delete,
     WALEdit edit, Durability durability) throws IOException {
-    if (!isOnMeta(c)) {
+    if (!isWritableInReadOnlyMode(c)) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.preDelete(c, delete, edit, durability);
@@ -179,7 +179,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
   @Override
   public void preDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c, Delete delete,
     WALEdit edit) throws IOException {
-    if (!isOnMeta(c)) {
+    if (!isWritableInReadOnlyMode(c)) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.preDelete(c, delete, edit);
@@ -188,7 +188,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
   @Override
   public void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
-    if (!isOnMeta(c)) {
+    if (!isWritableInReadOnlyMode(c)) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.preBatchMutate(c, miniBatchOp);
@@ -198,7 +198,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
   public boolean preCheckAndPut(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     byte[] row, byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
     Put put, boolean result) throws IOException {
-    if (!isOnMeta(c)) {
+    if (!isWritableInReadOnlyMode(c)) {
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCheckAndPut(c, row, family, qualifier, op, comparator, put,
@@ -208,7 +208,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
   @Override
   public boolean preCheckAndPut(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     byte[] row, Filter filter, Put put, boolean result) throws IOException {
-    if (!isOnMeta(c)) {
+    if (!isWritableInReadOnlyMode(c)) {
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCheckAndPut(c, row, filter, put, result);
@@ -219,7 +219,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
     ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, byte[] family,
     byte[] qualifier, CompareOperator op, ByteArrayComparable comparator, Put put, boolean result)
     throws IOException {
-    if (!isOnMeta(c)) {
+    if (!isWritableInReadOnlyMode(c)) {
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCheckAndPutAfterRowLock(c, row, family, qualifier, op,
@@ -230,7 +230,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
   public boolean preCheckAndPutAfterRowLock(
     ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, Filter filter, Put put,
     boolean result) throws IOException {
-    if (!isOnMeta(c)) {
+    if (!isWritableInReadOnlyMode(c)) {
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCheckAndPutAfterRowLock(c, row, filter, put, result);
@@ -240,7 +240,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
   public boolean preCheckAndDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     byte[] row, byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
     Delete delete, boolean result) throws IOException {
-    if (!isOnMeta(c)) {
+    if (!isWritableInReadOnlyMode(c)) {
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete,
@@ -250,7 +250,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
   @Override
   public boolean preCheckAndDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     byte[] row, Filter filter, Delete delete, boolean result) throws IOException {
-    if (!isOnMeta(c)) {
+    if (!isWritableInReadOnlyMode(c)) {
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCheckAndDelete(c, row, filter, delete, result);
@@ -261,7 +261,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
     ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, byte[] family,
     byte[] qualifier, CompareOperator op, ByteArrayComparable comparator, Delete delete,
     boolean result) throws IOException {
-    if (!isOnMeta(c)) {
+    if (!isWritableInReadOnlyMode(c)) {
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op,
@@ -272,7 +272,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
   public boolean preCheckAndDeleteAfterRowLock(
     ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, Filter filter,
     Delete delete, boolean result) throws IOException {
-    if (!isOnMeta(c)) {
+    if (!isWritableInReadOnlyMode(c)) {
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
@@ -339,7 +339,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
   @Override
   public void preReplayWALs(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     RegionInfo info, Path edits) throws IOException {
-    if (!isOnMeta(ctx)) {
+    if (!isWritableInReadOnlyMode(ctx)) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.preReplayWALs(ctx, info, edits);
@@ -363,7 +363,7 @@ public class RegionReadOnlyController extends AbstractReadOnlyController
   public void preWALAppend(ObserverContext<? extends RegionCoprocessorEnvironment> ctx, WALKey key,
     WALEdit edit) throws IOException {
     // Only allow this operation for meta table
-    if (!TableName.isMetaTableName(key.getTableName())) {
+    if (!key.getTableName().isWritableInReadOnlyMode()) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.preWALAppend(ctx, key, edit);

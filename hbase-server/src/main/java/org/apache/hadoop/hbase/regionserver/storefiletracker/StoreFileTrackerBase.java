@@ -141,7 +141,9 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
 
   @Override
   public final StoreFileWriter createWriter(CreateStoreFileWriterParams params) throws IOException {
-    if (!isPrimaryReplica || isReadOnlyEnabled()) {
+    if (
+      !isPrimaryReplica || (isReadOnlyEnabled() && !ctx.getTableName().isWritableInReadOnlyMode())
+    ) {
       throw new IllegalStateException(
         "Should not call create writer on secondary replicas or in read-only mode");
     }

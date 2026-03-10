@@ -19,11 +19,14 @@ package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.Collections;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TestRefreshHFilesBase;
 import org.apache.hadoop.hbase.master.procedure.TestRefreshHFilesProcedureWithReadOnlyConf;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -41,6 +44,8 @@ public class TestStoreFileTrackerBaseReadOnlyMode extends TestRefreshHFilesBase 
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRefreshHFilesProcedureWithReadOnlyConf.class);
 
+  TableName tableName = TableName.valueOf("TestStoreFileTrackerBaseReadOnlyMode");
+
   @Before
   public void setup() throws Exception {
     // When true is passed only setup for readonly property is done.
@@ -57,7 +62,7 @@ public class TestStoreFileTrackerBaseReadOnlyMode extends TestRefreshHFilesBase 
   public void testLoadReadOnlyWhenGlobalReadOnlyEnabled() throws Exception {
     try {
       setReadOnlyMode(true);
-      tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true);
+      tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true, tableName);
       tracker.load();
       assertTrue("Tracker should be in read-only mode", tracker.wasReadOnlyLoad());
     } catch (Exception e) {
@@ -71,7 +76,7 @@ public class TestStoreFileTrackerBaseReadOnlyMode extends TestRefreshHFilesBase 
   public void testReplaceSkippedWhenGlobalReadOnlyEnabled() throws Exception {
     try {
       setReadOnlyMode(true);
-      tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true);
+      tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true, tableName);
       tracker.replace(Collections.emptyList(), Collections.emptyList());
       assertFalse("Compaction should not be executed in readonly mode",
         tracker.wasCompactionExecuted());
@@ -84,7 +89,7 @@ public class TestStoreFileTrackerBaseReadOnlyMode extends TestRefreshHFilesBase 
 
   @Test
   public void testReplaceExecutedWhenWritable() throws Exception {
-    tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true);
+    tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true, tableName);
     tracker.replace(Collections.emptyList(), Collections.emptyList());
     assertTrue("Compaction should run when not readonly", tracker.wasCompactionExecuted());
   }
@@ -93,7 +98,7 @@ public class TestStoreFileTrackerBaseReadOnlyMode extends TestRefreshHFilesBase 
   public void testAddSkippedWhenGlobalReadOnlyEnabled() throws Exception {
     try {
       setReadOnlyMode(true);
-      tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true);
+      tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true, tableName);
       tracker.add(Collections.emptyList());
       assertFalse("Add should not be executed in readonly mode", tracker.wasAddExecuted());
     } catch (Exception e) {
@@ -105,7 +110,7 @@ public class TestStoreFileTrackerBaseReadOnlyMode extends TestRefreshHFilesBase 
 
   @Test
   public void testAddExecutedWhenWritable() throws Exception {
-    tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true);
+    tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true, tableName);
     tracker.add(Collections.emptyList());
     assertTrue("Add should run when not readonly", tracker.wasAddExecuted());
   }
@@ -114,7 +119,7 @@ public class TestStoreFileTrackerBaseReadOnlyMode extends TestRefreshHFilesBase 
   public void testSetSkippedWhenGlobalReadOnlyEnabled() throws Exception {
     try {
       setReadOnlyMode(true);
-      tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true);
+      tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true, tableName);
       tracker.set(Collections.emptyList());
       assertFalse("Set should not be executed in readonly mode", tracker.wasSetExecuted());
     } catch (Exception e) {
@@ -126,21 +131,56 @@ public class TestStoreFileTrackerBaseReadOnlyMode extends TestRefreshHFilesBase 
 
   @Test
   public void testSetExecutedWhenWritable() throws Exception {
-    tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true);
+    tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true, tableName);
     tracker.set(Collections.emptyList());
     assertTrue("Set should run when not readonly", tracker.wasSetExecuted());
   }
 
-  @Test(expected = IllegalStateException.class)
-  public void testCreateWriterThrowExceptionWhenGlobalReadOnlyEnabled() throws Exception {
+  private CreateStoreFileWriterParams createParams() {
+    return CreateStoreFileWriterParams.create().maxKeyCount(4).isCompaction(false)
+      .includeMVCCReadpoint(true).includesTag(false).shouldDropBehind(false);
+  }
+
+  private void assertIllegalStateThrown(TableName tableName) throws Exception {
     try {
       setReadOnlyMode(true);
-      tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true);
-      CreateStoreFileWriterParams params = CreateStoreFileWriterParams.create().maxKeyCount(4)
-        .isCompaction(false).includeMVCCReadpoint(true).includesTag(false).shouldDropBehind(false);
-      tracker.createWriter(params);
+      tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true, tableName);
+      tracker.createWriter(createParams());
+      fail("Expected IllegalStateException");
     } finally {
       setReadOnlyMode(false);
     }
+  }
+
+  private void assertNoIllegalStateThrown(TableName tableName) throws Exception {
+    try {
+      setReadOnlyMode(true);
+      tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true, tableName);
+      try {
+        tracker.createWriter(createParams());
+      } catch (IllegalStateException e) {
+        fail("Should not throw IllegalStateException for table " + tableName);
+      } catch (Exception e) {
+        // Ignore other exceptions as they are not the focus of this test
+      }
+    } finally {
+      setReadOnlyMode(false);
+    }
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testCreateWriterThrowExceptionWhenGlobalReadOnlyEnabled() throws Exception {
+    assertIllegalStateThrown(tableName);
+  }
+
+  @Test
+  public void testCreateWriterNoExceptionMetaTableWhenGlobalReadOnlyEnabled() throws Exception {
+    assertNoIllegalStateThrown(TableName.META_TABLE_NAME);
+  }
+
+  @Test
+  public void testCreateWriterNoExceptionMasterStoreTableWhenGlobalReadOnlyEnabled()
+    throws Exception {
+    assertNoIllegalStateThrown(MasterRegionFactory.TABLE_NAME);
   }
 }
