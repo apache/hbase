@@ -399,24 +399,29 @@ public class MasterFileSystem {
       try {
         // verify the contents against the config set
         ActiveClusterSuffix acs = FSUtils.getActiveClusterSuffix(fs, rootdir);
-        LOG.debug("File Suffix {} : Configured suffix {} :  Cluster ID : {}", acs,
-          getSuffixFromConfig(), getClusterId());
+        LOG.debug(
+          "Negotiating active cluster suffix file. File {} : File Suffix {} : Configured suffix {} :  Cluster ID : {}",
+          new Path(rootdir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME), acs, getSuffixFromConfig(),
+          getClusterId());
         if (Objects.equals(acs.getActiveClusterSuffix(), getSuffixFromConfig())) {
           this.activeClusterSuffix = acs;
         } else {
           // throw error
-          LOG.info("rootdir {} : Read replica active cluster file suffix {} ", rootdir, acs);
+          LOG.info(
+            "[Read-replica feature] Another cluster is running in active (read-write) mode on this storage location. Active cluster ID: {}, This cluster ID {}. Rootdir location {} ",
+            acs, getSuffixFromConfig(), rootdir);
           throw new IOException("Cannot start master, because another cluster is running in active "
             + "(read-write) mode on this storage location. Active Cluster Id: " + acs
-            + ", This cluster Id: "
-            + new String(getSuffixFileDataToWrite(), StandardCharsets.UTF_8));
+            + ", This cluster Id: " + getSuffixFromConfig());
         }
         LOG.info(
-          "[Read-replica feature] This cluster is the active (read-write) cluster on this shared storage location, cluster id: {}",
-          new String(getSuffixFileDataToWrite(), StandardCharsets.UTF_8));
+          "[Read-replica feature] This is the active cluster on this storage location with cluster id: {}",
+          getSuffixFromConfig());
       } catch (FileNotFoundException fnfe) {
         // this is the active cluster, create active cluster suffix file if it does not exist
-        FSUtils.setActiveClusterSuffix(fs, rootdir, computeAndSetSuffixFileDataToWrite(), wait);
+        FSUtils.setActiveClusterSuffix(fs, rootdir, getSuffixFileDataToWrite(), wait);
+        LOG.info("[Read-replica feature] Created Active cluster suffix file: {}, with content: {}",
+          HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME, getSuffixFromConfig());
       }
     } else {
       // this is a replica cluster
@@ -448,7 +453,7 @@ public class MasterFileSystem {
     return str.getBytes(StandardCharsets.UTF_8);
   }
 
-  public byte[] computeAndSetSuffixFileDataToWrite() {
+  public byte[] getSuffixFileDataToWrite() {
     String str = getClusterId().toString() + ":" + getActiveClusterSuffixFromConfig(conf);
     this.activeClusterSuffix = new ActiveClusterSuffix(str);
     return str.getBytes(StandardCharsets.UTF_8);

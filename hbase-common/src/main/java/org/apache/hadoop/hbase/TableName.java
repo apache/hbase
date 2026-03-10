@@ -93,7 +93,8 @@ public final class TableName implements Comparable<TableName> {
   public static TableName initializeHbaseMetaTableName(Configuration conf) {
     String suffix_val = conf.get(HConstants.HBASE_META_TABLE_SUFFIX,
       HConstants.HBASE_META_TABLE_SUFFIX_DEFAULT_VALUE);
-    LOG.info("Read Replica Cluster suffix value: {}", (suffix_val == null || suffix_val.isEmpty()) ? "<blank>" : suffix_val);
+    LOG.debug("[Read-replica feature] suffix value: {}",
+      (suffix_val == null || suffix_val.isEmpty()) ? "<blank>" : suffix_val);
     if (Strings.isNullOrEmpty(suffix_val)) {
       return valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
     } else {
