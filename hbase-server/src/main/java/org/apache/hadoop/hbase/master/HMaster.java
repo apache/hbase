@@ -2109,80 +2109,85 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
 
     synchronized (this.balancer) {
-      // Only allow one balance run at at time.
-      if (this.assignmentManager.getRegionTransitScheduledCount() > 0) {
-        List<RegionStateNode> regionsInTransition = assignmentManager.getRegionsInTransition();
-        // if hbase:meta region is in transition, result of assignment cannot be recorded
-        // ignore the force flag in that case
-        boolean metaInTransition = assignmentManager.isMetaRegionInTransition();
-        List<RegionStateNode> toPrint = regionsInTransition;
-        int max = 5;
-        boolean truncated = false;
-        if (regionsInTransition.size() > max) {
-          toPrint = regionsInTransition.subList(0, max);
-          truncated = true;
-        }
+      try {
+        this.balancer.onBalancingStart();
+        // Only allow one balance run at at time.
+        if (this.assignmentManager.getRegionTransitScheduledCount() > 0) {
+          List<RegionStateNode> regionsInTransition = assignmentManager.getRegionsInTransition();
+          // if hbase:meta region is in transition, result of assignment cannot be recorded
+          // ignore the force flag in that case
+          boolean metaInTransition = assignmentManager.isMetaRegionInTransition();
+          List<RegionStateNode> toPrint = regionsInTransition;
+          int max = 5;
+          boolean truncated = false;
+          if (regionsInTransition.size() > max) {
+            toPrint = regionsInTransition.subList(0, max);
+            truncated = true;
+          }
 
-        if (!request.isIgnoreRegionsInTransition() || metaInTransition) {
-          LOG.info("Not running balancer (ignoreRIT=false" + ", metaRIT=" + metaInTransition
-            + ") because " + assignmentManager.getRegionTransitScheduledCount()
-            + " region(s) are scheduled to transit " + toPrint
-            + (truncated ? "(truncated list)" : ""));
-          return responseBuilder.build();
-        }
-      }
-      if (this.serverManager.areDeadServersInProgress()) {
-        LOG.info("Not running balancer because processing dead regionserver(s): "
-          + this.serverManager.getDeadServers());
-        return responseBuilder.build();
-      }
-
-      if (this.cpHost != null) {
-        try {
-          if (this.cpHost.preBalance(request)) {
-            LOG.debug("Coprocessor bypassing balancer request");
+          if (!request.isIgnoreRegionsInTransition() || metaInTransition) {
+            LOG.info("Not running balancer (ignoreRIT=false" + ", metaRIT=" + metaInTransition
+              + ") because " + assignmentManager.getRegionTransitScheduledCount()
+              + " region(s) are scheduled to transit " + toPrint
+              + (truncated ? "(truncated list)" : ""));
             return responseBuilder.build();
           }
-        } catch (IOException ioe) {
-          LOG.error("Error invoking master coprocessor preBalance()", ioe);
+        }
+        if (this.serverManager.areDeadServersInProgress()) {
+          LOG.info("Not running balancer because processing dead regionserver(s): "
+            + this.serverManager.getDeadServers());
           return responseBuilder.build();
         }
-      }
 
-      Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
-        this.assignmentManager.getRegionStates().getAssignmentsForBalancer(tableStateManager,
-          this.serverManager.getOnlineServersList());
-      for (Map<ServerName, List<RegionInfo>> serverMap : assignments.values()) {
-        serverMap.keySet().removeAll(this.serverManager.getDrainingServersList());
-      }
-
-      // Give the balancer the current cluster state.
-      this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
-
-      List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
-
-      responseBuilder.setBalancerRan(true).setMovesCalculated(plans == null ? 0 : plans.size());
-
-      if (skipRegionManagementAction("balancer")) {
-        // make one last check that the cluster isn't shutting down before proceeding.
-        return responseBuilder.build();
-      }
-
-      // For dry run we don't actually want to execute the moves, but we do want
-      // to execute the coprocessor below
-      List<RegionPlan> sucRPs =
-        request.isDryRun() ? Collections.emptyList() : executeRegionPlansWithThrottling(plans);
-
-      if (this.cpHost != null) {
-        try {
-          this.cpHost.postBalance(request, sucRPs);
-        } catch (IOException ioe) {
-          // balancing already succeeded so don't change the result
-          LOG.error("Error invoking master coprocessor postBalance()", ioe);
+        if (this.cpHost != null) {
+          try {
+            if (this.cpHost.preBalance(request)) {
+              LOG.debug("Coprocessor bypassing balancer request");
+              return responseBuilder.build();
+            }
+          } catch (IOException ioe) {
+            LOG.error("Error invoking master coprocessor preBalance()", ioe);
+            return responseBuilder.build();
+          }
         }
-      }
 
-      responseBuilder.setMovesExecuted(sucRPs.size());
+        Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
+          this.assignmentManager.getRegionStates().getAssignmentsForBalancer(tableStateManager,
+            this.serverManager.getOnlineServersList());
+        for (Map<ServerName, List<RegionInfo>> serverMap : assignments.values()) {
+          serverMap.keySet().removeAll(this.serverManager.getDrainingServersList());
+        }
+
+        // Give the balancer the current cluster state.
+        this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
+
+        List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
+
+        responseBuilder.setBalancerRan(true).setMovesCalculated(plans == null ? 0 : plans.size());
+
+        if (skipRegionManagementAction("balancer")) {
+          // make one last check that the cluster isn't shutting down before proceeding.
+          return responseBuilder.build();
+        }
+
+        // For dry run we don't actually want to execute the moves, but we do want
+        // to execute the coprocessor below
+        List<RegionPlan> sucRPs =
+          request.isDryRun() ? Collections.emptyList() : executeRegionPlansWithThrottling(plans);
+
+        if (this.cpHost != null) {
+          try {
+            this.cpHost.postBalance(request, sucRPs);
+          } catch (IOException ioe) {
+            // balancing already succeeded so don't change the result
+            LOG.error("Error invoking master coprocessor postBalance()", ioe);
+          }
+        }
+
+        responseBuilder.setMovesExecuted(sucRPs.size());
+      } finally {
+        this.balancer.onBalancingComplete();
+      }
     }
 
     // If LoadBalancer did not generate any plans, it means the cluster is already balanced.
@@ -2213,7 +2218,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         try {
           this.assignmentManager.balance(plan);
           this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
-          this.balancer.throttle(plan);
+          this.balancer.throttle(plan, this.balancer);
         } catch (HBaseIOException hioe) {
           // should ignore failed plans here, avoiding the whole balance plans be aborted
           // later calls of balance() can fetch up the failed and skipped plans
