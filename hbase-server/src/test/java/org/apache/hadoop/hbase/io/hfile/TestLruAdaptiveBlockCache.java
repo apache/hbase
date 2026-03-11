@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.junit.Assert;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -57,7 +56,6 @@ import org.slf4j.LoggerFactory;
  * Tests will ensure it grows and shrinks in size properly, evictions run when they're supposed to
  * and do what they should, and that cached blocks are accessible when expected to be.
  */
-@Ignore
 @Category({ IOTests.class, SmallTests.class })
 public class TestLruAdaptiveBlockCache {
 
