@@ -77,7 +77,7 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
         // DISABLING READ-ONLY (true -> false), create the active cluster file id file
         int wait = mfs.getConfiguration().getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
         if (!fs.exists(activeClusterFile)) {
-          FSUtils.setActiveClusterSuffix(fs, rootDir, mfs.getSuffixFileDataToWrite(), wait);
+          FSUtils.setActiveClusterSuffix(fs, rootDir, mfs.getActiveClusterSuffix(), wait);
         } else {
           LOG.debug("Active cluster file already exists at: {}. No need to create it again.",
             activeClusterFile);

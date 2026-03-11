@@ -28,6 +28,9 @@ option optimize_for = SPEED;
  * Content of the '/hbase/active_cluster_suffix.id' file to indicate the active cluster.
  */
 message ActiveClusterSuffix {
+  // This is the active cluster id set by the user in the config, as a String
+  required string cluster_id = 1;
+
   // This is the active cluster suffix set by the user in the config, as a String
-  required string active_cluster_suffix = 1;
+  required string suffix = 2;
 }

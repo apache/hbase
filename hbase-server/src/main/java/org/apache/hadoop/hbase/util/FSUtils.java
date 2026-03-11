@@ -620,6 +620,7 @@ public final class FSUtils {
         } finally {
           in.close();
         }
+        rewriteAsPb(fs, rootdir, idPath, cs);
       }
       return cs;
     } else {
@@ -641,6 +642,19 @@ public final class FSUtils {
       throw new IOException("Failed delete of " + movedAsideName);
     }
     LOG.debug("Rewrote the hbase.id file as pb");
+  }
+
+  private static void rewriteAsPb(final FileSystem fs, final Path rootdir, final Path p,
+    final ActiveClusterSuffix cs) throws IOException {
+    // Rewrite the file as pb. Move aside the old one first, write new
+    // then delete the moved-aside file.
+    Path movedAsideName = new Path(p + "." + EnvironmentEdgeManager.currentTime());
+    if (!fs.rename(p, movedAsideName)) throw new IOException("Failed rename of " + p);
+    setActiveClusterSuffix(fs, rootdir, cs, 100);
+    if (!fs.delete(movedAsideName, false)) {
+      throw new IOException("Failed delete of " + movedAsideName);
+    }
+    LOG.debug("Rewrote the active.cluster.suffix.id file as pb");
   }
 
   /**
@@ -668,17 +682,15 @@ public final class FSUtils {
    * HBase root directory. If any operations on the ID file fails, and {@code wait} is a positive
    * value, the method will retry to produce the ID file until the thread is forcibly interrupted.
    */
-
-  public static void setActiveClusterSuffix(final FileSystem fs, final Path rootdir, byte[] bdata,
-    final long wait) throws IOException {
+  public static void setActiveClusterSuffix(final FileSystem fs, final Path rootdir,
+    final ActiveClusterSuffix cs, final long wait) throws IOException {
     final Path idFile = new Path(rootdir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
     final Path tempDir = new Path(rootdir, HConstants.HBASE_TEMP_DIRECTORY);
     final Path tempIdFile = new Path(tempDir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
-    String fsuffix = new String(bdata, StandardCharsets.US_ASCII);
 
     LOG.debug("[Read-replica feature] id file [{}] is present and contains cluster id: {}", idFile,
-      fsuffix);
-    writeClusterInfo(fs, rootdir, idFile, tempIdFile, bdata, wait);
+      cs.getActiveClusterSuffixForLogging());
+    writeClusterInfo(fs, rootdir, idFile, tempIdFile, cs.toByteArray(), wait);
   }
 
   /**
