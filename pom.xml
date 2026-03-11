@@ -371,6 +371,12 @@
       <timezone>+8</timezone>
     </developer>
     <developer>
+      <id>liuxiaocs7</id>
+      <name>Xiao Liu</name>
+      <email>liuxiaocs@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
       <id>liyin</id>
       <name>Liyin Tang</name>
       <email>liyin.tang@fb.com</email>
