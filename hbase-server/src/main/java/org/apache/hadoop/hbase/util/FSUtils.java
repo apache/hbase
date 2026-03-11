@@ -629,8 +629,6 @@ public final class FSUtils {
     }
   }
 
-  /**
-   *   */
   private static void rewriteAsPb(final FileSystem fs, final Path rootdir, final Path p,
     final ClusterId cid) throws IOException {
     // Rewrite the file as pb. Move aside the old one first, write new
@@ -688,8 +686,8 @@ public final class FSUtils {
     final Path tempDir = new Path(rootdir, HConstants.HBASE_TEMP_DIRECTORY);
     final Path tempIdFile = new Path(tempDir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
 
-    LOG.debug("[Read-replica feature] id file [{}] is present and contains cluster id: {}", idFile,
-      cs.getActiveClusterSuffixForLogging());
+    LOG.debug("[Read-replica feature] id file [{}] is present and contains cluster id: {}",
+      idFile, cs);
     writeClusterInfo(fs, rootdir, idFile, tempIdFile, cs.toByteArray(), wait);
   }
 
