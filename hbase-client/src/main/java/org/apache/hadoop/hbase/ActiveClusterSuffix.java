@@ -41,8 +41,8 @@ public class ActiveClusterSuffix {
    * New ActiveClusterSuffix.
    */
 
-  public ActiveClusterSuffix(final String cs, final String suffix) {
-    this.cluster_id = cs;
+  public ActiveClusterSuffix(final String ci, final String suffix) {
+    this.cluster_id = ci;
     this.suffix = suffix;
   }
 
@@ -59,15 +59,6 @@ public class ActiveClusterSuffix {
   public static ActiveClusterSuffix fromConfig(Configuration conf, ClusterId clusterId) {
     return new ActiveClusterSuffix(clusterId.toString(), conf.get(HConstants.HBASE_META_TABLE_SUFFIX,
       HConstants.HBASE_META_TABLE_SUFFIX_DEFAULT_VALUE));
-  }
-
-  public static String getSuffixFromConfig(final Configuration conf) {
-    return conf.get(HConstants.HBASE_META_TABLE_SUFFIX,
-      HConstants.HBASE_META_TABLE_SUFFIX_DEFAULT_VALUE);
-  }
-
-  public String getActiveClusterSuffixForLogging() {
-    return String.format("%s:%s", this.cluster_id, Strings.isNullOrEmpty(this.suffix) ? "<blank>" : this.suffix);
   }
 
   /** Returns The active cluster suffix serialized using pb w/ pb magic prefix */
@@ -102,16 +93,14 @@ public class ActiveClusterSuffix {
 
   /** Returns A pb instance to represent this instance. */
   public ActiveClusterSuffixProtos.ActiveClusterSuffix convert() {
-    ActiveClusterSuffixProtos.ActiveClusterSuffix.Builder builder =
-      ActiveClusterSuffixProtos.ActiveClusterSuffix.newBuilder();
-    builder.setClusterId(cluster_id);
-    builder.setSuffix(suffix);
-    return builder.build();
+    return ActiveClusterSuffixProtos.ActiveClusterSuffix.newBuilder()
+      .setClusterId(cluster_id)
+      .setSuffix(suffix)
+      .build();
   }
 
   /** Returns A {@link ActiveClusterSuffix} made from the passed in <code>cs</code> */
-  public static ActiveClusterSuffix
-    convert(final ActiveClusterSuffixProtos.ActiveClusterSuffix cs) {
+  public static ActiveClusterSuffix convert(final ActiveClusterSuffixProtos.ActiveClusterSuffix cs) {
     return new ActiveClusterSuffix(cs.getClusterId(), cs.getSuffix());
   }
 
@@ -120,7 +109,8 @@ public class ActiveClusterSuffix {
    */
   @Override
   public String toString() {
-    return String.format("%s:%s", cluster_id, suffix);
+    return String.format("%s:%s", this.cluster_id,
+      Strings.isNullOrEmpty(this.suffix) ? "<blank>" : this.suffix);
   }
 
   @Override public boolean equals(Object o) {
