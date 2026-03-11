@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
@@ -59,25 +63,33 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
         // ENABLING READ-ONLY (false -> true), delete the active cluster file.
         LOG.debug("Global read-only mode is being ENABLED. Deleting active cluster file: {}",
           activeClusterFile);
-        try {
-          if (fs.exists(activeClusterFile)) {
+        try (FSDataInputStream in = fs.open(activeClusterFile)) {
+          String actualClusterFileData = IOUtils.toString(in, StandardCharsets.UTF_8);
+          String expectedClusterFileData = mfs.getSuffixFromConfig();
+          if (actualClusterFileData.equals(expectedClusterFileData)) {
             fs.delete(activeClusterFile, false);
             LOG.info("Successfully deleted active cluster file: {}", activeClusterFile);
           } else {
-            LOG.debug("Active cluster file does not exist at: {}. No need to delete.",
-              activeClusterFile);
+            LOG.debug(
+              "Active cluster file data does not match expected data. "
+                + "Not deleting the file to avoid potential inconsistency. "
+                + "Actual data: {}, Expected data: {}",
+              new String(actualClusterFileData), new String(expectedClusterFileData));
           }
-        } catch (IOException e) {
+      } catch (FileNotFoundException e) {
+          LOG.debug("Active cluster file does not exist at: {}. No need to delete.",
+            activeClusterFile);
+      } catch (IOException e) {
           LOG.error(
             "Failed to delete active cluster file: {}. "
               + "Read-only flag will be updated, but file system state is inconsistent.",
-            activeClusterFile);
+            activeClusterFile, e);
         }
       } else {
         // DISABLING READ-ONLY (true -> false), create the active cluster file id file
         int wait = mfs.getConfiguration().getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
         if (!fs.exists(activeClusterFile)) {
-          FSUtils.setActiveClusterSuffix(fs, rootDir, mfs.getSuffixFileDataToWrite(), wait);
+          FSUtils.setActiveClusterSuffix(fs, rootDir, mfs.computeAndSetSuffixFileDataToWrite(), wait);
         } else {
           LOG.debug("Active cluster file already exists at: {}. No need to create it again.",
             activeClusterFile);
