@@ -2218,7 +2218,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         try {
           this.assignmentManager.balance(plan);
           this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
-          this.balancer.throttle(plan, this.balancer);
+          this.balancer.throttle(plan);
         } catch (HBaseIOException hioe) {
           // should ignore failed plans here, avoiding the whole balance plans be aborted
           // later calls of balance() can fetch up the failed and skipped plans

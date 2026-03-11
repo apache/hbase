@@ -409,15 +409,16 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
 
   @Override
   public void onConfigurationChange(Configuration conf) {
+    // Refer to HBASE-29933
     synchronized (this) {
-      // If balance is in progress, defer applying configuration change until balance completed so
-      // that onConfigurationChange doesn't hang until balance completed.
+      // If balance is running, store configuration in pendingConfiguration and return immediately.
+      // Deferred config update.
       if (isBalancing.get()) {
-        LOG.info(
+        LOG.debug(
           "Balance is in progress, defer applying configuration change until balance completed.");
-        // Apply this pending configuration when balance completed.
         pendingConfiguration.set(conf);
       } else {
+        // If balance is not running, apply configuration change immediately.
         updateConfiguration(conf);
       }
     }
@@ -470,8 +471,16 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
   }
 
   @Override
-  public void throttle(RegionPlan plan, Object syncMonitor) throws Exception {
-    internalBalancer.throttle(plan, syncMonitor);
+  public void throttle(RegionPlan plan) throws Exception {
+    long throttlingTime = internalBalancer.getThrottlingTime(plan);
+    if (throttlingTime > 0) {
+      try {
+        // Release the monitor while waiting to avoid blocking other threads.
+        wait(throttlingTime);
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+    }
   }
 
   @Override
