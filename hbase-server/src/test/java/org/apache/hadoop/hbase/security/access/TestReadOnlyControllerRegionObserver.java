@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
@@ -175,6 +176,10 @@ public class TestReadOnlyControllerRegionObserver {
     when(regionInfo.getTable()).thenReturn(TableName.META_TABLE_NAME);
   }
 
+  private void mockOperationMasterStoreTable() {
+    when(regionInfo.getTable()).thenReturn(MasterRegionFactory.TABLE_NAME);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPreFlushV1ReadOnlyException() throws IOException {
     regionReadOnlyController.preFlush(c, flushLifeCycleTracker);
@@ -183,6 +188,12 @@ public class TestReadOnlyControllerRegionObserver {
   @Test
   public void testPreFlushV1ReadOnlyMetaNoException() throws IOException {
     mockOperationForMetaTable();
+    regionReadOnlyController.preFlush(c, flushLifeCycleTracker);
+  }
+
+  @Test
+  public void testPreFlushV1ReadOnlyMasterStoreNoException() throws IOException {
+    mockOperationMasterStoreTable();
     regionReadOnlyController.preFlush(c, flushLifeCycleTracker);
   }
 
@@ -197,6 +208,12 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.preFlush(c, store, scanner, flushLifeCycleTracker);
   }
 
+  @Test
+  public void testPreFlushV2ReadOnlyMasterStoreNoException() throws IOException {
+    mockOperationMasterStoreTable();
+    regionReadOnlyController.preFlush(c, store, scanner, flushLifeCycleTracker);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPreFlushScannerOpenReadOnlyException() throws IOException {
     regionReadOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
@@ -205,6 +222,12 @@ public class TestReadOnlyControllerRegionObserver {
   @Test
   public void testPreFlushScannerOpenReadOnlyMetaNoException() throws IOException {
     mockOperationForMetaTable();
+    regionReadOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
+  }
+
+  @Test
+  public void testPreFlushScannerOpenReadOnlyMasterStoreNoException() throws IOException {
+    mockOperationMasterStoreTable();
     regionReadOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
   }
 
@@ -234,6 +257,12 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.preCompactSelection(c, store, candidates, compactionLifeCycleTracker);
   }
 
+  @Test
+  public void testPreCompactSelectionReadOnlyMasterStoreNoException() throws IOException {
+    mockOperationMasterStoreTable();
+    regionReadOnlyController.preCompactSelection(c, store, candidates, compactionLifeCycleTracker);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCompactScannerOpenReadOnlyException() throws IOException {
     regionReadOnlyController.preCompactScannerOpen(c, store, scanType, options,
@@ -243,6 +272,13 @@ public class TestReadOnlyControllerRegionObserver {
   @Test
   public void testPreCompactScannerOpenReadOnlyMetaNoException() throws IOException {
     mockOperationForMetaTable();
+    regionReadOnlyController.preCompactScannerOpen(c, store, scanType, options,
+      compactionLifeCycleTracker, compactionRequest);
+  }
+
+  @Test
+  public void testPreCompactScannerOpenReadOnlyMasterStoreNoException() throws IOException {
+    mockOperationMasterStoreTable();
     regionReadOnlyController.preCompactScannerOpen(c, store, scanType, options,
       compactionLifeCycleTracker, compactionRequest);
   }
@@ -260,6 +296,13 @@ public class TestReadOnlyControllerRegionObserver {
       compactionRequest);
   }
 
+  @Test
+  public void testPreCompactReadOnlyMasterStoreNoException() throws IOException {
+    mockOperationMasterStoreTable();
+    regionReadOnlyController.preCompact(c, store, scanner, scanType, compactionLifeCycleTracker,
+      compactionRequest);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPrePutV1ReadOnlyException() throws IOException {
     regionReadOnlyController.prePut(c, put, edit);
@@ -268,6 +311,12 @@ public class TestReadOnlyControllerRegionObserver {
   @Test
   public void testPrePutV1ReadOnlyMetaNoException() throws IOException {
     mockOperationForMetaTable();
+    regionReadOnlyController.prePut(c, put, edit);
+  }
+
+  @Test
+  public void testPrePutV1ReadOnlyMasterStoreNoException() throws IOException {
+    mockOperationMasterStoreTable();
     regionReadOnlyController.prePut(c, put, edit);
   }
 
@@ -282,6 +331,12 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.prePut(c, put, edit, durability);
   }
 
+  @Test
+  public void testPrePutV2ReadOnlyMasterStoreNoException() throws IOException {
+    mockOperationMasterStoreTable();
+    regionReadOnlyController.prePut(c, put, edit, durability);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPreDeleteV1ReadOnlyException() throws IOException {
     regionReadOnlyController.preDelete(c, delete, edit);
@@ -290,6 +345,12 @@ public class TestReadOnlyControllerRegionObserver {
   @Test
   public void testPreDeleteV1ReadOnlyMetaNoException() throws IOException {
     mockOperationForMetaTable();
+    regionReadOnlyController.preDelete(c, delete, edit);
+  }
+
+  @Test
+  public void testPreDeleteV1ReadOnlyMasterStoreNoException() throws IOException {
+    mockOperationMasterStoreTable();
     regionReadOnlyController.preDelete(c, delete, edit);
   }
 
@@ -304,6 +365,12 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.preDelete(c, delete, edit, durability);
   }
 
+  @Test
+  public void testPreDeleteV2ReadOnlyMasterStoreNoException() throws IOException {
+    mockOperationMasterStoreTable();
+    regionReadOnlyController.preDelete(c, delete, edit, durability);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPreBatchMutateReadOnlyException() throws IOException {
     regionReadOnlyController.preBatchMutate(c, miniBatchOp);
@@ -312,6 +379,12 @@ public class TestReadOnlyControllerRegionObserver {
   @Test
   public void testPreBatchMutateReadOnlyMetaNoException() throws IOException {
     mockOperationForMetaTable();
+    regionReadOnlyController.preBatchMutate(c, miniBatchOp);
+  }
+
+  @Test
+  public void testPreBatchMutateReadOnlyMasterStoreNoException() throws IOException {
+    mockOperationMasterStoreTable();
     regionReadOnlyController.preBatchMutate(c, miniBatchOp);
   }
 
@@ -326,6 +399,12 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.preCheckAndPut(c, row, family, qualifier, op, comparator, put, result);
   }
 
+  @Test
+  public void testPreCheckAndPutV1ReadOnlyMasterStoreNoException() throws IOException {
+    mockOperationMasterStoreTable();
+    regionReadOnlyController.preCheckAndPut(c, row, family, qualifier, op, comparator, put, result);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndPutV2ReadOnlyException() throws IOException {
     regionReadOnlyController.preCheckAndPut(c, row, filter, put, result);
@@ -334,6 +413,12 @@ public class TestReadOnlyControllerRegionObserver {
   @Test
   public void testPreCheckAndPutV2ReadOnlyMetaNoException() throws IOException {
     mockOperationForMetaTable();
+    regionReadOnlyController.preCheckAndPut(c, row, filter, put, result);
+  }
+
+  @Test
+  public void testPreCheckAndPutV2ReadOnlyMasterStoreNoException() throws IOException {
+    mockOperationMasterStoreTable();
     regionReadOnlyController.preCheckAndPut(c, row, filter, put, result);
   }
 
@@ -350,6 +435,13 @@ public class TestReadOnlyControllerRegionObserver {
       put, result);
   }
 
+  @Test
+  public void testPreCheckAndPutAfterRowLockV1ReadOnlyMasterStoreNoException() throws IOException {
+    mockOperationMasterStoreTable();
+    regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, family, qualifier, op, comparator,
+      put, result);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndPutAfterRowLockV2ReadOnlyException() throws IOException {
     regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
@@ -358,6 +450,12 @@ public class TestReadOnlyControllerRegionObserver {
   @Test
   public void testPreCheckAndPutAfterRowLockV2ReadOnlyMetaNoException() throws IOException {
     mockOperationForMetaTable();
+    regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
+  }
+
+  @Test
+  public void testPreCheckAndPutAfterRowLockV2ReadOnlyMasterStoreNoException() throws IOException {
+    mockOperationMasterStoreTable();
     regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
   }
 
@@ -374,6 +472,13 @@ public class TestReadOnlyControllerRegionObserver {
       result);
   }
 
+  @Test
+  public void testPreCheckAndDeleteV1ReadOnlyMasterStoreNoException() throws IOException {
+    mockOperationMasterStoreTable();
+    regionReadOnlyController.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete,
+      result);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndDeleteV2ReadOnlyException() throws IOException {
     regionReadOnlyController.preCheckAndDelete(c, row, filter, delete, result);
@@ -382,6 +487,12 @@ public class TestReadOnlyControllerRegionObserver {
   @Test
   public void testPreCheckAndDeleteV2ReadOnlyMetaNoException() throws IOException {
     mockOperationForMetaTable();
+    regionReadOnlyController.preCheckAndDelete(c, row, filter, delete, result);
+  }
+
+  @Test
+  public void testPreCheckAndDeleteV2ReadOnlyMasterStoreNoException() throws IOException {
+    mockOperationMasterStoreTable();
     regionReadOnlyController.preCheckAndDelete(c, row, filter, delete, result);
   }
 
@@ -398,6 +509,14 @@ public class TestReadOnlyControllerRegionObserver {
       comparator, delete, result);
   }
 
+  @Test
+  public void testPreCheckAndDeleteAfterRowLockV1ReadOnlyMasterStoreNoException()
+    throws IOException {
+    mockOperationMasterStoreTable();
+    regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op,
+      comparator, delete, result);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPreCheckAndDeleteAfterRowLockV2ReadOnlyException() throws IOException {
     regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
@@ -406,6 +525,13 @@ public class TestReadOnlyControllerRegionObserver {
   @Test
   public void testPreCheckAndDeleteAfterRowLockV2ReadOnlyMetaNoException() throws IOException {
     mockOperationForMetaTable();
+    regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
+  }
+
+  @Test
+  public void testPreCheckAndDeleteAfterRowLockV2ReadOnlyMasterStoreNoException()
+    throws IOException {
+    mockOperationMasterStoreTable();
     regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
   }
 
@@ -460,6 +586,12 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.preReplayWALs(ctx, info, edits);
   }
 
+  @Test
+  public void testPreReplayWALsReadOnlyMasterStoreNoException() throws IOException {
+    mockOperationMasterStoreTable();
+    regionReadOnlyController.preReplayWALs(ctx, info, edits);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void testPreBulkLoadHFileReadOnlyException() throws IOException {
     regionReadOnlyController.preBulkLoadHFile(ctx, familyPaths);
@@ -478,6 +610,12 @@ public class TestReadOnlyControllerRegionObserver {
   @Test
   public void testPreWALAppendReadOnlyMetaNoException() throws IOException {
     when(key.getTableName()).thenReturn(TableName.META_TABLE_NAME);
+    regionReadOnlyController.preWALAppend(ctx, key, edit);
+  }
+
+  @Test
+  public void testPreWALAppendReadOnlyMasterStoreNoException() throws IOException {
+    when(key.getTableName()).thenReturn(MasterRegionFactory.TABLE_NAME);
     regionReadOnlyController.preWALAppend(ctx, key, edit);
   }
 }

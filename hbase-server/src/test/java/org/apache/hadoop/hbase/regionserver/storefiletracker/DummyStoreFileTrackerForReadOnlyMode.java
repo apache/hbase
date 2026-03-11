@@ -22,16 +22,41 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DummyStoreFileTrackerForReadOnlyMode extends StoreFileTrackerBase {
+  private static final Logger LOG =
+    LoggerFactory.getLogger(DummyStoreFileTrackerForReadOnlyMode.class);
+
   private boolean readOnlyUsed = false;
   private boolean compactionExecuted = false;
   private boolean addExecuted = false;
   private boolean setExecuted = false;
 
-  public DummyStoreFileTrackerForReadOnlyMode(Configuration conf, boolean isPrimaryReplica) {
-    super(conf, isPrimaryReplica, null);
+  private static StoreContext buildStoreContext(Configuration conf, TableName tableName) {
+    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
+    HRegionFileSystem hfs = Mockito.mock(HRegionFileSystem.class);
+    try {
+      Mockito.when(hfs.getRegionInfo()).thenReturn(regionInfo);
+      Mockito.when(hfs.getFileSystem()).thenReturn(FileSystem.get(conf));
+    } catch (IOException e) {
+      LOG.error("Failed to get FileSystem for StoreContext creation", e);
+    }
+    return StoreContext.getBuilder().withRegionFileSystem(hfs).build();
+  }
+
+  public DummyStoreFileTrackerForReadOnlyMode(Configuration conf, boolean isPrimaryReplica,
+    TableName tableName) {
+    super(conf, isPrimaryReplica, buildStoreContext(conf, tableName));
   }
 
   @Override
