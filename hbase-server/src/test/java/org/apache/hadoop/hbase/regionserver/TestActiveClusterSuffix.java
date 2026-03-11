@@ -25,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ActiveClusterSuffix;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -116,7 +117,7 @@ public class TestActiveClusterSuffix {
     String cluster_suffix1 =
       new String(mfs.getSuffixFileDataToCompare(), StandardCharsets.US_ASCII);
     // Compute using config
-    String cluster_suffix2 = mfs.getSuffixFromConfig();
+    String cluster_suffix2 = ActiveClusterSuffix.getSuffixFromConfig(TEST_UTIL.getConfiguration());
 
     assertEquals(cluster_suffix1, cluster_suffix2);
     assertEquals(cluster_suffix, cluster_suffix1);
