@@ -21,8 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import net.bytebuddy.dynamic.TypeResolutionStrategy;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,7 +32,6 @@ import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterIdProtos;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -91,10 +88,10 @@ public class TestActiveClusterSuffix {
 
     try (FSDataInputStream in = fs.open(filePath)) {
       ActiveClusterSuffix suffixFromFile = ActiveClusterSuffix.parseFrom(in.readAllBytes());
-      ActiveClusterSuffix suffixFromConfig = ActiveClusterSuffix.fromConfig(TEST_UTIL.getConfiguration(),
-        mfs.getClusterId());
-      assertEquals("Active Cluster Suffix file content doesn't match configuration",
-        suffixFromFile, suffixFromConfig);
+      ActiveClusterSuffix suffixFromConfig =
+        ActiveClusterSuffix.fromConfig(TEST_UTIL.getConfiguration(), mfs.getClusterId());
+      assertEquals("Active Cluster Suffix file content doesn't match configuration", suffixFromFile,
+        suffixFromConfig);
     }
   }
 
@@ -123,8 +120,8 @@ public class TestActiveClusterSuffix {
     // Compute using file contents
     ActiveClusterSuffix cluster_suffix1 = mfs.getActiveClusterSuffix();
     // Compute using config
-    ActiveClusterSuffix cluster_suffix2 = ActiveClusterSuffix
-      .fromConfig(TEST_UTIL.getConfiguration(), new ClusterId(clusterId));
+    ActiveClusterSuffix cluster_suffix2 =
+      ActiveClusterSuffix.fromConfig(TEST_UTIL.getConfiguration(), new ClusterId(clusterId));
 
     assertEquals(cluster_suffix1, cluster_suffix2);
     assertEquals(cluster_suffix, cluster_suffix1.toString());
