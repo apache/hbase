@@ -22,8 +22,9 @@ import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ActiveClusterSuffixProtos;
@@ -57,8 +58,8 @@ public class ActiveClusterSuffix {
   }
 
   public static ActiveClusterSuffix fromConfig(Configuration conf, ClusterId clusterId) {
-    return new ActiveClusterSuffix(clusterId.toString(), conf.get(HConstants.HBASE_META_TABLE_SUFFIX,
-      HConstants.HBASE_META_TABLE_SUFFIX_DEFAULT_VALUE));
+    return new ActiveClusterSuffix(clusterId.toString(), conf
+      .get(HConstants.HBASE_META_TABLE_SUFFIX, HConstants.HBASE_META_TABLE_SUFFIX_DEFAULT_VALUE));
   }
 
   /** Returns The active cluster suffix serialized using pb w/ pb magic prefix */
@@ -93,14 +94,13 @@ public class ActiveClusterSuffix {
 
   /** Returns A pb instance to represent this instance. */
   public ActiveClusterSuffixProtos.ActiveClusterSuffix convert() {
-    return ActiveClusterSuffixProtos.ActiveClusterSuffix.newBuilder()
-      .setClusterId(cluster_id)
-      .setSuffix(suffix)
-      .build();
+    return ActiveClusterSuffixProtos.ActiveClusterSuffix.newBuilder().setClusterId(cluster_id)
+      .setSuffix(suffix).build();
   }
 
   /** Returns A {@link ActiveClusterSuffix} made from the passed in <code>cs</code> */
-  public static ActiveClusterSuffix convert(final ActiveClusterSuffixProtos.ActiveClusterSuffix cs) {
+  public static ActiveClusterSuffix
+    convert(final ActiveClusterSuffixProtos.ActiveClusterSuffix cs) {
     return new ActiveClusterSuffix(cs.getClusterId(), cs.getSuffix());
   }
 
@@ -113,13 +113,15 @@ public class ActiveClusterSuffix {
       Strings.isNullOrEmpty(this.suffix) ? "<blank>" : this.suffix);
   }
 
-  @Override public boolean equals(Object o) {
+  @Override
+  public boolean equals(Object o) {
     if (o == null || getClass() != o.getClass()) return false;
     ActiveClusterSuffix that = (ActiveClusterSuffix) o;
     return Objects.equals(cluster_id, that.cluster_id) && Objects.equals(suffix, that.suffix);
   }
 
-  @Override public int hashCode() {
+  @Override
+  public int hashCode() {
     return Objects.hash(cluster_id, suffix);
   }
 }
