@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -38,7 +37,6 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public abstract class AbstractReadOnlyController implements Coprocessor {
-  private MasterServices masterServices;
   private static final Logger LOG = LoggerFactory.getLogger(AbstractReadOnlyController.class);
 
   protected void internalReadOnlyGuard() throws DoNotRetryIOException {
