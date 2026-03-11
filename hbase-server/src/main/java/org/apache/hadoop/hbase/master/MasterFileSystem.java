@@ -415,7 +415,7 @@ public class MasterFileSystem {
           acs, getActiveClusterSuffix());
       } catch (FileNotFoundException fnfe) {
         // this is the active cluster, create active cluster suffix file if it does not exist
-        FSUtils.setActiveClusterSuffix(fs, rootdir, getSuffixFileDataToWrite(), wait);
+        FSUtils.setActiveClusterSuffix(fs, rootdir, computeAndSetSuffixFileDataToWrite(), wait);
       }
     } else {
       // this is a replica cluster
@@ -447,8 +447,7 @@ public class MasterFileSystem {
     return str.getBytes(StandardCharsets.UTF_8);
   }
 
-  //
-  public byte[] getSuffixFileDataToWrite() {
+  public byte[] computeAndSetSuffixFileDataToWrite() {
     String str = getClusterId().toString() + ":" + getActiveClusterSuffixFromConfig(conf);
     this.activeClusterSuffix = new ActiveClusterSuffix(str);
     return str.getBytes(StandardCharsets.UTF_8);
