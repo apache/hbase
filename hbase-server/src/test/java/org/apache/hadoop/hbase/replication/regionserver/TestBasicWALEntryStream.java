@@ -882,6 +882,81 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     }
   }
 
+  /**
+   * Test that currentPosition in ReplicationSourceWALReader is properly reset when a WAL file
+   * switch is detected via the switched() check in run(). Without the fix, a stale position from
+   * the old WAL file would be carried to the new WAL file if a WALEntryFilterRetryableException
+   * causes the outer loop to restart.
+   * <p>
+   * The scenario:
+   * <ol>
+   * <li>Batch capacity is set to 1 so readWALEntries() returns after each entry without seeing
+   * EOF.</li>
+   * <li>After the last entry of WAL A, hasNext() at line 153 detects EOF, dequeues the old file,
+   * and returns RETRY_IMMEDIATELY.</li>
+   * <li>The switched() check at line 160 fires and enqueues an EOF batch, but currentPosition is
+   * NOT updated (this is the bug).</li>
+   * <li>The next readWALEntries() on WAL B hits a WALEntryFilterRetryableException, causing the
+   * outer loop to restart.</li>
+   * <li>A new WALEntryStream is created with the stale position from WAL A, applied to WAL B.</li>
+   * </ol>
+   */
+  @Test
+  public void testPositionResetOnFileSwitchWithRetryableFilter() throws Exception {
+    // Write 3 entries to WAL A
+    appendEntriesToLogAndSync(3);
+
+    // Roll the WAL so WAL A is closed and WAL B is created
+    log.rollWriter();
+    AbstractFSWAL<?> abstractWAL = (AbstractFSWAL<?>) log;
+    Waiter.waitFor(CONF, 5000,
+      (Waiter.Predicate<Exception>) () -> abstractWAL.getInflightWALCloseCount() == 0);
+
+    // Write 3 entries to WAL B
+    appendEntriesToLogAndSync(3);
+
+    // Use batch capacity of 1 so readWALEntries() returns after each entry.
+    // This ensures EOF on WAL A is detected by hasNext() at line 153 (not inside
+    // readWALEntries), which triggers the switched() path at line 160.
+    Configuration conf = new Configuration(CONF);
+    conf.setInt("replication.source.nb.capacity", 1);
+
+    // Filter that throws on the first WAL B entry, but only once.
+    AtomicInteger totalFilterCalls = new AtomicInteger(0);
+    AtomicBoolean threwOnce = new AtomicBoolean(false);
+    WALEntryFilter filter = entry -> {
+      int callNum = totalFilterCalls.incrementAndGet();
+      // Entries 1-3 are from WAL A (pass). Entry 4+ is from WAL B.
+      if (callNum > 3 && !threwOnce.get()) {
+        threwOnce.set(true);
+        throw new WALEntryFilterRetryableException("simulated filter failure after file switch");
+      }
+      return entry;
+    };
+
+    ReplicationSource source = mockReplicationSource(false, conf);
+    when(source.isPeerEnabled()).thenReturn(true);
+    ReplicationSourceWALReader reader =
+      new ReplicationSourceWALReader(fs, conf, logQueue, 0, filter, source, fakeWalGroupId);
+    reader.start();
+
+    // Collect all batches until we've seen all 6 entries (3 from WAL A + 3 from WAL B).
+    // Use a timeout to detect if the reader gets stuck (the bug).
+    int totalEntries = 0;
+    long deadline = System.currentTimeMillis() + 30000;
+    while (totalEntries < 6) {
+      long remaining = deadline - System.currentTimeMillis();
+      assertTrue("Reader appears stuck - likely position corruption. Only got " + totalEntries
+        + " of 6 entries", remaining > 0);
+      WALEntryBatch batch = reader.poll(1);
+      if (batch != null && batch != WALEntryBatch.NO_MORE_DATA) {
+        totalEntries += batch.getNbEntries();
+      }
+    }
+    assertEquals(6, totalEntries);
+    assertTrue("Filter should have thrown at least once", threwOnce.get());
+  }
+
   private static class PartialWALEntryFailingWALEntryFilter implements WALEntryFilter {
     private int filteredWALEntryCount = -1;
     private int walEntryCount = 0;
