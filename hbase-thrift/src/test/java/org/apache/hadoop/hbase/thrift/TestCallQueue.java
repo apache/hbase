@@ -18,34 +18,29 @@
 package org.apache.hadoop.hbase.thrift;
 
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Unit testing for CallQueue, a part of the org.apache.hadoop.hbase.thrift package.
  */
-@Category({ ClientTests.class, SmallTests.class })
-@RunWith(Parameterized.class)
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestCallQueue {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCallQueue.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCallQueue.class);
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -56,15 +51,14 @@ public class TestCallQueue {
   private int elementsAdded;
   private int elementsRemoved;
 
-  @Parameters
-  public static Collection<Object[]> getParameters() {
-    Collection<Object[]> parameters = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     for (int elementsAdded : new int[] { 100, 200, 300 }) {
       for (int elementsRemoved : new int[] { 0, 20, 100 }) {
-        parameters.add(new Object[] { elementsAdded, elementsRemoved });
+        params.add(Arguments.of(elementsAdded, elementsRemoved));
       }
     }
-    return parameters;
+    return params.stream();
   }
 
   public TestCallQueue(int elementsAdded, int elementsRemoved) {
@@ -74,7 +68,7 @@ public class TestCallQueue {
 
   }
 
-  @Test
+  @TestTemplate
   public void testPutTake() throws Exception {
     ThriftMetrics metrics = createMetrics();
     CallQueue callQueue = new CallQueue(new LinkedBlockingQueue<>(), metrics);
@@ -87,7 +81,7 @@ public class TestCallQueue {
     verifyMetrics(metrics, "timeInQueue_num_ops", elementsRemoved);
   }
 
-  @Test
+  @TestTemplate
   public void testOfferPoll() throws Exception {
     ThriftMetrics metrics = createMetrics();
     CallQueue callQueue = new CallQueue(new LinkedBlockingQueue<>(), metrics);
@@ -119,5 +113,4 @@ public class TestCallQueue {
       }
     };
   }
-
 }

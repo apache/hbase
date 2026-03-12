@@ -18,11 +18,11 @@
 package org.apache.hadoop.hbase.http.prometheus;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.metrics2.MetricsSystem;
@@ -30,20 +30,15 @@ import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test prometheus Sink.
  */
-@Category({ SmallTests.class, MiscTests.class })
+@Tag(SmallTests.TAG)
+@Tag(MiscTests.TAG)
 public class TestPrometheusServlet {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_TEST_RULE =
-    HBaseClassTestRule.forClass(TestPrometheusServlet.class);
 
   @Test
   public void testPublish() throws IOException {
@@ -66,8 +61,8 @@ public class TestPrometheusServlet {
     // THEN
     String writtenMetrics = stream.toString(UTF_8.name());
     System.out.println(writtenMetrics);
-    Assert.assertTrue("The expected metric line is missing from prometheus metrics output",
-      writtenMetrics.contains("test_metrics_num_bucket_create_fails{context=\"dfs\""));
+    assertTrue(writtenMetrics.contains("test_metrics_num_bucket_create_fails{context=\"dfs\""),
+      "The expected metric line is missing from prometheus metrics output");
 
     metrics.stop();
     metrics.shutdown();

@@ -17,15 +17,18 @@
  */
 package org.apache.hadoop.hbase.coprocessor.example.row.stats.sizebucket;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Map;
 import org.apache.hadoop.hbase.coprocessor.example.row.stats.SizeBucket;
 import org.apache.hadoop.hbase.coprocessor.example.row.stats.SizeBucketTracker;
-import org.junit.Test;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
 
+@Tag(SmallTests.TAG)
 public class TestSizeBucketTracker {
 
   @Test
@@ -36,7 +39,7 @@ public class TestSizeBucketTracker {
     // Initialize
     Map<String, Long> bucketToCount = sizeBucketTracker.toMap();
     for (SizeBucket sizeBucket : SizeBucket.values()) {
-      assertEquals((long) bucketToCount.get(sizeBucket.bucket()), 0L);
+      assertEquals(0L, (long) bucketToCount.get(sizeBucket.bucket()));
     }
 
     // minBytes
@@ -45,7 +48,7 @@ public class TestSizeBucketTracker {
     }
     bucketToCount = sizeBucketTracker.toMap();
     for (SizeBucket sizeBucket : sizeBuckets) {
-      assertEquals((long) bucketToCount.get(sizeBucket.bucket()), 1L);
+      assertEquals(1L, (long) bucketToCount.get(sizeBucket.bucket()));
     }
 
     // maxBytes - 1
@@ -54,7 +57,7 @@ public class TestSizeBucketTracker {
     }
     bucketToCount = sizeBucketTracker.toMap();
     for (SizeBucket sizeBucket : sizeBuckets) {
-      assertEquals((long) bucketToCount.get(sizeBucket.bucket()), 2L);
+      assertEquals(2L, (long) bucketToCount.get(sizeBucket.bucket()));
     }
 
     // maxBytes
@@ -65,13 +68,13 @@ public class TestSizeBucketTracker {
     for (int i = 0; i < sizeBuckets.length - 1; i++) {
       SizeBucket currBucket = sizeBuckets[i];
       if (currBucket == SizeBucket.KILOBYTES_1) {
-        assertEquals((long) bucketToCount.get(currBucket.bucket()), 2L);
+        assertEquals(2L, (long) bucketToCount.get(currBucket.bucket()));
       } else {
         SizeBucket nextBucket = sizeBuckets[i + 1];
         if (nextBucket == SizeBucket.KILOBYTES_MAX) {
-          assertEquals((long) bucketToCount.get(nextBucket.bucket()), 4L);
+          assertEquals(4L, (long) bucketToCount.get(nextBucket.bucket()));
         } else {
-          assertEquals((long) bucketToCount.get(nextBucket.bucket()), 3L);
+          assertEquals(3L, (long) bucketToCount.get(nextBucket.bucket()));
         }
       }
     }
@@ -87,7 +90,7 @@ public class TestSizeBucketTracker {
     JsonObject mapJson = sizeBucketTracker.toJsonObject();
     for (SizeBucket sizeBucket : sizeBuckets) {
       Number count = mapJson.get(sizeBucket.bucket()).getAsNumber();
-      assertEquals(count.longValue(), 1L);
+      assertEquals(1L, count.longValue());
     }
   }
 }

@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeSet;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -92,30 +93,8 @@ public final class BackupUtils {
    */
   public static Map<String, Long>
     getRSLogTimestampMins(Map<TableName, Map<String, Long>> rsLogTimestampMap) {
-    if (rsLogTimestampMap == null || rsLogTimestampMap.isEmpty()) {
-      return null;
-    }
-
-    HashMap<String, Long> rsLogTimestampMins = new HashMap<>();
-    HashMap<String, HashMap<TableName, Long>> rsLogTimestampMapByRS = new HashMap<>();
-
-    for (Entry<TableName, Map<String, Long>> tableEntry : rsLogTimestampMap.entrySet()) {
-      TableName table = tableEntry.getKey();
-      Map<String, Long> rsLogTimestamp = tableEntry.getValue();
-      for (Entry<String, Long> rsEntry : rsLogTimestamp.entrySet()) {
-        String rs = rsEntry.getKey();
-        Long ts = rsEntry.getValue();
-        rsLogTimestampMapByRS.putIfAbsent(rs, new HashMap<>());
-        rsLogTimestampMapByRS.get(rs).put(table, ts);
-      }
-    }
-
-    for (Entry<String, HashMap<TableName, Long>> entry : rsLogTimestampMapByRS.entrySet()) {
-      String rs = entry.getKey();
-      rsLogTimestampMins.put(rs, BackupUtils.getMinValue(entry.getValue()));
-    }
-
-    return rsLogTimestampMins;
+    return rsLogTimestampMap.values().stream().flatMap(map -> map.entrySet().stream())
+      .collect(Collectors.toMap(Entry::getKey, Entry::getValue, Math::min));
   }
 
   /**
@@ -344,22 +323,6 @@ public final class BackupUtils {
   }
 
   /**
-   * Get the min value for all the Values a map.
-   * @param map map
-   * @return the min value
-   */
-  public static <T> Long getMinValue(Map<T, Long> map) {
-    Long minTimestamp = null;
-    if (map != null) {
-      ArrayList<Long> timestampList = new ArrayList<>(map.values());
-      Collections.sort(timestampList);
-      // The min among all the RS log timestamps will be kept in backup system table table.
-      minTimestamp = timestampList.get(0);
-    }
-    return minTimestamp;
-  }
-
-  /**
    * Parses host name:port from archived WAL path
    * @param p path
    * @return host name
@@ -547,12 +510,21 @@ public final class BackupUtils {
       + HConstants.HREGION_LOGDIR_NAME;
   }
 
+  /**
+   * Loads all backup history as stored in files on the given backup root path.
+   * @return all backup history, from newest (most recent) to oldest (least recent)
+   */
   private static List<BackupInfo> getHistory(Configuration conf, Path backupRootPath)
     throws IOException {
     // Get all (n) history from backup root destination
 
     FileSystem fs = FileSystem.get(backupRootPath.toUri(), conf);
-    RemoteIterator<LocatedFileStatus> it = fs.listLocatedStatus(backupRootPath);
+    RemoteIterator<LocatedFileStatus> it;
+    try {
+      it = fs.listLocatedStatus(backupRootPath);
+    } catch (FileNotFoundException e) {
+      return Collections.emptyList();
+    }
 
     List<BackupInfo> infos = new ArrayList<>();
     while (it.hasNext()) {
@@ -571,26 +543,15 @@ public final class BackupUtils {
       }
     }
     // Sort
-    Collections.sort(infos, new Comparator<BackupInfo>() {
-      @Override
-      public int compare(BackupInfo o1, BackupInfo o2) {
-        long ts1 = getTimestamp(o1.getBackupId());
-        long ts2 = getTimestamp(o2.getBackupId());
-
-        if (ts1 == ts2) {
-          return 0;
-        }
-
-        return ts1 < ts2 ? 1 : -1;
-      }
-
-      private long getTimestamp(String backupId) {
-        return Long.parseLong(Iterators.get(Splitter.on('_').split(backupId).iterator(), 1));
-      }
-    });
+    infos.sort(Comparator.<BackupInfo> naturalOrder().reversed());
     return infos;
   }
 
+  /**
+   * Loads all backup history as stored in files on the given backup root path, and returns the
+   * first n entries matching all given filters.
+   * @return (subset of) backup history, from newest (most recent) to oldest (least recent)
+   */
   public static List<BackupInfo> getHistory(Configuration conf, int n, Path backupRootPath,
     BackupInfo.Filter... filters) throws IOException {
     List<BackupInfo> infos = getHistory(conf, backupRootPath);

@@ -17,22 +17,18 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestShellNoCluster extends AbstractTestShell {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestShellNoCluster.class);
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     RubyShellTest.setUpConfig(this);
 
@@ -44,7 +40,7 @@ public class TestShellNoCluster extends AbstractTestShell {
   }
 
   @Override
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     // no cluster
   }

@@ -17,33 +17,25 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestProcedureMetrics {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcedureMetrics.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestProcedureMetrics.class);
 
   private static final int PROCEDURE_EXECUTOR_SLOTS = 1;
 
@@ -60,7 +52,7 @@ public class TestProcedureMetrics {
   private static int successCount = 0;
   private static int failedCount = 0;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtil();
     testDir = htu.getDataTestDir();
@@ -76,7 +68,7 @@ public class TestProcedureMetrics {
     ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     procExecutor.stop();
     procStore.stop(false);
@@ -88,13 +80,13 @@ public class TestProcedureMetrics {
     // procedure that executes successfully
     ProcedureMetrics proc = new ProcedureMetrics(true);
     long id = ProcedureTestingUtility.submitAndWait(procExecutor, proc);
-    assertNotEquals("ProcId zero!", 0, id);
+    assertNotEquals(0, id, "ProcId zero!");
     beginCount++;
     successCount++;
     ProcedureTestingUtility.waitProcedure(procExecutor, proc);
-    assertEquals("beginCount doesn't match!", beginCount, proc.beginCount);
-    assertEquals("successCount doesn't match!", successCount, proc.successCount);
-    assertEquals("failedCont doesn't match!", failedCount, proc.failedCount);
+    assertEquals(beginCount, proc.beginCount, "beginCount doesn't match!");
+    assertEquals(successCount, proc.successCount, "successCount doesn't match!");
+    assertEquals(failedCount, proc.failedCount, "failedCont doesn't match!");
   }
 
   @Test
@@ -102,13 +94,13 @@ public class TestProcedureMetrics {
     // procedure that fails
     ProcedureMetrics proc = new ProcedureMetrics(false);
     long id = ProcedureTestingUtility.submitAndWait(procExecutor, proc);
-    assertNotEquals("ProcId zero!", 0, id);
+    assertNotEquals(0, id, "ProcId zero!");
     beginCount++;
     failedCount++;
     ProcedureTestingUtility.waitProcedure(procExecutor, proc);
-    assertEquals("beginCount doesn't match!", beginCount, proc.beginCount);
-    assertEquals("successCount doesn't match!", successCount, proc.successCount);
-    assertEquals("failedCont doesn't match!", failedCount, proc.failedCount);
+    assertEquals(beginCount, proc.beginCount, "beginCount doesn't match!");
+    assertEquals(successCount, proc.successCount, "successCount doesn't match!");
+    assertEquals(failedCount, proc.failedCount, "failedCont doesn't match!");
   }
 
   @Test
@@ -116,13 +108,13 @@ public class TestProcedureMetrics {
     // procedure that yields
     ProcedureMetrics proc = new ProcedureMetrics(true, true);
     long id = ProcedureTestingUtility.submitAndWait(procExecutor, proc);
-    assertNotEquals("ProcId zero!", 0, id);
+    assertNotEquals(0, id, "ProcId zero!");
     beginCount++;
     successCount++;
     ProcedureTestingUtility.waitProcedure(procExecutor, proc);
-    assertEquals("beginCount doesn't match!", beginCount, proc.beginCount);
-    assertEquals("successCount doesn't match!", successCount, proc.successCount);
-    assertEquals("failedCont doesn't match!", failedCount, proc.failedCount);
+    assertEquals(beginCount, proc.beginCount, "beginCount doesn't match!");
+    assertEquals(successCount, proc.successCount, "successCount doesn't match!");
+    assertEquals(failedCount, proc.failedCount, "failedCont doesn't match!");
   }
 
   @Test
@@ -130,13 +122,13 @@ public class TestProcedureMetrics {
     // procedure that yields and fails
     ProcedureMetrics proc = new ProcedureMetrics(false, true);
     long id = ProcedureTestingUtility.submitAndWait(procExecutor, proc);
-    assertNotEquals("ProcId zero!", 0, id);
+    assertNotEquals(0, id, "ProcId zero!");
     beginCount++;
     failedCount++;
     ProcedureTestingUtility.waitProcedure(procExecutor, proc);
-    assertEquals("beginCount doesn't match!", beginCount, proc.beginCount);
-    assertEquals("successCount doesn't match!", successCount, proc.successCount);
-    assertEquals("failedCont doesn't match!", failedCount, proc.failedCount);
+    assertEquals(beginCount, proc.beginCount, "beginCount doesn't match!");
+    assertEquals(successCount, proc.successCount, "successCount doesn't match!");
+    assertEquals(failedCount, proc.failedCount, "failedCont doesn't match!");
   }
 
   @Test
@@ -152,7 +144,7 @@ public class TestProcedureMetrics {
 
     ProcedureMetrics proc = new ProcedureMetrics(true, true, 3, subprocs);
     long id = ProcedureTestingUtility.submitAndWait(procExecutor, proc);
-    assertNotEquals("ProcId zero!", 0, id);
+    assertNotEquals(0, id, "ProcId zero!");
     beginCount += subProcCount + 1;
     successCount += subProcCount - (failChildIndex + 1);
     if (failChildIndex >= 0) {
@@ -161,9 +153,9 @@ public class TestProcedureMetrics {
       successCount++;
     }
     ProcedureTestingUtility.waitProcedure(procExecutor, proc);
-    assertEquals("beginCount doesn't match!", beginCount, proc.beginCount);
-    assertEquals("successCount doesn't match!", successCount, proc.successCount);
-    assertEquals("failedCont doesn't match!", failedCount, proc.failedCount);
+    assertEquals(beginCount, proc.beginCount, "beginCount doesn't match!");
+    assertEquals(successCount, proc.successCount, "successCount doesn't match!");
+    assertEquals(failedCount, proc.failedCount, "failedCont doesn't match!");
   }
 
   private static class TestProcEnv {

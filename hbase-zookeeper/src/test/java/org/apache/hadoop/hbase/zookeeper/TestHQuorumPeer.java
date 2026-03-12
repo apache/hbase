@@ -17,40 +17,36 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.IOException;
 import java.util.Properties;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseZKTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test for HQuorumPeer.
  */
-@Category({ ZKTests.class, SmallTests.class })
+@Tag(ZKTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHQuorumPeer {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHQuorumPeer.class);
 
   private static final HBaseZKTestingUtil TEST_UTIL = new HBaseZKTestingUtil();
   private static int PORT_NO = 21818;
   private Path dataDir;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     // Set it to a non-standard port.
     TEST_UTIL.getConfiguration().setInt(HConstants.ZOOKEEPER_CLIENT_PORT, PORT_NO);

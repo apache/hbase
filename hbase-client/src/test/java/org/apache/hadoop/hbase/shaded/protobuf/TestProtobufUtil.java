@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.shaded.protobuf;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -48,9 +47,7 @@ import org.apache.hadoop.hbase.client.SlowLogParams;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.protobuf.Any;
@@ -73,11 +70,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 
-@Category(SmallTests.class)
+@org.junit.jupiter.api.Tag(SmallTests.TAG)
 public class TestProtobufUtil {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProtobufUtil.class);
+
   private static final String TAG_STR = "tag-1";
   private static final byte TAG_TYPE = (byte) 10;
   private static final HBaseProtos.ServerName SERVER_NAME =
@@ -504,7 +499,7 @@ public class TestProtobufUtil {
   }
 
   /**
-   * Test {@link ProtobufUtil#toCell(Cell, boolean)} and
+   * Test {@link ProtobufUtil#toCell(ExtendedCell, boolean)} and
    * {@link ProtobufUtil#toCell(ExtendedCellBuilder, CellProtos.Cell, boolean)} conversion methods
    * when it contains tags and encode/decode tags is set to true.
    */

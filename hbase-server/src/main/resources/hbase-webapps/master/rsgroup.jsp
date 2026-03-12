@@ -434,7 +434,7 @@
          <tr>
              <th>Namespace</th>
              <th>Table</th>
-             <th>Stats</th>
+             <th>State</th>
              <th>Online Regions</th>
              <th>Offline Regions</th>
              <th>Failed Regions</th>

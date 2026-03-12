@@ -112,7 +112,7 @@ public final class RegionModeStrategy implements ModeStrategy {
       startKey = Bytes.toStringBinary(elements[1]);
       startCode = Bytes.toString(elements[2]);
       replicaId =
-        elements.length == 4 ? Integer.valueOf(Bytes.toString(elements[3])).toString() : "";
+        elements.length == 4 ? Integer.valueOf(Bytes.toString(elements[3])).toString() : "0";
       region = RegionInfo.encodeRegionName(regionMetrics.getRegionName());
     } catch (IOException ignored) {
       // Exception deliberately ignored

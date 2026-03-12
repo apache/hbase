@@ -45,11 +45,11 @@ MEMSTORE_FLUSHSIZE, and READONLY.
 
 For example, to change the max size of a family to 128MB, do:
 
-  hbase> alter 't1', METHOD => 'table_att', MAX_FILESIZE => '134217728'
+  hbase> alter_async 't1', METHOD => 'table_att', MAX_FILESIZE => '134217728'
 
 There could be more than one alteration in one command:
 
-  hbase> alter 't1', {NAME => 'f1'}, {NAME => 'f2', METHOD => 'delete'}
+  hbase> alter_async 't1', {NAME => 'f1'}, {NAME => 'f2', METHOD => 'delete'}
 
 To check if all the regions have been updated, use alter_status <table_name>
 EOF

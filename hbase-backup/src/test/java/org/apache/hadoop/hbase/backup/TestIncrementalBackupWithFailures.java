@@ -17,13 +17,11 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
@@ -41,37 +39,21 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category(LargeTests.class)
-@RunWith(Parameterized.class)
+@Tag(LargeTests.TAG)
 public class TestIncrementalBackupWithFailures extends TestBackupBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIncrementalBackupWithFailures.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestIncrementalBackupWithFailures.class);
 
-  @Parameterized.Parameters
-  public static Collection<Object[]> data() {
+  static {
     provider = "multiwal";
-    List<Object[]> params = new ArrayList<Object[]>();
-    params.add(new Object[] { Boolean.TRUE });
-    return params;
-  }
-
-  public TestIncrementalBackupWithFailures(Boolean b) {
   }
 
   // implement all test cases in 1 test since incremental backup/restore has dependencies
@@ -103,7 +85,7 @@ public class TestIncrementalBackupWithFailures extends TestBackupBase {
     Table t1 = insertIntoTable(conn, table1, famName, 1, ADD_ROWS);
     LOG.debug("writing " + ADD_ROWS + " rows to " + table1);
 
-    Assert.assertEquals(TEST_UTIL.countRows(t1), NB_ROWS_IN_BATCH + ADD_ROWS + NB_ROWS_FAM3);
+    assertEquals(TEST_UTIL.countRows(t1), NB_ROWS_IN_BATCH + ADD_ROWS + NB_ROWS_FAM3);
     t1.close();
     LOG.debug("written " + ADD_ROWS + " rows to " + table1);
 
@@ -115,7 +97,7 @@ public class TestIncrementalBackupWithFailures extends TestBackupBase {
       t2.put(p2);
     }
 
-    Assert.assertEquals(TEST_UTIL.countRows(t2), NB_ROWS_IN_BATCH + 5);
+    assertEquals(TEST_UTIL.countRows(t2), NB_ROWS_IN_BATCH + 5);
     t2.close();
     LOG.debug("written " + 5 + " rows to " + table2);
 

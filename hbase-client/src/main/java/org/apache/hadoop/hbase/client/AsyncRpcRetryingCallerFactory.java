@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.PRIORITY_UNSET;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.calcPriority;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkNotNull;
@@ -160,7 +159,6 @@ class AsyncRpcRetryingCallerFactory {
       checkNotNull(row, "row is null");
       checkNotNull(locateType, "locateType is null");
       checkNotNull(callable, "action is null");
-      this.priority = calcPriority(priority, tableName);
     }
 
     public AsyncSingleRequestRpcRetryingCaller<T> build() {
@@ -208,6 +206,8 @@ class AsyncRpcRetryingCallerFactory {
     private long scanTimeoutNs;
 
     private long rpcTimeoutNs;
+
+    private long lastNextCallNanos = System.nanoTime();
 
     private int priority = PRIORITY_UNSET;
 
@@ -275,6 +275,11 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
+    public ScanSingleRegionCallerBuilder lastNextCallNanos(long nanos) {
+      this.lastNextCallNanos = nanos;
+      return this;
+    }
+
     public ScanSingleRegionCallerBuilder pauseForServerOverloaded(long pause, TimeUnit unit) {
       this.pauseNsForServerOverloaded = unit.toNanos(pause);
       return this;
@@ -303,7 +308,6 @@ class AsyncRpcRetryingCallerFactory {
       checkNotNull(consumer, "consumer is null");
       checkNotNull(stub, "stub is null");
       checkNotNull(loc, "location is null");
-      this.priority = calcPriority(priority, loc.getRegion().getTable());
     }
 
     public AsyncScanSingleRegionRpcRetryingCaller build() {
@@ -311,7 +315,7 @@ class AsyncRpcRetryingCallerFactory {
       return new AsyncScanSingleRegionRpcRetryingCaller(retryTimer, conn, scan, scanMetrics,
         scannerId, resultCache, consumer, stub, loc, isRegionServerRemote, priority,
         scannerLeaseTimeoutPeriodNs, pauseNs, pauseNsForServerOverloaded, maxAttempts,
-        scanTimeoutNs, rpcTimeoutNs, startLogErrorsCnt, requestAttributes);
+        scanTimeoutNs, rpcTimeoutNs, lastNextCallNanos, startLogErrorsCnt, requestAttributes);
     }
 
     /**
@@ -411,6 +415,8 @@ class AsyncRpcRetryingCallerFactory {
 
     private int priority = PRIORITY_UNSET;
 
+    private TableName tableName;
+
     public MasterRequestCallerBuilder<T>
       action(AsyncMasterRequestRpcRetryingCaller.Callable<T> callable) {
       this.callable = callable;
@@ -447,13 +453,13 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
-    public MasterRequestCallerBuilder<T> priority(TableName tableName) {
-      this.priority = Math.max(priority, ConnectionUtils.getPriority(tableName));
+    public MasterRequestCallerBuilder<T> tableName(TableName tableName) {
+      this.tableName = tableName;
       return this;
     }
 
     public MasterRequestCallerBuilder<T> priority(int priority) {
-      this.priority = Math.max(this.priority, priority);
+      this.priority = priority;
       return this;
     }
 
@@ -463,9 +469,9 @@ class AsyncRpcRetryingCallerFactory {
 
     public AsyncMasterRequestRpcRetryingCaller<T> build() {
       preCheck();
-      return new AsyncMasterRequestRpcRetryingCaller<T>(retryTimer, conn, callable, priority,
-        pauseNs, pauseNsForServerOverloaded, maxAttempts, operationTimeoutNs, rpcTimeoutNs,
-        startLogErrorsCnt);
+      return new AsyncMasterRequestRpcRetryingCaller<T>(retryTimer, conn, callable, tableName,
+        priority, pauseNs, pauseNsForServerOverloaded, maxAttempts, operationTimeoutNs,
+        rpcTimeoutNs, startLogErrorsCnt);
     }
 
     /**

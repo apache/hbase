@@ -29,12 +29,12 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Before;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestIngestWithEncryption extends IntegrationTestIngest {
   private final static Logger LOG =
     LoggerFactory.getLogger(IntegrationTestIngestWithEncryption.class);
@@ -63,7 +63,7 @@ public class IntegrationTestIngestWithEncryption extends IntegrationTestIngest {
     initialized = true;
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     // Initialize the cluster. This invokes LoadTestTool -init_only, which

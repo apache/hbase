@@ -1,0 +1,305 @@
+//
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+import { docs } from "@/.source";
+import { toClientRenderer } from "fumadocs-mdx/runtime/vite";
+import { DocsLayout } from "@/components/docs/layout/docs";
+import {
+  DocsBody as FumaDocsBody,
+  DocsDescription as FumaDocsDescription,
+  DocsPage as FumaDocsPage,
+  DocsTitle as FumaDocsTitle
+} from "@/components/docs/layout/docs/page";
+import defaultMdxComponents from "fumadocs-ui/mdx";
+import type * as PageTree from "fumadocs-core/page-tree";
+import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
+import { useParams } from "react-router";
+import { useEffect } from "react";
+import { getPageTreePeers } from "fumadocs-core/page-tree";
+import { Card, Cards } from "fumadocs-ui/components/card";
+import { Step, Steps } from "fumadocs-ui/components/steps";
+import { Link } from "@/components/link";
+import type { MDXComponents } from "mdx/types";
+import type { TOCItemType } from "fumadocs-core/toc";
+import hbaseVersion from "@/lib/export-pdf/hbase-version.json";
+
+// Extend default MDX components to include Steps globally
+// Note: We'll override the 'a' component in the renderer to handle route-specific logic
+const baseMdxComponents: MDXComponents = {
+  ...defaultMdxComponents,
+  p: (props) => <p className="wrap-anywhere" {...props} />,
+  h1: (props) => <h1 className="font-bold" {...props} />,
+  Step,
+  Steps
+};
+
+export function baseOptions(): BaseLayoutProps {
+  return {
+    nav: {
+      title: (
+        <div className="flex items-center gap-2">
+          <img src="/favicon.ico" alt="HBase favicon" width={16} height={16} />
+          <p>Apache HBase</p>
+        </div>
+      )
+    },
+    githubUrl: "https://github.com/apache/hbase/"
+  };
+}
+
+type DocsLoaderData = { path: string; url: string; tree: unknown };
+
+const renderer = toClientRenderer(
+  docs.doc,
+  ({ toc, default: Mdx, frontmatter }, { tree }: { tree: PageTree.Root }) => {
+    const route = useParams()["*"];
+    const baseGithubPath = "hbase-website/app/pages/_docs/docs/_mdx/(multi-page)/";
+
+    // Filter TOC: only H1 (depth: 1) for single-page, all headings for other pages
+    const isSinglePage = route?.startsWith("single-page");
+    const filteredToc = isSinglePage ? toc.filter((item: any) => item.depth === 1) : toc;
+
+    // Handle hash navigation for single-page after content loads
+    useEffect(() => {
+      if (!isSinglePage) {
+        return;
+      }
+
+      const hash = window.location.hash;
+      if (!hash) {
+        return;
+      }
+
+      const targetId = hash.substring(1);
+
+      // Use MutationObserver to wait for the element to exist
+      const observer = new MutationObserver(() => {
+        const element = document.getElementById(targetId);
+        if (element) {
+          observer.disconnect();
+          element.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      });
+
+      // Check if element already exists
+      const element = document.getElementById(targetId);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        // Watch for DOM changes until element appears
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+      }
+
+      return () => observer.disconnect();
+    }, [isSinglePage]);
+
+    const grouppedRoutes = [
+      "configuration",
+      "upgrading",
+      "security",
+      "architecture",
+      "backup-restore",
+      "operational-management",
+      "building-and-developing"
+    ];
+    const trimmedRoute = route?.endsWith("/") ? route?.slice(0, -1) : route;
+    const mdxFileRoute = `${isSinglePage ? "" : `${trimmedRoute === "" ? "index" : trimmedRoute}.mdx`}`;
+    const isGrouppedRoute = !!trimmedRoute && grouppedRoutes.includes(trimmedRoute);
+
+    // Custom link component that transforms /docs/ links to anchors on single-page
+    const CustomLink = ({ href, children, ...rest }: any) => {
+      let transformedHref = href;
+
+      // Transform internal /docs/ links to single-page anchors when on single-page route
+      if (isSinglePage && !href.startsWith("/docs/single-page")) {
+        if (href?.startsWith("/docs")) {
+          // Convert /docs/configuration/basic-prerequisites to /docs/single-page#basic-prerequisites
+          // or /docs/architecture/regionserver#bucketcache-example-configuration to /docs/single-page#bucketcache-example-configuration
+          let anchor: string;
+          if (href.includes("#")) {
+            // If the href already has an anchor, use that
+            anchor = href.split("#")[1];
+          } else {
+            // Otherwise, extract the last path segment as the anchor
+            const segments = href.replace("/docs/", "").split("/");
+            anchor = segments[segments.length - 1];
+          }
+          transformedHref = `#${anchor}`;
+        } else if (href?.startsWith("/")) {
+          transformedHref = "https://hbase.apache.org" + href;
+        }
+      }
+
+      // Use default Link component for all links (external links are handled by Link component)
+      return (
+        <Link to={transformedHref ?? "#"} {...rest}>
+          {children}
+        </Link>
+      );
+    };
+
+    // Merge custom link component with base components
+    const mdxComponents = {
+      ...baseMdxComponents,
+      a: CustomLink
+    };
+
+    const renderPdfTocItems = (items: TOCItemType[]) => {
+      const groups: { parent: TOCItemType; children: TOCItemType[] }[] = [];
+      let current: { parent: TOCItemType; children: TOCItemType[] } | null = null;
+      for (const item of items) {
+        if (item.depth === 1) {
+          current = { parent: item, children: [] };
+          groups.push(current);
+        } else {
+          if (current) current.children.push(item);
+        }
+      }
+
+      return (
+        <ol className="mt-3 space-y-1 font-medium">
+          {groups.map(({ parent, children }) => (
+            <li key={parent.url}>
+              <a href={parent.url}>{parent.title}</a>
+
+              {children.length > 0 && (
+                <ol className="mt-1 list-inside list-decimal space-y-1 pl-2">
+                  {children.map((child) => (
+                    <li key={child.url}>
+                      <a href={child.url}>{child.title}</a>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </li>
+          ))}
+        </ol>
+      );
+    };
+    const printToc = isSinglePage
+      ? toc.filter((item: any) => item.depth === 1 || item.depth === 2)
+      : toc;
+
+    return (
+      <FumaDocsPage toc={filteredToc} tableOfContent={{ style: "clerk" }}>
+        <title>{frontmatter.title}</title>
+        <meta name="description" content={frontmatter.description} />
+
+        {/* Only for printing PDF book */}
+        {isSinglePage && (
+          <section className="print-only">
+            <div className="mt-40 flex break-after-page flex-col items-center justify-center gap-6 text-center">
+              <img
+                src="/images/large-logo.svg"
+                alt="Apache HBase logo"
+                className="mx-auto block h-24 w-auto dark:hidden"
+              />
+              <img
+                src="/images/dark-theme-large-logo.svg"
+                alt="Apache HBase logo"
+                className="mx-auto hidden h-24 w-auto dark:block"
+              />
+              <h1 className="text-4xl font-semibold tracking-wide">
+                Apache HBase® Reference Guide
+              </h1>
+              <p className="text-fd-muted-foreground text-sm">Version {hbaseVersion.version}</p>
+              <p className="text-fd-muted-foreground text-base">Apache HBase Team</p>
+            </div>
+          </section>
+        )}
+        {isSinglePage && printToc.length > 0 && (
+          <nav className="print-only break-after-page" aria-label="Table of contents">
+            <h2 className="text-2xl font-semibold tracking-wide">Contents</h2>
+            {renderPdfTocItems(printToc)}
+          </nav>
+        )}
+        {/* End of block */}
+
+        <div className="no-print">
+          <FumaDocsTitle>{frontmatter.title}</FumaDocsTitle>
+          <FumaDocsDescription>{frontmatter.description}</FumaDocsDescription>
+        </div>
+        <FumaDocsBody>
+          <Mdx components={mdxComponents} />
+          {route !== undefined && isGrouppedRoute && (
+            // table of content for groupped routes
+            <div className="flex flex-col">
+              <p>In this section:</p>
+              <Cards>
+                {getPageTreePeers(tree, `/docs/${trimmedRoute}`).map((peer) => (
+                  <Card key={peer.url} title={peer.name} href={peer.url}>
+                    {peer.description}
+                  </Card>
+                ))}
+              </Cards>
+            </div>
+          )}
+        </FumaDocsBody>
+
+        {route !== undefined && (
+          <a
+            href={`https://github.com/apache/hbase/${baseGithubPath}${mdxFileRoute}`}
+            rel="noreferrer noopener"
+            target="_blank"
+            className="text-fd-secondary-foreground bg-fd-secondary hover:text-fd-accent-foreground hover:bg-fd-accent w-fit rounded-xl border p-2 text-sm font-medium transition-colors"
+          >
+            Edit on GitHub
+          </a>
+        )}
+      </FumaDocsPage>
+    );
+  }
+);
+
+export function DocsPage({ loaderData }: { loaderData: DocsLoaderData }) {
+  const { tree, path } = loaderData;
+  const Content = renderer[path];
+
+  // Check if we're on single-page route
+  const isSinglePage = path.includes("single-page");
+
+  const layoutOptions = isSinglePage
+    ? {
+        ...baseOptions(),
+        sidebar: {
+          banner: (
+            <div className="px-4 py-2">
+              <p className="text-fd-muted-foreground text-center text-xs leading-relaxed">
+                You're viewing a single-page documentation. All content is merged into one
+                continuous page. You can switch to a multi-page version by using the dropdown above.
+              </p>
+            </div>
+          )
+        }
+      }
+    : baseOptions();
+
+  return (
+    <DocsLayout
+      {...layoutOptions}
+      tree={tree as PageTree.Root}
+      searchToggle={{ enabled: !isSinglePage }}
+      shouldRenderPageTree={!isSinglePage}
+    >
+      <Content tree={tree as PageTree.Root} />
+    </DocsLayout>
+  );
+}

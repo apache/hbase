@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
-import org.junit.jupiter.api.BeforeAll;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
@@ -47,10 +46,8 @@ public class IncrementalBackupRestoreTestBase extends TestBackupBase {
   private static final byte[] BULKLOAD_START_KEY = new byte[] { 0x00 };
   private static final byte[] BULKLOAD_END_KEY = new byte[] { Byte.MAX_VALUE };
 
-  @BeforeAll
-  public static void setUp() throws Exception {
+  static {
     provider = "multiwal";
-    TestBackupBase.setUp();
   }
 
   protected void checkThrowsCFMismatch(IOException ex, List<TableName> tables) {

@@ -21,27 +21,22 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestStochasticLoadBalancerRegionReplicaWithRacks extends StochasticBalancerTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStochasticLoadBalancerRegionReplicaWithRacks.class);
 
   private static class ForTestRackManager extends RackManager {
 
     int numRacks;
-    Map<String, Integer> serverIndexes = new HashMap<String, Integer>();
+    Map<String, Integer> serverIndexes = new HashMap<>();
     int numServers = 0;
 
     public ForTestRackManager(int numRacks) {
@@ -65,13 +60,12 @@ public class TestStochasticLoadBalancerRegionReplicaWithRacks extends Stochastic
     setMaxRunTime(Duration.ofSeconds(5));
     loadBalancer.onConfigurationChange(conf);
     int numNodes = 5;
-    int numRegions = numNodes * 1;
     int replication = 3; // 3 replicas per region
     int numRegionsPerServer = 1;
     int numTables = 1;
     int numRacks = 3; // all replicas should be on a different rack
     Map<ServerName, List<RegionInfo>> serverMap =
-      createServerMap(numNodes, numRegions, numRegionsPerServer, replication, numTables);
+      createServerMap(numNodes, numNodes, numRegionsPerServer, replication, numTables);
     RackManager rm = new ForTestRackManager(numRacks);
     testWithClusterWithIteration(serverMap, rm, true, true);
   }

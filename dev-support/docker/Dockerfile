@@ -24,6 +24,8 @@
 FROM ubuntu:22.04 AS base_image
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+ARG NODE_VERSION=v20.15.0
+
 RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
   DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -y \
     ca-certificates=20211016 \
@@ -69,6 +71,14 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
     && \
     locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
+
+# Install Node.js. Needed for Playwright.
+RUN curl -fsSL "https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-linux-x64.tar.gz" -o node.tar.gz \
+    && tar -xzf node.tar.gz -C /usr/local --strip-components=1 \
+    && rm node.tar.gz
+
+# Install Playwright dependencies. Needed for docs PDF export and docs UI e2e tests.
+RUN npx -y playwright install --with-deps
 
 ##
 # download sundry dependencies

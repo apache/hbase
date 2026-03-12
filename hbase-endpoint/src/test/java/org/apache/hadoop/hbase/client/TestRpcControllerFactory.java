@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -94,7 +95,7 @@ public class TestRpcControllerFactory {
     }
 
     @Override
-    public void setPriority(int priority) {
+    public void setPriority(int priority, @Nullable TableName tableName) {
       INT_PRIORITY.incrementAndGet();
       GROUPED_PRIORITY.add(priority);
     }
@@ -201,9 +202,7 @@ public class TestRpcControllerFactory {
       Get get = new Get(row);
       get.setPriority(HConstants.ADMIN_QOS);
       table.get(get);
-      // we will reset the controller for setting the call timeout so it will lead to an extra
-      // setPriority
-      verifyPriorityGroupCount(HConstants.ADMIN_QOS, 2);
+      verifyPriorityGroupCount(HConstants.ADMIN_QOS, 1);
     }
   }
 

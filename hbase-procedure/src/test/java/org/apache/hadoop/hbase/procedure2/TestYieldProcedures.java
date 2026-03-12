@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,25 +28,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
-import org.apache.hadoop.hbase.procedure2.TestYieldProcedures.TestStateMachineProcedure.State;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestYieldProcedures {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestYieldProcedures.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestYieldProcedures.class);
 
@@ -61,7 +57,7 @@ public class TestYieldProcedures {
   private Path testDir;
   private Path logDir;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtil();
     testDir = htu.getDataTestDir();
@@ -77,7 +73,7 @@ public class TestYieldProcedures {
     ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     procExecutor.stop();
     procStore.stop(false);
@@ -102,14 +98,14 @@ public class TestYieldProcedures {
       int index = 0;
       for (int execStep = 0; execStep < NUM_STATES; ++execStep) {
         TestStateMachineProcedure.ExecutionInfo info = procs[i].getExecutionInfo().get(index++);
-        assertEquals(false, info.isRollback());
+        assertFalse(info.isRollback());
         assertEquals(execStep, info.getStep().ordinal());
       }
 
       // verify rollback
       for (int execStep = NUM_STATES - 1; execStep >= 0; --execStep) {
         TestStateMachineProcedure.ExecutionInfo info = procs[i].getExecutionInfo().get(index++);
-        assertEquals(true, info.isRollback());
+        assertTrue(info.isRollback());
         assertEquals(execStep, info.getStep().ordinal());
       }
     }
@@ -135,18 +131,18 @@ public class TestYieldProcedures {
     assertEquals(NUM_STATES * 4, proc.getExecutionInfo().size());
     for (int i = 0; i < NUM_STATES; ++i) {
       TestStateMachineProcedure.ExecutionInfo info = proc.getExecutionInfo().get(count++);
-      assertEquals(false, info.isRollback());
+      assertFalse(info.isRollback());
       assertEquals(i, info.getStep().ordinal());
 
       info = proc.getExecutionInfo().get(count++);
-      assertEquals(false, info.isRollback());
+      assertFalse(info.isRollback());
       assertEquals(i, info.getStep().ordinal());
     }
 
     // test rollback (we execute steps twice, rollback counts both IE and completed)
     for (int i = NUM_STATES - 1; i >= 0; --i) {
       TestStateMachineProcedure.ExecutionInfo info = proc.getExecutionInfo().get(count++);
-      assertEquals(true, info.isRollback());
+      assertTrue(info.isRollback());
       assertEquals(i, info.getStep().ordinal());
     }
 

@@ -17,23 +17,18 @@
  */
 package org.apache.hadoop.hbase.favored;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestStartcodeAgnosticServerName {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStartcodeAgnosticServerName.class);
 
   @Test
   public void testStartCodeServerName() {
@@ -42,15 +37,15 @@ public class TestStartcodeAgnosticServerName {
       new StartcodeAgnosticServerName("www.example.org", 1234, 5678);
 
     assertTrue(ServerName.isSameAddress(sn, snStartCode));
-    assertTrue(snStartCode.equals(sn));
-    assertTrue(sn.equals(snStartCode));
+    assertEquals(snStartCode, sn);
+    assertEquals(sn, snStartCode);
     assertEquals(0, snStartCode.compareTo(sn));
 
     StartcodeAgnosticServerName snStartCodeFNPort =
       new StartcodeAgnosticServerName("www.example.org", 1234, ServerName.NON_STARTCODE);
     assertTrue(ServerName.isSameAddress(snStartCodeFNPort, snStartCode));
-    assertTrue(snStartCode.equals(snStartCodeFNPort));
-    assertTrue(snStartCodeFNPort.equals(snStartCode));
+    assertEquals(snStartCode, snStartCodeFNPort);
+    assertEquals(snStartCodeFNPort, snStartCode);
     assertEquals(0, snStartCode.compareTo(snStartCodeFNPort));
   }
 }

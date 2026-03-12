@@ -17,30 +17,20 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.util.Map;
 import javax.security.sasl.Sasl;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ SecurityTests.class, SmallTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestSaslUtil {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSaslUtil.class);
-
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
 
   @Test
   public void testInitSaslProperties() {
@@ -55,11 +45,11 @@ public class TestSaslUtil {
     props = SaslUtil.initSaslProperties("integrity,authentication,privacy");
     assertEquals("auth-int,auth,auth-conf", props.get(Sasl.QOP));
 
-    exception.expect(IllegalArgumentException.class);
-    props = SaslUtil.initSaslProperties("xyz");
-    assertEquals("auth", props.get(Sasl.QOP));
+    assertThrows(IllegalArgumentException.class, () -> {
+      Map<String, String> invalidProps = SaslUtil.initSaslProperties("xyz");
+      assertEquals("auth", invalidProps.get(Sasl.QOP));
+    });
 
-    exception.expect(IllegalArgumentException.class);
     props = SaslUtil.initSaslProperties("");
     assertEquals("auth", props.get(Sasl.QOP));
   }

@@ -19,30 +19,22 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 
-@Category({ ClientTests.class, LargeTests.class })
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestAdminShell extends AbstractTestShell {
-  private static final Logger LOG = LoggerFactory.getLogger(TestAdminShell.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAdminShell.class);
 
   @Override
   public String getIncludeList() {
     return "admin_test.rb";
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     RubyShellTest.setUpConfig(this);
 
