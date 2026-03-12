@@ -19,16 +19,16 @@ package org.apache.hadoop.hbase.security.access;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Arrays;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ActiveClusterSuffix;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -64,9 +64,10 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
         LOG.debug("Global read-only mode is being ENABLED. Deleting active cluster file: {}",
           activeClusterFile);
         try (FSDataInputStream in = fs.open(activeClusterFile)) {
-          byte[] actualClusterFileData = IOUtils.toByteArray(in);
-          byte[] expectedClusterFileData = mfs.getActiveClusterSuffix().toByteArray();
-          if (Arrays.equals(actualClusterFileData, expectedClusterFileData)) {
+          ActiveClusterSuffix actualClusterFileData =
+            ActiveClusterSuffix.parseFrom(in.readAllBytes());
+          ActiveClusterSuffix expectedClusterFileData = mfs.getActiveClusterSuffix();
+          if (expectedClusterFileData.equals(actualClusterFileData)) {
             fs.delete(activeClusterFile, false);
             LOG.info("Successfully deleted active cluster file: {}", activeClusterFile);
           } else {
@@ -84,6 +85,8 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
             "Failed to delete active cluster file: {}. "
               + "Read-only flag will be updated, but file system state is inconsistent.",
             activeClusterFile, e);
+        } catch (DeserializationException e) {
+          LOG.error("Failed to deserialize ActiveClusterSuffix from file {}", activeClusterFile, e);
         }
       } else {
         // DISABLING READ-ONLY (true -> false), create the active cluster file id file
