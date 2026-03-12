@@ -34,9 +34,13 @@ import org.apache.hadoop.hbase.security.access.EndpointReadOnlyController;
 import org.apache.hadoop.hbase.security.access.MasterReadOnlyController;
 import org.apache.hadoop.hbase.security.access.RegionReadOnlyController;
 import org.apache.hadoop.hbase.security.access.RegionServerReadOnlyController;
+import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category({ CoprocessorTests.class, SmallTests.class })
 public class TestCoprocessorConfigurationUtil {
 
   private Configuration conf;

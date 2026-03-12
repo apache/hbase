@@ -31,7 +31,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -629,8 +628,6 @@ public final class FSUtils {
     }
   }
 
-  /**
-   *   */
   private static void rewriteAsPb(final FileSystem fs, final Path rootdir, final Path p,
     final ClusterId cid) throws IOException {
     // Rewrite the file as pb. Move aside the old one first, write new
@@ -689,7 +686,7 @@ public final class FSUtils {
     final Path tempIdFile = new Path(tempDir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
 
     LOG.debug("[Read-replica feature] id file [{}] is present and contains cluster id: {}", idFile,
-      cs.getActiveClusterSuffixForLogging());
+      cs);
     writeClusterInfo(fs, rootdir, idFile, tempIdFile, cs.toByteArray(), wait);
   }
 

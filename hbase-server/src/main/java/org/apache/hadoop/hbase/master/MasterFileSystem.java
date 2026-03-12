@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -402,26 +400,27 @@ public class MasterFileSystem {
         ActiveClusterSuffix acs = FSUtils.getActiveClusterSuffix(fs, rootdir);
         LOG.debug(
           "Negotiating active cluster suffix file. File {} : File Suffix {} : Configured suffix {} :  Cluster ID : {}",
-          new Path(rootdir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME), acs, activeClusterSuffix.getActiveClusterSuffixForLogging(),
+          new Path(rootdir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME), acs, activeClusterSuffix,
           getClusterId());
         // Suffix file exists and we're in read/write mode. Content should match.
         if (!this.activeClusterSuffix.equals(acs)) {
           // throw error
           LOG.info(
-            "[Read-replica feature] Another cluster is running in active (read-write) mode on this storage location. Active cluster ID: {}, This cluster ID {}. Rootdir location {} ",
-            acs.getActiveClusterSuffixForLogging(), activeClusterSuffix.getActiveClusterSuffixForLogging(), rootdir);
+            "[Read-replica feature] Another cluster is running in active (read-write) mode on this "
+              + "storage location. Active cluster ID: {}, This cluster ID {}. Rootdir location {} ",
+            acs, activeClusterSuffix, rootdir);
           throw new IOException("Cannot start master, because another cluster is running in active "
-            + "(read-write) mode on this storage location. Active Cluster Id: " + acs.getActiveClusterSuffixForLogging()
-            + ", This cluster Id: " + activeClusterSuffix.getActiveClusterSuffixForLogging());
+            + "(read-write) mode on this storage location. Active Cluster Id: " + acs
+            + ", This cluster Id: " + activeClusterSuffix);
         }
         LOG.info(
           "[Read-replica feature] This is the active cluster on this storage location with cluster id: {}",
-          activeClusterSuffix.getActiveClusterSuffixForLogging());
+          activeClusterSuffix);
       } catch (FileNotFoundException fnfe) {
         // We're in read/write mode, but suffix file missing, let's create it
         FSUtils.setActiveClusterSuffix(fs, rootdir, activeClusterSuffix, wait);
         LOG.info("[Read-replica feature] Created Active cluster suffix file: {}, with content: {}",
-          HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME, activeClusterSuffix.getActiveClusterSuffixForLogging());
+          HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME, activeClusterSuffix);
       }
     } else {
       // This is a read-only cluster, don't care about suffix file
@@ -437,11 +436,4 @@ public class MasterFileSystem {
     return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
       HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
   }
-
-  // Used only for testing
-  public byte[] getSuffixFileDataToCompare() {
-    String str = this.activeClusterSuffix.toString();
-    return str.getBytes(StandardCharsets.UTF_8);
-  }
-
 }
