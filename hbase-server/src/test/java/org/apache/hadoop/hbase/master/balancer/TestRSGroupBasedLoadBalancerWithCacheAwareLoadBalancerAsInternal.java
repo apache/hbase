@@ -226,14 +226,16 @@ public class TestRSGroupBasedLoadBalancerWithCacheAwareLoadBalancerAsInternal
     RSGroupBasedLoadBalancer loadBalancer = new RSGroupBasedLoadBalancer();
     loadBalancer.setMasterServices(getMockedMaster());
     loadBalancer.initialize();
+    CacheAwareLoadBalancer internalBalancer =
+      (CacheAwareLoadBalancer) loadBalancer.getInternalBalancer();
+    internalBalancer.loadConf(conf);
 
     ServerName server0 = servers.get(0);
     ServerName server1 = servers.get(1);
     Pair<ServerName, Float> regionRatio = new Pair<>();
     regionRatio.setFirst(server0);
     regionRatio.setSecond(0.1f);
-    CacheAwareLoadBalancer internalBalancer =
-      (CacheAwareLoadBalancer) loadBalancer.getInternalBalancer();
+    internalBalancer = (CacheAwareLoadBalancer) loadBalancer.getInternalBalancer();
     internalBalancer.regionCacheRatioOnOldServerMap.put("region1", regionRatio);
     RegionInfo mockedInfo = mock(RegionInfo.class);
     when(mockedInfo.getEncodedName()).thenReturn("region1");
@@ -256,6 +258,9 @@ public class TestRSGroupBasedLoadBalancerWithCacheAwareLoadBalancerAsInternal
     RSGroupBasedLoadBalancer loadBalancer = new RSGroupBasedLoadBalancer();
     loadBalancer.setMasterServices(getMockedMaster());
     loadBalancer.initialize();
+    CacheAwareLoadBalancer internalBalancer =
+      (CacheAwareLoadBalancer) loadBalancer.getInternalBalancer();
+    internalBalancer.loadConf(conf);
 
     ServerName server0 = servers.get(0);
     ServerName server1 = servers.get(1);
@@ -264,8 +269,7 @@ public class TestRSGroupBasedLoadBalancerWithCacheAwareLoadBalancerAsInternal
     Pair<ServerName, Float> regionRatio = new Pair<>();
     regionRatio.setFirst(server3);
     regionRatio.setSecond(1.0f);
-    CacheAwareLoadBalancer internalBalancer =
-      (CacheAwareLoadBalancer) loadBalancer.getInternalBalancer();
+    internalBalancer = (CacheAwareLoadBalancer) loadBalancer.getInternalBalancer();
     internalBalancer.regionCacheRatioOnOldServerMap.put("region1", regionRatio);
     RegionInfo mockedInfo = mock(RegionInfo.class);
     when(mockedInfo.getEncodedName()).thenReturn("region1");
@@ -288,6 +292,9 @@ public class TestRSGroupBasedLoadBalancerWithCacheAwareLoadBalancerAsInternal
     RSGroupBasedLoadBalancer loadBalancer = new RSGroupBasedLoadBalancer();
     loadBalancer.setMasterServices(getMockedMaster());
     loadBalancer.initialize();
+    CacheAwareLoadBalancer internalBalancer =
+      (CacheAwareLoadBalancer) loadBalancer.getInternalBalancer();
+    internalBalancer.loadConf(conf);
 
     ServerName server0 = servers.get(0);
     ServerName server1 = servers.get(1);
