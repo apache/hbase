@@ -20,23 +20,29 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.AsyncAdmin;
+import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -73,6 +79,9 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
   public static final byte[][] FAMILIES = new byte[][] { FAMILY_A, FAMILY_B, FAMILY_C };
 
   public static int NUM_COLS_TO_CHECK = 50;
+
+  private static final long FLUSH_TIMEOUT_SECONDS = 30;
+  private static final long FLUSH_INTERVAL_MILLIS = TimeUnit.MINUTES.toMillis(1);
 
   private ExecutorService sharedPool;
 
@@ -318,6 +327,61 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
     }
   }
 
+  /**
+   * Thread that flushes the table by region. Using region flush avoids the table flush procedure
+   * path, which is more likely to stall under CI back-pressure for MOB data.
+   */
+  public static class AtomicityFlusher extends RepeatingTestThread {
+    private final AsyncConnection connection;
+    private final AsyncAdmin admin;
+    private final List<RegionInfo> regions;
+    private final boolean crazyFlush;
+
+    public AtomicityFlusher(TestContext ctx, List<RegionInfo> regions, boolean crazyFlush)
+      throws Exception {
+      super(ctx);
+      this.connection = ConnectionFactory.createAsyncConnection(ctx.getConf()).get();
+      this.admin = connection.getAdmin();
+      this.regions = regions;
+      this.crazyFlush = crazyFlush;
+    }
+
+    @Override
+    public void doAnAction() throws Exception {
+      for (RegionInfo region : regions) {
+        try {
+          admin.flushRegion(region.getRegionName()).get(FLUSH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          return;
+        } catch (ExecutionException | TimeoutException e) {
+          LOG.warn("Ignoring exception while flushing region {}: {}", region.getEncodedName(),
+            StringUtils.stringifyException(e));
+        }
+      }
+      // Flushing has been a source of ACID violations previously (see HBASE-2856), so ideally,
+      // we would flush as often as possible. On a running cluster, this isn't practical:
+      // (1) we will cause a lot of load due to all the flushing and compacting
+      // (2) we cannot change the flushing/compacting related Configuration options to try to
+      // alleviate this
+      // (3) it is an unrealistic workload, since no one would actually flush that often.
+      // Therefore, let's flush every minute to have more flushes than usual, but not overload
+      // the running cluster.
+      if (!crazyFlush) {
+        try {
+          Thread.sleep(FLUSH_INTERVAL_MILLIS);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+      }
+    }
+
+    @Override
+    public void workDone() throws IOException {
+      connection.close();
+    }
+  }
+
   private void createTableIfMissing(Admin admin, boolean useMob) throws IOException {
     if (!admin.tableExists(TABLE_NAME)) {
       TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TABLE_NAME);
@@ -347,28 +411,16 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
       writers.add(writer);
       ctx.addThread(writer);
     }
-    // Add a flusher
-    ctx.addThread(new RepeatingTestThread(ctx) {
-      @Override
-      public void doAnAction() throws Exception {
-        try {
-          admin.flush(TABLE_NAME);
-        } catch (IOException ioe) {
-          LOG.warn("Ignoring exception while flushing: " + StringUtils.stringifyException(ioe));
-        }
-        // Flushing has been a source of ACID violations previously (see HBASE-2856), so ideally,
-        // we would flush as often as possible. On a running cluster, this isn't practical:
-        // (1) we will cause a lot of load due to all the flushing and compacting
-        // (2) we cannot change the flushing/compacting related Configuration options to try to
-        // alleviate this
-        // (3) it is an unrealistic workload, since no one would actually flush that often.
-        // Therefore, let's flush every minute to have more flushes than usual, but not overload
-        // the running cluster.
-        if (!crazyFlush) {
-          Thread.sleep(60000);
-        }
+    List<RegionInfo> regionsToFlush = Lists.newArrayList();
+    for (RegionInfo region : admin.getRegions(TABLE_NAME)) {
+      if (RegionReplicaUtil.isDefaultReplica(region)) {
+        regionsToFlush.add(region);
       }
-    });
+    }
+    if (regionsToFlush.isEmpty()) {
+      throw new IllegalStateException("No default regions found for " + TABLE_NAME);
+    }
+    ctx.addThread(new AtomicityFlusher(ctx, regionsToFlush, crazyFlush));
 
     List<AtomicGetReader> getters = Lists.newArrayList();
     for (int i = 0; i < numGetters; i++) {
