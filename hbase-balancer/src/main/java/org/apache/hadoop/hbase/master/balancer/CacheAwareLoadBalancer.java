@@ -172,7 +172,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
   }
 
   @Override
-  public long getThrottlingTime(RegionPlan plan) {
+  public long getThrottleDurationMs(RegionPlan plan) {
     Pair<ServerName, Float> rsRatio = this.regionCacheRatioOnOldServerMap.get(plan.getRegionName());
     if (
       rsRatio != null && plan.getDestination().equals(rsRatio.getFirst())

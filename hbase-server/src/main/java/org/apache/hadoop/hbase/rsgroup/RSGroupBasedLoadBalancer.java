@@ -412,20 +412,20 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
     // Refer to HBASE-29933
     synchronized (this) {
       // If balance is running, store configuration in pendingConfiguration and return immediately.
-      // Deferred config update.
+      // Defer the config update.
       if (isBalancing.get()) {
         LOG.debug(
           "Balance is in progress, defer applying configuration change until balance completed.");
         pendingConfiguration.set(conf);
       } else {
-        // If balance is not running, apply configuration change immediately.
+        // Apply configuration change immediately.
         updateConfiguration(conf);
       }
     }
   }
 
   /**
-   * Applies the given configuration immediately.
+   * Applies the given configuration.
    */
   private void updateConfiguration(Configuration conf) {
     boolean newFallbackEnabled = conf.getBoolean(FALLBACK_GROUP_ENABLE_KEY, false);
@@ -439,8 +439,8 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
   }
 
   /**
-   * If a pending configuration was stored during a balance run, applies it now by calling
-   * {@link #updateConfiguration(Configuration)} and clears the pending reference.
+   * If a pending configuration was stored during a balance run, apply it and clear the pending
+   * reference.
    */
   public void applyPendingConfiguration() {
     Configuration toApply = pendingConfiguration.getAndSet(null);
@@ -472,7 +472,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
 
   @Override
   public void throttle(RegionPlan plan) throws Exception {
-    long throttlingTime = internalBalancer.getThrottlingTime(plan);
+    long throttlingTime = internalBalancer.getThrottleDurationMs(plan);
     if (throttlingTime > 0) {
       try {
         // Release the monitor while waiting to avoid blocking other threads.

@@ -172,7 +172,7 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
     // noop
   }
 
-  default long getThrottlingTime(RegionPlan plan) {
+  default long getThrottleDurationMs(RegionPlan plan) {
     // By default, we do not throttle, so return 0 here.
     return 0L;
   }
