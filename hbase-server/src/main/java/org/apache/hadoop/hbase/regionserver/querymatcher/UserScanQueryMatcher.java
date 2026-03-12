@@ -155,11 +155,8 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
       // Cell is newer than the scan's time-range upper bound. Give the filter one last chance to
       // provide a seek hint before we fall back to a plain cell-level SKIP. This addresses
       // HBASE-29974 Path 2: time-range gate fires before filterCell is reached.
-      if (filter != null) {
-        ExtendedCell hint = resolveSkipHint(cell);
-        if (hint != null) {
-          return MatchCode.SEEK_NEXT_USING_HINT;
-        }
+      if (resolveSkipHint(cell)) {
+        return MatchCode.SEEK_NEXT_USING_HINT;
       }
       return MatchCode.SKIP;
     }
@@ -167,11 +164,8 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
       // Cell is older than the scan's time-range lower bound. Give the filter a chance to provide
       // a seek hint before we defer to the column tracker's next-row/next-column suggestion.
       // Addresses HBASE-29974 Path 2: time-range gate fires before filterCell is reached.
-      if (filter != null) {
-        ExtendedCell hint = resolveSkipHint(cell);
-        if (hint != null) {
-          return MatchCode.SEEK_NEXT_USING_HINT;
-        }
+      if (resolveSkipHint(cell)) {
+        return MatchCode.SEEK_NEXT_USING_HINT;
       }
       return columns.getNextRowOrNextColumn(cell);
     }
@@ -180,11 +174,8 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     if (matchCode != MatchCode.INCLUDE) {
       // Column is excluded by the scan's column set. Give the filter a chance to provide a
       // seek hint before the column-tracker's suggestion is used. Addresses HBASE-29974 Path 3.
-      if (filter != null) {
-        ExtendedCell hint = resolveSkipHint(cell);
-        if (hint != null) {
-          return MatchCode.SEEK_NEXT_USING_HINT;
-        }
+      if (resolveSkipHint(cell)) {
+        return MatchCode.SEEK_NEXT_USING_HINT;
       }
       return matchCode;
     }
@@ -197,21 +188,15 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
       case SKIP:
         // Version limit reached; skip this cell. Give the filter a hint opportunity before
         // falling back to SKIP. Addresses HBASE-29974 Path 3: version gate fires before filterCell.
-        if (filter != null) {
-          ExtendedCell hint = resolveSkipHint(cell);
-          if (hint != null) {
-            return MatchCode.SEEK_NEXT_USING_HINT;
-          }
+        if (resolveSkipHint(cell)) {
+          return MatchCode.SEEK_NEXT_USING_HINT;
         }
         return MatchCode.SKIP;
       case SEEK_NEXT_COL:
         // Version limit reached; advance to the next column. Give the filter a hint opportunity
         // before falling back to SEEK_NEXT_COL. Addresses HBASE-29974 Path 3.
-        if (filter != null) {
-          ExtendedCell hint = resolveSkipHint(cell);
-          if (hint != null) {
-            return MatchCode.SEEK_NEXT_USING_HINT;
-          }
+        if (resolveSkipHint(cell)) {
+          return MatchCode.SEEK_NEXT_USING_HINT;
         }
         return MatchCode.SEEK_NEXT_COL;
       default:
@@ -227,24 +212,30 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
   }
 
   /**
-   * Calls {@link org.apache.hadoop.hbase.filter.Filter#getSkipHint(Cell)} on the current filter,
-   * validates the returned cell type, and stores it as {@link #pendingSkipHint} so that
-   * {@link #getNextKeyHint} can return it when the scan pipeline asks for the seek target after
-   * receiving {@link ScanQueryMatcher.MatchCode#SEEK_NEXT_USING_HINT}.
+   * Asks the current filter for a seek hint via
+   * {@link org.apache.hadoop.hbase.filter.Filter#getSkipHint(Cell)}, validates the returned cell
+   * type, and if non-null stores it in {@link #pendingSkipHint} so that {@link #getNextKeyHint}
+   * can return it when the scan pipeline asks for the seek target after receiving
+   * {@link ScanQueryMatcher.MatchCode#SEEK_NEXT_USING_HINT}.
    *
    * <p>This is only called from the structural short-circuit branches of {@link #matchColumn},
    * where {@code filterCell} has <em>not</em> been called, in accordance with the stateless
-   * contract of {@code Filter#getSkipHint}.
+   * contract of {@code Filter#getSkipHint}. The filter-null guard is included here so call-sites
+   * need no boilerplate.
    *
    * @param cell the cell that triggered the structural short-circuit
-   * @return the validated {@link ExtendedCell} hint, or {@code null} if the filter returns no hint
+   * @return {@code true} if the filter returned a valid hint (stored in {@link #pendingSkipHint}),
+   *         {@code false} if no filter is set or the filter returned {@code null}
    * @throws DoNotRetryIOException if the filter returns a non-{@link ExtendedCell} instance
    * @throws IOException           if the filter signals an I/O failure
    */
-  private ExtendedCell resolveSkipHint(ExtendedCell cell) throws IOException {
+  private boolean resolveSkipHint(ExtendedCell cell) throws IOException {
+    if (filter == null) {
+      return false;
+    }
     Cell raw = filter.getSkipHint(cell);
     if (raw == null) {
-      return null;
+      return false;
     }
     if (!(raw instanceof ExtendedCell)) {
       throw new DoNotRetryIOException(
@@ -252,7 +243,7 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
           + "is not an ExtendedCell. Filter class: " + filter.getClass().getName());
     }
     pendingSkipHint = (ExtendedCell) raw;
-    return pendingSkipHint;
+    return true;
   }
 
   /**
