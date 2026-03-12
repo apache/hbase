@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterId;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -102,7 +103,7 @@ public class CachedClusterId {
       // the waiting threads.
       try {
         cacheMisses.incrementAndGet();
-        setClusterId(FSUtils.getClusterId(fs, rootDir));
+        setClusterId(FSUtils.getClusterFile(fs, rootDir, new ClusterId.Parser()));
       } catch (IOException e) {
         LOG.warn("Error fetching cluster ID", e);
       } finally {

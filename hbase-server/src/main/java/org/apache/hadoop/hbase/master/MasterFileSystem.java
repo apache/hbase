@@ -271,9 +271,10 @@ public class MasterFileSystem {
       !FSUtils.checkFileExistsInHbaseRootDir(fs, rootdir, HConstants.CLUSTER_ID_FILE_NAME,
         threadWakeFrequency)
     ) {
-      FSUtils.setClusterId(fs, rootdir, new ClusterId(), threadWakeFrequency);
+      FSUtils.setClusterFile(fs, rootdir, HConstants.CLUSTER_ID_FILE_NAME, new ClusterId(),
+        threadWakeFrequency);
     }
-    clusterId = FSUtils.getClusterId(fs, rootdir);
+    clusterId = FSUtils.getClusterFile(fs, rootdir, new ClusterId.Parser());
     negotiateActiveClusterSuffixFile(threadWakeFrequency);
   }
 
@@ -397,7 +398,11 @@ public class MasterFileSystem {
     if (!isReadOnlyModeEnabled(conf)) {
       try {
         // verify the contents against the config set
-        ActiveClusterSuffix acs = FSUtils.getActiveClusterSuffix(fs, rootdir);
+        ActiveClusterSuffix acs = FSUtils.getClusterFile(fs, rootdir, new ActiveClusterSuffix.Parser());
+        if (acs == null) {
+          throw new FileNotFoundException("[Read-replica feature] Active Cluster Suffix File "
+            + new Path(rootdir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME) + " not found");
+        }
         LOG.debug(
           "Negotiating active cluster suffix file. File {} : File Suffix {} : Configured suffix {} :  Cluster ID : {}",
           new Path(rootdir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME), acs, activeClusterSuffix,
@@ -418,7 +423,8 @@ public class MasterFileSystem {
           activeClusterSuffix);
       } catch (FileNotFoundException fnfe) {
         // We're in read/write mode, but suffix file missing, let's create it
-        FSUtils.setActiveClusterSuffix(fs, rootdir, activeClusterSuffix, wait);
+        FSUtils.setClusterFile(fs, rootdir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME,
+          activeClusterSuffix, wait);
         LOG.info("[Read-replica feature] Created Active cluster suffix file: {}, with content: {}",
           HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME, activeClusterSuffix);
       }
