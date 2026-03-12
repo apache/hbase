@@ -80,7 +80,7 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
           activeClusterFile);
         try (FSDataInputStream in = fs.open(activeClusterFile)) {
           String actualClusterFileData = IOUtils.toString(in, StandardCharsets.UTF_8);
-          String expectedClusterFileData = mfs.getSuffixFromConfig();
+          String expectedClusterFileData = mfs.getActiveClusterSuffix().toString();
           if (actualClusterFileData.equals(expectedClusterFileData)) {
             fs.delete(activeClusterFile, false);
             LOG.info("Successfully deleted active cluster file: {}", activeClusterFile);
