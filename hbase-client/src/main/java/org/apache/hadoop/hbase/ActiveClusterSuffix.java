@@ -38,17 +38,13 @@ public class ActiveClusterSuffix {
   private final String cluster_id;
   private final String suffix;
 
-  /**
-   * New ActiveClusterSuffix.
-   */
-
   public ActiveClusterSuffix(final String ci, final String suffix) {
     this.cluster_id = ci;
     this.suffix = suffix;
   }
 
   public ActiveClusterSuffix(final String input) {
-    String[] parts = input.split(":");
+    String[] parts = input.split(":", 2);
     this.cluster_id = parts[0];
     if (parts.length > 1) {
       this.suffix = parts[1];

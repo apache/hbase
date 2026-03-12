@@ -65,7 +65,7 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
           activeClusterFile);
         try (FSDataInputStream in = fs.open(activeClusterFile)) {
           String actualClusterFileData = IOUtils.toString(in, StandardCharsets.UTF_8);
-          String expectedClusterFileData = mfs.getSuffixFromConfig();
+          String expectedClusterFileData = mfs.getActiveClusterSuffix().toString();
           if (actualClusterFileData.equals(expectedClusterFileData)) {
             fs.delete(activeClusterFile, false);
             LOG.info("Successfully deleted active cluster file: {}", activeClusterFile);
@@ -74,12 +74,12 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
               "Active cluster file data does not match expected data. "
                 + "Not deleting the file to avoid potential inconsistency. "
                 + "Actual data: {}, Expected data: {}",
-              new String(actualClusterFileData), new String(expectedClusterFileData));
+              actualClusterFileData, expectedClusterFileData);
           }
-      } catch (FileNotFoundException e) {
+        } catch (FileNotFoundException e) {
           LOG.debug("Active cluster file does not exist at: {}. No need to delete.",
             activeClusterFile);
-      } catch (IOException e) {
+        } catch (IOException e) {
           LOG.error(
             "Failed to delete active cluster file: {}. "
               + "Read-only flag will be updated, but file system state is inconsistent.",
