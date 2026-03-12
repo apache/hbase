@@ -62,7 +62,7 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: "npm run dev -- --port 5178",
+    command: "npx serve build/client -l 5178",
     url: "http://localhost:5178",
     reuseExistingServer: false,
     timeout: 60000
