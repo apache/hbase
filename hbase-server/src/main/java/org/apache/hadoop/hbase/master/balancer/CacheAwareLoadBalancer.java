@@ -112,7 +112,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
    */
   @Override
   public void onBalancingStart() {
-    LOG.debug("setting isBalancing to true as balance is starting");
+    LOG.debug("Setting isBalancing to true as balance is starting");
     isBalancing.set(true);
   }
 
@@ -122,7 +122,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
    */
   @Override
   public void onBalancingComplete() {
-    LOG.debug("setting isBalancing to false as balance is completed");
+    LOG.debug("Setting isBalancing to false as balance is completed");
     isBalancing.set(false);
     applyPendingConfiguration();
   }
@@ -255,6 +255,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
       }
       synchronized (this) {
         try {
+          // Release the monitor while waiting to avoid blocking other threads.
           wait(sleepTime);
         } catch (InterruptedException e) {
           throw new RuntimeException(e);
