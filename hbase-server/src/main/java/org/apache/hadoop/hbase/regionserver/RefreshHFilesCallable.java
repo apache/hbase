@@ -42,7 +42,7 @@ public class RefreshHFilesCallable extends BaseRSProcedureCallable {
   private RegionInfo regionInfo;
 
   @Override
-  protected void doCall() throws Exception {
+  protected byte[] doCall() throws Exception {
     HRegion region = rs.getRegion(regionInfo.getEncodedName());
     LOG.debug("Starting refreshHfiles operation on region {}", region);
 
@@ -53,6 +53,7 @@ public class RefreshHFilesCallable extends BaseRSProcedureCallable {
     } catch (IOException ioe) {
       LOG.warn("Exception while trying to refresh store files: ", ioe);
     }
+    return null;
   }
 
   @Override
