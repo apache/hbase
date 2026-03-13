@@ -64,4 +64,4 @@ jobs:
           if [ "${FORCE_FAIL}" = "true" ]; then
             false
           fi
-          bash hbase/dev-support/jenkins-scripts/generate-hbase-website.sh --working-dir "${WORKSPACE}" --publish hbase
+          bash src/dev-support/jenkins-scripts/generate-hbase-website.sh --working-dir "${WORKSPACE}" --publish hbase
