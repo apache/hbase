@@ -74,7 +74,7 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
               "Active cluster file data does not match expected data. "
                 + "Not deleting the file to avoid potential inconsistency. "
                 + "Actual data: {}, Expected data: {}",
-              new String(actualClusterFileData), new String(expectedClusterFileData));
+              actualClusterFileData, expectedClusterFileData);
           }
         } catch (FileNotFoundException e) {
           LOG.debug("Active cluster file does not exist at: {}. No need to delete.",
