@@ -21,9 +21,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
@@ -406,6 +410,7 @@ public class TestTags {
         admin.flush(tableName);
         Thread.sleep(1000);
 
+        TestCoprocessorForTags.tagsByRow.clear();
         TestCoprocessorForTags.checkTagPresence = true;
         Scan s = new Scan().withStartRow(row);
         s.setCaching(1);
@@ -416,12 +421,14 @@ public class TestTags {
             CellScanner cellScanner = next.cellScanner();
             cellScanner.advance();
             Cell current = cellScanner.current();
+            ByteBuffer rowKey = ByteBuffer.wrap(CellUtil.cloneRow(current));
+            List<Tag> rowTags =
+              TestCoprocessorForTags.tagsByRow.getOrDefault(rowKey, Collections.emptyList());
             if (CellUtil.matchingRows(current, row)) {
-              assertEquals(1, TestCoprocessorForTags.tags.size());
-              Tag tag = TestCoprocessorForTags.tags.get(0);
-              assertEquals(bigTagLen, tag.getValueLength());
+              assertEquals(1, rowTags.size());
+              assertEquals(bigTagLen, rowTags.get(0).getValueLength());
             } else {
-              assertEquals(0, TestCoprocessorForTags.tags.size());
+              assertEquals(0, rowTags.size());
             }
           }
         } finally {
@@ -433,6 +440,7 @@ public class TestTags {
         while (admin.getCompactionState(tableName) != CompactionState.NONE) {
           Thread.sleep(10);
         }
+        TestCoprocessorForTags.tagsByRow.clear();
         TestCoprocessorForTags.checkTagPresence = true;
         scanner = table.getScanner(s);
         try {
@@ -441,12 +449,14 @@ public class TestTags {
             CellScanner cellScanner = next.cellScanner();
             cellScanner.advance();
             Cell current = cellScanner.current();
+            ByteBuffer rowKey = ByteBuffer.wrap(CellUtil.cloneRow(current));
+            List<Tag> rowTags =
+              TestCoprocessorForTags.tagsByRow.getOrDefault(rowKey, Collections.emptyList());
             if (CellUtil.matchingRows(current, row)) {
-              assertEquals(1, TestCoprocessorForTags.tags.size());
-              Tag tag = TestCoprocessorForTags.tags.get(0);
-              assertEquals(bigTagLen, tag.getValueLength());
+              assertEquals(1, rowTags.size());
+              assertEquals(bigTagLen, rowTags.get(0).getValueLength());
             } else {
-              assertEquals(0, TestCoprocessorForTags.tags.size());
+              assertEquals(0, rowTags.size());
             }
           }
         } finally {
@@ -638,6 +648,15 @@ public class TestTags {
     public static volatile boolean checkTagPresence = false;
     public static List<Tag> tags = null;
 
+    /**
+     * Thread-safe per-row tag storage. The {@link #tags} field is susceptible to overwrites by the
+     * async scanner's background prefetch, which can trigger multiple {@code postScannerNext}
+     * callbacks before the test thread reads the result. This map associates tags with the row key
+     * they belong to, eliminating the race.
+     */
+    public static final ConcurrentMap<ByteBuffer, List<Tag>> tagsByRow =
+      new ConcurrentHashMap<>();
+
     @Override
     public Optional<RegionObserver> getRegionObserver() {
       return Optional.of(this);
@@ -697,12 +716,13 @@ public class TestTags {
       InternalScanner s, List<Result> results, int limit, boolean hasMore) throws IOException {
       if (checkTagPresence) {
         if (results.size() > 0) {
-          // Check tag presence in the 1st cell in 1st Result
           Result result = results.get(0);
           ExtendedCellScanner cellScanner = result.cellScanner();
           if (cellScanner.advance()) {
             ExtendedCell cell = cellScanner.current();
-            tags = PrivateCellUtil.getTags(cell);
+            List<Tag> cellTags = PrivateCellUtil.getTags(cell);
+            tags = cellTags;
+            tagsByRow.put(ByteBuffer.wrap(CellUtil.cloneRow(cell)), cellTags);
           }
         }
       }
