@@ -83,6 +83,7 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
 
   protected final byte[] stopRow;
   protected final boolean includeStopRow;
+  protected final boolean reversed;
   protected final HRegion region;
   protected final CellComparator comparator;
 
@@ -125,6 +126,7 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     defaultScannerContext = ScannerContext.newBuilder().setBatchLimit(scan.getBatch()).build();
     this.stopRow = scan.getStopRow();
     this.includeStopRow = scan.includeStopRow();
+    this.reversed = scan.isReversed();
     this.operationId = scan.getId();
 
     // synchronize on scannerReadPoints so that nobody calculates
@@ -773,16 +775,21 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     throws IOException {
     assert this.joinedContinuationRow == null : "Trying to go to next row during joinedHeap read.";
 
-    // Enable skipping-row mode so block-size accounting is consistent with nextRow().
-    scannerContext.setSkippingRow(true);
-    this.storeHeap.requestSeek(hint, true, true);
-    scannerContext.setSkippingRow(false);
+    int difference = comparator.compare(hint, curRowCell);
+    if ((!reversed && difference > 0) || (reversed && difference < 0)) {
+      // Enable skipping-row mode so block-size accounting is consistent with nextRow().
+      scannerContext.setSkippingRow(true);
+      this.storeHeap.requestSeek(hint, true, true);
+      scannerContext.setSkippingRow(false);
 
-    resetFilters();
+      resetFilters();
 
-    // Notify coprocessors, identical to the epilogue in nextRow().
-    return this.region.getCoprocessorHost() == null
-      || this.region.getCoprocessorHost().postScannerFilterRow(this, curRowCell);
+      // Notify coprocessors, identical to the epilogue in nextRow().
+      return this.region.getCoprocessorHost() == null
+        || this.region.getCoprocessorHost().postScannerFilterRow(this, curRowCell);
+    }
+
+    return nextRow(scannerContext, curRowCell);
   }
 
   /**
