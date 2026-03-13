@@ -20,6 +20,7 @@
 name: Build and publish website
 
 "on":
+  # FIXME: Remove this PR here before merge!
   pull_request:
     types: [opened, synchronize, reopened]
   schedule:
@@ -53,6 +54,16 @@ jobs:
           key: hbase-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             hbase-m2-
+
+      # Install Node.js. Needed for Playwright.
+      - name: Use Node.js
+        uses: actions/setup-node@v53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: '24' # LTS
+
+      # Install Playwright dependencies. Needed for docs PDF export and docs UI e2e tests.
+      - name: Install Playwright dependencies
+        run: npx -y playwright install --with-deps
 
       - name: Generate HBase website
         run: |
