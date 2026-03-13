@@ -20,6 +20,8 @@
 name: Build and publish website
 
 "on":
+  pull_request:
+    types: [opened, synchronize, reopened]
   schedule:
   - cron: '0 14 * * *'
 
