@@ -127,7 +127,8 @@ public class TestCoprocessorEndpointTracing {
   @Order(3)
   @RegisterExtension
   private static final ConnectionExtension connectionExtension =
-    ConnectionExtension.createAsyncConnectionExtension(miniClusterExtension::createAsyncConnection);
+    ConnectionExtension.createConnectionExtension(miniClusterExtension::createConnection,
+      miniClusterExtension::createAsyncConnection);
 
   @BeforeAll
   public static void beforeAll() throws Exception {
