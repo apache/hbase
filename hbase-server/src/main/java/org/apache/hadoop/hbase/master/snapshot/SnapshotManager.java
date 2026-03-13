@@ -720,8 +720,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(master, nonceGroup, nonce) {
         @Override
         protected void run() throws IOException {
-          TableDescriptor tableDescriptor =
-            master.getTableDescriptors().get(TableName.valueOf(snapshot.getTable()));
+          TableDescriptor tableDescriptor = sanityCheckBeforeSnapshot(snapshot, false);
           MasterCoprocessorHost cpHost = getMaster().getMasterCoprocessorHost();
           User user = RpcServer.getRequestUser().orElse(null);
           org.apache.hadoop.hbase.client.SnapshotDescription snapshotDesc =
@@ -730,8 +729,6 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
           if (cpHost != null) {
             cpHost.preSnapshot(snapshotDesc, tableDescriptor, user);
           }
-
-          sanityCheckBeforeSnapshot(snapshot, false);
 
           long procId = submitProcedure(new SnapshotProcedure(
             getMaster().getMasterProcedureExecutor().getEnvironment(), snapshot));
