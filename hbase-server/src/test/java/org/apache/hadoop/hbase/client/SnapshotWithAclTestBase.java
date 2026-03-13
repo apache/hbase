@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.List;
@@ -32,6 +34,7 @@ import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
@@ -40,16 +43,22 @@ import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
+import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.SnapshotDoesNotExistException;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 
 public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
+
+  @Rule
+  public TableNameTestRule name = new TableNameTestRule();
 
   private TableName TEST_TABLE = TableName.valueOf(TEST_UTIL.getRandomUUID().toString());
 
@@ -308,5 +317,37 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
     List<SnapshotDescription> snapshotsAfterDelete =
       TEST_UTIL.getAdmin().listSnapshots(Pattern.compile(testSnapshotName));
     assertEquals(0, snapshotsAfterDelete.size());
+  }
+
+  @Test
+  public void testCreateSnapshotWithNonExistingTable() throws Exception {
+    final TableName tableName = name.getTableName();
+    String snapshotName = tableName.getNameAsString() + "snap1";
+
+    try {
+      // Create snapshot without creating table
+      assertThrows("Snapshot operation should fail, table doesn't exist",
+        SnapshotCreationException.class,
+        () -> TEST_UTIL.getAdmin().snapshot(snapshotName, tableName));
+
+      // Create the table
+      TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName).build();
+      TEST_UTIL.createTable(htd, new byte[][] { TEST_FAMILY }, TEST_UTIL.getConfiguration());
+      try {
+        TEST_UTIL.getAdmin().snapshot(snapshotName, tableName);
+      } catch (Exception e) {
+        fail("Snapshot should have been created successfully");
+      }
+      assertTrue(TEST_UTIL.getAdmin().listSnapshots().stream()
+        .anyMatch(name -> name.getName().equals(snapshotName)));
+    } finally {
+      try {
+        TEST_UTIL.getAdmin().deleteSnapshot(snapshotName);
+      } catch (SnapshotDoesNotExistException e) {
+      }
+      if (TEST_UTIL.getAdmin().tableExists(tableName)) {
+        TEST_UTIL.deleteTable(tableName);
+      }
+    }
   }
 }
