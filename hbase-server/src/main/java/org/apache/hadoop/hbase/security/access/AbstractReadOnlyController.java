@@ -76,10 +76,10 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
                 + "Actual data: {}, Expected data: {}",
               new String(actualClusterFileData), new String(expectedClusterFileData));
           }
-      } catch (FileNotFoundException e) {
+        } catch (FileNotFoundException e) {
           LOG.debug("Active cluster file does not exist at: {}. No need to delete.",
             activeClusterFile);
-      } catch (IOException e) {
+        } catch (IOException e) {
           LOG.error(
             "Failed to delete active cluster file: {}. "
               + "Read-only flag will be updated, but file system state is inconsistent.",
@@ -89,7 +89,8 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
         // DISABLING READ-ONLY (true -> false), create the active cluster file id file
         int wait = mfs.getConfiguration().getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
         if (!fs.exists(activeClusterFile)) {
-          FSUtils.setActiveClusterSuffix(fs, rootDir, mfs.computeAndSetSuffixFileDataToWrite(), wait);
+          FSUtils.setActiveClusterSuffix(fs, rootDir, mfs.computeAndSetSuffixFileDataToWrite(),
+            wait);
         } else {
           LOG.debug("Active cluster file already exists at: {}. No need to create it again.",
             activeClusterFile);
