@@ -60,7 +60,7 @@ public final class MasterRegionFactory {
   // Default master data dir
   private static final String MASTER_REGION_DIR_NAME_DEFAULT = "MasterData";
 
-  private static final String MASTER_REGION_DIR_NAME;
+  public static final String MASTER_REGION_DIR_NAME;
   static {
     Configuration conf = HBaseConfiguration.create();
     MASTER_REGION_DIR_NAME = initMasterRegionDirName(conf);
