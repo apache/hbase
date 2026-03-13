@@ -58,13 +58,7 @@ jobs:
         run: |
           #!/usr/bin/env bash
           set -e
-          DEBUG="true"
-          if [ "${DEBUG}" = "true" ]; then
-            set -x
-          fi
-          if [ "${FORCE_FAIL}" = "true" ]; then
-            false
-          fi
+          set -x
           bash src/dev-support/jenkins-scripts/generate-hbase-website.sh --working-dir "${{ github.workspace }}" --publish src
 
       - name: Publish logs
@@ -72,5 +66,5 @@ jobs:
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: logs
-          path: ${{ github.workspace }}/hbase/hbase-*.txt
+          path: ${{ github.workspace }}/hbase-*.txt
           retention-days: 7
