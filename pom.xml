@@ -2917,6 +2917,8 @@
                 <exclude>**/.idea/**</exclude>
                 <exclude>**/node_modules/**</exclude>
                 <exclude>**/hbase-default.md</exclude>
+                <exclude>**/playwright-report/**</exclude>
+                <exclude>**/test-results/**</exclude>
               </excludes>
               <!-- define the steps to apply to those files -->
               <trimTrailingWhitespace/>
