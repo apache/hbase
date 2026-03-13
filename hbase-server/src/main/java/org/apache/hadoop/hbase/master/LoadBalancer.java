@@ -188,6 +188,14 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
     // noop
   }
 
+  default void onBalancingStart() {
+    // noop
+  }
+
+  default void onBalancingComplete() {
+    // noop
+  }
+
   /**
    * @return true if Master carries regions
    * @deprecated since 2.4.0, will be removed in 3.0.0.
