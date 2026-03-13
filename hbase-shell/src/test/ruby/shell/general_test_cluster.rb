@@ -20,6 +20,7 @@
 require 'hbase_constants'
 require 'hbase_shell'
 require 'irb/hirb'
+require 'stringio'
 
 class ShellTest < Test::Unit::TestCase
   include Hbase::TestHelpers
@@ -192,8 +193,16 @@ class ShellTest < Test::Unit::TestCase
     hirb.context.return_format = ""
     hirb.context.echo = false
 
-    output = capture_stdout do
-      hirb.eval_input
+    old_stderr = $stderr
+    $stderr = StringIO.new
+    err_output = ""
+    begin
+      capture_stdout do
+        hirb.eval_input
+      end
+    ensure
+      err_output = $stderr.string
+      $stderr = old_stderr
     end
 
     final_workspace = hirb.context.workspace
@@ -205,7 +214,7 @@ class ShellTest < Test::Unit::TestCase
     assert(!final_vars.include?(:list), "Command 'list' should not be shadowed")
     assert(!final_vars.include?(:list_namespace), "Command 'list_namespace' should not be shadowed")
 
-    assert_match(/WARN: 'list' is a reserved HBase command/, output)
-    assert_match(/WARN: 'list_namespace' is a reserved HBase command/, output)
+    assert_match(/WARN: 'list' is a reserved HBase command/, err_output)
+    assert_match(/WARN: 'list_namespace' is a reserved HBase command/, err_output)
   end
 end
