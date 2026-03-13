@@ -192,8 +192,10 @@ public class ReplicationSourceShipper extends Thread {
     List<Entry> entries = entryBatch.getWalEntries();
     int sleepMultiplier = 0;
     int currentSize = (int) entryBatch.getHeapSize();
-    source.getSourceMetrics()
-      .setTimeStampNextToReplicate(entries.get(entries.size() - 1).getKey().getWriteTime());
+    if(!entries.isEmpty()) {
+      source.getSourceMetrics()
+        .setTimeStampNextToReplicate(entries.get(entries.size() - 1).getKey().getWriteTime());
+    }
     while (isActive()) {
       try {
         if (entries.isEmpty()) {
