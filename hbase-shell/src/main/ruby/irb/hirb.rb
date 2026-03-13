@@ -163,6 +163,23 @@ module IRB
           else
             exc = nil
             next
+          ensure
+            # HBASE-28660: Prevent command shadowing by incorrectly parsed local variables
+            cmd_names = ::Shell.commands.keys.map(&:to_sym)
+            workspace_binding = @context.workspace.binding
+            shadowing_vars = workspace_binding.local_variables & cmd_names
+
+            if shadowing_vars.any?
+              shadowing_vars.each do |var|
+                puts "WARN: '#{var}' is a reserved HBase command. Local variable assignment ignored."
+              end
+
+              new_binding = @context.workspace.main.get_binding
+              (workspace_binding.local_variables - shadowing_vars).each do |var|
+                new_binding.local_variable_set(var, workspace_binding.local_variable_get(var))
+              end
+              @context.instance_variable_set(:@workspace, ::IRB::WorkSpace.new(new_binding))
+            end
           end
           handle_exception(exc)
           @context.workspace.local_variable_set(:_, exc)
