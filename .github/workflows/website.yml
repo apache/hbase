@@ -65,18 +65,17 @@ jobs:
       - name: Install Playwright dependencies
         run: npx -y playwright install --with-deps
 
-      - name: Set Git Author identity
-        run: |
-          cd src
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-
       - name: Generate HBase website
         run: |
           #!/usr/bin/env bash
           set -e
           set -x
           bash src/dev-support/jenkins-scripts/generate-hbase-website.sh --working-dir "${{ github.workspace }}" --publish src
+        env:
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
 
       - name: Publish logs
         if: always()
