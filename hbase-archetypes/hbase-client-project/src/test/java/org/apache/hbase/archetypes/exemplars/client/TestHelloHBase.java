@@ -17,10 +17,10 @@
  */
 package org.apache.hbase.archetypes.exemplars.client;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.client.Admin;
@@ -30,25 +30,30 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Unit testing for HelloHBase.
  */
-@Tag(MediumTests.TAG)
+@Category(MediumTests.class)
 public class TestHelloHBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestHelloHBase.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @BeforeAll
+  @BeforeClass
   public static void beforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterAll
+  @AfterClass
   public static void afterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -61,11 +66,11 @@ public class TestHelloHBase {
     Admin admin = TEST_UTIL.getAdmin();
 
     exists = HelloHBase.namespaceExists(admin, NONEXISTENT_NAMESPACE);
-    assertFalse(exists, "#namespaceExists failed: found nonexistent namespace.");
+    assertEquals("#namespaceExists failed: found nonexistent namespace.", false, exists);
 
     admin.createNamespace(NamespaceDescriptor.create(EXISTING_NAMESPACE).build());
     exists = HelloHBase.namespaceExists(admin, EXISTING_NAMESPACE);
-    assertTrue(exists, "#namespaceExists failed: did NOT find existing namespace.");
+    assertEquals("#namespaceExists failed: did NOT find existing namespace.", true, exists);
     admin.deleteNamespace(EXISTING_NAMESPACE);
   }
 
@@ -75,10 +80,10 @@ public class TestHelloHBase {
     HelloHBase.createNamespaceAndTable(admin);
 
     boolean namespaceExists = HelloHBase.namespaceExists(admin, HelloHBase.MY_NAMESPACE_NAME);
-    assertTrue(namespaceExists, "#createNamespaceAndTable failed to create namespace.");
+    assertEquals("#createNamespaceAndTable failed to create namespace.", true, namespaceExists);
 
     boolean tableExists = admin.tableExists(HelloHBase.MY_TABLE_NAME);
-    assertTrue(tableExists, "#createNamespaceAndTable failed to create table.");
+    assertEquals("#createNamespaceAndTable failed to create table.", true, tableExists);
 
     admin.disableTable(HelloHBase.MY_TABLE_NAME);
     admin.deleteTable(HelloHBase.MY_TABLE_NAME);
@@ -93,7 +98,7 @@ public class TestHelloHBase {
 
     HelloHBase.putRowToTable(table);
     Result row = table.get(new Get(HelloHBase.MY_ROW_ID));
-    assertFalse(row.isEmpty(), "#putRowToTable failed to store row.");
+    assertEquals("#putRowToTable failed to store row.", false, row.isEmpty());
 
     TEST_UTIL.deleteTable(HelloHBase.MY_TABLE_NAME);
     admin.deleteNamespace(HelloHBase.MY_NAMESPACE_NAME);
@@ -109,7 +114,7 @@ public class TestHelloHBase {
       HelloHBase.MY_FIRST_COLUMN_QUALIFIER, Bytes.toBytes("xyz")));
     HelloHBase.deleteRow(table);
     Result row = table.get(new Get(HelloHBase.MY_ROW_ID));
-    assertTrue(row.isEmpty(), "#deleteRow failed to delete row.");
+    assertEquals("#deleteRow failed to delete row.", true, row.isEmpty());
 
     TEST_UTIL.deleteTable(HelloHBase.MY_TABLE_NAME);
     admin.deleteNamespace(HelloHBase.MY_NAMESPACE_NAME);
