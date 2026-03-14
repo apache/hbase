@@ -19,10 +19,10 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import static org.apache.hadoop.hbase.client.coprocessor.AggregationHelper.getParsedGenericInstance;
 import static org.apache.hadoop.hbase.quotas.RpcThrottlingException.Type.ReadSizeExceeded;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
@@ -37,7 +37,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.LongColumnInterpreter;
@@ -53,22 +52,18 @@ import org.apache.hadoop.hbase.regionserver.RegionScannerImpl;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.stubbing.Answer;
 
 /**
  * Test AggregateImplementation with throttling and partial results
  */
-@Category({ SmallTests.class, CoprocessorTests.class })
+@Tag(SmallTests.TAG)
+@Tag(CoprocessorTests.TAG)
 public class TestAggregateImplementation {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAggregateImplementation.class);
 
   private static final byte[] CF = Bytes.toBytes("CF");
   private static final byte[] CQ = Bytes.toBytes("CQ");
@@ -85,7 +80,7 @@ public class TestAggregateImplementation {
   private AggregateRequest request;
   private RpcController controller;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     env = mock(RegionCoprocessorEnvironment.class);
     region = mock(HRegion.class);
@@ -172,8 +167,8 @@ public class TestAggregateImplementation {
     verify(callback).run(responseCaptor.capture());
 
     AggregateResponse response = responseCaptor.getValue();
-    assertTrue("Response should indicate there are more rows", response.hasNextChunkStartRow());
-    assertEquals("Wait interval should be set", 1000, response.getWaitIntervalMs());
+    assertTrue(response.hasNextChunkStartRow(), "Response should indicate there are more rows");
+    assertEquals(1000, response.getWaitIntervalMs(), "Wait interval should be set");
     ByteString b = response.getFirstPart(0);
     HBaseProtos.LongMsg q = getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, b);
     assertEquals(1L, (long) LONG_COLUMN_INTERPRETER.getCellValueFromProto(q));
@@ -194,11 +189,11 @@ public class TestAggregateImplementation {
     AggregateResponse response2 = responseCaptor.getValue();
     b = response2.getFirstPart(0);
     q = getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, b);
-    assertEquals("Final max value should be correct", 5L,
-      (long) LONG_COLUMN_INTERPRETER.getCellValueFromProto(q));
+    assertEquals(5L, (long) LONG_COLUMN_INTERPRETER.getCellValueFromProto(q),
+      "Final max value should be correct");
 
-    assertFalse("Response should not indicate there are more rows",
-      response2.hasNextChunkStartRow());
+    assertFalse(response2.hasNextChunkStartRow(),
+      "Response should not indicate there are more rows");
   }
 
   @Test
@@ -222,9 +217,9 @@ public class TestAggregateImplementation {
 
     AggregateResponse response = responseCaptor.getValue();
 
-    assertTrue("Response should indicate there are more rows", response.hasNextChunkStartRow());
-    assertEquals("response should contain the same start row as the request",
-      request.getScan().getStartRow(), response.getNextChunkStartRow());
+    assertTrue(response.hasNextChunkStartRow(), "Response should indicate there are more rows");
+    assertEquals(request.getScan().getStartRow(), response.getNextChunkStartRow(),
+      "response should contain the same start row as the request");
   }
 
   @Test
@@ -266,8 +261,8 @@ public class TestAggregateImplementation {
 
     AggregateResponse response = responseCaptor.getValue();
 
-    assertFalse("Response should not indicate there are more rows",
-      response.hasNextChunkStartRow());
+    assertFalse(response.hasNextChunkStartRow(),
+      "Response should not indicate there are more rows");
     ByteString b = response.getFirstPart(0);
     HBaseProtos.LongMsg q = getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, b);
     assertEquals(5L, (long) LONG_COLUMN_INTERPRETER.getCellValueFromProto(q));
@@ -285,8 +280,8 @@ public class TestAggregateImplementation {
     verify(callback).run(responseCaptor.capture());
 
     AggregateResponse response = responseCaptor.getValue();
-    assertTrue("Response should indicate there are more rows", response.hasNextChunkStartRow());
-    assertEquals("Wait interval should be set", 1000, response.getWaitIntervalMs());
+    assertTrue(response.hasNextChunkStartRow(), "Response should indicate there are more rows");
+    assertEquals(1000, response.getWaitIntervalMs(), "Wait interval should be set");
     ByteString b = response.getFirstPart(0);
     HBaseProtos.LongMsg q = getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, b);
     assertEquals(1L, (long) LONG_COLUMN_INTERPRETER.getCellValueFromProto(q));
@@ -307,8 +302,8 @@ public class TestAggregateImplementation {
     b = response.getFirstPart(0);
     q = getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, b);
     assertEquals(1L, (long) LONG_COLUMN_INTERPRETER.getCellValueFromProto(q));
-    assertFalse("Response should not indicate there are more rows",
-      response2.hasNextChunkStartRow());
+    assertFalse(response2.hasNextChunkStartRow(),
+      "Response should not indicate there are more rows");
   }
 
   @Test
@@ -332,9 +327,9 @@ public class TestAggregateImplementation {
 
     AggregateResponse response = responseCaptor.getValue();
 
-    assertTrue("Response should indicate there are more rows", response.hasNextChunkStartRow());
-    assertEquals("response should contain the same start row as the request",
-      request.getScan().getStartRow(), response.getNextChunkStartRow());
+    assertTrue(response.hasNextChunkStartRow(), "Response should indicate there are more rows");
+    assertEquals(request.getScan().getStartRow(), response.getNextChunkStartRow(),
+      "response should contain the same start row as the request");
   }
 
   @Test
@@ -376,8 +371,8 @@ public class TestAggregateImplementation {
 
     AggregateResponse response = responseCaptor.getValue();
 
-    assertFalse("Response should not indicate there are more rows",
-      response.hasNextChunkStartRow());
+    assertFalse(response.hasNextChunkStartRow(),
+      "Response should not indicate there are more rows");
     ByteString b = response.getFirstPart(0);
     HBaseProtos.LongMsg q = getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, b);
     assertEquals(1L, (long) LONG_COLUMN_INTERPRETER.getCellValueFromProto(q));
@@ -394,8 +389,8 @@ public class TestAggregateImplementation {
     verify(callback).run(responseCaptor.capture());
 
     AggregateResponse response = responseCaptor.getValue();
-    assertTrue("Response should indicate there are more rows", response.hasNextChunkStartRow());
-    assertEquals("Wait interval should be set", 1000, response.getWaitIntervalMs());
+    assertTrue(response.hasNextChunkStartRow(), "Response should indicate there are more rows");
+    assertEquals(1000, response.getWaitIntervalMs(), "Wait interval should be set");
     ByteString b = response.getFirstPart(0);
     HBaseProtos.LongMsg q = getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, b);
     assertEquals(1L, (long) LONG_COLUMN_INTERPRETER.getCellValueFromProto(q));
@@ -417,8 +412,8 @@ public class TestAggregateImplementation {
     b = response2.getFirstPart(0);
     q = getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, b);
     assertEquals(14L, (long) LONG_COLUMN_INTERPRETER.getCellValueFromProto(q));
-    assertFalse("Response should not indicate there are more rows",
-      response2.hasNextChunkStartRow());
+    assertFalse(response2.hasNextChunkStartRow(),
+      "Response should not indicate there are more rows");
   }
 
   @Test
@@ -442,9 +437,9 @@ public class TestAggregateImplementation {
 
     AggregateResponse response = responseCaptor.getValue();
 
-    assertTrue("Response should indicate there are more rows", response.hasNextChunkStartRow());
-    assertEquals("response should contain the same start row as the request",
-      request.getScan().getStartRow(), response.getNextChunkStartRow());
+    assertTrue(response.hasNextChunkStartRow(), "Response should indicate there are more rows");
+    assertEquals(request.getScan().getStartRow(), response.getNextChunkStartRow(),
+      "response should contain the same start row as the request");
   }
 
   @Test
@@ -486,8 +481,8 @@ public class TestAggregateImplementation {
 
     AggregateResponse response = responseCaptor.getValue();
 
-    assertFalse("Response should not indicate there are more rows",
-      response.hasNextChunkStartRow());
+    assertFalse(response.hasNextChunkStartRow(),
+      "Response should not indicate there are more rows");
     ByteString b = response.getFirstPart(0);
     HBaseProtos.LongMsg q = getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, b);
     assertEquals(15L, (long) LONG_COLUMN_INTERPRETER.getCellValueFromProto(q));
@@ -505,8 +500,8 @@ public class TestAggregateImplementation {
     verify(callback).run(responseCaptor.capture());
 
     AggregateResponse response = responseCaptor.getValue();
-    assertTrue("Response should indicate there are more rows", response.hasNextChunkStartRow());
-    assertEquals("Wait interval should be set", 1000, response.getWaitIntervalMs());
+    assertTrue(response.hasNextChunkStartRow(), "Response should indicate there are more rows");
+    assertEquals(1000, response.getWaitIntervalMs(), "Wait interval should be set");
     assertEquals(THROTTLE_AT_ROW - 1, response.getFirstPart(0).asReadOnlyByteBuffer().getLong());
 
     AggregateRequest request2 = AggregateRequest.newBuilder(request)
@@ -522,10 +517,11 @@ public class TestAggregateImplementation {
     verify(callback2).run(responseCaptor.capture());
 
     AggregateResponse response2 = responseCaptor.getValue();
-    assertEquals("Final row count should be correct", NUM_ROWS - THROTTLE_AT_ROW + 1,
-      response2.getFirstPart(0).asReadOnlyByteBuffer().getLong());
-    assertFalse("Response should not indicate there are more rows",
-      response2.hasNextChunkStartRow());
+    assertEquals(NUM_ROWS - THROTTLE_AT_ROW + 1,
+      response2.getFirstPart(0).asReadOnlyByteBuffer().getLong(),
+      "Final row count should be correct");
+    assertFalse(response2.hasNextChunkStartRow(),
+      "Response should not indicate there are more rows");
   }
 
   @Test
@@ -544,8 +540,8 @@ public class TestAggregateImplementation {
     verify(callback).run(responseCaptor.capture());
 
     AggregateResponse response = responseCaptor.getValue();
-    assertFalse("Response should not indicate there are more rows",
-      response.hasNextChunkStartRow());
+    assertFalse(response.hasNextChunkStartRow(),
+      "Response should not indicate there are more rows");
     assertEquals(NUM_ROWS, response.getFirstPart(0).asReadOnlyByteBuffer().getLong());
   }
 
@@ -570,9 +566,9 @@ public class TestAggregateImplementation {
 
     AggregateResponse response = responseCaptor.getValue();
 
-    assertTrue("Response should indicate there are more rows", response.hasNextChunkStartRow());
-    assertEquals("response should contain the same start row as the request",
-      request.getScan().getStartRow(), response.getNextChunkStartRow());
+    assertTrue(response.hasNextChunkStartRow(), "Response should indicate there are more rows");
+    assertEquals(request.getScan().getStartRow(), response.getNextChunkStartRow(),
+      "response should contain the same start row as the request");
   }
 
   @Test
@@ -591,7 +587,7 @@ public class TestAggregateImplementation {
     verify(callback).run(responseCaptor.capture());
     AggregateResponse response = responseCaptor.getValue();
 
-    assertFalse("Response should indicate there are no more rows", response.hasNextChunkStartRow());
+    assertFalse(response.hasNextChunkStartRow(), "Response should indicate there are no more rows");
     assertEquals(0, response.getFirstPart(0).asReadOnlyByteBuffer().getLong());
   }
 
@@ -616,10 +612,10 @@ public class TestAggregateImplementation {
 
     AggregateResponse response = responseCaptor.getValue();
 
-    assertFalse("Response should not indicate there are more rows",
-      response.hasNextChunkStartRow());
-    assertEquals("Final row count should be correct", NUM_ROWS,
-      response.getFirstPart(0).asReadOnlyByteBuffer().getLong());
+    assertFalse(response.hasNextChunkStartRow(),
+      "Response should not indicate there are more rows");
+    assertEquals(NUM_ROWS, response.getFirstPart(0).asReadOnlyByteBuffer().getLong(),
+      "Final row count should be correct");
   }
 
   @Test
@@ -634,12 +630,14 @@ public class TestAggregateImplementation {
     verify(callback).run(responseCaptor.capture());
 
     AggregateResponse response = responseCaptor.getValue();
-    assertTrue("Response should indicate there are more rows", response.hasNextChunkStartRow());
-    assertEquals("Wait interval should be set", 1000, response.getWaitIntervalMs());
-    assertEquals("sum should be 1", 1L, (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
-      getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response.getFirstPart(0))));
-    assertEquals("count should be 1", THROTTLE_AT_ROW - 1,
-      response.getSecondPart().asReadOnlyByteBuffer().getLong());
+    assertTrue(response.hasNextChunkStartRow(), "Response should indicate there are more rows");
+    assertEquals(1000, response.getWaitIntervalMs(), "Wait interval should be set");
+    assertEquals(1L,
+      (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
+        getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response.getFirstPart(0))),
+      "sum should be 1");
+    assertEquals(THROTTLE_AT_ROW - 1, response.getSecondPart().asReadOnlyByteBuffer().getLong(),
+      "count should be 1");
 
     AggregateRequest request2 = AggregateRequest.newBuilder(request)
       .setScan(request.getScan().toBuilder().setStartRow(response.getNextChunkStartRow()).build())
@@ -654,12 +652,14 @@ public class TestAggregateImplementation {
     verify(callback2).run(responseCaptor.capture());
 
     AggregateResponse response2 = responseCaptor.getValue();
-    assertEquals("sum should be 14", 14L, (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
-      getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response2.getFirstPart(0))));
-    assertEquals("count should be 4", NUM_ROWS - THROTTLE_AT_ROW + 1,
-      response2.getSecondPart().asReadOnlyByteBuffer().getLong());
-    assertFalse("Response should not indicate there are more rows",
-      response2.hasNextChunkStartRow());
+    assertEquals(14L,
+      (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
+        getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response2.getFirstPart(0))),
+      "sum should be 14");
+    assertEquals(NUM_ROWS - THROTTLE_AT_ROW + 1,
+      response2.getSecondPart().asReadOnlyByteBuffer().getLong(), "count should be 4");
+    assertFalse(response2.hasNextChunkStartRow(),
+      "Response should not indicate there are more rows");
   }
 
   @Test
@@ -683,9 +683,9 @@ public class TestAggregateImplementation {
 
     AggregateResponse response = responseCaptor.getValue();
 
-    assertTrue("Response should indicate there are more rows", response.hasNextChunkStartRow());
-    assertEquals("response should contain the same start row as the request",
-      request.getScan().getStartRow(), response.getNextChunkStartRow());
+    assertTrue(response.hasNextChunkStartRow(), "Response should indicate there are more rows");
+    assertEquals(request.getScan().getStartRow(), response.getNextChunkStartRow(),
+      "response should contain the same start row as the request");
   }
 
   @Test
@@ -727,12 +727,14 @@ public class TestAggregateImplementation {
 
     AggregateResponse response = responseCaptor.getValue();
 
-    assertFalse("Response should not indicate there are more rows",
-      response.hasNextChunkStartRow());
-    assertEquals("sum should be 15", 15L, (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
-      getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response.getFirstPart(0))));
-    assertEquals("count should be 5", NUM_ROWS,
-      response.getSecondPart().asReadOnlyByteBuffer().getLong());
+    assertFalse(response.hasNextChunkStartRow(),
+      "Response should not indicate there are more rows");
+    assertEquals(15L,
+      (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
+        getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response.getFirstPart(0))),
+      "sum should be 15");
+    assertEquals(NUM_ROWS, response.getSecondPart().asReadOnlyByteBuffer().getLong(),
+      "count should be 5");
   }
 
   @Test
@@ -747,14 +749,18 @@ public class TestAggregateImplementation {
     verify(callback).run(responseCaptor.capture());
 
     AggregateResponse response = responseCaptor.getValue();
-    assertTrue("Response should indicate there are more rows", response.hasNextChunkStartRow());
-    assertEquals("Wait interval should be set", 1000, response.getWaitIntervalMs());
-    assertEquals("sum should be 1", 1L, (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
-      getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response.getFirstPart(0))));
-    assertEquals("sumSq should be 1", 1L, (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
-      getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response.getFirstPart(1))));
-    assertEquals("count should be 1", THROTTLE_AT_ROW - 1,
-      response.getSecondPart().asReadOnlyByteBuffer().getLong());
+    assertTrue(response.hasNextChunkStartRow(), "Response should indicate there are more rows");
+    assertEquals(1000, response.getWaitIntervalMs(), "Wait interval should be set");
+    assertEquals(1L,
+      (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
+        getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response.getFirstPart(0))),
+      "sum should be 1");
+    assertEquals(1L,
+      (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
+        getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response.getFirstPart(1))),
+      "sumSq should be 1");
+    assertEquals(THROTTLE_AT_ROW - 1, response.getSecondPart().asReadOnlyByteBuffer().getLong(),
+      "count should be 1");
 
     AggregateRequest request2 = AggregateRequest.newBuilder(request)
       .setScan(request.getScan().toBuilder().setStartRow(response.getNextChunkStartRow()).build())
@@ -769,15 +775,18 @@ public class TestAggregateImplementation {
     verify(callback2).run(responseCaptor.capture());
 
     AggregateResponse response2 = responseCaptor.getValue();
-    assertEquals("sum should be 14", 14L, (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
-      getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response2.getFirstPart(0))));
-    assertEquals("sumSq should be 54", 54L,
-      (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(getParsedGenericInstance(
-        LONG_COLUMN_INTERPRETER.getClass(), 3, response2.getFirstPart(1))));
-    assertEquals("count should be 4", NUM_ROWS - THROTTLE_AT_ROW + 1,
-      response2.getSecondPart().asReadOnlyByteBuffer().getLong());
-    assertFalse("Response should not indicate there are more rows",
-      response2.hasNextChunkStartRow());
+    assertEquals(14L,
+      (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
+        getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response2.getFirstPart(0))),
+      "sum should be 14");
+    assertEquals(54L,
+      (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
+        getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response2.getFirstPart(1))),
+      "sumSq should be 54");
+    assertEquals(NUM_ROWS - THROTTLE_AT_ROW + 1,
+      response2.getSecondPart().asReadOnlyByteBuffer().getLong(), "count should be 4");
+    assertFalse(response2.hasNextChunkStartRow(),
+      "Response should not indicate there are more rows");
   }
 
   @Test
@@ -801,9 +810,9 @@ public class TestAggregateImplementation {
 
     AggregateResponse response = responseCaptor.getValue();
 
-    assertTrue("Response should indicate there are more rows", response.hasNextChunkStartRow());
-    assertEquals("response should contain the same start row as the request",
-      request.getScan().getStartRow(), response.getNextChunkStartRow());
+    assertTrue(response.hasNextChunkStartRow(), "Response should indicate there are more rows");
+    assertEquals(request.getScan().getStartRow(), response.getNextChunkStartRow(),
+      "response should contain the same start row as the request");
   }
 
   @Test
@@ -845,15 +854,18 @@ public class TestAggregateImplementation {
 
     AggregateResponse response = responseCaptor.getValue();
 
-    assertFalse("Response should not indicate there are more rows",
-      response.hasNextChunkStartRow());
-    assertEquals("sum should be 15", 15L, (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
-      getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response.getFirstPart(0))));
-    assertEquals("sumSq should be 55", 55L,
+    assertFalse(response.hasNextChunkStartRow(),
+      "Response should not indicate there are more rows");
+    assertEquals(15L,
       (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
-        getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response.getFirstPart(1))));
-    assertEquals("count should be 5", NUM_ROWS,
-      response.getSecondPart().asReadOnlyByteBuffer().getLong());
+        getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response.getFirstPart(0))),
+      "sum should be 15");
+    assertEquals(55L,
+      (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
+        getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response.getFirstPart(1))),
+      "sumSq should be 55");
+    assertEquals(NUM_ROWS, response.getSecondPart().asReadOnlyByteBuffer().getLong(),
+      "count should be 5");
   }
 
   @Test
@@ -868,10 +880,12 @@ public class TestAggregateImplementation {
     verify(callback).run(responseCaptor.capture());
 
     AggregateResponse response = responseCaptor.getValue();
-    assertTrue("Response should indicate there are more rows", response.hasNextChunkStartRow());
-    assertEquals("Wait interval should be set", 1000, response.getWaitIntervalMs());
-    assertEquals("sum should be 1", 1L, (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
-      getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response.getFirstPart(0))));
+    assertTrue(response.hasNextChunkStartRow(), "Response should indicate there are more rows");
+    assertEquals(1000, response.getWaitIntervalMs(), "Wait interval should be set");
+    assertEquals(1L,
+      (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
+        getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response.getFirstPart(0))),
+      "sum should be 1");
 
     AggregateRequest request2 = AggregateRequest.newBuilder(request)
       .setScan(request.getScan().toBuilder().setStartRow(response.getNextChunkStartRow()).build())
@@ -886,9 +900,11 @@ public class TestAggregateImplementation {
     verify(callback2).run(responseCaptor.capture());
 
     AggregateResponse response2 = responseCaptor.getValue();
-    assertEquals("sum should be 14", 14L, (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
-      getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response2.getFirstPart(0))));
-    assertFalse("Response should indicate there are more rows", response2.hasNextChunkStartRow());
+    assertEquals(14L,
+      (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
+        getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response2.getFirstPart(0))),
+      "sum should be 14");
+    assertFalse(response2.hasNextChunkStartRow(), "Response should indicate there are more rows");
   }
 
   @Test
@@ -912,9 +928,9 @@ public class TestAggregateImplementation {
 
     AggregateResponse response = responseCaptor.getValue();
 
-    assertTrue("Response should indicate there are more rows", response.hasNextChunkStartRow());
-    assertEquals("response should contain the same start row as the request",
-      request.getScan().getStartRow(), response.getNextChunkStartRow());
+    assertTrue(response.hasNextChunkStartRow(), "Response should indicate there are more rows");
+    assertEquals(request.getScan().getStartRow(), response.getNextChunkStartRow(),
+      "response should contain the same start row as the request");
   }
 
   @Test
@@ -959,9 +975,10 @@ public class TestAggregateImplementation {
 
     AggregateResponse response = responseCaptor.getValue();
 
-    assertEquals("sum should be 15", 15L, (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
-      getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response.getFirstPart(0))));
-    assertFalse("Response should indicate there are more rows", response.hasNextChunkStartRow());
+    assertEquals(15L,
+      (long) LONG_COLUMN_INTERPRETER.getPromotedValueFromProto(
+        getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, response.getFirstPart(0))),
+      "sum should be 15");
+    assertFalse(response.hasNextChunkStartRow(), "Response should indicate there are more rows");
   }
-
 }
