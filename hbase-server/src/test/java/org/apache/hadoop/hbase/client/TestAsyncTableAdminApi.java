@@ -19,17 +19,18 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
+import java.util.function.Supplier;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -39,11 +40,10 @@ import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFac
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
 
 /**
  * Class to test asynchronous table admin operations.
@@ -51,23 +51,34 @@ import org.junit.runners.Parameterized;
  *      minute timeout so they were split.
  * @see TestAsyncTableAdminApi3 Another split out from this class so each runs under ten minutes.
  */
-@RunWith(Parameterized.class)
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: policy = {0}")
 public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableAdminApi.class);
+  public TestAsyncTableAdminApi(Supplier<AsyncAdmin> admin) {
+    super(admin);
+  }
 
-  @Test
+  @BeforeAll
+  public static void setUpBeforeClass() throws Exception {
+    TestAsyncAdminBase.setUpBeforeClass();
+  }
+
+  @AfterAll
+  public static void tearDownAfterClass() throws Exception {
+    TestAsyncAdminBase.tearDownAfterClass();
+  }
+
+  @TestTemplate
   public void testCreateTable() throws Exception {
     List<TableDescriptor> tables = admin.listTableDescriptors().get();
     int numTables = tables.size();
     createTableWithDefaultConf(tableName);
     tables = admin.listTableDescriptors().get();
     assertEquals(numTables + 1, tables.size());
-    assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster().getMaster()
-      .getTableStateManager().isTableState(tableName, TableState.State.ENABLED));
+    assertTrue(TEST_UTIL.getHBaseCluster().getMaster().getTableStateManager()
+      .isTableState(tableName, TableState.State.ENABLED), "Table must be enabled.");
     assertEquals(TableState.State.ENABLED, getStateFromMeta(tableName));
   }
 
@@ -78,26 +89,26 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     return state.get().getState();
   }
 
-  @Test
+  @TestTemplate
   public void testCreateTableNumberOfRegions() throws Exception {
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
 
     createTableWithDefaultConf(tableName);
     List<HRegionLocation> regionLocations =
       ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
-    assertEquals("Table should have only 1 region", 1, regionLocations.size());
+    assertEquals(1, regionLocations.size(), "Table should have only 1 region");
 
     final TableName tableName2 = TableName.valueOf(tableName.getNameAsString() + "_2");
     createTableWithDefaultConf(tableName2, new byte[][] { new byte[] { 42 } });
     regionLocations = ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName2).get();
-    assertEquals("Table should have only 2 region", 2, regionLocations.size());
+    assertEquals(2, regionLocations.size(), "Table should have only 2 region");
 
     final TableName tableName3 = TableName.valueOf(tableName.getNameAsString() + "_3");
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName3);
     builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
     admin.createTable(builder.build(), Bytes.toBytes("a"), Bytes.toBytes("z"), 3).join();
     regionLocations = ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName3).get();
-    assertEquals("Table should have only 3 region", 3, regionLocations.size());
+    assertEquals(3, regionLocations.size(), "Table should have only 3 region");
 
     final TableName tableName4 = TableName.valueOf(tableName.getNameAsString() + "_4");
     builder = TableDescriptorBuilder.newBuilder(tableName4);
@@ -114,10 +125,10 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
     admin.createTable(builder.build(), new byte[] { 1 }, new byte[] { 127 }, 16).join();
     regionLocations = ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName5).get();
-    assertEquals("Table should have 16 region", 16, regionLocations.size());
+    assertEquals(16, regionLocations.size(), "Table should have 16 region");
   }
 
-  @Test
+  @TestTemplate
   public void testCreateTableWithRegions() throws Exception {
     byte[][] splitKeys = { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 }, new byte[] { 3, 3, 3 },
       new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
@@ -126,16 +137,15 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     createTableWithDefaultConf(tableName, splitKeys);
 
     boolean tableAvailable = admin.isTableAvailable(tableName).get();
-    assertTrue("Table should be created with splitKyes + 1 rows in META", tableAvailable);
+    assertTrue(tableAvailable, "Table should be created with splitKyes + 1 rows in META");
 
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
     List<HRegionLocation> regions =
       ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
     Iterator<HRegionLocation> hris = regions.iterator();
 
-    assertEquals(
-      "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
-      expectedRegions, regions.size());
+    assertEquals(expectedRegions, regions.size(),
+      "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size());
     System.err.println("Found " + regions.size() + " regions");
 
     RegionInfo hri;
@@ -186,9 +196,8 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     admin.createTable(builder.build(), startKey, endKey, expectedRegions).join();
 
     regions = ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName2).get();
-    assertEquals(
-      "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
-      expectedRegions, regions.size());
+    assertEquals(expectedRegions, regions.size(),
+      "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size());
     System.err.println("Found " + regions.size() + " regions");
 
     hris = regions.iterator();
@@ -234,9 +243,8 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     admin.createTable(builder.build(), startKey, endKey, expectedRegions).join();
 
     regions = ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName3).get();
-    assertEquals(
-      "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
-      expectedRegions, regions.size());
+    assertEquals(expectedRegions, regions.size(),
+      "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size());
     System.err.println("Found " + regions.size() + " regions");
 
     // Try an invalid case where there are duplicate split keys
@@ -251,7 +259,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testCreateTableWithOnlyEmptyStartRow() throws Exception {
     byte[][] splitKeys = new byte[1][];
     splitKeys[0] = HConstants.EMPTY_BYTE_ARRAY;
@@ -263,7 +271,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testCreateTableWithEmptyRowInTheSplitKeys() throws Exception {
     byte[][] splitKeys = new byte[3][];
     splitKeys[0] = Bytes.toBytes("region1");
@@ -277,7 +285,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testDeleteTable() throws Exception {
     createTableWithDefaultConf(tableName);
     assertTrue(admin.tableExists(tableName).get());
@@ -286,12 +294,12 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     assertFalse(admin.tableExists(tableName).get());
   }
 
-  @Test
+  @TestTemplate
   public void testTruncateTable() throws Exception {
     testTruncateTable(tableName, false);
   }
 
-  @Test
+  @TestTemplate
   public void testTruncateTablePreservingSplits() throws Exception {
     testTruncateTable(tableName, true);
   }
@@ -326,13 +334,13 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testCloneTableSchema() throws Exception {
     final TableName newTableName = TableName.valueOf(tableName.getNameAsString() + "_new");
     testCloneTableSchema(tableName, newTableName, false);
   }
 
-  @Test
+  @TestTemplate
   public void testCloneTableSchemaPreservingSplits() throws Exception {
     final TableName newTableName = TableName.valueOf(tableName.getNameAsString() + "_new");
     testCloneTableSchema(tableName, newTableName, true);
@@ -358,8 +366,8 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     admin.createTable(tableDesc, splitKeys).join();
 
     assertEquals(NUM_REGIONS, TEST_UTIL.getHBaseCluster().getRegions(tableName).size());
-    assertTrue("Table should be created with splitKyes + 1 rows in META",
-      admin.isTableAvailable(tableName).get());
+    assertTrue(admin.isTableAvailable(tableName).get(),
+      "Table should be created with splitKyes + 1 rows in META");
 
     // Clone & Verify
     admin.cloneTableSchema(tableName, newTableName, preserveSplits).join();
@@ -376,14 +384,14 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
     if (preserveSplits) {
       assertEquals(NUM_REGIONS, TEST_UTIL.getHBaseCluster().getRegions(newTableName).size());
-      assertTrue("New table should be created with splitKyes + 1 rows in META",
-        admin.isTableAvailable(newTableName).get());
+      assertTrue(admin.isTableAvailable(newTableName).get(),
+        "New table should be created with splitKyes + 1 rows in META");
     } else {
       assertEquals(1, TEST_UTIL.getHBaseCluster().getRegions(newTableName).size());
     }
   }
 
-  @Test
+  @TestTemplate
   public void testCloneTableSchemaWithNonExistentSourceTable() throws Exception {
     final TableName newTableName = TableName.valueOf(tableName.getNameAsString() + "_new");
     // test for non-existent source table
@@ -395,7 +403,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testCloneTableSchemaWithExistentDestinationTable() throws Exception {
     final TableName newTableName = TableName.valueOf(tableName.getNameAsString() + "_new");
     byte[] FAMILY_0 = Bytes.toBytes("cf0");
@@ -410,7 +418,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testIsTableAvailableWithInexistantTable() throws Exception {
     final TableName newTableName = TableName.valueOf(tableName.getNameAsString() + "_new");
     // test for inexistant table
