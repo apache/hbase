@@ -18,6 +18,184 @@
 -->
 # HBASE Changelog
 
+## Release 2.6.5 - 2026-03-20
+
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-29988](https://issues.apache.org/jira/browse/HBASE-29988) | Upgrade hbase-archetypes to use junit5 |  Major | test |
+| [HBASE-29969](https://issues.apache.org/jira/browse/HBASE-29969) | Bump lz4-java 1.10.4 |  Major | dependencies |
+| [HBASE-29982](https://issues.apache.org/jira/browse/HBASE-29982) | Upgrade TestTags to JUnit5 and polish the code |  Major | test |
+| [HBASE-29949](https://issues.apache.org/jira/browse/HBASE-29949) | Downgrade info log in GlobalMetricRegistriesAdapter |  Major | metrics |
+| [HBASE-29978](https://issues.apache.org/jira/browse/HBASE-29978) | Remove redundant imports in regionserver.jsp file |  Trivial | UI |
+| [HBASE-29954](https://issues.apache.org/jira/browse/HBASE-29954) | Support magic links to PR and JIRA in IDEA |  Minor | community |
+| [HBASE-29980](https://issues.apache.org/jira/browse/HBASE-29980) | Polish jenkinsfiles after splitting integration test out |  Major | jenkins |
+| [HBASE-28601](https://issues.apache.org/jira/browse/HBASE-28601) | Enable setting memstore on-heap sizes in bytes |  Major | regionserver |
+| [HBASE-29966](https://issues.apache.org/jira/browse/HBASE-29966) | Fix race in FlushRegionProcedure and rewrite TestAcidGuarantees |  Major | proc-v2, test |
+| [HBASE-29979](https://issues.apache.org/jira/browse/HBASE-29979) | Remove JUnit5 related dependencies in hbase-protocol-shaded |  Major | test |
+| [HBASE-29967](https://issues.apache.org/jira/browse/HBASE-29967) | Upgrade hbase-backup to use junit5 |  Major | backup&restore, test |
+| [HBASE-29938](https://issues.apache.org/jira/browse/HBASE-29938) | Upgrade hbase-it to use junit5 |  Major | integration tests, test |
+| [HBASE-29940](https://issues.apache.org/jira/browse/HBASE-29940) | GC Collector stats can't be displayed properly in JDK21 |  Major | UI |
+| [HBASE-29939](https://issues.apache.org/jira/browse/HBASE-29939) | Upgrade hbase-logging to use junit5 |  Major | logging, test |
+| [HBASE-29937](https://issues.apache.org/jira/browse/HBASE-29937) | Upgrade hbase-metrics-api to use junit5 |  Major | metrics, test |
+| [HBASE-29934](https://issues.apache.org/jira/browse/HBASE-29934) | Quota Info in Table Attributes should display more clearly |  Major | Quotas, UI |
+| [HBASE-29935](https://issues.apache.org/jira/browse/HBASE-29935) | Update copyright notices year to 2026 |  Minor | documentation |
+| [HBASE-29926](https://issues.apache.org/jira/browse/HBASE-29926) | Upgrade hbase-hadoop-compat to use junit5 |  Major | test |
+| [HBASE-29932](https://issues.apache.org/jira/browse/HBASE-29932) | Upgrade hbase-http to use junit5 |  Major | test |
+| [HBASE-23644](https://issues.apache.org/jira/browse/HBASE-23644) | Thrift2 DemoClient.py is not running |  Minor | . |
+| [HBASE-29457](https://issues.apache.org/jira/browse/HBASE-29457) | thrift1/DemoClient.py is not running |  Minor | . |
+| [HBASE-29910](https://issues.apache.org/jira/browse/HBASE-29910) | Upgrade hbase-client to use junit5 |  Major | Client, test |
+| [HBASE-29925](https://issues.apache.org/jira/browse/HBASE-29925) | TestCheckTestClasses fails on branch-2.x with JDK8 |  Major | test |
+| [HBASE-29874](https://issues.apache.org/jira/browse/HBASE-29874) | Removing the useless parameters from ScanQueryMatcher.isCellTTLExpired |  Major | . |
+| [HBASE-29919](https://issues.apache.org/jira/browse/HBASE-29919) | Test case TestSecureIPC#testRpcServerDisallowFallbackToSimpleAuth failed |  Major | test |
+| [HBASE-29911](https://issues.apache.org/jira/browse/HBASE-29911) | Upgrade hbase-examples to use junit5 |  Major | test |
+| [HBASE-29871](https://issues.apache.org/jira/browse/HBASE-29871) | During WAL write times out add DataNode address in. the exception message |  Minor | Filesystem Integration, io |
+| [HBASE-29902](https://issues.apache.org/jira/browse/HBASE-29902) | Upgrade hbase-thrift to use junit5 |  Major | test, Thrift |
+| [HBASE-29887](https://issues.apache.org/jira/browse/HBASE-29887) | Upgrade hbase-hbtop to use junit5 |  Major | hbtop, test |
+| [HBASE-29721](https://issues.apache.org/jira/browse/HBASE-29721) | Add validation for Mutations without column families |  Minor | Client |
+| [HBASE-29901](https://issues.apache.org/jira/browse/HBASE-29901) | Upgrade hbase-zookeeper to use junit5 |  Major | test, Zookeeper |
+| [HBASE-29898](https://issues.apache.org/jira/browse/HBASE-29898) | Upgrade hbase-replication to use junit5 |  Major | Replication, test |
+| [HBASE-29903](https://issues.apache.org/jira/browse/HBASE-29903) | hbtop should display default replica id |  Major | hbtop |
+| [HBASE-29885](https://issues.apache.org/jira/browse/HBASE-29885) | Enable Disabled UT TestNamespacesInstanceResource.testInvalidNamespacePostsAndPuts |  Minor | REST, test |
+| [HBASE-29900](https://issues.apache.org/jira/browse/HBASE-29900) | Correct logger initialization under hbase-procedure |  Major | proc-v2, test |
+| [HBASE-29844](https://issues.apache.org/jira/browse/HBASE-29844) | Upgrade hbase-metrics to use junit5 |  Major | metrics, test |
+| [HBASE-29562](https://issues.apache.org/jira/browse/HBASE-29562) | Add RegionServer Metrics for excluded DataNodes |  Minor | metrics |
+| [HBASE-29879](https://issues.apache.org/jira/browse/HBASE-29879) | Upgrade hbase-procedure to use junit5 |  Major | . |
+| [HBASE-29876](https://issues.apache.org/jira/browse/HBASE-29876) | Upgrade hbase-shell to use junit5 |  Major | shell, test |
+| [HBASE-25508](https://issues.apache.org/jira/browse/HBASE-25508) | Add a python example of using the thrift proxy in thrift-over-http mode |  Minor | Thrift |
+| [HBASE-29858](https://issues.apache.org/jira/browse/HBASE-29858) | Upgrade hbase-rest to use junit5 |  Major | test |
+| [HBASE-29867](https://issues.apache.org/jira/browse/HBASE-29867) | Promote some medium tests to large tests |  Major | test |
+| [HBASE-29866](https://issues.apache.org/jira/browse/HBASE-29866) | Generate job summary for our yetus check github action |  Major | build |
+| [HBASE-29845](https://issues.apache.org/jira/browse/HBASE-29845) | Description of the hbase:slowlog is not displayed correctly |  Major | UI |
+| [HBASE-29820](https://issues.apache.org/jira/browse/HBASE-29820) | Bump the syntax of velocity template to align with velocity 2.x syntax |  Minor | . |
+| [HBASE-29828](https://issues.apache.org/jira/browse/HBASE-29828) | Upgrade TestIPC related tests to junit5 |  Major | rpc, test |
+| [HBASE-29821](https://issues.apache.org/jira/browse/HBASE-29821) | Fix maven-source-plugin duplicate jar failure |  Minor | . |
+| [HBASE-29819](https://issues.apache.org/jira/browse/HBASE-29819) | Upgrade hbase-asyncfs to use junit5 |  Major | Filesystem Integration, test |
+| [HBASE-29817](https://issues.apache.org/jira/browse/HBASE-29817) | Stop retrying on DoNotRetryIOException when waiting procedure result |  Major | Admin, asyncclient |
+| [HBASE-29727](https://issues.apache.org/jira/browse/HBASE-29727) | Introduce a String pool for repeating filename, region and cf string fields in BlockCacheKey |  Major | . |
+| [HBASE-29808](https://issues.apache.org/jira/browse/HBASE-29808) | Simplify backup history retrieval |  Minor | backup&restore |
+| [HBASE-29810](https://issues.apache.org/jira/browse/HBASE-29810) | Polish TestFileChangeWatcher |  Major | test |
+| [HBASE-29796](https://issues.apache.org/jira/browse/HBASE-29796) | Allow sleepForRetry replication config to be overridden by replication peers |  Minor | Replication |
+| [HBASE-29794](https://issues.apache.org/jira/browse/HBASE-29794) | Only exclude tests when its failure rate above a threshold |  Major | flakies, jenkins |
+| [HBASE-29706](https://issues.apache.org/jira/browse/HBASE-29706) | Modify table with lazy mode should pass if coprocessors have not changed |  Major | . |
+| [HBASE-29732](https://issues.apache.org/jira/browse/HBASE-29732) | Add hbase.rs.evictblocksonsplit to UI and CacheConfig logs |  Major | BlockCache |
+| [HBASE-29729](https://issues.apache.org/jira/browse/HBASE-29729) | Add per-region table descriptor hash to RegionServer JMX metrics |  Minor | metrics, regionserver |
+| [HBASE-29767](https://issues.apache.org/jira/browse/HBASE-29767) | Fix IOTimePerHit NaN issue in BucketCacheStats |  Minor | BlockCache |
+| [HBASE-29645](https://issues.apache.org/jira/browse/HBASE-29645) | AsyncBufferedMutatorImpl concurrency improvement |  Major | Client |
+| [HBASE-29731](https://issues.apache.org/jira/browse/HBASE-29731) | Add L1 and L2 cache hit/miss caching metrics |  Trivial | BlockCache |
+| [HBASE-29725](https://issues.apache.org/jira/browse/HBASE-29725) | Refactor the testScan method of TestDefaultMemStore |  Minor | in-memory-compaction |
+| [HBASE-29714](https://issues.apache.org/jira/browse/HBASE-29714) | Increase DEFAULT\_RS\_REMOTE\_PROC\_RETRY\_LIMIT to 10 |  Major | proc-v2 |
+| [HBASE-29033](https://issues.apache.org/jira/browse/HBASE-29033) | Add a shell command for inspecting the state of enable/disable\_rpc\_throttle |  Major | Quotas, shell |
+| [HBASE-29703](https://issues.apache.org/jira/browse/HBASE-29703) | Remove duplicate calls to withNextBlockOnDiskSize |  Minor | BucketCache |
+| [HBASE-29473](https://issues.apache.org/jira/browse/HBASE-29473) | Obtain target cluster's token for cross clusters job |  Major | . |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-29955](https://issues.apache.org/jira/browse/HBASE-29955) | HMaster getting aborted due to NPE while creating snapshot for invalid table name |  Major | snapshots |
+| [HBASE-29987](https://issues.apache.org/jira/browse/HBASE-29987) | Replication position corruption when WAL file switch detected in ReplicationSourceWALReader run loop |  Minor | Replication, wal, Zookeeper |
+| [HBASE-29800](https://issues.apache.org/jira/browse/HBASE-29800) | WAL logs are unprotected during first full backup |  Major | backup&restore |
+| [HBASE-29977](https://issues.apache.org/jira/browse/HBASE-29977) | TestFSUtils fails with class not found |  Major | . |
+| [HBASE-29777](https://issues.apache.org/jira/browse/HBASE-29777) | Slow and Large Response RPC StartTime in SlowLog Operation Details page is incorrect |  Major | . |
+| [HBASE-29834](https://issues.apache.org/jira/browse/HBASE-29834) | MILLIS\_BETWEEN\_NEXTS metric is not updated on branch-3+ |  Minor | asyncclient, Client, scan |
+| [HBASE-29759](https://issues.apache.org/jira/browse/HBASE-29759) | TestAsyncTableScan fails with tracing assert error |  Major | asyncclient, tracing |
+| [HBASE-29862](https://issues.apache.org/jira/browse/HBASE-29862) | Test case TestClearRegionBlockCache#testClearBlockCache failed |  Major | BlockCache, test |
+| [HBASE-28913](https://issues.apache.org/jira/browse/HBASE-28913) | LoadBalancerPerformanceEvaluation fails with NPE |  Major | tooling |
+| [HBASE-29907](https://issues.apache.org/jira/browse/HBASE-29907) | ROWCOL bloom filter + StoreScanner.trySkipToNextColumn can surface out-of-order cells, causing read failure “isDelete failed” |  Blocker | Filters, Scanners |
+| [HBASE-29915](https://issues.apache.org/jira/browse/HBASE-29915) | Rewrite TestMultiRowResource and TestSchemaResource |  Major | REST, test |
+| [HBASE-29917](https://issues.apache.org/jira/browse/HBASE-29917) | TestCheckTestClasses fails with JDK8 + hadoop3 |  Major | test |
+| [HBASE-28985](https://issues.apache.org/jira/browse/HBASE-28985) | Fix memStoreSize metric for a table and add heap and off-heap size metrics |  Minor | metrics |
+| [HBASE-29886](https://issues.apache.org/jira/browse/HBASE-29886) | list\_namespace will throw instance vars on non-persistent Java type warning |  Minor | shell |
+| [HBASE-29846](https://issues.apache.org/jira/browse/HBASE-29846) | Fix backup history ordering |  Minor | backup&restore |
+| [HBASE-29877](https://issues.apache.org/jira/browse/HBASE-29877) | Load Test Tool doesn't read with TIMELINE consistency, because it sets replica id explicitly |  Major | test, util |
+| [HBASE-29859](https://issues.apache.org/jira/browse/HBASE-29859) | Initialization log for DataTieringManager is incorrect |  Minor | regionserver |
+| [HBASE-29896](https://issues.apache.org/jira/browse/HBASE-29896) | Raw scan incorrectly skips cells expired by cell-level TTL |  Minor | Scanners |
+| [HBASE-29870](https://issues.apache.org/jira/browse/HBASE-29870) | Correct the UI Column name from Stats to State in rsgroup.jsp |  Major | UI |
+| [HBASE-29868](https://issues.apache.org/jira/browse/HBASE-29868) | Can not start mini dfs cluster when building against hadoop 3.3.x |  Major | hadoop3, logging |
+| [HBASE-29857](https://issues.apache.org/jira/browse/HBASE-29857) | BucketCache fails to start when persistence file was written with empty cache |  Critical | regionserver |
+| [HBASE-29831](https://issues.apache.org/jira/browse/HBASE-29831) | Region replica's can fall behind due to a NPE during processing |  Minor | read replicas |
+| [HBASE-29860](https://issues.apache.org/jira/browse/HBASE-29860) | Fix NullPointerException on Maven site build |  Blocker | build, site |
+| [HBASE-29854](https://issues.apache.org/jira/browse/HBASE-29854) | Add osgi annotations dependency when generating javadoc |  Major | build, site |
+| [HBASE-29788](https://issues.apache.org/jira/browse/HBASE-29788) | Bump the version for Maven Project Info Reports Plugin |  Major | build, pom, site |
+| [HBASE-29141](https://issues.apache.org/jira/browse/HBASE-29141) | Calculate default maxQueueLength call queues correctly |  Major | master, regionserver |
+| [HBASE-29830](https://issues.apache.org/jira/browse/HBASE-29830) | Manage org.bouncycastle:bcutil-jdk18on version |  Major | . |
+| [HBASE-29836](https://issues.apache.org/jira/browse/HBASE-29836) | Add org.bouncycastle:bcpkix-jdk18on as explicit test dependency to hbase-http |  Major | test |
+| [HBASE-29783](https://issues.apache.org/jira/browse/HBASE-29783) | Fix flaky TestVerifyBucketCacheFile.testRetrieveFromFile test |  Minor | . |
+| [HBASE-29144](https://issues.apache.org/jira/browse/HBASE-29144) | Client request fails for KERBEROS with RpcConnectionRegistry |  Blocker | Client, rpc, security |
+| [HBASE-29802](https://issues.apache.org/jira/browse/HBASE-29802) | NPE when shutting down mini cluster cause tests hang |  Major | mapreduce, test |
+| [HBASE-29795](https://issues.apache.org/jira/browse/HBASE-29795) | RegionServer abort because of NPE when closing compacted store file |  Major | Compaction, regionserver |
+| [HBASE-29793](https://issues.apache.org/jira/browse/HBASE-29793) | TestDefaultHandlerUsageQuota fails 100% on flaky dashboard |  Major | Quotas, test |
+| [HBASE-29797](https://issues.apache.org/jira/browse/HBASE-29797) | Should not create wal directory when creating WAL instance |  Blocker | Region Assignment |
+| [HBASE-29775](https://issues.apache.org/jira/browse/HBASE-29775) | Allow inspecting log levels in Master UI in read-only mode |  Minor | UI |
+| [HBASE-29742](https://issues.apache.org/jira/browse/HBASE-29742) | Compaction scan returns single cells instead of rows after 10MB |  Major | Compaction |
+| [HBASE-29744](https://issues.apache.org/jira/browse/HBASE-29744) | Data loss scenario for WAL files belonging to RS added between backups |  Major | backup&restore |
+| [HBASE-29526](https://issues.apache.org/jira/browse/HBASE-29526) | Dynamic configuration not working for coprocessor |  Major | Coprocessors |
+| [HBASE-29771](https://issues.apache.org/jira/browse/HBASE-29771) | TestThreadHandlerUsageQuota fails on flaky dashboard |  Major | Quotas |
+| [HBASE-29586](https://issues.apache.org/jira/browse/HBASE-29586) | Setting \`hbase.oldwals.cleaner.thread.size\` to negative value will throw IllegalArgumentException |  Minor | . |
+| [HBASE-29760](https://issues.apache.org/jira/browse/HBASE-29760) | TestIncrementalBackup fails 100% on flaky dashboard |  Major | backup&restore |
+| [HBASE-29501](https://issues.apache.org/jira/browse/HBASE-29501) | IOException in SerialReplicationChecker.canPush causes entries to be pushed out of order |  Major | Replication |
+| [HBASE-28158](https://issues.apache.org/jira/browse/HBASE-28158) | Decouple RIT list management from TRSP invocation |  Major | master, Region Assignment |
+| [HBASE-29709](https://issues.apache.org/jira/browse/HBASE-29709) | NPE may occur when compacting table via RawAsyncHBaseAdmin |  Minor | asyncclient |
+| [HBASE-29698](https://issues.apache.org/jira/browse/HBASE-29698) | Correct log message in ReplicationSourceShipper.clearWALEntryBatch |  Major | Replication |
+| [HBASE-29145](https://issues.apache.org/jira/browse/HBASE-29145) | Table Stats shows store file size as zero always for hbase:meta table |  Major | UI |
+| [HBASE-29707](https://issues.apache.org/jira/browse/HBASE-29707) | Fix region cache % metrics miss calculation |  Major | BucketCache |
+| [HBASE-29701](https://issues.apache.org/jira/browse/HBASE-29701) | Update README.txt in hbase-protocol-shaded |  Minor | . |
+| [HBASE-29704](https://issues.apache.org/jira/browse/HBASE-29704) | Replace unsupported forkMode failsafe parameter in hbase-it |  Major | integration tests |
+| [HBASE-29702](https://issues.apache.org/jira/browse/HBASE-29702) | Remove shade plugin from hbase-protocol-shaded |  Minor | . |
+| [HBASE-29667](https://issues.apache.org/jira/browse/HBASE-29667) | The block priority is initialized as MULTI when the data block is first written into the BucketCache |  Major | BucketCache |
+| [HBASE-29700](https://issues.apache.org/jira/browse/HBASE-29700) | Always close RPC servers in AbstractTestIPC |  Minor | test |
+| [HBASE-29686](https://issues.apache.org/jira/browse/HBASE-29686) | Compatible issue of HFileOutputFormat2#configureRemoteCluster |  Minor | . |
+| [HBASE-28839](https://issues.apache.org/jira/browse/HBASE-28839) | Exception handling during retrieval of bucket-cache from persistence. |  Major | BucketCache |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-29807](https://issues.apache.org/jira/browse/HBASE-29807) | Depend on jcip-annotations explicitly |  Major | build, dependencies, hadoop3 |
+| [HBASE-29569](https://issues.apache.org/jira/browse/HBASE-29569) | Implement a built-in TieringValueProvider for parsing the date value from the rowkey |  Minor | . |
+| [HBASE-29837](https://issues.apache.org/jira/browse/HBASE-29837) | Backport HBASE-27355 Separate meta read requests from master and client to branch-2 |  Minor | . |
+| [HBASE-29596](https://issues.apache.org/jira/browse/HBASE-29596) | Migrate Canary Status Jamon page back to JSP |  Major | UI |
+| [HBASE-29531](https://issues.apache.org/jira/browse/HBASE-29531) | Migrate RegionServer Status Jamon page back to JSP |  Major | UI |
+| [HBASE-29223](https://issues.apache.org/jira/browse/HBASE-29223) | Migrate Master Status Jamon page back to JSP |  Major | UI |
+| [HBASE-29568](https://issues.apache.org/jira/browse/HBASE-29568) | Allow for a configurable "grace period" when using Time Based Priority |  Major | . |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-29582](https://issues.apache.org/jira/browse/HBASE-29582) | Migrate Jamon pages back to JSP |  Major | UI |
+| [HBASE-29971](https://issues.apache.org/jira/browse/HBASE-29971) | Upgrade to hbase-thirdparty 4.1.13 |  Major | dependencies, thirdparty |
+| [HBASE-29893](https://issues.apache.org/jira/browse/HBASE-29893) | Add zizmor for GitHub Actions workflows security analysis |  Major | build |
+| [HBASE-29930](https://issues.apache.org/jira/browse/HBASE-29930) | Separate packaging and integration check in nightly job to new jenkins job |  Major | jenkins |
+| [HBASE-29454](https://issues.apache.org/jira/browse/HBASE-29454) | Update hbase-examples scripts to be compatible with Python 3 |  Minor | . |
+| [HBASE-29928](https://issues.apache.org/jira/browse/HBASE-29928) | Bump io.airlift:aircompressor from 0.27 to 2.0.3 |  Major | compression, dependabot, dependencies, security |
+| [HBASE-29916](https://issues.apache.org/jira/browse/HBASE-29916) | Correct alter\_async help text examples |  Trivial | shell |
+| [HBASE-29897](https://issues.apache.org/jira/browse/HBASE-29897) | Bump org.apache.avro:avro from 1.11.4 to 1.11.5 |  Major | dependabot, security |
+| [HBASE-29873](https://issues.apache.org/jira/browse/HBASE-29873) | Improve the job summary for unit check |  Major | build, test |
+| [HBASE-29888](https://issues.apache.org/jira/browse/HBASE-29888) | GitHub Actions job summary should show which tests failed |  Major | build |
+| [HBASE-29838](https://issues.apache.org/jira/browse/HBASE-29838) | Run Hadoop Check as a GitHub Action |  Major | build |
+| [HBASE-29792](https://issues.apache.org/jira/browse/HBASE-29792) | Bump org.apache.logging.log4j:log4j-core from 2.17.2 to 2.25.3 |  Major | dependabot, dependencies, logging, security |
+| [HBASE-29855](https://issues.apache.org/jira/browse/HBASE-29855) | Bump maven-site-plugin to 3.21.0 |  Blocker | build, site |
+| [HBASE-29851](https://issues.apache.org/jira/browse/HBASE-29851) | Add more directories to yetus skip-dirs |  Major | build |
+| [HBASE-29852](https://issues.apache.org/jira/browse/HBASE-29852) | GHA general check broken on branch-2\* |  Major | build |
+| [HBASE-29829](https://issues.apache.org/jira/browse/HBASE-29829) | Pagination support for Hide Old Comments in PRs |  Major | build |
+| [HBASE-29787](https://issues.apache.org/jira/browse/HBASE-29787) | Run Yetus General Checks as a GitHub Action |  Major | build |
+| [HBASE-29791](https://issues.apache.org/jira/browse/HBASE-29791) | Backport 'HBASE-29761: The HBase UI's Debug Dump is not redacting sensitive information' to branch-2.6 |  Critical | security, UI |
+| [HBASE-28804](https://issues.apache.org/jira/browse/HBASE-28804) | Implement asynchronous retrieval of bucket-cache data from persistence. |  Major | BucketCache |
+| [HBASE-29743](https://issues.apache.org/jira/browse/HBASE-29743) | Fix typos in documentation for BulkLoadObserver |  Trivial | documentation |
+| [HBASE-29740](https://issues.apache.org/jira/browse/HBASE-29740) | Upgrade lz4-java to 1.8.1+ |  Major | security |
+| [HBASE-29695](https://issues.apache.org/jira/browse/HBASE-29695) | Fix typo in RestoreRequest's "Builder.withOvewrite()" method |  Minor | backup&restore |
+| [HBASE-29724](https://issues.apache.org/jira/browse/HBASE-29724) | Backport missing changes of "HBASE-25334: TestRSGroupsFallback.testFallback is flaky" into branch-2 and branch-2.6 |  Major | . |
+| [HBASE-29723](https://issues.apache.org/jira/browse/HBASE-29723) | Backport "HBASE-25282: Remove processingServers in DeadServer as we can get this information by Procedure of master" to branch-2.6 |  Major | . |
+
+
 ## Release 2.6.4 - 2025-11-10
 
 

@@ -16,6 +16,147 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
+# HBASE  2.6.5 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-29930](https://issues.apache.org/jira/browse/HBASE-29930) | *Major* | **Separate packaging and integration check in nightly job to new jenkins job**
+
+Introduced a new HBase-Integration-Test jenkins job to run packaging and integration test.
+
+
+---
+
+* [HBASE-28985](https://issues.apache.org/jira/browse/HBASE-28985) | *Minor* | **Fix memStoreSize metric for a table and add heap and off-heap size metrics**
+
+The table-level memStoreSize metric was incorrectly summing data size, heap size, and off-heap size together, while the same metric at the region and region server levels reported only data size. This has been fixed so that memStoreSize now consistently reports data size at all levels.
+
+Two new metrics have been added at both the table and region levels:
+- memStoreHeapSize: on-heap memstore size
+- memStoreOffHeapSize: off-heap memstore size
+
+
+---
+
+* [HBASE-29877](https://issues.apache.org/jira/browse/HBASE-29877) | *Major* | **Load Test Tool doesn't read with TIMELINE consistency, because it sets replica id explicitly**
+
+New parameter for HBase LTT "--timeline": Use TIMELINE consistency in read operations.
+
+
+---
+
+* [HBASE-29569](https://issues.apache.org/jira/browse/HBASE-29569) | *Minor* | **Implement a built-in TieringValueProvider for parsing the date value from the rowkey**
+
+This introduces a regex based built-in tiering value provider for parsing dates directly from the rowkey portion of Cells.  enabling time-based priority comparison. The implementation utilizes a configurable regular expression and date format to isolate a date substring within the RowKey, returning the parsed epoch time in milliseconds.
+
+Usage:
+This feature is controlled via table-level configuration properties. To utilize this provider, specify the class in the TIERING\_VALUE\_PROVIDER property and define the
+
+Configuration properties :
+TIERING\_KEY\_DATE\_PATTERN: Regex pattern for date extraction.
+TIERING\_KEY\_DATE\_FORMAT: Expected date format.
+TIERING\_KEY\_DATE\_GROUP: The target regex extract group.
+
+Example using hbase shell:
+
+-----
+hbase(main):003:0\> alter 'orders', {NAME =\> 'cf1',
+  CONFIGURATION =\> {'hbase.hstore.datatiering.type' =\> 'CUSTOM',
+    'TIERING\_KEY\_DATE\_PATTERN' =\> '\_(\\\\d{4}-\\\\d{2}-\\\\d{2})\_',
+    'TIERING\_KEY\_DATE\_FORMAT' =\> 'yyyy-MM-dd',
+    'TIERING\_KEY\_DATE\_GROUP' =\> '1',
+    'hbase.hstore.datatiering.hot.age.millis' =\> '604800000',
+    'hbase.hstore.engine.class' =\> 'org.apache.hadoop.hbase.regionserver.CustomTieredStoreEngine',
+    'hbase.hstore.compaction.date.tiered.custom.age.limit.millis' =\> '604800000'
+  }
+}
+-----
+
+Note: Please ensure strict validation of regex patterns and date formats to ensure accurate parsing.
+
+
+---
+
+* [HBASE-29837](https://issues.apache.org/jira/browse/HBASE-29837) | *Minor* | **Backport HBASE-27355 Separate meta read requests from master and client to branch-2**
+
+Dispatch the client's meta read request and the master's meta read request to different processing queues. Introduce a new configuration hbase.ipc.server.metacallqueue.handler.factor to determine the size of the meta request processing queue.
+
+
+---
+
+* [HBASE-29141](https://issues.apache.org/jira/browse/HBASE-29141) | *Major* | **Calculate default maxQueueLength call queues correctly**
+
+The default limit for RPC callqueue length was too high previously. The default was approximately the number of RPC handlers ^ 2 (squared), and is now approximately 10 \* number of RPC handlers. The length can still be overridden with hbase.ipc.server.max.callqueue.length.
+
+
+---
+
+* [HBASE-29144](https://issues.apache.org/jira/browse/HBASE-29144) | *Blocker* | **Client request fails for KERBEROS with RpcConnectionRegistry**
+
+SaslClientAuthenticationProviders and SaslServerAuthenticationProviders are not singleton now.
+
+As you are free to connect to different HBase clusters which have different authentication configurations from a single process, it does not make sense to let them share the same SaslClientAuthenticationProviders. Now we will create a SaslClientAuthenticationProviders for every Connection instance, even if you pass the same Configuration object when calling ConnectionFactory.createConnection.
+
+For SaslServerAuthenticationProviders, typically we will only initialize it once in production even if it is not singleton as we will only start a single service(like master or region server) in a process, making it not singleton can also benefit UTs as we will start multiple services when starting a mini cluster.
+
+
+---
+
+* [HBASE-29582](https://issues.apache.org/jira/browse/HBASE-29582) | *Major* | **Migrate Jamon pages back to JSP**
+
+Jamon is almost dead so in this issue, we moved our status page back to JSP, which is also old but a standard in Java EE that not easy to be dead.
+
+See https://lists.apache.org/thread/0c9to6rxzbf5f2x6t0x20408n15rdvmt for more details.
+
+
+---
+
+* [HBASE-29796](https://issues.apache.org/jira/browse/HBASE-29796) | *Minor* | **Allow sleepForRetry replication config to be overridden by replication peers**
+
+Setting a PeerConfig configuration value beginning with "replication.source" will override the value in the ReplicationSource for only that peer.
+
+If the default value for "replication.source.sleepforretries" is 1000 and there are two peers, '0' and '1', running "update\_peer\_config '0', CONFIG =\> { "replication.source.sleepforretries" =\> "500" }" will result in '0' using a value of 500 and '1' using the default value of 1000.
+
+
+---
+
+* [HBASE-29794](https://issues.apache.org/jira/browse/HBASE-29794) | *Major* | **Only exclude tests when its failure rate above a threshold**
+
+Now we will only exclude a test from nightly and pre commit build when its failure rate on flakydashboard is above 20% and have been run for at least 10 times.
+
+
+---
+
+* [HBASE-29526](https://issues.apache.org/jira/browse/HBASE-29526) | *Major* | **Dynamic configuration not working for coprocessor**
+
+This change fixed the dynamic configuration for coprocessor.
+
+
+---
+
+* [HBASE-29729](https://issues.apache.org/jira/browse/HBASE-29729) | *Minor* | **Add per-region table descriptor hash to RegionServer JMX metrics**
+
+Adds a tableDescriptorHash metric to region JMX output, exposing a SHA-256 hash of the region's current table descriptor. This enables operators to track which regions have adopted new descriptors during lazy table modifications, supporting progressive canary rollouts without maintaining external state. The hash is computed once at region open and cached for the region's lifetime.
+
+
+---
+
+* [HBASE-29740](https://issues.apache.org/jira/browse/HBASE-29740) | *Major* | **Upgrade lz4-java to 1.8.1+**
+
+Upgrade lz4-java to 1.10.1 for addressing CVE‐2025‐12183 and CVE-2025-66566.
+
+
+---
+
+* [HBASE-29695](https://issues.apache.org/jira/browse/HBASE-29695) | *Minor* | **Fix typo in RestoreRequest's "Builder.withOvewrite()" method**
+
+fixed typo of an internal API by replacing withOvewrite with withOverwrite
+
+
+
 # HBASE  2.6.4 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
