@@ -26,6 +26,8 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-29981](https://issues.apache.org/jira/browse/HBASE-29981) | Upgrade hbase-endpoint to use junit5 |  Major | test |
+| [HBASE-29927](https://issues.apache.org/jira/browse/HBASE-29927) | Upgrade hbase-external-blockcache to use junit5 |  Major | test |
 | [HBASE-29988](https://issues.apache.org/jira/browse/HBASE-29988) | Upgrade hbase-archetypes to use junit5 |  Major | test |
 | [HBASE-29969](https://issues.apache.org/jira/browse/HBASE-29969) | Bump lz4-java 1.10.4 |  Major | dependencies |
 | [HBASE-29982](https://issues.apache.org/jira/browse/HBASE-29982) | Upgrade TestTags to JUnit5 and polish the code |  Major | test |
