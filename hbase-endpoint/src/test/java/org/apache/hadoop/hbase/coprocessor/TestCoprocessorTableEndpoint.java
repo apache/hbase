@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.Map;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -37,19 +36,16 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCoprocessorTableEndpoint {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCoprocessorTableEndpoint.class);
 
   private static final byte[] TEST_FAMILY = Bytes.toBytes("TestFamily");
   private static final byte[] TEST_QUALIFIER = Bytes.toBytes("TestQualifier");
@@ -61,22 +57,26 @@ public class TestCoprocessorTableEndpoint {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(2);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  @BeforeEach
+  public void setUpEach(TestInfo testInfo) {
+    this.methodName = testInfo.getTestMethod().get().getName();
+  }
+
   @Test
   public void testCoprocessorTableEndpoint() throws Throwable {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
 
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
@@ -88,7 +88,7 @@ public class TestCoprocessorTableEndpoint {
 
   @Test
   public void testDynamicCoprocessorTableEndpoint() throws Throwable {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
 
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
@@ -167,7 +167,7 @@ public class TestCoprocessorTableEndpoint {
       for (long i = 0; i < ROWSIZE; i++) {
         expectedResult += i;
       }
-      assertEquals("Invalid result", expectedResult, sumResult);
+      assertEquals(expectedResult, sumResult, "Invalid result");
 
       // scan: for region 2 and region 3
       results.clear();
@@ -180,7 +180,7 @@ public class TestCoprocessorTableEndpoint {
       for (int i = rowSeperator1; i < ROWSIZE; i++) {
         expectedResult += i;
       }
-      assertEquals("Invalid result", expectedResult, sumResult);
+      assertEquals(expectedResult, sumResult, "Invalid result");
     } finally {
       table.close();
     }
