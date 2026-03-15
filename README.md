@@ -24,7 +24,7 @@ under the License.
 # Getting Start
 To get started using HBase, the full documentation for this release can be found under the doc/ directory that accompanies this README. Using a browser, open the docs/index.html to view the project home page (or browse https://hbase.apache.org). The hbase '[book](https://hbase.apache.org/book.html)' has a 'quick start' section and is where you should being your exploration of the hbase project.
 
-The latest HBase can be downloaded from the [download page](https://hbase.apache.org/downloads.html).
+The latest HBase can be downloaded from the [download page](https://hbase.apache.org/downloads/).
 
 We use mailing lists to send notice and discuss. The mailing lists and archives are listed [here](http://hbase.apache.org/mail-lists.html)
 
