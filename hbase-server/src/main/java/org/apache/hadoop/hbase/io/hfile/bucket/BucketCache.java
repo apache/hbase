@@ -1950,8 +1950,17 @@ public class BucketCache implements BlockCache, HeapSize {
   @Override
   public int evictBlocksRangeByHfileName(String hfileName, long initOffset, long endOffset) {
     Set<BlockCacheKey> keySet = getAllCacheKeysForFile(hfileName, initOffset, endOffset);
-    // We need to make sure whether we are evicting all blocks for this given file. In case of
-    // split references, we might be evicting just half of the blocks
+    // Also collect matching keys still in ramCache (not yet written to the backing map by the
+    // writer thread). Without this, blocks that were recently cached but not yet persisted to the
+    // IOEngine would be missed by eviction, leaving stale entries and an inflated block count.
+    for (BlockCacheKey key : ramCache.delegate.keySet()) {
+      if (
+        key.getOffset() >= initOffset && key.getOffset() <= endOffset
+          && BlockCacheUtil.matchesHFileName(key.getHfileName(), hfileName)
+      ) {
+        keySet.add(key);
+      }
+    }
     LOG.debug("found {} blocks for file {}, starting offset: {}, end offset: {}", keySet.size(),
       hfileName, initOffset, endOffset);
     int numEvicted = 0;

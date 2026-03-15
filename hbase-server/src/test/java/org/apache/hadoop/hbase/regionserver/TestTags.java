@@ -654,8 +654,7 @@ public class TestTags {
      * callbacks before the test thread reads the result. This map associates tags with the row key
      * they belong to, eliminating the race.
      */
-    public static final ConcurrentMap<ByteBuffer, List<Tag>> tagsByRow =
-      new ConcurrentHashMap<>();
+    public static final ConcurrentMap<ByteBuffer, List<Tag>> tagsByRow = new ConcurrentHashMap<>();
 
     @Override
     public Optional<RegionObserver> getRegionObserver() {
