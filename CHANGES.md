@@ -26,6 +26,8 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-29981](https://issues.apache.org/jira/browse/HBASE-29981) | Upgrade hbase-endpoint to use junit5 |  Major | test |
+| [HBASE-29927](https://issues.apache.org/jira/browse/HBASE-29927) | Upgrade hbase-external-blockcache to use junit5 |  Major | test |
 | [HBASE-29988](https://issues.apache.org/jira/browse/HBASE-29988) | Upgrade hbase-archetypes to use junit5 |  Major | test |
 | [HBASE-29969](https://issues.apache.org/jira/browse/HBASE-29969) | Bump lz4-java 1.10.4 |  Major | dependencies |
 | [HBASE-29982](https://issues.apache.org/jira/browse/HBASE-29982) | Upgrade TestTags to JUnit5 and polish the code |  Major | test |
@@ -171,6 +173,7 @@
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
 | [HBASE-29582](https://issues.apache.org/jira/browse/HBASE-29582) | Migrate Jamon pages back to JSP |  Major | UI |
+| [HBASE-29985](https://issues.apache.org/jira/browse/HBASE-29985) | Bump org.apache.zookeeper:zookeeper from 3.8.4 to 3.8.6 |  Major | dependabot, security, Zookeeper |
 | [HBASE-29971](https://issues.apache.org/jira/browse/HBASE-29971) | Upgrade to hbase-thirdparty 4.1.13 |  Major | dependencies, thirdparty |
 | [HBASE-29893](https://issues.apache.org/jira/browse/HBASE-29893) | Add zizmor for GitHub Actions workflows security analysis |  Major | build |
 | [HBASE-29930](https://issues.apache.org/jira/browse/HBASE-29930) | Separate packaging and integration check in nightly job to new jenkins job |  Major | jenkins |
