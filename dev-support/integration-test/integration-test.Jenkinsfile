@@ -314,6 +314,13 @@ pipeline {
   post {
     always {
       script {
+        sh "printenv"
+        // wipe out all the output directories before unstashing
+        sh'''
+          echo "Clean up result directories"
+          rm -rf output-srctarball
+          rm -rf output-integration-hadoop-*
+        '''
         def results = []
         results.add('output-srctarball/commentfile')
         for (hadoopVersion in getHadoopVersions(env.HADOOP_VERSIONS)) {
