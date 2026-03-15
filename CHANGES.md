@@ -26,6 +26,10 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-30003](https://issues.apache.org/jira/browse/HBASE-30003) | Upgrade deprecated GitHub Actions versions for branch-2.x |  Major | build |
+| [HBASE-30002](https://issues.apache.org/jira/browse/HBASE-30002) | Rewrite TestExportSnapshot related UTs |  Major | mapreduce, test |
+| [HBASE-29999](https://issues.apache.org/jira/browse/HBASE-29999) | Update the download links in the README |  Minor | . |
+| [HBASE-29994](https://issues.apache.org/jira/browse/HBASE-29994) | Separate backwards compatibility checks to a new jenkins job |  Major | jenkins, scripts |
 | [HBASE-29981](https://issues.apache.org/jira/browse/HBASE-29981) | Upgrade hbase-endpoint to use junit5 |  Major | test |
 | [HBASE-29927](https://issues.apache.org/jira/browse/HBASE-29927) | Upgrade hbase-external-blockcache to use junit5 |  Major | test |
 | [HBASE-29988](https://issues.apache.org/jira/browse/HBASE-29988) | Upgrade hbase-archetypes to use junit5 |  Major | test |
@@ -159,6 +163,9 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-29923](https://issues.apache.org/jira/browse/HBASE-29923) | Polish the nightly jenkins file |  Major | jenkins, scripts |
+| [HBASE-29922](https://issues.apache.org/jira/browse/HBASE-29922) | Change hadoop check versions after supporting hadoop 3.4.3 |  Major | scripts |
+| [HBASE-29921](https://issues.apache.org/jira/browse/HBASE-29921) | Bump default hadoop 3 version to 3.4.3 |  Major | dependencies, hadoop3 |
 | [HBASE-29807](https://issues.apache.org/jira/browse/HBASE-29807) | Depend on jcip-annotations explicitly |  Major | build, dependencies, hadoop3 |
 | [HBASE-29569](https://issues.apache.org/jira/browse/HBASE-29569) | Implement a built-in TieringValueProvider for parsing the date value from the rowkey |  Minor | . |
 | [HBASE-29837](https://issues.apache.org/jira/browse/HBASE-29837) | Backport HBASE-27355 Separate meta read requests from master and client to branch-2 |  Minor | . |
