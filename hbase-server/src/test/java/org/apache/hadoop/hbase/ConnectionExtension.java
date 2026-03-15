@@ -22,39 +22,34 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.Connection;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.rules.ExternalResource;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.Extension;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 /**
- * A {@link Rule} that manages the lifecycle of an instance of {@link AsyncConnection}. Can be used
- * in either the {@link Rule} or {@link ClassRule} positions.
+ * An {@link Extension} that manages the lifecycle of an instance of {@link AsyncConnection}.
  * </p>
- * Use in combination with {@link MiniClusterRule}, for example:
+ * Use in combination with {@link MiniClusterExtension}, for example:
  *
  * <pre>
  * {
- *   &#64;code
  *   public class TestMyClass {
- *     private static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder().build();
- *     private static final ConnectionRule connectionRule =
- *       ConnectionRule.createAsyncConnectionRule(miniClusterRule::createConnection);
  *
- *     &#64;ClassRule
- *     public static final TestRule rule =
- *       RuleChain.outerRule(miniClusterRule).around(connectionRule);
+ *     &#64;Order(1)
+ *     &#64;RegisterExtension
+ *     private static final MiniClusterExtension miniClusterExtension =
+ *        miniClusterExtension.newBuilder().build();
+ *
+ *     &#64;Order(2)
+ *     &#64;RegisterExtension
+ *     private static final ConnectionExtension connectionExtension =
+ *         ConnectionExtension.createAsyncConnectionExtension(
+ *            miniClusterExtension::createConnection);
  *   }
- * }
  * </pre>
- *
- * @deprecated Use {@link ConnectionExtension} instead, once we finish the migration of JUnit5,
- *             which means we do not need {@link ConnectionRule} any more, we can remove these
- *             dependencies, see
- *             <a href="https://issues.apache.org/jira/browse/HBASE-23671">HBASE-23671</a> for more
- *             details.
  */
-@Deprecated
-public final class ConnectionRule extends ExternalResource {
+public final class ConnectionExtension implements BeforeAllCallback, AfterAllCallback {
 
   private final Supplier<Connection> connectionSupplier;
   private final Supplier<CompletableFuture<AsyncConnection>> asyncConnectionSupplier;
@@ -62,21 +57,23 @@ public final class ConnectionRule extends ExternalResource {
   private Connection connection;
   private AsyncConnection asyncConnection;
 
-  public static ConnectionRule createConnectionRule(final Supplier<Connection> connectionSupplier) {
-    return new ConnectionRule(connectionSupplier, null);
+  public static ConnectionExtension
+    createConnectionExtension(final Supplier<Connection> connectionSupplier) {
+    return new ConnectionExtension(connectionSupplier, null);
   }
 
-  public static ConnectionRule createAsyncConnectionRule(
+  public static ConnectionExtension createAsyncConnectionExtension(
     final Supplier<CompletableFuture<AsyncConnection>> asyncConnectionSupplier) {
-    return new ConnectionRule(null, asyncConnectionSupplier);
+    return new ConnectionExtension(null, asyncConnectionSupplier);
   }
 
-  public static ConnectionRule createConnectionRule(final Supplier<Connection> connectionSupplier,
+  public static ConnectionExtension createConnectionExtension(
+    final Supplier<Connection> connectionSupplier,
     final Supplier<CompletableFuture<AsyncConnection>> asyncConnectionSupplier) {
-    return new ConnectionRule(connectionSupplier, asyncConnectionSupplier);
+    return new ConnectionExtension(connectionSupplier, asyncConnectionSupplier);
   }
 
-  private ConnectionRule(final Supplier<Connection> connectionSupplier,
+  private ConnectionExtension(final Supplier<Connection> connectionSupplier,
     final Supplier<CompletableFuture<AsyncConnection>> asyncConnectionSupplier) {
     this.connectionSupplier = connectionSupplier;
     this.asyncConnectionSupplier = asyncConnectionSupplier;
@@ -85,7 +82,7 @@ public final class ConnectionRule extends ExternalResource {
   public Connection getConnection() {
     if (connection == null) {
       throw new IllegalStateException(
-        "ConnectionRule not initialized with a synchronous connection.");
+        "ConnectionExtension not initialized with a synchronous connection.");
     }
     return connection;
   }
@@ -93,13 +90,13 @@ public final class ConnectionRule extends ExternalResource {
   public AsyncConnection getAsyncConnection() {
     if (asyncConnection == null) {
       throw new IllegalStateException(
-        "ConnectionRule not initialized with an asynchronous connection.");
+        "ConnectionExtension not initialized with an asynchronous connection.");
     }
     return asyncConnection;
   }
 
   @Override
-  protected void before() throws Throwable {
+  public void beforeAll(ExtensionContext context) {
     if (connectionSupplier != null) {
       this.connection = connectionSupplier.get();
     }
@@ -109,7 +106,7 @@ public final class ConnectionRule extends ExternalResource {
   }
 
   @Override
-  protected void after() {
+  public void afterAll(ExtensionContext context) {
     CompletableFuture<Void> closeConnection = CompletableFuture.runAsync(() -> {
       if (this.connection != null) {
         try {
