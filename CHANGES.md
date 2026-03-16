@@ -26,6 +26,11 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-30003](https://issues.apache.org/jira/browse/HBASE-30003) | Upgrade deprecated GitHub Actions versions for branch-2.x |  Major | build |
+| [HBASE-30002](https://issues.apache.org/jira/browse/HBASE-30002) | Rewrite TestExportSnapshot related UTs |  Major | mapreduce, test |
+| [HBASE-29999](https://issues.apache.org/jira/browse/HBASE-29999) | Update the download links in the README |  Minor | . |
+| [HBASE-29994](https://issues.apache.org/jira/browse/HBASE-29994) | Separate backwards compatibility checks to a new jenkins job |  Major | jenkins, scripts |
+| [HBASE-30001](https://issues.apache.org/jira/browse/HBASE-30001) | Backport upgrade hbase-endpoint to use junit5 for branch-2.5 |  Major | test |
 | [HBASE-29927](https://issues.apache.org/jira/browse/HBASE-29927) | Upgrade hbase-external-blockcache to use junit5 |  Major | test |
 | [HBASE-29996](https://issues.apache.org/jira/browse/HBASE-29996) | Backport the HBaseParameterizedTemplateProvider changes in HBASE-29966 to branch-2.5 |  Major | test |
 | [HBASE-29988](https://issues.apache.org/jira/browse/HBASE-29988) | Upgrade hbase-archetypes to use junit5 |  Major | test |
@@ -88,6 +93,7 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-28806](https://issues.apache.org/jira/browse/HBASE-28806) | ExportSnapshot failed if reference file presented |  Major | snapshots |
 | [HBASE-29977](https://issues.apache.org/jira/browse/HBASE-29977) | TestFSUtils fails with class not found |  Major | . |
 | [HBASE-29777](https://issues.apache.org/jira/browse/HBASE-29777) | Slow and Large Response RPC StartTime in SlowLog Operation Details page is incorrect |  Major | . |
 | [HBASE-29834](https://issues.apache.org/jira/browse/HBASE-29834) | MILLIS\_BETWEEN\_NEXTS metric is not updated on branch-3+ |  Minor | asyncclient, Client, scan |
@@ -131,6 +137,9 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-29923](https://issues.apache.org/jira/browse/HBASE-29923) | Polish the nightly jenkins file |  Major | jenkins, scripts |
+| [HBASE-29922](https://issues.apache.org/jira/browse/HBASE-29922) | Change hadoop check versions after supporting hadoop 3.4.3 |  Major | scripts |
+| [HBASE-29921](https://issues.apache.org/jira/browse/HBASE-29921) | Bump default hadoop 3 version to 3.4.3 |  Major | dependencies, hadoop3 |
 | [HBASE-29807](https://issues.apache.org/jira/browse/HBASE-29807) | Depend on jcip-annotations explicitly |  Major | build, dependencies, hadoop3 |
 | [HBASE-29837](https://issues.apache.org/jira/browse/HBASE-29837) | Backport HBASE-27355 Separate meta read requests from master and client to branch-2 |  Minor | . |
 | [HBASE-29596](https://issues.apache.org/jira/browse/HBASE-29596) | Migrate Canary Status Jamon page back to JSP |  Major | UI |
