@@ -2413,6 +2413,9 @@ public class BucketCache implements BlockCache, HeapSize {
     return Optional.empty();
   }
 
+  static final int CACHE_COMPLETION_MAX_RETRIES = 50;
+  static final long CACHE_COMPLETION_RETRY_INTERVAL_MS = 100;
+
   @Override
   public void notifyFileCachingCompleted(Path fileName, int totalBlockCount, int dataBlockCount,
     long size) {
@@ -2422,49 +2425,56 @@ public class BucketCache implements BlockCache, HeapSize {
     // find the cached blocks and we will never mark the file/region as cached.
     final String requestedFileName = fileName.getName();
     final String baseFileName = BlockCacheUtil.getBaseHFileName(requestedFileName);
-    // block eviction may be happening in the background as prefetch runs,
-    // so we need to count all blocks for this file in the backing map under
-    // a read lock for the block offset
-    final List<ReentrantReadWriteLock> locks = new ArrayList<>();
     LOG.debug("Notifying caching completed for file {}, with total blocks {}, and data blocks {}",
       fileName, totalBlockCount, dataBlockCount);
-    try {
-      int count = 0;
-      LOG.debug("iterating over {} entries in the backing map", backingMap.size());
-      Set<BlockCacheKey> result = getAllCacheKeysForFile(baseFileName, 0, Long.MAX_VALUE);
-      if (result.isEmpty() && StoreFileInfo.isReference(baseFileName)) {
-        result = getAllCacheKeysForFile(
-          StoreFileInfo.getReferredToRegionAndFile(baseFileName).getSecond(), 0, Long.MAX_VALUE);
-      }
-      for (BlockCacheKey entry : result) {
-        LOG.debug("found block for file {} in the backing map. Acquiring read lock for offset {}",
-          baseFileName, entry.getOffset());
-        ReentrantReadWriteLock lock = offsetLock.getLock(entry.getOffset());
-        lock.readLock().lock();
-        locks.add(lock);
-        if (backingMap.containsKey(entry) && entry.getBlockType().isData()) {
-          count++;
+    // Tracks whether ramCache was empty on the previous scan. doDrain() publishes each block to
+    // backingMap/blocksByHFile BEFORE removing it from ramCache, so once ramCache is empty all
+    // blocks are visible in blocksByHFile. However, our getAllCacheKeysForFile snapshot may be
+    // stale. When ramCache first becomes empty we do one immediate rescan (no sleep) to pick up
+    // blocks that moved during the previous scan.
+    boolean ramCacheWasEmpty = false;
+    for (int attempt = 0; attempt <= CACHE_COMPLETION_MAX_RETRIES; attempt++) {
+      // block eviction may be happening in the background as prefetch runs,
+      // so we need to count all blocks for this file in the backing map under
+      // a read lock for the block offset
+      final List<ReentrantReadWriteLock> locks = new ArrayList<>();
+      try {
+        int count = 0;
+        LOG.debug("iterating over {} entries in the backing map (attempt {})", backingMap.size(),
+          attempt);
+        Set<BlockCacheKey> result = getAllCacheKeysForFile(baseFileName, 0, Long.MAX_VALUE);
+        if (result.isEmpty() && StoreFileInfo.isReference(baseFileName)) {
+          result = getAllCacheKeysForFile(
+            StoreFileInfo.getReferredToRegionAndFile(baseFileName).getSecond(), 0, Long.MAX_VALUE);
         }
-      }
-      // BucketCache would only have data blocks
-      if (dataBlockCount == count) {
-        LOG.debug("File {} has now been fully cached.", fileName);
-        fileCacheCompleted(fileName, size);
-      } else {
-        LOG.debug(
-          "Prefetch executor completed for {}, but only {} data blocks were cached. "
-            + "Total data blocks for file: {}. "
-            + "Checking for blocks pending cache in cache writer queue.",
-          fileName, count, dataBlockCount);
-        if (ramCache.hasBlocksForFile(baseFileName)) {
-          for (ReentrantReadWriteLock lock : locks) {
-            lock.readLock().unlock();
+        for (BlockCacheKey entry : result) {
+          LOG.debug(
+            "found block for file {} in the backing map. Acquiring read lock for offset {}",
+            baseFileName, entry.getOffset());
+          ReentrantReadWriteLock lock = offsetLock.getLock(entry.getOffset());
+          lock.readLock().lock();
+          locks.add(lock);
+          if (backingMap.containsKey(entry) && entry.getBlockType().isData()) {
+            count++;
           }
-          locks.clear();
-          LOG.debug("There are still blocks pending caching for file {}. Will sleep 100ms "
-            + "and try the verification again.", fileName);
-          Thread.sleep(100);
-          notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
+        }
+        // BucketCache would only have data blocks
+        if (dataBlockCount == count) {
+          LOG.debug("File {} has now been fully cached.", fileName);
+          fileCacheCompleted(fileName, size);
+          return;
+        }
+        if (ramCache.hasBlocksForFile(baseFileName)) {
+          ramCacheWasEmpty = false;
+          LOG.debug("There are still blocks pending caching for file {}. "
+            + "Will retry after {}ms (attempt {}).", fileName,
+            CACHE_COMPLETION_RETRY_INTERVAL_MS, attempt);
+        } else if (!ramCacheWasEmpty) {
+          // ramCache just became empty. Rescan immediately (no sleep) to close the TOCTOU
+          // window: getAllCacheKeysForFile above may have captured a stale blocksByHFile
+          // snapshot that missed blocks the writer thread published after our scan started.
+          ramCacheWasEmpty = true;
+          continue;
         } else {
           LOG.info(
             "The total block count was {}. We found only {} data blocks cached from "
@@ -2472,15 +2482,23 @@ public class BucketCache implements BlockCache, HeapSize {
               + "but no blocks pending caching. Maybe cache is full or evictions "
               + "happened concurrently to cache prefetch.",
             totalBlockCount, count, dataBlockCount, fileName);
+          return;
+        }
+      } finally {
+        for (ReentrantReadWriteLock lock : locks) {
+          lock.readLock().unlock();
         }
       }
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    } finally {
-      for (ReentrantReadWriteLock lock : locks) {
-        lock.readLock().unlock();
+      try {
+        Thread.sleep(CACHE_COMPLETION_RETRY_INTERVAL_MS);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException(e);
       }
     }
+    LOG.warn("File {} was not fully cached after {} retries. "
+      + "Found fewer than {} expected data blocks.", fileName, CACHE_COMPLETION_MAX_RETRIES,
+      dataBlockCount);
   }
 
   @Override
