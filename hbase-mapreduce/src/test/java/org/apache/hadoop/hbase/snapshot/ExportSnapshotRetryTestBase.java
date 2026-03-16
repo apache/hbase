@@ -38,8 +38,9 @@ public class ExportSnapshotRetryTestBase extends ExportSnapshotTestBase {
     conf.setBoolean(ExportSnapshot.Testing.CONF_TEST_FAILURE, true);
     conf.setInt(ExportSnapshot.Testing.CONF_TEST_FAILURE_COUNT, 2);
     conf.setInt("mapreduce.map.maxattempts", 3);
-    TestExportSnapshotMisc.testExportFileSystemState(conf, tableName, snapshotName, snapshotName,
-      tableNumFiles, TEST_UTIL.getDefaultRootDirPath(), copyDir, true, false, null, true, false);
+    testExportFileSystemState(conf, tableName, snapshotName, snapshotName, tableNumFiles,
+      TEST_UTIL.getDefaultRootDirPath(), copyDir, true, false, getBypassRegionPredicate(), true,
+      false);
   }
 
   /**
@@ -54,7 +55,8 @@ public class ExportSnapshotRetryTestBase extends ExportSnapshotTestBase {
     conf.setBoolean(ExportSnapshot.Testing.CONF_TEST_FAILURE, true);
     conf.setInt(ExportSnapshot.Testing.CONF_TEST_FAILURE_COUNT, 4);
     conf.setInt("mapreduce.map.maxattempts", 3);
-    TestExportSnapshotMisc.testExportFileSystemState(conf, tableName, snapshotName, snapshotName,
-      tableNumFiles, TEST_UTIL.getDefaultRootDirPath(), copyDir, true, false, null, false, false);
+    testExportFileSystemState(conf, tableName, snapshotName, snapshotName, tableNumFiles,
+      TEST_UTIL.getDefaultRootDirPath(), copyDir, true, false, getBypassRegionPredicate(), false,
+      false);
   }
 }
