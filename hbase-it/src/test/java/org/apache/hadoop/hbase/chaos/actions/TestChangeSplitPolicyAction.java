@@ -17,42 +17,36 @@
  */
 package org.apache.hadoop.hbase.chaos.actions;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-@Category({ MediumTests.class })
+@Tag(MediumTests.TAG)
 public class TestChangeSplitPolicyAction {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestChangeSplitPolicyAction.class);
 
   private final static IntegrationTestingUtility TEST_UTIL = new IntegrationTestingUtility();
   private final TableName tableName = TableName.valueOf("ChangeSplitPolicyAction");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(2);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);

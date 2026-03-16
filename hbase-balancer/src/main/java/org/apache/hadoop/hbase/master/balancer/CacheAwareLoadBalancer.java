@@ -69,7 +69,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
   }
 
   @Override
-  public synchronized void loadConf(Configuration configuration) {
+  public void loadConf(Configuration configuration) {
     this.configuration = configuration;
     this.costFunctions = new ArrayList<>();
     super.loadConf(configuration);
@@ -172,7 +172,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
   }
 
   @Override
-  public void throttle(RegionPlan plan) {
+  public long getThrottleDurationMs(RegionPlan plan) {
     Pair<ServerName, Float> rsRatio = this.regionCacheRatioOnOldServerMap.get(plan.getRegionName());
     if (
       rsRatio != null && plan.getDestination().equals(rsRatio.getFirst())
@@ -180,6 +180,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     ) {
       LOG.debug("Moving region {} to server {} with cache ratio {}. No throttling needed.",
         plan.getRegionInfo().getEncodedName(), plan.getDestination(), rsRatio.getSecond());
+      return 0L;
     } else {
       if (rsRatio != null) {
         LOG.debug("Moving region {} to server {} with cache ratio: {}. Throttling move for {}ms.",
@@ -192,11 +193,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
             + "Throttling move for {}ms.",
           plan.getRegionInfo().getEncodedName(), plan.getDestination(), sleepTime);
       }
-      try {
-        Thread.sleep(sleepTime);
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
+      return sleepTime;
     }
   }
 

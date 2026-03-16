@@ -17,33 +17,28 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestFullRestore extends TestBackupBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFullRestore.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFullRestore.class);
 
@@ -293,20 +288,22 @@ public class TestFullRestore extends TestBackupBase {
    * Verify that restore fails on a single table that does not exist.
    * @throws Exception if doing the backup or restoring it fails
    */
-  @Test(expected = IOException.class)
+  @Test
   public void testFullRestoreSingleDNE() throws Exception {
-    LOG.info("test restore fails on a single table that does not exist");
-    List<TableName> tables = Lists.newArrayList(table1);
-    String backupId = fullTableBackup(tables);
-    assertTrue(checkSucceeded(backupId));
+    assertThrows(IOException.class, () -> {
+      LOG.info("test restore fails on a single table that does not exist");
+      List<TableName> tables = Lists.newArrayList(table1);
+      String backupId = fullTableBackup(tables);
+      assertTrue(checkSucceeded(backupId));
 
-    LOG.info("backup complete");
+      LOG.info("backup complete");
 
-    TableName[] tableset = new TableName[] { TableName.valueOf("faketable") };
-    TableName[] tablemap = new TableName[] { table1_restore };
-    BackupAdmin client = getBackupAdmin();
-    client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false, tableset,
-      tablemap, false));
+      TableName[] tableset = new TableName[] { TableName.valueOf("faketable") };
+      TableName[] tablemap = new TableName[] { table1_restore };
+      BackupAdmin client = getBackupAdmin();
+      client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false, tableset,
+        tablemap, false));
+    });
   }
 
   /**
@@ -335,20 +332,22 @@ public class TestFullRestore extends TestBackupBase {
    * Verify that restore fails on multiple tables that do not exist.
    * @throws Exception if doing the backup or restoring it fails
    */
-  @Test(expected = IOException.class)
+  @Test
   public void testFullRestoreMultipleDNE() throws Exception {
-    LOG.info("test restore fails on multiple tables that do not exist");
+    assertThrows(IOException.class, () -> {
+      LOG.info("test restore fails on multiple tables that do not exist");
 
-    List<TableName> tables = Lists.newArrayList(table2, table3);
-    String backupId = fullTableBackup(tables);
-    assertTrue(checkSucceeded(backupId));
+      List<TableName> tables = Lists.newArrayList(table2, table3);
+      String backupId = fullTableBackup(tables);
+      assertTrue(checkSucceeded(backupId));
 
-    TableName[] restore_tableset =
-      new TableName[] { TableName.valueOf("faketable1"), TableName.valueOf("faketable2") };
-    TableName[] tablemap = new TableName[] { table2_restore, table3_restore };
-    BackupAdmin client = getBackupAdmin();
-    client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false,
-      restore_tableset, tablemap, false));
+      TableName[] restore_tableset =
+        new TableName[] { TableName.valueOf("faketable1"), TableName.valueOf("faketable2") };
+      TableName[] tablemap = new TableName[] { table2_restore, table3_restore };
+      BackupAdmin client = getBackupAdmin();
+      client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false,
+        restore_tableset, tablemap, false));
+    });
   }
 
   /**

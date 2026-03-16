@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -67,15 +66,13 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,11 +81,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestSecureExport {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSecureExport.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSecureExport.class);
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -123,8 +117,7 @@ public class TestSecureExport {
   private static final String CONFIDENTIAL = "confidential";
   private static final String SECRET = "secret";
   private static final String TOPSECRET = "topsecret";
-  @Rule
-  public final TestName name = new TestName();
+  private String methodName;
 
   private static void setUpKdcServer() throws Exception {
     KDC = UTIL.setupMiniKdc(KEYTAB_FILE);
@@ -171,12 +164,13 @@ public class TestSecureExport {
     getUserByLogin(USER_ADMIN).runAs(action);
   }
 
-  @Before
-  public void announce() {
-    LOG.info("Running " + name.getMethodName());
+  @BeforeEach
+  public void announce(TestInfo testInfo) {
+    methodName = testInfo.getTestMethod().get().getName();
+    LOG.info("Running " + methodName);
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws IOException {
   }
 
@@ -190,7 +184,7 @@ public class TestSecureExport {
   /**
    * Sets the security firstly for getting the correct default realm.
    */
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     UserProvider.setUserProviderForTesting(UTIL.getConfiguration(),
       HadoopSecurityEnabledUserProviderForTesting.class);
@@ -212,7 +206,7 @@ public class TestSecureExport {
       Arrays.asList(PRIVATE, CONFIDENTIAL, SECRET, TOPSECRET));
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     if (KDC != null) {
       KDC.stop();
@@ -226,7 +220,7 @@ public class TestSecureExport {
    */
   @Test
   public void testAccessCase() throws Throwable {
-    final String exportTable = name.getMethodName();
+    final String exportTable = methodName;
     TableDescriptor exportHtd = TableDescriptorBuilder.newBuilder(TableName.valueOf(exportTable))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYA)).build();
     User owner = User.createUserForTesting(UTIL.getConfiguration(), USER_OWNER, new String[0]);
@@ -284,11 +278,11 @@ public class TestSecureExport {
           // owned by the current user, not the hbase service user.
           FileStatus outputDirFileStatus = fs.getFileStatus(new Path(openDir, "output"));
           String currentUserName = User.getCurrent().getShortName();
-          assertEquals("Unexpected file owner", currentUserName, outputDirFileStatus.getOwner());
+          assertEquals(currentUserName, outputDirFileStatus.getOwner(), "Unexpected file owner");
 
           FileStatus[] outputFileStatus = fs.listStatus(new Path(openDir, "output"));
           for (FileStatus fileStatus : outputFileStatus) {
-            assertEquals("Unexpected file owner", currentUserName, fileStatus.getOwner());
+            assertEquals(currentUserName, fileStatus.getOwner(), "Unexpected file owner");
           }
         } else {
           LOG.info("output directory doesn't exist. Skip check");
@@ -312,8 +306,8 @@ public class TestSecureExport {
   @Test
   @org.junit.Ignore // See HBASE-23990
   public void testVisibilityLabels() throws IOException, Throwable {
-    final String exportTable = name.getMethodName() + "_export";
-    final String importTable = name.getMethodName() + "_import";
+    final String exportTable = methodName + "_export";
+    final String importTable = methodName + "_import";
     final TableDescriptor exportHtd =
       TableDescriptorBuilder.newBuilder(TableName.valueOf(exportTable))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYA)).build();

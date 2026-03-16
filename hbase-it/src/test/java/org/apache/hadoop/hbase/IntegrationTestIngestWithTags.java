@@ -24,9 +24,9 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.LoadTestDataGeneratorWithTags;
 import org.apache.hadoop.hbase.util.LoadTestTool;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestIngestWithTags extends IntegrationTestIngest {
 
   private static final char COLON = ':';

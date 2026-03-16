@@ -2383,6 +2383,16 @@ public class BucketCache implements BlockCache, HeapSize {
       return delegate.keySet().stream().filter(key -> key.getHfileName().equals(fileName))
         .findFirst().isPresent();
     }
+
+    public Set<BlockCacheKey> getRamBlockCacheKeysForHFile(String fileName) {
+      Set<BlockCacheKey> ramCacheKeySet = new HashSet<>();
+      for (BlockCacheKey blockCacheKey : delegate.keySet()) {
+        if (blockCacheKey.getHfileName().equals(fileName)) {
+          ramCacheKeySet.add(blockCacheKey);
+        }
+      }
+      return ramCacheKeySet;
+    }
   }
 
   public Map<BlockCacheKey, BucketEntry> getBackingMap() {

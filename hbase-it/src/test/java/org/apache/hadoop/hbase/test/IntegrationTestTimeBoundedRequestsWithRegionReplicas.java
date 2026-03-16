@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.test;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -47,8 +49,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Assert;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,7 +91,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * -Dhbase.ipc.client.allowsInterrupt=true --monkey serverKilling
  * </pre>
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends IntegrationTestIngest {
 
   private static final Logger LOG =
@@ -133,7 +134,7 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
     if (0 != ret) {
       String errorMsg = "Load failed with error code " + ret;
       LOG.error(errorMsg);
-      Assert.fail(errorMsg);
+      fail(errorMsg);
     }
   }
 
@@ -221,7 +222,7 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
       if (0 != ret) {
         String errorMsg = "Verification failed with error code " + ret;
         LOG.error(errorMsg);
-        Assert.fail(errorMsg);
+        fail(errorMsg);
       }
     } finally {
       if (result != null) result.cancel(false);

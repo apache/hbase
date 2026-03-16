@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.backup.master;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -29,17 +29,19 @@ import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRestoreBackupSystemTable {
+
   private static final String BACKUP_ROOT = "root";
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster();
   }
@@ -69,15 +71,15 @@ public class TestRestoreBackupSystemTable {
     BackupSystemTable.restoreFromSnapshot(UTIL.getConnection());
     Map<TableName, Map<String, Long>> results = table.readLogTimestampMap(BACKUP_ROOT);
 
-    assertEquals(results.size(), tables.size());
+    assertEquals(tables.size(), results.size());
 
     for (TableName tableName : tables) {
       Map<String, Long> resultMap = results.get(tableName);
-      assertEquals(resultMap, rsTimestampMap);
+      assertEquals(rsTimestampMap, resultMap);
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }

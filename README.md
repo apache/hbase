@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-![hbase-logo](https://raw.githubusercontent.com/apache/hbase/master/src/site/resources/images/hbase_logo_with_orca_large.png)
+![hbase-logo](https://raw.githubusercontent.com/apache/hbase/master/hbase-website/public/docs-images/hbase_logo_with_orca_large.png)
 
 [Apache HBase](https://hbase.apache.org) is an open-source, distributed, versioned, column-oriented store modeled after Google's [Bigtable](https://research.google.com/archive/bigtable.html): A Distributed Storage System for Structured Data by Chang et al. Just as Bigtable leverages the distributed data storage provided by the Google File System, HBase provides Bigtable-like capabilities on top of [Apache Hadoop](https://hadoop.apache.org/).
 
@@ -25,7 +25,7 @@ under the License.
 To get started using HBase, visit the [project home page](https://hbase.apache.org).
 The HBase [Reference Guide](https://hbase.apache.org/book.html) has a 'Quick Start' section and is where you should begin your exploration of the HBase project.
 
-The latest HBase can be downloaded from the [download page](https://hbase.apache.org/downloads.html).
+The latest HBase can be downloaded from the [download page](https://hbase.apache.org/downloads/).
 
 We use mailing lists to send notices and discuss. See the [mailing lists and archives](https://hbase.apache.org/mailing-lists) for more information.
 

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.ConnectionUtils.calcPriority;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.resetController;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
@@ -437,8 +436,8 @@ class AsyncBatchRpcRetryingCaller<T> {
       return;
     }
     HBaseRpcController controller = conn.rpcControllerFactory.newController();
-    resetController(controller, Math.min(rpcTimeoutNs, remainingNs),
-      calcPriority(serverReq.getPriority(), tableName), tableName);
+    resetController(controller, Math.min(rpcTimeoutNs, remainingNs), serverReq.getPriority(),
+      tableName);
     controller.setRequestAttributes(requestAttributes);
     if (!cells.isEmpty()) {
       controller.setCellScanner(PrivateCellUtil.createExtendedCellScanner(cells));

@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -140,68 +140,68 @@ public class MetricsAssertHelperImpl implements MetricsAssertHelper {
   public void assertTag(String name, String expected, BaseSource source) {
     getMetrics(source);
     String cName = canonicalizeMetricName(name);
-    assertEquals("Tags should be equal", expected, tags.get(cName));
+    assertEquals(expected, tags.get(cName), "Tags should be equal");
   }
 
   @Override
   public void assertGauge(String name, long expected, BaseSource source) {
     long found = getGaugeLong(name, source);
-    assertEquals("Metrics Should be equal", (long) Long.valueOf(expected), found);
+    assertEquals((long) Long.valueOf(expected), found, "Metrics Should be equal");
   }
 
   @Override
   public void assertGaugeGt(String name, long expected, BaseSource source) {
     double found = getGaugeDouble(name, source);
-    assertTrue(name + " (" + found + ") should be greater than " + expected, found > expected);
+    assertTrue(found > expected, name + " (" + found + ") should be greater than " + expected);
   }
 
   @Override
   public void assertGaugeLt(String name, long expected, BaseSource source) {
     double found = getGaugeDouble(name, source);
-    assertTrue(name + "(" + found + ") should be less than " + expected, found < expected);
+    assertTrue(found < expected, name + "(" + found + ") should be less than " + expected);
   }
 
   @Override
   public void assertGauge(String name, double expected, BaseSource source) {
     double found = getGaugeDouble(name, source);
-    assertEquals("Metrics Should be equal", (double) Double.valueOf(expected), found, 0.01);
+    assertEquals((double) Double.valueOf(expected), found, 0.01, "Metrics Should be equal");
   }
 
   @Override
   public void assertGaugeGt(String name, double expected, BaseSource source) {
     double found = getGaugeDouble(name, source);
-    assertTrue(name + "(" + found + ") should be greater than " + expected, found > expected);
+    assertTrue(found > expected, name + "(" + found + ") should be greater than " + expected);
   }
 
   @Override
   public void assertGaugeLt(String name, double expected, BaseSource source) {
     double found = getGaugeDouble(name, source);
-    assertTrue(name + "(" + found + ") should be less than " + expected, found < expected);
+    assertTrue(found < expected, name + "(" + found + ") should be less than " + expected);
   }
 
   @Override
   public void assertCounter(String name, long expected, BaseSource source) {
     long found = getCounter(name, source);
-    assertEquals(name + "(" + found + ") should be equal", (long) Long.valueOf(expected), found);
+    assertEquals((long) Long.valueOf(expected), found, name + "(" + found + ") should be equal");
   }
 
   @Override
   public void assertCounterGt(String name, long expected, BaseSource source) {
     long found = getCounter(name, source);
-    assertTrue(name + " (" + found + ") should be greater than " + expected, found > expected);
+    assertTrue(found > expected, name + " (" + found + ") should be greater than " + expected);
   }
 
   @Override
   public void assertCounterLt(String name, long expected, BaseSource source) {
     long found = getCounter(name, source);
-    assertTrue(name + "(" + found + ") should be less than " + expected, found < expected);
+    assertTrue(found < expected, name + "(" + found + ") should be less than " + expected);
   }
 
   @Override
   public long getCounter(String name, BaseSource source) {
     getMetrics(source);
     String cName = canonicalizeMetricName(name);
-    assertNotNull("Should get counter " + cName + " but did not", counters.get(cName));
+    assertNotNull(counters.get(cName), "Should get counter " + cName + " but did not");
     return counters.get(cName).longValue();
   }
 
@@ -223,7 +223,7 @@ public class MetricsAssertHelperImpl implements MetricsAssertHelper {
   public double getGaugeDouble(String name, BaseSource source) {
     getMetrics(source);
     String cName = canonicalizeMetricName(name);
-    assertNotNull("Should get gauge " + cName + " but did not", gauges.get(cName));
+    assertNotNull(gauges.get(cName), "Should get gauge " + cName + " but did not");
     return gauges.get(cName).doubleValue();
   }
 
@@ -231,7 +231,7 @@ public class MetricsAssertHelperImpl implements MetricsAssertHelper {
   public long getGaugeLong(String name, BaseSource source) {
     getMetrics(source);
     String cName = canonicalizeMetricName(name);
-    assertNotNull("Should get gauge " + cName + " but did not", gauges.get(cName));
+    assertNotNull(gauges.get(cName), "Should get gauge " + cName + " but did not");
     return gauges.get(cName).longValue();
   }
 
@@ -252,7 +252,7 @@ public class MetricsAssertHelperImpl implements MetricsAssertHelper {
   private void getMetrics(BaseSource source) {
     reset();
     if (!(source instanceof MetricsSource)) {
-      assertTrue("The Source passed must be a MetricsSource", false);
+      assertTrue(false, "The Source passed must be a MetricsSource");
     }
     MetricsSource impl = (MetricsSource) source;
 

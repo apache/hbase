@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,19 +28,15 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellScannable;
 import org.apache.hadoop.hbase.ExtendedCellScanner;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHBaseRpcControllerImpl {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseRpcControllerImpl.class);
 
   @Test
   public void testListOfCellScannerables() throws IOException {
@@ -56,8 +52,8 @@ public class TestHBaseRpcControllerImpl {
     for (; cellScanner.advance(); index++) {
       Cell cell = cellScanner.current();
       byte[] indexBytes = Bytes.toBytes(index);
-      assertTrue("" + index, Bytes.equals(indexBytes, 0, indexBytes.length, cell.getValueArray(),
-        cell.getValueOffset(), cell.getValueLength()));
+      assertTrue(Bytes.equals(indexBytes, 0, indexBytes.length, cell.getValueArray(),
+        cell.getValueOffset(), cell.getValueLength()), "" + index);
     }
     assertEquals(count, index);
   }

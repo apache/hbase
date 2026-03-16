@@ -1,0 +1,56 @@
+---
+title: "HBase and Schema Design"
+description: "Comprehensive guide to designing HBase schemas, including table and column family design, rowkey strategies, and best practices for optimal performance."
+---
+
+A good introduction on the strength and weaknesses modelling on the various non-rdbms datastores is to be found in Ian Varley's Master thesis, [No Relation: The Mixed Blessings of Non-Relational Databases](http://ianvarley.com/UT/MR/Varley_MastersReport_Full_2009-08-07.pdf). It is a little dated now but a good background read if you have a moment on how HBase schema modeling differs from how it is done in an RDBMS. Also, read [keyvalue](/docs/architecture/regions#keyvalue) for how HBase stores data internally, and the section on [schema.casestudies](/docs/regionserver-sizing#schema-design-case-studies).
+
+The documentation on the Cloud Bigtable website, [Designing Your Schema](https://cloud.google.com/bigtable/docs/schema-design), is pertinent and nicely done and lessons learned there equally apply here in HBase land; just divide any quoted values by ~10 to get what works for HBase: e.g. where it says individual values can be ~10MBs in size, HBase can do similar — perhaps best to go smaller if you can — and where it says a maximum of 100 column families in Cloud Bigtable, think ~10 when modeling on HBase.
+
+See also Robert Yokota's [HBase Application Archetypes](https://blogs.apache.org/hbase/entry/hbase-application-archetypes-redux) (an update on work done by other HBasers), for a helpful categorization of use cases that do well on top of the HBase model.
+
+## Schema Creation
+
+HBase schemas can be created or updated using the [Apache HBase Shell](/docs/shell) or by using [Admin](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Admin.html) in the Java API.
+
+Tables must be disabled when making ColumnFamily modifications, for example:
+
+```java
+Configuration config = HBaseConfiguration.create();
+Admin admin = new Admin(conf);
+TableName table = TableName.valueOf("myTable");
+
+admin.disableTable(table);
+
+HColumnDescriptor cf1 = ...;
+admin.addColumn(table, cf1);      // adding new ColumnFamily
+HColumnDescriptor cf2 = ...;
+admin.modifyColumn(table, cf2);    // modifying existing ColumnFamily
+
+admin.enableTable(table);
+```
+
+See [client dependencies](/docs/configuration/default#client-configuration-and-dependencies-connecting-to-an-hbase-cluster) for more information about configuring client connections.
+
+<Callout type="info">
+  Online schema changes are supported in the 0.92.x codebase, but the 0.90.x codebase requires the
+  table to be disabled.
+</Callout>
+
+### Schema Updates
+
+When changes are made to either Tables or ColumnFamilies (e.g. region size, block size), these changes take effect the next time there is a major compaction and the StoreFiles get re-written.
+
+See [store](/docs/architecture/regions#store) for more information on StoreFiles.
+
+## Table Schema Rules Of Thumb
+
+There are many different data sets, with different access patterns and service-level expectations. Therefore, these rules of thumb are only an overview. Read the rest of this chapter to get more details after you have gone through this list.
+
+- Aim to have regions sized between 10 and 50 GB.
+- Aim to have cells no larger than 10 MB, or 50 MB if you use [mob](/docs/architecture/hbase-mob). Otherwise, consider storing your cell data in HDFS and store a pointer to the data in HBase.
+- A typical schema has between 1 and 3 column families per table. HBase tables should not be designed to mimic RDBMS tables.
+- Around 50-100 regions is a good number for a table with 1 or 2 column families. Remember that a region is a contiguous segment of a column family.
+- Keep your column family names as short as possible. The column family names are stored for every value (ignoring prefix encoding). They should not be self-documenting and descriptive like in a typical RDBMS.
+- If you are storing time-based machine data or logging information, and the row key is based on device ID or service ID plus time, you can end up with a pattern where older data regions never have additional writes beyond a certain age. In this type of situation, you end up with a small number of active regions and a large number of older regions which have no new writes. For these situations, you can tolerate a larger number of regions because your resource consumption is driven by the active regions only.
+- If only one column family is busy with writes, only that column family accomulates memory. Be aware of write patterns when allocating resources.

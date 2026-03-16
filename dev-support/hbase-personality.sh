@@ -298,30 +298,16 @@ function personality_file_tests
 {
   local filename=$1
   yetus_debug "HBase specific personality_file_tests"
-  # If the change is to the refguide, then we don't need any builtin yetus tests
-  # the refguide test (below) will suffice for coverage.
-  if [[ ${filename} =~ src/main/asciidoc ]] ||
-     [[ ${filename} =~ src/main/xslt ]]; then
-    yetus_debug "Skipping builtin yetus checks for ${filename}. refguide test should pick it up."
-  else
-    # If we change our asciidoc or our site rebuild mvnsite
-    if [[ ${BUILDTOOL} = maven ]]; then
-      if [[ ${filename} =~ src/site || ${filename} =~ src/main/asciidoc || ${filename} =~ hbase-website ]]; then
-        yetus_debug "tests/mvnsite: ${filename}"
-        add_test mvnsite
-      fi
-    fi
-    # If we change checkstyle configs, run checkstyle
-    if [[ ${filename} =~ checkstyle.*\.xml ]]; then
-      yetus_debug "tests/checkstyle: ${filename}"
-      add_test checkstyle
-    fi
-    # fallback to checking which tests based on what yetus would do by default
-    if declare -f "${BUILDTOOL}_builtin_personality_file_tests" >/dev/null; then
-      "${BUILDTOOL}_builtin_personality_file_tests" "${filename}"
-    elif declare -f builtin_personality_file_tests >/dev/null; then
-      builtin_personality_file_tests "${filename}"
-    fi
+  # If we change checkstyle configs, run checkstyle
+  if [[ ${filename} =~ checkstyle.*\.xml ]]; then
+    yetus_debug "tests/checkstyle: ${filename}"
+    add_test checkstyle
+  fi
+  # fallback to checking which tests based on what yetus would do by default
+  if declare -f "${BUILDTOOL}_builtin_personality_file_tests" >/dev/null; then
+    "${BUILDTOOL}_builtin_personality_file_tests" "${filename}"
+  elif declare -f builtin_personality_file_tests >/dev/null; then
+    builtin_personality_file_tests "${filename}"
   fi
 }
 
@@ -400,8 +386,7 @@ function refguide_filefilter
 
   # we only generate ref guide on master branch now
   if [[ "${PATCH_BRANCH}" = master ]]; then
-    if [[ ${filename} =~ src/main/asciidoc ]] ||
-       [[ ${filename} =~ src/main/xslt ]] ||
+    if [[ ${filename} =~ hbase-website ]] ||
        [[ ${filename} =~ hbase-common/src/main/resources/hbase-default\.xml ]]; then
       add_test refguide
     fi
@@ -427,8 +412,8 @@ function refguide_rebuild
   # shellcheck disable=2046
   echo_and_redirect "${logfile}" \
     $(maven_executor) clean site --batch-mode \
-      -pl . \
-      -Dtest=NoUnitTests -DHBasePatchProcess -Prelease \
+      -pl hbase-website \
+      -DskipTests -DHBasePatchProcess -Prelease \
       -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true
 
   count=$(${GREP} -c '\[ERROR\]' "${logfile}")
@@ -438,31 +423,37 @@ function refguide_rebuild
     return 1
   fi
 
-  if ! mv target/site "${PATCH_DIR}/${repostatus}-site"; then
+  if ! mv hbase-website/build/client "${PATCH_DIR}/${repostatus}-site"; then
     add_vote_table -1 refguide "${repostatus} failed to produce a site directory."
     add_footer_table refguide "@@BASE@@/${repostatus}-refguide.log"
     return 1
   fi
 
-  if [[ ! -f "${PATCH_DIR}/${repostatus}-site/book.html" ]]; then
+  if [[ ! -f "${PATCH_DIR}/${repostatus}-site/index.html" ]]; then
     add_vote_table -1 refguide "${repostatus} failed to produce the html version of the reference guide."
     add_footer_table refguide "@@BASE@@/${repostatus}-refguide.log"
     return 1
   fi
 
-  pdf_output="apache_hbase_reference_guide.pdf"
+pdf_output="apache-hbase-reference-guide.pdf"
+
+  if ! mv "hbase-website/public/books/${pdf_output}" "${PATCH_DIR}/${repostatus}-site"; then
+    add_vote_table -1 refguide "${repostatus} failed to produce the pdf version of the reference guide."
+    add_footer_table refguide "@@BASE@@/${repostatus}-refguide.log"
+    return 1
+  fi
 
   if [[ ! -f "${PATCH_DIR}/${repostatus}-site/${pdf_output}" ]]; then
-    add_vote_table -1 refguide "${repostatus} failed to produce the pdf version of the reference guide."
+    add_vote_table -1 refguide "${repostatus} failed to verify the pdf version of the reference guide."
     add_footer_table refguide "@@BASE@@/${repostatus}-refguide.log"
     return 1
   fi
 
   add_vote_table 0 refguide "${repostatus} has no errors when building the reference guide. See footer for rendered docs, which you should manually inspect."
   if [[ -n "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}" ]]; then
-    add_footer_table refguide "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/${repostatus}-site/book.html"
+    add_footer_table refguide "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/${repostatus}-site/index.html"
   else
-    add_footer_table refguide "@@BASE@@/${repostatus}-site/book.html"
+    add_footer_table refguide "@@BASE@@/${repostatus}-site/index.html"
   fi
   return 0
 }
