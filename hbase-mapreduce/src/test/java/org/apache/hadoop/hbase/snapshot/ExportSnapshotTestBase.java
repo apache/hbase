@@ -56,12 +56,9 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
-/**
- *
- */
 public class ExportSnapshotTestBase {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestExportSnapshotMisc.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ExportSnapshotTestBase.class);
 
   protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 

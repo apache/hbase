@@ -120,7 +120,7 @@ public class TestExportSnapshotV1NoCluster {
     int snapshotFilesCount = dataFiles.size();
     String snapshotName = builder.getSnapshotDescription().getName();
     TableName tableName = builder.getTableDescriptor().getTableName();
-    TestExportSnapshotMisc.testExportFileSystemState(testUtil.getConfiguration(), tableName,
+    ExportSnapshotTestBase.testExportFileSystemState(testUtil.getConfiguration(), tableName,
       snapshotName, snapshotName, snapshotFilesCount, testDir,
       getDestinationDir(fs, testUtil, testDir), false, false, null, true, false);
   }
