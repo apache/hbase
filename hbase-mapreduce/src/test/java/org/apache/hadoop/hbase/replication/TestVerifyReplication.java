@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -58,23 +57,18 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.mapreduce.Job;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ReplicationTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestVerifyReplication extends TestReplicationBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVerifyReplication.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestVerifyReplication.class);
 
@@ -82,18 +76,14 @@ public class TestVerifyReplication extends TestReplicationBase {
   private static final TableName peerTableName = TableName.valueOf("peerTest");
   private static Table htable3;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     cleanUp();
     UTIL2.deleteTableData(peerTableName);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
-    TestReplicationBase.setUpBeforeClass();
 
     TableDescriptor peerTable =
       TableDescriptorBuilder.newBuilder(peerTableName)
@@ -157,10 +147,10 @@ public class TestVerifyReplication extends TestReplicationBase {
    * delete marker is replicated, run verify replication with and without raw to check the results.
    */
   @Test
-  public void testVerifyRepJobWithRawOptions() throws Exception {
-    LOG.info(name.getMethodName());
+  public void testVerifyRepJobWithRawOptions(TestInfo testInfo) throws Exception {
+    LOG.info(testInfo.getTestMethod().get().getName());
 
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     byte[] familyname = Bytes.toBytes("fam_raw");
     byte[] row = Bytes.toBytes("row_raw");
 
@@ -447,7 +437,7 @@ public class TestVerifyReplication extends TestReplicationBase {
     checkRestoreTmpDir(CONF2, tmpPath2, 2);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     htable3.close();
     TestReplicationBase.tearDownAfterClass();

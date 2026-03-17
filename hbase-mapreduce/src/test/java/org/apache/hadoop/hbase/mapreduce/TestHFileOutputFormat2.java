@@ -19,12 +19,12 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static org.apache.hadoop.hbase.client.ConnectionFactory.createConnection;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.BLOOM_FILTER_TYPE_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -116,10 +115,8 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -129,13 +126,9 @@ import org.slf4j.LoggerFactory;
  * output. Creates a few inner classes to implement splits and an inputformat that emits keys and
  * values like those of {@link PerformanceEvaluation}.
  */
-@Category({ VerySlowMapReduceTests.class, LargeTests.class })
-// TODO : Remove this in 3.0
+@org.junit.jupiter.api.Tag(VerySlowMapReduceTests.TAG)
+@org.junit.jupiter.api.Tag(LargeTests.TAG)
 public class TestHFileOutputFormat2 {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHFileOutputFormat2.class);
 
   private final static int ROWSPERSPLIT = 1024;
 
@@ -300,7 +293,7 @@ public class TestHFileOutputFormat2 {
    * timestamp is {@link HConstants#LATEST_TIMESTAMP}.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-2615">HBASE-2615</a>
    */
-  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
+  @Disabled("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test
   public void test_LATEST_TIMESTAMP_isReplaced() throws Exception {
     Configuration conf = new Configuration(this.util.getConfiguration());
@@ -350,7 +343,7 @@ public class TestHFileOutputFormat2 {
    * Test that {@link HFileOutputFormat2} creates an HFile with TIMERANGE metadata used by
    * time-restricted scans.
    */
-  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
+  @Disabled("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test
   public void test_TIMERANGE() throws Exception {
     Configuration conf = new Configuration(this.util.getConfiguration());
@@ -414,7 +407,7 @@ public class TestHFileOutputFormat2 {
   /**
    * Run small MR job.
    */
-  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
+  @Disabled("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test
   public void testWritingPEData() throws Exception {
     Configuration conf = util.getConfiguration();
@@ -467,10 +460,10 @@ public class TestHFileOutputFormat2 {
         kvCount += reader.getEntries();
         scanner.seekTo();
         long perKVSize = scanner.getCell().getSerializedSize();
-        assertTrue("Data size of each file should not be too large.",
-          perKVSize * reader.getEntries() <= hregionMaxFilesize);
+        assertTrue(perKVSize * reader.getEntries() <= hregionMaxFilesize,
+          "Data size of each file should not be too large.");
       }
-      assertEquals("Should write expected data in output file.", ROWSPERSPLIT, kvCount);
+      assertEquals(ROWSPERSPLIT, kvCount, "Should write expected data in output file.");
     }
   }
 
@@ -523,7 +516,7 @@ public class TestHFileOutputFormat2 {
     }
   }
 
-  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
+  @Disabled("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test
   public void testJobConfiguration() throws Exception {
     Configuration conf = new Configuration(this.util.getConfiguration());
@@ -536,7 +529,7 @@ public class TestHFileOutputFormat2 {
     setupMockStartKeys(regionLocator);
     setupMockTableName(regionLocator);
     HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(), regionLocator);
-    assertEquals(job.getNumReduceTasks(), 4);
+    assertEquals(4, job.getNumReduceTasks());
   }
 
   private byte[][] generateRandomStartKeys(int numKeys) {
@@ -557,14 +550,14 @@ public class TestHFileOutputFormat2 {
     return ret;
   }
 
-  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
+  @Disabled("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test
   public void testMRIncrementalLoad() throws Exception {
     LOG.info("\nStarting test testMRIncrementalLoad\n");
     doIncrementalLoadTest(false, false, false, "testMRIncrementalLoad");
   }
 
-  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
+  @Disabled("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test
   public void testMRIncrementalLoadWithSplit() throws Exception {
     LOG.info("\nStarting test testMRIncrementalLoadWithSplit\n");
@@ -579,7 +572,7 @@ public class TestHFileOutputFormat2 {
    * supports explicit hostnames parameter (just like MiniDFSCluster does), we could test region
    * locality features more easily.
    */
-  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
+  @Disabled("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test
   public void testMRIncrementalLoadWithLocality() throws Exception {
     LOG.info("\nStarting test testMRIncrementalLoadWithLocality\n");
@@ -638,9 +631,9 @@ public class TestHFileOutputFormat2 {
       Table table = util.createTable(tableName, FAMILIES, splitKeys);
 
       RegionLocator r = util.getConnection().getRegionLocator(tableName);
-      assertEquals("Should start with empty table", 0, util.countRows(table));
+      assertEquals(0, util.countRows(table), "Should start with empty table");
       int numRegions = r.getStartKeys().length;
-      assertEquals("Should make " + regionNum + " regions", numRegions, regionNum);
+      assertEquals(numRegions, regionNum, "Should make " + regionNum + " regions");
 
       allTables.put(tableStrSingle, table);
       tableInfo.add(new HFileOutputFormat2.TableInfo(table.getTableDescriptor(), r));
@@ -651,7 +644,7 @@ public class TestHFileOutputFormat2 {
 
     for (Table tableSingle : allTables.values()) {
       // This doesn't write into the table, just makes files
-      assertEquals("HFOF should not touch actual table", 0, util.countRows(tableSingle));
+      assertEquals(0, util.countRows(tableSingle), "HFOF should not touch actual table");
     }
     int numTableDirs = 0;
     for (FileStatus tf : testDir.getFileSystem(conf).listStatus(testDir)) {
@@ -675,10 +668,10 @@ public class TestHFileOutputFormat2 {
           }
         }
       }
-      assertEquals("Column family not found in FS.", FAMILIES.length, dir);
+      assertEquals(FAMILIES.length, dir, "Column family not found in FS.");
     }
     if (writeMultipleTables) {
-      assertEquals("Dir for all input tables not created", numTableDirs, allTables.size());
+      assertEquals(numTableDirs, allTables.size(), "Dir for all input tables not created");
     }
 
     Admin admin = util.getConnection().getAdmin();
@@ -721,12 +714,12 @@ public class TestHFileOutputFormat2 {
         int expectedRows = 0;
         if (putSortReducer) {
           // no rows should be extracted
-          assertEquals("LoadIncrementalHFiles should put expected data in table", expectedRows,
-            util.countRows(currentTable));
+          assertEquals(expectedRows, util.countRows(currentTable),
+            "LoadIncrementalHFiles should put expected data in table");
         } else {
           expectedRows = NMapInputFormat.getNumMapTasks(conf) * ROWSPERSPLIT;
-          assertEquals("LoadIncrementalHFiles should put expected data in table", expectedRows,
-            util.countRows(currentTable));
+          assertEquals(expectedRows, util.countRows(currentTable),
+            "LoadIncrementalHFiles should put expected data in table");
           Scan scan = new Scan();
           ResultScanner results = currentTable.getScanner(scan);
           for (Result res : results) {
@@ -759,8 +752,8 @@ public class TestHFileOutputFormat2 {
         }
         admin.enableTable(currentTableName);
         util.waitTableAvailable(currentTableName);
-        assertEquals("Data should remain after reopening of regions", tableDigestBefore,
-          util.checksumRows(currentTable));
+        assertEquals(tableDigestBefore, util.checksumRows(currentTable),
+          "Data should remain after reopening of regions");
       }
     } finally {
       for (HFileOutputFormat2.TableInfo tableInfoSingle : tableInfo) {
@@ -809,7 +802,7 @@ public class TestHFileOutputFormat2 {
    * Test for {@link HFileOutputFormat2#createFamilyCompressionMap(Configuration)}. Tests that the
    * family compression map is correctly serialized into and deserialized from configuration
    */
-  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
+  @Disabled("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test
   public void testSerializeDeserializeFamilyCompressionMap() throws IOException {
     for (int numCfs = 0; numCfs <= 3; numCfs++) {
@@ -829,8 +822,9 @@ public class TestHFileOutputFormat2 {
       // test that we have a value for all column families that matches with the
       // used mock values
       for (Entry<String, Algorithm> entry : familyToCompression.entrySet()) {
-        assertEquals("Compression configuration incorrect for column family:" + entry.getKey(),
-          entry.getValue(), retrievedFamilyToCompressionMap.get(entry.getKey().getBytes("UTF-8")));
+        assertEquals(entry.getValue(),
+          retrievedFamilyToCompressionMap.get(Bytes.toBytes(entry.getKey())),
+          "Compression configuration incorrect for column family:" + entry.getKey());
       }
     }
   }
@@ -871,7 +865,7 @@ public class TestHFileOutputFormat2 {
    * Test for {@link HFileOutputFormat2#createFamilyBloomTypeMap(Configuration)}. Tests that the
    * family bloom type map is correctly serialized into and deserialized from configuration
    */
-  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
+  @Disabled("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test
   public void testSerializeDeserializeFamilyBloomTypeMap() throws IOException {
     for (int numCfs = 0; numCfs <= 2; numCfs++) {
@@ -891,8 +885,9 @@ public class TestHFileOutputFormat2 {
       // test that we have a value for all column families that matches with the
       // used mock values
       for (Entry<String, BloomType> entry : familyToBloomType.entrySet()) {
-        assertEquals("BloomType configuration incorrect for column family:" + entry.getKey(),
-          entry.getValue(), retrievedFamilyToBloomTypeMap.get(entry.getKey().getBytes("UTF-8")));
+        assertEquals(entry.getValue(),
+          retrievedFamilyToBloomTypeMap.get(Bytes.toBytes(entry.getKey())),
+          "BloomType configuration incorrect for column family:" + entry.getKey());
       }
     }
   }
@@ -930,7 +925,7 @@ public class TestHFileOutputFormat2 {
    * Test for {@link HFileOutputFormat2#createFamilyBlockSizeMap(Configuration)}. Tests that the
    * family block size map is correctly serialized into and deserialized from configuration
    */
-  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
+  @Disabled("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test
   public void testSerializeDeserializeFamilyBlockSizeMap() throws IOException {
     for (int numCfs = 0; numCfs <= 3; numCfs++) {
@@ -950,8 +945,9 @@ public class TestHFileOutputFormat2 {
       // test that we have a value for all column families that matches with the
       // used mock values
       for (Entry<String, Integer> entry : familyToBlockSize.entrySet()) {
-        assertEquals("BlockSize configuration incorrect for column family:" + entry.getKey(),
-          entry.getValue(), retrievedFamilyToBlockSizeMap.get(entry.getKey().getBytes("UTF-8")));
+        assertEquals(entry.getValue(),
+          retrievedFamilyToBlockSizeMap.get(entry.getKey().getBytes("UTF-8")),
+          "BlockSize configuration incorrect for column family:" + entry.getKey());
       }
     }
   }
@@ -993,7 +989,7 @@ public class TestHFileOutputFormat2 {
    * the family data block encoding map is correctly serialized into and deserialized from
    * configuration
    */
-  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
+  @Disabled("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test
   public void testSerializeDeserializeFamilyDataBlockEncodingMap() throws IOException {
     for (int numCfs = 0; numCfs <= 3; numCfs++) {
@@ -1015,10 +1011,9 @@ public class TestHFileOutputFormat2 {
       // test that we have a value for all column families that matches with the
       // used mock values
       for (Entry<String, DataBlockEncoding> entry : familyToDataBlockEncoding.entrySet()) {
-        assertEquals(
-          "DataBlockEncoding configuration incorrect for column family:" + entry.getKey(),
-          entry.getValue(),
-          retrievedFamilyToDataBlockEncodingMap.get(entry.getKey().getBytes("UTF-8")));
+        assertEquals(entry.getValue(),
+          retrievedFamilyToDataBlockEncodingMap.get(Bytes.toBytes(entry.getKey())),
+          "DataBlockEncoding configuration incorrect for column family:" + entry.getKey());
       }
     }
   }
@@ -1070,7 +1065,7 @@ public class TestHFileOutputFormat2 {
    * Test that {@link HFileOutputFormat2} RecordWriter uses compression and bloom filter settings
    * from the column family descriptor
    */
-  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
+  @Disabled("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test
   public void testColumnFamilySettings() throws Exception {
     Configuration conf = new Configuration(this.util.getConfiguration());
@@ -1131,12 +1126,11 @@ public class TestHFileOutputFormat2 {
 
         byte[] bloomFilter = fileInfo.get(BLOOM_FILTER_TYPE_KEY);
         if (bloomFilter == null) bloomFilter = Bytes.toBytes("NONE");
-        assertEquals(
-          "Incorrect bloom filter used for column family " + familyStr + "(reader: " + reader + ")",
-          hcd.getBloomFilterType(), BloomType.valueOf(Bytes.toString(bloomFilter)));
-        assertEquals(
-          "Incorrect compression used for column family " + familyStr + "(reader: " + reader + ")",
-          hcd.getCompressionType(), reader.getFileContext().getCompression());
+        assertEquals(hcd.getBloomFilterType(), BloomType.valueOf(Bytes.toString(bloomFilter)),
+          "Incorrect bloom filter used for column family " + familyStr + "(reader: " + reader
+            + ")");
+        assertEquals(hcd.getCompressionType(), reader.getFileContext().getCompression(),
+          "Incorrect compression used for column family " + familyStr + "(reader: " + reader + ")");
       }
     } finally {
       dir.getFileSystem(conf).delete(dir, true);
@@ -1173,7 +1167,7 @@ public class TestHFileOutputFormat2 {
    * excluded from minor compaction. Without the fix of HBASE-6901, an
    * ArrayIndexOutOfBoundsException will be thrown.
    */
-  @Ignore("Flakey: See HBASE-9051")
+  @Disabled("Flakey: See HBASE-9051")
   @Test
   public void testExcludeAllFromMinorCompaction() throws Exception {
     Configuration conf = util.getConfiguration();
@@ -1185,7 +1179,7 @@ public class TestHFileOutputFormat2 {
       Table table = util.createTable(TABLE_NAMES[0], FAMILIES);
       RegionLocator locator = conn.getRegionLocator(TABLE_NAMES[0])) {
       final FileSystem fs = util.getDFSCluster().getFileSystem();
-      assertEquals("Should start with empty table", 0, util.countRows(table));
+      assertEquals(0, util.countRows(table), "Should start with empty table");
 
       // deep inspection: get the StoreFile dir
       final Path storePath =
@@ -1209,8 +1203,8 @@ public class TestHFileOutputFormat2 {
 
       // Ensure data shows up
       int expectedRows = 2 * NMapInputFormat.getNumMapTasks(conf) * ROWSPERSPLIT;
-      assertEquals("LoadIncrementalHFiles should put expected data in table", expectedRows,
-        util.countRows(table));
+      assertEquals(expectedRows, util.countRows(table),
+        "BulkLoadHFiles should put expected data in table");
 
       // should have a second StoreFile now
       assertEquals(2, fs.listStatus(storePath).length);
@@ -1255,7 +1249,7 @@ public class TestHFileOutputFormat2 {
     }
   }
 
-  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
+  @Disabled("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test
   public void testExcludeMinorCompaction() throws Exception {
     Configuration conf = util.getConfiguration();
@@ -1268,7 +1262,7 @@ public class TestHFileOutputFormat2 {
       Path testDir = util.getDataTestDirOnTestFS("testExcludeMinorCompaction");
       final FileSystem fs = util.getDFSCluster().getFileSystem();
       Table table = util.createTable(TABLE_NAMES[0], FAMILIES);
-      assertEquals("Should start with empty table", 0, util.countRows(table));
+      assertEquals(0, util.countRows(table), "Should start with empty table");
 
       // deep inspection: get the StoreFile dir
       final Path storePath =
@@ -1303,8 +1297,8 @@ public class TestHFileOutputFormat2 {
 
       // Ensure data shows up
       int expectedRows = NMapInputFormat.getNumMapTasks(conf) * ROWSPERSPLIT;
-      assertEquals("LoadIncrementalHFiles should put expected data in table", expectedRows + 1,
-        util.countRows(table));
+      assertEquals(expectedRows + 1, util.countRows(table),
+        "LoadIncrementalHFiles should put expected data in table");
 
       // should have a second StoreFile now
       assertEquals(2, fs.listStatus(storePath).length);
