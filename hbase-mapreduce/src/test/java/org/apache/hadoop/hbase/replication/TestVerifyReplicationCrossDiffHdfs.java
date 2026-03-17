@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -47,23 +46,20 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.mapreduce.Job;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
-@Category({ ReplicationTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestVerifyReplicationCrossDiffHdfs {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVerifyReplicationCrossDiffHdfs.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestVerifyReplicationCrossDiffHdfs.class);
@@ -80,7 +76,7 @@ public class TestVerifyReplicationCrossDiffHdfs {
   private static final String PEER_ID = "1";
   private static final TableName TABLE_NAME = TableName.valueOf("testVerifyRepCrossDiffHDFS");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
     util1 = new HBaseTestingUtility(conf1);
@@ -144,11 +140,11 @@ public class TestVerifyReplicationCrossDiffHdfs {
         }
       }
     }
-    Assert.assertNotNull(results);
-    Assert.assertEquals(10, results.length);
+    Assertions.assertNotNull(results);
+    Assertions.assertEquals(10, results.length);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() throws Exception {
     if (mapReduceUtil != null) {
       mapReduceUtil.shutdownMiniCluster();

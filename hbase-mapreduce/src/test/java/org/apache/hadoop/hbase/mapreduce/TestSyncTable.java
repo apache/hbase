@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.Arrays;
 import java.util.function.BooleanSupplier;
@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
@@ -43,24 +42,20 @@ import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.mapreduce.Counters;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Basic test for the SyncTable M/R tool
  */
-@Category({ MapReduceTests.class, LargeTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSyncTable {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSyncTable.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSyncTable.class);
 
@@ -68,16 +63,13 @@ public class TestSyncTable {
 
   private static final HBaseTestingUtility UTIL2 = new HBaseTestingUtility();
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     UTIL1.startMiniCluster(3);
     UTIL2.startMiniCluster(3);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     UTIL2.shutdownMiniCluster();
     UTIL1.shutdownMiniCluster();
@@ -91,11 +83,13 @@ public class TestSyncTable {
     return splitRows;
   }
 
-  private void testSyncTable(HBaseTestingUtility source, HBaseTestingUtility target,
-    String... options) throws Exception {
-    final TableName sourceTableName = TableName.valueOf(name.getMethodName() + "_source");
-    final TableName targetTableName = TableName.valueOf(name.getMethodName() + "_target");
-    Path testDir = source.getDataTestDirOnTestFS(name.getMethodName());
+  private void testSyncTable(TestInfo testInfo, HBaseTestingUtility source,
+    HBaseTestingUtility target, String... options) throws Exception {
+    final TableName sourceTableName =
+      TableName.valueOf(testInfo.getTestMethod().get().getName() + "_source");
+    final TableName targetTableName =
+      TableName.valueOf(testInfo.getTestMethod().get().getName() + "_target");
+    Path testDir = source.getDataTestDirOnTestFS(testInfo.getTestMethod().get().getName());
 
     writeTestData(source, sourceTableName, target, targetTableName);
     hashSourceTable(source, sourceTableName, testDir);
@@ -115,26 +109,28 @@ public class TestSyncTable {
   }
 
   @Test
-  public void testSyncTable() throws Exception {
-    testSyncTable(UTIL1, UTIL1);
+  public void testSyncTable(TestInfo testInfo) throws Exception {
+    testSyncTable(testInfo, UTIL1, UTIL1);
   }
 
   @Test
-  public void testSyncTableToPeerCluster() throws Exception {
-    testSyncTable(UTIL1, UTIL2, "--sourcezkcluster=" + UTIL1.getClusterKey());
+  public void testSyncTableToPeerCluster(TestInfo testInfo) throws Exception {
+    testSyncTable(testInfo, UTIL1, UTIL2, "--sourcezkcluster=" + UTIL1.getClusterKey());
   }
 
   @Test
-  public void testSyncTableFromSourceToPeerCluster() throws Exception {
-    testSyncTable(UTIL2, UTIL1, "--sourcezkcluster=" + UTIL2.getClusterKey(),
+  public void testSyncTableFromSourceToPeerCluster(TestInfo testInfo) throws Exception {
+    testSyncTable(testInfo, UTIL2, UTIL1, "--sourcezkcluster=" + UTIL2.getClusterKey(),
       "--targetzkcluster=" + UTIL1.getClusterKey());
   }
 
   @Test
-  public void testSyncTableDoDeletesFalse() throws Exception {
-    final TableName sourceTableName = TableName.valueOf(name.getMethodName() + "_source");
-    final TableName targetTableName = TableName.valueOf(name.getMethodName() + "_target");
-    Path testDir = UTIL1.getDataTestDirOnTestFS(name.getMethodName());
+  public void testSyncTableDoDeletesFalse(TestInfo testInfo) throws Exception {
+    final TableName sourceTableName =
+      TableName.valueOf(testInfo.getTestMethod().get().getName() + "_source");
+    final TableName targetTableName =
+      TableName.valueOf(testInfo.getTestMethod().get().getName() + "_target");
+    Path testDir = UTIL1.getDataTestDirOnTestFS(testInfo.getTestMethod().get().getName());
 
     writeTestData(UTIL1, sourceTableName, UTIL1, targetTableName);
     hashSourceTable(UTIL1, sourceTableName, testDir);
@@ -154,10 +150,12 @@ public class TestSyncTable {
   }
 
   @Test
-  public void testSyncTableDoPutsFalse() throws Exception {
-    final TableName sourceTableName = TableName.valueOf(name.getMethodName() + "_source");
-    final TableName targetTableName = TableName.valueOf(name.getMethodName() + "_target");
-    Path testDir = UTIL2.getDataTestDirOnTestFS(name.getMethodName());
+  public void testSyncTableDoPutsFalse(TestInfo testInfo) throws Exception {
+    final TableName sourceTableName =
+      TableName.valueOf(testInfo.getTestMethod().get().getName() + "_source");
+    final TableName targetTableName =
+      TableName.valueOf(testInfo.getTestMethod().get().getName() + "_target");
+    Path testDir = UTIL2.getDataTestDirOnTestFS(testInfo.getTestMethod().get().getName());
 
     writeTestData(UTIL2, sourceTableName, UTIL2, targetTableName);
     hashSourceTable(UTIL2, sourceTableName, testDir);
@@ -177,10 +175,12 @@ public class TestSyncTable {
   }
 
   @Test
-  public void testSyncTableIgnoreTimestampsTrue() throws Exception {
-    final TableName sourceTableName = TableName.valueOf(name.getMethodName() + "_source");
-    final TableName targetTableName = TableName.valueOf(name.getMethodName() + "_target");
-    Path testDir = UTIL1.getDataTestDirOnTestFS(name.getMethodName());
+  public void testSyncTableIgnoreTimestampsTrue(TestInfo testInfo) throws Exception {
+    final TableName sourceTableName =
+      TableName.valueOf(testInfo.getTestMethod().get().getName() + "_source");
+    final TableName targetTableName =
+      TableName.valueOf(testInfo.getTestMethod().get().getName() + "_target");
+    Path testDir = UTIL1.getDataTestDirOnTestFS(testInfo.getTestMethod().get().getName());
     long current = EnvironmentEdgeManager.currentTime();
     writeTestData(UTIL1, sourceTableName, UTIL2, targetTableName, current - 1000, current);
     hashSourceTable(UTIL1, sourceTableName, testDir, "--ignoreTimestamps=true");
@@ -200,18 +200,18 @@ public class TestSyncTable {
   }
 
   private void assertCellEquals(Cell sourceCell, Cell targetCell, BooleanSupplier checkTimestamp) {
-    assertTrue("Rows don't match, source: " + sourceCell + ", target: " + targetCell,
-      CellUtil.matchingRows(sourceCell, targetCell));
-    assertTrue("Families don't match, source: " + sourceCell + ", target: " + targetCell,
-      CellUtil.matchingFamily(sourceCell, targetCell));
-    assertTrue("Qualifiers don't match, source: " + sourceCell + ", target: " + targetCell,
-      CellUtil.matchingQualifier(sourceCell, targetCell));
+    assertTrue(CellUtil.matchingRows(sourceCell, targetCell),
+      "Rows don't match, source: " + sourceCell + ", target: " + targetCell);
+    assertTrue(CellUtil.matchingFamily(sourceCell, targetCell),
+      "Families don't match, source: " + sourceCell + ", target: " + targetCell);
+    assertTrue(CellUtil.matchingQualifier(sourceCell, targetCell),
+      "Qualifiers don't match, source: " + sourceCell + ", target: " + targetCell);
     if (checkTimestamp.getAsBoolean()) {
-      assertTrue("Timestamps don't match, source: " + sourceCell + ", target: " + targetCell,
-        CellUtil.matchingTimestamp(sourceCell, targetCell));
+      assertTrue(CellUtil.matchingTimestamp(sourceCell, targetCell),
+        "Timestamps don't match, source: " + sourceCell + ", target: " + targetCell);
     }
-    assertTrue("Values don't match, source: " + sourceCell + ", target: " + targetCell,
-      CellUtil.matchingValue(sourceCell, targetCell));
+    assertTrue(CellUtil.matchingValue(sourceCell, targetCell),
+      "Values don't match, source: " + sourceCell + ", target: " + targetCell);
   }
 
   private void assertEqualTables(int expectedRows, HBaseTestingUtility sourceCluster,
@@ -314,7 +314,7 @@ public class TestSyncTable {
         targetRow = targetScanner.next();
         sourceRow = sourceScanner.next();
       }
-      assertEquals("Target expected rows does not match.", expectedRows, rowsCount);
+      assertEquals(expectedRows, rowsCount, "Target expected rows does not match.");
     }
   }
 
@@ -384,7 +384,7 @@ public class TestSyncTable {
         targetRow = targetScanner.next();
         sourceRow = sourceScanner.next();
       }
-      assertEquals("Target expected rows does not match.", expectedRows, rowsCount);
+      assertEquals(expectedRows, rowsCount, "Target expected rows does not match.");
     }
   }
 
@@ -396,7 +396,7 @@ public class TestSyncTable {
     args[options.length + 1] = sourceTableName.getNameAsString();
     args[options.length + 2] = targetTableName.getNameAsString();
     int code = syncTable.run(args);
-    assertEquals("sync table job failed", 0, code);
+    assertEquals(0, code, "sync table job failed");
 
     LOG.info("Sync tables completed");
     return syncTable.counters;
@@ -415,7 +415,7 @@ public class TestSyncTable {
     args[options.length + 3] = sourceTableName.getNameAsString();
     args[options.length + 4] = testDir.toString();
     int code = hashTable.run(args);
-    assertEquals("hash table job failed", 0, code);
+    assertEquals(0, code, "hash table job failed");
 
     FileSystem fs = sourceCluster.getTestFileSystem();
 

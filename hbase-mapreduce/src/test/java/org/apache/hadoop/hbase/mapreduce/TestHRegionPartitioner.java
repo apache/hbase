@@ -17,42 +17,33 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MapReduceTests.class, MediumTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestHRegionPartitioner {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHRegionPartitioner.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -61,16 +52,17 @@ public class TestHRegionPartitioner {
    * Test HRegionPartitioner
    */
   @Test
-  public void testHRegionPartitioner() throws Exception {
+  public void testHRegionPartitioner(TestInfo testInfo) throws Exception {
 
     byte[][] families = { Bytes.toBytes("familyA"), Bytes.toBytes("familyB") };
 
-    UTIL.createTable(TableName.valueOf(name.getMethodName()), families, 1, Bytes.toBytes("aa"),
+    String tableName = testInfo.getTestMethod().get().getName();
+    UTIL.createTable(TableName.valueOf(tableName), families, 1, Bytes.toBytes("aa"),
       Bytes.toBytes("cc"), 3);
 
     HRegionPartitioner<Long, Long> partitioner = new HRegionPartitioner<>();
     Configuration configuration = UTIL.getConfiguration();
-    configuration.set(TableOutputFormat.OUTPUT_TABLE, name.getMethodName());
+    configuration.set(TableOutputFormat.OUTPUT_TABLE, tableName);
     partitioner.setConf(configuration);
     ImmutableBytesWritable writable = new ImmutableBytesWritable(Bytes.toBytes("bb"));
 
@@ -79,10 +71,11 @@ public class TestHRegionPartitioner {
   }
 
   @Test
-  public void testHRegionPartitionerMoreRegions() throws Exception {
+  public void testHRegionPartitionerMoreRegions(TestInfo testInfo) throws Exception {
     byte[][] families = { Bytes.toBytes("familyA"), Bytes.toBytes("familyB") };
 
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    String tableNameStr = testInfo.getTestMethod().get().getName();
+    TableName tableName = TableName.valueOf(tableNameStr);
     UTIL.createTable(tableName, families, 1, Bytes.toBytes("aa"), Bytes.toBytes("cc"), 5);
 
     Configuration configuration = UTIL.getConfiguration();
@@ -90,7 +83,7 @@ public class TestHRegionPartitioner {
     assertEquals(5, numberOfRegions);
 
     HRegionPartitioner<Long, Long> partitioner = new HRegionPartitioner<>();
-    configuration.set(TableOutputFormat.OUTPUT_TABLE, name.getMethodName());
+    configuration.set(TableOutputFormat.OUTPUT_TABLE, tableNameStr);
     partitioner.setConf(configuration);
 
     // Get some rowKey for the lastRegion

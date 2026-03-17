@@ -17,18 +17,17 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -45,35 +44,27 @@ import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Basic test for the CopyTable M/R tool
  */
-@Category({ MapReduceTests.class, LargeTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestCopyTable extends CopyTableTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCopyTable.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -107,45 +98,45 @@ public class TestCopyTable extends CopyTableTestBase {
    * Simple end-to-end test
    */
   @Test
-  public void testCopyTable() throws Exception {
-    doCopyTableTest(TEST_UTIL.getConfiguration(), false);
+  public void testCopyTable(TestInfo testInfo) throws Exception {
+    doCopyTableTest(TEST_UTIL.getConfiguration(), false, testInfo);
   }
 
   /**
    * Simple end-to-end test with bulkload.
    */
   @Test
-  public void testCopyTableWithBulkload() throws Exception {
-    doCopyTableTest(TEST_UTIL.getConfiguration(), true);
+  public void testCopyTableWithBulkload(TestInfo testInfo) throws Exception {
+    doCopyTableTest(TEST_UTIL.getConfiguration(), true, testInfo);
   }
 
   /**
    * Simple end-to-end test on table with MOB
    */
   @Test
-  public void testCopyTableWithMob() throws Exception {
-    doCopyTableTestWithMob(TEST_UTIL.getConfiguration(), false);
+  public void testCopyTableWithMob(TestInfo testInfo) throws Exception {
+    doCopyTableTestWithMob(TEST_UTIL.getConfiguration(), false, testInfo);
   }
 
   /**
    * Simple end-to-end test with bulkload on table with MOB.
    */
   @Test
-  public void testCopyTableWithBulkloadWithMob() throws Exception {
-    doCopyTableTestWithMob(TEST_UTIL.getConfiguration(), true);
+  public void testCopyTableWithBulkloadWithMob(TestInfo testInfo) throws Exception {
+    doCopyTableTestWithMob(TEST_UTIL.getConfiguration(), true, testInfo);
   }
 
   @Test
-  public void testStartStopRow() throws Exception {
-    testStartStopRow(TEST_UTIL.getConfiguration());
+  public void testStartStopRow(TestInfo testInfo) throws Exception {
+    testStartStopRow(TEST_UTIL.getConfiguration(), testInfo);
   }
 
   /**
    * Test copy of table from sourceTable to targetTable all rows from family a
    */
   @Test
-  public void testRenameFamily() throws Exception {
-    testRenameFamily(TEST_UTIL.getConfiguration());
+  public void testRenameFamily(TestInfo testInfo) throws Exception {
+    testRenameFamily(TEST_UTIL.getConfiguration(), testInfo);
   }
 
   /**
