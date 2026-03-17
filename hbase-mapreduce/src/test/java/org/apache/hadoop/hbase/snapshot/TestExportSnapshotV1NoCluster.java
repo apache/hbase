@@ -25,7 +25,6 @@ import java.util.Set;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -33,13 +32,12 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,18 +46,17 @@ import org.slf4j.LoggerFactory;
  * separate the tests. See companion file for test of v2 snapshot.
  * @see TestExportSnapshotV2NoCluster
  */
-@Category({ MapReduceTests.class, MediumTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestExportSnapshotV1NoCluster {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestExportSnapshotV1NoCluster.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestExportSnapshotV1NoCluster.class);
 
   private HBaseCommonTestingUtil testUtil = new HBaseCommonTestingUtil();
   private Path testDir;
   private FileSystem fs;
 
-  @Before
+  @BeforeEach
   public void setUpBefore() throws Exception {
     // Make sure testDir is on LocalFileSystem
     this.fs = FileSystem.getLocal(this.testUtil.getConfiguration());
@@ -123,7 +120,7 @@ public class TestExportSnapshotV1NoCluster {
     int snapshotFilesCount = dataFiles.size();
     String snapshotName = builder.getSnapshotDescription().getName();
     TableName tableName = builder.getTableDescriptor().getTableName();
-    TestExportSnapshot.testExportFileSystemState(testUtil.getConfiguration(), tableName,
+    TestExportSnapshotMisc.testExportFileSystemState(testUtil.getConfiguration(), tableName,
       snapshotName, snapshotName, snapshotFilesCount, testDir,
       getDestinationDir(fs, testUtil, testDir), false, false, null, true, false);
   }
