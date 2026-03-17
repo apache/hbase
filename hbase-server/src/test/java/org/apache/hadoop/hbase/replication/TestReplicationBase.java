@@ -56,6 +56,10 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -272,6 +276,7 @@ public class TestReplicationBase {
     htable2 = connection2.getTable(tableName);
   }
 
+  @BeforeAll
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     configureClusters(UTIL1, UTIL2);
@@ -318,6 +323,7 @@ public class TestReplicationBase {
   }
 
   @Before
+  @BeforeEach
   public void setUpBase() throws Exception {
     addPeer(PEER_ID2, tableName);
   }
@@ -333,6 +339,7 @@ public class TestReplicationBase {
   }
 
   @After
+  @AfterEach
   public void tearDownBase() throws Exception {
     removePeer(PEER_ID2);
   }
@@ -399,6 +406,7 @@ public class TestReplicationBase {
     }
   }
 
+  @AfterAll
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     if (htable2 != null) {

@@ -21,12 +21,13 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
 /**
  * Tests the table import and table export MR job functionality
  */
-@org.junit.jupiter.api.Tag(VerySlowMapReduceTests.TAG)
-@org.junit.jupiter.api.Tag(LargeTests.TAG)
+@Tag(VerySlowMapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestImportExport extends TestImportExportBase {
 
   @BeforeAll
