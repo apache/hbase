@@ -17,20 +17,18 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,25 +36,22 @@ import org.slf4j.LoggerFactory;
  * Test Export Snapshot Tool; tests v2 snapshots.
  * @see TestExportSnapshotV1NoCluster
  */
-@Category({ MapReduceTests.class, MediumTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestExportSnapshotV2NoCluster {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestExportSnapshotV2NoCluster.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestExportSnapshotV2NoCluster.class);
 
   private HBaseCommonTestingUtility testUtil = new HBaseCommonTestingUtility();
   private Path testDir;
   private FileSystem fs;
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     // Make sure testDir is on LocalFileSystem
     this.fs = FileSystem.getLocal(this.testUtil.getConfiguration());
     this.testDir = TestExportSnapshotV1NoCluster.setup(this.fs, this.testUtil);
     LOG.info("fs={}, testDir={}", this.fs, this.testDir);
-    assertTrue("FileSystem '" + fs + "' is not local", fs instanceof LocalFileSystem);
+    assertTrue(fs instanceof LocalFileSystem, "FileSystem '" + fs + "' is not local");
   }
 
   @Test
