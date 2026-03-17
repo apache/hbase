@@ -21,9 +21,9 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -66,25 +65,20 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 /**
  * Basic test for the WALPlayer M/R tool
  */
-@Category({ MapReduceTests.class, LargeTests.class })
-// TODO : Remove this in 3.0
+@Tag(MapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestWALPlayer {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALPlayer.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static MiniHBaseCluster cluster;
@@ -94,10 +88,7 @@ public class TestWALPlayer {
   private static FileSystem logFs;
   private static Configuration conf;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     rootDir = TEST_UTIL.createRootDir();
@@ -107,7 +98,7 @@ public class TestWALPlayer {
     cluster = TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
     fs.delete(rootDir, true);
@@ -115,9 +106,9 @@ public class TestWALPlayer {
   }
 
   @Test
-  public void testDiskBasedSortingEnabled() throws Exception {
-    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
-    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
+  public void testDiskBasedSortingEnabled(TestInfo testInfo) throws Exception {
+    final TableName tableName1 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "1");
+    final TableName tableName2 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "2");
     final byte[] FAMILY = Bytes.toBytes("family");
     final byte[] COLUMN1 = Bytes.toBytes("c1");
     final byte[] COLUMN2 = Bytes.toBytes("c2");
@@ -191,8 +182,8 @@ public class TestWALPlayer {
    * the resulting bulkloaded HFiles. See HBASE-27649
    */
   @Test
-  public void testWALPlayerBulkLoadWithOverriddenTimestamps() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + "1");
+  public void testWALPlayerBulkLoadWithOverriddenTimestamps(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName() + "1");
     final byte[] family = Bytes.toBytes("family");
     final byte[] column1 = Bytes.toBytes("c1");
     final byte[] column2 = Bytes.toBytes("c2");
@@ -230,7 +221,7 @@ public class TestWALPlayer {
       HConstants.HREGION_LOGDIR_NAME).toString();
 
     Configuration configuration = new Configuration(TEST_UTIL.getConfiguration());
-    String outPath = "/tmp/" + name.getMethodName();
+    String outPath = "/tmp/" + testInfo.getTestMethod().get().getName();
     configuration.set(WALPlayer.BULK_OUTPUT_CONF_KEY, outPath);
     configuration.setBoolean(WALPlayer.MULTI_TABLES_SUPPORT, true);
 
@@ -272,9 +263,9 @@ public class TestWALPlayer {
    * Simple end-to-end test
    */
   @Test
-  public void testWALPlayer() throws Exception {
-    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
-    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
+  public void testWALPlayer(TestInfo testInfo) throws Exception {
+    final TableName tableName1 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "1");
+    final TableName tableName2 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "2");
     final byte[] FAMILY = Bytes.toBytes("family");
     final byte[] COLUMN1 = Bytes.toBytes("c1");
     final byte[] COLUMN2 = Bytes.toBytes("c2");
