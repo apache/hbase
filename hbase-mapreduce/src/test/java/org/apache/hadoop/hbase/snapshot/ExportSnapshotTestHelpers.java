@@ -29,9 +29,6 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 
-/**
- *
- */
 final class ExportSnapshotTestHelpers {
 
   private ExportSnapshotTestHelpers() {
