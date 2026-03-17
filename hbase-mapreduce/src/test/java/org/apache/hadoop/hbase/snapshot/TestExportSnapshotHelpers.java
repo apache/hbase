@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -107,7 +107,7 @@ public class TestExportSnapshotHelpers {
     Collection<List<Pair<SnapshotFileInfo, Long>>> groups =
       inputFormat.groupFilesForSplits(conf, files);
 
-    assertEquals("Should create 3 groups", 3, groups.size());
+    assertEquals(3, groups.size(), "Should create 3 groups");
 
     long totalSize = 0;
     int totalFiles = 0;
@@ -118,8 +118,8 @@ public class TestExportSnapshotHelpers {
       }
     }
 
-    assertEquals("All files should be included", 10, totalFiles);
-    assertEquals("Total size should be preserved", 450, totalSize);
+    assertEquals(10, totalFiles, "All files should be included");
+    assertEquals(450, totalSize, "Total size should be preserved");
   }
 
   @Test
@@ -141,7 +141,7 @@ public class TestExportSnapshotHelpers {
     Collection<List<Pair<SnapshotFileInfo, Long>>> groups =
       inputFormat.groupFilesForSplits(conf, files);
 
-    assertEquals("Should create splits based on custom grouper output", 4, groups.size());
+    assertEquals(4, groups.size(), "Should create splits based on custom grouper output");
 
     long totalSize = 0;
     int totalFiles = 0;
@@ -152,8 +152,8 @@ public class TestExportSnapshotHelpers {
       }
     }
 
-    assertEquals("All files should be included", 8, totalFiles);
-    assertEquals("Total size should be preserved", 140, totalSize);
+    assertEquals(8, totalFiles, "All files should be included");
+    assertEquals(140, totalSize, "Total size should be preserved");
   }
 
   @Test
@@ -169,7 +169,7 @@ public class TestExportSnapshotHelpers {
       new ExportSnapshot.NoopFileLocationResolver();
     Set<String> locations = resolver.getLocationsForInputFiles(files);
 
-    assertTrue("NoopFileLocationResolver should return empty locations", locations.isEmpty());
+    assertTrue(locations.isEmpty(), "NoopFileLocationResolver should return empty locations");
   }
 
   @Test
@@ -184,13 +184,13 @@ public class TestExportSnapshotHelpers {
     TestFileLocationResolver resolver = new TestFileLocationResolver();
     Set<String> locations = resolver.getLocationsForInputFiles(files);
 
-    assertEquals("Should return expected locations", 2, locations.size());
-    assertTrue("Should contain rack1", locations.contains("rack1"));
-    assertTrue("Should contain rack2", locations.contains("rack2"));
+    assertEquals(2, locations.size(), "Should return expected locations");
+    assertTrue(locations.contains("rack1"), "Should contain rack1");
+    assertTrue(locations.contains("rack2"), "Should contain rack2");
   }
 
   @Test
-  public void testInputSplitWithFileLocationResolver() {
+  public void testInputSplitWithFileLocationResolver() throws Exception {
     List<Pair<SnapshotFileInfo, Long>> files = new ArrayList<>();
     for (long i = 0; i < 3; i++) {
       SnapshotFileInfo fileInfo = SnapshotFileInfo.newBuilder().setType(SnapshotFileInfo.Type.HFILE)
@@ -202,26 +202,22 @@ public class TestExportSnapshotHelpers {
     ExportSnapshot.ExportSnapshotInputFormat.ExportSnapshotInputSplit split =
       new ExportSnapshot.ExportSnapshotInputFormat.ExportSnapshotInputSplit(files, resolver);
 
-    try {
-      String[] locations = split.getLocations();
-      assertEquals("Should return 2 locations", 2, locations.length);
+    String[] locations = split.getLocations();
+    assertEquals(2, locations.length, "Should return 2 locations");
 
-      boolean hasRack1 = false;
-      boolean hasRack2 = false;
-      for (String location : locations) {
-        if ("rack1".equals(location)) {
-          hasRack1 = true;
-        }
-        if ("rack2".equals(location)) {
-          hasRack2 = true;
-        }
+    boolean hasRack1 = false;
+    boolean hasRack2 = false;
+    for (String location : locations) {
+      if ("rack1".equals(location)) {
+        hasRack1 = true;
       }
-
-      assertTrue("Should contain rack1", hasRack1);
-      assertTrue("Should contain rack2", hasRack2);
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to get locations", e);
+      if ("rack2".equals(location)) {
+        hasRack2 = true;
+      }
     }
+
+    assertTrue(hasRack1, "Should contain rack1");
+    assertTrue(hasRack2, "Should contain rack2");
   }
 
   public static class TestCustomFileGrouper implements ExportSnapshot.CustomFileGrouper {

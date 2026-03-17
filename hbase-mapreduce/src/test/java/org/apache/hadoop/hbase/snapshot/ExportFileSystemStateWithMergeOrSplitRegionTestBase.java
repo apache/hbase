@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -72,8 +72,6 @@ public class ExportFileSystemStateWithMergeOrSplitRegionTestBase extends ExportS
     admin.snapshot(snapshotName0, tableName0);
     // export snapshot and verify
     testExportFileSystemState(tableName0, snapshotName0, snapshotName0, tableNumFiles);
-    // delete table
-    TEST_UTIL.deleteTable(tableName0);
   }
 
   @TestTemplate
@@ -119,7 +117,5 @@ public class ExportFileSystemStateWithMergeOrSplitRegionTestBase extends ExportS
     testExportFileSystemState(tmpConf, splitTableName, splitTableSnap, splitTableSnap,
       tableNumFiles, TEST_UTIL.getDefaultRootDirPath(), getHdfsDestinationDir(), false, false,
       getBypassRegionPredicate(), true, false);
-    // delete table
-    TEST_UTIL.deleteTable(splitTableName);
   }
 }

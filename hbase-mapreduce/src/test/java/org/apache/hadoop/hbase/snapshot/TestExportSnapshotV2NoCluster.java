@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -51,7 +51,7 @@ public class TestExportSnapshotV2NoCluster {
     this.fs = FileSystem.getLocal(this.testUtil.getConfiguration());
     this.testDir = TestExportSnapshotV1NoCluster.setup(this.fs, this.testUtil);
     LOG.info("fs={}, testDir={}", this.fs, this.testDir);
-    assertTrue("FileSystem '" + fs + "' is not local", fs instanceof LocalFileSystem);
+    assertTrue(fs instanceof LocalFileSystem, "FileSystem '" + fs + "' is not local");
   }
 
   @Test
