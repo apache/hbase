@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import static org.apache.hadoop.util.ToolRunner.run;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -185,11 +185,11 @@ public class ExportSnapshotTestBase {
     // Export Snapshot
     int res = runExportSnapshot(conf, snapshotName, targetName, srcDir, rawTgtDir, overwrite,
       resetTtl, checksumVerify, true, true);
-    assertEquals("success " + success + ", res=" + res, success ? 0 : 1, res);
+    assertEquals(success ? 0 : 1, res, "success " + success + ", res=" + res);
     if (!success) {
       final Path targetDir = new Path(HConstants.SNAPSHOT_DIR_NAME, targetName);
-      assertFalse(tgtDir.toString() + " " + targetDir.toString(),
-        tgtFs.exists(new Path(tgtDir, targetDir)));
+      assertFalse(tgtFs.exists(new Path(tgtDir, targetDir)),
+        tgtDir.toString() + " " + targetDir.toString());
       return;
     }
     LOG.info("Exported snapshot");
@@ -199,9 +199,9 @@ public class ExportSnapshotTestBase {
     assertEquals(filesExpected > 0 ? 2 : 1, rootFiles.length);
     for (FileStatus fileStatus : rootFiles) {
       String name = fileStatus.getPath().getName();
-      assertTrue(fileStatus.toString(), fileStatus.isDirectory());
-      assertTrue(name.toString(), name.equals(HConstants.SNAPSHOT_DIR_NAME)
-        || name.equals(HConstants.HFILE_ARCHIVE_DIRECTORY));
+      assertTrue(fileStatus.isDirectory(), fileStatus.toString());
+      assertTrue(name.equals(HConstants.SNAPSHOT_DIR_NAME)
+        || name.equals(HConstants.HFILE_ARCHIVE_DIRECTORY), name.toString());
     }
     LOG.info("Verified filesystem state");
 
@@ -260,8 +260,8 @@ public class ExportSnapshotTestBase {
         }
 
         private void verifyNonEmptyFile(final Path path) throws IOException {
-          assertTrue(path + " should exists", fs.exists(path));
-          assertTrue(path + " should not be empty", fs.getFileStatus(path).getLen() > 0);
+          assertTrue(fs.exists(path), path + " should exists");
+          assertTrue(fs.getFileStatus(path).getLen() > 0, path + " should not be empty");
         }
       });
 
