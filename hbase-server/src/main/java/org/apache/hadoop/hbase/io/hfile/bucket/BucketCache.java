@@ -2458,8 +2458,7 @@ public class BucketCache implements BlockCache, HeapSize {
             StoreFileInfo.getReferredToRegionAndFile(baseFileName).getSecond(), 0, Long.MAX_VALUE);
         }
         for (BlockCacheKey entry : result) {
-          LOG.debug(
-            "found block for file {} in the backing map. Acquiring read lock for offset {}",
+          LOG.debug("found block for file {} in the backing map. Acquiring read lock for offset {}",
             baseFileName, entry.getOffset());
           ReentrantReadWriteLock lock = offsetLock.getLock(entry.getOffset());
           lock.readLock().lock();
@@ -2476,9 +2475,10 @@ public class BucketCache implements BlockCache, HeapSize {
         }
         if (ramCache.hasBlocksForFile(baseFileName)) {
           ramCacheWasEmpty = false;
-          LOG.debug("There are still blocks pending caching for file {}. "
-            + "Will retry after {}ms (attempt {}).", fileName,
-            CACHE_COMPLETION_RETRY_INTERVAL_MS, attempt);
+          LOG.debug(
+            "There are still blocks pending caching for file {}. "
+              + "Will retry after {}ms (attempt {}).",
+            fileName, CACHE_COMPLETION_RETRY_INTERVAL_MS, attempt);
         } else if (!ramCacheWasEmpty) {
           // ramCache just became empty. Rescan immediately (no sleep) to close the TOCTOU
           // window: getAllCacheKeysForFile above may have captured a stale blocksByHFile
@@ -2506,9 +2506,10 @@ public class BucketCache implements BlockCache, HeapSize {
         throw new RuntimeException(e);
       }
     }
-    LOG.warn("File {} was not fully cached after {} retries. "
-      + "Found fewer than {} expected data blocks.", fileName, CACHE_COMPLETION_MAX_RETRIES,
-      dataBlockCount);
+    LOG.warn(
+      "File {} was not fully cached after {} retries. "
+        + "Found fewer than {} expected data blocks.",
+      fileName, CACHE_COMPLETION_MAX_RETRIES, dataBlockCount);
   }
 
   @Override
