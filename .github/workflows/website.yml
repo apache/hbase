@@ -28,6 +28,10 @@ name: Build and publish website
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   website:
     runs-on: ubuntu-latest
