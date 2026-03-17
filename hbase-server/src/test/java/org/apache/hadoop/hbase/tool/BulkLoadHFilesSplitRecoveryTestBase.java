@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.hbase.tool;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -40,7 +41,6 @@ import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -56,21 +56,14 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,14 +74,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 /**
  * Test cases for the atomic load error handling of the bulk load functionality.
  */
-@Category({ MiscTests.class, LargeTests.class })
-public class TestBulkLoadHFilesSplitRecovery {
+public class BulkLoadHFilesSplitRecoveryTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBulkLoadHFilesSplitRecovery.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestHRegionServerBulkLoad.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(BulkLoadHFilesSplitRecoveryTestBase.class);
 
   static HBaseTestingUtil util;
   // used by secure subclass
@@ -99,9 +88,6 @@ public class TestBulkLoadHFilesSplitRecovery {
   final static int ROWCOUNT = 100;
 
   private final static byte[][] families = new byte[NUM_CFS][];
-
-  @Rule
-  public TestName name = new TestName();
 
   static {
     for (int i = 0; i < NUM_CFS; i++) {
@@ -222,14 +208,7 @@ public class TestBulkLoadHFilesSplitRecovery {
     }
   }
 
-  @BeforeClass
-  public static void setupCluster() throws Exception {
-    util = new HBaseTestingUtil();
-    util.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
-    util.startMiniCluster(1);
-  }
-
-  @AfterClass
+  @AfterAll
   public static void teardownCluster() throws Exception {
     util.shutdownMiniCluster();
   }
@@ -271,9 +250,9 @@ public class TestBulkLoadHFilesSplitRecovery {
    * Test that shows that exception thrown from the RS side will result in an exception on the
    * LIHFile client.
    */
-  @Test(expected = IOException.class)
-  public void testBulkLoadPhaseFailure() throws Exception {
-    final TableName table = TableName.valueOf(name.getMethodName());
+  @Test
+  public void testBulkLoadPhaseFailure(TestInfo testInfo) throws Exception {
+    final TableName table = TableName.valueOf(testInfo.getTestMethod().get().getName());
     final AtomicInteger attemptedCalls = new AtomicInteger();
     Configuration conf = new Configuration(util.getConfiguration());
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
@@ -289,7 +268,7 @@ public class TestBulkLoadHFilesSplitRecovery {
       }
     };
     Path dir = buildBulkFiles(table, 1);
-    loader.bulkLoad(table, dir);
+    assertThrows(IOException.class, () -> loader.bulkLoad(table, dir));
   }
 
   /**
@@ -298,8 +277,8 @@ public class TestBulkLoadHFilesSplitRecovery {
    * ${@link BulkLoadHFiles#RETRY_ON_IO_EXCEPTION} is set
    */
   @Test
-  public void testRetryOnIOException() throws Exception {
-    TableName table = TableName.valueOf(name.getMethodName());
+  public void testRetryOnIOException(TestInfo testInfo) throws Exception {
+    TableName table = TableName.valueOf(testInfo.getTestMethod().get().getName());
     AtomicInteger calls = new AtomicInteger(0);
     setupTable(util.getConnection(), table, 10);
     Configuration conf = new Configuration(util.getConfiguration());
@@ -334,8 +313,8 @@ public class TestBulkLoadHFilesSplitRecovery {
    * split just before the atomic region load.
    */
   @Test
-  public void testSplitWhileBulkLoadPhase() throws Exception {
-    final TableName table = TableName.valueOf(name.getMethodName());
+  public void testSplitWhileBulkLoadPhase(TestInfo testInfo) throws Exception {
+    final TableName table = TableName.valueOf(testInfo.getTestMethod().get().getName());
     setupTable(util.getConnection(), table, 10);
     populateTable(util.getConnection(), table, 1);
     assertExpectedTable(table, ROWCOUNT, 1);
@@ -374,8 +353,8 @@ public class TestBulkLoadHFilesSplitRecovery {
    * before atomically importing.
    */
   @Test
-  public void testGroupOrSplitPresplit() throws Exception {
-    final TableName table = TableName.valueOf(name.getMethodName());
+  public void testGroupOrSplitPresplit(TestInfo testInfo) throws Exception {
+    final TableName table = TableName.valueOf(testInfo.getTestMethod().get().getName());
     setupTable(util.getConnection(), table, 10);
     populateTable(util.getConnection(), table, 1);
     assertExpectedTable(util.getConnection(), table, ROWCOUNT, 1);
@@ -405,8 +384,8 @@ public class TestBulkLoadHFilesSplitRecovery {
   }
 
   @Test
-  public void testCorrectSplitPoint() throws Exception {
-    final TableName table = TableName.valueOf(name.getMethodName());
+  public void testCorrectSplitPoint(TestInfo testInfo) throws Exception {
+    final TableName table = TableName.valueOf(testInfo.getTestMethod().get().getName());
     byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000010"),
       Bytes.toBytes("row_00000020"), Bytes.toBytes("row_00000030"), Bytes.toBytes("row_00000040"),
       Bytes.toBytes("row_00000050"), Bytes.toBytes("row_00000060"), Bytes.toBytes("row_00000070") };
@@ -435,8 +414,8 @@ public class TestBulkLoadHFilesSplitRecovery {
    * multiple times before all of them can be loaded successfully.
    */
   @Test
-  public void testSplitTmpFileCleanUp() throws Exception {
-    final TableName table = TableName.valueOf(name.getMethodName());
+  public void testSplitTmpFileCleanUp(TestInfo testInfo) throws Exception {
+    final TableName table = TableName.valueOf(testInfo.getTestMethod().get().getName());
     byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000010"),
       Bytes.toBytes("row_00000020"), Bytes.toBytes("row_00000030"), Bytes.toBytes("row_00000040"),
       Bytes.toBytes("row_00000050") };
@@ -455,17 +434,17 @@ public class TestBulkLoadHFilesSplitRecovery {
     // HFiles have been splitted, there is TMP_DIR
     assertTrue(fs.exists(tmpPath));
     // TMP_DIR should have been cleaned-up
-    assertNull(BulkLoadHFilesTool.TMP_DIR + " should be empty.",
-      CommonFSUtils.listStatus(fs, tmpPath));
+    assertNull(CommonFSUtils.listStatus(fs, tmpPath),
+      BulkLoadHFilesTool.TMP_DIR + " should be empty.");
     assertExpectedTable(util.getConnection(), table, ROWCOUNT, 2);
   }
 
   /**
    * This simulates an remote exception which should cause LIHF to exit with an exception.
    */
-  @Test(expected = IOException.class)
-  public void testGroupOrSplitFailure() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  @Test
+  public void testGroupOrSplitFailure(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     setupTable(util.getConnection(), tableName, 10);
     BulkLoadHFilesTool loader = new BulkLoadHFilesTool(util.getConfiguration()) {
 
@@ -486,7 +465,7 @@ public class TestBulkLoadHFilesSplitRecovery {
 
     // create HFiles for different column families
     Path dir = buildBulkFiles(tableName, 1);
-    loader.bulkLoad(tableName, dir);
+    assertThrows(IOException.class, () -> loader.bulkLoad(tableName, dir));
   }
 
   /**
@@ -496,8 +475,8 @@ public class TestBulkLoadHFilesSplitRecovery {
    * behavior.
    */
   @Test
-  public void testSplitWhileBulkLoadPhaseWithoutItemMap() throws Exception {
-    final TableName table = TableName.valueOf(name.getMethodName());
+  public void testSplitWhileBulkLoadPhaseWithoutItemMap(TestInfo testInfo) throws Exception {
+    final TableName table = TableName.valueOf(testInfo.getTestMethod().get().getName());
     setupTable(util.getConnection(), table, 10);
     populateTable(util.getConnection(), table, 1);
     assertExpectedTable(table, ROWCOUNT, 1);
