@@ -47,39 +47,7 @@ public class RowColBloomHashKey extends CellHashKey {
 
   @Override
   public byte get(int offset) {
-    // ROWCOL Bloom byte layout:
-    // <2B RK length> <RK> <1B CF length> <CQ> <8B TS> <1B TYPE>
-    if (offset < Bytes.SIZEOF_SHORT) {
-      // assign locally
-      int rowlen = rowLength;
-      byte b = (byte) rowlen;
-      if (offset == 0) {
-        rowlen >>= 8;
-        b = (byte) rowlen;
-      }
-      return b;
-    }
-    int refLen = Bytes.SIZEOF_SHORT + rowLength;
-    if (offset < refLen) {
-      return PrivateCellUtil.getRowByte(t, offset - Bytes.SIZEOF_SHORT);
-    }
-    if (offset == refLen) {
-      // The fam length should return 0 assuming there is no column family.
-      // Because for ROWCOL blooms family is not considered
-      return 0;
-    }
-    refLen += qualLength + Bytes.SIZEOF_BYTE;
-    // skip the family len because actual cells may have family also
-    if (offset < refLen) {
-      return PrivateCellUtil.getQualifierByte(t,
-        offset - (Bytes.SIZEOF_SHORT + rowLength + Bytes.SIZEOF_BYTE));
-    }
-    // TODO : check if ts and type can be removed
-    refLen += KeyValue.TIMESTAMP_SIZE;
-    if (offset < refLen) {
-      return LATEST_TS[offset - (Bytes.SIZEOF_SHORT + rowLength + qualLength + Bytes.SIZEOF_BYTE)];
-    }
-    return MAX_TYPE;
+    return (byte) assembleCrossingLE(offset, Bytes.SIZEOF_BYTE);
   }
 
   @Override
