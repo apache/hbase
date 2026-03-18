@@ -93,11 +93,15 @@ public class RowColBloomHashKey extends CellHashKey {
     while (remaining > 0) {
       // 1) row length field [0,2)
       if (pos < KeyValue.ROW_LENGTH_SIZE) {
-        if (pos == 0) {
+        if (pos == 0 && remaining >= KeyValue.ROW_LENGTH_SIZE) {
           result |= (rowLength >>> 8) & 0xFF;
           result |= (rowLength & 0xFF) << 8;
           pos += 2;
           remaining -= 2;
+        } else if (pos == 0) {
+          result |= (rowLength >>> 8) & 0xFF;
+          pos += 1;
+          remaining -= 1;
         } else {
           result |= rowLength & 0xFF;
           pos += 1;
