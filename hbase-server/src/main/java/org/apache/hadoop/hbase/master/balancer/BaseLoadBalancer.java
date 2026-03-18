@@ -785,7 +785,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   @Override
-  public void onConfigurationChange(Configuration conf) {
+  public synchronized void onConfigurationChange(Configuration conf) {
     loadConf(conf);
   }
 }

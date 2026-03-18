@@ -83,18 +83,15 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
 
   @Override
   public void loadConf(Configuration configuration) {
-    // Refer to HBASE-29933
-    synchronized (this) {
-      // If balance is running, store configuration in pendingConfiguration and return immediately.
-      // Defer the config update.
-      if (isBalancing.get()) {
-        LOG.debug(
-          "Balance is in progress, defer applying configuration change until balance completed.");
-        pendingConfiguration.set(configuration);
-      } else {
-        // Apply configuration change immediately.
-        updateConfiguration(configuration);
-      }
+    // If balance is running, store configuration in pendingConfiguration and return immediately.
+    // Defer the config update.
+    if (isBalancing.get()) {
+      LOG.debug(
+        "Balance is in progress, defer applying configuration change until balance completed.");
+      pendingConfiguration.set(configuration);
+    } else {
+      // Apply configuration change immediately.
+      updateConfiguration(configuration);
     }
   }
 
