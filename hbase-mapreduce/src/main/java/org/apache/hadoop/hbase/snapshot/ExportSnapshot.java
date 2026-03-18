@@ -325,6 +325,8 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       Path outputPath = getOutputPath(inputInfo);
 
       copyFile(context, inputInfo, outputPath);
+      // inject failure
+      injectTestFailure(context, inputInfo);
     }
 
     /**
@@ -351,19 +353,23 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       return new Path(outputArchive, path);
     }
 
-    @SuppressWarnings("checkstyle:linelength")
     /**
      * Used by TestExportSnapshot to test for retries when failures happen. Failure is injected in
-     * {@link #copyFile(Mapper.Context, org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotFileInfo, Path)}.
+     * {@link #map(BytesWritable, NullWritable, org.apache.hadoop.mapreduce.Mapper.Context)}
      */
     private void injectTestFailure(final Context context, final SnapshotFileInfo inputInfo)
       throws IOException {
-      if (!context.getConfiguration().getBoolean(Testing.CONF_TEST_FAILURE, false)) return;
-      if (testing.injectedFailureCount >= testing.failuresCountToInject) return;
+      if (!context.getConfiguration().getBoolean(Testing.CONF_TEST_FAILURE, false)) {
+        return;
+      }
+      if (testing.injectedFailureCount >= testing.failuresCountToInject) {
+        return;
+      }
       testing.injectedFailureCount++;
       context.getCounter(Counter.COPY_FAILED).increment(1);
       LOG.debug("Injecting failure. Count: " + testing.injectedFailureCount);
-      throw new IOException(String.format("TEST FAILURE (%d of max %d): Unable to copy input=%s",
+      throw new IOException(String.format(
+        context.getTaskAttemptID() + " TEST FAILURE (%d of max %d): Unable to copy input=%s",
         testing.injectedFailureCount, testing.failuresCountToInject, inputInfo));
     }
 
@@ -426,8 +432,6 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         LOG.error("Error copying " + inputPath + " to " + outputPath, e);
         context.getCounter(Counter.COPY_FAILED).increment(1);
         throw e;
-      } finally {
-        injectTestFailure(context, inputInfo);
       }
     }
 
