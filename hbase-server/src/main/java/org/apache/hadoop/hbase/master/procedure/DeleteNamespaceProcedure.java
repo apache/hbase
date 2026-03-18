@@ -258,6 +258,6 @@ public class DeleteNamespaceProcedure
    **/
   private static void removeNamespaceQuota(final MasterProcedureEnv env, final String namespaceName)
     throws IOException {
-    env.getMasterServices().getMasterQuotaManager().removeNamespaceQuota(namespaceName);
+    ProcedureSyncWait.getMasterQuotaManager(env).removeNamespaceQuota(namespaceName);
   }
 }
