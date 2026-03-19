@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.snapshot;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -32,13 +32,11 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.snapshot.SnapshotTTLExpiredException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Unfortunately, couldn't test TakeSnapshotHandler using mocks, because it relies on TableLock,
@@ -46,27 +44,22 @@ import org.junit.rules.TestName;
  * prevents us from mocking its behaviour. Looks like an overkill having to emulate a whole cluster
  * run for such a small optional property behaviour.
  */
-@Category({ MediumTests.class })
+@Tag(MediumTests.TAG)
 public class TestTakeSnapshotHandler {
 
   private static HBaseTestingUtil UTIL;
+  private String currentTestName;
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTakeSnapshotHandler.class);
-
-  @Rule
-  public TestName name = new TestName();
-
-  @Before
-  public void setup() {
+  @BeforeEach
+  public void setup(TestInfo testInfo) {
+    currentTestName = testInfo.getTestMethod().get().getName();
     UTIL = new HBaseTestingUtil();
   }
 
   public TableDescriptor createTableInsertDataAndTakeSnapshot(Map<String, Object> snapshotProps)
     throws Exception {
     TableDescriptor descriptor =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTestName))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f")).build())
         .build();
     UTIL.getConnection().getAdmin().createTable(descriptor);
@@ -74,9 +67,9 @@ public class TestTakeSnapshotHandler {
     Put put = new Put(Bytes.toBytes("1"));
     put.addColumn(Bytes.toBytes("f"), Bytes.toBytes("1"), Bytes.toBytes("v1"));
     table.put(put);
-    String snapName = "snap" + name.getMethodName();
+    String snapName = "snap" + currentTestName;
     UTIL.getAdmin().snapshot(snapName, descriptor.getTableName(), snapshotProps);
-    TableName cloned = TableName.valueOf(name.getMethodName() + "clone");
+    TableName cloned = TableName.valueOf(currentTestName + "clone");
     UTIL.getAdmin().cloneSnapshot(snapName, cloned);
     return descriptor;
   }
@@ -87,7 +80,7 @@ public class TestTakeSnapshotHandler {
     Map<String, Object> snapshotProps = new HashMap<>();
     snapshotProps.put(TableDescriptorBuilder.MAX_FILESIZE, Long.parseLong("21474836480"));
     TableDescriptor descriptor = createTableInsertDataAndTakeSnapshot(snapshotProps);
-    TableName cloned = TableName.valueOf(name.getMethodName() + "clone");
+    TableName cloned = TableName.valueOf(currentTestName + "clone");
     assertEquals(-1, UTIL.getAdmin().getDescriptor(descriptor.getTableName()).getMaxFileSize());
     assertEquals(21474836480L, UTIL.getAdmin().getDescriptor(cloned).getMaxFileSize());
   }
@@ -96,20 +89,22 @@ public class TestTakeSnapshotHandler {
   public void testPreparePreserveMaxFileSizeDisabled() throws Exception {
     UTIL.startMiniCluster();
     TableDescriptor descriptor = createTableInsertDataAndTakeSnapshot(null);
-    TableName cloned = TableName.valueOf(name.getMethodName() + "clone");
+    TableName cloned = TableName.valueOf(currentTestName + "clone");
     assertEquals(-1, UTIL.getAdmin().getDescriptor(descriptor.getTableName()).getMaxFileSize());
     assertEquals(-1, UTIL.getAdmin().getDescriptor(cloned).getMaxFileSize());
   }
 
-  @Test(expected = SnapshotTTLExpiredException.class)
+  @Test
   public void testSnapshotEarlyExpiration() throws Exception {
     UTIL.startMiniCluster();
     Map<String, Object> snapshotProps = new HashMap<>();
     snapshotProps.put("TTL", 1L);
-    createTableInsertDataAndTakeSnapshot(snapshotProps);
+    assertThrows(SnapshotTTLExpiredException.class, () -> {
+      createTableInsertDataAndTakeSnapshot(snapshotProps);
+    });
   }
 
-  @After
+  @AfterEach
   public void shutdown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
