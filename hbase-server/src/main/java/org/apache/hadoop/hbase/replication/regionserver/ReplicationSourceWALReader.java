@@ -158,6 +158,7 @@ class ReplicationSourceWALReader extends Thread {
           // first, check if we have switched a file, if so, we need to manually add an EOF entry
           // batch to the queue
           if (currentPath != null && switched(entryStream, currentPath)) {
+            currentPosition = entryStream.getPosition();
             entryBatchQueue.put(WALEntryBatch.endOfFile(currentPath));
             continue;
           }
