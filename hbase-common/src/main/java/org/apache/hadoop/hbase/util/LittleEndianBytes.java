@@ -73,7 +73,8 @@ public final class LittleEndianBytes {
 
       @Override
       int toInt(ByteBuffer buffer, int offset) {
-        return Integer.reverseBytes(buffer.getInt(offset));
+        return (buffer.get(offset) & 0xFF) | ((buffer.get(offset + 1) & 0xFF) << 8)
+          | ((buffer.get(offset + 2) & 0xFF) << 16) | ((buffer.get(offset + 3) & 0xFF) << 24);
       }
 
       @Override

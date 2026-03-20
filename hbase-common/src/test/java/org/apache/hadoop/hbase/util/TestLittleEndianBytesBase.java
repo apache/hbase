@@ -82,7 +82,7 @@ public abstract class TestLittleEndianBytesBase {
     KeyValue cell = createCell();
     byte[] row = cell.getRowArray();
 
-    for (int i = cell.getRowOffset(); i <= cell.getRowLength() - Integer.BYTES; i++) {
+    for (int i = 0; i <= cell.getRowLength() - Integer.BYTES; i++) {
       int expected = readIntLE(row, cell.getRowOffset() + i);
       assertEquals(expected, LittleEndianBytes.getRowAsInt(cell, i));
     }
@@ -93,9 +93,8 @@ public abstract class TestLittleEndianBytesBase {
     Cell bbCell = createByteBufferExtendedCell();
     byte[] qual = bbCell.getQualifierArray();
 
-    for (int i = bbCell.getQualifierOffset(); i
-        <= bbCell.getQualifierLength() - Integer.BYTES; i++) {
-      int expected = readIntLE(qual, i);
+    for (int i = 0; i <= bbCell.getQualifierLength() - Integer.BYTES; i++) {
+      int expected = readIntLE(qual, bbCell.getQualifierOffset() + i);
       assertEquals(expected, LittleEndianBytes.getQualifierAsInt(bbCell, i));
     }
   }
@@ -105,7 +104,7 @@ public abstract class TestLittleEndianBytesBase {
     KeyValue cell = createCell();
     byte[] qual = cell.getQualifierArray();
 
-    for (int i = cell.getQualifierOffset(); i <= cell.getQualifierLength() - Integer.BYTES; i++) {
+    for (int i = 0; i <= cell.getQualifierLength() - Integer.BYTES; i++) {
       int expected = readIntLE(qual, cell.getQualifierOffset() + i);
       assertEquals(expected, LittleEndianBytes.getQualifierAsInt(cell, i));
     }
