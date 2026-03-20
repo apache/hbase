@@ -38,7 +38,6 @@ pipeline {
     OUTPUT_DIR_RELATIVE_JDK8_HADOOP3 = 'output-jdk8-hadoop3'
     OUTPUT_DIR_RELATIVE_JDK11_HADOOP3 = 'output-jdk11-hadoop3'
     OUTPUT_DIR_RELATIVE_JDK17_HADOOP3 = 'output-jdk17-hadoop3'
-    OUTPUT_DIR_RELATIVE_JDK17_HADOOP3_BACKWARDS = 'output-jdk17-hadoop3-backwards'
 
     PROJECT = 'hbase'
     PROJECT_PERSONALITY = 'https://raw.githubusercontent.com/apache/hbase/master/dev-support/hbase-personality.sh'
@@ -58,10 +57,6 @@ pipeline {
     ASF_NIGHTLIES = 'https://nightlies.apache.org'
     ASF_NIGHTLIES_BASE_ORI = "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}"
     ASF_NIGHTLIES_BASE = "${ASF_NIGHTLIES_BASE_ORI.replaceAll(' ', '%20')}"
-    // These are dependent on the branch
-    // We are not running the tests for 3.4.0, due to time constraints.
-    HADOOP3_VERSIONS = "3.2.4,3.3.5,3.3.6,3.4.1,3.4.2"
-    HADOOP3_DEFAULT_VERSION = "3.4.2"
   }
   parameters {
     booleanParam(name: 'USE_YETUS_PRERELEASE', defaultValue: false, description: '''Check to use the current HEAD of apache/yetus rather than our configured release.
