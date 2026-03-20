@@ -175,16 +175,22 @@ public final class CoprocessorConfigurationUtil {
     };
   }
 
-  public static void syncReadOnlyConfigurations(boolean readOnlyMode, Configuration conf,
-    String configurationKey) {
-    conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyMode);
+  /**
+   * This method adds or removes relevant ReadOnlyController coprocessors to the provided
+   * configuration based on whether read-only mode is enabled.
+   * @param conf               The up-to-date configuration used to determine how to handle
+   *                           coprocessors
+   * @param coprocessorConfKey The configuration key name
+   */
+  public static void syncReadOnlyConfigurations(Configuration conf, String coprocessorConfKey) {
+    boolean isReadOnlyModeEnabled = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
 
-    List<String> cpList = getReadOnlyCoprocessors(configurationKey);
-    // If readonly is true then add the coprocessor of master
-    if (readOnlyMode) {
-      CoprocessorConfigurationUtil.addCoprocessors(conf, configurationKey, cpList);
+    List<String> cpList = getReadOnlyCoprocessors(coprocessorConfKey);
+    if (isReadOnlyModeEnabled) {
+      CoprocessorConfigurationUtil.addCoprocessors(conf, coprocessorConfKey, cpList);
     } else {
-      CoprocessorConfigurationUtil.removeCoprocessors(conf, configurationKey, cpList);
+      CoprocessorConfigurationUtil.removeCoprocessors(conf, coprocessorConfKey, cpList);
     }
   }
 }

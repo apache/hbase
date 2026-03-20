@@ -107,8 +107,8 @@ public class TestReadOnlyControllerCoprocessorLoading {
     region = regions.get(0);
   }
 
-  private void setReadOnlyMode(boolean isReadOnlyEnabled) {
-    // Create a new configuration to micic client server behavior
+  private Configuration setReadOnlyMode(boolean isReadOnlyEnabled) {
+    // Create a new configuration to mimic client server behavior
     // otherwise the existing conf object is shared with the cluster
     // and can cause side effects on other tests if not reset properly.
     // This way we can ensure that only the coprocessor loading is tested
@@ -119,9 +119,10 @@ public class TestReadOnlyControllerCoprocessorLoading {
     newConf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, isReadOnlyEnabled);
     master.getConfigurationManager().notifyAllObservers(newConf);
     regionServer.getConfigurationManager().notifyAllObservers(newConf);
+    return newConf;
   }
 
-  private void verifyMasterReadOnlyControllerLoading(boolean isReadOnlyEnabled) throws Exception {
+  private void verifyMasterReadOnlyControllerLoading(boolean isReadOnlyEnabled) {
     MasterCoprocessorHost masterCPHost = master.getMasterCoprocessorHost();
     if (isReadOnlyEnabled) {
       assertNotNull(
@@ -136,8 +137,7 @@ public class TestReadOnlyControllerCoprocessorLoading {
     }
   }
 
-  private void verifyRegionServerReadOnlyControllerLoading(boolean isReadOnlyEnabled)
-    throws Exception {
+  private void verifyRegionServerReadOnlyControllerLoading(boolean isReadOnlyEnabled) {
     RegionServerCoprocessorHost rsCPHost = regionServer.getRegionServerCoprocessorHost();
     if (isReadOnlyEnabled) {
       assertNotNull(
@@ -152,7 +152,7 @@ public class TestReadOnlyControllerCoprocessorLoading {
     }
   }
 
-  private void verifyRegionReadOnlyControllerLoading(boolean isReadOnlyEnabled) throws Exception {
+  private void verifyRegionReadOnlyControllerLoading(boolean isReadOnlyEnabled) {
     RegionCoprocessorHost regionCPHost = region.getCoprocessorHost();
 
     if (isReadOnlyEnabled) {
@@ -220,8 +220,10 @@ public class TestReadOnlyControllerCoprocessorLoading {
   public void testReadOnlyControllerUnloadedWhenDisabledDynamically() throws Exception {
     setupMiniCluster(initialReadOnlyMode);
     boolean isReadOnlyEnabled = false;
-    setReadOnlyMode(isReadOnlyEnabled);
+    Configuration newConf = setReadOnlyMode(isReadOnlyEnabled);
     createTable();
+    // The newly created table's region has a stale conf that needs to be updated
+    region.onConfigurationChange(newConf);
     verifyMasterReadOnlyControllerLoading(isReadOnlyEnabled);
     verifyRegionServerReadOnlyControllerLoading(isReadOnlyEnabled);
     verifyRegionReadOnlyControllerLoading(isReadOnlyEnabled);
@@ -232,8 +234,10 @@ public class TestReadOnlyControllerCoprocessorLoading {
     setupMiniCluster(initialReadOnlyMode);
 
     // Ensure region exists before validation
-    setReadOnlyMode(false);
+    Configuration newConf = setReadOnlyMode(false);
     createTable();
+    // The newly created table's region has a stale conf that needs to be updated
+    region.onConfigurationChange(newConf);
     verifyReadOnlyState(false);
 
     // Define toggle sequence
