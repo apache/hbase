@@ -40,6 +40,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -52,6 +54,7 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -91,6 +94,7 @@ import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -153,7 +157,10 @@ public class TestCompaction {
       hcd.setMaxVersions(65536);
       this.htd.addFamily(hcd);
     }
-    if (name.getMethodName().equals("testCompactionWithCorruptBlock")) {
+    if (
+      name.getMethodName().equals("testCompactionWithCorruptBlock")
+        || name.getMethodName().equals("generateHFileForCorruptBlockTest")
+    ) {
       UTIL.getConfiguration().setBoolean("hbase.hstore.validate.read_fully", true);
       HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
       hcd.setCompressionType(Compression.Algorithm.GZ);
@@ -379,8 +386,37 @@ public class TestCompaction {
   }
 
   /**
+   * Generates the HFile used by {@link #testCompactionWithCorruptBlock()}. Run this method to
+   * regenerate the test resource file after changes to the HFile format. The output file must then
+   * be hand-edited to corrupt the first data block (zero out the GZip magic bytes at offset 33)
+   * before being placed into the test resources directory.
+   */
+  @Ignore("Not a test; utility for regenerating testCompactionWithCorruptBlock resource file")
+  @Test
+  public void generateHFileForCorruptBlockTest() throws Exception {
+    createStoreFile(r, Bytes.toString(FAMILY));
+    createStoreFile(r, Bytes.toString(FAMILY));
+    HStore store = r.getStore(FAMILY);
+
+    Collection<HStoreFile> storeFiles = store.getStorefiles();
+    DefaultCompactor tool = (DefaultCompactor) store.storeEngine.getCompactor();
+    CompactionRequestImpl request = new CompactionRequestImpl(storeFiles);
+    List<Path> paths = tool.compact(request, NoLimitThroughputController.INSTANCE, null);
+
+    FileSystem fs = store.getFileSystem();
+    Path hfilePath = paths.get(0);
+    File outFile = new File("/tmp/TestCompaction_HFileWithCorruptBlock.gz");
+    try (InputStream in = fs.open(hfilePath);
+      GZIPOutputStream gzOut = new GZIPOutputStream(new FileOutputStream(outFile))) {
+      IOUtils.copyBytes(in, gzOut, 4096);
+    }
+    LoggerFactory.getLogger(TestCompaction.class)
+      .info("Wrote HFile to {}. Now hex-edit offset 33 (0x21): zero out bytes 1f 8b.", outFile);
+  }
+
+  /**
    * This test uses a hand-modified HFile, which is loaded in from the resources' path. That file
-   * was generated from the test support code in this class and then edited to corrupt the
+   * was generated from {@link #generateHFileForCorruptBlockTest()} and then edited to corrupt the
    * GZ-encoded block by zeroing-out the first two bytes of the GZip header, the "standard
    * declaration" of {@code 1f 8b}, found at offset 33 in the file. I'm not sure why, but it seems
    * that in this test context we do not enforce CRC checksums. Thus, this corruption manifests in
