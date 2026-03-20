@@ -111,7 +111,7 @@ public interface BackupRestoreConstants {
     + CoprocessorHost.REGION_COPROCESSOR_CONF_KEY + "=YOUR_CLASSES,"
     + BackupObserver.class.getSimpleName() + "\n" + CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY
     + "=YOUR_CLASSES," + BackupMasterObserver.class.getSimpleName() + "\nand restart the cluster\n"
-    + "For more information please see http://hbase.apache.org/book.html#backuprestore\n";
+    + "For more information please see https://hbase.apache.org/docs/backup-restore\n";
   String ENABLE_BACKUP = "Backup is not enabled. To enable backup, " + "in hbase-site.xml, set:\n "
     + BACKUP_CONFIG_STRING;
 
