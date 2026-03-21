@@ -260,12 +260,14 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
   }
 
   private ScanResponse doScan(RpcController controller, ScanRequest request) throws ServiceException {
-    long rpcCallStartTimeMs = EnvironmentEdgeManager.currentTime();
     try {
       ScanResponse response = getStub().scan(controller, request);
       return response;
     } finally {
-      rpcCallTimeMs += (EnvironmentEdgeManager.currentTime() - rpcCallStartTimeMs);
+      if (controller instanceof HBaseRpcController) {
+        HBaseRpcController hrc = (HBaseRpcController) controller;
+        rpcCallTimeMs += hrc.getResponseReceiveTimestampInMs() - hrc.getRequestSendTimestampInMs();
+      }
     }
   }
 

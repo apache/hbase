@@ -466,5 +466,9 @@ abstract class RpcConnection {
       // problem
       throw e;
     }
+    finally {
+      long currentTime = EnvironmentEdgeManager.currentTime();
+      call.setResponseReceiveTimestampInMs(currentTime);
+    }
   }
 }

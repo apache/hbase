@@ -40,6 +40,7 @@ import org.apache.hbase.thirdparty.io.netty.util.concurrent.PromiseCombiner;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * The netty rpc handler.
@@ -113,6 +114,8 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
     if (msg instanceof Call) {
       Call call = (Call) msg;
       try (Scope scope = call.span.makeCurrent()) {
+        long currentTime = EnvironmentEdgeManager.currentTime();
+        call.setRequestSendTimestampInMs(currentTime);
         writeRequest(ctx, call, promise);
       }
     } else {

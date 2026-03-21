@@ -338,12 +338,16 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     Message param, Message returnType, final User ticket, final Address isa)
     throws ServiceException {
     BlockingRpcCallback<Message> done = new BlockingRpcCallback<>();
-    callMethod(md, hrc, param, returnType, ticket, isa, done);
+    Call call = callMethod(md, hrc, param, returnType, ticket, isa, done);
     Message val;
     try {
       val = done.get();
     } catch (IOException e) {
       throw new ServiceException(e);
+    }
+    finally {
+      hrc.setRequestSendTimestampInMs(call.getRequestSendTimestampInMs());
+      hrc.setResponseReceiveTimestampInMs(call.getResponseReceiveTimestampInMs());
     }
     if (hrc.failed()) {
       throw new ServiceException(hrc.getFailed());

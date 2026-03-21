@@ -53,6 +53,10 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
 
   private TableName tableName;
 
+  private long requestSendTimestampInMs = 0;
+
+  private long responseReceiveTimestampInMs = 0;
+
   /**
    * Rpc target Region's RegionInfo we are going against. May be null.
    * @see #hasRegionInfo()
@@ -293,5 +297,25 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
   @Override
   public TableName getTableName() {
     return tableName;
+  }
+
+  @Override
+  public void setRequestSendTimestampInMs(long timestamp) {
+    this.requestSendTimestampInMs = timestamp;
+  }
+
+  @Override
+  public long getRequestSendTimestampInMs() {
+    return requestSendTimestampInMs;
+  }
+
+  @Override
+  public void setResponseReceiveTimestampInMs(long timestamp) {
+    this.responseReceiveTimestampInMs = timestamp;
+  }
+
+  @Override
+  public long getResponseReceiveTimestampInMs() {
+    return responseReceiveTimestampInMs;
   }
 }

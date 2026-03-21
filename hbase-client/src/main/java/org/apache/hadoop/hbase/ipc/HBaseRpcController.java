@@ -140,4 +140,18 @@ public interface HBaseRpcController extends RpcController, CellScannable {
   default TableName getTableName() {
     return null;
   }
+
+  default void setRequestSendTimestampInMs(long timestamp) {
+  }
+
+  default void setResponseReceiveTimestampInMs(long timestamp) {
+  }
+
+  default long getRequestSendTimestampInMs() {
+    return 0;
+  }
+
+  default long getResponseReceiveTimestampInMs() {
+    return 0;
+  }
 }
