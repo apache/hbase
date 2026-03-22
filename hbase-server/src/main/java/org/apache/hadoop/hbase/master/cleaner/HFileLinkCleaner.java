@@ -79,7 +79,17 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
           }
           hfilePath =
             HFileLink.getHFileFromBackReference(CommonFSUtils.getRootDir(getConf()), filePath);
-          return !fs.exists(hfilePath);
+          if (fs.exists(hfilePath)) {
+            return false;
+          }
+          // Also protect HFileLink Reference files created by
+          // RestoreSnapshotHelper.restoreReferenceFile(). These are named
+          // <hfileLinkName>.<encodedRegion> and live in the same directory as the
+          // zero-byte HFileLink. The zero-byte file does not exist (only the Reference
+          // file does), so the fs.exists() check above is insufficient.
+          FileStatus[] refFiles =
+            fs.globStatus(new Path(hfilePath.getParent(), hfilePath.getName() + ".*"));
+          return refFiles == null || refFiles.length == 0;
         } catch (IOException e) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Couldn't verify if the referenced file still exists, keep it just in case: "
