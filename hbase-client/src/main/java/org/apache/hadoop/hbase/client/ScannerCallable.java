@@ -153,6 +153,29 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
       getTableName(), row);
   }
 
+  protected void doPrepare(boolean reload) throws IOException {
+    if (
+      reload && getTableName() != null && !getTableName().equals(TableName.META_TABLE_NAME)
+        && getConnection().isTableDisabled(getTableName())
+    ) {
+      throw new TableNotEnabledException(getTableName().getNameAsString() + " is disabled.");
+    }
+
+    RegionLocations rl = getRegionLocationsForPrepare(getRow());
+    location = getLocationForReplica(rl);
+    ServerName dest = location.getServerName();
+    setStub(super.getConnection().getClient(dest));
+    if (!instantiated || reload) {
+      checkIfRegionServerIsRemote();
+      instantiated = true;
+    }
+    cursor = null;
+    // check how often we retry.
+    if (reload) {
+      incRPCRetriesMetrics(scanMetrics, isRegionServerRemote);
+    }
+  }
+
   /**
    * @param reload force reload of server location
    */
@@ -164,26 +187,7 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
 
     long prepareStartTimeMs = EnvironmentEdgeManager.currentTime();
     try {
-      if (
-        reload && getTableName() != null && !getTableName().equals(TableName.META_TABLE_NAME)
-          && getConnection().isTableDisabled(getTableName())
-      ) {
-        throw new TableNotEnabledException(getTableName().getNameAsString() + " is disabled.");
-      }
-
-      RegionLocations rl = getRegionLocationsForPrepare(getRow());
-      location = getLocationForReplica(rl);
-      ServerName dest = location.getServerName();
-      setStub(super.getConnection().getClient(dest));
-      if (!instantiated || reload) {
-        checkIfRegionServerIsRemote();
-        instantiated = true;
-      }
-      cursor = null;
-      // check how often we retry.
-      if (reload) {
-        incRPCRetriesMetrics(scanMetrics, isRegionServerRemote);
-      }
+      doPrepare(reload);
     } finally {
       scanPrepareTimeMs += (EnvironmentEdgeManager.currentTime() - prepareStartTimeMs);
     }
@@ -259,6 +263,15 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
     this.closed = true;
   }
 
+  private long getRpcCallTimeMs(HBaseRpcController hrc) {
+    long requestSendTimestampInMs = hrc.getRequestSendTimestampInMs();
+    long responseReceiveTimestampInMs = hrc.getResponseReceiveTimestampInMs();
+    if (requestSendTimestampInMs == 0 || responseReceiveTimestampInMs == 0) {
+      return 0;
+    }
+    return responseReceiveTimestampInMs - requestSendTimestampInMs;
+  }
+
   private ScanResponse doScan(RpcController controller, ScanRequest request) throws ServiceException {
     try {
       ScanResponse response = getStub().scan(controller, request);
@@ -266,7 +279,7 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
     } finally {
       if (controller instanceof HBaseRpcController) {
         HBaseRpcController hrc = (HBaseRpcController) controller;
-        rpcCallTimeMs += hrc.getResponseReceiveTimestampInMs() - hrc.getRequestSendTimestampInMs();
+        rpcCallTimeMs += getRpcCallTimeMs(hrc);
       }
     }
   }

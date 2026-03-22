@@ -75,11 +75,7 @@ public class ReversedScannerCallable extends ScannerCallable {
    * @param reload force reload of server location
    */
   @Override
-  public void prepare(boolean reload) throws IOException {
-    if (Thread.interrupted()) {
-      throw new InterruptedIOException();
-    }
-
+  protected void doPrepare(boolean reload) throws IOException {
     if (
       reload && getTableName() != null && !getTableName().equals(TableName.META_TABLE_NAME)
         && getConnection().isTableDisabled(getTableName())
