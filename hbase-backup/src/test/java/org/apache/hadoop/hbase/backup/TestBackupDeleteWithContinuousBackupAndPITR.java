@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
 import static org.junit.Assert.assertEquals;
@@ -267,7 +268,7 @@ public class TestBackupDeleteWithContinuousBackupAndPITR extends TestBackupBase 
   }
 
   private BackupInfo getBackupInfoById(String backupId) throws IOException {
-    return backupSystemTable.getBackupInfos(BackupInfo.BackupState.COMPLETE).stream()
+    return backupSystemTable.getBackupHistory(withState(BackupInfo.BackupState.COMPLETE)).stream()
       .filter(b -> b.getBackupId().equals(backupId)).findFirst()
       .orElseThrow(() -> new IllegalStateException("Backup should exist: " + backupId));
   }

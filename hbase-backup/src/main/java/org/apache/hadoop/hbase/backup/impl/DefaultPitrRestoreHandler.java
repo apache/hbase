@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.PointInTimeRestoreRequest;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.yetus.audience.InterfaceAudience;
+import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
 
 /**
  * Default PITR restore handler that retrieves backup metadata from the system table.
@@ -48,7 +49,8 @@ public class DefaultPitrRestoreHandler extends AbstractPitrRestoreHandler {
   protected List<PitrBackupMetadata> getBackupMetadata(PointInTimeRestoreRequest request)
     throws IOException {
     try (BackupSystemTable table = new BackupSystemTable(conn)) {
-      return table.getBackupInfos(BackupInfo.BackupState.COMPLETE).stream()
+      return table.getBackupHistory(withState(
+          BackupInfo.BackupState.COMPLETE)).stream()
         .map(BackupInfoAdapter::new).collect(Collectors.toList());
     }
   }
