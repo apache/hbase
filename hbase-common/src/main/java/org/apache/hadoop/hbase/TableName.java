@@ -70,6 +70,7 @@ public final class TableName implements Comparable<TableName> {
   // with NAMESPACE_DELIM as delimiter
   public static final String VALID_USER_TABLE_REGEX = "(?:(?:(?:" + VALID_NAMESPACE_REGEX + "\\"
     + NAMESPACE_DELIM + ")?)" + "(?:" + VALID_TABLE_QUALIFIER_REGEX + "))";
+  public static final String VALID_META_TABLE_SUFFIX_REGEX = "[a-zA-Z0-9]+";
 
   /**
    * The name of hbase meta table could either be hbase:meta_xxx or 'hbase:meta' otherwise. Config
@@ -96,6 +97,11 @@ public final class TableName implements Comparable<TableName> {
     if (Strings.isNullOrEmpty(suffix_val)) {
       return valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
     } else {
+      if (!suffix_val.matches(VALID_META_TABLE_SUFFIX_REGEX)) {
+        throw new IllegalArgumentException("Invalid value '" + suffix_val + "' for config '"
+          + HConstants.HBASE_META_TABLE_SUFFIX + "'. Suffix must only contain ASCII letters and "
+          + "digits matching: " + VALID_META_TABLE_SUFFIX_REGEX);
+      }
       return valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta_" + suffix_val);
     }
   }
