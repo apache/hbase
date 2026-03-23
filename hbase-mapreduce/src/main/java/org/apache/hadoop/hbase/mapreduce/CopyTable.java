@@ -253,16 +253,18 @@ public class CopyTable extends Configured implements Tool {
       + "--new.name=destTable --snapshot --bulkload sourceTableSnapshot");
     System.err.println();
     System.err.println(
-      " To copy the data of 'TestTable' between the secured cluster and insecure cluster-b");
+      " To copy the data of 'TestTable' from the secured local cluster to an insecure peer cluster"
+        + " (cluster-b)");
     System.err.println(" $ hbase org.apache.hadoop.hbase.mapreduce.CopyTable "
       + "-Dhbase.mapred.output.hbase.security.authentication=simple "
       + "--peer.adr=cluster-b-1.example.com,cluster-b-2.example.com,cluster-b-3.example.com:"
       + "2181:/cluster-b" + " TestTable");
     System.err.println();
-    System.err.println(" To copy the data of 'TestTable' between different realm secured cluster.");
-    System.err.println(" Assume cluster-b uses different kerberos principal, "
-      + "cluster-b/_HOST@EXAMPLE.COM, for master and regionserver kerberos principal from another "
-      + "cluster");
+    System.err.println(
+      " To copy the data of 'TestTable' from the local secured cluster to a peer secured cluster "
+        + "in a different Kerberos realm.");
+    System.err.println(" Assume cluster-b uses a different Kerberos principal "
+      + "(cluster-b/_HOST@EXAMPLE.COM) for its master and regionserver.");
     System.err.println(" $ hbase org.apache.hadoop.hbase.mapreduce.CopyTable "
       + "-Dhbase.mapred.output.hbase.regionserver.kerberos.principal="
       + "cluster-b/_HOST@EXAMPLE.COM "
@@ -271,7 +273,8 @@ public class CopyTable extends Configured implements Tool {
       + "2181:/cluster-b" + " TestTable");
     System.err.println();
     System.err.println(
-      " To copy the data of 'TestTable' between the insecure cluster and secured cluster-b");
+      " To copy the data of 'TestTable' from the insecure local cluster to a secured peer cluster"
+        + " (cluster-b)");
     System.err.println(" $ hbase org.apache.hadoop.hbase.mapreduce.CopyTable "
       + "-Dhbase.mapred.output.hbase.security.authentication=kerberos "
       + "-Dhbase.mapred.output.hbase.regionserver.kerberos.principal="
