@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINU
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_ENABLE_CONTINUOUS_BACKUP;
 import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_DEFAULT;
 import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_KEY;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -127,7 +128,7 @@ public class TestBackupDescribe extends TestBackupBase {
       String[] backupArgs = new String[] { "create", BackupType.FULL.name(), BACKUP_ROOT_DIR, "-t",
         table1.getNameAsString(), "-" + OPTION_ENABLE_CONTINUOUS_BACKUP };
       int ret = ToolRunner.run(conf1, new BackupDriver(), backupArgs);
-      assertEquals("Backup should succeed", 0, ret);
+      assertEquals(0, ret, "Backup should succeed");
       List<BackupInfo> backups = table.getBackupHistory();
       String backupId = backups.get(0).getBackupId();
       assertTrue(checkSucceeded(backupId));
@@ -163,7 +164,7 @@ public class TestBackupDescribe extends TestBackupBase {
       backupArgs = new String[] { "create", BackupType.INCREMENTAL.name(), BACKUP_ROOT_DIR, "-t",
         table1.getNameAsString() };
       ret = ToolRunner.run(conf1, new BackupDriver(), backupArgs);
-      assertEquals("Incremental Backup should succeed", 0, ret);
+      assertEquals(0, ret, "Incremental Backup should succeed");
       backups = table.getBackupHistory();
       String incrBackupId = backups.get(0).getBackupId();
       assertTrue(checkSucceeded(incrBackupId));
