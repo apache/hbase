@@ -195,7 +195,7 @@ public class TestBackupBase {
         Map<TableName, Map<String, Long>> newTableSetTimestampMap =
           backupManager.readLogTimestampMap();
 
-        handleBulkLoad(backupInfo.getTableNames());
+        handleBulkLoad(backupInfo.getTableNames(), new HashMap<>(), new HashMap<>());
         failStageIf(Stage.stage_4);
 
         // backup complete

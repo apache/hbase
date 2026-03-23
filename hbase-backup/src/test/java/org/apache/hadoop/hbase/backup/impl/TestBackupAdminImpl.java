@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupInfo.withRoot;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -266,7 +267,7 @@ public class TestBackupAdminImpl {
     BackupInfo b3 = createBackupInfo("backup_003", 3000L, BackupType.INCREMENTAL, table);
     BackupInfo b4 = createBackupInfo("backup_004", 4000L, BackupType.INCREMENTAL, table);
 
-    when(mockTable.getBackupHistory("/backup/root")).thenReturn(List.of(b4, b3, b2, b1, b0));
+    when(mockTable.getBackupHistory(withRoot("/backup/root"))).thenReturn(List.of(b4, b3, b2, b1, b0));
 
     List<BackupInfo> result = backupAdminImpl.getAffectedBackupSessions(current, table, mockTable);
 
@@ -293,7 +294,7 @@ public class TestBackupAdminImpl {
     BackupInfo b2 = createBackupInfo("backup_002", 2000L, BackupType.FULL, table);
     BackupInfo b3 = createBackupInfo("backup_003", 3000L, BackupType.INCREMENTAL, table);
 
-    when(mockTable.getBackupHistory("/backup/root")).thenReturn(List.of(b3, b2, b1, b0));
+    when(mockTable.getBackupHistory(withRoot("/backup/root"))).thenReturn(List.of(b3, b2, b1, b0));
 
     List<BackupInfo> result = backupAdminImpl.getAffectedBackupSessions(current, table, mockTable);
 
@@ -320,7 +321,7 @@ public class TestBackupAdminImpl {
       TableName.valueOf("other_table"));
     BackupInfo b4 = createBackupInfo("backup_004", 4000L, BackupType.INCREMENTAL, table);
 
-    when(mockTable.getBackupHistory("/backup/root")).thenReturn(List.of(b4, b3, b2, b1, b0));
+    when(mockTable.getBackupHistory(withRoot("/backup/root"))).thenReturn(List.of(b4, b3, b2, b1, b0));
 
     List<BackupInfo> result = backupAdminImpl.getAffectedBackupSessions(current, table, mockTable);
 
@@ -349,7 +350,7 @@ public class TestBackupAdminImpl {
     BackupInfo b3 = createBackupInfo("backup_003", 3000L, BackupType.INCREMENTAL, table);
     BackupInfo b4 = createBackupInfo("backup_004", 4000L, BackupType.INCREMENTAL, table);
 
-    when(mockTable.getBackupHistory("/backup/root")).thenReturn(List.of(b4, b3, b2, b1, b0));
+    when(mockTable.getBackupHistory(withRoot("/backup/root"))).thenReturn(List.of(b4, b3, b2, b1, b0));
 
     List<BackupInfo> result = backupAdminImpl.getAffectedBackupSessions(current, table, mockTable);
 
@@ -633,7 +634,7 @@ public class TestBackupAdminImpl {
     BackupSystemTable table = mock(BackupSystemTable.class);
     when(table.readBackupInfo("b1")).thenReturn(b1);
     when(table.readBackupInfo("b2")).thenReturn(b2);
-    when(table.getBackupHistory(eq(-1), any(), any(), any(), any(), any()))
+    when(table.getBackupHistory(any()))
       .thenReturn(List.of(b1, b2));
 
     new BackupAdminImpl(mock(Connection.class)).checkIfValidForMerge(ids, table);
@@ -728,8 +729,7 @@ public class TestBackupAdminImpl {
     when(table.readBackupInfo("b2")).thenReturn(b2);
     when(table.readBackupInfo("b3")).thenReturn(b3);
 
-    when(table.getBackupHistory(eq(-1), any(), any(), any(), any(), any()))
-      .thenReturn(List.of(b1, b2, b3));
+    when(table.getBackupHistory(any())).thenReturn(List.of(b1, b2, b3));
 
     // Simulate a "hole" by omitting b2 from images
     String[] idsWithHole = { "b1", "b3" };

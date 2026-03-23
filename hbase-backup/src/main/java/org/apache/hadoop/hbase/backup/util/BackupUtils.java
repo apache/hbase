@@ -343,6 +343,22 @@ public final class BackupUtils {
   }
 
   /**
+   * Get the min value for all the Values a map.
+   * @param map map
+   * @return the min value
+   */
+  public static <T> Long getMinValue(Map<T, Long> map) {
+    Long minTimestamp = null;
+    if (map != null) {
+      ArrayList<Long> timestampList = new ArrayList<>(map.values());
+      Collections.sort(timestampList);
+      // The min among all the RS log timestamps will be kept in backup system table table.
+      minTimestamp = timestampList.get(0);
+    }
+    return minTimestamp;
+  }
+
+  /**
    * Parses host name:port from archived WAL path
    * @param p path
    * @return host name

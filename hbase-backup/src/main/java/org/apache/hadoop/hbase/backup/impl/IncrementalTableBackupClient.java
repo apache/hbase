@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
 
@@ -381,15 +382,10 @@ public class IncrementalTableBackupClient extends TableBackupClient {
         // The table list in backupInfo is good for both full backup and incremental backup.
         // For incremental backup, it contains the incremental backup table set.
         backupManager.writeRegionServerLogTimestamp(backupInfo.getTables(), newTimestamps);
-
-        Map<TableName, Map<String, Long>> newTableSetTimestampMap =
-          backupManager.readLogTimestampMap();
-
-        backupInfo.setTableSetTimestampMap(newTableSetTimestampMap);
-        Long newStartCode =
-          BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(newTableSetTimestampMap));
-        backupManager.writeBackupStartCode(newStartCode);
       }
+
+      Map<TableName, Map<String, Long>> newTableSetTimestampMap =
+        backupManager.readLogTimestampMap();
 
       List<BulkLoad> bulkLoads =
         handleBulkLoad(backupInfo.getTableNames(), tablesToWALFileList, tablesToPrevBackupTs);
@@ -468,7 +464,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       Path walBackupPath = new Path(walBackupDir);
       Set<TableName> tableSet = backupInfo.getTables();
       currentBackupTs = backupInfo.getIncrCommittedWalTs();
-      List<BackupInfo> backupInfos = backupManager.getBackupHistory(true);
+      List<BackupInfo> backupInfos = backupManager.getBackupHistory(withState(
+        BackupInfo.BackupState.COMPLETE));
       for (TableName table : tableSet) {
         for (BackupInfo backup : backupInfos) {
           // find previous backup for this table

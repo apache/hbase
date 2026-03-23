@@ -803,7 +803,8 @@ public final class BackupCommands {
           }
 
           // Check if there is any other valid backup that can cover the PITR window
-          List<BackupInfo> allBackups = backupSystemTable.getBackupInfos(BackupState.COMPLETE);
+          List<BackupInfo> allBackups = backupSystemTable.getBackupHistory(withState(
+            BackupInfo.BackupState.COMPLETE));
           boolean hasAnotherValidBackup =
             canAnyOtherBackupCover(allBackups, targetBackup, table, coveredPitrWindow.get(),
               continuousBackupStartTimes.get(table), maxAllowedPITRTime, currentTime);
@@ -946,7 +947,8 @@ public final class BackupCommands {
      * @return cutoff timestamp or 0 if not found
      */
     long determineWALCleanupCutoffTime(BackupSystemTable sysTable) throws IOException {
-      List<BackupInfo> backupInfos = sysTable.getBackupInfos(BackupState.COMPLETE);
+      List<BackupInfo> backupInfos = sysTable.getBackupHistory(withState(
+        BackupInfo.BackupState.COMPLETE));
       Collections.reverse(backupInfos); // Start from oldest
 
       for (BackupInfo backupInfo : backupInfos) {
