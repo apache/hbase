@@ -250,7 +250,6 @@ public class FullTableBackupClient extends TableBackupClient {
     backupInfo.setTableSetTimestampMap(timestampMap);
   }
 
-
   private long startContinuousWALBackup(Admin admin) throws IOException {
     enableTableReplication(admin);
     if (continuousBackupReplicationPeerExists(admin)) {

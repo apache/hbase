@@ -199,8 +199,8 @@ public class TestBackupUtils {
 
         // Verify the correct number of valid WAL dirs was found
         assertEquals(numExpectedValidWalDirs, validWalDirs.size(),
-          "The number of valid WAL dirs should be " + numExpectedValidWalDirs
-            + " for time zone " + timeZone);
+          "The number of valid WAL dirs should be " + numExpectedValidWalDirs + " for time zone "
+            + timeZone);
 
         // Verify the list of valid WAL dirs is as expected
         for (String dirName : expectedValidWalDirs) {
@@ -212,7 +212,8 @@ public class TestBackupUtils {
         List<String> expectedInvalidWalDirs = new ArrayList<>(availableWalDateDirs);
         expectedInvalidWalDirs.removeAll(expectedValidWalDirs);
         for (String dirName : expectedInvalidWalDirs) {
-          assertFalse(validWalDirs.contains(dirName), "Expected " + dirName + " to NOT be a valid WAL dir");
+          assertFalse(validWalDirs.contains(dirName),
+            "Expected " + dirName + " to NOT be a valid WAL dir");
         }
       }
     } finally {
