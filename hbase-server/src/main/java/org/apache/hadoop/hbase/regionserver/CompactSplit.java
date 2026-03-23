@@ -508,7 +508,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     if (server.getNumberOfOnlineRegions() > 0.9 * regionSplitLimit) {
       LOG.warn("Total number of regions is approaching the upper limit " + regionSplitLimit + ". "
         + "Please consider taking a look at "
-        + "https://hbase.apache.org/docs/operational-management/region-and-capacity#region-managementk");
+        + "https://hbase.apache.org/docs/operational-management/region-and-capacity#region-management");
     }
     return (regionSplitLimit > server.getNumberOfOnlineRegions()
       // Do not attempt to split secondary region replicas, as this is not allowed and our request
