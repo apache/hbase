@@ -464,8 +464,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       Path walBackupPath = new Path(walBackupDir);
       Set<TableName> tableSet = backupInfo.getTables();
       currentBackupTs = backupInfo.getIncrCommittedWalTs();
-      List<BackupInfo> backupInfos = backupManager.getBackupHistory(withState(
-        BackupInfo.BackupState.COMPLETE));
+      List<BackupInfo> backupInfos =
+        backupManager.getBackupHistory(withState(BackupInfo.BackupState.COMPLETE));
       for (TableName table : tableSet) {
         for (BackupInfo backup : backupInfos) {
           // find previous backup for this table
