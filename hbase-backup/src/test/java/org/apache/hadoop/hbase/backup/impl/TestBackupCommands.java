@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.TestBackupDeleteWithCleanup.logDirectoryStructure;
 import static org.apache.hadoop.hbase.backup.TestBackupDeleteWithCleanup.setupBackupFolders;
@@ -85,7 +86,7 @@ public class TestBackupCommands extends TestBackupBase {
 
     // Ordered as newest to oldest, will be reversed in the method
     List<BackupInfo> backupInfos = List.of(full2, inc, full1);
-    when(sysTable.getBackupInfos(BackupInfo.BackupState.COMPLETE))
+    when(sysTable.getBackupHistory(withState(BackupInfo.BackupState.COMPLETE)))
       .thenReturn(new ArrayList<>(backupInfos));
 
     // WHEN
