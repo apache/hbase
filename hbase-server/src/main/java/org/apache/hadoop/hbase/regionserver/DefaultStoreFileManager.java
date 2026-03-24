@@ -27,7 +27,6 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -231,16 +230,25 @@ class DefaultStoreFileManager implements StoreFileManager {
     ImmutableList<HStoreFile> files = storeFiles.all;
     // 1) We can never get rid of the last file which has the maximum seqid.
     // 2) Files that are not the latest can't become one due to (1), so the rest are fair game.
-    return files.stream().limit(Math.max(0, files.size() - 1)).filter(sf -> {
-      long fileTs = sf.getReader().getMaxTimestamp();
+    List<HStoreFile> expiredStoreFiles = new ArrayList<>();
+    for (int i = 0; i < files.size() - 1; i++) {
+      HStoreFile sf = files.get(i);
+      StoreFileReader reader = sf.getReader();
+      if (reader == null) {
+        LOG.debug(
+          "Skipping store file {} with sequenceId {} while collecting unneeded files because its "
+            + "reader is null; expiration cutoff={}",
+          sf.getPath(), sf.getMaxSequenceId(), maxTs);
+        continue;
+      }
+      long fileTs = reader.getMaxTimestamp();
       if (fileTs < maxTs && !filesCompacting.contains(sf)) {
         LOG.info("Found an expired store file {} whose maxTimestamp is {}, which is below {}",
           sf.getPath(), fileTs, maxTs);
-        return true;
-      } else {
-        return false;
+        expiredStoreFiles.add(sf);
       }
-    }).collect(Collectors.toList());
+    }
+    return expiredStoreFiles;
   }
 
   @Override
