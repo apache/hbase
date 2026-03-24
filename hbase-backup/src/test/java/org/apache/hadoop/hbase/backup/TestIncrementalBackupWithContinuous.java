@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.backup;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_DEFAULT;
 import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -34,7 +34,6 @@ import java.util.Set;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest;
@@ -47,22 +46,17 @@ import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestIncrementalBackupWithContinuous extends TestBackupBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIncrementalBackupWithContinuous.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestIncrementalBackupWithContinuous.class);
@@ -72,7 +66,7 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
 
   private FileSystem fs;
 
-  @Before
+  @BeforeEach
   public void beforeTest() throws IOException {
     Path root = TEST_UTIL.getDataTestDirOnTestFS();
     Path backupWalDir = new Path(root, backupWalDirName);
@@ -81,7 +75,7 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
     fs = FileSystem.get(conf1);
   }
 
-  @After
+  @AfterEach
   public void afterTest() throws IOException {
     Path root = TEST_UTIL.getDataTestDirOnTestFS();
     Path backupWalDir = new Path(root, backupWalDirName);
@@ -109,13 +103,13 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
       // Verify backup history increased and all the backups are succeeded
       LOG.info("Verify backup history increased and all the backups are succeeded");
       List<BackupInfo> backups = table.getBackupHistory();
-      assertEquals("Backup history should increase", before + 1, backups.size());
+      assertEquals(before + 1, backups.size(), "Backup history should increase");
 
       // Verify backup manifest contains the correct tables
       LOG.info("Verify backup manifest contains the correct tables");
       BackupManifest manifest = getLatestBackupManifest(backups);
-      assertEquals("Backup should contain the expected tables", Sets.newHashSet(tableName),
-        new HashSet<>(manifest.getTableList()));
+      assertEquals(Sets.newHashSet(tableName), new HashSet<>(manifest.getTableList()),
+        "Backup should contain the expected tables");
 
       loadTable(t1);
       Thread.sleep(10000);
@@ -131,12 +125,12 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
       // Verify the temporary backup directory was deleted
       Path backupTmpDir = new Path(BACKUP_ROOT_DIR, ".tmp");
       Path bulkLoadOutputDir = new Path(backupTmpDir, backup2);
-      assertFalse("Bulk load output directory " + bulkLoadOutputDir + " should have been deleted",
-        fs.exists(bulkLoadOutputDir));
+      assertFalse(fs.exists(bulkLoadOutputDir),
+        "Bulk load output directory " + bulkLoadOutputDir + " should have been deleted");
 
       // Verify backup history increased and all the backups are succeeded
       backups = table.getBackupHistory();
-      assertEquals("Backup history should increase", before + 1, backups.size());
+      assertEquals(before + 1, backups.size(), "Backup history should increase");
 
       TEST_UTIL.truncateTable(tableName);
 
