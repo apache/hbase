@@ -28,6 +28,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -61,6 +62,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
@@ -347,6 +349,110 @@ public class TestDataTieringManager {
     assertEquals(1, coldDataFiles.size());
     // hStoreFiles[3] is the cold file.
     assert (coldDataFiles.containsKey(hStoreFiles.get(3).getFileInfo().getActiveFileName()));
+  }
+
+  /**
+   * {@link DataTieringManager#isHotData(HFileInfo, org.apache.hadoop.conf.Configuration)} should
+   * record cold files in {@link DataTieringManager#getRegionColdDataSize()} (path and aggregate
+   * size).
+   */
+  @Test
+  public void testRegionColdDataSizeRecordColdHFile() throws IOException {
+    initializeTestEnvironment();
+    dataTieringManager.getRegionColdDataSize().clear();
+
+    HStoreFile coldFile = hStoreFiles.get(3);
+    String region = coldFile.getPath().getParent().getParent().getName();
+    assertFalse("fixture file should be cold for TIME_RANGE tiering", dataTieringManager
+      .isHotData(coldFile.getFileInfo().getHFileInfo(), coldFile.getFileInfo().getConf()));
+
+    Map<String, Pair<List<String>, Long>> coldByRegion = dataTieringManager.getRegionColdDataSize();
+    assertTrue(coldByRegion.containsKey(region));
+    Pair<List<String>, Long> entry = coldByRegion.get(region);
+    long expected = Bytes.toLong(coldFile.getFileInfo().getHFileInfo().get(HFileInfo.FILE_SIZE));
+    assertEquals(expected, (long) entry.getSecond());
+    assertEquals(1, entry.getFirst().size());
+    assertTrue(entry.getFirst().contains(coldFile.getPath().getName()));
+  }
+
+  @Test
+  public void testRegionColdDataSizeSkipsHotHFile() throws IOException {
+    initializeTestEnvironment();
+    dataTieringManager.getRegionColdDataSize().clear();
+
+    HStoreFile hotFile = hStoreFiles.get(0);
+    assertTrue(dataTieringManager.isHotData(hotFile.getFileInfo().getHFileInfo(),
+      hotFile.getFileInfo().getConf()));
+    assertTrue(dataTieringManager.getRegionColdDataSize().isEmpty());
+  }
+
+  @Test
+  public void testRegionColdDataSizeSkipsNoTieringHFile() throws IOException {
+    initializeTestEnvironment();
+    dataTieringManager.getRegionColdDataSize().clear();
+
+    HStoreFile file = hStoreFiles.get(1);
+    assertTrue(dataTieringManager.isHotData(file.getFileInfo().getHFileInfo(),
+      file.getFileInfo().getConf()));
+    String encoded = file.getPath().getParent().getParent().getName();
+    assertFalse(dataTieringManager.getRegionColdDataSize().containsKey(encoded));
+  }
+
+  @Test
+  public void testRegionColdDataSizeForSameHFile() throws IOException {
+    initializeTestEnvironment();
+    dataTieringManager.getRegionColdDataSize().clear();
+
+    HStoreFile coldFile = hStoreFiles.get(3);
+    long expected = Bytes.toLong(coldFile.getFileInfo().getHFileInfo().get(HFileInfo.FILE_SIZE));
+    dataTieringManager.isHotData(coldFile.getFileInfo().getHFileInfo(),
+      coldFile.getFileInfo().getConf());
+    dataTieringManager.isHotData(coldFile.getFileInfo().getHFileInfo(),
+      coldFile.getFileInfo().getConf());
+
+    String region = coldFile.getPath().getParent().getParent().getName();
+    Pair<List<String>, Long> entry = dataTieringManager.getRegionColdDataSize().get(region);
+    assertNotNull(entry);
+    assertEquals(expected, (long) entry.getSecond());
+    assertEquals(1, entry.getFirst().size());
+  }
+
+  @Test
+  public void testUpdateRegionColdDataSizeNoopWhenRegionNotTracked() throws IOException {
+    initializeTestEnvironment();
+    dataTieringManager.getRegionColdDataSize().clear();
+    HStoreFile coldFile = hStoreFiles.get(3);
+    dataTieringManager.updateRegionColdDataSize("not-a-real-encoded-region",
+      Collections.singletonList(coldFile), Collections.emptyList());
+    assertTrue(dataTieringManager.getRegionColdDataSize().isEmpty());
+  }
+
+  @Test
+  public void testUpdateRegionColdDataSizeRemovesCompactedColdAddsNewHot() throws IOException {
+    initializeTestEnvironment();
+    dataTieringManager.getRegionColdDataSize().clear();
+
+    HStoreFile coldFile = hStoreFiles.get(3);
+    String regionName = coldFile.getPath().getParent().getParent().getName();
+    dataTieringManager.isHotData(coldFile.getFileInfo().getHFileInfo(),
+      coldFile.getFileInfo().getConf());
+
+    HRegion region = testOnlineRegions.get(regionName);
+    assertNotNull(region);
+    HStore hStore = region.getStore(Bytes.toBytes("cf2"));
+    HStoreFile newFile = createHStoreFile(hStore.getStoreContext().getFamilyStoreDirectoryPath(),
+      hStore.getReadOnlyConfiguration(), System.currentTimeMillis(), region.getRegionFileSystem());
+    newFile.initReader();
+    hStore.refreshStoreFiles();
+
+    dataTieringManager.updateRegionColdDataSize(regionName, Collections.singletonList(coldFile),
+      Collections.singletonList(newFile));
+
+    Pair<List<String>, Long> after = dataTieringManager.getRegionColdDataSize().get(regionName);
+    assertNotNull(after);
+    assertTrue("Cold compacted file should be removed from tracking",
+      after.getFirst().isEmpty() || !after.getFirst().contains(coldFile.getPath().getName()));
+    assertEquals(0L, (long) after.getSecond());
   }
 
   /*
