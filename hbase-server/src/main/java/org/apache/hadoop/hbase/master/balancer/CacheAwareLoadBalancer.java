@@ -37,6 +37,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.RegionMetrics;
@@ -64,19 +66,74 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
   private Long sleepTime;
   private Configuration configuration;
 
+  /**
+   * Tracks whether a balance run is currently in progress.
+   */
+  private final AtomicBoolean isBalancing = new AtomicBoolean(false);
+
+  /**
+   * Holds a configuration update that arrived while a balance run was in progress.
+   */
+  private AtomicReference<Configuration> pendingConfiguration = new AtomicReference<>();
+
   public enum GeneratorFunctionType {
     LOAD,
     CACHE_RATIO
   }
 
   @Override
-  public synchronized void loadConf(Configuration configuration) {
+  public void loadConf(Configuration configuration) {
+    // If balance is running, store configuration in pendingConfiguration and return immediately.
+    // Defer the config update.
+    if (isBalancing.get()) {
+      LOG.debug(
+        "Balance is in progress, defer applying configuration change until balance completed.");
+      pendingConfiguration.set(configuration);
+    } else {
+      // Apply configuration change immediately.
+      updateConfiguration(configuration);
+    }
+  }
+
+  public void updateConfiguration(Configuration configuration) {
     this.configuration = configuration;
     this.costFunctions = new ArrayList<>();
     super.loadConf(configuration);
     ratioThreshold =
       this.configuration.getFloat(CACHE_RATIO_THRESHOLD, CACHE_RATIO_THRESHOLD_DEFAULT);
     sleepTime = configuration.getLong(MOVE_THROTTLING, MOVE_THROTTLING_DEFAULT.toMillis());
+  }
+
+  /**
+   * Sets {@link #isBalancing} to {@code true} before a balance run starts.
+   */
+  @Override
+  public void onBalancingStart() {
+    LOG.debug("Setting isBalancing to true as balance is starting");
+    isBalancing.set(true);
+  }
+
+  /**
+   * Sets {@link #isBalancing} to {@code false} after a balance run completes and applies any
+   * pending configuration that arrived during balancing.
+   */
+  @Override
+  public void onBalancingComplete() {
+    LOG.debug("Setting isBalancing to false as balance is completed");
+    isBalancing.set(false);
+    applyPendingConfiguration();
+  }
+
+  /**
+   * If a pending configuration was stored during a balance run, apply it and clear the pending
+   * reference.
+   */
+  public void applyPendingConfiguration() {
+    Configuration toApply = pendingConfiguration.getAndSet(null);
+    if (toApply != null) {
+      LOG.info("Applying pending configuration after balance completed.");
+      updateConfiguration(toApply);
+    }
   }
 
   @Override
@@ -193,10 +250,13 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
             + "Throttling move for {}ms.",
           plan.getRegionInfo().getEncodedName(), plan.getDestination(), sleepTime);
       }
-      try {
-        Thread.sleep(sleepTime);
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
+      synchronized (this) {
+        try {
+          // Release the monitor while waiting to avoid blocking other threads.
+          wait(sleepTime);
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
       }
     }
   }
