@@ -180,6 +180,9 @@ class ShellTest < Test::Unit::TestCase
     lines = [
       "list = 10\n",
       "list_namespace, 'ns.*'\n",
+      "list_snapshots, 'snap01'\n",
+      "scan = 20\n",
+      "processlist = 30\n",
       "my_var = 5\n"
     ]
 
@@ -213,8 +216,14 @@ class ShellTest < Test::Unit::TestCase
 
     assert(!final_vars.include?(:list), "Command 'list' should not be shadowed")
     assert(!final_vars.include?(:list_namespace), "Command 'list_namespace' should not be shadowed")
+    assert(!final_vars.include?(:list_snapshots), "Command 'list_snapshots' should not be shadowed")
+    assert(!final_vars.include?(:scan), "Command 'scan' should not be shadowed")
+    assert(!final_vars.include?(:processlist), "Command 'processlist' should not be shadowed")
 
     assert_match(/WARN: 'list' is a reserved HBase command/, err_output)
     assert_match(/WARN: 'list_namespace' is a reserved HBase command/, err_output)
+    assert_match(/WARN: 'list_snapshots' is a reserved HBase command/, err_output)
+    assert_match(/WARN: 'scan' is a reserved HBase command/, err_output)
+    assert_match(/WARN: 'processlist' is a reserved HBase command/, err_output)
   end
 end
