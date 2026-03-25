@@ -171,4 +171,17 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
   default void throttle(RegionPlan plan) throws Exception {
     // noop
   }
+
+  default long getThrottleDurationMs(RegionPlan plan) {
+    // By default, we do not throttle, so return 0 here.
+    return 0L;
+  }
+
+  default void onBalancingStart() {
+    // noop
+  }
+
+  default void onBalancingComplete() {
+    // noop
+  }
 }

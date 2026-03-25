@@ -57,6 +57,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
     shellcheck='0.8.0-*' \
     libxml2-dev='2.9.13+dfsg-*' \
     libxml2-utils='2.9.13+dfsg-*' \
+    zip='3.0-*' \
     && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* \

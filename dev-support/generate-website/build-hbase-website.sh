@@ -20,19 +20,6 @@
 
 # This script is meant to run as part of a Jenkins job such as
 # https://builds.apache.org/job/hbase_generate_website/
-#
-# It needs to be built on a Jenkins server with the label git-websites
-#
-# Allows specifying options for working directory, maven repo, and publishing to git
-# run with --help for usage.
-#
-# If there is a build error, the Jenkins job is configured to send an email
-
-declare CURRENT_HBASE_COMMIT
-declare PUSHED
-declare FILE
-declare WEBSITE_COMMIT_MSG
-declare -a FILES_TO_REMOVE
 
 set -e
 function usage {
@@ -44,7 +31,6 @@ function usage {
   echo "    --local-repo /path/for/maven/.m2  Path for putting local maven repo."
   echo "                                if given must exist."
   echo "                                defaults to making a clean directory in --working-dir."
-  echo "    --publish                   if given, will attempt to push results back to the hbase-site repo."
   echo "    --help                      show this usage message."
   exit 1
 }
@@ -57,13 +43,11 @@ fi
 declare component_dir
 declare working_dir
 declare local_repo
-declare publish
 while [ $# -gt 0 ]
 do
   case "$1" in
     --working-dir) shift; working_dir=$1; shift;;
     --local-repo) shift; local_repo=$1; shift;;
-    --publish) shift; publish="true";;
     --) shift; break;;
     -*) usage ;;
     *)  break;;  # terminate while loop
@@ -74,6 +58,12 @@ done
 if [ $# -lt 1 ]; then
   usage
 fi
+
+MVN="mvn"
+if ! command -v mvn &>/dev/null; then
+  MVN=$MAVEN_HOME/bin/mvn
+fi
+
 component_dir="$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
 
 if [ -z "${working_dir}" ]; then
@@ -108,21 +98,10 @@ else
   fi
 fi
 
-# Set up the environment
-if [ -z "${JAVA_HOME}" ]; then
-  JAVA_HOME="${JDK_1_8_LATEST__HOME}"
-  export JAVA_HOME
-  export PATH="${JAVA_HOME}/bin:${PATH}"
-fi
-if [ -z "${MAVEN_HOME}" ]; then
-  MAVEN_HOME="${MAVEN_3_3_3_HOME}"
-  export MAVEN_HOME
-  export PATH="${MAVEN_HOME}/bin:${PATH}"
-fi
 export MAVEN_OPTS="${MAVEN_OPTS} -Dmaven.repo.local=${local_repo}"
 
 # Verify the Maven version
-mvn -version
+${MVN} -version
 # Verify the git version
 git --version
 
@@ -172,13 +151,13 @@ echo "Building HBase"
 # breaks for me is hbase-server trying to find hbase-http:test and hbase-zookeeper:test.
 # But! some sunshine: because we're doing a full install before running site, we can skip all the
 # compiling in the forked executions. We have to do it awkwardly because MJAVADOC-444.
-if mvn \
+if ${MVN} \
     --batch-mode \
     -Psite-install-step \
     --errors \
     --log-file="${working_dir}/hbase-install-log-${CURRENT_HBASE_COMMIT}.txt" \
     clean install \
-  && mvn site \
+  && ${MVN} site \
     --batch-mode \
     -Dscala.skip=true \
     -Psite-build-step \
@@ -193,7 +172,7 @@ fi
 
 # Stage the site
 echo "Staging HBase site"
-mvn \
+${MVN} \
   --batch-mode \
   --errors \
   --log-file="${working_dir}/hbase-stage-log-${CURRENT_HBASE_COMMIT}.txt" \
@@ -247,6 +226,10 @@ fi
 
 echo "Adding all the files we know about"
 git add .
+if [[ -z "$(git status --porcelain)" ]]; then
+  echo "No files to commit, skipping..."
+  exit 0
+fi
 # Create the commit message and commit the changes
 WEBSITE_COMMIT_MSG="Published site at $CURRENT_HBASE_COMMIT."
 echo "WEBSITE_COMMIT_MSG: $WEBSITE_COMMIT_MSG"
@@ -261,26 +244,6 @@ if [ ! -s "${working_dir}/${CURRENT_HBASE_COMMIT}.patch" ]; then
   exit 1
 fi
 echo "Change set saved to patch ${working_dir}/${CURRENT_HBASE_COMMIT}.patch"
-
-if [ -n "${publish}" ]; then
-  echo "Publishing changes to remote repo..."
-  if git push origin asf-site; then
-    echo "changes pushed."
-  else
-    echo "Failed to push to asf-site. Website not updated."
-    exit 1
-  fi
-  echo "Sending empty commit to work around INFRA-10751."
-  git commit --allow-empty -m "INFRA-10751 Empty commit"
-  # Push the empty commit
-  if git push origin asf-site; then
-    echo "empty commit pushed."
-  else
-    echo "Failed to push the empty commit to asf-site. Website may not update. Manually push an empty commit to fix this. (See INFRA-10751)"
-    exit 1
-  fi
-  echo "Pushed the changes to branch asf-site. Refresh http://hbase.apache.org/ to see the changes within a few minutes."
-fi
 
 # Zip up the patch so Jenkins can save it
 cd "${working_dir}"
