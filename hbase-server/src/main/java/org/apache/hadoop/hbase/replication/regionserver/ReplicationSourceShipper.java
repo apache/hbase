@@ -86,6 +86,8 @@ public class ReplicationSourceShipper extends Thread {
     "hbase.replication.shipper.offset.update.interval.ms";
   private static final String OFFSET_UPDATE_SIZE_THRESHOLD_KEY =
     "hbase.replication.shipper.offset.update.size.threshold";
+  private static final long DEFAULT_OFFSET_UPDATE_INTERVAL_MS = Long.MAX_VALUE;
+  private static final long DEFAULT_OFFSET_UPDATE_SIZE_THRESHOLD = -1L;
 
   public ReplicationSourceShipper(Configuration conf, String walGroupId, ReplicationSource source,
     ReplicationSourceWALReader walReader) {
@@ -102,8 +104,10 @@ public class ReplicationSourceShipper extends Thread {
       this.conf.getInt("replication.source.getEntries.timeout", DEFAULT_TIMEOUT);
     this.shipEditsTimeout = this.conf.getInt(HConstants.REPLICATION_SOURCE_SHIPEDITS_TIMEOUT,
       HConstants.REPLICATION_SOURCE_SHIPEDITS_TIMEOUT_DFAULT);
-    this.offsetUpdateIntervalMs = conf.getLong(OFFSET_UPDATE_INTERVAL_MS_KEY, Long.MAX_VALUE);
-    this.offsetUpdateSizeThresholdBytes = conf.getLong(OFFSET_UPDATE_SIZE_THRESHOLD_KEY, -1L);
+    this.offsetUpdateIntervalMs =
+      conf.getLong(OFFSET_UPDATE_INTERVAL_MS_KEY, DEFAULT_OFFSET_UPDATE_INTERVAL_MS);
+    this.offsetUpdateSizeThresholdBytes =
+      conf.getLong(OFFSET_UPDATE_SIZE_THRESHOLD_KEY, DEFAULT_OFFSET_UPDATE_SIZE_THRESHOLD);
   }
 
   @Override
