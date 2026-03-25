@@ -77,7 +77,7 @@ public class FlushRegionProcedure extends Procedure<MasterProcedureEnv>
   }
 
   @Override
-  protected Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
+  protected synchronized Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
     throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
     if (dispatched) {
       if (succ) {
@@ -95,7 +95,7 @@ public class FlushRegionProcedure extends Procedure<MasterProcedureEnv>
     }
     regionNode.lock();
     try {
-      if (!regionNode.isInState(State.OPEN) || regionNode.isInTransition()) {
+      if (!regionNode.isInState(State.OPEN) || regionNode.isTransitionScheduled()) {
         LOG.info("State of region {} is not OPEN or in transition. Skip {} ...", region, this);
         return null;
       }
@@ -149,7 +149,7 @@ public class FlushRegionProcedure extends Procedure<MasterProcedureEnv>
   }
 
   @Override
-  public void remoteOperationCompleted(MasterProcedureEnv env) {
+  public void remoteOperationCompleted(MasterProcedureEnv env, byte[] remoteResultData) {
     complete(env, null);
   }
 
@@ -158,7 +158,7 @@ public class FlushRegionProcedure extends Procedure<MasterProcedureEnv>
     complete(env, error);
   }
 
-  private void complete(MasterProcedureEnv env, Throwable error) {
+  private synchronized void complete(MasterProcedureEnv env, Throwable error) {
     if (isFinished()) {
       LOG.info("This procedure {} is already finished, skip the rest processes", this.getProcId());
       return;

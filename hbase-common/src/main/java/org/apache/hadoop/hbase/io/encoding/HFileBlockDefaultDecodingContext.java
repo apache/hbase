@@ -24,6 +24,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
+import org.apache.hadoop.hbase.io.compress.ByteBuffDecompressor;
 import org.apache.hadoop.hbase.io.compress.CanReinit;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
@@ -43,6 +44,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class HFileBlockDefaultDecodingContext implements HFileBlockDecodingContext {
+
   private final Configuration conf;
   private final HFileContext fileContext;
   private TagCompressionContext tagCompressionContext;
@@ -55,6 +57,13 @@ public class HFileBlockDefaultDecodingContext implements HFileBlockDecodingConte
   @Override
   public void prepareDecoding(int onDiskSizeWithoutHeader, int uncompressedSizeWithoutHeader,
     ByteBuff blockBufferWithoutHeader, ByteBuff onDiskBlock) throws IOException {
+
+    // If possible, use the ByteBuffer decompression mechanism to avoid extra copies.
+    if (canDecompressViaByteBuff(blockBufferWithoutHeader, onDiskBlock)) {
+      decompressViaByteBuff(blockBufferWithoutHeader, onDiskBlock, onDiskSizeWithoutHeader);
+      return;
+    }
+
     final ByteBuffInputStream byteBuffInputStream = new ByteBuffInputStream(onDiskBlock);
     InputStream dataInputStream = new DataInputStream(byteBuffInputStream);
 
@@ -116,6 +125,46 @@ public class HFileBlockDefaultDecodingContext implements HFileBlockDecodingConte
     } finally {
       byteBuffInputStream.close();
       dataInputStream.close();
+    }
+  }
+
+  /**
+   * When only decompression is needed (not decryption), and the input and output buffers are
+   * SingleByteBuffs, and the decompression algorithm supports it, we can do decompression without
+   * any intermediate heap buffers. Do not call unless you've checked
+   * {@link #canDecompressViaByteBuff} first.
+   */
+  private void decompressViaByteBuff(ByteBuff blockBufferWithoutHeader, ByteBuff onDiskBlock,
+    int onDiskSizeWithoutHeader) throws IOException {
+    Compression.Algorithm compression = fileContext.getCompression();
+    ByteBuffDecompressor decompressor = compression.getByteBuffDecompressor();
+    try {
+      decompressor.reinit(fileContext.getDecompressionContext());
+      decompressor.decompress(blockBufferWithoutHeader, onDiskBlock, onDiskSizeWithoutHeader);
+    } finally {
+      compression.returnByteBuffDecompressor(decompressor);
+    }
+  }
+
+  private boolean canDecompressViaByteBuff(ByteBuff blockBufferWithoutHeader,
+    ByteBuff onDiskBlock) {
+    // Theoretically we can do ByteBuff decompression after doing streaming decryption, but the
+    // refactoring necessary to support this has not been attempted. For now, we skip ByteBuff
+    // decompression if the input is encrypted.
+    if (fileContext.getEncryptionContext() != Encryption.Context.NONE) {
+      return false;
+    } else if (!fileContext.getCompression().supportsByteBuffDecompression()) {
+      return false;
+    } else {
+      ByteBuffDecompressor decompressor = fileContext.getCompression().getByteBuffDecompressor();
+      try {
+        decompressor.reinit(fileContext.getDecompressionContext());
+        // Even if we have a ByteBuffDecompressor, we still need to check if it can decompress
+        // our particular ByteBuffs
+        return decompressor.canDecompress(blockBufferWithoutHeader, onDiskBlock);
+      } finally {
+        fileContext.getCompression().returnByteBuffDecompressor(decompressor);
+      }
     }
   }
 

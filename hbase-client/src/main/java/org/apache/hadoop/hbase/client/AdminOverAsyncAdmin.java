@@ -512,6 +512,17 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public Future<Void> reopenTableRegionsAsync(TableName tableName) throws IOException {
+    return admin.reopenTableRegions(tableName).toCompletableFuture();
+  }
+
+  @Override
+  public Future<Void> reopenTableRegionsAsync(TableName tableName, List<RegionInfo> regions)
+    throws IOException {
+    return admin.reopenTableRegions(tableName, regions).toCompletableFuture();
+  }
+
+  @Override
   public Future<Void> modifyTableStoreFileTrackerAsync(TableName tableName, String dstSFT)
     throws IOException {
     return admin.modifyTableStoreFileTracker(tableName, dstSFT);
@@ -633,6 +644,11 @@ class AdminOverAsyncAdmin implements Admin {
   @Override
   public void rollWALWriter(ServerName serverName) throws IOException, FailedLogCloseException {
     get(admin.rollWALWriter(serverName));
+  }
+
+  @Override
+  public Map<ServerName, Long> rollAllWALWriters() throws IOException {
+    return get(admin.rollAllWALWriters());
   }
 
   @Override
@@ -1135,5 +1151,10 @@ class AdminOverAsyncAdmin implements Admin {
   @Override
   public List<String> getCachedFilesList(ServerName serverName) throws IOException {
     return get(admin.getCachedFilesList(serverName));
+  }
+
+  @Override
+  public void restoreBackupSystemTable(String snapshotName) throws IOException {
+    get(admin.restoreBackupSystemTable(snapshotName));
   }
 }

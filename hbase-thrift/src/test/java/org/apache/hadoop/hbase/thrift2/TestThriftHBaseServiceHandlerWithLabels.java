@@ -18,10 +18,11 @@
 package org.apache.hadoop.hbase.thrift2;
 
 import static java.nio.ByteBuffer.wrap;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -32,7 +33,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TCellVisibility;
 import org.apache.hadoop.hbase.thrift2.generated.TColumn;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnValue;
+import org.apache.hadoop.hbase.thrift2.generated.TDelete;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
 import org.apache.hadoop.hbase.thrift2.generated.TIllegalArgument;
 import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
@@ -65,24 +66,19 @@ import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestThriftHBaseServiceHandlerWithLabels {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestThriftHBaseServiceHandlerWithLabels.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestThriftHBaseServiceHandlerWithLabels.class);
@@ -131,7 +127,7 @@ public class TestThriftHBaseServiceHandlerWithLabels {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
     conf = UTIL.getConfiguration();
@@ -177,12 +173,12 @@ public class TestThriftHBaseServiceHandlerWithLabels {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
 
   }
@@ -233,7 +229,7 @@ public class TestThriftHBaseServiceHandlerWithLabels {
     int scanId = handler.openScanner(table, scan);
     List<TResult> results = handler.getScannerRows(scanId, 10);
     assertEquals(9, results.size());
-    Assert.assertFalse(Bytes.equals(results.get(5).getRow(), Bytes.toBytes("testScan" + 5)));
+    assertFalse(Bytes.equals(results.get(5).getRow(), Bytes.toBytes("testScan" + 5)));
     for (int i = 0; i < 9; i++) {
       if (i < 5) {
         assertArrayEquals(Bytes.toBytes("testScan" + i), results.get(i).getRow());
@@ -437,6 +433,94 @@ public class TestThriftHBaseServiceHandlerWithLabels {
     assertEquals(1, result.getColumnValuesSize());
     TColumnValue columnValue = result.getColumnValues().get(0);
     assertArrayEquals(Bytes.add(v1, v2), columnValue.getValue());
+  }
+
+  @Test
+  public void testDeleteWithLabels() throws Exception {
+    ThriftHBaseServiceHandler handler = createHandler();
+    byte[] rowName = "testPutGetDeleteGet".getBytes();
+    ByteBuffer table = wrap(tableAname);
+
+    // common auths
+    TAuthorization tauth = new TAuthorization();
+    List<String> labels = new ArrayList<String>();
+    labels.add(SECRET);
+    labels.add(PRIVATE);
+    tauth.setLabels(labels);
+
+    // put
+    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
+    columnValues.add(new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(valueAname)));
+    columnValues.add(new TColumnValue(wrap(familyBname), wrap(qualifierBname), wrap(valueBname)));
+    TPut put = new TPut(wrap(rowName), columnValues);
+
+    put.setColumnValues(columnValues);
+    put.setCellVisibility(new TCellVisibility()
+      .setExpression("(" + SECRET + "|" + CONFIDENTIAL + ")" + "&" + "!" + TOPSECRET));
+    handler.put(table, put);
+
+    // verify put
+    TGet get = new TGet(wrap(rowName));
+    get.setAuthorizations(tauth);
+    TResult result = handler.get(table, get);
+    assertArrayEquals(rowName, result.getRow());
+    List<TColumnValue> returnedColumnValues = result.getColumnValues();
+    assertTColumnValuesEqual(columnValues, returnedColumnValues);
+
+    // delete
+    TDelete delete = new TDelete(wrap(rowName));
+    delete.setCellVisibility(new TCellVisibility()
+      .setExpression("(" + SECRET + "|" + CONFIDENTIAL + ")" + "&" + "!" + TOPSECRET));
+    handler.deleteSingle(table, delete);
+
+    // verify delete
+    TGet get2 = new TGet(wrap(rowName));
+    get2.setAuthorizations(tauth);
+    TResult result2 = handler.get(table, get2);
+    assertNull(result2.getRow());
+  }
+
+  @Test
+  public void testDeleteWithLabelsNegativeTest() throws Exception {
+    ThriftHBaseServiceHandler handler = createHandler();
+    byte[] rowName = "testPutGetTryDeleteGet".getBytes();
+    ByteBuffer table = wrap(tableAname);
+
+    // common auths
+    TAuthorization tauth = new TAuthorization();
+    List<String> labels = new ArrayList<String>();
+    labels.add(SECRET);
+    labels.add(PRIVATE);
+    tauth.setLabels(labels);
+
+    // put
+    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
+    columnValues.add(new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(valueAname)));
+    columnValues.add(new TColumnValue(wrap(familyBname), wrap(qualifierBname), wrap(valueBname)));
+    TPut put = new TPut(wrap(rowName), columnValues);
+
+    put.setColumnValues(columnValues);
+    put.setCellVisibility(new TCellVisibility()
+      .setExpression("(" + SECRET + "|" + CONFIDENTIAL + ")" + "&" + "!" + TOPSECRET));
+    handler.put(table, put);
+
+    // verify put
+    TGet get = new TGet(wrap(rowName));
+    get.setAuthorizations(tauth);
+    TResult result = handler.get(table, get);
+    assertArrayEquals(rowName, result.getRow());
+    List<TColumnValue> returnedColumnValues = result.getColumnValues();
+    assertTColumnValuesEqual(columnValues, returnedColumnValues);
+
+    // _try_ delete with _no_ CellVisibility
+    TDelete delete = new TDelete(wrap(rowName));
+    handler.deleteSingle(table, delete);
+
+    // verify delete did in fact _not_ work
+    TGet get2 = new TGet(wrap(rowName));
+    get2.setAuthorizations(tauth);
+    TResult result2 = handler.get(table, get2);
+    assertArrayEquals(rowName, result2.getRow());
   }
 
   /**

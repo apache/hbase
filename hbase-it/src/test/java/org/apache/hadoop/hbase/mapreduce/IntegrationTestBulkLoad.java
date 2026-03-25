@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -77,8 +78,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,7 +100,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
  * hbase.IntegrationTestBulkLoad.replicaCount How many region replicas to configure for the table
  * under test.
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestBulkLoad.class);
@@ -272,7 +273,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
       HFileOutputFormat2.configureIncrementalLoad(job, admin.getDescriptor(getTablename()),
         regionLocator);
       // Run the job making sure it works.
-      assertEquals(true, job.waitForCompletion(true));
+      assertTrue(job.waitForCompletion(true));
     }
     // Create a new loader.
     BulkLoadHFiles loader = BulkLoadHFiles.create(conf);

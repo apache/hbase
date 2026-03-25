@@ -61,6 +61,16 @@ public interface MetricsRegionWrapper {
   long getMemStoreSize();
 
   /**
+   * Get the size of the on heap memstore of this region
+   */
+  long getMemStoreHeapSize();
+
+  /**
+   * Get the size of the off heap memstore of this region
+   */
+  long getMemStoreOffHeapSize();
+
+  /**
    * Get the total size of the store files this region server is serving from.
    */
   long getStoreFileSize();
@@ -165,5 +175,13 @@ public interface MetricsRegionWrapper {
 
   /** Returns the number of row reads on memstore and file per store */
   Map<String, Long> getMixedRowReadsCount();
+
+  /**
+   * Returns a hash of the table descriptor that this region was opened with. This hash uniquely
+   * identifies the table configuration (column families, compression, TTL, block size, etc.) and
+   * can be used to determine if a region needs to be reopened to pick up descriptor changes.
+   * @return hex-encoded hash of the serialized TableDescriptor
+   */
+  String getTableDescriptorHash();
 
 }

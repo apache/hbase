@@ -374,8 +374,18 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   @Override
+  public long getL1CacheHitCachingCount() {
+    return this.l1Stats != null ? this.l1Stats.getHitCachingCount() : 0L;
+  }
+
+  @Override
   public long getL1CacheMissCount() {
     return this.l1Stats != null ? this.l1Stats.getMissCount() : 0L;
+  }
+
+  @Override
+  public long getL1CacheMissCachingCount() {
+    return this.l1Stats != null ? this.l1Stats.getMissCachingCount() : 0L;
   }
 
   @Override
@@ -384,8 +394,18 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   @Override
+  public double getL1CacheHitCachingRatio() {
+    return this.l1Stats != null ? this.l1Stats.getHitCachingRatio() : 0.0;
+  }
+
+  @Override
   public double getL1CacheMissRatio() {
     return this.l1Stats != null ? this.l1Stats.getMissRatio() : 0.0;
+  }
+
+  @Override
+  public double getL1CacheMissCachingRatio() {
+    return this.l1Stats != null ? this.l1Stats.getMissCachingRatio() : 0.0;
   }
 
   @Override
@@ -394,8 +414,18 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   @Override
+  public long getL2CacheHitCachingCount() {
+    return this.l2Stats != null ? this.l2Stats.getHitCachingCount() : 0L;
+  }
+
+  @Override
   public long getL2CacheMissCount() {
     return this.l2Stats != null ? this.l2Stats.getMissCount() : 0L;
+  }
+
+  @Override
+  public long getL2CacheMissCachingCount() {
+    return this.l2Stats != null ? this.l2Stats.getMissCachingCount() : 0L;
   }
 
   @Override
@@ -404,8 +434,18 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   @Override
+  public double getL2CacheHitCachingRatio() {
+    return this.l2Stats != null ? this.l2Stats.getHitCachingRatio() : 0.0;
+  }
+
+  @Override
   public double getL2CacheMissRatio() {
     return this.l2Stats != null ? this.l2Stats.getMissRatio() : 0.0;
+  }
+
+  @Override
+  public double getL2CacheMissCachingRatio() {
+    return this.l2Stats != null ? this.l2Stats.getMissCachingRatio() : 0.0;
   }
 
   @Override
@@ -433,8 +473,9 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
     if (excludeDatanodeManager == null) {
       return Collections.emptyList();
     }
-    return excludeDatanodeManager.getExcludeDNs().entrySet().stream()
-      .map(e -> e.getKey().toString() + ", " + e.getValue()).collect(Collectors.toList());
+    return excludeDatanodeManager.getExcludeDNs().entrySet().stream().map(e -> e.getKey().toString()
+      + " - " + e.getValue().getSecond() + " - " + e.getValue().getFirst())
+      .collect(Collectors.toList());
   }
 
   @Override
@@ -613,6 +654,11 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   @Override
+  public double getPercentFileLocalPrimaryRegions() {
+    return aggregate.percentFileLocalPrimaryRegions;
+  }
+
+  @Override
   public double getPercentFileLocalSecondaryRegions() {
     return aggregate.percentFileLocalSecondaryRegions;
   }
@@ -762,6 +808,7 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
     private long numMutationsWithoutWAL = 0;
     private long dataInMemoryWithoutWAL = 0;
     private double percentFileLocal = 0;
+    private double percentFileLocalPrimaryRegions = 0;
     private double percentFileLocalSecondaryRegions = 0;
     private long flushedCellsCount = 0;
     private long compactedCellsCount = 0;
@@ -794,6 +841,7 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
     private void aggregate(HRegionServer regionServer,
       Map<String, ArrayList<Long>> requestsCountCache) {
       HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
+      HDFSBlocksDistribution hdfsBlocksDistributionPrimaryRegions = new HDFSBlocksDistribution();
       HDFSBlocksDistribution hdfsBlocksDistributionSecondaryRegions = new HDFSBlocksDistribution();
 
       long avgAgeNumerator = 0;
@@ -821,6 +869,9 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
 
         HDFSBlocksDistribution distro = r.getHDFSBlocksDistribution();
         hdfsBlocksDistribution.add(distro);
+        if (r.getRegionInfo().getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
+          hdfsBlocksDistributionPrimaryRegions.add(distro);
+        }
         if (r.getRegionInfo().getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
           hdfsBlocksDistributionSecondaryRegions.add(distro);
         }
@@ -831,6 +882,11 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
       float localityIndex =
         hdfsBlocksDistribution.getBlockLocalityIndex(regionServer.getServerName().getHostname());
       percentFileLocal = Double.isNaN(localityIndex) ? 0 : (localityIndex * 100);
+
+      float localityIndexPrimaryRegions = hdfsBlocksDistributionPrimaryRegions
+        .getBlockLocalityIndex(regionServer.getServerName().getHostname());
+      percentFileLocalPrimaryRegions =
+        Double.isNaN(localityIndexPrimaryRegions) ? 0 : (localityIndexPrimaryRegions * 100);
 
       float localityIndexSecondaryRegions = hdfsBlocksDistributionSecondaryRegions
         .getBlockLocalityIndex(regionServer.getServerName().getHostname());
@@ -1005,10 +1061,14 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
         aggregate = newVal;
 
         List<WALProvider> providers = regionServer.getWalFactory().getAllWALProviders();
+        long numWALFilesTmp = 0;
+        long walFileSizeTmp = 0;
         for (WALProvider provider : providers) {
-          numWALFiles += provider.getNumLogFiles();
-          walFileSize += provider.getLogFileSize();
+          numWALFilesTmp += provider.getNumLogFiles();
+          walFileSizeTmp += provider.getLogFileSize();
         }
+        numWALFiles = numWALFilesTmp;
+        walFileSize = walFileSizeTmp;
 
         mobFileCacheAccessCount = mobFileCache != null ? mobFileCache.getAccessCount() : 0L;
         mobFileCacheMissCount = mobFileCache != null ? mobFileCache.getMissCount() : 0L;

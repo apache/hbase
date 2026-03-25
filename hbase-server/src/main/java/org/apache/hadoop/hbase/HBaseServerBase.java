@@ -52,6 +52,10 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
@@ -86,7 +90,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends Thread
-  implements Server, ConfigurationObserver, ConnectionRegistryEndpoint {
+  implements Server, ConfigurationObserver, ConnectionRegistryEndpoint, KeyManagementService {
 
   private static final Logger LOG = LoggerFactory.getLogger(HBaseServerBase.class);
 
@@ -322,9 +326,11 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
       this.conf.getInt(HConstants.REGIONSERVER_INFO_PORT, HConstants.DEFAULT_REGIONSERVER_INFOPORT);
     String addr = this.conf.get("hbase.regionserver.info.bindAddress", "0.0.0.0");
 
+    boolean isMaster = false;
     if (this instanceof HMaster) {
       port = conf.getInt(HConstants.MASTER_INFO_PORT, HConstants.DEFAULT_MASTER_INFOPORT);
       addr = this.conf.get("hbase.master.info.bindAddress", "0.0.0.0");
+      isMaster = true;
     }
     // -1 is for disabling info server
     if (port < 0) {
@@ -334,7 +340,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     if (!Addressing.isLocalAddress(InetAddress.getByName(addr))) {
       String msg = "Failed to start http info server. Address " + addr
         + " does not belong to this host. Correct configuration parameter: "
-        + "hbase.regionserver.info.bindAddress";
+        + (isMaster ? "hbase.master.info.bindAddress" : "hbase.regionserver.info.bindAddress");
       LOG.error(msg);
       throw new IOException(msg);
     }
@@ -399,6 +405,21 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   @Override
   public ZKWatcher getZooKeeper() {
     return zooKeeper;
+  }
+
+  @Override
+  public KeymetaAdmin getKeymetaAdmin() {
+    return null;
+  }
+
+  @Override
+  public ManagedKeyDataCache getManagedKeyDataCache() {
+    return null;
+  }
+
+  @Override
+  public SystemKeyCache getSystemKeyCache() {
+    return null;
   }
 
   protected final void shutdownChore(ScheduledChore chore) {
@@ -624,6 +645,11 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     conf.reloadConfiguration();
     configurationManager.notifyAllObservers(conf);
     postUpdateConfiguration();
+  }
+
+  @Override
+  public KeyManagementService getKeyManagementService() {
+    return this;
   }
 
   private void preUpdateConfiguration() throws IOException {

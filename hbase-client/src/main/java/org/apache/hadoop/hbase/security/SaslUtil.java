@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import javax.security.sasl.Sasl;
@@ -131,5 +134,24 @@ public class SaslUtil {
     } catch (SaslException e) {
       LOG.error("Error disposing of SASL server", e);
     }
+  }
+
+  public static void verifyNegotiatedQop(String requestedQopString, String negotiatedQop)
+    throws IOException {
+    // We use the SASL QOP names here, not the HBase names
+    if (requestedQopString == null || requestedQopString.isEmpty()) {
+      // None requested, nothing to check
+      return;
+    }
+    List<String> requestedQops = Arrays.asList(requestedQopString.toLowerCase().split(","));
+    if (negotiatedQop == null) {
+      // Null negotiated QOP is equivalent to "auth" (for mechanisms without QOP support)
+      negotiatedQop = QualityOfProtection.AUTHENTICATION.getSaslQop();
+    }
+    if (requestedQops.contains(negotiatedQop.toLowerCase())) {
+      return;
+    }
+    throw new IOException("Could not negotiate requested SASL QOP. Requested:" + requestedQopString
+      + " , negotiated:" + negotiatedQop);
   }
 }

@@ -23,12 +23,11 @@ package org.apache.hadoop.hbase.master.balancer;
  * periodically and restores the cache when it is restarted. This balancer implements a mechanism
  * where it maintains the amount by which a region is cached on a region server. During balancer
  * run, a region plan is generated that takes into account this cache information and tries to
- * move the regions so that the cache minimally impacted.
+ * move the regions so that the cache is minimally impacted.
  */
 
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_PERSISTENT_PATH_KEY;
 
-import java.text.DecimalFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,7 +42,9 @@ import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Size;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -53,6 +54,13 @@ import org.slf4j.LoggerFactory;
 public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
   private static final Logger LOG = LoggerFactory.getLogger(CacheAwareLoadBalancer.class);
 
+  public static final String CACHE_RATIO_THRESHOLD =
+    "hbase.master.balancer.stochastic.throttling.cacheRatio";
+  public static final float CACHE_RATIO_THRESHOLD_DEFAULT = 0.8f;
+
+  public Float ratioThreshold;
+
+  private Long sleepTime;
   private Configuration configuration;
 
   public enum GeneratorFunctionType {
@@ -61,19 +69,23 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
   }
 
   @Override
-  public synchronized void loadConf(Configuration configuration) {
+  public void loadConf(Configuration configuration) {
     this.configuration = configuration;
     this.costFunctions = new ArrayList<>();
     super.loadConf(configuration);
+    ratioThreshold =
+      this.configuration.getFloat(CACHE_RATIO_THRESHOLD, CACHE_RATIO_THRESHOLD_DEFAULT);
+    sleepTime = configuration.getLong(MOVE_THROTTLING, MOVE_THROTTLING_DEFAULT.toMillis());
   }
 
   @Override
-  protected List<CandidateGenerator> createCandidateGenerators() {
-    List<CandidateGenerator> candidateGenerators = new ArrayList<>(2);
-    candidateGenerators.add(GeneratorFunctionType.LOAD.ordinal(),
+  protected Map<Class<? extends CandidateGenerator>, CandidateGenerator>
+    createCandidateGenerators(Configuration conf) {
+    Map<Class<? extends CandidateGenerator>, CandidateGenerator> candidateGenerators =
+      new HashMap<>(2);
+    candidateGenerators.put(CacheAwareSkewnessCandidateGenerator.class,
       new CacheAwareSkewnessCandidateGenerator());
-    candidateGenerators.add(GeneratorFunctionType.CACHE_RATIO.ordinal(),
-      new CacheAwareCandidateGenerator());
+    candidateGenerators.put(CacheAwareCandidateGenerator.class, new CacheAwareCandidateGenerator());
     return candidateGenerators;
   }
 
@@ -117,7 +129,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
         int regionSizeMB = (int) rm.getRegionSizeMB().get(Size.Unit.MEGABYTE);
 
         rload.add(new BalancerRegionLoad(rm));
-        // Maintain a map of region and it's total size. This is needed to calculate the cache
+        // Maintain a map of region and its total size. This is needed to calculate the cache
         // ratios for the regions cached on old region servers
         regionCacheRatioOnCurrentServerMap.put(regionEncodedName, new Pair<>(sn, regionSizeMB));
         loads.put(regionEncodedName, rload);
@@ -157,6 +169,53 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
       return regionInfoOptional.get();
     }
     return null;
+  }
+
+  @Override
+  public long getThrottleDurationMs(RegionPlan plan) {
+    Pair<ServerName, Float> rsRatio = this.regionCacheRatioOnOldServerMap.get(plan.getRegionName());
+    if (
+      rsRatio != null && plan.getDestination().equals(rsRatio.getFirst())
+        && rsRatio.getSecond() >= ratioThreshold
+    ) {
+      LOG.debug("Moving region {} to server {} with cache ratio {}. No throttling needed.",
+        plan.getRegionInfo().getEncodedName(), plan.getDestination(), rsRatio.getSecond());
+      return 0L;
+    } else {
+      if (rsRatio != null) {
+        LOG.debug("Moving region {} to server {} with cache ratio: {}. Throttling move for {}ms.",
+          plan.getRegionInfo().getEncodedName(), plan.getDestination(),
+          plan.getDestination().equals(rsRatio.getFirst()) ? rsRatio.getSecond() : "unknown",
+          sleepTime);
+      } else {
+        LOG.debug(
+          "Moving region {} to server {} with no cache ratio info for the region. "
+            + "Throttling move for {}ms.",
+          plan.getRegionInfo().getEncodedName(), plan.getDestination(), sleepTime);
+      }
+      return sleepTime;
+    }
+  }
+
+  @Override
+  protected List<RegionPlan> balanceTable(TableName tableName,
+    Map<ServerName, List<RegionInfo>> loadOfOneTable) {
+    final Map<String, Pair<ServerName, Float>> snapshot = new HashMap<>();
+    snapshot.putAll(this.regionCacheRatioOnOldServerMap);
+    List<RegionPlan> plans = super.balanceTable(tableName, loadOfOneTable);
+    if (plans == null) {
+      return plans;
+    }
+    plans.sort((p1, p2) -> {
+      Pair<ServerName, Float> pair1 = snapshot.get(p1.getRegionName());
+      Float ratio1 =
+        pair1 == null ? 0 : pair1.getFirst().equals(p1.getDestination()) ? pair1.getSecond() : 0f;
+      Pair<ServerName, Float> pair2 = snapshot.get(p2.getRegionName());
+      Float ratio2 =
+        pair2 == null ? 0 : pair2.getFirst().equals(p2.getDestination()) ? pair2.getSecond() : 0f;
+      return ratio1.compareTo(ratio2) * (-1);
+    });
+    return plans;
   }
 
   private class CacheAwareCandidateGenerator extends CandidateGenerator {
@@ -222,9 +281,6 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
         return false;
       }
 
-      DecimalFormat df = new DecimalFormat("#");
-      df.setMaximumFractionDigits(4);
-
       float cacheRatioDiffThreshold = 0.6f;
 
       // Conditions for moving the region
@@ -244,7 +300,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
           LOG.debug(
             "Region {} moved from {} to {} as the region is cached {} equally on both servers",
             cluster.regions[regionIndex].getEncodedName(), cluster.servers[currentServerIndex],
-            cluster.servers[oldServerIndex], df.format(cacheRatioOnCurrentServer));
+            cluster.servers[oldServerIndex], cacheRatioOnCurrentServer);
         }
         return true;
       }
@@ -261,8 +317,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
             "Region {} moved from {} to {} as region cache ratio {} is better than the current "
               + "cache ratio {}",
             cluster.regions[regionIndex].getEncodedName(), cluster.servers[currentServerIndex],
-            cluster.servers[oldServerIndex], cacheRatioOnCurrentServer,
-            df.format(cacheRatioOnCurrentServer));
+            cluster.servers[oldServerIndex], cacheRatioOnOldServer, cacheRatioOnCurrentServer);
         }
         return true;
       }
@@ -271,8 +326,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
         LOG.debug(
           "Region {} not moved from {} to {} with current cache ratio {} and old cache ratio {}",
           cluster.regions[regionIndex], cluster.servers[currentServerIndex],
-          cluster.servers[oldServerIndex], cacheRatioOnCurrentServer,
-          df.format(cacheRatioOnCurrentServer));
+          cluster.servers[oldServerIndex], cacheRatioOnCurrentServer, cacheRatioOnOldServer);
       }
       return false;
     }
@@ -328,7 +382,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
         if (LOG.isDebugEnabled()) {
           LOG.debug(
             "CacheAwareSkewnessCandidateGenerator: Region {} moved from {} to {} as it "
-              + "was hosted their earlier",
+              + "was hosted there earlier",
             regionEncodedName, cluster.servers[thisServer].getHostname(),
             cluster.servers[otherServer].getHostname());
         }
@@ -409,8 +463,9 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
       });
     }
 
-    public final void updateWeight(double[] weights) {
-      weights[GeneratorFunctionType.LOAD.ordinal()] += cost();
+    @Override
+    public final void updateWeight(Map<Class<? extends CandidateGenerator>, Double> weights) {
+      weights.merge(LoadCandidateGenerator.class, cost(), Double::sum);
     }
   }
 
@@ -478,8 +533,8 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     }
 
     @Override
-    public final void updateWeight(double[] weights) {
-      weights[GeneratorFunctionType.CACHE_RATIO.ordinal()] += cost();
+    public void updateWeight(Map<Class<? extends CandidateGenerator>, Double> weights) {
+      weights.merge(LoadCandidateGenerator.class, cost(), Double::sum);
     }
   }
 }

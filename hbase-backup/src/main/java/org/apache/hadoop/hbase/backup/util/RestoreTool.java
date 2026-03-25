@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.snapshot.SnapshotTTLExpiredException;
 import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -54,6 +55,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
@@ -143,16 +145,19 @@ public class RestoreTool {
    * During incremental backup operation. Call WalPlayer to replay WAL in backup image Currently
    * tableNames and newTablesNames only contain single table, will be expanded to multiple tables in
    * the future
-   * @param conn            HBase connection
-   * @param tableBackupPath backup path
-   * @param logDirs         : incremental backup folders, which contains WAL
-   * @param tableNames      : source tableNames(table names were backuped)
-   * @param newTableNames   : target tableNames(table names to be restored to)
-   * @param incrBackupId    incremental backup Id
+   * @param conn               HBase connection
+   * @param tableBackupPath    backup path
+   * @param logDirs            : incremental backup folders, which contains WAL
+   * @param tableNames         : source tableNames(table names were backuped)
+   * @param newTableNames      : target tableNames(table names to be restored to)
+   * @param incrBackupId       incremental backup Id
+   * @param keepOriginalSplits whether the original region splits from the full backup should be
+   *                           kept
    * @throws IOException exception
    */
   public void incrementalRestoreTable(Connection conn, Path tableBackupPath, Path[] logDirs,
-    TableName[] tableNames, TableName[] newTableNames, String incrBackupId) throws IOException {
+    TableName[] tableNames, TableName[] newTableNames, String incrBackupId,
+    boolean keepOriginalSplits) throws IOException {
     try (Admin admin = conn.getAdmin()) {
       if (tableNames.length != newTableNames.length) {
         throw new IOException("Number of source tables and target tables does not match!");
@@ -200,6 +205,7 @@ public class RestoreTool {
           LOG.info("Changed " + newTableDescriptor.getTableName() + " to: " + newTableDescriptor);
         }
       }
+      configureForRestoreJob(keepOriginalSplits);
       RestoreJob restoreService = BackupRestoreFactory.getRestoreJob(conf);
 
       restoreService.run(logDirs, tableNames, restoreRootDir, newTableNames, false);
@@ -207,9 +213,10 @@ public class RestoreTool {
   }
 
   public void fullRestoreTable(Connection conn, Path tableBackupPath, TableName tableName,
-    TableName newTableName, boolean truncateIfExists, String lastIncrBackupId) throws IOException {
+    TableName newTableName, boolean truncateIfExists, boolean isKeepOriginalSplits,
+    String lastIncrBackupId) throws IOException {
     createAndRestoreTable(conn, tableName, newTableName, tableBackupPath, truncateIfExists,
-      lastIncrBackupId);
+      isKeepOriginalSplits, lastIncrBackupId);
   }
 
   /**
@@ -260,6 +267,12 @@ public class RestoreTool {
     Path tableInfoPath = this.getTableInfoPath(tableName);
     SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, tableInfoPath);
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, tableInfoPath, desc);
+    if (
+      SnapshotDescriptionUtils.isExpiredSnapshot(desc.getTtl(), desc.getCreationTime(),
+        EnvironmentEdgeManager.currentTime())
+    ) {
+      throw new SnapshotTTLExpiredException(ProtobufUtil.createSnapshotDesc(desc));
+    }
     TableDescriptor tableDescriptor = manifest.getTableDescriptor();
     if (!tableDescriptor.getTableName().equals(tableName)) {
       LOG.error("couldn't find Table Desc for table: " + tableName + " under tableInfoPath: "
@@ -283,7 +296,8 @@ public class RestoreTool {
   }
 
   private void createAndRestoreTable(Connection conn, TableName tableName, TableName newTableName,
-    Path tableBackupPath, boolean truncateIfExists, String lastIncrBackupId) throws IOException {
+    Path tableBackupPath, boolean truncateIfExists, boolean isKeepOriginalSplits,
+    String lastIncrBackupId) throws IOException {
     if (newTableName == null) {
       newTableName = tableName;
     }
@@ -304,6 +318,12 @@ public class RestoreTool {
           SnapshotDescription desc =
             SnapshotDescriptionUtils.readSnapshotInfo(fileSys, tableSnapshotPath);
           SnapshotManifest manifest = SnapshotManifest.open(conf, fileSys, tableSnapshotPath, desc);
+          if (
+            SnapshotDescriptionUtils.isExpiredSnapshot(desc.getTtl(), desc.getCreationTime(),
+              EnvironmentEdgeManager.currentTime())
+          ) {
+            throw new SnapshotTTLExpiredException(ProtobufUtil.createSnapshotDesc(desc));
+          }
           tableDescriptor = manifest.getTableDescriptor();
         } else {
           tableDescriptor = getTableDesc(tableName);
@@ -349,6 +369,7 @@ public class RestoreTool {
       // should only try to create the table with all region informations, so we could pre-split
       // the regions in fine grain
       checkAndCreateTable(conn, newTableName, regionPathList, tableDescriptor, truncateIfExists);
+      configureForRestoreJob(isKeepOriginalSplits);
       RestoreJob restoreService = BackupRestoreFactory.getRestoreJob(conf);
       Path[] paths = new Path[regionPathList.size()];
       regionPathList.toArray(paths);
@@ -528,5 +549,10 @@ public class RestoreTool {
         }
       }
     }
+  }
+
+  private void configureForRestoreJob(boolean keepOriginalSplits) {
+    conf.setBoolean(RestoreJob.KEEP_ORIGINAL_SPLITS_KEY, keepOriginalSplits);
+    conf.set(RestoreJob.BACKUP_ROOT_PATH_KEY, backupRootPath.toString());
   }
 }

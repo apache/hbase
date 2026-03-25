@@ -26,7 +26,10 @@ import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.triggerTableC
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.triggerUserCacheRefresh;
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.waitMinuteQuota;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -85,7 +88,6 @@ public class TestQuotaThrottle {
     TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.waitTableAvailable(QuotaTableUtil.QUOTA_TABLE_NAME);
-    QuotaCache.TEST_FORCE_REFRESH = true;
 
     tables = new Table[TABLE_NAMES.length];
     for (int i = 0; i < TABLE_NAMES.length; ++i) {
@@ -652,4 +654,39 @@ public class TestQuotaThrottle {
     admin.setQuota(QuotaSettingsFactory.unthrottleTable(TABLE_NAMES[0]));
     triggerTableCacheRefresh(TEST_UTIL, true, TABLE_NAMES[0]);
   }
+
+  @Test
+  public void testSetAndGetAllThrottleTypes() throws Exception {
+    for (ThrottleType throttleType : ThrottleType.values()) {
+      canSetAndGetUserThrottle(throttleType);
+    }
+  }
+
+  private void canSetAndGetUserThrottle(ThrottleType throttleType) throws IOException {
+    final Admin admin = TEST_UTIL.getAdmin();
+    final String userName = User.getCurrent().getShortName();
+
+    QuotaSettings setQuota =
+      QuotaSettingsFactory.throttleUser(userName, throttleType, 123, TimeUnit.SECONDS);
+    admin.setQuota(setQuota);
+
+    boolean found = false;
+    List<QuotaSettings> quotaSettings = admin.getQuota(new QuotaFilter().setUserFilter(userName));
+    for (QuotaSettings settings : quotaSettings) {
+      if (settings instanceof ThrottleSettings) {
+        ThrottleSettings throttle = (ThrottleSettings) settings;
+        if (
+          userName.equals(throttle.getUserName()) && throttle.getThrottleType() == throttleType
+            && throttle.getSoftLimit() == 123 && throttle.getTimeUnit() == TimeUnit.SECONDS
+        ) {
+          found = true;
+          break;
+        }
+      }
+    }
+
+    assertTrue("Expected to find " + throttleType.name() + " quota for user " + userName, found);
+    admin.setQuota(QuotaSettingsFactory.unthrottleUserByThrottleType(userName, throttleType));
+  }
+
 }

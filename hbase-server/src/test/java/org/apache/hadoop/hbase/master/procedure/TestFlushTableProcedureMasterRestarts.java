@@ -24,13 +24,13 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Category({ MasterTests.class, LargeTests.class })
 public class TestFlushTableProcedureMasterRestarts extends TestFlushTableProcedureBase {
 
   @ClassRule

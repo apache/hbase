@@ -482,6 +482,12 @@ public class CloneSnapshotProcedure extends AbstractStateMachineTableProcedure<C
           LOG.info(msg);
           monitorStatus.setStatus(msg + " Waiting for table to be enabled...");
 
+          // Extract the parent to children regions mapping so we can update meta later.
+          // If we don't update the split information, the parent region will be garbage-collected.
+          // And once the snapshot is deleted, HFiles of the parent region can be prematurely
+          // deleted, causing permanent data loss.
+          parentsToChildrenPairMap = metaChanges.getParentToChildrenPairMap();
+
           // 2. Let the next step to add the regions to meta
           return metaChanges.getRegionsToAdd();
         } catch (Exception e) {
@@ -535,8 +541,6 @@ public class CloneSnapshotProcedure extends AbstractStateMachineTableProcedure<C
   private void addRegionsToMeta(final MasterProcedureEnv env) throws IOException {
     newRegions = CreateTableProcedure.addTableToMeta(env, tableDescriptor, newRegions);
 
-    // TODO: parentsToChildrenPairMap is always empty, which makes updateMetaParentRegions()
-    // a no-op. This part seems unnecessary. Figure out. - Appy 12/21/17
     RestoreSnapshotHelper.RestoreMetaChanges metaChanges =
       new RestoreSnapshotHelper.RestoreMetaChanges(tableDescriptor, parentsToChildrenPairMap);
     metaChanges.updateMetaParentRegions(env.getMasterServices().getConnection(), newRegions);

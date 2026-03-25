@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -46,7 +47,7 @@ import org.slf4j.LoggerFactory;
 public final class ThrottleQuotaTestUtil {
 
   private final static Logger LOG = LoggerFactory.getLogger(ThrottleQuotaTestUtil.class);
-  private static ManualEnvironmentEdge envEdge = new ManualEnvironmentEdge();
+  static ManualEnvironmentEdge envEdge = new ManualEnvironmentEdge();
   private final static int REFRESH_TIME = 30 * 60000;
   static {
     envEdge.setValue(EnvironmentEdgeManager.currentTime());
@@ -129,6 +130,23 @@ public final class ThrottleQuotaTestUtil {
     return count;
   }
 
+  static long doIncrements(int maxOps, byte[] family, byte[] qualifier, final Table... tables) {
+    int count = 0;
+    try {
+      while (count < maxOps) {
+        Increment inc = new Increment(Bytes.toBytes("row-" + count));
+        inc.addColumn(family, qualifier, 1L);
+        for (final Table table : tables) {
+          table.increment(inc);
+        }
+        count += tables.length;
+      }
+    } catch (IOException e) {
+      LOG.error("increment failed after nRetries=" + count, e);
+    }
+    return count;
+  }
+
   static long doMultiGets(int maxOps, int batchSize, int rowCount, byte[] family, byte[] qualifier,
     final Table... tables) {
     int opCount = 0;
@@ -202,7 +220,7 @@ public final class ThrottleQuotaTestUtil {
       RegionServerRpcQuotaManager quotaManager =
         rst.getRegionServer().getRegionServerRpcQuotaManager();
       QuotaCache quotaCache = quotaManager.getQuotaCache();
-      quotaCache.triggerCacheRefresh();
+      quotaCache.forceSynchronousCacheRefresh();
       Thread.sleep(250);
       testUtil.waitFor(60000, 250, new ExplainingPredicate<Exception>() {
 

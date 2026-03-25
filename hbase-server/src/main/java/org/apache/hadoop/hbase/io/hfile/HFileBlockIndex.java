@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyOnlyKeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -46,8 +47,8 @@ import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -564,7 +565,8 @@ public class HFileBlockIndex {
    * array of offsets to the entries within the block. This allows us to do binary search for the
    * entry corresponding to the given key without having to deserialize the block.
    */
-  static abstract class BlockIndexReader implements HeapSize {
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  public static abstract class BlockIndexReader implements HeapSize {
 
     protected long[] blockOffsets;
     protected int[] blockDataSizes;
@@ -812,7 +814,8 @@ public class HFileBlockIndex {
      * @return the index position where the given key was found, otherwise return -1 in the case the
      *         given key is before the first key.
      */
-    static int locateNonRootIndexEntry(ByteBuff nonRootBlock, Cell key, CellComparator comparator) {
+    public static int locateNonRootIndexEntry(ByteBuff nonRootBlock, Cell key,
+      CellComparator comparator) {
       int entryIndex = binarySearchNonRootIndex(key, nonRootBlock, comparator);
 
       if (entryIndex != -1) {
@@ -1091,8 +1094,8 @@ public class HFileBlockIndex {
         LOG.trace("Wrote a " + numLevels + "-level index with root level at pos "
           + rootLevelIndexPos + ", " + rootChunk.getNumEntries() + " root-level entries, "
           + totalNumEntries + " total entries, "
-          + StringUtils.humanReadableInt(this.totalBlockOnDiskSize) + " on-disk size, "
-          + StringUtils.humanReadableInt(totalBlockUncompressedSize) + " total uncompressed size.");
+          + Strings.humanReadableInt(this.totalBlockOnDiskSize) + " on-disk size, "
+          + Strings.humanReadableInt(totalBlockUncompressedSize) + " total uncompressed size.");
       }
       return rootLevelIndexPos;
     }

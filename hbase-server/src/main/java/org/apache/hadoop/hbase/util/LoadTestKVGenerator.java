@@ -98,6 +98,7 @@ public class LoadTestKVGenerator {
    * Generates random bytes of the given size for the given row and column qualifier. The random
    * seed is fully determined by these parameters.
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "DMI_RANDOM_USED_ONLY_ONCE")
   private static byte[] getValueForRowColumn(int dataSize, byte[]... seedStrings) {
     long seed = dataSize;
     for (byte[] str : seedStrings) {

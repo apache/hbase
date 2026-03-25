@@ -1,0 +1,49 @@
+# Editor directories and files
+.vscode/*
+.cursor/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+.env
+/node_modules/
+
+# React Router
+/.react-router/
+/build/
+.vite
+
+# Fumadocs
+.source/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Maven
+/target/
+/node/
+
+# Generated files
+/app/pages/_landing/team/developers.json
+/app/pages/_docs/docs/_mdx/(multi-page)/configuration/hbase-default.md
+/app/lib/export-pdf/hbase-version.json
+/public/books/**
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

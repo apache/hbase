@@ -139,6 +139,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RegionSpecifierAndState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReopenTableRegionsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RollAllWALWritersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
@@ -201,7 +203,7 @@ public final class RequestConverter {
   public static MutateRequest buildMutateRequest(final byte[] regionName, final byte[] row,
     final byte[] family, final byte[] qualifier, final CompareOperator op, final byte[] value,
     final Filter filter, final TimeRange timeRange, final Mutation mutation, long nonceGroup,
-    long nonce) throws IOException {
+    long nonce, boolean queryMetricsEnabled) throws IOException {
     MutateRequest.Builder builder = MutateRequest.newBuilder();
     if (mutation instanceof Increment || mutation instanceof Append) {
       builder.setMutation(ProtobufUtil.toMutation(getMutationType(mutation), mutation, nonce))
@@ -210,7 +212,8 @@ public final class RequestConverter {
       builder.setMutation(ProtobufUtil.toMutation(getMutationType(mutation), mutation));
     }
     return builder.setRegion(buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName))
-      .setCondition(ProtobufUtil.toCondition(row, family, qualifier, op, value, filter, timeRange))
+      .setCondition(ProtobufUtil.toCondition(row, family, qualifier, op, value, filter, timeRange,
+        queryMetricsEnabled))
       .build();
   }
 
@@ -221,10 +224,10 @@ public final class RequestConverter {
   public static ClientProtos.MultiRequest buildMultiRequest(final byte[] regionName,
     final byte[] row, final byte[] family, final byte[] qualifier, final CompareOperator op,
     final byte[] value, final Filter filter, final TimeRange timeRange,
-    final RowMutations rowMutations, long nonceGroup, long nonce) throws IOException {
-    return buildMultiRequest(regionName, rowMutations,
-      ProtobufUtil.toCondition(row, family, qualifier, op, value, filter, timeRange), nonceGroup,
-      nonce);
+    final RowMutations rowMutations, long nonceGroup, long nonce, boolean queryMetricsEnabled)
+    throws IOException {
+    return buildMultiRequest(regionName, rowMutations, ProtobufUtil.toCondition(row, family,
+      qualifier, op, value, filter, timeRange, queryMetricsEnabled), nonceGroup, nonce);
   }
 
   /**
@@ -559,9 +562,9 @@ public final class RequestConverter {
       getRegionActionBuilderWithRegion(builder, regionName);
 
       CheckAndMutate cam = (CheckAndMutate) action.getAction();
-      builder
-        .setCondition(ProtobufUtil.toCondition(cam.getRow(), cam.getFamily(), cam.getQualifier(),
-          cam.getCompareOp(), cam.getValue(), cam.getFilter(), cam.getTimeRange()));
+      builder.setCondition(ProtobufUtil.toCondition(cam.getRow(), cam.getFamily(),
+        cam.getQualifier(), cam.getCompareOp(), cam.getValue(), cam.getFilter(), cam.getTimeRange(),
+        cam.isQueryMetricsEnabled()));
 
       if (cam.getAction() instanceof Put) {
         actionBuilder.clear();
@@ -859,6 +862,11 @@ public final class RequestConverter {
     return RollWALWriterRequest.getDefaultInstance();
   }
 
+  public static RollAllWALWritersRequest buildRollAllWALWritersRequest(long nonceGroup,
+    long nonce) {
+    return RollAllWALWritersRequest.newBuilder().setNonceGroup(nonceGroup).setNonce(nonce).build();
+  }
+
   /**
    * Create a new GetServerInfoRequest
    * @return a GetServerInfoRequest
@@ -1118,6 +1126,31 @@ public final class RequestConverter {
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
     builder.setReopenRegions(reopenRegions);
+    return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer ReopenTableRegionsRequest
+   * @param tableName   table whose regions to reopen
+   * @param regionNames specific regions to reopen (empty = all regions)
+   * @param nonceGroup  nonce group
+   * @param nonce       nonce
+   * @return a ReopenTableRegionsRequest
+   */
+  public static ReopenTableRegionsRequest buildReopenTableRegionsRequest(final TableName tableName,
+    final List<byte[]> regionNames, final long nonceGroup, final long nonce) {
+    ReopenTableRegionsRequest.Builder builder = ReopenTableRegionsRequest.newBuilder();
+    builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
+
+    if (regionNames != null && !regionNames.isEmpty()) {
+      for (byte[] regionName : regionNames) {
+        builder.addRegionNames(UnsafeByteOperations.unsafeWrap(regionName));
+      }
+    }
+
+    builder.setNonceGroup(nonceGroup);
+    builder.setNonce(nonce);
+
     return builder.build();
   }
 

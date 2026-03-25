@@ -146,6 +146,7 @@ public abstract class TestAssignmentManagerBase {
     // make retry for TRSP more frequent
     conf.setLong(ProcedureUtil.PROCEDURE_RETRY_SLEEP_INTERVAL_MS, 10);
     conf.setLong(ProcedureUtil.PROCEDURE_RETRY_MAX_SLEEP_TIME_MS, 100);
+    conf.setInt("hbase.master.rs.remote.proc.fail.fast.limit", Integer.MAX_VALUE);
   }
 
   @Before
@@ -279,7 +280,7 @@ public abstract class TestAssignmentManagerBase {
     TransitRegionStateProcedure proc;
     regionNode.lock();
     try {
-      assertFalse(regionNode.isInTransition());
+      assertFalse(regionNode.isTransitionScheduled());
       proc = TransitRegionStateProcedure
         .unassign(master.getMasterProcedureExecutor().getEnvironment(), hri);
       regionNode.setProcedure(proc);

@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
+import static org.apache.hadoop.hbase.backup.impl.BackupSystemTable.Order.NEW_TO_OLD;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,6 +33,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupHFileCleaner;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
+import org.apache.hadoop.hbase.backup.BackupMasterObserver;
 import org.apache.hadoop.hbase.backup.BackupObserver;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.BackupType;
@@ -43,7 +47,6 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.procedure.ProcedureManagerHost;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -120,11 +123,17 @@ public class BackupManager implements Closeable {
     plugins = conf.get(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS);
     conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
       (plugins == null ? "" : plugins + ",") + BackupHFileCleaner.class.getName());
+
+    String observerClass = BackupMasterObserver.class.getName();
+    String masterCoProc = conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      (masterCoProc == null ? "" : masterCoProc + ",") + observerClass);
+
     if (LOG.isDebugEnabled()) {
       LOG.debug(
         "Added log cleaner: {}. Added master procedure manager: {}."
-          + "Added master procedure manager: {}",
-        cleanerClass, masterProcedureClass, BackupHFileCleaner.class.getName());
+          + " Added master procedure manager: {}. Added master observer: {}",
+        cleanerClass, masterProcedureClass, BackupHFileCleaner.class.getName(), observerClass);
     }
   }
 
@@ -243,7 +252,8 @@ public class BackupManager implements Closeable {
    * @throws IOException exception
    */
   private String getOngoingBackupId() throws IOException {
-    ArrayList<BackupInfo> sessions = systemTable.getBackupInfos(BackupState.RUNNING);
+    List<BackupInfo> sessions =
+      systemTable.getBackupHistory(NEW_TO_OLD, 1, withState(BackupState.RUNNING));
     if (sessions.size() == 0) {
       return null;
     }
@@ -328,26 +338,6 @@ public class BackupManager implements Closeable {
   }
 
   /**
-   * Read the last backup start code (timestamp) of last successful backup. Will return null if
-   * there is no startcode stored in backup system table or the value is of length 0. These two
-   * cases indicate there is no successful backup completed so far.
-   * @return the timestamp of a last successful backup
-   * @throws IOException exception
-   */
-  public String readBackupStartCode() throws IOException {
-    return systemTable.readBackupStartCode(backupInfo.getBackupRootDir());
-  }
-
-  /**
-   * Write the start code (timestamp) to backup system table. If passed in null, then write 0 byte.
-   * @param startCode start code
-   * @throws IOException exception
-   */
-  public void writeBackupStartCode(Long startCode) throws IOException {
-    systemTable.writeBackupStartCode(startCode, backupInfo.getBackupRootDir());
-  }
-
-  /**
    * Get the RS log information after the last log roll from backup system table.
    * @return RS log info
    * @throws IOException exception
@@ -356,8 +346,7 @@ public class BackupManager implements Closeable {
     return systemTable.readRegionServerLastLogRollResult(backupInfo.getBackupRootDir());
   }
 
-  public Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>, List<byte[]>>
-    readBulkloadRows(List<TableName> tableList) throws IOException {
+  public List<BulkLoad> readBulkloadRows(List<TableName> tableList) throws IOException {
     return systemTable.readBulkloadRows(tableList);
   }
 
@@ -366,16 +355,10 @@ public class BackupManager implements Closeable {
   }
 
   /**
-   * Get all completed backup information (in desc order by time)
-   * @return history info of BackupCompleteData
-   * @throws IOException exception
+   * Get all backup information, ordered by descending start time. I.e. from newest to oldest.
    */
-  public List<BackupInfo> getBackupHistory() throws IOException {
-    return systemTable.getBackupHistory();
-  }
-
-  public ArrayList<BackupInfo> getBackupHistory(boolean completed) throws IOException {
-    return systemTable.getBackupHistory(completed);
+  public List<BackupInfo> getBackupHistory(BackupInfo.Filter... filters) throws IOException {
+    return systemTable.getBackupHistory(filters);
   }
 
   /**

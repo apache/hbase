@@ -22,9 +22,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -55,12 +61,11 @@ public class ReopenTableRegionsProcedure
   private static final Logger LOG = LoggerFactory.getLogger(ReopenTableRegionsProcedure.class);
 
   public static final String PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY =
-    "hbase.reopen.table.regions.progressive.batch.backoff.ms";
+    ConfigKey.LONG("hbase.reopen.table.regions.progressive.batch.backoff.ms");
   public static final long PROGRESSIVE_BATCH_BACKOFF_MILLIS_DEFAULT = 0L;
   public static final String PROGRESSIVE_BATCH_SIZE_MAX_KEY =
-    "hbase.reopen.table.regions.progressive.batch.size.max";
+    ConfigKey.INT("hbase.reopen.table.regions.progressive.batch.size.max");
   public static final int PROGRESSIVE_BATCH_SIZE_MAX_DISABLED = -1;
-  private static final int PROGRESSIVE_BATCH_SIZE_MAX_DEFAULT_VALUE = Integer.MAX_VALUE;
 
   // this minimum prevents a max which would break this procedure
   private static final int MINIMUM_BATCH_SIZE_MAX = 1;
@@ -83,6 +88,41 @@ public class ReopenTableRegionsProcedure
   private long regionsReopened = 0;
   private long batchesProcessed = 0;
 
+  /**
+   * Create a new ReopenTableRegionsProcedure respecting the throttling configuration for the table.
+   * First check the table descriptor, then fall back to the global configuration. Only used in
+   * ModifyTableProcedure and in {@link HMaster#reopenRegionsThrottled}.
+   */
+  public static ReopenTableRegionsProcedure throttled(final Configuration conf,
+    final TableDescriptor desc) {
+    long backoffMillis = Optional.ofNullable(desc.getValue(PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY))
+      .map(Long::parseLong).orElseGet(() -> conf.getLong(PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY,
+        PROGRESSIVE_BATCH_BACKOFF_MILLIS_DEFAULT));
+    int batchSizeMax = Optional.ofNullable(desc.getValue(PROGRESSIVE_BATCH_SIZE_MAX_KEY))
+      .map(Integer::parseInt).orElseGet(
+        () -> conf.getInt(PROGRESSIVE_BATCH_SIZE_MAX_KEY, PROGRESSIVE_BATCH_SIZE_MAX_DISABLED));
+
+    return new ReopenTableRegionsProcedure(desc.getTableName(), backoffMillis, batchSizeMax);
+  }
+
+  /**
+   * Create a new ReopenTableRegionsProcedure for specific regions, respecting the throttling
+   * configuration for the table. First check the table descriptor, then fall back to the global
+   * configuration. Only used in {@link HMaster#reopenRegionsThrottled}.
+   */
+  public static ReopenTableRegionsProcedure throttled(final Configuration conf,
+    final TableDescriptor desc, final List<byte[]> regionNames) {
+    long backoffMillis = Optional.ofNullable(desc.getValue(PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY))
+      .map(Long::parseLong).orElseGet(() -> conf.getLong(PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY,
+        PROGRESSIVE_BATCH_BACKOFF_MILLIS_DEFAULT));
+    int batchSizeMax = Optional.ofNullable(desc.getValue(PROGRESSIVE_BATCH_SIZE_MAX_KEY))
+      .map(Integer::parseInt).orElseGet(
+        () -> conf.getInt(PROGRESSIVE_BATCH_SIZE_MAX_KEY, PROGRESSIVE_BATCH_SIZE_MAX_DISABLED));
+
+    return new ReopenTableRegionsProcedure(desc.getTableName(), regionNames, backoffMillis,
+      batchSizeMax);
+  }
+
   public ReopenTableRegionsProcedure() {
     this(null);
   }
@@ -96,11 +136,17 @@ public class ReopenTableRegionsProcedure
       PROGRESSIVE_BATCH_SIZE_MAX_DISABLED);
   }
 
+  /**
+   * Visible for testing purposes - prefer the above methods to construct
+   */
   public ReopenTableRegionsProcedure(final TableName tableName, long reopenBatchBackoffMillis,
     int reopenBatchSizeMax) {
     this(tableName, Collections.emptyList(), reopenBatchBackoffMillis, reopenBatchSizeMax);
   }
 
+  /**
+   * Visible for testing purposes - prefer the above methods to construct
+   */
   public ReopenTableRegionsProcedure(final TableName tableName, final List<byte[]> regionNames,
     long reopenBatchBackoffMillis, int reopenBatchSizeMax) {
     this.tableName = tableName;
@@ -137,6 +183,12 @@ public class ReopenTableRegionsProcedure
     return batchesProcessed;
   }
 
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  long getReopenBatchBackoffMillis() {
+    return reopenBatchBackoffMillis;
+  }
+
   @RestrictedApi(explanation = "Should only be called internally or in tests", link = "",
       allowedOnPath = ".*(/src/test/.*|ReopenTableRegionsProcedure).java")
   protected int progressBatchSize() {
@@ -158,73 +210,84 @@ public class ReopenTableRegionsProcedure
     // If the region node is null, then at least in the next round we can remove this region to make
     // progress. And the second condition is a normal one, if there are no TRSP with it then we can
     // schedule one to make progress.
-    return regionNode == null || !regionNode.isInTransition();
+    return regionNode == null || !regionNode.isTransitionScheduled();
   }
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, ReopenTableRegionsState state)
     throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
-    switch (state) {
-      case REOPEN_TABLE_REGIONS_GET_REGIONS:
-        if (!isTableEnabled(env)) {
-          LOG.info("Table {} is disabled, give up reopening its regions", tableName);
-          return Flow.NO_MORE_STATE;
-        }
-        List<HRegionLocation> tableRegions =
-          env.getAssignmentManager().getRegionStates().getRegionsOfTableForReopen(tableName);
-        regions = getRegionLocationsForReopen(tableRegions);
-        setNextState(ReopenTableRegionsState.REOPEN_TABLE_REGIONS_REOPEN_REGIONS);
-        return Flow.HAS_MORE_STATE;
-      case REOPEN_TABLE_REGIONS_REOPEN_REGIONS:
-        // if we didn't finish reopening the last batch yet, let's keep trying until we do.
-        // at that point, the batch will be empty and we can generate a new batch
-        if (!regions.isEmpty() && currentRegionBatch.isEmpty()) {
-          currentRegionBatch = regions.stream().limit(reopenBatchSize).collect(Collectors.toList());
-          batchesProcessed++;
-        }
-        for (HRegionLocation loc : currentRegionBatch) {
-          RegionStateNode regionNode =
-            env.getAssignmentManager().getRegionStates().getRegionStateNode(loc.getRegion());
-          // this possible, maybe the region has already been merged or split, see HBASE-20921
-          if (regionNode == null) {
-            continue;
+    try {
+      switch (state) {
+        case REOPEN_TABLE_REGIONS_GET_REGIONS:
+          if (!isTableEnabled(env)) {
+            LOG.info("Table {} is disabled, give up reopening its regions", tableName);
+            return Flow.NO_MORE_STATE;
           }
-          TransitRegionStateProcedure proc;
-          regionNode.lock();
-          try {
-            if (regionNode.getProcedure() != null) {
+          List<HRegionLocation> tableRegions =
+            env.getAssignmentManager().getRegionStates().getRegionsOfTableForReopen(tableName);
+          regions = getRegionLocationsForReopen(tableRegions);
+          setNextState(ReopenTableRegionsState.REOPEN_TABLE_REGIONS_REOPEN_REGIONS);
+          return Flow.HAS_MORE_STATE;
+        case REOPEN_TABLE_REGIONS_REOPEN_REGIONS:
+          // if we didn't finish reopening the last batch yet, let's keep trying until we do.
+          // at that point, the batch will be empty and we can generate a new batch
+          if (!regions.isEmpty() && currentRegionBatch.isEmpty()) {
+            currentRegionBatch =
+              regions.stream().limit(reopenBatchSize).collect(Collectors.toList());
+            batchesProcessed++;
+          }
+          for (HRegionLocation loc : currentRegionBatch) {
+            RegionStateNode regionNode =
+              env.getAssignmentManager().getRegionStates().getRegionStateNode(loc.getRegion());
+            // this possible, maybe the region has already been merged or split, see HBASE-20921
+            if (regionNode == null) {
               continue;
             }
-            proc = TransitRegionStateProcedure.reopen(env, regionNode.getRegionInfo());
-            regionNode.setProcedure(proc);
-          } finally {
-            regionNode.unlock();
+            TransitRegionStateProcedure proc;
+            regionNode.lock();
+            try {
+              if (regionNode.getProcedure() != null) {
+                continue;
+              }
+              proc = TransitRegionStateProcedure.reopen(env, regionNode.getRegionInfo());
+              regionNode.setProcedure(proc);
+            } finally {
+              regionNode.unlock();
+            }
+            addChildProcedure(proc);
+            regionsReopened++;
           }
-          addChildProcedure(proc);
-          regionsReopened++;
-        }
-        setNextState(ReopenTableRegionsState.REOPEN_TABLE_REGIONS_CONFIRM_REOPENED);
-        return Flow.HAS_MORE_STATE;
-      case REOPEN_TABLE_REGIONS_CONFIRM_REOPENED:
-        // update region lists based on what's been reopened
-        regions = filterReopened(env, regions);
-        currentRegionBatch = filterReopened(env, currentRegionBatch);
+          setNextState(ReopenTableRegionsState.REOPEN_TABLE_REGIONS_CONFIRM_REOPENED);
+          return Flow.HAS_MORE_STATE;
+        case REOPEN_TABLE_REGIONS_CONFIRM_REOPENED:
+          // update region lists based on what's been reopened
+          regions = filterReopened(env, regions);
+          currentRegionBatch = filterReopened(env, currentRegionBatch);
 
-        // existing batch didn't fully reopen, so try to resolve that first.
-        // since this is a retry, don't do the batch backoff
-        if (!currentRegionBatch.isEmpty()) {
-          return reopenIfSchedulable(env, currentRegionBatch, false);
-        }
+          // existing batch didn't fully reopen, so try to resolve that first.
+          // since this is a retry, don't do the batch backoff
+          if (!currentRegionBatch.isEmpty()) {
+            return reopenIfSchedulable(env, currentRegionBatch, false);
+          }
 
-        if (regions.isEmpty()) {
-          return Flow.NO_MORE_STATE;
-        }
+          if (regions.isEmpty()) {
+            return Flow.NO_MORE_STATE;
+          }
 
-        // current batch is finished, schedule more regions
-        return reopenIfSchedulable(env, regions, true);
-      default:
-        throw new UnsupportedOperationException("unhandled state=" + state);
+          // current batch is finished, schedule more regions
+          return reopenIfSchedulable(env, regions, true);
+        default:
+          throw new UnsupportedOperationException("unhandled state=" + state);
+      }
+    } catch (IOException e) {
+      if (isRollbackSupported(state) || e instanceof DoNotRetryIOException) {
+        setFailure("master-reopen-table-regions", e);
+      } else {
+        LOG.warn("Retriable error trying to reopen regions for table={} (in state={})", tableName,
+          state, e);
+      }
     }
+    return Flow.HAS_MORE_STATE;
   }
 
   private List<HRegionLocation> filterReopened(MasterProcedureEnv env,
@@ -238,8 +301,10 @@ public class ReopenTableRegionsProcedure
     if (regionsToReopen.stream().anyMatch(loc -> canSchedule(env, loc))) {
       retryCounter = null;
       setNextState(ReopenTableRegionsState.REOPEN_TABLE_REGIONS_REOPEN_REGIONS);
-      if (shouldBatchBackoff && reopenBatchBackoffMillis > 0) {
+      if (shouldBatchBackoff) {
         progressBatchSize();
+      }
+      if (shouldBatchBackoff && reopenBatchBackoffMillis > 0) {
         setBackoffState(reopenBatchBackoffMillis);
         throw new ProcedureSuspendedException();
       } else {
@@ -268,19 +333,33 @@ public class ReopenTableRegionsProcedure
   }
 
   private List<HRegionLocation>
-    getRegionLocationsForReopen(List<HRegionLocation> tableRegionsForReopen) {
+    getRegionLocationsForReopen(List<HRegionLocation> tableRegionsForReopen) throws IOException {
 
     List<HRegionLocation> regionsToReopen = new ArrayList<>();
     if (
       CollectionUtils.isNotEmpty(regionNames) && CollectionUtils.isNotEmpty(tableRegionsForReopen)
     ) {
+      List<byte[]> notFoundRegions = new ArrayList<>();
+
       for (byte[] regionName : regionNames) {
+        boolean found = false;
         for (HRegionLocation hRegionLocation : tableRegionsForReopen) {
           if (Bytes.equals(regionName, hRegionLocation.getRegion().getRegionName())) {
             regionsToReopen.add(hRegionLocation);
+            found = true;
             break;
           }
         }
+        if (!found) {
+          notFoundRegions.add(regionName);
+        }
+      }
+
+      if (!notFoundRegions.isEmpty()) {
+        String regionNamesStr =
+          notFoundRegions.stream().map(Bytes::toStringBinary).collect(Collectors.joining(", "));
+        throw new UnknownRegionException(
+          "The following regions do not belong to table " + tableName + ": " + regionNamesStr);
       }
     } else {
       regionsToReopen = tableRegionsForReopen;

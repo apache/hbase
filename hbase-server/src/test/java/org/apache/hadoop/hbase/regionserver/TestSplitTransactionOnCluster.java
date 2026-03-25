@@ -89,6 +89,8 @@ import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -910,7 +912,7 @@ public class TestSplitTransactionOnCluster {
       } catch (DoNotRetryIOException e) {
         // Expected
       }
-      assertFalse("Split region can't be assigned", regionStates.isRegionInTransition(hri));
+      assertFalse("Split region can't be assigned", am.isRegionInTransition(hri));
       assertTrue(regionStates.isRegionInState(hri, State.SPLIT));
 
       // We should not be able to unassign it either
@@ -920,7 +922,7 @@ public class TestSplitTransactionOnCluster {
       } catch (DoNotRetryIOException e) {
         // Expected
       }
-      assertFalse("Split region can't be unassigned", regionStates.isRegionInTransition(hri));
+      assertFalse("Split region can't be unassigned", am.isRegionInTransition(hri));
       assertTrue(regionStates.isRegionInState(hri, State.SPLIT));
     } finally {
       admin.balancerSwitch(true, false);
@@ -952,11 +954,14 @@ public class TestSplitTransactionOnCluster {
       Collection<HStoreFile> storefiles = store.getStorefiles();
       assertEquals(1, storefiles.size());
       assertFalse(region.hasReferences());
-      Path referencePath = region.getRegionFileSystem().splitStoreFile(region.getRegionInfo(), "f",
-        storefiles.iterator().next(), Bytes.toBytes("row1"), false, region.getSplitPolicy());
+      HRegionFileSystem hfs = region.getRegionFileSystem();
+      StoreFileTracker sft = StoreFileTrackerFactory.create(TESTING_UTIL.getConfiguration(), true,
+        store.getStoreContext());
+      Path referencePath = hfs.splitStoreFile(region.getRegionInfo(), "f",
+        storefiles.iterator().next(), Bytes.toBytes("row1"), false, region.getSplitPolicy(), sft);
       assertNull(referencePath);
-      referencePath = region.getRegionFileSystem().splitStoreFile(region.getRegionInfo(), "i_f",
-        storefiles.iterator().next(), Bytes.toBytes("row1"), false, region.getSplitPolicy());
+      referencePath = hfs.splitStoreFile(region.getRegionInfo(), "i_f",
+        storefiles.iterator().next(), Bytes.toBytes("row1"), false, region.getSplitPolicy(), sft);
       assertNotNull(referencePath);
     } finally {
       TESTING_UTIL.deleteTable(tableName);
@@ -1139,12 +1144,11 @@ public class TestSplitTransactionOnCluster {
           && req.getTransition(0).getTransitionCode().equals(TransitionCode.READY_TO_SPLIT)
           && !resp.hasErrorMessage()
       ) {
-        RegionStates regionStates = myMaster.getAssignmentManager().getRegionStates();
-        for (RegionStateNode regionState : regionStates.getRegionsInTransition()) {
-          /*
-           * TODO!!!! // Find the merging_new region and remove it if (regionState.isSplittingNew())
-           * { regionStates.deleteRegion(regionState.getRegion()); }
-           */
+        AssignmentManager am = myMaster.getAssignmentManager();
+        for (RegionStateNode regionState : am.getRegionsInTransition()) {
+          if (regionState.toRegionState().isSplittingNew()) {
+            am.getRegionStates().deleteRegion(regionState.toRegionState().getRegion());
+          }
         }
       }
       return resp;

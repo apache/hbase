@@ -21,24 +21,19 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.master.MetricsMasterSourceFactory;
 import org.apache.hadoop.hbase.master.MetricsMasterSourceFactoryImpl;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test for the CompatibilitySingletonFactory and building MetricsRegionServerSource
  */
-@Category({ MetricsTests.class, SmallTests.class })
+@Tag(MetricsTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMetricsRegionServerSourceFactory {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricsRegionServerSourceFactory.class);
 
   @Test
   public void testGetInstance() throws Exception {

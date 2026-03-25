@@ -24,12 +24,15 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.IntConsumer;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -37,6 +40,7 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.PrivateConstants;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.ipc.RpcCall;
@@ -128,7 +132,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * timeout checks.
    */
   public static final String HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK =
-    "hbase.cells.scanned.per.heartbeat.check";
+    ConfigKey.LONG("hbase.cells.scanned.per.heartbeat.check");
 
   /**
    * Default value of {@link #HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK}.
@@ -141,7 +145,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * block size for this store. If configured with a value <0, for all scans with ReadType DEFAULT,
    * we will open scanner with stream mode itself.
    */
-  public static final String STORESCANNER_PREAD_MAX_BYTES = "hbase.storescanner.pread.max.bytes";
+  public static final String STORESCANNER_PREAD_MAX_BYTES =
+    ConfigKey.LONG("hbase.storescanner.pread.max.bytes");
 
   private final Scan.ReadType readType;
 
@@ -163,6 +168,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   protected final long readPt;
   private boolean topChanged = false;
+
+  // These are used to verify the state of the scanner during testing.
+  private static AtomicBoolean hasUpdatedReaders;
+  private static AtomicBoolean hasSwitchedToStreamRead;
 
   /** An internal constructor. */
   private StoreScanner(HStore store, Scan scan, ScanInfo scanInfo, int numColumns, long readPt,
@@ -588,6 +597,13 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
     Optional<RpcCall> rpcCall =
       matcher.isUserScan() ? RpcServer.getCurrentCall() : Optional.empty();
+    // re-useable closure to avoid allocations
+    IntConsumer recordBlockSize = blockSize -> {
+      if (rpcCall.isPresent()) {
+        rpcCall.get().incrementBlockBytesScanned(blockSize);
+      }
+      scannerContext.incrementBlockProgress(blockSize);
+    };
 
     int count = 0;
     long totalBytesRead = 0;
@@ -629,12 +645,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           scannerContext.returnImmediately();
         }
 
-        heap.recordBlockSize(blockSize -> {
-          if (rpcCall.isPresent()) {
-            rpcCall.get().incrementBlockBytesScanned(blockSize);
-          }
-          scannerContext.incrementBlockProgress(blockSize);
-        });
+        heap.recordBlockSize(recordBlockSize);
 
         prevCell = cell;
         scannerContext.setLastPeekedCell(cell);
@@ -745,7 +756,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
             }
             matcher.clearCurrentRow();
             seekOrSkipToNextRow(cell);
-            NextState stateAfterSeekNextRow = needToReturn(outResult);
+            NextState stateAfterSeekNextRow = needToReturn();
             if (stateAfterSeekNextRow != null) {
               return scannerContext.setScannerState(stateAfterSeekNextRow).hasMoreValues();
             }
@@ -753,7 +764,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
           case SEEK_NEXT_COL:
             seekOrSkipToNextColumn(cell);
-            NextState stateAfterSeekNextColumn = needToReturn(outResult);
+            NextState stateAfterSeekNextColumn = needToReturn();
             if (stateAfterSeekNextColumn != null) {
               return scannerContext.setScannerState(stateAfterSeekNextColumn).hasMoreValues();
             }
@@ -771,7 +782,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
                 ((!scan.isReversed() && difference > 0) || (scan.isReversed() && difference < 0))
               ) {
                 seekAsDirection(nextKV);
-                NextState stateAfterSeekByHint = needToReturn(outResult);
+                NextState stateAfterSeekByHint = needToReturn();
                 if (stateAfterSeekByHint != null) {
                   return scannerContext.setScannerState(stateAfterSeekByHint).hasMoreValues();
                 }
@@ -828,11 +839,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * memstore scanner is replaced by hfile scanner after #reopenAfterFlush. If the row of top cell
    * is changed, we should return the current cells. Otherwise, we may return the cells across
    * different rows.
-   * @param outResult the cells which are visible for user scan
    * @return null is the top cell doesn't change. Otherwise, the NextState to return
    */
-  private NextState needToReturn(List<? super ExtendedCell> outResult) {
-    if (!outResult.isEmpty() && topChanged) {
+  private NextState needToReturn() {
+    if (topChanged) {
       return heap.peek() == null ? NextState.NO_MORE_VALUES : NextState.MORE_VALUES;
     }
     return null;
@@ -954,10 +964,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     } while ((nextCell = this.heap.peek()) != null && CellUtil.matchingRowColumn(cell, nextCell));
     // We need this check because it may happen that the new scanner that we get
     // during heap.next() is requiring reseek due of fake KV previously generated for
-    // ROWCOL bloom filter optimization. See HBASE-19863 for more details
-    if (
-      useRowColBloom && nextCell != null && cell.getTimestamp() == PrivateConstants.OLDEST_TIMESTAMP
-    ) {
+    // ROWCOL bloom filter optimization. See HBASE-19863 and HBASE-29907 for more details
+    if (useRowColBloom && nextCell != null && matcher.compareKeyForNextColumn(nextCell, cell) < 0) {
       return false;
     }
     return true;
@@ -1027,6 +1035,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       flushLock.unlock();
       if (updateReaders) {
         closeLock.unlock();
+      }
+      if (hasUpdatedReaders != null) {
+        hasUpdatedReaders.set(true);
       }
     }
     // Let the next() call handle re-creating and seeking
@@ -1178,6 +1189,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     this.heap = newHeap;
     resetQueryMatcher(lastTop);
     scannersToClose.forEach(KeyValueScanner::close);
+    if (hasSwitchedToStreamRead != null) {
+      hasSwitchedToStreamRead.set(true);
+    }
   }
 
   protected final boolean checkFlushed() {
@@ -1284,5 +1298,31 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // See HBASE-18055 for more details.
       trySwitchToStreamRead();
     }
+  }
+
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  static final void instrument() {
+    hasUpdatedReaders = new AtomicBoolean(false);
+    hasSwitchedToStreamRead = new AtomicBoolean(false);
+  }
+
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  static final boolean hasUpdatedReaders() {
+    return hasUpdatedReaders.get();
+  }
+
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  static final boolean hasSwitchedToStreamRead() {
+    return hasSwitchedToStreamRead.get();
+  }
+
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  static final void resetHasUpdatedReaders() {
+    hasUpdatedReaders.set(false);
+  }
+
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  static final void resetHasSwitchedToStreamRead() {
+    hasSwitchedToStreamRead.set(false);
   }
 }

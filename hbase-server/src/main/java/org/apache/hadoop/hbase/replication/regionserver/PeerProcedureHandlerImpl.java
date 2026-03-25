@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.LogRoller;
@@ -108,6 +109,33 @@ public class PeerProcedureHandlerImpl implements PeerProcedureHandler {
     refreshPeerState(peerId);
   }
 
+  private boolean hasReplicationConfigChange(ReplicationPeerConfig oldConfig,
+    ReplicationPeerConfig newConfig) {
+    Map<String, String> oldReplicationConfigs = oldConfig.getConfiguration();
+    Map<String, String> newReplicationConfigs = newConfig.getConfiguration();
+
+    // Check if any replication.source.* keys have changed values
+    for (Map.Entry<String, String> entry : newReplicationConfigs.entrySet()) {
+      String key = entry.getKey();
+      if (key.startsWith("replication.source.")) {
+        String oldValue = oldReplicationConfigs.get(key);
+        String newValue = entry.getValue();
+        if (!newValue.equals(oldValue)) {
+          return true;
+        }
+      }
+    }
+
+    // Check if any replication.source.* keys were removed
+    for (String key : oldReplicationConfigs.keySet()) {
+      if (key.startsWith("replication.source.") && !newReplicationConfigs.containsKey(key)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   @Override
   public void updatePeerConfig(String peerId) throws ReplicationException, IOException {
     Lock peerLock = peersLock.acquireLock(peerId);
@@ -131,6 +159,7 @@ public class PeerProcedureHandlerImpl implements PeerProcedureHandler {
       if (
         !ReplicationUtils.isNamespacesAndTableCFsEqual(oldConfig, newConfig)
           || oldConfig.isSerial() != newConfig.isSerial()
+          || hasReplicationConfigChange(oldConfig, newConfig)
           || (oldState.equals(PeerState.ENABLED) && newState.equals(PeerState.DISABLED))
       ) {
         replicationSourceManager.refreshSources(peerId);

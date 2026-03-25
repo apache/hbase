@@ -22,8 +22,8 @@ import static org.apache.hadoop.hbase.backup.BackupTestUtil.enableBackup;
 import static org.apache.hadoop.hbase.backup.BackupTestUtil.verifyBackup;
 import static org.apache.hadoop.hbase.backup.BackupType.FULL;
 import static org.apache.hadoop.hbase.backup.BackupType.INCREMENTAL;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -31,12 +31,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.client.Admin;
@@ -48,40 +48,37 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testing.TestingHBaseCluster;
 import org.apache.hadoop.hbase.testing.TestingHBaseClusterOption;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(MediumTests.class)
-@RunWith(Parameterized.class)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: restoreToOtherTable={0}")
 public class TestBackupRestoreOnEmptyEnvironment {
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestBackupRestoreOnEmptyEnvironment.class);
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupRestoreOnEmptyEnvironment.class);
+  public boolean restoreToOtherTable;
 
-  @Parameterized.Parameters(name = "{index}: restoreToOtherTable={0}")
-  public static Iterable<Object[]> data() {
-    return HBaseCommonTestingUtil.BOOLEAN_PARAMETERIZED;
+  public TestBackupRestoreOnEmptyEnvironment(boolean restoreToOtherTable) {
+    this.restoreToOtherTable = restoreToOtherTable;
   }
 
-  @Parameterized.Parameter(0)
-  public boolean restoreToOtherTable;
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(true), Arguments.of(false));
+  }
+
   private TableName sourceTable;
   private TableName targetTable;
 
@@ -89,7 +86,7 @@ public class TestBackupRestoreOnEmptyEnvironment {
   private static Path BACKUP_ROOT_DIR;
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("0");
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     enableBackup(conf);
@@ -98,12 +95,12 @@ public class TestBackupRestoreOnEmptyEnvironment {
     BACKUP_ROOT_DIR = new Path(new Path(conf.get("fs.defaultFS")), new Path("/backupIT"));
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     cluster.stop();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     sourceTable = TableName.valueOf("table");
     targetTable = TableName.valueOf("another-table");
@@ -111,12 +108,12 @@ public class TestBackupRestoreOnEmptyEnvironment {
     createTable(targetTable);
   }
 
-  @After
+  @AfterEach
   public void removeTables() throws Exception {
     deleteTables();
   }
 
-  @Test
+  @TestTemplate
   public void testRestoreToCorrectTable() throws Exception {
     Instant timestamp = Instant.now().minusSeconds(10);
 
@@ -140,7 +137,7 @@ public class TestBackupRestoreOnEmptyEnvironment {
 
   }
 
-  @Test
+  @TestTemplate
   public void testRestoreCorrectTableForIncremental() throws Exception {
     Instant timestamp = Instant.now().minusSeconds(10);
 
@@ -231,7 +228,7 @@ public class TestBackupRestoreOnEmptyEnvironment {
     try (Connection connection = ConnectionFactory.createConnection(cluster.getConf());
       BackupAdmin backupAdmin = new BackupAdminImpl(connection)) {
       RestoreRequest restoreRequest = new RestoreRequest.Builder().withBackupId(backupId)
-        .withBackupRootDir(BACKUP_ROOT_DIR.toString()).withOvewrite(true)
+        .withBackupRootDir(BACKUP_ROOT_DIR.toString()).withOverwrite(true)
         .withFromTables(new TableName[] { sourceTableName })
         .withToTables(new TableName[] { targetTableName }).build();
       backupAdmin.restore(restoreRequest);

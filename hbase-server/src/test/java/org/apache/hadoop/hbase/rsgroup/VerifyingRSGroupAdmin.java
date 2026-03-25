@@ -431,6 +431,17 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     return admin.modifyTableAsync(td, reopenRegions);
   }
 
+  @Override
+  public Future<Void> reopenTableRegionsAsync(TableName tableName) throws IOException {
+    return admin.reopenTableRegionsAsync(tableName);
+  }
+
+  @Override
+  public Future<Void> reopenTableRegionsAsync(TableName tableName, List<RegionInfo> regions)
+    throws IOException {
+    return admin.reopenTableRegionsAsync(tableName, regions);
+  }
+
   public void shutdown() throws IOException {
     admin.shutdown();
   }
@@ -524,6 +535,11 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
 
   public void rollWALWriter(ServerName serverName) throws IOException, FailedLogCloseException {
     admin.rollWALWriter(serverName);
+  }
+
+  @Override
+  public Map<ServerName, Long> rollAllWALWriters() throws IOException {
+    return admin.rollAllWALWriters();
   }
 
   public CompactionState getCompactionState(TableName tableName) throws IOException {
@@ -980,6 +996,11 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   @Override
+  public void restoreBackupSystemTable(String snapshotName) throws IOException {
+    admin.restoreBackupSystemTable(snapshotName);
+  }
+
+  @Override
   public boolean replicationPeerModificationSwitch(boolean on, boolean drainProcedures)
     throws IOException {
     return admin.replicationPeerModificationSwitch(on, drainProcedures);
@@ -989,4 +1010,5 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   public boolean isReplicationPeerModificationEnabled() throws IOException {
     return admin.isReplicationPeerModificationEnabled();
   }
+
 }

@@ -17,29 +17,29 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import java.util.Set;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotFileInfo;
 
 /**
  * Test Export Snapshot Tool helpers
  */
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestExportSnapshotHelpers {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestExportSnapshotHelpers.class);
 
   /**
    * Verfy the result of getBalanceSplits() method. The result are groups of files, used as input
@@ -48,7 +48,7 @@ public class TestExportSnapshotHelpers {
    * assign to each group a file, going back and forth through the groups.
    */
   @Test
-  public void testBalanceSplit() throws Exception {
+  public void testBalanceSplit() {
     // Create a list of files
     List<Pair<SnapshotFileInfo, Long>> files = new ArrayList<>(21);
     for (long i = 0; i <= 20; i++) {
@@ -88,5 +88,169 @@ public class TestExportSnapshotHelpers {
       totalSize += fileInfo.getSecond();
     }
     assertEquals(expectedSize, totalSize);
+  }
+
+  @Test
+  public void testGroupFilesForSplitsWithoutCustomFileGrouper() {
+    List<Pair<SnapshotFileInfo, Long>> files = new ArrayList<>();
+    for (long i = 0; i < 10; i++) {
+      SnapshotFileInfo fileInfo = SnapshotFileInfo.newBuilder().setType(SnapshotFileInfo.Type.HFILE)
+        .setHfile("file-" + i).build();
+      files.add(new Pair<>(fileInfo, i * 10));
+    }
+
+    Configuration conf = new Configuration();
+    conf.setInt("snapshot.export.format.splits", 3);
+
+    ExportSnapshot.ExportSnapshotInputFormat inputFormat =
+      new ExportSnapshot.ExportSnapshotInputFormat();
+    Collection<List<Pair<SnapshotFileInfo, Long>>> groups =
+      inputFormat.groupFilesForSplits(conf, files);
+
+    assertEquals(3, groups.size(), "Should create 3 groups");
+
+    long totalSize = 0;
+    int totalFiles = 0;
+    for (List<Pair<SnapshotFileInfo, Long>> group : groups) {
+      for (Pair<SnapshotFileInfo, Long> file : group) {
+        totalSize += file.getSecond();
+        totalFiles++;
+      }
+    }
+
+    assertEquals(10, totalFiles, "All files should be included");
+    assertEquals(450, totalSize, "Total size should be preserved");
+  }
+
+  @Test
+  public void testGroupFilesForSplitsWithCustomFileGrouper() {
+    List<Pair<SnapshotFileInfo, Long>> files = new ArrayList<>();
+    for (long i = 0; i < 8; i++) {
+      SnapshotFileInfo fileInfo = SnapshotFileInfo.newBuilder().setType(SnapshotFileInfo.Type.HFILE)
+        .setHfile("file-" + i).build();
+      files.add(new Pair<>(fileInfo, i * 5));
+    }
+
+    Configuration conf = new Configuration();
+    conf.setInt("snapshot.export.format.splits", 4);
+    conf.setClass("snapshot.export.input.file.grouper.class", TestCustomFileGrouper.class,
+      ExportSnapshot.CustomFileGrouper.class);
+
+    ExportSnapshot.ExportSnapshotInputFormat inputFormat =
+      new ExportSnapshot.ExportSnapshotInputFormat();
+    Collection<List<Pair<SnapshotFileInfo, Long>>> groups =
+      inputFormat.groupFilesForSplits(conf, files);
+
+    assertEquals(4, groups.size(), "Should create splits based on custom grouper output");
+
+    long totalSize = 0;
+    int totalFiles = 0;
+    for (List<Pair<SnapshotFileInfo, Long>> group : groups) {
+      for (Pair<SnapshotFileInfo, Long> file : group) {
+        totalSize += file.getSecond();
+        totalFiles++;
+      }
+    }
+
+    assertEquals(8, totalFiles, "All files should be included");
+    assertEquals(140, totalSize, "Total size should be preserved");
+  }
+
+  @Test
+  public void testFileLocationResolverWithNoopResolver() {
+    List<Pair<SnapshotFileInfo, Long>> files = new ArrayList<>();
+    for (long i = 0; i < 3; i++) {
+      SnapshotFileInfo fileInfo = SnapshotFileInfo.newBuilder().setType(SnapshotFileInfo.Type.HFILE)
+        .setHfile("file-" + i).build();
+      files.add(new Pair<>(fileInfo, i * 10));
+    }
+
+    ExportSnapshot.NoopFileLocationResolver resolver =
+      new ExportSnapshot.NoopFileLocationResolver();
+    Set<String> locations = resolver.getLocationsForInputFiles(files);
+
+    assertTrue(locations.isEmpty(), "NoopFileLocationResolver should return empty locations");
+  }
+
+  @Test
+  public void testFileLocationResolverWithCustomResolver() {
+    List<Pair<SnapshotFileInfo, Long>> files = new ArrayList<>();
+    for (long i = 0; i < 3; i++) {
+      SnapshotFileInfo fileInfo = SnapshotFileInfo.newBuilder().setType(SnapshotFileInfo.Type.HFILE)
+        .setHfile("file-" + i).build();
+      files.add(new Pair<>(fileInfo, i * 10));
+    }
+
+    TestFileLocationResolver resolver = new TestFileLocationResolver();
+    Set<String> locations = resolver.getLocationsForInputFiles(files);
+
+    assertEquals(2, locations.size(), "Should return expected locations");
+    assertTrue(locations.contains("rack1"), "Should contain rack1");
+    assertTrue(locations.contains("rack2"), "Should contain rack2");
+  }
+
+  @Test
+  public void testInputSplitWithFileLocationResolver() throws Exception {
+    List<Pair<SnapshotFileInfo, Long>> files = new ArrayList<>();
+    for (long i = 0; i < 3; i++) {
+      SnapshotFileInfo fileInfo = SnapshotFileInfo.newBuilder().setType(SnapshotFileInfo.Type.HFILE)
+        .setHfile("file-" + i).build();
+      files.add(new Pair<>(fileInfo, i * 10));
+    }
+
+    TestFileLocationResolver resolver = new TestFileLocationResolver();
+    ExportSnapshot.ExportSnapshotInputFormat.ExportSnapshotInputSplit split =
+      new ExportSnapshot.ExportSnapshotInputFormat.ExportSnapshotInputSplit(files, resolver);
+
+    String[] locations = split.getLocations();
+    assertEquals(2, locations.length, "Should return 2 locations");
+
+    boolean hasRack1 = false;
+    boolean hasRack2 = false;
+    for (String location : locations) {
+      if ("rack1".equals(location)) {
+        hasRack1 = true;
+      }
+      if ("rack2".equals(location)) {
+        hasRack2 = true;
+      }
+    }
+
+    assertTrue(hasRack1, "Should contain rack1");
+    assertTrue(hasRack2, "Should contain rack2");
+  }
+
+  public static class TestCustomFileGrouper implements ExportSnapshot.CustomFileGrouper {
+    @Override
+    public Collection<Collection<Pair<SnapshotFileInfo, Long>>>
+      getGroupedInputFiles(Collection<Pair<SnapshotFileInfo, Long>> snapshotFiles) {
+      List<Collection<Pair<SnapshotFileInfo, Long>>> groups = new ArrayList<>();
+      List<Pair<SnapshotFileInfo, Long>> group1 = new ArrayList<>();
+      List<Pair<SnapshotFileInfo, Long>> group2 = new ArrayList<>();
+
+      int count = 0;
+      for (Pair<SnapshotFileInfo, Long> file : snapshotFiles) {
+        if (count % 2 == 0) {
+          group1.add(file);
+        } else {
+          group2.add(file);
+        }
+        count++;
+      }
+
+      groups.add(group1);
+      groups.add(group2);
+      return groups;
+    }
+  }
+
+  public static class TestFileLocationResolver implements ExportSnapshot.FileLocationResolver {
+    @Override
+    public Set<String> getLocationsForInputFiles(Collection<Pair<SnapshotFileInfo, Long>> files) {
+      Set<String> locations = new HashSet<>();
+      locations.add("rack1");
+      locations.add("rack2");
+      return locations;
+    }
   }
 }

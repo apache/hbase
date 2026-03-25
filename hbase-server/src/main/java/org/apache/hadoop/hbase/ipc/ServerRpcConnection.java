@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.security.SaslStatus;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.provider.SaslServerAuthenticationProvider;
-import org.apache.hadoop.hbase.security.provider.SaslServerAuthenticationProviders;
 import org.apache.hadoop.hbase.security.provider.SimpleSaslServerAuthenticationProvider;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -137,13 +136,11 @@ abstract class ServerRpcConnection implements Closeable {
 
   protected User user = null;
   protected UserGroupInformation ugi = null;
-  protected SaslServerAuthenticationProviders saslProviders = null;
   protected X509Certificate[] clientCertificateChain = null;
 
   public ServerRpcConnection(RpcServer rpcServer) {
     this.rpcServer = rpcServer;
     this.callCleanup = null;
-    this.saslProviders = SaslServerAuthenticationProviders.getInstance(rpcServer.getConf());
   }
 
   @Override
@@ -351,10 +348,12 @@ abstract class ServerRpcConnection implements Closeable {
   }
 
   void finishSaslNegotiation() throws IOException {
-    String qop = saslServer.getNegotiatedQop();
+    String negotiatedQop = saslServer.getNegotiatedQop();
+    SaslUtil.verifyNegotiatedQop(saslServer.getRequestedQop(), negotiatedQop);
     ugi = provider.getAuthorizedUgi(saslServer.getAuthorizationID(), this.rpcServer.secretManager);
     RpcServer.LOG.debug(
-      "SASL server context established. Authenticated client: {}. Negotiated QoP is {}", ugi, qop);
+      "SASL server context established. Authenticated client: {}. Negotiated QoP is {}", ugi,
+      negotiatedQop);
     rpcServer.metrics.authenticationSuccess();
     RpcServer.AUDITLOG.info(RpcServer.AUTH_SUCCESSFUL_FOR + ugi);
   }
@@ -366,6 +365,7 @@ abstract class ServerRpcConnection implements Closeable {
       processConnectionHeader(buf);
       callCleanupIfNeeded();
       this.connectionHeaderRead = true;
+      this.rpcServer.getRpcCoprocessorHost().preAuthorizeConnection(connectionHeader, addr);
       if (rpcServer.needAuthorization() && !authorizeConnection()) {
         // Throw FatalConnectionException wrapping ACE so client does right thing and closes
         // down the connection instead of trying to read non-existent retun.
@@ -373,6 +373,8 @@ abstract class ServerRpcConnection implements Closeable {
           + connectionHeader.getServiceName() + " is unauthorized for user: " + ugi);
       }
       this.user = this.rpcServer.userProvider.create(this.ugi);
+      this.rpcServer.getRpcCoprocessorHost().postAuthorizeConnection(
+        this.user != null ? this.user.getName() : null, this.clientCertificateChain);
     }
   }
 
@@ -779,7 +781,7 @@ abstract class ServerRpcConnection implements Closeable {
       return PreambleResponse.CLOSE;
     }
 
-    this.provider = this.saslProviders.selectProvider(authByte);
+    this.provider = rpcServer.saslProviders.selectProvider(authByte);
     if (this.provider == null) {
       String msg = getFatalConnectionString(version, authByte);
       doBadPreambleHandling(msg, new BadAuthException(msg));
@@ -799,7 +801,7 @@ abstract class ServerRpcConnection implements Closeable {
     if (!this.rpcServer.isSecurityEnabled && !isSimpleAuthentication()) {
       doRawSaslReply(SaslStatus.SUCCESS, new IntWritable(SaslUtil.SWITCH_TO_SIMPLE_AUTH), null,
         null);
-      provider = saslProviders.getSimpleProvider();
+      provider = rpcServer.saslProviders.getSimpleProvider();
       // client has already sent the initial Sasl message and we
       // should ignore it. Both client and server should fall back
       // to simple auth from now on.
@@ -848,8 +850,14 @@ abstract class ServerRpcConnection implements Closeable {
     }
 
     @Override
+    public long readLong(int offset) {
+      return this.buf.getLong(offset);
+    }
+
+    @Override
     public int size() {
       return this.length;
     }
+
   }
 }

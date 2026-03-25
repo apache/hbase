@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.master.assignment.TestSplitTableRegionProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -70,8 +69,6 @@ public class TestTruncateRegionProcedure extends TestTableDDLProcedureBase {
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
     conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 0);
-    conf.set("hbase.coprocessor.region.classes",
-      TestSplitTableRegionProcedure.RegionServerHostingReplicaSlowOpenCopro.class.getName());
     conf.setInt("hbase.client.sync.wait.timeout.msec", 60000);
   }
 

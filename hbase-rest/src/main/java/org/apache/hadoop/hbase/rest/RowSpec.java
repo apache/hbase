@@ -46,6 +46,7 @@ public class RowSpec {
   private long endTime = DEFAULT_END_TIMESTAMP;
   private int maxVersions = 1;
   private int maxValues = Integer.MAX_VALUE;
+  private boolean partialTimeRange;
 
   public RowSpec(String path) throws IllegalArgumentException {
     this(path, null);
@@ -216,6 +217,7 @@ public class RowSpec {
       endTime = time1;
     } else {
       endTime = time0;
+      partialTimeRange = true;
     }
     return i;
   }
@@ -426,4 +428,9 @@ public class RowSpec {
     result.append("}");
     return result.toString();
   }
+
+  public boolean isPartialTimeRange() {
+    return partialTimeRange;
+  }
+
 }

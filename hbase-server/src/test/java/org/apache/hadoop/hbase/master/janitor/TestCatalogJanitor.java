@@ -61,6 +61,9 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
+import org.apache.hadoop.hbase.regionserver.StoreContext;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -145,8 +148,10 @@ public class TestCatalogJanitor {
     Path storedir =
       HRegionFileSystem.getStoreHomedir(tabledir, merged, td.getColumnFamilies()[0].getName());
 
-    Path parentaRef = createMergeReferenceFile(storedir, merged, parenta);
-    Path parentbRef = createMergeReferenceFile(storedir, merged, parentb);
+    Path parentaRef =
+      createMergeReferenceFile(storedir, tabledir, td.getColumnFamilies()[0], merged, parenta);
+    Path parentbRef =
+      createMergeReferenceFile(storedir, tabledir, td.getColumnFamilies()[0], merged, parentb);
 
     // references exist, should not clean
     assertFalse(CatalogJanitor.cleanMergeRegion(masterServices, merged, parents));
@@ -181,7 +186,7 @@ public class TestCatalogJanitor {
     Path tabledir = CommonFSUtils.getTableDir(rootdir, td.getTableName());
     Path storedir =
       HRegionFileSystem.getStoreHomedir(tabledir, merged, td.getColumnFamilies()[0].getName());
-    createMergeReferenceFile(storedir, merged, parenta);
+    createMergeReferenceFile(storedir, tabledir, td.getColumnFamilies()[0], merged, parenta);
 
     MasterServices mockedMasterServices = spy(masterServices);
     MasterFileSystem mockedMasterFileSystem = spy(masterServices.getMasterFileSystem());
@@ -209,14 +214,22 @@ public class TestCatalogJanitor {
     assertFalse(CatalogJanitor.cleanMergeRegion(mockedMasterServices, merged, parents));
   }
 
-  private Path createMergeReferenceFile(Path storeDir, RegionInfo mergedRegion,
-    RegionInfo parentRegion) throws IOException {
+  private Path createMergeReferenceFile(Path storeDir, Path tableDir,
+    ColumnFamilyDescriptor columnFamilyDescriptor, RegionInfo mergedRegion, RegionInfo parentRegion)
+    throws IOException {
     Reference ref = Reference.createTopReference(mergedRegion.getStartKey());
     long now = EnvironmentEdgeManager.currentTime();
     // Reference name has this format: StoreFile#REF_NAME_PARSER
     Path p = new Path(storeDir, Long.toString(now) + "." + parentRegion.getEncodedName());
     FileSystem fs = this.masterServices.getMasterFileSystem().getFileSystem();
-    return ref.write(fs, p);
+    HRegionFileSystem mergedRegionFS =
+      HRegionFileSystem.create(fs.getConf(), fs, tableDir, mergedRegion);
+    StoreContext storeContext =
+      StoreContext.getBuilder().withColumnFamilyDescriptor(columnFamilyDescriptor)
+        .withFamilyStoreDirectoryPath(storeDir).withRegionFileSystem(mergedRegionFS).build();
+    StoreFileTracker sft = StoreFileTrackerFactory.create(fs.getConf(), false, storeContext);
+    sft.createReference(ref, p);
+    return p;
   }
 
   /**
@@ -245,9 +258,16 @@ public class TestCatalogJanitor {
     // Reference name has this format: StoreFile#REF_NAME_PARSER
     Path p = new Path(storedir, Long.toString(now) + "." + parent.getEncodedName());
     FileSystem fs = this.masterServices.getMasterFileSystem().getFileSystem();
-    Path path = ref.write(fs, p);
-    assertTrue(fs.exists(path));
-    LOG.info("Created reference " + path);
+    HRegionFileSystem regionFS =
+      HRegionFileSystem.create(this.masterServices.getConfiguration(), fs, tabledir, splita);
+    StoreContext storeContext =
+      StoreContext.getBuilder().withColumnFamilyDescriptor(td.getColumnFamilies()[0])
+        .withFamilyStoreDirectoryPath(storedir).withRegionFileSystem(regionFS).build();
+    StoreFileTracker sft =
+      StoreFileTrackerFactory.create(this.masterServices.getConfiguration(), false, storeContext);
+    sft.createReference(ref, p);
+    assertTrue(fs.exists(p));
+    LOG.info("Created reference " + p);
     // Add a parentdir for kicks so can check it gets removed by the catalogjanitor.
     fs.mkdirs(parentdir);
     assertFalse(CatalogJanitor.cleanParent(masterServices, parent, r));
@@ -717,7 +737,14 @@ public class TestCatalogJanitor {
     // Reference name has this format: StoreFile#REF_NAME_PARSER
     Path p = new Path(storedir, Long.toString(now) + "." + parent.getEncodedName());
     FileSystem fs = services.getMasterFileSystem().getFileSystem();
-    ref.write(fs, p);
+    HRegionFileSystem regionFS =
+      HRegionFileSystem.create(services.getConfiguration(), fs, tabledir, daughter);
+    StoreContext storeContext =
+      StoreContext.getBuilder().withColumnFamilyDescriptor(td.getColumnFamilies()[0])
+        .withFamilyStoreDirectoryPath(storedir).withRegionFileSystem(regionFS).build();
+    StoreFileTracker sft =
+      StoreFileTrackerFactory.create(services.getConfiguration(), false, storeContext);
+    sft.createReference(ref, p);
     return p;
   }
 

@@ -334,6 +334,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
     filters.add(new ClusterMarkingEntryFilter(clusterId, peerClusterId, replicationEndpoint));
     this.walEntryFilter = new ChainWALEntryFilter(filters);
+    this.walEntryFilter.setSerial(replicationPeer.getPeerConfig().isSerial());
   }
 
   private long getStartOffset(String walGroupId) {
@@ -860,5 +861,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
   // Visible for testing purpose
   public long getTotalReplicatedEdits() {
     return totalReplicatedEdits.get();
+  }
+
+  long getSleepForRetries() {
+    return sleepForRetries;
   }
 }

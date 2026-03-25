@@ -79,6 +79,7 @@ public class MultiThreadedReader extends MultiThreadedAction {
   private int keyWindow = DEFAULT_KEY_WINDOW;
   private int batchSize = DEFAULT_BATCH_SIZE;
   private int regionReplicaId = -1; // particular region replica id to do reads against if set
+  private boolean timelineConsistency = false;
 
   public MultiThreadedReader(LoadTestDataGenerator dataGen, Configuration conf, TableName tableName,
     double verifyPercent) throws IOException {
@@ -105,6 +106,10 @@ public class MultiThreadedReader extends MultiThreadedAction {
 
   public void setRegionReplicaId(int regionReplicaId) {
     this.regionReplicaId = regionReplicaId;
+  }
+
+  public void setTimelineConsistency(boolean timelineConsistency) {
+    this.timelineConsistency = timelineConsistency;
   }
 
   @Override
@@ -307,24 +312,26 @@ public class MultiThreadedReader extends MultiThreadedAction {
 
     protected Get createGet(long keyToRead) throws IOException {
       Get get = new Get(dataGenerator.getDeterministicUniqueKey(keyToRead));
-      String cfsString = "";
+      StringBuilder cfsString = new StringBuilder();
       byte[][] columnFamilies = dataGenerator.getColumnFamilies();
       for (byte[] cf : columnFamilies) {
         get.addFamily(cf);
         if (verbose) {
           if (cfsString.length() > 0) {
-            cfsString += ", ";
+            cfsString.append(", ");
           }
-          cfsString += "[" + Bytes.toStringBinary(cf) + "]";
+          cfsString.append("[").append(Bytes.toStringBinary(cf)).append("]");
         }
       }
       get = dataGenerator.beforeGet(keyToRead, get);
       if (regionReplicaId > 0) {
         get.setReplicaId(regionReplicaId);
+      }
+      if (timelineConsistency) {
         get.setConsistency(Consistency.TIMELINE);
       }
       if (verbose) {
-        LOG.info("[" + readerId + "] " + "Querying key " + keyToRead + ", cfs " + cfsString);
+        LOG.info("[{}] Querying key {}, cfs {}", readerId, keyToRead, cfsString.toString());
       }
       return get;
     }

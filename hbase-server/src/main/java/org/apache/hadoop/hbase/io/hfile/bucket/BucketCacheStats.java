@@ -36,9 +36,8 @@ public class BucketCacheStats extends CacheStats {
   /* Tracing failed Bucket Cache allocations. */
   private LongAdder allocationFailCount = new LongAdder();
 
-  BucketCacheStats() {
-    super("BucketCache");
-
+  BucketCacheStats(int numPeriodsInWindow, int periodTimeInMinutes) {
+    super("BucketCache", numPeriodsInWindow, periodTimeInMinutes);
     allocationFailCount.reset();
   }
 
@@ -63,7 +62,7 @@ public class BucketCacheStats extends CacheStats {
   public double getIOTimePerHit() {
     long time = ioHitTime.sum() / NANO_TIME;
     long count = ioHitCount.sum();
-    return ((float) time / (float) count);
+    return count == 0 ? 0.0 : (double) time / count;
   }
 
   public void reset() {

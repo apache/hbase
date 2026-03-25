@@ -21,7 +21,6 @@
   import="java.util.concurrent.TimeUnit"
   import="java.util.ArrayList"
   import="java.util.List"
-  import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.quotas.MasterQuotaManager"
   import="org.apache.hadoop.hbase.quotas.QuotaRetriever"
@@ -74,11 +73,11 @@
     </div>
   </div>
   <%if (quotaManager.isRpcThrottleEnabled()) {%>
-  <div class="alert alert-success">
+  <div class="alert alert-success" role="alert">
     Rpc throttle is enabled.
   </div>
   <% } else {%>
-  <div class="alert alert-info">
+  <div class="alert alert-info" role="alert">
     Rpc throttle is disabled. All requests will not be throttled.<br/>
     Use 'enable_rpc_throttle' shell command to enable it.
   </div>
@@ -92,13 +91,13 @@
     </div>
   </div>
   <%if (exceedThrottleQuotaEnabled) {%>
-  <div class="alert alert-success">
+  <div class="alert alert-success" role="alert">
     Exceed throttle quota is enabled. The user/table/namespace throttle quotas can exceed the limit
     if a region server has available quotas.<br/>
     Use 'disable_exceed_throttle_quota' shell command to disable it.
   </div>
   <% } else {%>
-  <div class="alert alert-info">
+  <div class="alert alert-info" role="alert">
     Exceed throttle quota is disabled.
   </div>
   <% } %>
@@ -135,7 +134,7 @@
     <% } %>
   </table>
   <% } else if (exceedThrottleQuotaEnabled) { %>
-  <div class="alert alert-danger">
+  <div class="alert alert-danger" role="alert">
     Exceed throttle quota is enabled, but RegionServer throttle quotas are not set.<br/>
     Please set RegionServer read and write throttle quotas in SECONDS time unit.<br/>
     eg. set_quota TYPE => THROTTLE, REGIONSERVER => 'all', THROTTLE_TYPE => WRITE, LIMIT => '20000req/sec'

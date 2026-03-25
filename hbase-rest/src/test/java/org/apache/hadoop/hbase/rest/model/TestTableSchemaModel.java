@@ -17,28 +17,19 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Iterator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RestTests.class, SmallTests.class })
+@Tag(RestTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestTableSchemaModel extends TestModelBase<TableSchemaModel> {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableSchemaModel.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestTableSchemaModel.class);
 
   public static final String TABLE_NAME = "testTable";
   private static final boolean IS_META = false;
@@ -117,5 +108,4 @@ public class TestTableSchemaModel extends TestModelBase<TableSchemaModel> {
   public void testFromPB() throws Exception {
     checkModel(fromPB(AS_PB));
   }
-
 }

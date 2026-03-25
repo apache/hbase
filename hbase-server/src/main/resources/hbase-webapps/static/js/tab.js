@@ -20,19 +20,23 @@
 
 $(document).ready(
   function(){
-    var prefix = "tab_";
-	$('.tabbable .nav-pills a').click(function (e) {
+    const prefix = "tab_";
+    $('.tabbable .nav-pills a').click(function (e) {
         e.preventDefault();
         location.hash = $(e.target).attr('href').substr(1).replace(prefix, "");
         $(this).tab('show');
     });
 
-  $.ajax({url:"/userSnapshots.jsp", success:function(result){
-    $("#tab_userSnapshots").html(result);
-  }});
-            
+    const $userSnapshotsTab = $("#tab_userSnapshots");
+    const isUserSnapshotsTabExists = $userSnapshotsTab.length;
+    if (isUserSnapshotsTabExists) {
+      $.ajax({url:"/userSnapshots.jsp", success:function(result){
+        $userSnapshotsTab.html(result);
+      }});
+    }
+
     if (location.hash !== '') {
-      var tabItem = $('a[href="' + location.hash.replace("#", "#"+prefix) + '"]');
+      const tabItem = $('a[href="' + location.hash.replace("#", "#"+prefix) + '"]');
       tabItem.tab('show');
       $(document).scrollTop(0);  
       return false;  

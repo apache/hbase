@@ -57,7 +57,7 @@ public interface OperationQuota {
    * @throws RpcThrottlingException if the operation cannot be performed because RPC quota is
    *                                exceeded.
    */
-  void checkBatchQuota(int numWrites, int numReads) throws RpcThrottlingException;
+  void checkBatchQuota(int numWrites, int numReads, boolean isAtomic) throws RpcThrottlingException;
 
   /**
    * Checks if it is possible to execute the scan. The quota will be estimated based on the

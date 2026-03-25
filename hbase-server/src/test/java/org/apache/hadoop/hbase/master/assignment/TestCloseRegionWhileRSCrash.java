@@ -38,8 +38,8 @@ import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -53,7 +53,7 @@ import org.slf4j.LoggerFactory;
  * Confirm that we will do backoff when retrying on closing a region, to avoid consuming all the
  * CPUs.
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Category({ MasterTests.class, LargeTests.class })
 public class TestCloseRegionWhileRSCrash {
   private static final Logger LOG = LoggerFactory.getLogger(TestCloseRegionWhileRSCrash.class);
 

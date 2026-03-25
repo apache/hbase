@@ -27,6 +27,7 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -3094,5 +3095,17 @@ public final class PrivateCellUtil {
     } else {
       return HConstants.NO_SEQNUM;
     }
+  }
+
+  public static byte[] increaseLastNonMaxByte(byte[] bytes) {
+    byte[] result = Arrays.copyOf(bytes, bytes.length);
+    for (int i = bytes.length - 1; i >= 0; i--) {
+      byte b = bytes[i];
+      if (b < Byte.MAX_VALUE) {
+        result[i] = (byte) (b + 1);
+        break;
+      }
+    }
+    return result;
   }
 }

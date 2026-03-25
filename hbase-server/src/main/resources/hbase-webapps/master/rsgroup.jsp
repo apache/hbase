@@ -24,8 +24,6 @@
   import="java.util.List"
   import="java.util.Map"
   import="java.util.function.Function"
-  import="java.util.regex.Pattern"
-  import="java.util.stream.Stream"
   import="java.util.stream.Collectors"
   import="org.apache.hadoop.hbase.ServerName"
   import="org.apache.hadoop.hbase.TableName"
@@ -40,10 +38,11 @@
   import="org.apache.hadoop.hbase.rsgroup.RSGroupUtil"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.VersionInfo"
-  import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"%>
-<%@ page import="org.apache.hadoop.hbase.ServerMetrics" %>
-<%@ page import="org.apache.hadoop.hbase.Size" %>
-<%@ page import="org.apache.hadoop.hbase.RegionMetrics" %>
+  import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"
+  import="org.apache.hadoop.hbase.ServerMetrics"
+  import="org.apache.hadoop.hbase.Size"
+  import="org.apache.hadoop.hbase.RegionMetrics"
+  import="static org.apache.hadoop.hbase.master.http.MasterStatusUtil.serverNameLink" %>
 <%
   String rsGroupName = request.getParameter("name");
   pageContext.setAttribute("pageTitle", "RSGroup: " + rsGroupName);
@@ -118,26 +117,26 @@
     </div>
     <div class="tabbable">
       <% if (rsGroupServers != null && rsGroupServers.size() > 0) { %>
-        <ul class="nav nav-pills">
-          <li class="active">
-            <a href="#tab_baseStats" data-toggle="tab">Base Stats</a>
+        <ul class="nav nav-pills" role="tablist">
+          <li class="nav-item">
+            <a class="nav-link active" href="#tab_baseStats" data-bs-toggle="tab" role="tab">Base Stats</a>
           </li>
-          <li class="">
-            <a href="#tab_memoryStats" data-toggle="tab">Memory</a>
+          <li class="nav-item">
+            <a class="nav-link" href="#tab_memoryStats" data-bs-toggle="tab" role="tab">Memory</a>
           </li>
-          <li class="">
-            <a href="#tab_requestStats" data-toggle="tab">Requests</a>
+          <li class="nav-item">
+            <a class="nav-link" href="#tab_requestStats" data-bs-toggle="tab" role="tab">Requests</a>
           </li>
-          <li class="">
-            <a href="#tab_storeStats" data-toggle="tab">Storefiles</a>
+          <li class="nav-item">
+            <a class="nav-link" href="#tab_storeStats" data-bs-toggle="tab" role="tab">Storefiles</a>
           </li>
-          <li class="">
-            <a href="#tab_compactStats" data-toggle="tab">Compactions</a>
+          <li class="nav-item">
+            <a class="nav-link" href="#tab_compactStats" data-bs-toggle="tab" role="tab">Compactions</a>
           </li>
         </ul>
 
-      <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-        <div class="tab-pane active" id="tab_baseStats">
+      <div class="tab-content">
+        <div class="tab-pane active" id="tab_baseStats" role="tabpanel">
           <table class="table table-striped">
             <tr>
               <th>ServerName</th>
@@ -169,11 +168,9 @@
                      totalRequestsPerSecond += sl.getRequestCountPerSecond();
                      lastContact = (System.currentTimeMillis() - sl.getReportTimestamp())/1000;
                    }
-                   long startcode = serverName.getStartcode();
-                   int infoPort = master.getRegionServerInfoPort(serverName);
-                   String url = "//" + serverName.getHostname() + ":" + infoPort + "/rs-status";%>
+                   long startcode = serverName.getStartCode(); %>
                    <tr>
-                     <td><a href="<%= url %>"><%= serverName.getServerName() %></a></td>
+                     <td><%= serverNameLink(master, serverName) %></td>
                      <td><%= new Date(startcode) %></td>
                      <td><%= lastContact %></td>
                      <td><%= version %></td>
@@ -204,7 +201,7 @@
             </tr>
           </table>
         </div>
-        <div class="tab-pane" id="tab_memoryStats">
+        <div class="tab-pane" id="tab_memoryStats" role="tabpanel">
           <table class="table table-striped">
             <tr>
               <th>ServerName</th>
@@ -225,8 +222,6 @@
                    double memStoreSizeMB = sl.getRegionMetrics().values()
                            .stream().mapToDouble(rm -> rm.getMemStoreSize().get(Size.Unit.MEGABYTE))
                            .sum();
-                   int infoPort = master.getRegionServerInfoPort(serverName);
-                   String url = "//" + serverName.getHostname() + ":" + infoPort + "/rs-status";
 
                    if (memStoreSizeMB > 0) {
                      memStoreSizeMBStr = TraditionalBinaryPrefix.long2String(
@@ -242,7 +237,7 @@
                    }
             %>
                    <tr>
-                     <td><a href="<%= url %>"><%= serverName.getServerName() %></a></td>
+                     <td><%= serverNameLink(master, serverName) %></td>
                      <td><%= usedHeapSizeMBStr %></td>
                      <td><%= maxHeapSizeMBStr %></td>
                      <td><%= memStoreSizeMBStr %></td>
@@ -258,7 +253,7 @@
                } %>
           </table>
         </div>
-        <div class="tab-pane" id="tab_requestStats">
+        <div class="tab-pane" id="tab_requestStats" role="tabpanel">
           <table class="table table-striped">
             <tr>
                 <th>ServerName</th>
@@ -270,17 +265,15 @@
                  ServerName serverName = serverMaping.get(server);
                  ServerMetrics sl = onlineServers.get(server);
                  if (sl != null && serverName != null) {
-                   int infoPort = master.getRegionServerInfoPort(serverName);
                    long readRequestCount = 0;
                    long writeRequestCount = 0;
                    for (RegionMetrics rm : sl.getRegionMetrics().values()) {
                      readRequestCount += rm.getReadRequestCount();
                      writeRequestCount += rm.getWriteRequestCount();
                    }
-                   String url = "//" + serverName.getHostname() + ":" + infoPort + "/rs-status";
             %>
                    <tr>
-                     <td><a href="<%= url %>"><%= serverName.getServerName() %></a></td>
+                     <td><%= serverNameLink(master, serverName) %></td>
                      <td><%= sl.getRequestCountPerSecond() %></td>
                      <td><%= readRequestCount %></td>
                      <td><%= writeRequestCount %></td>
@@ -296,7 +289,7 @@
               } %>
           </table>
         </div>
-        <div class="tab-pane" id="tab_storeStats">
+        <div class="tab-pane" id="tab_storeStats" role="tabpanel">
           <table class="table table-striped">
             <tr>
                 <th>ServerName</th>
@@ -330,8 +323,6 @@
                       totalStaticIndexSizeKB += rm.getStoreFileUncompressedDataIndexSize().get(Size.Unit.KILOBYTE);
                       totalStaticBloomSizeKB += rm.getBloomFilterSize().get(Size.Unit.KILOBYTE);
                     }
-                    int infoPort = master.getRegionServerInfoPort(serverName);
-                    String url = "//" + serverName.getHostname() + ":" + infoPort + "/rs-status";
                     if (storeUncompressedSizeMB > 0) {
                       storeUncompressedSizeMBStr = TraditionalBinaryPrefix.long2String(
                       (long) storeUncompressedSizeMB * TraditionalBinaryPrefix.MEGA.value, "B", 1);
@@ -350,7 +341,7 @@
                     }
             %>
                     <tr>
-                      <td><a href="<%= url %>"><%= serverName.getServerName() %></a></td>
+                      <td><%= serverNameLink(master, serverName) %></td>
                       <td><%= storeCount %></td>
                       <td><%= storeFileCount %></td>
                       <td><%= storeUncompressedSizeMBStr %></td>
@@ -372,7 +363,7 @@
               } %>
           </table>
         </div>
-        <div class="tab-pane" id="tab_compactStats">
+        <div class="tab-pane" id="tab_compactStats" role="tabpanel">
           <table class="table table-striped">
             <tr>
               <th>ServerName</th>
@@ -396,11 +387,9 @@
                          percentDone = String.format("%.2f", 100 *
                             ((float) currentCompactedCells / totalCompactingCells)) + "%";
                     }
-                    int infoPort = master.getRegionServerInfoPort(serverName);
-                    String url = "//" + serverName.getHostname() + ":" + infoPort + "/rs-status";
             %>
                     <tr>
-                      <td><a href="<%= url %>"><%= serverName.getServerName() %></a></td>
+                      <td><%= serverNameLink(master, serverName) %></td>
                       <td><%= totalCompactingCells %></td>
                       <td><%= currentCompactedCells %></td>
                       <td><%= totalCompactingCells - currentCompactedCells %></td>
@@ -445,7 +434,7 @@
          <tr>
              <th>Namespace</th>
              <th>Table</th>
-             <th>Stats</th>
+             <th>State</th>
              <th>Online Regions</th>
              <th>Offline Regions</th>
              <th>Failed Regions</th>

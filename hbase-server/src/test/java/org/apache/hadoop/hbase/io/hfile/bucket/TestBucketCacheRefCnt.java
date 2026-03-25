@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheUtil;
@@ -229,6 +230,10 @@ public class TestBucketCacheRefCnt {
       cache.cacheBlock(key, blk);
       assertTrue(blk.refCnt() == 1 || blk.refCnt() == 2);
 
+      // wait for block to move to backing map because refCnt get refreshed once block moves to
+      // backing map
+      Waiter.waitFor(HBaseConfiguration.create(), 12000, () -> isRamCacheDrained(key, cache));
+
       Cacheable block1 = cache.getBlock(key, false, false, false);
       assertTrue(block1.refCnt() >= 2);
       assertTrue(((HFileBlock) block1).getByteBuffAllocator() == alloc);
@@ -260,6 +265,10 @@ public class TestBucketCacheRefCnt {
     } finally {
       cache.shutdown();
     }
+  }
+
+  private boolean isRamCacheDrained(BlockCacheKey key, BucketCache cache) {
+    return cache.backingMap.containsKey(key) && !cache.ramCache.containsKey(key);
   }
 
   @Test

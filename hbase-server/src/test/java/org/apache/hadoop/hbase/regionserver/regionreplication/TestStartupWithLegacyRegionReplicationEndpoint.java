@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
-import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.replication.ReplicationGroupOffset;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -108,9 +107,6 @@ public class TestStartupWithLegacyRegionReplicationEndpoint {
       () -> UTIL.getMiniHBaseCluster().getMaster().getProcedures().stream()
         .filter(p -> p instanceof ServerCrashProcedure).map(p -> (ServerCrashProcedure) p)
         .allMatch(Procedure::isSuccess));
-    // the deletion is async, so wait until they get deleted
-    ReplicationPeerManager ppm = UTIL.getMiniHBaseCluster().getMaster().getReplicationPeerManager();
-    UTIL.waitFor(15000, () -> !ppm.getPeerStorage().listPeerIds().contains(peerId)
-      && ppm.getQueueStorage().listAllQueueIds(peerId, rsName).isEmpty());
+    // we will delete the legacy peer while migrating, so here we do not assert the replication data
   }
 }

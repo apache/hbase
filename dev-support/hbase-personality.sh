@@ -298,30 +298,16 @@ function personality_file_tests
 {
   local filename=$1
   yetus_debug "HBase specific personality_file_tests"
-  # If the change is to the refguide, then we don't need any builtin yetus tests
-  # the refguide test (below) will suffice for coverage.
-  if [[ ${filename} =~ src/main/asciidoc ]] ||
-     [[ ${filename} =~ src/main/xslt ]]; then
-    yetus_debug "Skipping builtin yetus checks for ${filename}. refguide test should pick it up."
-  else
-    # If we change our asciidoc, rebuild mvnsite
-    if [[ ${BUILDTOOL} = maven ]]; then
-      if [[ ${filename} =~ src/site || ${filename} =~ src/main/asciidoc ]]; then
-        yetus_debug "tests/mvnsite: ${filename}"
-        add_test mvnsite
-      fi
-    fi
-    # If we change checkstyle configs, run checkstyle
-    if [[ ${filename} =~ checkstyle.*\.xml ]]; then
-      yetus_debug "tests/checkstyle: ${filename}"
-      add_test checkstyle
-    fi
-    # fallback to checking which tests based on what yetus would do by default
-    if declare -f "${BUILDTOOL}_builtin_personality_file_tests" >/dev/null; then
-      "${BUILDTOOL}_builtin_personality_file_tests" "${filename}"
-    elif declare -f builtin_personality_file_tests >/dev/null; then
-      builtin_personality_file_tests "${filename}"
-    fi
+  # If we change checkstyle configs, run checkstyle
+  if [[ ${filename} =~ checkstyle.*\.xml ]]; then
+    yetus_debug "tests/checkstyle: ${filename}"
+    add_test checkstyle
+  fi
+  # fallback to checking which tests based on what yetus would do by default
+  if declare -f "${BUILDTOOL}_builtin_personality_file_tests" >/dev/null; then
+    "${BUILDTOOL}_builtin_personality_file_tests" "${filename}"
+  elif declare -f builtin_personality_file_tests >/dev/null; then
+    builtin_personality_file_tests "${filename}"
   fi
 }
 
@@ -330,6 +316,9 @@ function personality_file_tests
 ## @audience     private
 ## @stability    evolving
 ## @param        name of variable to set with maven arguments
+# NOTE: INCLUDE_TESTS_URL uses -Dtest= which conflicts with pom.xml <include> patterns.
+#       Do not use INCLUDE_TESTS_URL with profiles that define their own <include> patterns
+#       (e.g., runLargeTests-wave1, runLargeTests-wave2, runLargeTests-wave3).
 function get_include_exclude_tests_arg
 {
   local  __resultvar=$1
@@ -397,8 +386,7 @@ function refguide_filefilter
 
   # we only generate ref guide on master branch now
   if [[ "${PATCH_BRANCH}" = master ]]; then
-    if [[ ${filename} =~ src/main/asciidoc ]] ||
-       [[ ${filename} =~ src/main/xslt ]] ||
+    if [[ ${filename} =~ hbase-website ]] ||
        [[ ${filename} =~ hbase-common/src/main/resources/hbase-default\.xml ]]; then
       add_test refguide
     fi
@@ -424,8 +412,8 @@ function refguide_rebuild
   # shellcheck disable=2046
   echo_and_redirect "${logfile}" \
     $(maven_executor) clean site --batch-mode \
-      -pl . \
-      -Dtest=NoUnitTests -DHBasePatchProcess -Prelease \
+      -pl hbase-website \
+      -DskipTests -DHBasePatchProcess -Prelease \
       -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true
 
   count=$(${GREP} -c '\[ERROR\]' "${logfile}")
@@ -435,31 +423,37 @@ function refguide_rebuild
     return 1
   fi
 
-  if ! mv target/site "${PATCH_DIR}/${repostatus}-site"; then
+  if ! mv hbase-website/build/client "${PATCH_DIR}/${repostatus}-site"; then
     add_vote_table -1 refguide "${repostatus} failed to produce a site directory."
     add_footer_table refguide "@@BASE@@/${repostatus}-refguide.log"
     return 1
   fi
 
-  if [[ ! -f "${PATCH_DIR}/${repostatus}-site/book.html" ]]; then
+  if [[ ! -f "${PATCH_DIR}/${repostatus}-site/index.html" ]]; then
     add_vote_table -1 refguide "${repostatus} failed to produce the html version of the reference guide."
     add_footer_table refguide "@@BASE@@/${repostatus}-refguide.log"
     return 1
   fi
 
-  pdf_output="apache_hbase_reference_guide.pdf"
+pdf_output="apache-hbase-reference-guide.pdf"
+
+  if ! mv "hbase-website/public/books/${pdf_output}" "${PATCH_DIR}/${repostatus}-site"; then
+    add_vote_table -1 refguide "${repostatus} failed to produce the pdf version of the reference guide."
+    add_footer_table refguide "@@BASE@@/${repostatus}-refguide.log"
+    return 1
+  fi
 
   if [[ ! -f "${PATCH_DIR}/${repostatus}-site/${pdf_output}" ]]; then
-    add_vote_table -1 refguide "${repostatus} failed to produce the pdf version of the reference guide."
+    add_vote_table -1 refguide "${repostatus} failed to verify the pdf version of the reference guide."
     add_footer_table refguide "@@BASE@@/${repostatus}-refguide.log"
     return 1
   fi
 
   add_vote_table 0 refguide "${repostatus} has no errors when building the reference guide. See footer for rendered docs, which you should manually inspect."
   if [[ -n "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}" ]]; then
-    add_footer_table refguide "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/${repostatus}-site/book.html"
+    add_footer_table refguide "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/${repostatus}-site/index.html"
   else
-    add_footer_table refguide "@@BASE@@/${repostatus}-site/book.html"
+    add_footer_table refguide "@@BASE@@/${repostatus}-site/index.html"
   fi
   return 0
 }
@@ -612,17 +606,17 @@ function hadoopcheck_rebuild
     # TODO remove this on non 2.5 branches ?
     yetus_info "Setting Hadoop 3 versions to test based on branch-2.5 rules"
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop3_versions="3.2.4 3.3.6 3.4.0"
+      hbase_hadoop3_versions="3.2.4 3.3.6 3.4.2"
     else
-      hbase_hadoop3_versions="3.2.3 3.2.4 3.3.2 3.3.3 3.3.4 3.3.5 3.3.6 3.4.0"
+      hbase_hadoop3_versions="3.2.3 3.2.4 3.3.2 3.3.3 3.3.4 3.3.5 3.3.6 3.4.0 3.4.1 3.4.2"
     fi
   else
     yetus_info "Setting Hadoop 3 versions to test based on branch-2.6+/master/feature branch rules"
     # Isn't runnung these tests with the default Hadoop version redundant ?
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop3_versions="3.3.6 3.4.0"
+      hbase_hadoop3_versions="3.3.6 3.4.2"
     else
-      hbase_hadoop3_versions="3.3.5 3.3.6 3.4.0"
+      hbase_hadoop3_versions="3.3.5 3.3.6 3.4.0 3.4.1 3.4.2"
     fi
   fi
 
@@ -852,6 +846,7 @@ function spotless_rebuild
 {
   local repostatus=$1
   local logfile="${PATCH_DIR}/${repostatus}-spotless.txt"
+  local linecommentsfile="${PATCH_DIR}/${repostatus}-spotless-linecomments.txt"
 
   if ! verify_needed_test spotless; then
     return 0
@@ -869,12 +864,27 @@ function spotless_rebuild
 
   count=$(${GREP} -c '\[ERROR\]' "${logfile}")
   if [[ ${count} -gt 0 ]]; then
-    add_vote_table -1 spotless "${repostatus} has ${count} errors when running spotless:check, run spotless:apply to fix."
-    add_footer_table spotless "@@BASE@@/${repostatus}-spotless.txt"
+    # Generate file-level annotations for GitHub Actions
+    if [[ -n "${BUGLINECOMMENTS}" ]]; then
+      # Extract files with violations: lines like "[ERROR]     src/path/to/file.java"
+      # with leading whitespace after [ERROR]
+      ${GREP} '^\[ERROR\][[:space:]]\+[^[:space:]]' "${logfile}" \
+        | ${SED} 's/^\[ERROR\][[:space:]]*//g' \
+        | while read -r file; do
+            echo "${file}:1:Spotless formatting required, run mvn spotless:apply"
+          done > "${linecommentsfile}"
+      if [[ -s "${linecommentsfile}" ]]; then
+        bugsystem_linecomments_queue spotless "${linecommentsfile}"
+      fi
+    fi
+
+    add_vote_table_v2 -1 spotless \
+      "@@BASE@@/${repostatus}-spotless.txt" \
+      "${repostatus} has ${count} errors when running spotless:check, run spotless:apply to fix."
     return 1
   fi
 
-  add_vote_table +1 spotless "${repostatus} has no errors when running spotless:check."
+  add_vote_table_v2 +1 spotless "" "${repostatus} has no errors when running spotless:check."
   return 0
 }
 

@@ -17,46 +17,53 @@
  */
 package org.apache.hadoop.hbase.backup.master;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.TestBackupBase;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
+import org.apache.hadoop.hbase.backup.util.BackupBoundaries;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestBackupLogCleaner extends TestBackupBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupLogCleaner.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupLogCleaner.class);
 
   // implements all test cases in 1 test since incremental full backup/
   // incremental backup has dependencies
+
+  @BeforeAll
+  public static void before() {
+    TEST_UTIL.getConfiguration().setLong(BackupLogCleaner.TS_BUFFER_KEY, 0);
+  }
 
   @Test
   public void testBackupLogCleaner() throws Exception {
@@ -193,7 +200,175 @@ public class TestBackupLogCleaner extends TestBackupBase {
       // Taking the minimum timestamp (= 2), this means all WALs preceding B3 can be deleted.
       deletable = cleaner.getDeletableFiles(walFilesAfterB5);
       assertEquals(toSet(walFilesAfterB2), toSet(deletable));
+    } finally {
+      TEST_UTIL.truncateTable(BackupSystemTable.getTableName(TEST_UTIL.getConfiguration())).close();
     }
+  }
+
+  @Test
+  public void testDoesNotDeleteWALsFromNewServers() throws Exception {
+    Path backupRoot1 = new Path(BACKUP_ROOT_DIR, "backup1");
+    List<TableName> tableSetFull = List.of(table1, table2, table3, table4);
+
+    JVMClusterUtil.RegionServerThread rsThread = null;
+    try (BackupSystemTable systemTable = new BackupSystemTable(TEST_UTIL.getConnection())) {
+      LOG.info("Creating initial backup B1");
+      String backupIdB1 = backupTables(BackupType.FULL, tableSetFull, backupRoot1.toString());
+      assertTrue(checkSucceeded(backupIdB1));
+
+      List<FileStatus> walsAfterB1 = getListOfWALFiles(TEST_UTIL.getConfiguration());
+      LOG.info("WALs after B1: {}", walsAfterB1.size());
+
+      // Add a new RegionServer to the cluster
+      LOG.info("Adding new RegionServer to cluster");
+      rsThread = TEST_UTIL.getMiniHBaseCluster().startRegionServer();
+      ServerName newServerName = rsThread.getRegionServer().getServerName();
+      LOG.info("New RegionServer started: {}", newServerName);
+
+      // Move a region to the new server to ensure it creates a WAL
+      List<RegionInfo> regions = TEST_UTIL.getAdmin().getRegions(table1);
+      RegionInfo regionToMove = regions.get(0);
+
+      LOG.info("Moving region {} to new server {}", regionToMove.getEncodedName(), newServerName);
+      TEST_UTIL.getAdmin().move(regionToMove.getEncodedNameAsBytes(), newServerName);
+
+      TEST_UTIL.waitFor(30000, () -> {
+        try {
+          HRegionLocation location = TEST_UTIL.getConnection().getRegionLocator(table1)
+            .getRegionLocation(regionToMove.getStartKey());
+          return location.getServerName().equals(newServerName);
+        } catch (IOException e) {
+          return false;
+        }
+      });
+
+      // Write some data to trigger WAL creation on the new server
+      try (Table t1 = TEST_UTIL.getConnection().getTable(table1)) {
+        for (int i = 0; i < 100; i++) {
+          Put p = new Put(Bytes.toBytes("newserver-row-" + i));
+          p.addColumn(famName, qualName, Bytes.toBytes("val" + i));
+          t1.put(p);
+        }
+      }
+      TEST_UTIL.getAdmin().flushRegion(regionToMove.getEncodedNameAsBytes());
+
+      List<FileStatus> walsAfterNewServer = getListOfWALFiles(TEST_UTIL.getConfiguration());
+      LOG.info("WALs after adding new server: {}", walsAfterNewServer.size());
+      assertTrue(walsAfterNewServer.size() > walsAfterB1.size(),
+        "Should have more WALs after new server");
+
+      List<FileStatus> newServerWALs = new ArrayList<>(walsAfterNewServer);
+      newServerWALs.removeAll(walsAfterB1);
+      assertFalse(newServerWALs.isEmpty(), "Should have WALs from new server");
+
+      BackupLogCleaner cleaner = new BackupLogCleaner();
+      cleaner.setConf(TEST_UTIL.getConfiguration());
+      cleaner.init(Map.of(HMaster.MASTER, TEST_UTIL.getHBaseCluster().getMaster()));
+
+      Set<FileStatus> deletable = toSet(cleaner.getDeletableFiles(walsAfterNewServer));
+      for (FileStatus newWAL : newServerWALs) {
+        assertFalse(deletable.contains(newWAL),
+          "WAL from new server should NOT be deletable: " + newWAL.getPath());
+      }
+    } finally {
+      TEST_UTIL.truncateTable(BackupSystemTable.getTableName(TEST_UTIL.getConfiguration())).close();
+      // Clean up the RegionServer we added
+      if (rsThread != null) {
+        LOG.info("Stopping the RegionServer added for test");
+        TEST_UTIL.getMiniHBaseCluster()
+          .stopRegionServer(rsThread.getRegionServer().getServerName());
+        TEST_UTIL.getMiniHBaseCluster()
+          .waitForRegionServerToStop(rsThread.getRegionServer().getServerName(), 30000);
+      }
+    }
+  }
+
+  @Test
+  public void testCanDeleteFileWithNewServerWALs() {
+    BackupInfo backup = new BackupInfo();
+    backup.setState(BackupInfo.BackupState.COMPLETE);
+    backup.setTableSetTimestampMap(
+      Map.of(TableName.valueOf("table1"), Map.of("server1:60020", 1000000L)));
+    BackupBoundaries boundaries =
+      BackupLogCleaner.calculatePreservationBoundary(List.of(backup), 0L);
+
+    // Old WAL from before the backup
+    Path oldWAL = new Path("/hbase/oldWALs/server1%2C60020%2C12345.500000");
+    assertTrue(BackupLogCleaner.canDeleteFile(boundaries, oldWAL),
+      "WAL older than backup should be deletable");
+
+    // WAL from exactly at the backup boundary
+    Path boundaryWAL = new Path("/hbase/oldWALs/server1%2C60020%2C12345.1000000");
+    assertTrue(BackupLogCleaner.canDeleteFile(boundaries, boundaryWAL),
+      "WAL at boundary should be deletable");
+
+    // WAL created after the backup boundary
+    Path newWal = new Path("/hbase/oldWALs/server1%2C60020%2C12345.1500000");
+    assertFalse(BackupLogCleaner.canDeleteFile(boundaries, newWal),
+      "WAL newer than backup should not be deletable");
+
+    // WAL from a new server that joined AFTER the backup
+    Path newServerWAL = new Path("/hbase/oldWALs/newserver%2C60020%2C99999.1500000");
+    assertFalse(BackupLogCleaner.canDeleteFile(boundaries, newServerWAL),
+      "WAL from new server (after backup) should NOT be deletable");
+  }
+
+  @Test
+  public void testFirstBackupProtectsFiles() {
+    BackupInfo backup = new BackupInfo();
+    backup.setBackupId("backup_1");
+    backup.setState(BackupInfo.BackupState.RUNNING);
+    backup.setStartTs(100L);
+    // Running backups have no TableSetTimestampMap
+
+    BackupBoundaries boundaries =
+      BackupLogCleaner.calculatePreservationBoundary(List.of(backup), 5L);
+
+    // There's only a single backup, and it is still running, so it's a FULL backup.
+    // We expect files preceding the snapshot are deletable, but files after the start are not.
+    // Because this is not region-server-specific, the buffer is taken into account.
+    Path path = new Path("/hbase/oldWALs/server1%2C60020%2C12345.94");
+    assertTrue(BackupLogCleaner.canDeleteFile(boundaries, path));
+    path = new Path("/hbase/oldWALs/server1%2C60020%2C12345.95");
+    assertTrue(BackupLogCleaner.canDeleteFile(boundaries, path));
+    path = new Path("/hbase/oldWALs/server1%2C60020%2C12345.96");
+    assertFalse(BackupLogCleaner.canDeleteFile(boundaries, path));
+
+    // If there is an already completed backup in the same root, only that one matters.
+    // In this case, a region-server-specific timestamp is available, so the buffer is not used.
+    BackupInfo backup2 = new BackupInfo();
+    backup2.setBackupId("backup_2");
+    backup2.setState(BackupInfo.BackupState.COMPLETE);
+    backup2.setStartTs(80L);
+    backup2
+      .setTableSetTimestampMap(Map.of(TableName.valueOf("table1"), Map.of("server1:60020", 90L)));
+
+    boundaries = BackupLogCleaner.calculatePreservationBoundary(List.of(backup, backup2), 5L);
+
+    path = new Path("/hbase/oldWALs/server1%2C60020%2C12345.89");
+    assertTrue(BackupLogCleaner.canDeleteFile(boundaries, path));
+    path = new Path("/hbase/oldWALs/server1%2C60020%2C12345.90");
+    assertTrue(BackupLogCleaner.canDeleteFile(boundaries, path));
+    path = new Path("/hbase/oldWALs/server1%2C60020%2C12345.91");
+    assertFalse(BackupLogCleaner.canDeleteFile(boundaries, path));
+  }
+
+  @Test
+  public void testCleansUpHMasterWal() {
+    Path path = new Path("/hbase/MasterData/WALs/hmaster,60000,1718808578163");
+    assertTrue(BackupLogCleaner.canDeleteFile(BackupBoundaries.builder(0L).build(), path));
+  }
+
+  @Test
+  public void testCleansUpArchivedHMasterWal() {
+    BackupBoundaries empty = BackupBoundaries.builder(0L).build();
+    Path normalPath =
+      new Path("/hbase/oldWALs/hmaster%2C60000%2C1716224062663.1716247552189$masterlocalwal$");
+    assertTrue(BackupLogCleaner.canDeleteFile(empty, normalPath));
+
+    Path masterPath = new Path(
+      "/hbase/MasterData/oldWALs/hmaster%2C60000%2C1716224062663.1716247552189$masterlocalwal$");
+    assertTrue(BackupLogCleaner.canDeleteFile(empty, masterPath));
   }
 
   private Set<FileStatus> mergeAsSet(Collection<FileStatus> toCopy, Collection<FileStatus> toAdd) {
@@ -206,22 +381,5 @@ public class TestBackupLogCleaner extends TestBackupBase {
     Set<T> result = new LinkedHashSet<>();
     iterable.forEach(result::add);
     return result;
-  }
-
-  @Test
-  public void testCleansUpHMasterWal() {
-    Path path = new Path("/hbase/MasterData/WALs/hmaster,60000,1718808578163");
-    assertTrue(BackupLogCleaner.canDeleteFile(Collections.emptyMap(), path));
-  }
-
-  @Test
-  public void testCleansUpArchivedHMasterWal() {
-    Path normalPath =
-      new Path("/hbase/oldWALs/hmaster%2C60000%2C1716224062663.1716247552189$masterlocalwal$");
-    assertTrue(BackupLogCleaner.canDeleteFile(Collections.emptyMap(), normalPath));
-
-    Path masterPath = new Path(
-      "/hbase/MasterData/oldWALs/hmaster%2C60000%2C1716224062663.1716247552189$masterlocalwal$");
-    assertTrue(BackupLogCleaner.canDeleteFile(Collections.emptyMap(), masterPath));
   }
 }

@@ -151,17 +151,19 @@ public final class WALSplitUtil {
    * /hbase/some_table/2323432434/recovered.edits/2332. This method also ensures existence of
    * RECOVERED_EDITS_DIR under the region creating it if necessary. And also set storage policy for
    * RECOVERED_EDITS_DIR if WAL_STORAGE_POLICY is configured.
-   * @param tableName          the table name
-   * @param encodedRegionName  the encoded region name
-   * @param seqId              the sequence id which used to generate file name
-   * @param fileNameBeingSplit the file being split currently. Used to generate tmp file name.
-   * @param tmpDirName         of the directory used to sideline old recovered edits file
-   * @param conf               configuration
+   * @param tableName           the table name
+   * @param encodedRegionName   the encoded region name
+   * @param seqId               the sequence id which used to generate file name
+   * @param fileNameBeingSplit  the file being split currently. Used to generate tmp file name.
+   * @param tmpDirName          of the directory used to sideline old recovered edits file
+   * @param conf                configuration
+   * @param workerNameComponent the worker name component for the file name
    * @return Path to file into which to dump split log edits.
    */
   @SuppressWarnings("deprecation")
   static Path getRegionSplitEditsPath(TableName tableName, byte[] encodedRegionName, long seqId,
-    String fileNameBeingSplit, String tmpDirName, Configuration conf) throws IOException {
+    String fileNameBeingSplit, String tmpDirName, Configuration conf, String workerNameComponent)
+    throws IOException {
     FileSystem walFS = CommonFSUtils.getWALFileSystem(conf);
     Path tableDir = CommonFSUtils.getWALTableDir(conf, tableName);
     String encodedRegionNameStr = Bytes.toString(encodedRegionName);
@@ -193,7 +195,8 @@ public final class WALSplitUtil {
     // Append file name ends with RECOVERED_LOG_TMPFILE_SUFFIX to ensure
     // region's replayRecoveredEdits will not delete it
     String fileName = formatRecoveredEditsFileName(seqId);
-    fileName = getTmpRecoveredEditsFileName(fileName + "-" + fileNameBeingSplit);
+    fileName =
+      getTmpRecoveredEditsFileName(fileName + "-" + fileNameBeingSplit + "-" + workerNameComponent);
     return new Path(dir, fileName);
   }
 

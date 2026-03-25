@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,27 +27,23 @@ import java.util.List;
 import java.util.Objects;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestProcedureExecution {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcedureExecution.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProcedureExecution.class);
 
@@ -61,7 +58,7 @@ public class TestProcedureExecution {
   private Path testDir;
   private Path logDir;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtil();
     testDir = htu.getDataTestDir();
@@ -75,7 +72,7 @@ public class TestProcedureExecution {
     ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     procExecutor.stop();
     procStore.stop(false);
@@ -149,10 +146,10 @@ public class TestProcedureExecution {
     // failed state with 2 execute and 2 rollback
     LOG.info(Objects.toString(state));
     Procedure<?> result = procExecutor.getResult(rootId);
-    assertTrue(state.toString(), result.isFailed());
+    assertTrue(result.isFailed(), state.toString());
     ProcedureTestingUtility.assertIsIllegalArgumentException(result);
 
-    assertEquals(state.toString(), 4, state.size());
+    assertEquals(4, state.size(), state.toString());
     assertEquals("rootProc-execute", state.get(0));
     assertEquals("subProc1-execute", state.get(1));
     assertEquals("subProc1-rollback", state.get(2));
@@ -171,7 +168,7 @@ public class TestProcedureExecution {
     LOG.info(Objects.toString(state));
     Procedure<?> result = procExecutor.getResult(rootId);
     ProcedureTestingUtility.assertProcNotFailed(result);
-    assertEquals(state.toString(), 3, state.size());
+    assertEquals(3, state.size(), state.toString());
   }
 
   @Test
@@ -186,13 +183,13 @@ public class TestProcedureExecution {
     // the 3rd proc fail, rollback after 2 successful execution
     LOG.info(Objects.toString(state));
     Procedure<?> result = procExecutor.getResult(rootId);
-    assertTrue(state.toString(), result.isFailed());
+    assertTrue(result.isFailed(), state.toString());
     LOG.info(result.getException().getMessage());
     Throwable cause = ProcedureTestingUtility.getExceptionCause(result);
-    assertTrue("expected TestProcedureException, got " + cause,
-      cause instanceof TestProcedureException);
+    assertTrue(cause instanceof TestProcedureException,
+      "expected TestProcedureException, got " + cause);
 
-    assertEquals(state.toString(), 6, state.size());
+    assertEquals(6, state.size(), state.toString());
     assertEquals("rootProc-execute", state.get(0));
     assertEquals("subProc1-execute", state.get(1));
     assertEquals("subProc2-execute", state.get(2));
@@ -216,10 +213,10 @@ public class TestProcedureExecution {
     @Override
     protected void rollback(Void env) throws IOException {
       if (++retries < 3) {
-        LOG.info("inject rollback failure " + retries);
+        LOG.info("inject rollback failure {}", retries);
         throw new IOException("injected failure number " + retries);
       }
-      LOG.info("execute non faulty rollback step retries=" + retries);
+      LOG.info("execute non faulty rollback step retries={}", retries);
     }
 
     @Override
@@ -233,11 +230,11 @@ public class TestProcedureExecution {
     long procId = ProcedureTestingUtility.submitAndWait(procExecutor, new TestFaultyRollback());
 
     Procedure<?> result = procExecutor.getResult(procId);
-    assertTrue("expected a failure", result.isFailed());
+    assertTrue(result.isFailed(), "expected a failure");
     LOG.info(result.getException().getMessage());
     Throwable cause = ProcedureTestingUtility.getExceptionCause(result);
-    assertTrue("expected TestProcedureException, got " + cause,
-      cause instanceof TestProcedureException);
+    assertInstanceOf(TestProcedureException.class, cause,
+      "expected TestProcedureException, got " + cause);
   }
 
   public static class TestWaitingProcedure extends SequentialProcedure<Void> {
@@ -315,11 +312,11 @@ public class TestProcedureExecution {
     long rootId = ProcedureTestingUtility.submitAndWait(procExecutor, proc);
     long execTime = EnvironmentEdgeManager.currentTime() - startTime;
     LOG.info(Objects.toString(state));
-    assertTrue("we didn't wait enough execTime=" + execTime, execTime >= PROC_TIMEOUT_MSEC);
+    assertTrue(execTime >= PROC_TIMEOUT_MSEC, "we didn't wait enough execTime=" + execTime);
     Procedure<?> result = procExecutor.getResult(rootId);
-    assertTrue(state.toString(), result.isFailed());
+    assertTrue(result.isFailed(), state.toString());
     ProcedureTestingUtility.assertIsTimeoutException(result);
-    assertEquals(state.toString(), 2, state.size());
+    assertEquals(2, state.size(), state.toString());
     assertEquals("wproc-execute", state.get(0));
     assertEquals("wproc-rollback", state.get(1));
   }
@@ -332,9 +329,9 @@ public class TestProcedureExecution {
     long rootId = ProcedureTestingUtility.submitAndWait(procExecutor, proc);
     LOG.info(Objects.toString(state));
     Procedure<?> result = procExecutor.getResult(rootId);
-    assertTrue(state.toString(), result.isFailed());
+    assertTrue(result.isFailed(), state.toString());
     ProcedureTestingUtility.assertIsTimeoutException(result);
-    assertEquals(state.toString(), 3, state.size());
+    assertEquals(3, state.size(), state.toString());
     assertEquals("wproc-execute", state.get(0));
     assertEquals("wproc-child-execute", state.get(1));
     assertEquals("wproc-rollback", state.get(2));

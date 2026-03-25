@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
+import org.apache.hadoop.hbase.regionserver.compactions.CustomCellTieredUtils;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerValidationUtils;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
@@ -263,6 +264,9 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
 
   @Override
   protected boolean waitInitialized(MasterProcedureEnv env) {
+    if (isCriticalSystemTable()) {
+      return false;
+    }
     if (getTableName().isSystemTable()) {
       // Creating system table is part of the initialization, so only wait for meta loaded instead
       // of waiting for master fully initialized.
@@ -314,6 +318,8 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
     StoreFileTrackerValidationUtils.checkForCreateTable(env.getMasterConfiguration(),
       tableDescriptor);
 
+    CustomCellTieredUtils.checkForModifyTable(tableDescriptor);
+
     return true;
   }
 
@@ -357,8 +363,7 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
         throws IOException {
         RegionInfo[] regions =
           newRegions != null ? newRegions.toArray(new RegionInfo[newRegions.size()]) : null;
-        return ModifyRegionUtils.createRegions(env.getMasterConfiguration(), tableRootDir,
-          tableDescriptor, regions, null);
+        return ModifyRegionUtils.createRegions(env, tableRootDir, tableDescriptor, regions, null);
       }
     });
   }

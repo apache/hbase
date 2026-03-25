@@ -39,7 +39,7 @@ public abstract class RawScanQueryMatcher extends UserScanQueryMatcher {
     if (filter != null && filter.filterAllRemaining()) {
       return MatchCode.DONE_SCAN;
     }
-    MatchCode returnCode = preCheck(cell);
+    MatchCode returnCode = preCheckRaw(cell);
     if (returnCode != null) {
       return returnCode;
     }

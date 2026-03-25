@@ -33,15 +33,11 @@
 RuntimeMXBean runtimeBean = ManagementFactory.getRuntimeMXBean();
 ObjectName jvmMetrics = new ObjectName("Hadoop:service=HBase,name=JvmMetrics");
 ObjectName rsMetrics = new ObjectName("Hadoop:service=HBase,name=RegionServer,sub=Server");
+Object pauseWarnThresholdExceeded = JSONMetricUtil.getValueFromMBean(rsMetrics, "pauseWarnThresholdExceeded");
+Object pauseInfoThresholdExceeded = JSONMetricUtil.getValueFromMBean(rsMetrics, "pauseInfoThresholdExceeded");
 
 // There is always two of GC collectors
 List<GarbageCollectorMXBean> gcBeans = JSONMetricUtil.getGcCollectorBeans();
-GarbageCollectorMXBean collector1 = null;
-GarbageCollectorMXBean collector2 = null;
-try {
-collector1 = gcBeans.get(0);
-collector2 = gcBeans.get(1);
-} catch(IndexOutOfBoundsException e) {}
 List<MemoryPoolMXBean> mPools = JSONMetricUtil.getMemoryPools();
 pageContext.setAttribute("pageTitle", "Process info for PID: " + JSONMetricUtil.getProcessPID());
 %>
@@ -60,7 +56,7 @@ pageContext.setAttribute("pageTitle", "Process info for PID: " + JSONMetricUtil.
         <th>Started</th>
         <th>Uptime</th>
         <th>PID</th>
-        <th>JvmPauseMonitor Count </th>
+        <th>JvmPauseMonitor Count</th>
         <th>Owner</th>
     </tr>
     <tr>
@@ -68,8 +64,8 @@ pageContext.setAttribute("pageTitle", "Process info for PID: " + JSONMetricUtil.
         <td><%= new Date(runtimeBean.getStartTime()) %></td>
         <td><%= StringUtils.humanTimeDiff(runtimeBean.getUptime()) %></td>
         <td><%= JSONMetricUtil.getProcessPID() %></td>
-        <td><%= (long)JSONMetricUtil.getValueFromMBean(rsMetrics, "pauseWarnThresholdExceeded")
-          + (long)JSONMetricUtil.getValueFromMBean(rsMetrics, "pauseInfoThresholdExceeded") %></td>
+        <td><%= pauseWarnThresholdExceeded != null && pauseInfoThresholdExceeded != null ?
+                (long)pauseWarnThresholdExceeded + (long)pauseInfoThresholdExceeded : 0 %></td>
         <td><%= runtimeBean.getSystemProperties().get("user.name") %></td>
       </tr>
   </table>
@@ -83,10 +79,10 @@ pageContext.setAttribute("pageTitle", "Process info for PID: " + JSONMetricUtil.
   <table class="table table-striped" width="90%" >
     <tr>
         <th>ThreadsNew</th>
-        <th>ThreadsRunable</th>
+        <th>ThreadsRunnable</th>
         <th>ThreadsBlocked</th>
         <th>ThreadsWaiting</th>
-        <th>ThreadsTimeWaiting</th>
+        <th>ThreadsTimedWaiting</th>
         <th>ThreadsTerminated</th>
     </tr>
     <tr>
@@ -105,19 +101,21 @@ pageContext.setAttribute("pageTitle", "Process info for PID: " + JSONMetricUtil.
     <div class="page-header">
     <h2>GC Collectors</h2>
     </div>
-    </div>
-    <% if (gcBeans.size() == 2) { %>
+  </div>
+    <% if (gcBeans != null && !gcBeans.isEmpty()) { %>
 <div class="tabbable">
-  <ul class="nav nav-pills">
-    <li class="active">
-      <a href="#tab_gc1" data-toggle="tab"><%=collector1.getName() %></a>
+  <ul class="nav nav-pills" role="tablist">
+    <% int idx = 0; for (GarbageCollectorMXBean gc : gcBeans) { %>
+    <li class="nav-item">
+      <a class="nav-link <%= idx == 0 ? "active" : "" %>" href="#tab_gc_<%= idx %>" data-bs-toggle="tab" role="tab">
+        <%= gc.getName() %>
+      </a>
     </li>
-    <li class="">
-      <a href="#tab_gc2" data-toggle="tab"><%=collector2.getName() %></a>
-     </li>
+    <% idx++; } %>
   </ul>
-    <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-      <div class="tab-pane active" id="tab_gc1">
+    <div class="tab-content">
+      <% idx = 0; long totalGcTime = 0; for (GarbageCollectorMXBean gc : gcBeans) { totalGcTime += gc.getCollectionTime(); %>
+      <div class="tab-pane <%= idx == 0 ? "active" : "" %>" id="tab_gc_<%= idx %>" role="tabpanel">
           <table class="table table-striped">
             <tr>
               <th>Collection Count</th>
@@ -125,35 +123,20 @@ pageContext.setAttribute("pageTitle", "Process info for PID: " + JSONMetricUtil.
               <th>Last duration</th>
             </tr>
             <tr>
-              <td> <%= collector1.getCollectionCount() %></td>
-              <td> <%= StringUtils.humanTimeDiff(collector1.getCollectionTime()) %> </td>
-              <td> <%= StringUtils.humanTimeDiff(JSONMetricUtil.getLastGcDuration(
-                collector1.getObjectName())) %></td>
+              <td><%= gc.getCollectionCount() %></td>
+              <td><%= StringUtils.humanTimeDiff(gc.getCollectionTime()) %></td>
+              <td><%= StringUtils.humanTimeDiff(JSONMetricUtil.getLastGcDuration(
+                gc.getObjectName())) %></td>
             </tr>
           </table>
       </div>
-      <div class="tab-pane" id="tab_gc2">
-        <table class="table table-striped">
-          <tr>
-            <th>Collection Count</th>
-            <th>Collection Time</th>
-             <th>Last duration</th>
-          </tr>
-          <tr>
-            <td> <%= collector2.getCollectionCount()  %></td>
-            <td> <%= StringUtils.humanTimeDiff(collector2.getCollectionTime()) %> </td>
-            <td> <%= StringUtils.humanTimeDiff(JSONMetricUtil.getLastGcDuration(
-              collector2.getObjectName())) %></td>
-          </tr>
-          </table>
+      <% idx++; } %>
       </div>
-      </div>
-  </div>
-  <%} else { %>
-  <p> Can not display GC Collector stats.</p>
-  <%} %>
-  Total GC Collection time: <%= StringUtils.humanTimeDiff(collector1.getCollectionTime() +
-    collector2.getCollectionTime())%>
+</div>
+<p>Total GC Collection time: <%= StringUtils.humanTimeDiff(totalGcTime) %></p>
+  <% } else { %>
+  <p>Can not display GC Collector stats.</p>
+  <% } %>
 </div>
 <% for(MemoryPoolMXBean mp:mPools) {
 if(mp.getName().contains("Cache")) continue;%>

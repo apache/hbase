@@ -123,7 +123,8 @@ public abstract class ServerRemoteProcedure extends Procedure<MasterProcedureEnv
   }
 
   @Override
-  public synchronized void remoteOperationCompleted(MasterProcedureEnv env) {
+  public synchronized void remoteOperationCompleted(MasterProcedureEnv env,
+    byte[] remoteResultData) {
     state = MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_REPORT_SUCCEED;
     remoteOperationDone(env, null);
   }

@@ -230,6 +230,11 @@ public interface MetricsRegionServerWrapper {
   double getPercentFileLocal();
 
   /**
+   * Get the percent of HFiles' that are local for primary region replicas.
+   */
+  double getPercentFileLocalPrimaryRegions();
+
+  /**
    * Get the percent of HFiles' that are local for secondary region replicas.
    */
   double getPercentFileLocalSecondaryRegions();
@@ -370,9 +375,19 @@ public interface MetricsRegionServerWrapper {
   long getL1CacheHitCount();
 
   /**
+   * Hit Caching count of L1 cache, for cacheable requests only.
+   */
+  long getL1CacheHitCachingCount();
+
+  /**
    * Miss count of L1 cache.
    */
   long getL1CacheMissCount();
+
+  /**
+   * Miss Caching count of L1 cache, for cacheable requests only.
+   */
+  long getL1CacheMissCachingCount();
 
   /**
    * Hit ratio of L1 cache.
@@ -380,9 +395,19 @@ public interface MetricsRegionServerWrapper {
   double getL1CacheHitRatio();
 
   /**
+   * Hit Caching ratio of L1 cache.
+   */
+  double getL1CacheHitCachingRatio();
+
+  /**
    * Miss ratio of L1 cache.
    */
   double getL1CacheMissRatio();
+
+  /**
+   * Miss Caching ratio of L1 cache.
+   */
+  double getL1CacheMissCachingRatio();
 
   /**
    * Cache size (bytes) of L2 cache
@@ -410,9 +435,19 @@ public interface MetricsRegionServerWrapper {
   long getL2CacheHitCount();
 
   /**
+   * Hit Caching count of L2 cache, for cacheable requests only.
+   */
+  long getL2CacheHitCachingCount();
+
+  /**
    * Miss count of L2 cache.
    */
   long getL2CacheMissCount();
+
+  /**
+   * Miss Caching count of L2 cache, for cacheable requests only.
+   */
+  long getL2CacheMissCachingCount();
 
   /**
    * Hit ratio of L2 cache.
@@ -420,9 +455,19 @@ public interface MetricsRegionServerWrapper {
   double getL2CacheHitRatio();
 
   /**
+   * Hit Caching ratio of L2 cache.
+   */
+  double getL2CacheHitCachingRatio();
+
+  /**
    * Miss ratio of L2 cache.
    */
   double getL2CacheMissRatio();
+
+  /**
+   * Miss Caching ratio of L2 cache.
+   */
+  double getL2CacheMissCachingRatio();
 
   /**
    * Force a re-computation of the metrics.

@@ -32,7 +32,6 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 
 import io.opentelemetry.sdk.trace.data.SpanData;
-import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Arrays;
@@ -55,6 +54,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
+import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
 import org.apache.hadoop.hbase.trace.OpenTelemetryClassRule;
 import org.apache.hadoop.hbase.trace.OpenTelemetryTestRule;
 import org.apache.hadoop.hbase.trace.TraceUtil;
@@ -283,12 +283,12 @@ public abstract class AbstractTestAsyncTableScan {
       fail("Found unexpected Exception " + e);
     }
     assertTraceError(anyOf(
-      containsEntry(is(SemanticAttributes.EXCEPTION_TYPE),
+      containsEntry(is(HBaseSemanticAttributes.EXCEPTION_TYPE),
         endsWith(NoSuchColumnFamilyException.class.getName())),
       allOf(
-        containsEntry(is(SemanticAttributes.EXCEPTION_TYPE),
+        containsEntry(is(HBaseSemanticAttributes.EXCEPTION_TYPE),
           endsWith(RemoteWithExtrasException.class.getName())),
-        containsEntry(is(SemanticAttributes.EXCEPTION_MESSAGE),
+        containsEntry(is(HBaseSemanticAttributes.EXCEPTION_MESSAGE),
           containsString(NoSuchColumnFamilyException.class.getName())))));
   }
 

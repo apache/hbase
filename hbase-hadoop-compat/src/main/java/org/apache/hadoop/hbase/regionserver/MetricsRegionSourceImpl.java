@@ -216,6 +216,14 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
       mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.MEMSTORE_SIZE,
         MetricsRegionServerSource.MEMSTORE_SIZE_DESC), this.regionWrapper.getMemStoreSize());
       mrb.addGauge(
+        Interns.info(regionNamePrefix + MetricsRegionServerSource.MEMSTORE_HEAP_SIZE,
+          MetricsRegionServerSource.MEMSTORE_HEAP_SIZE_DESC),
+        this.regionWrapper.getMemStoreHeapSize());
+      mrb.addGauge(
+        Interns.info(regionNamePrefix + MetricsRegionServerSource.MEMSTORE_OFFHEAP_SIZE,
+          MetricsRegionServerSource.MEMSTORE_OFFHEAP_SIZE_DESC),
+        this.regionWrapper.getMemStoreOffHeapSize());
+      mrb.addGauge(
         Interns.info(regionNamePrefix + MetricsRegionServerSource.MAX_STORE_FILE_AGE,
           MetricsRegionServerSource.MAX_STORE_FILE_AGE_DESC),
         this.regionWrapper.getMaxStoreFileAge());
@@ -286,6 +294,9 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
         MetricsRegionSource.ROW_READS_ONLY_ON_MEMSTORE_DESC);
       addCounter(mrb, this.regionWrapper.getMixedRowReadsCount(),
         MetricsRegionSource.MIXED_ROW_READS, MetricsRegionSource.MIXED_ROW_READS_ON_STORE_DESC);
+      mrb.add(Interns.tag(regionNamePrefix + MetricsRegionSource.TABLE_DESCRIPTOR_HASH,
+        MetricsRegionSource.TABLE_DESCRIPTOR_HASH_DESC,
+        this.regionWrapper.getTableDescriptorHash()));
     }
   }
 

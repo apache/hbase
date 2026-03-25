@@ -25,7 +25,7 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CON
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupCopyJob;
@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.BackupRequest;
 import org.apache.hadoop.hbase.backup.BackupRestoreFactory;
 import org.apache.hadoop.hbase.backup.BackupType;
-import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -134,17 +133,7 @@ public class FullTableBackupClient extends TableBackupClient {
     try (Admin admin = conn.getAdmin()) {
       // Begin BACKUP
       beginBackup(backupManager, backupInfo);
-      String savedStartCode;
-      boolean firstBackup;
-      // do snapshot for full table backup
 
-      savedStartCode = backupManager.readBackupStartCode();
-      firstBackup = savedStartCode == null || Long.parseLong(savedStartCode) == 0L;
-      if (firstBackup) {
-        // This is our first backup. Let's put some marker to system table so that we can hold the
-        // logs while we do the backup.
-        backupManager.writeBackupStartCode(0L);
-      }
       // We roll log here before we do the snapshot. It is possible there is duplicate data
       // in the log that is already in the snapshot. But if we do it after the snapshot, we
       // could have data loss.
@@ -152,10 +141,12 @@ public class FullTableBackupClient extends TableBackupClient {
       // the snapshot.
       LOG.info("Execute roll log procedure for full backup ...");
 
-      Map<String, String> props = new HashMap<>();
-      props.put("backupRoot", backupInfo.getBackupRootDir());
-      admin.execProcedure(LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_SIGNATURE,
-        LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_NAME, props);
+      // Gather the bulk loads being tracked by the system, which can be deleted (since their data
+      // will be part of the snapshot being taken). We gather this list before taking the actual
+      // snapshots for the same reason as the log rolls.
+      List<BulkLoad> bulkLoadsToDelete = backupManager.readBulkloadRows(tableList);
+
+      BackupUtils.logRoll(conn, backupInfo.getBackupRootDir(), conf);
 
       newTimestamps = backupManager.readRegionServerLastLogRollResult();
 
@@ -187,12 +178,11 @@ public class FullTableBackupClient extends TableBackupClient {
       Map<TableName, Map<String, Long>> newTableSetTimestampMap =
         backupManager.readLogTimestampMap();
 
-      backupInfo.setTableSetTimestampMap(newTableSetTimestampMap);
-      Long newStartCode =
-        BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(newTableSetTimestampMap));
-      backupManager.writeBackupStartCode(newStartCode);
+      backupManager
+        .deleteBulkLoadedRows(bulkLoadsToDelete.stream().map(BulkLoad::getRowKey).toList());
 
       // backup complete
+      backupInfo.setTableSetTimestampMap(newTableSetTimestampMap);
       completeBackup(conn, backupInfo, BackupType.FULL, conf);
     } catch (Exception e) {
       failBackup(conn, backupInfo, backupManager, e, "Unexpected BackupException : ",

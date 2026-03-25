@@ -75,6 +75,8 @@ allowed_expr="(^org/$|^org/apache/$|^org/apache/hadoop/$"
 allowed_expr+="|^org/apache/hadoop/hbase"
 #   * classes in packages that start with org.apache.hbase
 allowed_expr+="|^org/apache/hbase/"
+# We have a dummy DFSOutputStream implementation in hbase
+allowed_expr+="|^org/apache/hadoop/hdfs/$|^org/apache/hadoop/hdfs/DummyDFSOutputStream.class"
 #   * whatever in the "META-INF" directory
 allowed_expr+="|^META-INF/"
 #   * the folding tables from jcodings
@@ -94,7 +96,10 @@ allowed_expr+="|^PropertyList-1.0.dtd$"
 # Shaded jetty resources
 allowed_expr+="|^about.html$"
 allowed_expr+="|^jetty-dir.css$"
-
+# Coming from Guava, see https://github.com/google/guava/commit/2cc8c5eddb587db3ac12dacdd5563e79a4681ec4
+allowed_expr+="|^org/jspecify/$|^org/jspecify/annotations/$|^org/jspecify/annotations/.*\.class$"
+# Required by jetty 12 on ee8
+allowed_expr="(|^javax/$)"
 
 if [ -n "${allow_hadoop}" ]; then
   #   * classes in packages that start with org.apache.hadoop, which by
@@ -108,6 +113,8 @@ if [ -n "${allow_hadoop}" ]; then
   allowed_expr+="|^[^-]*-version-info.properties$"
   #   * Hadoop's application classloader properties file.
   allowed_expr+="|^org.apache.hadoop.application-classloader.properties$"
+  #   * Comes from dnssecjava via Hadoop
+  allowed_expr+="|^messages.properties$"
 else
   # We have some classes for integrating with the Hadoop Metrics2 system
   # that have to be in a particular package space due to access rules.

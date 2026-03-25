@@ -101,6 +101,8 @@ fi
 
 init_locale
 init_java
+#set java 17 for spotless
+set_java17_home
 init_mvn
 init_python
 # Print out subset of perl version (used in git hooks and japi-compliance-checker)
@@ -214,6 +216,14 @@ log "Checked out ${PROJECT} at ${GIT_REF} commit $git_hash"
 
 if [ -z "${RELEASE_VERSION}" ]; then
   RELEASE_VERSION="$(maven_get_version)"
+fi
+init_java17
+
+# We need to do following as hbase-thirdparty requires toolchains setup
+if [[ "${PROJECT}" == "hbase-thirdparty" ]]; then
+  log "Setting up toolchains and JDK for hbase-thirdparty"
+  set_java17_as_default_java
+  init_toolchains
 fi
 
 # This is a band-aid fix to avoid the failure of Maven nightly snapshot in some Jenkins

@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.io.compress;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.Closeable;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,7 +28,8 @@ import java.io.OutputStream;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.io.compress.CodecPool;
+import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
@@ -508,9 +511,74 @@ public final class Compression {
       }
     }
 
+    /**
+     * Signals if this codec theoretically supports decompression on {@link ByteBuff}s. This can be
+     * faster than using a DecompressionStream. If this method returns true, you can call
+     * {@link #getByteBuffDecompressor()} to obtain a {@link ByteBuffDecompressor}. You must then
+     * also call {@link ByteBuffDecompressor#canDecompress(ByteBuff, ByteBuff)} before attempting
+     * decompression, to verify if that decompressor is capable of handling your particular input
+     * and output buffers.
+     */
+    public boolean supportsByteBuffDecompression() {
+      CompressionCodec codec = getCodec(conf);
+      return codec instanceof ByteBuffDecompressionCodec;
+    }
+
+    /**
+     * Be sure to call {@link #supportsByteBuffDecompression()} before calling this method.
+     * @throws IllegalStateException if the codec does not support block decompression
+     */
+    public ByteBuffDecompressor getByteBuffDecompressor() {
+      CompressionCodec codec = getCodec(conf);
+      if (codec instanceof ByteBuffDecompressionCodec) {
+        ByteBuffDecompressor decompressor =
+          CodecPool.getByteBuffDecompressor((ByteBuffDecompressionCodec) codec);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Retrieved decompressor {} from pool.", decompressor);
+        }
+        return decompressor;
+      } else {
+        throw new IllegalStateException("Codec " + codec + " does not support block decompression");
+      }
+    }
+
+    public void returnByteBuffDecompressor(ByteBuffDecompressor decompressor) {
+      if (decompressor != null) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Returning decompressor {} to pool.", decompressor);
+        }
+        CodecPool.returnByteBuffDecompressor(decompressor);
+      }
+    }
+
+    /**
+     * Get an object that holds settings used by ByteBuffDecompressor. It's expensive to pull these
+     * from a Configuration object every time we decompress a block, so pull them here when, for
+     * example, opening an HFile, and reuse the returned HFileDecompressionContext as much as
+     * possible. The concrete class of this object will be one that is specific to the codec
+     * implementation in use. You don't need to inspect it yourself, just pass it along to
+     * {@link ByteBuffDecompressor#reinit(HFileDecompressionContext)}.
+     */
+    @Nullable
+    public HFileDecompressionContext
+      getHFileDecompressionContextForConfiguration(Configuration conf) {
+      if (supportsByteBuffDecompression()) {
+        return ((ByteBuffDecompressionCodec) getCodec(conf))
+          .getDecompressionContextFromConfiguration(conf);
+      } else {
+        return null;
+      }
+    }
+
     public String getName() {
       return compressName;
     }
+  }
+
+  /**
+   * See {@link Algorithm#getHFileDecompressionContextForConfiguration(Configuration)}.
+   */
+  public static abstract class HFileDecompressionContext implements Closeable, HeapSize {
   }
 
   public static Algorithm getCompressionAlgorithmByName(String compressName) {

@@ -144,6 +144,8 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLineParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.DefaultParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.ServletHolder;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.http.HttpVersion;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConfiguration;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConnectionFactory;
@@ -151,8 +153,6 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SecureRequestCustomi
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SslConnectionFactory;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletContextHandler;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.thread.QueuedThreadPool;
 
@@ -353,7 +353,7 @@ public class ThriftServer extends Configured implements Tool {
         + "To shutdown the thrift server run 'hbase-daemon.sh stop "
         + "thrift' or send a kill signal to the thrift server pid",
       true);
-    throw new ExitCodeException(exitCode, "");
+    System.exit(exitCode);
   }
 
   /**
@@ -778,7 +778,7 @@ public class ThriftServer extends Configured implements Tool {
     CommandLine cmd = parser.parse(options, args);
 
     if (cmd.hasOption("help")) {
-      printUsageAndExit(options, 1);
+      printUsageAndExit(options, 0);
     }
     parseCommandLine(cmd, options);
   }

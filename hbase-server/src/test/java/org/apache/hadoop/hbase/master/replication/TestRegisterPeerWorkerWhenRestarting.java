@@ -57,14 +57,14 @@ public class TestRegisterPeerWorkerWhenRestarting extends SyncReplicationTestBas
     }
 
     @Override
-    public void remoteProcedureCompleted(long procId) {
+    public void remoteProcedureCompleted(long procId, byte[] data) {
       if (
         FAIL && getMasterProcedureExecutor()
           .getProcedure(procId) instanceof SyncReplicationReplayWALRemoteProcedure
       ) {
         throw new RuntimeException("Inject error");
       }
-      super.remoteProcedureCompleted(procId);
+      super.remoteProcedureCompleted(procId, data);
     }
   }
 

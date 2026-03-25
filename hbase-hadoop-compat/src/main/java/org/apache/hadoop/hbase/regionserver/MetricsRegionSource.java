@@ -56,6 +56,8 @@ public interface MetricsRegionSource extends Comparable<MetricsRegionSource> {
   String ROW_READS_ONLY_ON_MEMSTORE_DESC = "Row reads happening completely out of memstore";
   String MIXED_ROW_READS = "mixedRowReadsCount";
   String MIXED_ROW_READS_ON_STORE_DESC = "Row reads happening out of files and memstore on store";
+  String TABLE_DESCRIPTOR_HASH = "tableDescriptorHash";
+  String TABLE_DESCRIPTOR_HASH_DESC = "The hash of the current table descriptor";
 
   /**
    * Close the region's metrics as this region is closing.

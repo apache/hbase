@@ -18,11 +18,10 @@
 package org.apache.hadoop.hbase.client;
 
 import static java.util.stream.Collectors.toList;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.checkHasFamilies;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.timelineConsistentRead;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.validatePut;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.validatePutsInRowMutations;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.validateMutation;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.validateRowMutations;
 import static org.apache.hadoop.hbase.trace.TraceUtil.tracedFuture;
 import static org.apache.hadoop.hbase.trace.TraceUtil.tracedFutures;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
@@ -249,7 +248,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public CompletableFuture<Void> put(Put put) {
-    validatePut(put, conn.connConf.getMaxKeyValueSize());
+    validateMutation(put, conn.connConf.getMaxKeyValueSize());
     final Supplier<Span> supplier = newTableOperationSpanBuilder().setOperation(put);
     return tracedFuture(() -> this.<Void, Put> newCaller(put, writeRpcTimeoutNs)
       .action((controller, loc, stub) -> RawAsyncTableImpl.<Put> voidMutate(controller, loc, stub,
@@ -268,7 +267,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public CompletableFuture<Result> append(Append append) {
-    checkHasFamilies(append);
+    validateMutation(append, conn.connConf.getMaxKeyValueSize());
     final Supplier<Span> supplier = newTableOperationSpanBuilder().setOperation(append);
     return tracedFuture(() -> {
       long nonceGroup = conn.getNonceGenerator().getNonceGroup();
@@ -283,7 +282,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public CompletableFuture<Result> increment(Increment increment) {
-    checkHasFamilies(increment);
+    validateMutation(increment, conn.connConf.getMaxKeyValueSize());
     final Supplier<Span> supplier = newTableOperationSpanBuilder().setOperation(increment);
     return tracedFuture(() -> {
       long nonceGroup = conn.getNonceGenerator().getNonceGroup();
@@ -349,7 +348,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
     @Override
     public CompletableFuture<Boolean> thenPut(Put put) {
-      validatePut(put, conn.connConf.getMaxKeyValueSize());
+      validateMutation(put, conn.connConf.getMaxKeyValueSize());
       preCheck();
       final Supplier<Span> supplier = newTableOperationSpanBuilder()
         .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
@@ -358,7 +357,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         () -> RawAsyncTableImpl.this.<Boolean> newCaller(row, put.getPriority(), rpcTimeoutNs)
           .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller, loc, stub, put,
             (rn, p) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier, op, value,
-              null, timeRange, p, HConstants.NO_NONCE, HConstants.NO_NONCE),
+              null, timeRange, p, HConstants.NO_NONCE, HConstants.NO_NONCE, false),
             (c, r) -> r.getProcessed()))
           .call(),
         supplier);
@@ -374,7 +373,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         () -> RawAsyncTableImpl.this.<Boolean> newCaller(row, delete.getPriority(), rpcTimeoutNs)
           .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller, loc, stub, delete,
             (rn, d) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier, op, value,
-              null, timeRange, d, HConstants.NO_NONCE, HConstants.NO_NONCE),
+              null, timeRange, d, HConstants.NO_NONCE, HConstants.NO_NONCE, false),
             (c, r) -> r.getProcessed()))
           .call(),
         supplier);
@@ -383,7 +382,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     @Override
     public CompletableFuture<Boolean> thenMutate(RowMutations mutations) {
       preCheck();
-      validatePutsInRowMutations(mutations, conn.connConf.getMaxKeyValueSize());
+      validateRowMutations(mutations, conn.connConf.getMaxKeyValueSize());
       final Supplier<Span> supplier = newTableOperationSpanBuilder()
         .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
         .setContainerOperations(mutations);
@@ -392,7 +391,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         .action((controller, loc, stub) -> RawAsyncTableImpl.this.mutateRow(controller, loc, stub,
           mutations,
           (rn, rm) -> RequestConverter.buildMultiRequest(rn, row, family, qualifier, op, value,
-            null, timeRange, rm, HConstants.NO_NONCE, HConstants.NO_NONCE),
+            null, timeRange, rm, HConstants.NO_NONCE, HConstants.NO_NONCE, false),
           CheckAndMutateResult::isSuccess))
         .call(), supplier);
     }
@@ -425,7 +424,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
     @Override
     public CompletableFuture<Boolean> thenPut(Put put) {
-      validatePut(put, conn.connConf.getMaxKeyValueSize());
+      validateMutation(put, conn.connConf.getMaxKeyValueSize());
       final Supplier<Span> supplier = newTableOperationSpanBuilder()
         .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
         .setContainerOperations(put);
@@ -433,7 +432,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         () -> RawAsyncTableImpl.this.<Boolean> newCaller(row, put.getPriority(), rpcTimeoutNs)
           .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller, loc, stub, put,
             (rn, p) -> RequestConverter.buildMutateRequest(rn, row, null, null, null, null, filter,
-              timeRange, p, HConstants.NO_NONCE, HConstants.NO_NONCE),
+              timeRange, p, HConstants.NO_NONCE, HConstants.NO_NONCE, false),
             (c, r) -> r.getProcessed()))
           .call(),
         supplier);
@@ -448,7 +447,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         () -> RawAsyncTableImpl.this.<Boolean> newCaller(row, delete.getPriority(), rpcTimeoutNs)
           .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller, loc, stub, delete,
             (rn, d) -> RequestConverter.buildMutateRequest(rn, row, null, null, null, null, filter,
-              timeRange, d, HConstants.NO_NONCE, HConstants.NO_NONCE),
+              timeRange, d, HConstants.NO_NONCE, HConstants.NO_NONCE, false),
             (c, r) -> r.getProcessed()))
           .call(),
         supplier);
@@ -456,7 +455,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
     @Override
     public CompletableFuture<Boolean> thenMutate(RowMutations mutations) {
-      validatePutsInRowMutations(mutations, conn.connConf.getMaxKeyValueSize());
+      validateRowMutations(mutations, conn.connConf.getMaxKeyValueSize());
       final Supplier<Span> supplier = newTableOperationSpanBuilder()
         .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
         .setContainerOperations(mutations);
@@ -465,7 +464,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         .action((controller, loc, stub) -> RawAsyncTableImpl.this.mutateRow(controller, loc, stub,
           mutations,
           (rn, rm) -> RequestConverter.buildMultiRequest(rn, row, null, null, null, null, filter,
-            timeRange, rm, HConstants.NO_NONCE, HConstants.NO_NONCE),
+            timeRange, rm, HConstants.NO_NONCE, HConstants.NO_NONCE, false),
           CheckAndMutateResult::isSuccess))
         .call(), supplier);
     }
@@ -487,9 +486,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
           || checkAndMutate.getAction() instanceof Append
       ) {
         Mutation mutation = (Mutation) checkAndMutate.getAction();
-        if (mutation instanceof Put) {
-          validatePut((Put) mutation, conn.connConf.getMaxKeyValueSize());
-        }
+        validateMutation(mutation, conn.connConf.getMaxKeyValueSize());
         long nonceGroup = conn.getNonceGenerator().getNonceGroup();
         long nonce = conn.getNonceGenerator().newNonce();
         return RawAsyncTableImpl.this
@@ -500,12 +497,13 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
               (rn, m) -> RequestConverter.buildMutateRequest(rn, checkAndMutate.getRow(),
                 checkAndMutate.getFamily(), checkAndMutate.getQualifier(),
                 checkAndMutate.getCompareOp(), checkAndMutate.getValue(),
-                checkAndMutate.getFilter(), checkAndMutate.getTimeRange(), m, nonceGroup, nonce),
+                checkAndMutate.getFilter(), checkAndMutate.getTimeRange(), m, nonceGroup, nonce,
+                checkAndMutate.isQueryMetricsEnabled()),
               (c, r) -> ResponseConverter.getCheckAndMutateResult(r, c.cellScanner())))
           .call();
       } else if (checkAndMutate.getAction() instanceof RowMutations) {
         RowMutations rowMutations = (RowMutations) checkAndMutate.getAction();
-        validatePutsInRowMutations(rowMutations, conn.connConf.getMaxKeyValueSize());
+        validateRowMutations(rowMutations, conn.connConf.getMaxKeyValueSize());
         long nonceGroup = conn.getNonceGenerator().getNonceGroup();
         long nonce = conn.getNonceGenerator().newNonce();
         return RawAsyncTableImpl.this
@@ -516,7 +514,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
               (rn, rm) -> RequestConverter.buildMultiRequest(rn, checkAndMutate.getRow(),
                 checkAndMutate.getFamily(), checkAndMutate.getQualifier(),
                 checkAndMutate.getCompareOp(), checkAndMutate.getValue(),
-                checkAndMutate.getFilter(), checkAndMutate.getTimeRange(), rm, nonceGroup, nonce),
+                checkAndMutate.getFilter(), checkAndMutate.getTimeRange(), rm, nonceGroup, nonce,
+                checkAndMutate.isQueryMetricsEnabled()),
               resp -> resp))
           .call();
       } else {
@@ -583,7 +582,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public CompletableFuture<Result> mutateRow(RowMutations mutations) {
-    validatePutsInRowMutations(mutations, conn.connConf.getMaxKeyValueSize());
+    validateRowMutations(mutations, conn.connConf.getMaxKeyValueSize());
     long nonceGroup = conn.getNonceGenerator().getNonceGroup();
     long nonce = conn.getNonceGenerator().newNonce();
     final Supplier<Span> supplier =
@@ -692,18 +691,19 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   private <T> List<CompletableFuture<T>> batch(List<? extends Row> actions, long rpcTimeoutNs) {
     for (Row action : actions) {
-      if (action instanceof Put) {
-        validatePut((Put) action, conn.connConf.getMaxKeyValueSize());
+      if (action instanceof Mutation) {
+        validateMutation((Mutation) action, conn.connConf.getMaxKeyValueSize());
       } else if (action instanceof CheckAndMutate) {
         CheckAndMutate checkAndMutate = (CheckAndMutate) action;
-        if (checkAndMutate.getAction() instanceof Put) {
-          validatePut((Put) checkAndMutate.getAction(), conn.connConf.getMaxKeyValueSize());
+        if (checkAndMutate.getAction() instanceof Mutation) {
+          validateMutation((Mutation) checkAndMutate.getAction(),
+            conn.connConf.getMaxKeyValueSize());
         } else if (checkAndMutate.getAction() instanceof RowMutations) {
-          validatePutsInRowMutations((RowMutations) checkAndMutate.getAction(),
+          validateRowMutations((RowMutations) checkAndMutate.getAction(),
             conn.connConf.getMaxKeyValueSize());
         }
       } else if (action instanceof RowMutations) {
-        validatePutsInRowMutations((RowMutations) action, conn.connConf.getMaxKeyValueSize());
+        validateRowMutations((RowMutations) action, conn.connConf.getMaxKeyValueSize());
       }
     }
     return conn.callerFactory.batch().table(tableName).actions(actions)
@@ -823,7 +823,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
           Duration waitInterval = callback.getWaitInterval(r, region);
           LOG.trace("Coprocessor returned incomplete result. "
             + "Sleeping for {} before making follow-up request.", waitInterval);
-          if (waitInterval.isZero()) {
+          if (!waitInterval.isZero()) {
             AsyncConnectionImpl.RETRY_TIMER.newTimeout(
               (timeout) -> coprocessorServiceUntilComplete(stubMaker, updatedCallable, callback,
                 locateFinished, unfinishedRequest, region, span),

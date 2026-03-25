@@ -30,17 +30,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
-import org.apache.hadoop.hbase.security.access.AccessController;
-import org.apache.hadoop.hbase.security.access.PermissionStorage;
-import org.apache.hadoop.hbase.security.access.SecureTestUtil;
-import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProviders;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenIdentifier;
-import org.apache.hadoop.hbase.security.token.TokenProvider;
-import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.io.LongWritable;
@@ -51,7 +43,6 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.junit.After;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -59,18 +50,13 @@ import org.junit.experimental.categories.Category;
 /**
  * Test different variants of initTableMapperJob method
  */
-@Category({ MapReduceTests.class, MediumTests.class })
+@Category({ MapReduceTests.class, LargeTests.class })
 public class TestTableMapReduceUtil {
   private static final String HTTP_PRINCIPAL = "HTTP/localhost";
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestTableMapReduceUtil.class);
-
-  @After
-  public void after() {
-    SaslClientAuthenticationProviders.reset();
-  }
 
   /*
    * initTableSnapshotMapperJob is tested in {@link TestTableSnapshotInputFormat} because the method
@@ -134,31 +120,6 @@ public class TestTableMapReduceUtil {
     assertEquals("Table", job.getConfiguration().get(TableInputFormat.INPUT_TABLE));
   }
 
-  private static Closeable startSecureMiniCluster(HBaseTestingUtil util, MiniKdc kdc,
-    String principal) throws Exception {
-    Configuration conf = util.getConfiguration();
-
-    SecureTestUtil.enableSecurity(conf);
-    VisibilityTestUtil.enableVisiblityLabels(conf);
-    SecureTestUtil.verifyConfiguration(conf);
-
-    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-      AccessController.class.getName() + ',' + TokenProvider.class.getName());
-
-    HBaseKerberosUtils.setSecuredConfiguration(conf, principal + '@' + kdc.getRealm(),
-      HTTP_PRINCIPAL + '@' + kdc.getRealm());
-
-    util.startMiniCluster();
-    try {
-      util.waitUntilAllRegionsAssigned(PermissionStorage.ACL_TABLE_NAME);
-    } catch (Exception e) {
-      util.shutdownMiniCluster();
-      throw e;
-    }
-
-    return util::shutdownMiniCluster;
-  }
-
   @Test
   public void testInitCredentialsForCluster1() throws Exception {
     HBaseTestingUtil util1 = new HBaseTestingUtil();
@@ -198,8 +159,8 @@ public class TestTableMapReduceUtil {
       kdc.createPrincipal(keytab, userPrincipal, HTTP_PRINCIPAL);
       loginUserFromKeytab(userPrincipal + '@' + kdc.getRealm(), keytab.getAbsolutePath());
 
-      try (Closeable ignored1 = startSecureMiniCluster(util1, kdc, userPrincipal);
-        Closeable ignored2 = startSecureMiniCluster(util2, kdc, userPrincipal)) {
+      try (Closeable ignored1 = util1.startSecureMiniCluster(kdc, userPrincipal, HTTP_PRINCIPAL);
+        Closeable ignored2 = util2.startSecureMiniCluster(kdc, userPrincipal, HTTP_PRINCIPAL)) {
         Configuration conf1 = util1.getConfiguration();
         Job job = Job.getInstance(conf1);
 
@@ -232,7 +193,7 @@ public class TestTableMapReduceUtil {
       kdc.createPrincipal(keytab, userPrincipal, HTTP_PRINCIPAL);
       loginUserFromKeytab(userPrincipal + '@' + kdc.getRealm(), keytab.getAbsolutePath());
 
-      try (Closeable ignored1 = startSecureMiniCluster(util1, kdc, userPrincipal)) {
+      try (Closeable ignored1 = util1.startSecureMiniCluster(kdc, userPrincipal, HTTP_PRINCIPAL)) {
         HBaseTestingUtil util2 = new HBaseTestingUtil();
         // Assume util2 is insecure cluster
         // Do not start util2 because cannot boot secured mini cluster and insecure mini cluster at
@@ -268,7 +229,7 @@ public class TestTableMapReduceUtil {
       kdc.createPrincipal(keytab, userPrincipal, HTTP_PRINCIPAL);
       loginUserFromKeytab(userPrincipal + '@' + kdc.getRealm(), keytab.getAbsolutePath());
 
-      try (Closeable ignored2 = startSecureMiniCluster(util2, kdc, userPrincipal)) {
+      try (Closeable ignored2 = util2.startSecureMiniCluster(kdc, userPrincipal, HTTP_PRINCIPAL)) {
         Configuration conf1 = util1.getConfiguration();
         Job job = Job.getInstance(conf1);
 
@@ -303,8 +264,8 @@ public class TestTableMapReduceUtil {
       kdc.createPrincipal(keytab, userPrincipal, HTTP_PRINCIPAL);
       loginUserFromKeytab(userPrincipal + '@' + kdc.getRealm(), keytab.getAbsolutePath());
 
-      try (Closeable ignored1 = startSecureMiniCluster(util1, kdc, userPrincipal);
-        Closeable ignored2 = startSecureMiniCluster(util2, kdc, userPrincipal)) {
+      try (Closeable ignored1 = util1.startSecureMiniCluster(kdc, userPrincipal, HTTP_PRINCIPAL);
+        Closeable ignored2 = util2.startSecureMiniCluster(kdc, userPrincipal, HTTP_PRINCIPAL)) {
         Configuration conf1 = util1.getConfiguration();
         Job job = Job.getInstance(conf1);
 

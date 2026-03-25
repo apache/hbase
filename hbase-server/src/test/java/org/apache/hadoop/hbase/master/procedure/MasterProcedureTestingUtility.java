@@ -113,6 +113,7 @@ public class MasterProcedureTestingUtility {
           // create server state node, to simulate master start up
           env.getMasterServices().getServerManager().getOnlineServersList()
             .forEach(am.getRegionStates()::createServer);
+          am.initializationPostMetaOnline();
           master.setServiceStarted(true);
           return null;
         }

@@ -17,18 +17,16 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
@@ -69,8 +67,6 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
   static List<ServerName> servers;
 
   static List<TableDescriptor> tableDescs;
-
-  static Map<TableName, String> tableMap = new HashMap<>();
 
   static TableName[] tables = new TableName[] { TableName.valueOf("dt1"), TableName.valueOf("dt2"),
     TableName.valueOf("dt3"), TableName.valueOf("dt4") };
@@ -131,18 +127,14 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
   }
 
   @Test
-  public void testRegionsNotCachedOnOldServerAndCurrentServer() throws Exception {
-    // The regions are not cached on old server as well as the current server. This causes
-    // skewness in the region allocation which should be fixed by the balancer
-
+  public void testBalancerNotThrowNPEWhenBalancerPlansIsNull() throws Exception {
     Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
     ServerName server0 = servers.get(0);
     ServerName server1 = servers.get(1);
     ServerName server2 = servers.get(2);
 
-    // Simulate that the regions previously hosted by server1 are now hosted on server0
-    List<RegionInfo> regionsOnServer0 = randomRegions(10);
-    List<RegionInfo> regionsOnServer1 = randomRegions(0);
+    List<RegionInfo> regionsOnServer0 = randomRegions(5);
+    List<RegionInfo> regionsOnServer1 = randomRegions(5);
     List<RegionInfo> regionsOnServer2 = randomRegions(5);
 
     clusterState.put(server0, regionsOnServer0);
@@ -157,241 +149,18 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
       0.0f, new ArrayList<>(), 0, 10));
     serverMetricsMap.put(server2, mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2,
       0.0f, new ArrayList<>(), 0, 10));
+
     ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
     when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
     loadBalancer.updateClusterMetrics(clusterMetrics);
 
     Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
       (Map) mockClusterServersWithTables(clusterState);
-    List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
-    Set<RegionInfo> regionsMovedFromServer0 = new HashSet<>();
-    Map<ServerName, List<RegionInfo>> targetServers = new HashMap<>();
-    for (RegionPlan plan : plans) {
-      if (plan.getSource().equals(server0)) {
-        regionsMovedFromServer0.add(plan.getRegionInfo());
-        if (!targetServers.containsKey(plan.getDestination())) {
-          targetServers.put(plan.getDestination(), new ArrayList<>());
-        }
-        targetServers.get(plan.getDestination()).add(plan.getRegionInfo());
-      }
+    try {
+      List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
+      assertNull(plans);
+    } catch (NullPointerException npe) {
+      fail("NPE should not be thrown");
     }
-    // should move 5 regions from server0 to server 1
-    assertEquals(5, regionsMovedFromServer0.size());
-    assertEquals(5, targetServers.get(server1).size());
-  }
-
-  @Test
-  public void testRegionsPartiallyCachedOnOldServerAndNotCachedOnCurrentServer() throws Exception {
-    // The regions are partially cached on old server but not cached on the current server
-
-    Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
-    ServerName server0 = servers.get(0);
-    ServerName server1 = servers.get(1);
-    ServerName server2 = servers.get(2);
-
-    // Simulate that the regions previously hosted by server1 are now hosted on server0
-    List<RegionInfo> regionsOnServer0 = randomRegions(10);
-    List<RegionInfo> regionsOnServer1 = randomRegions(0);
-    List<RegionInfo> regionsOnServer2 = randomRegions(5);
-
-    clusterState.put(server0, regionsOnServer0);
-    clusterState.put(server1, regionsOnServer1);
-    clusterState.put(server2, regionsOnServer2);
-
-    // Mock cluster metrics
-
-    // Mock 5 regions from server0 were previously hosted on server1
-    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
-
-    Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
-    serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
-      0.0f, new ArrayList<>(), 0, 10));
-    serverMetricsMap.put(server1, mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1,
-      0.0f, oldCachedRegions, 6, 10));
-    serverMetricsMap.put(server2, mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2,
-      0.0f, new ArrayList<>(), 0, 10));
-    ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
-    when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
-    loadBalancer.updateClusterMetrics(clusterMetrics);
-
-    Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
-      (Map) mockClusterServersWithTables(clusterState);
-    List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
-    Set<RegionInfo> regionsMovedFromServer0 = new HashSet<>();
-    Map<ServerName, List<RegionInfo>> targetServers = new HashMap<>();
-    for (RegionPlan plan : plans) {
-      if (plan.getSource().equals(server0)) {
-        regionsMovedFromServer0.add(plan.getRegionInfo());
-        if (!targetServers.containsKey(plan.getDestination())) {
-          targetServers.put(plan.getDestination(), new ArrayList<>());
-        }
-        targetServers.get(plan.getDestination()).add(plan.getRegionInfo());
-      }
-    }
-    // should move 5 regions from server0 to server1
-    assertEquals(5, regionsMovedFromServer0.size());
-    assertEquals(5, targetServers.get(server1).size());
-    assertTrue(targetServers.get(server1).containsAll(oldCachedRegions));
-  }
-
-  @Test
-  public void testRegionsFullyCachedOnOldServerAndNotCachedOnCurrentServers() throws Exception {
-    // The regions are fully cached on old server
-
-    Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
-    ServerName server0 = servers.get(0);
-    ServerName server1 = servers.get(1);
-    ServerName server2 = servers.get(2);
-
-    // Simulate that the regions previously hosted by server1 are now hosted on server0
-    List<RegionInfo> regionsOnServer0 = randomRegions(10);
-    List<RegionInfo> regionsOnServer1 = randomRegions(0);
-    List<RegionInfo> regionsOnServer2 = randomRegions(5);
-
-    clusterState.put(server0, regionsOnServer0);
-    clusterState.put(server1, regionsOnServer1);
-    clusterState.put(server2, regionsOnServer2);
-
-    // Mock cluster metrics
-
-    // Mock 5 regions from server0 were previously hosted on server1
-    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
-
-    Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
-    serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
-      0.0f, new ArrayList<>(), 0, 10));
-    serverMetricsMap.put(server1, mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1,
-      0.0f, oldCachedRegions, 10, 10));
-    serverMetricsMap.put(server2, mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2,
-      0.0f, new ArrayList<>(), 0, 10));
-    ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
-    when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
-    loadBalancer.updateClusterMetrics(clusterMetrics);
-
-    Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
-      (Map) mockClusterServersWithTables(clusterState);
-    List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
-    Set<RegionInfo> regionsMovedFromServer0 = new HashSet<>();
-    Map<ServerName, List<RegionInfo>> targetServers = new HashMap<>();
-    for (RegionPlan plan : plans) {
-      if (plan.getSource().equals(server0)) {
-        regionsMovedFromServer0.add(plan.getRegionInfo());
-        if (!targetServers.containsKey(plan.getDestination())) {
-          targetServers.put(plan.getDestination(), new ArrayList<>());
-        }
-        targetServers.get(plan.getDestination()).add(plan.getRegionInfo());
-      }
-    }
-    // should move 5 regions from server0 to server1
-    assertEquals(5, regionsMovedFromServer0.size());
-    assertEquals(5, targetServers.get(server1).size());
-    assertTrue(targetServers.get(server1).containsAll(oldCachedRegions));
-  }
-
-  @Test
-  public void testRegionsFullyCachedOnOldAndCurrentServers() throws Exception {
-    // The regions are fully cached on old server
-
-    Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
-    ServerName server0 = servers.get(0);
-    ServerName server1 = servers.get(1);
-    ServerName server2 = servers.get(2);
-
-    // Simulate that the regions previously hosted by server1 are now hosted on server0
-    List<RegionInfo> regionsOnServer0 = randomRegions(10);
-    List<RegionInfo> regionsOnServer1 = randomRegions(0);
-    List<RegionInfo> regionsOnServer2 = randomRegions(5);
-
-    clusterState.put(server0, regionsOnServer0);
-    clusterState.put(server1, regionsOnServer1);
-    clusterState.put(server2, regionsOnServer2);
-
-    // Mock cluster metrics
-
-    // Mock 5 regions from server0 were previously hosted on server1
-    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
-
-    Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
-    serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
-      1.0f, new ArrayList<>(), 0, 10));
-    serverMetricsMap.put(server1, mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1,
-      1.0f, oldCachedRegions, 10, 10));
-    serverMetricsMap.put(server2, mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2,
-      1.0f, new ArrayList<>(), 0, 10));
-    ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
-    when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
-    loadBalancer.updateClusterMetrics(clusterMetrics);
-
-    Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
-      (Map) mockClusterServersWithTables(clusterState);
-    List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
-    Set<RegionInfo> regionsMovedFromServer0 = new HashSet<>();
-    Map<ServerName, List<RegionInfo>> targetServers = new HashMap<>();
-    for (RegionPlan plan : plans) {
-      if (plan.getSource().equals(server0)) {
-        regionsMovedFromServer0.add(plan.getRegionInfo());
-        if (!targetServers.containsKey(plan.getDestination())) {
-          targetServers.put(plan.getDestination(), new ArrayList<>());
-        }
-        targetServers.get(plan.getDestination()).add(plan.getRegionInfo());
-      }
-    }
-    // should move 5 regions from server0 to server1
-    assertEquals(5, regionsMovedFromServer0.size());
-    assertEquals(5, targetServers.get(server1).size());
-    assertTrue(targetServers.get(server1).containsAll(oldCachedRegions));
-  }
-
-  @Test
-  public void testRegionsPartiallyCachedOnOldServerAndCurrentServer() throws Exception {
-    // The regions are partially cached on old server
-
-    Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
-    ServerName server0 = servers.get(0);
-    ServerName server1 = servers.get(1);
-    ServerName server2 = servers.get(2);
-
-    // Simulate that the regions previously hosted by server1 are now hosted on server0
-    List<RegionInfo> regionsOnServer0 = randomRegions(10);
-    List<RegionInfo> regionsOnServer1 = randomRegions(0);
-    List<RegionInfo> regionsOnServer2 = randomRegions(5);
-
-    clusterState.put(server0, regionsOnServer0);
-    clusterState.put(server1, regionsOnServer1);
-    clusterState.put(server2, regionsOnServer2);
-
-    // Mock cluster metrics
-
-    // Mock 5 regions from server0 were previously hosted on server1
-    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
-
-    Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
-    serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
-      0.2f, new ArrayList<>(), 0, 10));
-    serverMetricsMap.put(server1, mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1,
-      0.0f, oldCachedRegions, 6, 10));
-    serverMetricsMap.put(server2, mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2,
-      1.0f, new ArrayList<>(), 0, 10));
-    ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
-    when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
-    loadBalancer.updateClusterMetrics(clusterMetrics);
-
-    Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
-      (Map) mockClusterServersWithTables(clusterState);
-    List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
-    Set<RegionInfo> regionsMovedFromServer0 = new HashSet<>();
-    Map<ServerName, List<RegionInfo>> targetServers = new HashMap<>();
-    for (RegionPlan plan : plans) {
-      if (plan.getSource().equals(server0)) {
-        regionsMovedFromServer0.add(plan.getRegionInfo());
-        if (!targetServers.containsKey(plan.getDestination())) {
-          targetServers.put(plan.getDestination(), new ArrayList<>());
-        }
-        targetServers.get(plan.getDestination()).add(plan.getRegionInfo());
-      }
-    }
-    assertEquals(5, regionsMovedFromServer0.size());
-    assertEquals(5, targetServers.get(server1).size());
-    assertTrue(targetServers.get(server1).containsAll(oldCachedRegions));
   }
 }

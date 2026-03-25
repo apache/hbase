@@ -169,7 +169,9 @@ public class TestFilterList {
     assertTrue(filterMPONE.filterRowKey(KeyValueUtil.createFirstOnRow(rowkey)));
     kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(0), Bytes.toBytes(0));
     assertFalse(Filter.ReturnCode.INCLUDE == filterMPONE.filterCell(kv));
-    assertFalse(filterMPONE.filterRow());
+    // FilterList.filterRow() returns true because previously "z" was filtered out (return true) by
+    // PrefixFilter.filterRowKey()
+    assertTrue(filterMPONE.filterRow());
 
     /* We should filter any row */
     rowkey = Bytes.toBytes("z");

@@ -40,14 +40,19 @@ public class RpcThrottlingException extends HBaseIOException {
     ReadSizeExceeded,
     RequestCapacityUnitExceeded,
     ReadCapacityUnitExceeded,
-    WriteCapacityUnitExceeded
+    WriteCapacityUnitExceeded,
+    AtomicRequestNumberExceeded,
+    AtomicReadSizeExceeded,
+    AtomicWriteSizeExceeded,
+    RequestHandlerUsageTimeExceeded,
   }
 
-  private static final String[] MSG_TYPE =
-    new String[] { "number of requests exceeded", "request size limit exceeded",
-      "number of read requests exceeded", "number of write requests exceeded",
-      "write size limit exceeded", "read size limit exceeded", "request capacity unit exceeded",
-      "read capacity unit exceeded", "write capacity unit exceeded" };
+  private static final String[] MSG_TYPE = new String[] { "number of requests exceeded",
+    "request size limit exceeded", "number of read requests exceeded",
+    "number of write requests exceeded", "write size limit exceeded", "read size limit exceeded",
+    "request capacity unit exceeded", "read capacity unit exceeded", "write capacity unit exceeded",
+    "atomic request number exceeded", "atomic read size exceeded", "atomic write size exceeded",
+    "request handler usage time exceeded" };
 
   private static final String MSG_WAIT = " - wait ";
 
@@ -127,6 +132,26 @@ public class RpcThrottlingException extends HBaseIOException {
     throwThrottlingException(Type.WriteCapacityUnitExceeded, waitInterval);
   }
 
+  public static void throwAtomicRequestNumberExceeded(final long waitInterval)
+    throws RpcThrottlingException {
+    throwThrottlingException(Type.AtomicRequestNumberExceeded, waitInterval);
+  }
+
+  public static void throwAtomicReadSizeExceeded(final long waitInterval)
+    throws RpcThrottlingException {
+    throwThrottlingException(Type.AtomicReadSizeExceeded, waitInterval);
+  }
+
+  public static void throwAtomicWriteSizeExceeded(final long waitInterval)
+    throws RpcThrottlingException {
+    throwThrottlingException(Type.AtomicWriteSizeExceeded, waitInterval);
+  }
+
+  public static void throwRequestHandlerUsageTimeExceeded(final long waitInterval)
+    throws RpcThrottlingException {
+    throwThrottlingException(Type.RequestHandlerUsageTimeExceeded, waitInterval);
+  }
+
   private static void throwThrottlingException(final Type type, final long waitInterval)
     throws RpcThrottlingException {
     String msg = MSG_TYPE[type.ordinal()] + MSG_WAIT + stringFromMillis(waitInterval);
@@ -179,5 +204,16 @@ public class RpcThrottlingException extends HBaseIOException {
       return time;
     }
     return -1;
+  }
+
+  /**
+   * There is little value in an RpcThrottlingException having a stack trace, since its cause is
+   * well understood without one. When a RegionServer is under heavy load and needs to serve many
+   * RpcThrottlingExceptions, skipping fillInStackTrace() will save CPU time and allocations, both
+   * here and later when the exception must be serialized over the wire.
+   */
+  @Override
+  public synchronized Throwable fillInStackTrace() {
+    return this;
   }
 }

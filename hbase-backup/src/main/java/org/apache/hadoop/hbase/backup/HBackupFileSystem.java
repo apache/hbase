@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -26,6 +27,8 @@ import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * View to an on-disk Backup Image FileSytem Provides the set of methods necessary to interact with
@@ -97,16 +100,33 @@ public final class HBackupFileSystem {
 
   private static Path getManifestPath(Configuration conf, Path backupRootPath, String backupId)
     throws IOException {
+    return getManifestPath(conf, backupRootPath, backupId, true);
+  }
+
+  /* Visible for testing only */
+  @RestrictedApi(explanation = "Should only be called internally or in tests", link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/HBackupFileSystem.java)")
+  static Path getManifestPath(Configuration conf, Path backupRootPath, String backupId,
+    boolean throwIfNotFound) throws IOException {
     FileSystem fs = backupRootPath.getFileSystem(conf);
     Path manifestPath = new Path(getBackupPath(backupRootPath.toString(), backupId) + Path.SEPARATOR
       + BackupManifest.MANIFEST_FILE_NAME);
-    if (!fs.exists(manifestPath)) {
+    if (throwIfNotFound && !fs.exists(manifestPath)) {
       String errorMsg = "Could not find backup manifest " + BackupManifest.MANIFEST_FILE_NAME
         + " for " + backupId + ". File " + manifestPath + " does not exists. Did " + backupId
         + " correspond to previously taken backup ?";
       throw new IOException(errorMsg);
     }
     return manifestPath;
+  }
+
+  public static Path getRootDirFromBackupPath(Path backupPath, String backupId) {
+    if (backupPath.getName().equals(BackupManifest.MANIFEST_FILE_NAME)) {
+      backupPath = backupPath.getParent();
+    }
+    Preconditions.checkArgument(backupPath.getName().equals(backupId),
+      String.format("Backup path %s must end in backupId %s", backupPath, backupId));
+    return backupPath.getParent();
   }
 
   public static BackupManifest getManifest(Configuration conf, Path backupRootPath, String backupId)

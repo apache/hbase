@@ -27,7 +27,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileReader;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.hbase.util.Strings;
 
 import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 
@@ -71,7 +71,7 @@ class MockStoreFileGenerator {
     // this when selection takes this into account
     when(mockSf.getReader()).thenReturn(reader);
     String toString = MoreObjects.toStringHelper("MockStoreFile").add("isReference", false)
-      .add("fileSize", StringUtils.humanReadableInt(sizeInBytes)).add("seqId", seqId)
+      .add("fileSize", Strings.humanReadableInt(sizeInBytes)).add("seqId", seqId)
       .add("path", stringPath).toString();
     when(mockSf.toString()).thenReturn(toString);
 

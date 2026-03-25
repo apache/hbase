@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -124,6 +125,11 @@ public class ScannerContext {
   final ServerSideScanMetrics metrics;
 
   ScannerContext(boolean keepProgress, LimitFields limitsToCopy, boolean trackMetrics) {
+    this(keepProgress, limitsToCopy, trackMetrics, null);
+  }
+
+  ScannerContext(boolean keepProgress, LimitFields limitsToCopy, boolean trackMetrics,
+    ServerSideScanMetrics scanMetrics) {
     this.limits = new LimitFields();
     if (limitsToCopy != null) {
       this.limits.copy(limitsToCopy);
@@ -134,7 +140,8 @@ public class ScannerContext {
 
     this.keepProgress = keepProgress;
     this.scannerState = DEFAULT_STATE;
-    this.metrics = trackMetrics ? new ServerSideScanMetrics() : null;
+    this.metrics =
+      trackMetrics ? (scanMetrics != null ? scanMetrics : new ServerSideScanMetrics()) : null;
   }
 
   public boolean isTrackingMetrics() {
@@ -258,6 +265,17 @@ public class ScannerContext {
    */
   void clearProgress() {
     progress.setFields(0, 0, 0, getBlockSizeProgress());
+  }
+
+  /**
+   * Clear away the block size progress. Mainly used in compaction, as we will use a single
+   * ScannerContext across all the compaction lifetime, and we will call Shipper.shipped to clear
+   * the block reference, so it is safe to clear the block size progress in compaction.
+   */
+  @RestrictedApi(explanation = "Should only be called in Compactor", link = "",
+      allowedOnPath = ".*/org/apache/hadoop/hbase/.*/*Compactor.java|.*/src/test/.*")
+  public void clearBlockSizeProgress() {
+    progress.setBlockSize(0);
   }
 
   /**
@@ -417,6 +435,7 @@ public class ScannerContext {
     boolean keepProgress = DEFAULT_KEEP_PROGRESS;
     boolean trackMetrics = false;
     LimitFields limits = new LimitFields();
+    ServerSideScanMetrics scanMetrics = null;
 
     private Builder() {
     }
@@ -455,8 +474,13 @@ public class ScannerContext {
       return this;
     }
 
+    public Builder setScanMetrics(ServerSideScanMetrics scanMetrics) {
+      this.scanMetrics = scanMetrics;
+      return this;
+    }
+
     public ScannerContext build() {
-      return new ScannerContext(keepProgress, limits, trackMetrics);
+      return new ScannerContext(keepProgress, limits, trackMetrics, scanMetrics);
     }
   }
 

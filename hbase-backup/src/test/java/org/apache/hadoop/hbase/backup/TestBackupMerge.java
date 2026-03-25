@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
@@ -31,21 +32,15 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestBackupMerge extends TestBackupBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupMerge.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupMerge.class);
 
@@ -70,17 +65,17 @@ public class TestBackupMerge extends TestBackupBase {
 
     // #2 - insert some data to table1
     Table t1 = insertIntoTable(conn, table1, famName, 1, ADD_ROWS);
-    LOG.debug("writing " + ADD_ROWS + " rows to " + table1);
+    LOG.debug("writing {} rows to {}", ADD_ROWS, table1);
 
-    Assert.assertEquals(TEST_UTIL.countRows(t1), NB_ROWS_IN_BATCH + ADD_ROWS);
+    assertEquals(NB_ROWS_IN_BATCH + ADD_ROWS, HBaseTestingUtil.countRows(t1));
     t1.close();
-    LOG.debug("written " + ADD_ROWS + " rows to " + table1);
+    LOG.debug("written {} rows to {}", ADD_ROWS, table1);
 
     Table t2 = insertIntoTable(conn, table2, famName, 1, ADD_ROWS);
 
-    Assert.assertEquals(TEST_UTIL.countRows(t2), NB_ROWS_IN_BATCH + ADD_ROWS);
+    assertEquals(NB_ROWS_IN_BATCH + ADD_ROWS, HBaseTestingUtil.countRows(t2));
     t2.close();
-    LOG.debug("written " + ADD_ROWS + " rows to " + table2);
+    LOG.debug("written {} rows to {}", ADD_ROWS, table2);
 
     // #3 - incremental backup for multiple tables
     tables = Lists.newArrayList(table1, table2);
@@ -112,15 +107,15 @@ public class TestBackupMerge extends TestBackupBase {
       tablesRestoreIncMultiple, tablesMapIncMultiple, true));
 
     Table hTable = conn.getTable(table1_restore);
-    LOG.debug("After incremental restore: " + hTable.getDescriptor());
-    int countRows = TEST_UTIL.countRows(hTable, famName);
-    LOG.debug("f1 has " + countRows + " rows");
-    Assert.assertEquals(NB_ROWS_IN_BATCH + 2 * ADD_ROWS, countRows);
+    LOG.debug("After incremental restore: {}", hTable.getDescriptor());
+    int countRows = HBaseTestingUtil.countRows(hTable, famName);
+    LOG.debug("f1 has {} rows", countRows);
+    assertEquals(NB_ROWS_IN_BATCH + 2 * ADD_ROWS, countRows);
 
     hTable.close();
 
     hTable = conn.getTable(table2_restore);
-    Assert.assertEquals(TEST_UTIL.countRows(hTable), NB_ROWS_IN_BATCH + 2 * ADD_ROWS);
+    assertEquals(NB_ROWS_IN_BATCH + 2 * ADD_ROWS, HBaseTestingUtil.countRows(hTable));
     hTable.close();
 
     admin.close();

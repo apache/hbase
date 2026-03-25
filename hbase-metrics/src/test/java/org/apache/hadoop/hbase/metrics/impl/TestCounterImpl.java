@@ -17,29 +17,23 @@
  */
 package org.apache.hadoop.hbase.metrics.impl;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test class for {@link CounterImpl}.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestCounterImpl {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCounterImpl.class);
 
   private Counter counter;
 
-  @Before
+  @BeforeEach
   public void setup() {
     this.counter = new CounterImpl();
   }

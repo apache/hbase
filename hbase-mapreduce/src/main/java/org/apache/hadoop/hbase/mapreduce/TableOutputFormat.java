@@ -33,8 +33,10 @@ import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
@@ -56,6 +58,15 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
   /** Job parameter that specifies the output table. */
   public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
 
+  /** Property value to use write-ahead logging */
+  public static final boolean WAL_ON = true;
+
+  /** Property value to disable write-ahead logging */
+  public static final boolean WAL_OFF = false;
+
+  /** Set this to {@link #WAL_OFF} to turn off write-ahead logging (WAL) */
+  public static final String WAL_PROPERTY = "hbase.mapreduce.tableoutputformat.write.wal";
+
   /**
    * Optional job parameter to specify a peer cluster. Used specifying remote cluster when copying
    * between hbase clusters (the source is picked up from <code>hbase-site.xml</code>).
@@ -63,6 +74,16 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
    *      Class, java.net.URI)
    */
   public static final String OUTPUT_CLUSTER = "hbase.mapred.outputcluster";
+
+  /**
+   * The configuration key for specifying a custom
+   * {@link org.apache.hadoop.mapreduce.OutputCommitter} implementation to be used by
+   * {@link TableOutputFormat}. The value for this property should be the fully qualified class name
+   * of the custom committer. If this property is not set, {@link TableOutputCommitter} will be used
+   * by default.
+   */
+  public static final String OUTPUT_COMMITTER_CLASS =
+    "hbase.mapreduce.tableoutputformat.output.committer.class";
 
   /**
    * Prefix for configuration property overrides to apply in {@link #setConf(Configuration)}. For
@@ -139,12 +160,14 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
 
     private Connection connection;
     private BufferedMutator mutator;
+    boolean useWriteAheadLogging;
 
     public TableRecordWriter() throws IOException {
       this.connection = createConnection(conf);
       String tableName = conf.get(OUTPUT_TABLE);
       this.mutator = connection.getBufferedMutator(TableName.valueOf(tableName));
       LOG.info("Created table instance for " + tableName);
+      this.useWriteAheadLogging = conf.getBoolean(WAL_PROPERTY, WAL_ON);
     }
 
     /**
@@ -177,6 +200,9 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
     public void write(KEY key, Mutation value) throws IOException {
       if (!(value instanceof Put) && !(value instanceof Delete)) {
         throw new IOException("Pass a Delete or a Put");
+      }
+      if (!useWriteAheadLogging) {
+        value.setDurability(Durability.SKIP_WAL);
       }
       mutator.mutate(value);
     }
@@ -237,7 +263,18 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
   @Override
   public OutputCommitter getOutputCommitter(TaskAttemptContext context)
     throws IOException, InterruptedException {
-    return new TableOutputCommitter();
+    Configuration hConf = getConf();
+    if (hConf == null) {
+      hConf = context.getConfiguration();
+    }
+
+    try {
+      Class<? extends OutputCommitter> outputCommitter =
+        hConf.getClass(OUTPUT_COMMITTER_CLASS, TableOutputCommitter.class, OutputCommitter.class);
+      return ReflectionUtils.newInstance(outputCommitter);
+    } catch (Exception e) {
+      throw new IOException("Could not create the configured OutputCommitter", e);
+    }
   }
 
   @Override

@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
+import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -1097,71 +1099,117 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
    * Retrieve block from cache. Validates the retrieved block's type vs {@code expectedBlockType}
    * and its encoding vs. {@code expectedDataBlockEncoding}. Unpacks the block as necessary.
    */
-  private HFileBlock getCachedBlock(BlockCacheKey cacheKey, boolean cacheBlock, boolean useLock,
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  public HFileBlock getCachedBlock(BlockCacheKey cacheKey, boolean cacheBlock, boolean useLock,
     boolean updateCacheMetrics, BlockType expectedBlockType,
     DataBlockEncoding expectedDataBlockEncoding) throws IOException {
     // Check cache for block. If found return.
     BlockCache cache = cacheConf.getBlockCache().orElse(null);
+    long cachedBlockBytesRead = 0;
     if (cache != null) {
-      HFileBlock cachedBlock = (HFileBlock) cache.getBlock(cacheKey, cacheBlock, useLock,
-        updateCacheMetrics, expectedBlockType);
-      if (cachedBlock != null) {
-        if (cacheConf.shouldCacheCompressed(cachedBlock.getBlockType().getCategory())) {
-          HFileBlock compressedBlock = cachedBlock;
-          cachedBlock = compressedBlock.unpack(hfileContext, fsBlockReader);
-          // In case of compressed block after unpacking we can release the compressed block
-          if (compressedBlock != cachedBlock) {
-            compressedBlock.release();
+      HFileBlock cachedBlock = null;
+      boolean isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
+      try {
+        cachedBlock = (HFileBlock) cache.getBlock(cacheKey, cacheBlock, useLock, updateCacheMetrics,
+          expectedBlockType);
+        if (cachedBlock != null) {
+          if (cacheConf.shouldCacheCompressed(cachedBlock.getBlockType().getCategory())) {
+            HFileBlock compressedBlock = cachedBlock;
+            cachedBlock = compressedBlock.unpack(hfileContext, fsBlockReader);
+            // In case of compressed block after unpacking we can release the compressed block
+            if (compressedBlock != cachedBlock) {
+              compressedBlock.release();
+            }
           }
-        }
-        try {
-          validateBlockType(cachedBlock, expectedBlockType);
-        } catch (IOException e) {
-          returnAndEvictBlock(cache, cacheKey, cachedBlock);
-          throw e;
-        }
+          try {
+            validateBlockType(cachedBlock, expectedBlockType);
+          } catch (IOException e) {
+            returnAndEvictBlock(cache, cacheKey, cachedBlock);
+            cachedBlock = null;
+            throw e;
+          }
 
-        if (expectedDataBlockEncoding == null) {
+          if (expectedDataBlockEncoding == null) {
+            return cachedBlock;
+          }
+          DataBlockEncoding actualDataBlockEncoding = cachedBlock.getDataBlockEncoding();
+          // Block types other than data blocks always have
+          // DataBlockEncoding.NONE. To avoid false negative cache misses, only
+          // perform this check if cached block is a data block.
+          if (
+            cachedBlock.getBlockType().isData()
+              && !actualDataBlockEncoding.equals(expectedDataBlockEncoding)
+          ) {
+            // This mismatch may happen if a Scanner, which is used for say a
+            // compaction, tries to read an encoded block from the block cache.
+            // The reverse might happen when an EncodedScanner tries to read
+            // un-encoded blocks which were cached earlier.
+            //
+            // Because returning a data block with an implicit BlockType mismatch
+            // will cause the requesting scanner to throw a disk read should be
+            // forced here. This will potentially cause a significant number of
+            // cache misses, so update so we should keep track of this as it might
+            // justify the work on a CompoundScanner.
+            if (
+              !expectedDataBlockEncoding.equals(DataBlockEncoding.NONE)
+                && !actualDataBlockEncoding.equals(DataBlockEncoding.NONE)
+            ) {
+              // If the block is encoded but the encoding does not match the
+              // expected encoding it is likely the encoding was changed but the
+              // block was not yet evicted. Evictions on file close happen async
+              // so blocks with the old encoding still linger in cache for some
+              // period of time. This event should be rare as it only happens on
+              // schema definition change.
+              LOG.info(
+                "Evicting cached block with key {} because data block encoding mismatch; "
+                  + "expected {}, actual {}, path={}",
+                cacheKey, actualDataBlockEncoding, expectedDataBlockEncoding, path);
+              // This is an error scenario. so here we need to release the block.
+              returnAndEvictBlock(cache, cacheKey, cachedBlock);
+            }
+            cachedBlock = null;
+            return null;
+          }
           return cachedBlock;
         }
-        DataBlockEncoding actualDataBlockEncoding = cachedBlock.getDataBlockEncoding();
-        // Block types other than data blocks always have
-        // DataBlockEncoding.NONE. To avoid false negative cache misses, only
-        // perform this check if cached block is a data block.
-        if (
-          cachedBlock.getBlockType().isData()
-            && !actualDataBlockEncoding.equals(expectedDataBlockEncoding)
-        ) {
-          // This mismatch may happen if a Scanner, which is used for say a
-          // compaction, tries to read an encoded block from the block cache.
-          // The reverse might happen when an EncodedScanner tries to read
-          // un-encoded blocks which were cached earlier.
-          //
-          // Because returning a data block with an implicit BlockType mismatch
-          // will cause the requesting scanner to throw a disk read should be
-          // forced here. This will potentially cause a significant number of
-          // cache misses, so update so we should keep track of this as it might
-          // justify the work on a CompoundScanner.
-          if (
-            !expectedDataBlockEncoding.equals(DataBlockEncoding.NONE)
-              && !actualDataBlockEncoding.equals(DataBlockEncoding.NONE)
-          ) {
-            // If the block is encoded but the encoding does not match the
-            // expected encoding it is likely the encoding was changed but the
-            // block was not yet evicted. Evictions on file close happen async
-            // so blocks with the old encoding still linger in cache for some
-            // period of time. This event should be rare as it only happens on
-            // schema definition change.
-            LOG.info(
-              "Evicting cached block with key {} because data block encoding mismatch; "
-                + "expected {}, actual {}, path={}",
-              cacheKey, actualDataBlockEncoding, expectedDataBlockEncoding, path);
-            // This is an error scenario. so here we need to release the block.
-            returnAndEvictBlock(cache, cacheKey, cachedBlock);
-          }
-          return null;
+      } catch (Exception e) {
+        if (cachedBlock != null) {
+          returnAndEvictBlock(cache, cacheKey, cachedBlock);
         }
-        return cachedBlock;
+        LOG.warn("Failed retrieving block from cache with key {}. "
+          + "\n Evicting this block from cache and will read it from file system. "
+          + "\n Exception details: ", cacheKey, e);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Further tracing details for failed block cache retrieval:"
+            + "\n Complete File path - {}," + "\n Expected Block Type - {}, Actual Block Type - {},"
+            + "\n Cache compressed - {}" + "\n Header size (after deserialized from cache) - {}"
+            + "\n Size with header - {}" + "\n Uncompressed size without header - {} "
+            + "\n Total byte buffer size - {}" + "\n Encoding code - {}", this.path,
+            expectedBlockType, (cachedBlock != null ? cachedBlock.getBlockType() : "N/A"),
+            (expectedBlockType != null
+              ? cacheConf.shouldCacheCompressed(expectedBlockType.getCategory())
+              : "N/A"),
+            (cachedBlock != null ? cachedBlock.headerSize() : "N/A"),
+            (cachedBlock != null ? cachedBlock.getOnDiskSizeWithHeader() : "N/A"),
+            (cachedBlock != null ? cachedBlock.getUncompressedSizeWithoutHeader() : "N/A"),
+            (cachedBlock != null ? cachedBlock.getBufferReadOnly().limit() : "N/A"),
+            (cachedBlock != null
+              ? cachedBlock.getBufferReadOnly().getShort(cachedBlock.headerSize())
+              : "N/A"));
+        }
+        return null;
+      } finally {
+        // Count bytes read as cached block is being returned
+        if (isScanMetricsEnabled && cachedBlock != null) {
+          cachedBlockBytesRead = cachedBlock.getOnDiskSizeWithHeader();
+          // Account for the header size of the next block if it exists
+          if (cachedBlock.getNextBlockOnDiskSize() > 0) {
+            cachedBlockBytesRead += cachedBlock.headerSize();
+          }
+        }
+        if (cachedBlockBytesRead > 0) {
+          ThreadLocalServerSideScanMetrics.addBytesReadFromBlockCache(cachedBlockBytesRead);
+        }
       }
     }
     return null;
@@ -1199,9 +1247,10 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       // Check cache for block. If found return.
       long metaBlockOffset = metaBlockIndexReader.getRootBlockOffset(block);
       BlockCacheKey cacheKey =
-        new BlockCacheKey(name, metaBlockOffset, this.isPrimaryReplicaReader(), BlockType.META);
+        new BlockCacheKey(path, metaBlockOffset, this.isPrimaryReplicaReader(), BlockType.META);
 
-      cacheBlock &= cacheConf.shouldCacheBlockOnRead(BlockType.META.getCategory());
+      cacheBlock &=
+        cacheConf.shouldCacheBlockOnRead(BlockType.META.getCategory(), getHFileInfo(), conf);
       HFileBlock cachedBlock =
         getCachedBlock(cacheKey, cacheBlock, false, true, BlockType.META, null);
       if (cachedBlock != null) {
@@ -1289,11 +1338,15 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
     BlockCacheKey cacheKey =
       new BlockCacheKey(path, dataBlockOffset, this.isPrimaryReplicaReader(), expectedBlockType);
-    Attributes attributes = Attributes.of(BLOCK_CACHE_KEY_KEY, cacheKey.toString());
 
     boolean useLock = false;
     IdLock.Entry lockEntry = null;
     final Span span = Span.current();
+    // BlockCacheKey#toString() is quite expensive to call, so if tracing isn't enabled, don't
+    // record
+    Attributes attributes = span.isRecording()
+      ? Attributes.of(BLOCK_CACHE_KEY_KEY, cacheKey.toString())
+      : Attributes.empty();
     try {
       while (true) {
         // Check cache for block. If found return.
@@ -1352,7 +1405,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         }
         BlockType.BlockCategory category = hfileBlock.getBlockType().getCategory();
         final boolean cacheCompressed = cacheConf.shouldCacheCompressed(category);
-        final boolean cacheOnRead = cacheConf.shouldCacheBlockOnRead(category);
+        final boolean cacheOnRead =
+          cacheConf.shouldCacheBlockOnRead(category, getHFileInfo(), conf);
 
         // Don't need the unpacked block back and we're storing the block in the cache compressed
         if (cacheOnly && cacheCompressed && cacheOnRead) {
@@ -1360,7 +1414,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
           cacheConf.getBlockCache().ifPresent(cache -> {
             LOG.debug("Skipping decompression of block {} in prefetch", cacheKey);
             // Cache the block if necessary
-            if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
+            if (cacheBlock && cacheOnRead) {
               cache.cacheBlock(cacheKey, blockNoChecksum, cacheConf.isInMemory(), cacheOnly);
             }
           });
@@ -1374,7 +1428,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         HFileBlock unpackedNoChecksum = BlockCacheUtil.getBlockForCaching(cacheConf, unpacked);
         // Cache the block if necessary
         cacheConf.getBlockCache().ifPresent(cache -> {
-          if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
+          if (cacheBlock && cacheOnRead) {
             // Using the wait on cache during compaction and prefetching.
             cache.cacheBlock(cacheKey,
               cacheCompressed

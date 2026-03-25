@@ -17,21 +17,41 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.io.IOException;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 
-@Category({ ClientTests.class, LargeTests.class })
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestAdminShell extends AbstractTestShell {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAdminShell.class);
-
   @Override
-  protected String getIncludeList() {
+  public String getIncludeList() {
     return "admin_test.rb";
+  }
+
+  @BeforeEach
+  public void setUp() throws Exception {
+    RubyShellTest.setUpConfig(this);
+
+    // Start mini cluster
+    // 3 datanodes needed for erasure coding checks
+    TEST_UTIL.startMiniCluster(3);
+
+    setupDFS();
+
+    RubyShellTest.setUpJRubyRuntime(this);
+
+    RubyShellTest.doTestSetup(this);
+  }
+
+  protected void setupDFS() throws IOException {
+    DistributedFileSystem dfs =
+      (DistributedFileSystem) FileSystem.get(TEST_UTIL.getConfiguration());
+    dfs.enableErasureCodingPolicy("XOR-2-1-1024k");
   }
 }

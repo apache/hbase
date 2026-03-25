@@ -229,6 +229,12 @@ public final class ImmutableScan extends Scan {
   }
 
   @Override
+  public Scan setEnableScanMetricsByRegion(final boolean enable) {
+    throw new UnsupportedOperationException(
+      "ImmutableScan does not allow access to setEnableScanMetricsByRegion");
+  }
+
+  @Override
   @Deprecated
   public Scan setAsyncPrefetch(boolean asyncPrefetch) {
     throw new UnsupportedOperationException(
@@ -400,6 +406,11 @@ public final class ImmutableScan extends Scan {
   @Override
   public boolean isScanMetricsEnabled() {
     return this.delegateScan.isScanMetricsEnabled();
+  }
+
+  @Override
+  public boolean isScanMetricsByRegionEnabled() {
+    return this.delegateScan.isScanMetricsByRegionEnabled();
   }
 
   @Override

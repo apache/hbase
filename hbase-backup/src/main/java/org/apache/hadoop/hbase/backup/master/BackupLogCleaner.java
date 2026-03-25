@@ -18,8 +18,10 @@
 package org.apache.hadoop.hbase.backup.master;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,11 +30,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
+import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
-import org.apache.hadoop.hbase.backup.util.BackupUtils;
+import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
+import org.apache.hadoop.hbase.backup.util.BackupBoundaries;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -41,7 +44,6 @@ import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
-import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +58,8 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class BackupLogCleaner extends BaseLogCleanerDelegate {
   private static final Logger LOG = LoggerFactory.getLogger(BackupLogCleaner.class);
+  private static final long TS_BUFFER_DEFAULT = Duration.ofHours(1).toMillis();
+  static final String TS_BUFFER_KEY = "hbase.backup.log.cleaner.timestamp.buffer.ms";
 
   private boolean stopped = false;
   private Connection conn;
@@ -85,9 +89,11 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
    * Calculates the timestamp boundary up to which all backup roots have already included the WAL.
    * I.e. WALs with a lower (= older) or equal timestamp are no longer needed for future incremental
    * backups.
+   * @param backups  all completed or running backups to use for the calculation of the boundary
+   * @param tsBuffer a buffer (in ms) to lower the boundary for the default bound
    */
-  private Map<Address, Long> serverToPreservationBoundaryTs(List<BackupInfo> backups)
-    throws IOException {
+  protected static BackupBoundaries calculatePreservationBoundary(List<BackupInfo> backups,
+    long tsBuffer) {
     if (LOG.isDebugEnabled()) {
       LOG.debug(
         "Cleaning WALs if they are older than the WAL cleanup time-boundary. "
@@ -96,11 +102,12 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
         backups.stream().map(BackupInfo::getBackupId).sorted().collect(Collectors.joining(", ")));
     }
 
-    // This map tracks, for every backup root, the most recent created backup (= highest timestamp)
+    // This map tracks, for every backup root, the most recent (= highest timestamp) completed
+    // backup, or if there is no such one, the currently running backup (if any)
     Map<String, BackupInfo> newestBackupPerRootDir = new HashMap<>();
     for (BackupInfo backup : backups) {
       BackupInfo existingEntry = newestBackupPerRootDir.get(backup.getBackupRootDir());
-      if (existingEntry == null || existingEntry.getStartTs() < backup.getStartTs()) {
+      if (existingEntry == null || existingEntry.getState() == BackupState.RUNNING) {
         newestBackupPerRootDir.put(backup.getBackupRootDir(), backup);
       }
     }
@@ -112,27 +119,13 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
           .collect(Collectors.joining(", ")));
     }
 
-    // This map tracks, for every RegionServer, the least recent (= oldest / lowest timestamp)
-    // inclusion in any backup. In other words, it is the timestamp boundary up to which all backup
-    // roots have included the WAL in their backup.
-    Map<Address, Long> boundaries = new HashMap<>();
-    for (BackupInfo backupInfo : newestBackupPerRootDir.values()) {
-      // Iterate over all tables in the timestamp map, which contains all tables covered in the
-      // backup root, not just the tables included in that specific backup (which could be a subset)
-      for (TableName table : backupInfo.getTableSetTimestampMap().keySet()) {
-        for (Map.Entry<String, Long> entry : backupInfo.getTableSetTimestampMap().get(table)
-          .entrySet()) {
-          Address address = Address.fromString(entry.getKey());
-          Long storedTs = boundaries.get(address);
-          if (storedTs == null || entry.getValue() < storedTs) {
-            boundaries.put(address, entry.getValue());
-          }
-        }
-      }
-    }
+    BackupBoundaries.BackupBoundariesBuilder builder = BackupBoundaries.builder(tsBuffer);
+    newestBackupPerRootDir.values().forEach(builder::update);
+    BackupBoundaries boundaries = builder.build();
 
     if (LOG.isDebugEnabled()) {
-      for (Map.Entry<Address, Long> entry : boundaries.entrySet()) {
+      LOG.debug("Boundaries defaultBoundary: {}", boundaries.getDefaultBoundary());
+      for (Map.Entry<Address, Long> entry : boundaries.getBoundaries().entrySet()) {
         LOG.debug("Server: {}, WAL cleanup boundary: {}", entry.getKey().getHostName(),
           entry.getValue());
       }
@@ -153,19 +146,19 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
       return files;
     }
 
-    Map<Address, Long> serverToPreservationBoundaryTs;
-    try {
-      try (BackupManager backupManager = new BackupManager(conn, getConf())) {
-        serverToPreservationBoundaryTs =
-          serverToPreservationBoundaryTs(backupManager.getBackupHistory(true));
-      }
+    BackupBoundaries boundaries;
+    try (BackupSystemTable sysTable = new BackupSystemTable(conn)) {
+      long tsBuffer = getConf().getLong(TS_BUFFER_KEY, TS_BUFFER_DEFAULT);
+      List<BackupInfo> backupHistory = sysTable.getBackupHistory(
+        i -> EnumSet.of(BackupState.COMPLETE, BackupState.RUNNING).contains(i.getState()));
+      boundaries = calculatePreservationBoundary(backupHistory, tsBuffer);
     } catch (IOException ex) {
       LOG.error("Failed to analyse backup history with exception: {}. Retaining all logs",
         ex.getMessage(), ex);
       return Collections.emptyList();
     }
     for (FileStatus file : files) {
-      if (canDeleteFile(serverToPreservationBoundaryTs, file.getPath())) {
+      if (canDeleteFile(boundaries, file.getPath())) {
         filteredFiles.add(file);
       }
     }
@@ -200,54 +193,17 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     return this.stopped;
   }
 
-  protected static boolean canDeleteFile(Map<Address, Long> addressToBoundaryTs, Path path) {
+  protected static boolean canDeleteFile(BackupBoundaries boundaries, Path path) {
     if (isHMasterWAL(path)) {
       return true;
     }
-
-    try {
-      String hostname = BackupUtils.parseHostNameFromLogFile(path);
-      if (hostname == null) {
-        LOG.warn(
-          "Cannot parse hostname from RegionServer WAL file: {}. Ignoring cleanup of this log",
-          path);
-        return false;
-      }
-      Address walServerAddress = Address.fromString(hostname);
-      long walTimestamp = AbstractFSWALProvider.getTimestamp(path.getName());
-
-      if (!addressToBoundaryTs.containsKey(walServerAddress)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("No cleanup WAL time-boundary found for server: {}. Ok to delete file: {}",
-            walServerAddress.getHostName(), path);
-        }
-        return true;
-      }
-
-      Long backupBoundary = addressToBoundaryTs.get(walServerAddress);
-      if (backupBoundary >= walTimestamp) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-            "WAL cleanup time-boundary found for server {}: {}. Ok to delete older file: {}",
-            walServerAddress.getHostName(), backupBoundary, path);
-        }
-        return true;
-      }
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("WAL cleanup time-boundary found for server {}: {}. Keeping younger file: {}",
-          walServerAddress.getHostName(), backupBoundary, path);
-      }
-    } catch (Exception ex) {
-      LOG.warn("Error occurred while filtering file: {}. Ignoring cleanup of this log", path, ex);
-      return false;
-    }
-    return false;
+    return boundaries.isDeletable(path);
   }
 
   private static boolean isHMasterWAL(Path path) {
     String fn = path.getName();
     return fn.startsWith(WALProcedureStore.LOG_PREFIX)
-      || fn.endsWith(MasterRegionFactory.ARCHIVED_WAL_SUFFIX);
+      || fn.endsWith(MasterRegionFactory.ARCHIVED_WAL_SUFFIX)
+      || path.toString().contains("/%s/".formatted(MasterRegionFactory.MASTER_STORE_DIR));
   }
 }

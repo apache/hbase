@@ -45,9 +45,10 @@ public class NettyHBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
     super(conf, provider, token, serverAddr, serverPrincipal, fallbackAllowed, rpcProtection);
   }
 
-  public void setupSaslHandler(ChannelPipeline p, String addAfter) {
+  public void setupSaslHandler(ChannelPipeline p, String addAfter) throws IOException {
     String qop = (String) saslClient.getNegotiatedProperty(Sasl.QOP);
     LOG.trace("SASL client context established. Negotiated QoP {}", qop);
+    verifyNegotiatedQop();
     if (qop == null || "auth".equalsIgnoreCase(qop)) {
       return;
     }

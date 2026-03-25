@@ -31,6 +31,9 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.regionserver.DataTieringManager;
+import org.apache.hadoop.hbase.regionserver.DataTieringType;
+import org.apache.hadoop.hbase.regionserver.StoreEngine;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -185,6 +188,48 @@ public class TestIllegalTableDescriptor {
     verify(LOGGER).warn(contains("MEMSTORE_FLUSHSIZE for table "
       + "descriptor or \"hbase.hregion.memstore.flush.size\" (0) is too small, which might "
       + "cause very frequent flushing."));
+  }
+
+  @Test
+  public void testIllegalTableDescriptorWithDataTiering() throws IOException {
+    // table level configuration changes
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
+    builder.setColumnFamily(cfBuilder.build());
+
+    // First scenario: DataTieringType set to TIME_RANGE without DateTieredStoreEngine
+    builder.setValue(DataTieringManager.DATATIERING_KEY, DataTieringType.TIME_RANGE.name());
+    checkTableIsIllegal(builder.build());
+
+    // Second scenario: DataTieringType set to TIME_RANGE with DateTieredStoreEngine
+    builder.setValue(StoreEngine.STORE_ENGINE_CLASS_KEY,
+      "org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine");
+    checkTableIsLegal(builder.build());
+
+    // Third scenario: Disabling DateTieredStoreEngine while Time Range DataTiering is active
+    builder.setValue(StoreEngine.STORE_ENGINE_CLASS_KEY,
+      "org.apache.hadoop.hbase.regionserver.DefaultStoreEngine");
+    checkTableIsIllegal(builder.build());
+
+    // column family level configuration changes
+    builder = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
+
+    // First scenario: DataTieringType set to TIME_RANGE without DateTieredStoreEngine
+    cfBuilder.setConfiguration(DataTieringManager.DATATIERING_KEY,
+      DataTieringType.TIME_RANGE.name());
+    checkTableIsIllegal(builder.setColumnFamily(cfBuilder.build()).build());
+
+    // Second scenario: DataTieringType set to TIME_RANGE with DateTieredStoreEngine
+    cfBuilder.setConfiguration(StoreEngine.STORE_ENGINE_CLASS_KEY,
+      "org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine");
+    checkTableIsLegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+
+    // Third scenario: Disabling DateTieredStoreEngine while Time Range DataTiering is active
+    cfBuilder.setConfiguration(StoreEngine.STORE_ENGINE_CLASS_KEY,
+      "org.apache.hadoop.hbase.regionserver.DefaultStoreEngine");
+    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
   }
 
   private void checkTableIsLegal(TableDescriptor tableDescriptor) throws IOException {

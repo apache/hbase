@@ -211,6 +211,17 @@ message ModifyTableResponse {
   optional uint64 proc_id = 1;
 }
 
+message ReopenTableRegionsRequest {
+  required TableName table_name = 1;
+  repeated bytes region_names = 2;  // empty = all regions
+  optional uint64 nonce_group = 3 [default = 0];
+  optional uint64 nonce = 4 [default = 0];
+}
+
+message ReopenTableRegionsResponse {
+  optional uint64 proc_id = 1;
+}
+
 message FlushTableRequest {
   required TableName table_name = 1;
   repeated bytes column_family = 2;
@@ -799,6 +810,15 @@ message ModifyColumnStoreFileTrackerResponse {
 message FlushMasterStoreRequest {}
 message FlushMasterStoreResponse {}
 
+message RollAllWALWritersRequest {
+  optional uint64 nonce_group = 1 [default = 0];
+  optional uint64 nonce = 2 [default = 0];
+}
+
+message RollAllWALWritersResponse {
+  optional uint64 proc_id = 1;
+}
+
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
   rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
@@ -900,6 +920,13 @@ service MasterService {
   /** Modify a table's metadata */
   rpc ModifyTable(ModifyTableRequest)
     returns(ModifyTableResponse);
+
+  /**
+   * Reopen regions of a table. Regions are reopened in-place without moving.
+   * Useful for rolling out table descriptor changes after modifyTable(reopenRegions=false).
+   */
+  rpc ReopenTableRegions(ReopenTableRegionsRequest)
+    returns(ReopenTableRegionsResponse);
 
   /** Creates a new table asynchronously */
   rpc CreateTable(CreateTableRequest)
@@ -1270,6 +1297,12 @@ service MasterService {
 
   rpc FlushTable(FlushTableRequest)
     returns(FlushTableResponse);
+
+  rpc RestoreBackupSystemTable(RestoreBackupSystemTableRequest)
+    returns(RestoreBackupSystemTableResponse);
+
+  rpc rollAllWALWriters(RollAllWALWritersRequest)
+    returns(RollAllWALWritersResponse);
 }
 
 // HBCK Service definitions.
@@ -1356,6 +1389,13 @@ message ScheduleSCPsForUnknownServersResponse {
 message FixMetaRequest {}
 
 message FixMetaResponse {}
+
+message RestoreBackupSystemTableRequest {
+  required string snapshot_name = 1;
+}
+message RestoreBackupSystemTableResponse {
+  optional uint64 proc_id = 1;
+}
 
 service HbckService {
   /** Update state of the table in meta only*/

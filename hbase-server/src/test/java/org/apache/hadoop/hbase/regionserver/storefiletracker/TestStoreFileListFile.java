@@ -239,4 +239,21 @@ public class TestStoreFileListFile {
     assertEquals("Higher store file list version detected, expected " + StoreFileListFile.VERSION
       + ", got " + (StoreFileListFile.VERSION + 1), error.getMessage());
   }
+
+  @Test
+  public void testLoadOldPatternTrackFiles() throws IOException {
+    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
+    StoreFileList storeFileList =
+      StoreFileList.newBuilder().setTimestamp(EnvironmentEdgeManager.currentTime())
+        .addStoreFile(StoreFileEntry.newBuilder().setName("hehe").setSize(10).build()).build();
+    Path trackFileDir = new Path(testDir, StoreFileListFile.TRACK_FILE_DIR);
+    StoreFileListFile.write(fs, new Path(trackFileDir, StoreFileListFile.TRACK_FILE_PREFIX),
+      storeFileList);
+
+    FileStatus trackerFileStatus = getOnlyTrackerFile(fs);
+    assertEquals(StoreFileListFile.TRACK_FILE_PREFIX, trackerFileStatus.getPath().getName());
+
+    StoreFileList list = storeFileListFile.load(true);
+    assertEquals(1, list.getStoreFileCount());
+  }
 }

@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -449,6 +450,19 @@ public class MergeTableRegionsProcedure
         "Skip merging regions " + regionNamesToLog + ", because we are snapshotting " + tn);
     }
 
+    /*
+     * Sometimes a ModifyTableProcedure has edited a table descriptor to change the number of region
+     * replicas for a table, but it has not yet opened/closed the new replicas. The
+     * ModifyTableProcedure assumes that nobody else will do the opening/closing of the new
+     * replicas, but a concurrent MergeTableRegionProcedure would violate that assumption.
+     */
+    if (isTableModificationInProgress(env)) {
+      setFailure(getClass().getSimpleName(),
+        new IOException("Skip merging regions " + regionNamesToLog
+          + ", because there is an active procedure that is modifying the table " + tn));
+      return false;
+    }
+
     // Mostly the below two checks are not used because we already check the switches before
     // submitting the merge procedure. Just for safety, we are checking the switch again here.
     // Also, in case the switch was set to false after submission, this procedure can be rollbacked,
@@ -540,7 +554,10 @@ public class MergeTableRegionsProcedure
     }
     // TODO: Clean up split and merge. Currently all over the place.
     try {
-      env.getMasterServices().getMasterQuotaManager().onRegionMerged(this.mergedRegion);
+      MasterQuotaManager masterQuotaManager = env.getMasterServices().getMasterQuotaManager();
+      if (masterQuotaManager != null) {
+        masterQuotaManager.onRegionMerged(this.mergedRegion);
+      }
     } catch (QuotaExceededException e) {
       // TODO: why is this here? merge requests can be submitted by actors other than the normalizer
       env.getMasterServices().getRegionNormalizerManager()
@@ -627,7 +644,7 @@ public class MergeTableRegionsProcedure
           // to read the hfiles.
           storeFileInfo.setConf(storeConfiguration);
           Path refFile = mergeRegionFs.mergeStoreFile(regionFs.getRegionInfo(), family,
-            new HStoreFile(storeFileInfo, hcd.getBloomFilterType(), CacheConfig.DISABLED));
+            new HStoreFile(storeFileInfo, hcd.getBloomFilterType(), CacheConfig.DISABLED), tracker);
           mergedFiles.add(refFile);
         }
       }
@@ -655,8 +672,8 @@ public class MergeTableRegionsProcedure
    **/
   private void rollbackCloseRegionsForMerge(MasterProcedureEnv env) throws IOException {
     // At this point we should check if region was actually closed. If it was not closed then we
-    // don't need to repoen the region and we can just change the regionNode state to OPEN.
-    // if it is alredy closed then we need to do a reopen of region
+    // don't need to reopen the region and we can just change the regionNode state to OPEN.
+    // if it is already closed then we need to do a reopen of region
     List<RegionInfo> toAssign = new ArrayList<>();
     for (RegionInfo rinfo : regionsToMerge) {
       RegionStateNode regionStateNode =

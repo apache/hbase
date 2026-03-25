@@ -105,6 +105,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
@@ -149,6 +150,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.LastHighestWalFilenum;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
@@ -261,8 +263,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineReg
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReopenTableRegionsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReopenTableRegionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RollAllWALWritersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RollAllWALWritersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreRequest;
@@ -497,28 +503,70 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     return future;
   }
 
+  /**
+   * short-circuit call for
+   * {@link RawAsyncHBaseAdmin#procedureCall(Object, MasterRpcCall, Converter, Converter, ProcedureBiConsumer)}
+   * by ignoring procedure result
+   */
   private <PREQ, PRESP> CompletableFuture<Void> procedureCall(PREQ preq,
     MasterRpcCall<PRESP, PREQ> rpcCall, Converter<Long, PRESP> respConverter,
-    ProcedureBiConsumer consumer) {
-    return procedureCall(b -> {
-    }, preq, rpcCall, respConverter, consumer);
+    ProcedureBiConsumer<Void> consumer) {
+    return procedureCall(preq, rpcCall, respConverter, result -> null, consumer);
   }
 
+  /**
+   * short-circuit call for procedureCall(Consumer, Object, MasterRpcCall, Converter, Converter,
+   * ProcedureBiConsumer) by skip setting priority for request
+   */
+  private <PREQ, PRESP, PRES> CompletableFuture<PRES> procedureCall(PREQ preq,
+    MasterRpcCall<PRESP, PREQ> rpcCall, Converter<Long, PRESP> respConverter,
+    Converter<PRES, ByteString> resultConverter, ProcedureBiConsumer<PRES> consumer) {
+    return procedureCall(b -> {
+    }, preq, rpcCall, respConverter, resultConverter, consumer);
+  }
+
+  /**
+   * short-circuit call for procedureCall(TableName, Object, MasterRpcCall, Converter, Converter,
+   * ProcedureBiConsumer) by ignoring procedure result
+   */
   private <PREQ, PRESP> CompletableFuture<Void> procedureCall(TableName tableName, PREQ preq,
     MasterRpcCall<PRESP, PREQ> rpcCall, Converter<Long, PRESP> respConverter,
-    ProcedureBiConsumer consumer) {
-    return procedureCall(b -> b.priority(tableName), preq, rpcCall, respConverter, consumer);
+    ProcedureBiConsumer<Void> consumer) {
+    return procedureCall(tableName, preq, rpcCall, respConverter, result -> null, consumer);
   }
 
-  private <PREQ, PRESP> CompletableFuture<Void> procedureCall(
+  /**
+   * short-circuit call for procedureCall(Consumer, Object, MasterRpcCall, Converter, Converter,
+   * ProcedureBiConsumer) by skip setting priority for request
+   */
+  private <PREQ, PRESP, PRES> CompletableFuture<PRES> procedureCall(TableName tableName, PREQ preq,
+    MasterRpcCall<PRESP, PREQ> rpcCall, Converter<Long, PRESP> respConverter,
+    Converter<PRES, ByteString> resultConverter, ProcedureBiConsumer<PRES> consumer) {
+    return procedureCall(b -> b.tableName(tableName), preq, rpcCall, respConverter, resultConverter,
+      consumer);
+  }
+
+  /**
+   * @param <PREQ>          type of request
+   * @param <PRESP>         type of response
+   * @param <PRES>          type of procedure call result
+   * @param prioritySetter  prioritySetter set priority by table for request
+   * @param preq            procedure call request
+   * @param rpcCall         procedure rpc call
+   * @param respConverter   extract proc id from procedure call response
+   * @param resultConverter extract result from procedure call result
+   * @param consumer        action performs on result
+   * @return procedure call result, null if procedure is void
+   */
+  private <PREQ, PRESP, PRES> CompletableFuture<PRES> procedureCall(
     Consumer<MasterRequestCallerBuilder<?>> prioritySetter, PREQ preq,
     MasterRpcCall<PRESP, PREQ> rpcCall, Converter<Long, PRESP> respConverter,
-    ProcedureBiConsumer consumer) {
-    MasterRequestCallerBuilder<Long> builder = this.<Long> newMasterCaller().action((controller,
-      stub) -> this.<PREQ, PRESP, Long> call(controller, stub, preq, rpcCall, respConverter));
+    Converter<PRES, ByteString> resultConverter, ProcedureBiConsumer<PRES> consumer) {
+    MasterRequestCallerBuilder<Long> builder = this.<Long> newMasterCaller()
+      .action((controller, stub) -> this.call(controller, stub, preq, rpcCall, respConverter));
     prioritySetter.accept(builder);
     CompletableFuture<Long> procFuture = builder.call();
-    CompletableFuture<Void> future = waitProcedureResult(procFuture);
+    CompletableFuture<PRES> future = waitProcedureResult(procFuture, resultConverter);
     addListener(future, consumer);
     return future;
   }
@@ -638,7 +686,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<TableDescriptor> getDescriptor(TableName tableName) {
     CompletableFuture<TableDescriptor> future = new CompletableFuture<>();
-    addListener(this.<List<TableSchema>> newMasterCaller().priority(tableName)
+    addListener(this.<List<TableSchema>> newMasterCaller().tableName(tableName)
       .action((controller, stub) -> this.<GetTableDescriptorsRequest, GetTableDescriptorsResponse,
         List<TableSchema>> call(controller, stub,
           RequestConverter.buildGetTableDescriptorsRequest(tableName),
@@ -709,6 +757,21 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> reopenTableRegions(TableName tableName) {
+    return reopenTableRegions(tableName, Collections.emptyList());
+  }
+
+  @Override
+  public CompletableFuture<Void> reopenTableRegions(TableName tableName, List<RegionInfo> regions) {
+    List<byte[]> regionNames = regions.stream().map(RegionInfo::getRegionName).toList();
+    return this.<ReopenTableRegionsRequest, ReopenTableRegionsResponse> procedureCall(tableName,
+      RequestConverter.buildReopenTableRegionsRequest(tableName, regionNames, ng.getNonceGroup(),
+        ng.newNonce()),
+      (s, c, req, done) -> s.reopenTableRegions(c, req, done), (resp) -> resp.getProcId(),
+      new ReopenTableRegionsProcedureBiConsumer(this, tableName));
+  }
+
+  @Override
   public CompletableFuture<Void> modifyTableStoreFileTracker(TableName tableName, String dstSFT) {
     return this.<ModifyTableStoreFileTrackerRequest,
       ModifyTableStoreFileTrackerResponse> procedureCall(tableName,
@@ -758,13 +821,13 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
    * targetState).
    */
   private static CompletableFuture<Boolean> completeCheckTableState(
-    CompletableFuture<Boolean> future, TableState tableState, Throwable error,
+    CompletableFuture<Boolean> future, Optional<TableState> tableState, Throwable error,
     TableState.State targetState, TableName tableName) {
     if (error != null) {
       future.completeExceptionally(error);
     } else {
-      if (tableState != null) {
-        future.complete(tableState.inStates(targetState));
+      if (tableState.isPresent()) {
+        future.complete(tableState.get().inStates(targetState));
       } else {
         future.completeExceptionally(new TableNotFoundException(tableName));
       }
@@ -780,8 +843,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     CompletableFuture<Boolean> future = new CompletableFuture<>();
     addListener(ClientMetaTableAccessor.getTableState(metaTable, tableName),
       (tableState, error) -> {
-        completeCheckTableState(future, tableState.isPresent() ? tableState.get() : null, error,
-          TableState.State.ENABLED, tableName);
+        completeCheckTableState(future, tableState, error, TableState.State.ENABLED, tableName);
       });
     return future;
   }
@@ -794,8 +856,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     CompletableFuture<Boolean> future = new CompletableFuture<>();
     addListener(ClientMetaTableAccessor.getTableState(metaTable, tableName),
       (tableState, error) -> {
-        completeCheckTableState(future, tableState.isPresent() ? tableState.get() : null, error,
-          TableState.State.DISABLED, tableName);
+        completeCheckTableState(future, tableState, error, TableState.State.DISABLED, tableName);
       });
     return future;
   }
@@ -1295,6 +1356,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           }
           if (locations == null || locations.isEmpty()) {
             future.completeExceptionally(new TableNotFoundException(tableName));
+            return;
           }
           CompletableFuture<?>[] compactFutures =
             locations.stream().filter(l -> l.getRegion() != null)
@@ -1702,7 +1764,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         return;
       }
       addListener(
-        this.<Void> newMasterCaller().priority(regionInfo.getTable())
+        this.<Void> newMasterCaller().tableName(regionInfo.getTable())
           .action((controller, stub) -> this.<AssignRegionRequest, AssignRegionResponse, Void> call(
             controller, stub, RequestConverter.buildAssignRegionRequest(regionInfo.getRegionName()),
             (s, c, req, done) -> s.assignRegion(c, req, done), resp -> null))
@@ -1727,7 +1789,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         return;
       }
       addListener(
-        this.<Void> newMasterCaller().priority(regionInfo.getTable())
+        this.<Void> newMasterCaller().tableName(regionInfo.getTable())
           .action((controller, stub) -> this.<UnassignRegionRequest, UnassignRegionResponse,
             Void> call(controller, stub,
               RequestConverter.buildUnassignRegionRequest(regionInfo.getRegionName()),
@@ -1752,7 +1814,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         future.completeExceptionally(err);
         return;
       }
-      addListener(this.<Void> newMasterCaller().priority(regionInfo.getTable())
+      addListener(this.<Void> newMasterCaller().tableName(regionInfo.getTable())
         .action((controller, stub) -> this.<OfflineRegionRequest, OfflineRegionResponse, Void> call(
           controller, stub, RequestConverter.buildOfflineRegionRequest(regionInfo.getRegionName()),
           (s, c, req, done) -> s.offlineRegion(c, req, done), resp -> null))
@@ -1814,7 +1876,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   private CompletableFuture<Void> moveRegion(RegionInfo regionInfo, MoveRegionRequest request) {
-    return this.<Void> newMasterCaller().priority(regionInfo.getTable())
+    return this.<Void> newMasterCaller().tableName(regionInfo.getTable())
       .action(
         (controller, stub) -> this.<MoveRegionRequest, MoveRegionResponse, Void> call(controller,
           stub, request, (s, c, req, done) -> s.moveRegion(c, req, done), resp -> null))
@@ -1937,7 +1999,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return failedFuture(new ReplicationException("tableCfs is null"));
     }
 
-    CompletableFuture<Void> future = new CompletableFuture<Void>();
+    CompletableFuture<Void> future = new CompletableFuture<>();
     addListener(getReplicationPeerConfig(id), (peerConfig, error) -> {
       if (!completeExceptionally(future, error)) {
         ReplicationPeerConfig newPeerConfig =
@@ -1959,7 +2021,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return failedFuture(new ReplicationException("tableCfs is null"));
     }
 
-    CompletableFuture<Void> future = new CompletableFuture<Void>();
+    CompletableFuture<Void> future = new CompletableFuture<>();
     addListener(getReplicationPeerConfig(id), (peerConfig, error) -> {
       if (!completeExceptionally(future, error)) {
         ReplicationPeerConfig newPeerConfig = null;
@@ -2058,7 +2120,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   private void waitSnapshotFinish(SnapshotDescription snapshot, CompletableFuture<Void> future,
     SnapshotResponse resp) {
     if (resp.hasProcId()) {
-      getProcedureResult(resp.getProcId(), future, 0);
+      getProcedureResult(resp.getProcId(), src -> null, future, 0);
       addListener(future, new SnapshotProcedureBiConsumer(snapshot.getTableName()));
     } else {
       long expectedTimeout = resp.getExpectedTimeout();
@@ -2274,7 +2336,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       .action((controller, stub) -> this.<RestoreSnapshotRequest, RestoreSnapshotResponse,
         Long> call(controller, stub, builder.build(),
           (s, c, req, done) -> s.restoreSnapshot(c, req, done), (resp) -> resp.getProcId()))
-      .call());
+      .call(), result -> null);
   }
 
   @Override
@@ -2686,14 +2748,14 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     }
   }
 
-  private static abstract class ProcedureBiConsumer implements BiConsumer<Void, Throwable> {
+  private static abstract class ProcedureBiConsumer<T> implements BiConsumer<T, Throwable> {
 
     abstract void onFinished();
 
     abstract void onError(Throwable error);
 
     @Override
-    public void accept(Void v, Throwable error) {
+    public void accept(T value, Throwable error) {
       if (error != null) {
         onError(error);
         return;
@@ -2702,7 +2764,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     }
   }
 
-  private static abstract class TableProcedureBiConsumer extends ProcedureBiConsumer {
+  private static abstract class TableProcedureBiConsumer extends ProcedureBiConsumer<Void> {
     protected final TableName tableName;
 
     TableProcedureBiConsumer(TableName tableName) {
@@ -2727,7 +2789,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     }
   }
 
-  private static abstract class NamespaceProcedureBiConsumer extends ProcedureBiConsumer {
+  private static abstract class NamespaceProcedureBiConsumer extends ProcedureBiConsumer<Void> {
     protected final String namespaceName;
 
     NamespaceProcedureBiConsumer(String namespaceName) {
@@ -2742,12 +2804,25 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
     @Override
     void onFinished() {
-      LOG.info(getDescription() + " completed");
+      LOG.info("{} completed", getDescription());
     }
 
     @Override
     void onError(Throwable error) {
-      LOG.info(getDescription() + " failed with " + error.getMessage());
+      LOG.info("{} failed with {}", getDescription(), error.getMessage());
+    }
+  }
+
+  private static class RestoreBackupSystemTableProcedureBiConsumer extends ProcedureBiConsumer {
+
+    @Override
+    void onFinished() {
+      LOG.info("RestoreBackupSystemTableProcedure completed");
+    }
+
+    @Override
+    void onError(Throwable error) {
+      LOG.info("RestoreBackupSystemTableProcedure failed with {}", error.getMessage());
     }
   }
 
@@ -2772,6 +2847,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     @Override
     String getOperationType() {
       return "MODIFY";
+    }
+  }
+
+  private static class ReopenTableRegionsProcedureBiConsumer extends TableProcedureBiConsumer {
+
+    ReopenTableRegionsProcedureBiConsumer(AsyncAdmin admin, TableName tableName) {
+      super(tableName);
+    }
+
+    @Override
+    String getOperationType() {
+      return "REOPEN_TABLE_REGIONS";
     }
   }
 
@@ -2986,7 +3073,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     }
   }
 
-  private static class ReplicationProcedureBiConsumer extends ProcedureBiConsumer {
+  private static class ReplicationProcedureBiConsumer extends ProcedureBiConsumer<Void> {
     private final String peerId;
     private final Supplier<String> getOperation;
 
@@ -3001,28 +3088,44 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
     @Override
     void onFinished() {
-      LOG.info(getDescription() + " completed");
+      LOG.info("{} completed", getDescription());
     }
 
     @Override
     void onError(Throwable error) {
-      LOG.info(getDescription() + " failed with " + error.getMessage());
+      LOG.info("{} failed with {}", getDescription(), error.getMessage());
     }
   }
 
-  private CompletableFuture<Void> waitProcedureResult(CompletableFuture<Long> procFuture) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
+  private static final class RollAllWALWritersBiConsumer
+    extends ProcedureBiConsumer<Map<ServerName, Long>> {
+
+    @Override
+    void onFinished() {
+      LOG.info("Rolling all WAL writers completed");
+    }
+
+    @Override
+    void onError(Throwable error) {
+      LOG.warn("Rolling all WAL writers failed with {}", error.getMessage());
+    }
+  }
+
+  private <T> CompletableFuture<T> waitProcedureResult(CompletableFuture<Long> procFuture,
+    Converter<T, ByteString> converter) {
+    CompletableFuture<T> future = new CompletableFuture<>();
     addListener(procFuture, (procId, error) -> {
       if (error != null) {
         future.completeExceptionally(error);
         return;
       }
-      getProcedureResult(procId, future, 0);
+      getProcedureResult(procId, converter, future, 0);
     });
     return future;
   }
 
-  private void getProcedureResult(long procId, CompletableFuture<Void> future, int retries) {
+  private <T> void getProcedureResult(long procId, Converter<T, ByteString> converter,
+    CompletableFuture<T> future, int retries) {
     addListener(
       this.<GetProcedureResultResponse> newMasterCaller()
         .action((controller, stub) -> this.<GetProcedureResultRequest, GetProcedureResultResponse,
@@ -3032,14 +3135,19 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         .call(),
       (response, error) -> {
         if (error != null) {
-          LOG.warn("failed to get the procedure result procId={}", procId,
-            ConnectionUtils.translateException(error));
-          retryTimer.newTimeout(t -> getProcedureResult(procId, future, retries + 1),
-            ConnectionUtils.getPauseTime(pauseNs, retries), TimeUnit.NANOSECONDS);
+          Throwable exc = ConnectionUtils.translateException(error);
+          if (exc instanceof DoNotRetryIOException) {
+            // stop retrying on DNRIOE
+            future.completeExceptionally(exc);
+          } else {
+            LOG.warn("failed to get the procedure result procId={}", procId, exc);
+            retryTimer.newTimeout(t -> getProcedureResult(procId, converter, future, retries + 1),
+              ConnectionUtils.getPauseTime(pauseNs, retries), TimeUnit.NANOSECONDS);
+          }
           return;
         }
         if (response.getState() == GetProcedureResultResponse.State.RUNNING) {
-          retryTimer.newTimeout(t -> getProcedureResult(procId, future, retries + 1),
+          retryTimer.newTimeout(t -> getProcedureResult(procId, converter, future, retries + 1),
             ConnectionUtils.getPauseTime(pauseNs, retries), TimeUnit.NANOSECONDS);
           return;
         }
@@ -3047,7 +3155,11 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           IOException ioe = ForeignExceptionUtil.toIOException(response.getException());
           future.completeExceptionally(ioe);
         } else {
-          future.complete(null);
+          try {
+            future.complete(converter.convert(response.getResult()));
+          } catch (IOException e) {
+            future.completeExceptionally(e);
+          }
         }
       });
   }
@@ -3188,6 +3300,20 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         Void> adminCall(controller, stub, RequestConverter.buildRollWALWriterRequest(),
           (s, c, req, done) -> s.rollWALWriter(controller, req, done), resp -> null))
       .serverName(serverName).call();
+  }
+
+  @Override
+  public CompletableFuture<Map<ServerName, Long>> rollAllWALWriters() {
+    return this
+      .<RollAllWALWritersRequest, RollAllWALWritersResponse,
+        Map<ServerName,
+          Long>> procedureCall(
+            RequestConverter.buildRollAllWALWritersRequest(ng.getNonceGroup(), ng.newNonce()),
+            (s, c, req, done) -> s.rollAllWALWriters(c, req, done), resp -> resp.getProcId(),
+            result -> LastHighestWalFilenum.parseFrom(result.toByteArray()).getFileNumMap()
+              .entrySet().stream().collect(Collectors
+                .toUnmodifiableMap(e -> ServerName.valueOf(e.getKey()), Map.Entry::getValue)),
+            new RollAllWALWritersBiConsumer());
   }
 
   @Override
@@ -4558,5 +4684,17 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           (s, c, req, done) -> s.getCachedFilesList(c, req, done),
           resp -> resp.getCachedFilesList()))
       .serverName(serverName).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> restoreBackupSystemTable(String snapshotName) {
+    MasterProtos.RestoreBackupSystemTableRequest request =
+      MasterProtos.RestoreBackupSystemTableRequest.newBuilder().setSnapshotName(snapshotName)
+        .build();
+    return this.<MasterProtos.RestoreBackupSystemTableRequest,
+      MasterProtos.RestoreBackupSystemTableResponse> procedureCall(request,
+        MasterService.Interface::restoreBackupSystemTable,
+        MasterProtos.RestoreBackupSystemTableResponse::getProcId,
+        new RestoreBackupSystemTableProcedureBiConsumer());
   }
 }

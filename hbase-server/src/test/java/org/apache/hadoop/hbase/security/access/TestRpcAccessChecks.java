@@ -22,7 +22,6 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -49,6 +48,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
+import org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -113,7 +113,8 @@ public class TestRpcAccessChecks {
 
     @Override
     public Iterable<Service> getServices() {
-      return Collections.singleton(mock(TestRpcServiceProtos.TestProtobufRpcProto.class));
+      return Collections.singleton(TestRpcServiceProtos.TestProtobufRpcProto
+        .newReflectiveService(new TestProtobufRpcServiceImpl()));
     }
   }
 

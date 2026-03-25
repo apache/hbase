@@ -153,13 +153,18 @@ function get_release_info {
     ASF_GITHUB_WEBUI="https://raw.githubusercontent.com/apache/${PROJECT}"
   fi
   if [ -z "$GIT_BRANCH" ]; then
-    # If no branch is specified, find out the latest branch from the repo.
-    GIT_BRANCH="$(git ls-remote --heads "$ASF_REPO" |
-      grep refs/heads/branch- |
-      awk '{print $2}' |
-      sort -r |
-      head -n 1 |
-      cut -d/ -f3)"
+    # Except for hbase main repo, all other repos usually release from master branch
+    if [[ "$PROJECT" =~ ^hbase- ]]; then
+      GIT_BRANCH="master"
+    else
+      # If no branch is specified, find out the latest branch from the repo.
+      GIT_BRANCH="$(git ls-remote --heads "$ASF_REPO" |
+        grep refs/heads/branch- |
+        awk '{print $2}' |
+        sort -r |
+        head -n 1 |
+        cut -d/ -f3)"
+    fi
   fi
 
   GIT_BRANCH="$(read_config "GIT_BRANCH" "$GIT_BRANCH")"
@@ -377,6 +382,43 @@ function init_java {
   export JAVA_VERSION
 }
 
+function set_java8_home() {
+  if [ -z "$JAVA8_HOME" ]; then
+    # Ubuntu default path for jdk 8, included in docker image
+    export JAVA8_HOME="/usr/lib/jvm/java-8-openjdk-amd64"
+    log "Setting JAVA8_HOME to $JAVA8_HOME"
+  fi
+}
+
+function set_java17_home() {
+  if [ -z "$JAVA17_HOME" ]; then
+    # Ubuntu default path for JDK 17, included in docker image
+    export JAVA17_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
+    log "Setting JAVA17_HOME to $JAVA17_HOME"
+  fi
+}
+
+function set_java17_as_default_java() {
+  log "Build requires JDK 17"
+  # Must be called after init_java
+  if [ "$JAVA_VERSION" != 17* ]; then
+    set_java17_home
+    log "Changing JAVA_HOME to $JAVA17_HOME"
+    export JAVA_HOME="$JAVA17_HOME"
+    # re-detect java version
+    init_java
+  fi
+}
+
+# Check the releaseTarget defined in the project, and switch to JDK17
+# if JAVA_HOME does not already point to JDK17
+function init_java17() {
+  RELEASETARGET=$(maven_get_release_target)
+  if [ "$RELEASETARGET" = "17" ]; then
+    set_java17_as_default_java
+  fi
+}
+
 function init_python {
   if ! [ -x "$(command -v python3)"  ]; then
     error 'python3 needed by yetus and api report. Install or add link?'
@@ -399,6 +441,45 @@ function init_mvn {
   echo -n "mvn version: "
   "${MVN[@]}" --version
   configure_maven
+}
+
+function init_toolchains {
+  # Requires JAVA8_HOME and JAVA17_HOME to be set
+  set_java8_home
+  set_java17_home
+
+  MAVEN_TOOLCHAINS_FILE="${MAVEN_LOCAL_REPO}/toolchains.xml"
+  log "Creating toolchains.xml under $MAVEN_TOOLCHAINS_FILE"
+
+  cat <<'EOF' > "$MAVEN_TOOLCHAINS_FILE"
+ <?xml version="1.0" encoding="UTF-8"?>
+ <toolchains xmlns="http://maven.apache.org/TOOLCHAINS/1.1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://maven.apache.org/TOOLCHAINS/1.1.0 http://maven.apache.org/xsd/toolchains-1.1.0.xsd">
+   <toolchain>
+     <type>jdk</type>
+     <provides>
+       <version>1.8</version>
+     </provides>
+     <configuration>
+       <jdkHome>${env.JAVA8_HOME}</jdkHome>
+     </configuration>
+   </toolchain>
+   <toolchain>
+     <type>jdk</type>
+     <provides>
+       <version>17</version>
+     </provides>
+     <configuration>
+       <jdkHome>${env.JAVA17_HOME}</jdkHome>
+     </configuration>
+   </toolchain>
+ </toolchains>
+EOF
+
+  # Pass toolchains.xml to every mvn call
+  log "Adding toolchains file to Maven command"
+  MVN=("${MVN[@]}" --toolchains "${MAVEN_TOOLCHAINS_FILE}")
+  export MVN MAVEN_TOOLCHAINS_FILE
 }
 
 function init_yetus {
@@ -646,7 +727,6 @@ make_src_release() {
 build_release_binary() {
   local project="${1}"
   local version="${2}"
-  local base_name="${project}-${version}"
   local extra_flags=()
   if [[ "${version}" = *-hadoop3 ]] || [[ "${version}" = *-hadoop3-SNAPSHOT ]]; then
     extra_flags=("-Drevision=${version}" "-Dhadoop.profile=3.0")
@@ -670,19 +750,25 @@ build_release_binary() {
   echo "${cmd[*]}"
   "${cmd[@]}"
 
-  # Check there is a bin gz output. The build may not produce one: e.g. hbase-thirdparty.
-  local f_bin_prefix="./${PROJECT}-assembly/target/${base_name}"
-  if ls "${f_bin_prefix}"*-bin.tar.gz &>/dev/null; then
-    cp "${f_bin_prefix}"*-bin.tar.gz ..
-    cd .. || exit
-    for i in "${base_name}"*-bin.tar.gz; do
-      "${GPG}" "${GPG_ARGS[@]}" --armour --output "${i}.asc" --detach-sig "${i}"
-      "${GPG}" "${GPG_ARGS[@]}" --print-md SHA512 "${i}" > "${i}.sha512"
-    done
-  else
-    cd .. || exit
-    log "No ${f_bin_prefix}*-bin.tar.gz product; expected?"
-  fi
+  # Check there are bin gz outputs. The build may not produce one: e.g. hbase-thirdparty.
+  POSTFIXES=("" "-byo-hadoop")
+  local builddir=$(pwd)
+  for postfix in "${POSTFIXES[@]}"; do
+    cd "${builddir}"
+    local assembly_name=${project}${postfix}-${version}
+    local f_bin_prefix="./${PROJECT}-assembly${postfix}/target/${assembly_name}"
+    if ls "${f_bin_prefix}"*-bin.tar.gz &>/dev/null; then
+      cp "${f_bin_prefix}"*-bin.tar.gz ..
+      cd .. || exit
+      for i in "${assembly_name}"*-bin.tar.gz; do
+        "${GPG}" "${GPG_ARGS[@]}" --armour --output "${i}.asc" --detach-sig "${i}"
+        "${GPG}" "${GPG_ARGS[@]}" --print-md SHA512 "${i}" > "${i}.sha512"
+      done
+    else
+      cd .. || exit
+      log "No ${f_bin_prefix}*-bin.tar.gz product; expected?"
+    fi
+  done
 }
 
 # Make binary release.
@@ -751,6 +837,12 @@ function maven_set_version { #input: <version_to_set>
 function maven_get_version {
   # shellcheck disable=SC2016
   "${MVN[@]}" -q -N -Dexec.executable="echo" -Dexec.args='${project.version}' exec:exec
+}
+
+# Do maven command to read target Java version from local pom
+function maven_get_release_target {
+  # shellcheck disable=SC2016
+  "${MVN[@]}"  -q -N -Dexec.executable="echo" -Dexec.args='${releaseTarget}' exec:exec
 }
 
 # Do maven deploy to snapshot or release artifact repository, with checks.
@@ -876,7 +968,8 @@ function get_hadoop3_version() {
 # For 2.x, the generated CHANGES.md and RELEASENOTES.md may have lines end with whitespace and
 # case spotless:check failure, so we should run spotless:apply before committing
 function maven_spotless_apply() {
-  "${MVN[@]}" spotless:apply
+  # our spotless plugin version requires at least java 11 to run, so we use java 17 here
+  JAVA_HOME="${JAVA17_HOME}" "${MVN[@]}" spotless:apply
 }
 
 function git_add_poms() {

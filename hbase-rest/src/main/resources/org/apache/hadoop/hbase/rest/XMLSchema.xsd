@@ -28,6 +28,8 @@
       <attribute name="OS" type="string"></attribute>
       <attribute name="Server" type="string"></attribute>
       <attribute name="Jersey" type="string"></attribute>
+      <attribute name="Version" type="string"></attribute>
+      <attribute name="Revision" type="string"></attribute>
     </complexType>
 
     <element name="TableList" type="tns:TableList"></element>
@@ -123,6 +125,10 @@
             <element name="labels" type="string" minOccurs="0" maxOccurs="unbounded"></element>
         </sequence>
         <attribute name="cacheBlocks" type="boolean"></attribute>
+        <attribute name="maxVersions" type="int"></attribute>
+        <attribute name="limit" type="int"></attribute>
+        <attribute name="includeStartRow" type="boolean"></attribute>
+        <attribute name="includeStopRow" type="boolean"></attribute>
     </complexType>
 
     <element name="StorageClusterVersion" type="tns:StorageClusterVersion" />
@@ -168,8 +174,9 @@
         <attribute name="storefiles" type="int"></attribute>
         <attribute name="storefileSizeMB" type="int"></attribute>
         <attribute name="memstoreSizeMB" type="int"></attribute>
-        <attribute name="storefileIndexSizeMB" type="int"></attribute>
+        <attribute name="storefileIndexSizeKB" type="int"></attribute>
         <attribute name="readRequestsCount" type="int"></attribute>
+        <attribute name="cpRequestsCount" type="int"></attribute>
         <attribute name="writeRequestsCount" type="int"></attribute>
         <attribute name="rootIndexSizeKB" type="int"></attribute>
         <attribute name="totalStaticIndexSizeKB" type="int"></attribute>

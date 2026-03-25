@@ -162,6 +162,16 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> reopenTableRegions(TableName tableName) {
+    return wrap(rawAdmin.reopenTableRegions(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Void> reopenTableRegions(TableName tableName, List<RegionInfo> regions) {
+    return wrap(rawAdmin.reopenTableRegions(tableName, regions));
+  }
+
+  @Override
   public CompletableFuture<Void> modifyTableStoreFileTracker(TableName tableName, String dstSFT) {
     return wrap(rawAdmin.modifyTableStoreFileTracker(tableName, dstSFT));
   }
@@ -692,6 +702,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Map<ServerName, Long>> rollAllWALWriters() {
+    return wrap(rawAdmin.rollAllWALWriters());
+  }
+
+  @Override
   public CompletableFuture<Void> clearCompactionQueues(ServerName serverName, Set<String> queues) {
     return wrap(rawAdmin.clearCompactionQueues(serverName, queues));
   }
@@ -1004,5 +1019,10 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<List<String>> getCachedFilesList(ServerName serverName) {
     return wrap(rawAdmin.getCachedFilesList(serverName));
+  }
+
+  @Override
+  public CompletableFuture<Void> restoreBackupSystemTable(String snapshotName) {
+    return wrap(rawAdmin.restoreBackupSystemTable(snapshotName));
   }
 }

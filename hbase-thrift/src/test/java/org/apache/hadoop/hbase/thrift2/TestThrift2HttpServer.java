@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.thrift2;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.ArrayList;
 import java.util.function.Supplier;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.thrift.TestThriftHttpServer;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.thrift.TestThriftHttpServerBase;
 import org.apache.hadoop.hbase.thrift.ThriftServer;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
@@ -32,17 +34,24 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.THttpClient;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-@Category({ ClientTests.class, MediumTests.class })
-public class TestThrift2HttpServer extends TestThriftHttpServer {
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
+public class TestThrift2HttpServer extends TestThriftHttpServerBase {
   private static final String TABLENAME = "TestThrift2HttpServerTable";
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestThrift2HttpServer.class);
+  @BeforeAll
+  public static void beforeAll() throws Exception {
+    TestThriftHttpServerBase.setUpBeforeClass();
+  }
+
+  @AfterAll
+  public static void afterAll() throws Exception {
+    TestThriftHttpServerBase.tearDownAfterClass();
+  }
 
   @Override
   protected Supplier<ThriftServer> getThriftServerSupplier() {
@@ -70,7 +79,7 @@ public class TestThrift2HttpServer extends TestThriftHttpServer {
       tTableName.setNs(Bytes.toBytes(""));
       tTableName.setQualifier(Bytes.toBytes(TABLENAME));
       if (!tableCreated) {
-        Assert.assertTrue(!client.tableExists(tTableName));
+        assertFalse(client.tableExists(tTableName));
         TTableDescriptor tTableDescriptor = new TTableDescriptor();
         tTableDescriptor.setTableName(tTableName);
         TColumnFamilyDescriptor columnFamilyDescriptor = new TColumnFamilyDescriptor();
@@ -79,10 +88,9 @@ public class TestThrift2HttpServer extends TestThriftHttpServer {
         client.createTable(tTableDescriptor, new ArrayList<>());
         tableCreated = true;
       }
-      Assert.assertTrue(client.tableExists(tTableName));
+      assertTrue(client.tableExists(tTableName));
     } finally {
       httpClient.close();
     }
   }
-
 }

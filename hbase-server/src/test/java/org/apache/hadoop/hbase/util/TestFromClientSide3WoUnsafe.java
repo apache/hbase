@@ -17,31 +17,29 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.client.TestFromClientSide3;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.Mockito.mockStatic;
+
+import org.apache.hadoop.hbase.client.FromClientSide3TestBase;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.mockito.MockedStatic;
 
-@Category({ LargeTests.class, ClientTests.class })
-public class TestFromClientSide3WoUnsafe extends TestFromClientSide3 {
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+public class TestFromClientSide3WoUnsafe extends FromClientSide3TestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFromClientSide3WoUnsafe.class);
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    TestByteBufferUtils.disableUnsafe();
-    TestFromClientSide3.setUpBeforeClass();
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    TestFromClientSide3.tearDownAfterClass();
-    TestByteBufferUtils.detectAvailabilityOfUnsafe();
+  @BeforeAll
+  public static void setUpBeforeAll() throws Exception {
+    try (MockedStatic<HBasePlatformDependent> mocked = mockStatic(HBasePlatformDependent.class)) {
+      mocked.when(HBasePlatformDependent::isUnsafeAvailable).thenReturn(false);
+      mocked.when(HBasePlatformDependent::unaligned).thenReturn(false);
+      assertFalse(ByteBufferUtils.UNSAFE_AVAIL);
+      assertFalse(ByteBufferUtils.UNSAFE_UNALIGNED);
+    }
+    startCluster();
   }
 }

@@ -228,6 +228,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       if (
         fileName.indexOf(FSTableDescriptors.TABLEINFO_DIR) > 0
           || fileName.indexOf(HRegionFileSystem.REGION_INFO_FILE) > 0
+          || fileName.indexOf(BackupManifest.MANIFEST_FILE_NAME) > 0
       ) {
         toKeep.add(p);
       }
@@ -235,6 +236,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
     // Copy meta to destination
     for (Path p : toKeep) {
       Path newPath = convertToDest(p, backupDirPath);
+      LOG.info("Copying tmp metadata from {} to {}", p, newPath);
       copyFile(fs, p, newPath);
     }
   }
@@ -310,8 +312,11 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
     List<String> backupsToDelete) throws IllegalArgumentException, IOException {
     BackupManifest manifest =
       HBackupFileSystem.getManifest(conf, new Path(backupRoot), mergedBackupId);
+    LOG.info("Removing ancestors from merged backup {} : {}", mergedBackupId, backupsToDelete);
     manifest.getBackupImage().removeAncestors(backupsToDelete);
     // save back
+    LOG.info("Creating new manifest file for merged backup {} at root {}", mergedBackupId,
+      backupRoot);
     manifest.store(conf);
   }
 
@@ -320,12 +325,14 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
     // Delete from backup system table
     try (BackupSystemTable table = new BackupSystemTable(conn)) {
       for (String backupId : backupIds) {
+        LOG.info("Removing metadata for backup {}", backupId);
         table.deleteBackupInfo(backupId);
       }
     }
 
     // Delete from file system
     for (String backupId : backupIds) {
+      LOG.info("Purging backup {} from FileSystem", backupId);
       Path backupDirPath = HBackupFileSystem.getBackupPath(backupRoot, backupId);
 
       if (!fs.delete(backupDirPath, true)) {

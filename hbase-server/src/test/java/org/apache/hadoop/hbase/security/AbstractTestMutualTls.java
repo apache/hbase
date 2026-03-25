@@ -18,9 +18,8 @@
 package org.apache.hadoop.hbase.security;
 
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -215,7 +214,18 @@ public abstract class AbstractTestMutualTls {
       submitRequest();
     } else {
       ServiceException se = assertThrows(ServiceException.class, this::submitRequest);
-      assertThat(se.getCause(), instanceOf(SSLHandshakeException.class));
+      // The SSLHandshakeException is encapsulated differently depending on the TLS version
+      boolean seenSSLHandshakeException = false;
+      Throwable current = se;
+      do {
+        if (current instanceof SSLHandshakeException) {
+          seenSSLHandshakeException = true;
+          break;
+        }
+        current = current.getCause();
+      } while (current != null);
+      assertTrue("Exception chain does not include SSLHandshakeException",
+        seenSSLHandshakeException);
     }
   }
 

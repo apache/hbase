@@ -17,11 +17,14 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.commons.lang3.StringUtils;
+import java.util.HashSet;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 
 /**
  * Helper class for coprocessor host when configuration changes.
@@ -32,19 +35,71 @@ public final class CoprocessorConfigurationUtil {
   private CoprocessorConfigurationUtil() {
   }
 
-  public static boolean checkConfigurationChange(Configuration oldConfig, Configuration newConfig,
-    String... configurationKey) {
+  /**
+   * Check configuration change by comparing current loaded coprocessors with configuration values.
+   * This method is useful when the configuration object has been updated but we need to determine
+   * if coprocessor configuration has actually changed compared to what's currently loaded.
+   * <p>
+   * <b>Note:</b> This method only detects changes in the set of coprocessor class names. It does
+   * <b>not</b> detect changes to priority or path for coprocessors that are already loaded with the
+   * same class name. If you need to update the priority or path of an existing coprocessor, you
+   * must restart the region/regionserver/master.
+   * @param coprocessorHost  the coprocessor host to check current loaded coprocessors (can be null)
+   * @param conf             the configuration to check
+   * @param configurationKey the configuration keys to check
+   * @return true if configuration has changed, false otherwise
+   */
+  public static boolean checkConfigurationChange(CoprocessorHost<?, ?> coprocessorHost,
+    Configuration conf, String... configurationKey) {
     Preconditions.checkArgument(configurationKey != null, "Configuration Key(s) must be provided");
-    boolean isConfigurationChange = false;
+    Preconditions.checkArgument(conf != null, "Configuration must be provided");
+
+    if (
+      !conf.getBoolean(CoprocessorHost.COPROCESSORS_ENABLED_CONF_KEY,
+        CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED)
+    ) {
+      return false;
+    }
+
+    if (coprocessorHost == null) {
+      // If no coprocessor host exists, check if any coprocessors are now configured
+      return hasCoprocessorsConfigured(conf, configurationKey);
+    }
+
+    // Get currently loaded coprocessor class names
+    Set<String> currentlyLoaded = coprocessorHost.getCoprocessorClassNames();
+
+    // Get coprocessor class names from configuration
+    // Only class names are compared; priority and path changes are not detected
+    Set<String> configuredClasses = new HashSet<>();
     for (String key : configurationKey) {
-      String oldValue = oldConfig.get(key);
-      String newValue = newConfig.get(key);
-      // check if the coprocessor key has any difference
-      if (!StringUtils.equalsIgnoreCase(oldValue, newValue)) {
-        isConfigurationChange = true;
-        break;
+      String[] classes = conf.getStrings(key);
+      if (classes != null) {
+        for (String className : classes) {
+          // Handle the className|priority|path format
+          String[] classNameToken = className.split("\\|");
+          String actualClassName = classNameToken[0].trim();
+          if (!Strings.isNullOrEmpty(actualClassName)) {
+            configuredClasses.add(actualClassName);
+          }
+        }
       }
     }
-    return isConfigurationChange;
+
+    // Compare the two sets
+    return !currentlyLoaded.equals(configuredClasses);
+  }
+
+  /**
+   * Helper method to check if there are any coprocessors configured.
+   */
+  private static boolean hasCoprocessorsConfigured(Configuration conf, String... configurationKey) {
+    for (String key : configurationKey) {
+      String[] coprocessors = conf.getStrings(key);
+      if (coprocessors != null && coprocessors.length > 0) {
+        return true;
+      }
+    }
+    return false;
   }
 }

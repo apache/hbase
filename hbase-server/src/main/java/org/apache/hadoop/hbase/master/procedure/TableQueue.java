@@ -52,14 +52,15 @@ class TableQueue extends Queue<TableName> {
       case CREATE:
       case DELETE:
       case DISABLE:
+      case SNAPSHOT:
       case ENABLE:
+      case RESTORE_BACKUP_SYSTEM_TABLE:
         return true;
       case EDIT:
         // we allow concurrent edit on the ns family in meta table
         return !proc.getTableName().equals(TableProcedureInterface.DUMMY_NAMESPACE_TABLE_NAME);
       case READ:
       case FLUSH:
-      case SNAPSHOT:
         return false;
       // region operations are using the shared-lock on the table
       // and then they will grab an xlock on the region.

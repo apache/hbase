@@ -127,6 +127,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   private long rootProcId = NO_PROC_ID;
   private long procId = NO_PROC_ID;
   private long submittedTime;
+  private boolean isCriticalSystemTable;
 
   // Runtime state, updated every operation
   private ProcedureState state = ProcedureState.INITIALIZING;
@@ -343,6 +344,25 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * Called when the procedure is ready to be added to the queue after the loading/replay operation.
    */
   protected void afterReplay(TEnvironment env) {
+    // no-op
+  }
+
+  /**
+   * Called before we call the execute method of this procedure, but after we acquire the execution
+   * lock and procedure scheduler lock.
+   */
+  protected void beforeExec(TEnvironment env) throws ProcedureSuspendedException {
+    // no-op
+  }
+
+  /**
+   * Called after we call the execute method of this procedure, and also after we initialize all the
+   * sub procedures and persist the the state if persistence is needed.
+   * <p>
+   * This is for doing some hooks after we initialize the sub procedures. See HBASE-29259 for more
+   * details on why we can not release the region lock inside the execute method.
+   */
+  protected void afterExec(TEnvironment env) {
     // no-op
   }
 
@@ -587,6 +607,14 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    */
   protected void setParentProcId(long parentProcId) {
     this.parentProcId = parentProcId;
+  }
+
+  public void setCriticalSystemTable(boolean isCriticalSystemTable) {
+    this.isCriticalSystemTable = isCriticalSystemTable;
+  }
+
+  public boolean isCriticalSystemTable() {
+    return isCriticalSystemTable;
   }
 
   protected void setRootProcId(long rootProcId) {

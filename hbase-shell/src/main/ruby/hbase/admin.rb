@@ -114,6 +114,9 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Switch compaction on/off at runtime on a region server
     def compaction_switch(on_or_off, regionserver_names)
+      unless /true|false/i.match(on_or_off.to_s)
+        raise ArgumentError, 'compaction_switch first argument only accepts "true" or "false"'
+      end
       region_servers = regionserver_names.flatten.compact
       servers = java.util.ArrayList.new
       if region_servers.any?
@@ -175,6 +178,12 @@ module Hbase
     end
     # TODO: remove older hlog_roll version
     alias hlog_roll wal_roll
+
+    #----------------------------------------------------------------------------------------------
+    # Requests all region servers to roll wal writer
+    def wal_roll_all
+      @admin.rollAllWALWriters
+    end
 
     #----------------------------------------------------------------------------------------------
     # Requests a table or region split
@@ -607,6 +616,34 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Reopen regions of a table
+    def reopen_regions(table_name, regions = nil)
+      table_name_obj = TableName.valueOf(table_name)
+      if regions.nil? || regions.empty?
+        @admin.reopenTableRegions(table_name_obj)
+      else
+        # Get all regions of the table
+        all_regions = @admin.getRegions(table_name_obj)
+        target_regions = java.util.ArrayList.new
+
+        regions.each do |r|
+          # r could be encoded name or full name
+          found = false
+          all_regions.each do |region_info|
+            if region_info.getEncodedName == r || region_info.getRegionNameAsString == r
+              target_regions.add(region_info)
+              found = true
+              break
+            end
+          end
+          raise ArgumentError, "Region #{r} not found in table #{table_name}" unless found
+        end
+
+        @admin.reopenTableRegions(table_name_obj, target_regions)
+      end
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Merge multiple regions
     def merge_region(regions, force)
       unless regions.is_a?(Array)
@@ -1002,7 +1039,7 @@ module Hbase
           r_load_source_map = sl.getReplicationLoadSourceMap
           build_source_string(r_load_source_map, r_source_string)
 
-          puts(format('    %<host>s:', host: server_name.getHostname))
+          puts(format('    %<host>s:%<port>s %<startcode>s', host: server_name.getHostname, port:server_name.getPort, startcode: server_name.getStartcode))
           if type.casecmp('SOURCE').zero?
             puts(format('%<source>s', source: r_source_string))
           elsif type.casecmp('SINK').zero?
@@ -1026,11 +1063,11 @@ module Hbase
             puts('    no active tasks')
           end
         end
-        puts(format('%d live servers', cluster_metrics.getServersSize))
-        for server in cluster_metrics.getServers
-          puts(format('    %s:%d %d', server.getHostname, server.getPort, server.getStartcode))
+        puts(format('%d live servers', cluster_metrics.getLiveServerMetrics.size))
+        cluster_metrics.getLiveServerMetrics.keySet.each do |server_name|
+          puts(format('    %s:%d %d', server_name.getHostname, server_name.getPort, server_name.getStartcode))
           printed = false
-          for task in cluster_metrics.getLiveServerMetrics.get(server).getTasks
+          for task in cluster_metrics.getLiveServerMetrics.get(server_name).getTasks
             next unless task.getState.name == 'RUNNING'
             puts(format('        %s', task.toString))
             printed = true
@@ -1213,6 +1250,10 @@ module Hbase
           )
           cfdb.setEncryptionKey(org.apache.hadoop.hbase.security.EncryptionUtil.wrapKey(@conf, key,
                                                                                           algorithm))
+        end
+        if arg.include?(ColumnFamilyDescriptorBuilder::ENCRYPTION_KEY_NAMESPACE)
+          cfdb.setEncryptionKeyNamespace(arg.delete(
+            ColumnFamilyDescriptorBuilder::ENCRYPTION_KEY_NAMESPACE))
         end
       end
       if arg.include?(ColumnFamilyDescriptorBuilder::COMPRESSION_COMPACT)
@@ -1471,7 +1512,7 @@ module Hbase
     def list_namespace(regex = '.*')
       pattern = java.util.regex.Pattern.compile(regex)
       list = @admin.listNamespaces
-      list.select { |s| pattern.match(s) }
+      list.select { |s| pattern.matcher(s).matches }
     end
 
     #----------------------------------------------------------------------------------------------

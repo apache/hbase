@@ -32,8 +32,11 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 /**
  * Just retain a small set of the methods for the old zookeeper based replication queue storage, for
@@ -41,6 +44,9 @@ import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
  */
 @InterfaceAudience.Private
 public class ZKReplicationQueueStorageForMigration extends ZKReplicationStorageBase {
+
+  private static final Logger LOG =
+    LoggerFactory.getLogger(ZKReplicationQueueStorageForMigration.class);
 
   public static final String ZOOKEEPER_ZNODE_REPLICATION_HFILE_REFS_KEY =
     "zookeeper.znode.replication.hfile.refs";
@@ -123,6 +129,8 @@ public class ZKReplicationQueueStorageForMigration extends ZKReplicationStorageB
     return getFileNode(getQueueNode(serverName, queueId), fileName);
   }
 
+  static final String REGION_REPLICA_REPLICATION_PEER = "region_replica_replication";
+
   @SuppressWarnings("unchecked")
   public MigrationIterator<Pair<ServerName, List<ZkReplicationQueueData>>> listAllQueues()
     throws KeeperException {
@@ -136,25 +144,57 @@ public class ZKReplicationQueueStorageForMigration extends ZKReplicationStorageB
 
       private ServerName previousServerName;
 
+      private boolean hasRegionReplicaReplicationQueue;
+
+      private void cleanupQueuesWithoutRegionReplicaReplication(ServerName serverName)
+        throws Exception {
+        String rsZNode = getRsNode(serverName);
+        List<String> queueIdList = ZKUtil.listChildrenNoWatch(zookeeper, rsZNode);
+        if (CollectionUtils.isEmpty(queueIdList)) {
+          return;
+        }
+        for (String queueId : queueIdList) {
+          ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
+          if (!queueInfo.getPeerId().equals(REGION_REPLICA_REPLICATION_PEER)) {
+            ZKUtil.deleteNodeRecursively(zookeeper, getQueueNode(serverName, queueId));
+          }
+        }
+      }
+
       @Override
       public Pair<ServerName, List<ZkReplicationQueueData>> next() throws Exception {
         if (previousServerName != null) {
-          ZKUtil.deleteNodeRecursively(zookeeper, getRsNode(previousServerName));
+          if (hasRegionReplicaReplicationQueue) {
+            // if there are region_replica_replication queues, we can not delete it, just delete
+            // other queues, see HBASE-29169.
+            cleanupQueuesWithoutRegionReplicaReplication(previousServerName);
+          } else {
+            ZKUtil.deleteNodeRecursively(zookeeper, getRsNode(previousServerName));
+          }
         }
         if (!iter.hasNext()) {
-          ZKUtil.deleteNodeRecursively(zookeeper, queuesZNode);
+          // If there are region_replica_replication queues then we can not delete the data right
+          // now, otherwise we may crash the old region servers, see HBASE-29169.
+          // The migration procedure has a special step to cleanup everything
           return null;
         }
+        hasRegionReplicaReplicationQueue = false;
         String replicator = iter.next();
         ServerName serverName = ServerName.parseServerName(replicator);
         previousServerName = serverName;
         List<String> queueIdList = ZKUtil.listChildrenNoWatch(zookeeper, getRsNode(serverName));
-        if (queueIdList == null || queueIdList.isEmpty()) {
+        if (CollectionUtils.isEmpty(queueIdList)) {
           return Pair.newPair(serverName, Collections.emptyList());
         }
         List<ZkReplicationQueueData> queueDataList = new ArrayList<>(queueIdList.size());
         for (String queueIdStr : queueIdList) {
           ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueIdStr);
+          if (queueInfo.getPeerId().equals(REGION_REPLICA_REPLICATION_PEER)) {
+            // we do not need to migrate the data for this queue, skip
+            LOG.debug("Found region replica replication queue {}, skip", queueInfo);
+            hasRegionReplicaReplicationQueue = true;
+            continue;
+          }
           ReplicationQueueId queueId;
           if (queueInfo.getDeadRegionServers().isEmpty()) {
             queueId = new ReplicationQueueId(serverName, queueInfo.getPeerId());

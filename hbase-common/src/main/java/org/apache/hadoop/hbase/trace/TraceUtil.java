@@ -28,8 +28,8 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
-import org.apache.hadoop.hbase.Version;
 import org.apache.hadoop.hbase.util.FutureUtils;
+import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -39,7 +39,7 @@ public final class TraceUtil {
   }
 
   public static Tracer getGlobalTracer() {
-    return GlobalOpenTelemetry.getTracer("org.apache.hbase", Version.version);
+    return GlobalOpenTelemetry.getTracer("org.apache.hbase", VersionInfo.getVersion());
   }
 
   /**

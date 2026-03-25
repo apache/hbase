@@ -97,9 +97,7 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     numScanQueues = scanQueues;
     scanHandlersCount = scanHandlers;
 
-    initializeQueues(numWriteQueues);
-    initializeQueues(numReadQueues);
-    initializeQueues(numScanQueues);
+    initializeQueues(numWriteQueues + numReadQueues + numScanQueues);
 
     this.writeBalancer = getBalancer(name, conf, queues.subList(0, numWriteQueues));
     this.readBalancer =
@@ -296,5 +294,9 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     if (balancer instanceof ConfigurationObserver) {
       ((ConfigurationObserver) balancer).onConfigurationChange(conf);
     }
+  }
+
+  protected int getNumScanQueues() {
+    return numScanQueues;
   }
 }

@@ -76,12 +76,14 @@ public class TestCoreRegionCoprocessor {
     this.rss = new MockRegionServerServices(HTU.getConfiguration());
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
       MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    HTU.createRegionDir(ri);
     this.region = HRegion.openHRegion(ri, td, null, HTU.getConfiguration(), this.rss, null);
   }
 
   @After
   public void after() throws IOException {
     this.region.close();
+    HTU.cleanupTestDir();
   }
 
   /**

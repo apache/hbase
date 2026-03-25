@@ -15,8 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-requests==2.32.0
+requests==2.32.4
 future==0.18.3
 gitpython==3.1.41
 rbtools==4.0
-jinja2==3.1.4
+jinja2==3.1.6

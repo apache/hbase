@@ -642,8 +642,8 @@ under a '2-clause BSD' license.
 
 ----
 This project bundles a copy of the Vega minified javascript library version
-5.24.0, the Vega-Lite minified javascript library version 5.6.1, and the
-Vega-Embed minified javascript library version 6.21.3. All three are
+5.32.0, the Vega-Lite minified javascript library version 5.23.0, and the
+Vega-Embed minified javascript library version 6.29.0. All three are
 available under the following '3-clause BSD' license.
 
 Copyright (c) 2015-2023, University of Washington Interactive Data Lab

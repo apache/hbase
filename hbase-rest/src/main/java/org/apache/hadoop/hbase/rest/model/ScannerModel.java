@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.RestUtil;
+import org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -80,8 +81,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
-
-import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.ScannerMessage.Scanner;
 
 /**
  * A representation of Scanner parameters.
@@ -121,6 +120,41 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   private List<String> labels = new ArrayList<>();
   private boolean cacheBlocks = true;
   private int limit = -1;
+
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = IncludeStartRowFilter.class)
+  private boolean includeStartRow = true;
+
+  @JsonInclude(value = JsonInclude.Include.NON_DEFAULT)
+  private boolean includeStopRow = false;
+
+  @XmlAttribute
+  public boolean isIncludeStopRow() {
+    return includeStopRow;
+  }
+
+  public void setIncludeStopRow(boolean includeStopRow) {
+    this.includeStopRow = includeStopRow;
+  }
+
+  @XmlAttribute
+  public boolean isIncludeStartRow() {
+    return includeStartRow;
+  }
+
+  public void setIncludeStartRow(boolean includeStartRow) {
+    this.includeStartRow = includeStartRow;
+  }
+
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+      value = { "EQ_CHECK_FOR_OPERAND_NOT_COMPATIBLE_WITH_THIS", "HE_EQUALS_NO_HASHCODE",
+        "HE_EQUALS_USE_HASHCODE" },
+      justification = "1.The supplied value from the JSON Value Filter is of Type Boolean, hence supressing the check, 2.hashCode method will not be invoked, hence supressing the check")
+  private static class IncludeStartRowFilter {
+    @Override
+    public boolean equals(Object value) {
+      return Boolean.TRUE.equals(value);
+    }
+  }
 
   /**
    * Implement lazily-instantiated singleton as per recipe here:
@@ -731,6 +765,8 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         model.addLabel(label);
       }
     }
+    model.setIncludeStartRow(scan.includeStartRow());
+    model.setIncludeStopRow(scan.includeStopRow());
     return model;
   }
 
@@ -998,6 +1034,8 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         builder.addLabels(label);
     }
     builder.setCacheBlocks(cacheBlocks);
+    builder.setIncludeStartRow(includeStartRow);
+    builder.setIncludeStopRow(includeStopRow);
     return builder.build();
   }
 
@@ -1043,6 +1081,12 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     }
     if (builder.hasCacheBlocks()) {
       this.cacheBlocks = builder.getCacheBlocks();
+    }
+    if (builder.hasIncludeStartRow()) {
+      this.includeStartRow = builder.getIncludeStartRow();
+    }
+    if (builder.hasIncludeStopRow()) {
+      this.includeStopRow = builder.getIncludeStopRow();
     }
     return this;
   }

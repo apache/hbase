@@ -237,6 +237,14 @@ public class ServerManager implements ConfigurationObserver {
   }
 
   /**
+   * Removes all of the ServerListeners of this collection that satisfy the given predicate.
+   * @param filter a predicate which returns true for ServerListener to be removed
+   */
+  public boolean unregisterListenerIf(final Predicate<ServerListener> filter) {
+    return this.listeners.removeIf(filter);
+  }
+
+  /**
    * Let the server manager know a new regionserver has come online
    * @param request       the startup request
    * @param versionNumber the version number of the new regionserver
@@ -429,12 +437,13 @@ public class ServerManager implements ConfigurationObserver {
    * <p/>
    * Must be called inside the initialization method of {@code RegionServerTracker} to avoid
    * concurrency issue.
-   * @param deadServersFromPE     the region servers which already have a SCP associated.
-   * @param liveServersFromWALDir the live region servers from wal directory.
+   * @param deadServersWithDeathTimeFromPE the region servers which already have an SCP associated,
+   *                                       have time of death as value.
+   * @param liveServersFromWALDir          the live region servers from wal directory.
    */
-  void findDeadServersAndProcess(Set<ServerName> deadServersFromPE,
+  void findDeadServersAndProcess(Map<ServerName, Long> deadServersWithDeathTimeFromPE,
     Set<ServerName> liveServersFromWALDir) {
-    deadServersFromPE.forEach(deadservers::putIfAbsent);
+    deadServersWithDeathTimeFromPE.forEach(deadservers::putIfAbsent);
     liveServersFromWALDir.stream().filter(sn -> !onlineServers.containsKey(sn))
       .forEach(this::expireServer);
   }

@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.security;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.ipc.BlockingRpcClient;
 import org.apache.hadoop.hbase.ipc.NettyRpcClient;
 import org.apache.hadoop.hbase.ipc.NettyRpcServer;
@@ -30,57 +30,52 @@ import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.SimpleRpcServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.provider.Arguments;
 
-@RunWith(Parameterized.class)
-@Category({ SecurityTests.class, LargeTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: rpcClientImpl={0}, rpcServerImpl={1}")
 public class TestSecureIPC extends AbstractTestSecureIPC {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSecureIPC.class);
-
-  @Parameters(name = "{index}: rpcClientImpl={0}, rpcServerImpl={1}")
-  public static Collection<Object[]> parameters() {
-    List<Object[]> params = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     List<String> rpcClientImpls =
       Arrays.asList(BlockingRpcClient.class.getName(), NettyRpcClient.class.getName());
     List<String> rpcServerImpls =
       Arrays.asList(SimpleRpcServer.class.getName(), NettyRpcServer.class.getName());
     for (String rpcClientImpl : rpcClientImpls) {
       for (String rpcServerImpl : rpcServerImpls) {
-        params.add(new Object[] { rpcClientImpl, rpcServerImpl });
+        params.add(Arguments.of(rpcClientImpl, rpcServerImpl));
       }
     }
-    return params;
+    return params.stream();
   }
 
-  @Parameter(0)
   public String rpcClientImpl;
 
-  @Parameter(1)
   public String rpcServerImpl;
 
-  @BeforeClass
+  public TestSecureIPC(String rpcClientImpl, String rpcServerImpl) {
+    this.rpcClientImpl = rpcClientImpl;
+    this.rpcServerImpl = rpcServerImpl;
+  }
+
+  @BeforeAll
   public static void setUp() throws Exception {
     initKDCAndConf();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     stopKDC();
     TEST_UTIL.cleanupTestDir();
   }
 
-  @Before
+  @BeforeEach
   public void setUpTest() throws Exception {
     setUpPrincipalAndConf();
     clientConf.set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, rpcClientImpl);

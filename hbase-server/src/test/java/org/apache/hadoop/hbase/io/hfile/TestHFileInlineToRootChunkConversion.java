@@ -22,6 +22,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -85,7 +86,7 @@ public class TestHFileInlineToRootChunkConversion {
       hfw.append(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(k)
         .setFamily(HConstants.EMPTY_BYTE_ARRAY).setQualifier(HConstants.EMPTY_BYTE_ARRAY)
         .setTimestamp(HConstants.LATEST_TIMESTAMP).setType(KeyValue.Type.Maximum.getCode())
-        .setValue(v).build());
+        .setValue(v).setType(Cell.Type.Put).build());
     }
     hfw.close();
 

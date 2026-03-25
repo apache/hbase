@@ -27,6 +27,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 import javax.servlet.ServletException;
@@ -41,7 +42,6 @@ import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.ssl.SSLFactory;
-import org.apache.hadoop.util.HttpExceptionUtils;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -61,6 +61,7 @@ public final class LogLevel {
   public static final String PROTOCOL_HTTPS = "https";
 
   public static final String READONLY_LOGGERS_CONF_KEY = "hbase.ui.logLevels.readonly.loggers";
+  public static final String MASTER_UI_READONLY_CONF_KEY = "hbase.master.ui.readonly";
 
   /**
    * A command line implementation
@@ -214,7 +215,11 @@ public final class LogLevel {
      * @throws Exception                      if unable to connect
      */
     private void doGetLevel() throws Exception {
-      process(protocol + "://" + hostName + "/logLevel?log=" + className);
+      System.out.println(fetchGetLevelResponse());
+    }
+
+    String fetchGetLevelResponse() throws Exception {
+      return fetchResponse(protocol + "://" + hostName + "/logLevel?log=" + className);
     }
 
     /**
@@ -223,7 +228,12 @@ public final class LogLevel {
      * @throws Exception                      if unable to connect
      */
     private void doSetLevel() throws Exception {
-      process(protocol + "://" + hostName + "/logLevel?log=" + className + "&level=" + level);
+      System.out.println(fetchSetLevelResponse());
+    }
+
+    String fetchSetLevelResponse() throws Exception {
+      return fetchResponse(
+        protocol + "://" + hostName + "/logLevel?log=" + className + "&level=" + level);
     }
 
     /**
@@ -257,28 +267,31 @@ public final class LogLevel {
     }
 
     /**
-     * Configures the client to send HTTP request to the URL. Supports SPENGO for authentication.
+     * Send HTTP request and fetch response.
      * @param urlString URL and query string to the daemon's web UI
+     * @return the response from the daemon
      * @throws Exception if unable to connect
      */
-    private void process(String urlString) throws Exception {
+    private String fetchResponse(String urlString) throws Exception {
       URL url = new URL(urlString);
       System.out.println("Connecting to " + url);
 
       HttpURLConnection connection = connect(url);
 
-      HttpExceptionUtils.validateResponse(connection, 200);
-
-      // read from the servlet
+      // We now use the validateResponse method of hbase to handle for HTML response,
+      // as with Jetty 12: getResponseMessage() returns "Precondition Failed" vs
+      // "Modification of logger protected.org.apache.hadoop.hbase.http.log.TestLogLevel is
+      // disallowed in configuration" in Jetty 9
+      LogLevelExceptionUtils.validateResponse(connection, 200);
 
       try (
         InputStreamReader streamReader =
           new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8);
         BufferedReader bufferedReader = new BufferedReader(streamReader)) {
-        bufferedReader.lines().filter(Objects::nonNull).filter(line -> line.startsWith(MARKER))
-          .forEach(line -> System.out.println(TAG.matcher(line).replaceAll("")));
-      } catch (IOException ioe) {
-        System.err.println("" + ioe);
+
+        return bufferedReader.lines().filter(Objects::nonNull)
+          .filter(line -> line.startsWith(MARKER)).map(line -> TAG.matcher(line).replaceAll(""))
+          .collect(Collectors.joining("\n"));
       }
     }
   }
@@ -300,14 +313,6 @@ public final class LogLevel {
       if (!HttpServer.hasAdministratorAccess(getServletContext(), request, response)) {
         return;
       }
-      // Disallow modification of the LogLevel if explicitly set to readonly
-      Configuration conf =
-        (Configuration) getServletContext().getAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE);
-      if (conf.getBoolean("hbase.master.ui.readonly", false)) {
-        sendError(response, HttpServletResponse.SC_FORBIDDEN,
-          "Modification of HBase via the UI is disallowed in configuration.");
-        return;
-      }
       response.setContentType("text/html");
       PrintWriter out;
       try {
@@ -323,15 +328,24 @@ public final class LogLevel {
       String logName = ServletUtil.getParameter(request, "log");
       String level = ServletUtil.getParameter(request, "level");
 
+      Configuration conf =
+        (Configuration) getServletContext().getAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE);
       String[] readOnlyLogLevels = conf.getStrings(READONLY_LOGGERS_CONF_KEY);
 
       if (logName != null) {
-        out.println("<p>Results:</p>");
+        out.println("<h2>Results</h2>");
         out.println(MARKER + "Submitted Log Name: <b>" + logName + "</b><br />");
 
         Logger log = LoggerFactory.getLogger(logName);
         out.println(MARKER + "Log Class: <b>" + log.getClass().getName() + "</b><br />");
         if (level != null) {
+          // Disallow modification of the LogLevel if explicitly set to readonly
+          if (conf.getBoolean(MASTER_UI_READONLY_CONF_KEY, false)) {
+            sendError(response, HttpServletResponse.SC_FORBIDDEN,
+              "Modification of HBase via the UI is disallowed in configuration.");
+            return;
+          }
+
           if (!isLogLevelChangeAllowed(logName, readOnlyLogLevels)) {
             sendError(response, HttpServletResponse.SC_PRECONDITION_FAILED,
               "Modification of logger " + logName + " is disallowed in configuration.");
@@ -373,23 +387,28 @@ public final class LogLevel {
 
     static final String FORMS = "<div class='container-fluid content'>\n"
       + "<div class='row inner_header top_header'>\n" + "<div class='page-header'>\n"
-      + "<h1>Get/Set Log Level</h1>\n" + "</div>\n" + "</div>\n" + "Actions:" + "<p>" + "<center>\n"
-      + "<table class='table' style='border: 0;' width='95%' >\n" + "<tr>\n" + "<form>\n"
-      + "<td class='centered'>\n"
-      + "<input style='font-size: 12pt; width: 10em' type='submit' value='Get Log Level'"
-      + " class='btn' />\n" + "</td>\n" + "<td style='text-align: center;'>\n"
-      + "<input type='text' name='log' size='50' required='required'"
-      + " placeholder='Log Name (required)' />\n" + "</td>\n" + "<td width=\"40%\">"
-      + "Get the current log level for the specified log name." + "</td>\n" + "</form>\n"
-      + "</tr>\n" + "<tr>\n" + "<form>\n" + "<td class='centered'>\n"
-      + "<input style='font-size: 12pt; width: 10em' type='submit'"
-      + " value='Set Log Level' class='btn' />\n" + "</td>\n" + "<td style='text-align: center;'>\n"
-      + "<input type='text' name='log' size='50' required='required'"
-      + " placeholder='Log Name (required)' />\n"
-      + "<input type='text' name='level' size='50' required='required'"
-      + " placeholder='Log Level (required)' />\n" + "</td>\n" + "<td width=\"40%\" style=\"\">"
-      + "Set the specified log level for the specified log name." + "</td>\n" + "</form>\n"
-      + "</tr>\n" + "</table>\n" + "</center>\n" + "</p>\n" + "<hr/>\n";
+      + "<h1>Get/Set Log Level</h1>\n" + "</div>\n" + "</div>\n" + "\n" + "<h2>Actions</h2>\n"
+      + "\n" + "<div class='row mb-4'>\n" + "<div class='col'>\n"
+      + "<form class='row g-3 align-items-center justify-content-center'>\n"
+      + "<div class='col-sm-auto'>\n"
+      + "<button type='submit' class='btn btn-primary'>Get Log Level</button>\n" + "</div>\n"
+      + "  <div class='col-sm-auto'>\n"
+      + "<input type='text' name='log' class='form-control' size='50'"
+      + " required='required' placeholder='Log Name (required)'>\n" + "</div>\n"
+      + "  <div class='col-sm-auto'>\n"
+      + "<span>Gets the current log level for the specified log name.</span>\n" + "</div>\n"
+      + "</form>\n" + "</div>\n" + "</div>\n" + "\n" + "<div class='row'>\n" + "<div class='col'>\n"
+      + "\n" + "<form class='row g-3 align-items-center justify-content-center'>\n"
+      + "<div class='col-sm-auto'>\n"
+      + "<button type='submit' class='btn btn-primary'>Set Log Level</button>\n" + "</div>\n"
+      + "<div class='col-sm-auto'>\n"
+      + "<input type='text' name='log' class='form-control mb-2' size='50'"
+      + " required='required' placeholder='Log Name (required)'>\n"
+      + "<input type='text' name='level' class='form-control' size='50'"
+      + " required='required' placeholder='Log Level (required)'>\n" + "</div>\n"
+      + "<div class='col-sm-auto'>\n"
+      + "<span>Sets the specified log level for the specified log name.</span>\n" + "</div>\n"
+      + "</form>\n" + "\n" + "</div>\n" + "</div>" + "<hr>\n";
 
     private static void process(Logger logger, String levelName, PrintWriter out) {
       if (levelName != null) {

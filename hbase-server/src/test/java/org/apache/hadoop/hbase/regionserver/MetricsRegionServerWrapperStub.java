@@ -263,6 +263,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public double getPercentFileLocalPrimaryRegions() {
+    return 99;
+  }
+
+  @Override
   public double getPercentFileLocalSecondaryRegions() {
     return 99;
   }
@@ -403,7 +408,17 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getL1CacheHitCachingCount() {
+    return 200;
+  }
+
+  @Override
   public long getL1CacheMissCount() {
+    return 100;
+  }
+
+  @Override
+  public long getL1CacheMissCachingCount() {
     return 100;
   }
 
@@ -413,7 +428,17 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public double getL1CacheHitCachingRatio() {
+    return 80;
+  }
+
+  @Override
   public double getL1CacheMissRatio() {
+    return 20;
+  }
+
+  @Override
+  public double getL1CacheMissCachingRatio() {
     return 20;
   }
 
@@ -443,7 +468,17 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getL2CacheHitCachingCount() {
+    return 800;
+  }
+
+  @Override
   public long getL2CacheMissCount() {
+    return 200;
+  }
+
+  @Override
+  public long getL2CacheMissCachingCount() {
     return 200;
   }
 
@@ -453,7 +488,17 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public double getL2CacheHitCachingRatio() {
+    return 90;
+  }
+
+  @Override
   public double getL2CacheMissRatio() {
+    return 10;
+  }
+
+  @Override
+  public double getL2CacheMissCachingRatio() {
     return 10;
   }
 

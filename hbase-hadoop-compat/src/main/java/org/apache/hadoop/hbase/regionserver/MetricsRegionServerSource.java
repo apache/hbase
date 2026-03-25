@@ -314,10 +314,16 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
     "Size of data that has been sent by clients with the write ahead logging turned off.";
   String PERCENT_FILES_LOCAL = "percentFilesLocal";
   String PERCENT_FILES_LOCAL_DESC =
-    "The percent of HFiles that are stored on the local hdfs data node.";
+    "The percent of HFiles that are stored on the local hdfs data node. If not using "
+      + "region replicas, this should equal percentFilesLocalPrimaryRegions";
+  String PERCENT_FILES_LOCAL_PRIMARY_REGIONS = "percentFilesLocalPrimaryRegions";
+  String PERCENT_FILES_LOCAL_PRIMARY_REGIONS_DESC =
+    "The percent of HFiles used by primary regions that are stored on the local hdfs data node. "
+      + "This is the category of locality that you want to reach 100% when using region replicas";
   String PERCENT_FILES_LOCAL_SECONDARY_REGIONS = "percentFilesLocalSecondaryRegions";
   String PERCENT_FILES_LOCAL_SECONDARY_REGIONS_DESC =
-    "The percent of HFiles used by secondary regions that are stored on the local hdfs data node.";
+    "The percent of HFiles used by secondary regions that are stored on the local hdfs data node. "
+      + "This is not likely to reach 100%";
   String SPLIT_QUEUE_LENGTH = "splitQueueLength";
   String SPLIT_QUEUE_LENGTH_DESC = "Length of the queue for splits.";
   String COMPACTION_QUEUE_LENGTH = "compactionQueueLength";
@@ -402,12 +408,22 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
 
   String L1_CACHE_HIT_COUNT = "l1CacheHitCount";
   String L1_CACHE_HIT_COUNT_DESC = "L1 cache hit count.";
+  String L1_CACHE_HIT_CAGHING_COUNT = "l1CacheHitCachingCount";
+  String L1_CACHE_HIT_CAGHING_COUNT_DESC =
+    "Count of the hit on the L1 cache, for cacheable requests";
   String L1_CACHE_MISS_COUNT = "l1CacheMissCount";
   String L1_CACHE_MISS_COUNT_DESC = "L1 cache miss count.";
+  String L1_CACHE_MISS_CACHING_COUNT = "l1CacheMissCachingCount";
+  String L1_CACHE_MISS_CACHING_COUNT_DESC =
+    "Count of the misses on the L1 cache, for cacheable requests";
   String L1_CACHE_HIT_RATIO = "l1CacheHitRatio";
   String L1_CACHE_HIT_RATIO_DESC = "L1 cache hit ratio.";
+  String L1_CACHE_HIT_CACHING_RATIO = "l1CacheHitCachingRatio";
+  String L1_CACHE_HIT_CACHING_RATIO_DESC = "Hit Caching ratio of L1 cache";
   String L1_CACHE_MISS_RATIO = "l1CacheMissRatio";
   String L1_CACHE_MISS_RATIO_DESC = "L1 cache miss ratio.";
+  String L1_CACHE_MISS_CACHING_RATIO = "l1CacheMissCachingRatio";
+  String L1_CACHE_MISS_CACHING_RATIO_DESC = "Miss Caching ratio of L1 cache";
   String L2_CACHE_FREE_SIZE = "l2CacheFreeSize";
   String L2_CACHE_FREE_SIZE_DESC = "Amount of free bytes in the L2 cache";
   String L2_CACHE_SIZE = "l2CacheSize";
@@ -418,12 +434,22 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String L2_CACHE_EVICTION_COUNT_DESC = "Count of blocks evicted from the L2 cache";
   String L2_CACHE_HIT_COUNT = "l2CacheHitCount";
   String L2_CACHE_HIT_COUNT_DESC = "L2 cache hit count.";
+  String L2_CACHE_HIT_CACHING_COUNT = "l2CacheHitCachingCount";
+  String L2_CACHE_HIT_CACHING_COUNT_DESC =
+    "Count of the hit on the L2 cache, for cacheable requests";
   String L2_CACHE_MISS_COUNT = "l2CacheMissCount";
   String L2_CACHE_MISS_COUNT_DESC = "L2 cache miss count.";
+  String L2_CACHE_MISS_CACHING_COUNT = "l2CacheMissCachingCount";
+  String L2_CACHE_MISS_CACHING_COUNT_DESC =
+    "Count of the misses on the L2 cache, for cacheable requests";
   String L2_CACHE_HIT_RATIO = "l2CacheHitRatio";
   String L2_CACHE_HIT_RATIO_DESC = "L2 cache hit ratio.";
+  String L2_CACHE_HIT_CACHING_RATIO = "l2CacheHitCachingRatio";
+  String L2_CACHE_HIT_CACHING_RATIO_DESC = "Hit Caching ratio of L2 cache";
   String L2_CACHE_MISS_RATIO = "l2CacheMissRatio";
   String L2_CACHE_MISS_RATIO_DESC = "L2 cache miss ratio.";
+  String L2_CACHE_MISS_CACHING_RATIO = "l2CacheMissCachingRatio";
+  String L2_CACHE_MISS_CACHING_RATIO_DESC = "Miss Caching ratio of L2 cache";
   String RS_START_TIME_NAME = "regionServerStartTime";
   String ZOOKEEPER_QUORUM_NAME = "zookeeperQuorum";
   String SERVER_NAME_NAME = "serverName";
@@ -641,4 +667,10 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
     "Count of scanners which were expired due to scanner lease timeout";
   String CURRENT_REGION_CACHE_RATIO = "currentRegionCacheRatio";
   String CURRENT_REGION_CACHE_RATIO_DESC = "The percentage of caching completed for this region.";
+
+  String EXCLUDE_DATA_NODES_COUNT = "excludedDataNodesCount";
+  String EXCLUDE_DATA_NODES_COUNT_DESC =
+    "Count of slow/connect error DataNodes excluded during WAL write operation";
+  String EXCLUDE_DATA_NODES_DETAILS = "excludedDataNodesDetails";
+  String EXCLUDE_DATA_NODES_DETAILS_DESC = "Excluded DataNodes info";
 }

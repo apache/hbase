@@ -20,7 +20,9 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -29,7 +31,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * cache.
  */
 @InterfaceAudience.Private
-public interface BlockCache extends Iterable<CachedBlock> {
+public interface BlockCache extends Iterable<CachedBlock>, ConfigurationObserver {
   /**
    * Add block to cache.
    * @param cacheKey The block's cache key.
@@ -197,11 +199,28 @@ public interface BlockCache extends Iterable<CachedBlock> {
    * overridden by all implementing classes. In such cases, the returned Optional will be empty. For
    * subclasses implementing this logic, the returned Optional would contain the boolean value
    * reflecting if the passed file should indeed be cached.
-   * @param fileName to check if it should be cached.
+   * @param hFileInfo Information about the file to check if it should be cached.
+   * @param conf      The configuration object to use for determining caching behavior.
    * @return empty optional if this method is not supported, otherwise the returned optional
    *         contains the boolean value informing if the file should be cached.
    */
-  default Optional<Boolean> shouldCacheFile(String fileName) {
+  default Optional<Boolean> shouldCacheFile(HFileInfo hFileInfo, Configuration conf) {
+    return Optional.empty();
+  }
+
+  /**
+   * Checks whether the block represented by the given key should be cached or not. This method may
+   * not be overridden by all implementing classes. In such cases, the returned Optional will be
+   * empty. For subclasses implementing this logic, the returned Optional would contain the boolean
+   * value reflecting if the passed block should indeed be cached.
+   * @param key          The key representing the block to check if it should be cached.
+   * @param maxTimeStamp The maximum timestamp for the block to check if it should be cached.
+   * @param conf         The configuration object to use for determining caching behavior.
+   * @return An empty Optional if this method is not supported; otherwise, the returned Optional
+   *         contains the boolean value indicating if the block should be cached.
+   */
+  default Optional<Boolean> shouldCacheBlock(BlockCacheKey key, long maxTimeStamp,
+    Configuration conf) {
     return Optional.empty();
   }
 
@@ -271,11 +290,23 @@ public interface BlockCache extends Iterable<CachedBlock> {
   }
 
   /**
-   * Wait for the bucket cache to be enabled while server restart
-   * @param timeout time to wait for the bucket cache to be enable
-   * @return boolean true if the bucket cache is enabled, false otherwise
+   * Wait for the block cache implementation to be completely enabled. Some block cache
+   * implementations may take longer to initialise, and this initialisation may be asynchronous.
+   * @param timeout time to wait for the cache to become enabled.
+   * @return boolean true if the cache is enabled, false otherwise.
    */
   default boolean waitForCacheInitialization(long timeout) {
     return true;
+  }
+
+  /**
+   * Allows for BlockCache implementations to provide a mean to refresh their configurations. Since
+   * HBASE-29249, CacheConfig implements PropagatingConfigurationObserver and registers itself
+   * together with the used BlockCache implementation for notifications of dynamic configuration
+   * changes. The default is a noop.
+   * @param config the new configuration to be updated.
+   */
+  default void onConfigurationChange(Configuration config) {
+    // noop
   }
 }

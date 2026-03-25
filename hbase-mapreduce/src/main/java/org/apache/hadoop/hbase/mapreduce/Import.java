@@ -132,8 +132,11 @@ public class Import extends Configured implements Tool {
 
     @Override
     public void write(DataOutput out) throws IOException {
-      out.writeInt(PrivateCellUtil.estimatedSerializedSizeOfKey(kv));
-      out.writeInt(0);
+      int keyLen = PrivateCellUtil.estimatedSerializedSizeOfKey(kv);
+      int valueLen = 0; // We avoid writing value here. So just serialize as if an empty value.
+      out.writeInt(keyLen + valueLen + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE);
+      out.writeInt(keyLen);
+      out.writeInt(valueLen);
       PrivateCellUtil.writeFlatKey(kv, out);
     }
 
@@ -212,7 +215,8 @@ public class Import extends Configured implements Tool {
               continue;
             }
             Cell ret = convertKv(kv, cfRenameMap);
-            context.write(new CellWritableComparable(ret), ret);
+            context.write(new CellWritableComparable(ret),
+              new MapReduceExtendedCell((ExtendedCell) ret));
           }
         }
       } catch (InterruptedException e) {

@@ -35,10 +35,14 @@ import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
+import org.apache.hadoop.hbase.io.hfile.InvalidHFileException;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -111,20 +115,9 @@ public class StoreFileInfo implements Configurable {
   // done.
   private final AtomicInteger refCount = new AtomicInteger(0);
 
-  /**
-   * Create a Store File Info
-   * @param conf           the {@link Configuration} to use
-   * @param fs             The current file system to use.
-   * @param initialPath    The {@link Path} of the file
-   * @param primaryReplica true if this is a store file for primary replica, otherwise false.
-   */
-  public StoreFileInfo(final Configuration conf, final FileSystem fs, final Path initialPath,
-    final boolean primaryReplica) throws IOException {
-    this(conf, fs, null, initialPath, primaryReplica);
-  }
-
   private StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
-    final Path initialPath, final boolean primaryReplica) throws IOException {
+    final Path initialPath, final boolean primaryReplica, final StoreFileTracker sft)
+    throws IOException {
     assert fs != null;
     assert initialPath != null;
     assert conf != null;
@@ -142,7 +135,7 @@ public class StoreFileInfo implements Configurable {
       this.link = HFileLink.buildFromHFileLinkPattern(conf, p);
       LOG.trace("{} is a link", p);
     } else if (isReference(p)) {
-      this.reference = Reference.read(fs, p);
+      this.reference = sft.readReference(p);
       Path referencePath = getReferredToFile(p);
       if (HFileLink.isHFileLink(referencePath)) {
         // HFileLink Reference
@@ -167,17 +160,6 @@ public class StoreFileInfo implements Configurable {
     } else {
       throw new IOException("path=" + p + " doesn't look like a valid StoreFile");
     }
-  }
-
-  /**
-   * Create a Store File Info
-   * @param conf       the {@link Configuration} to use
-   * @param fs         The current file system to use.
-   * @param fileStatus The {@link FileStatus} of the file
-   */
-  public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus)
-    throws IOException {
-    this(conf, fs, fileStatus, fileStatus.getPath(), true);
   }
 
   /**
@@ -222,6 +204,33 @@ public class StoreFileInfo implements Configurable {
     this.link = link;
     this.noReadahead =
       this.conf.getBoolean(STORE_FILE_READER_NO_READAHEAD, DEFAULT_STORE_FILE_READER_NO_READAHEAD);
+  }
+
+  /**
+   * Create a Store File Info from an HFileLink and a Reference
+   * @param conf       The {@link Configuration} to use
+   * @param fs         The current file system to use
+   * @param fileStatus The {@link FileStatus} of the file
+   * @param reference  The reference instance
+   * @param link       The link instance
+   */
+  public StoreFileInfo(final Configuration conf, final FileSystem fs, final long createdTimestamp,
+    final Path initialPath, final long size, final Reference reference, final HFileLink link,
+    final boolean primaryReplica) {
+    this.fs = fs;
+    this.conf = conf;
+    this.primaryReplica = primaryReplica;
+    this.initialPath = initialPath;
+    this.createdTimestamp = createdTimestamp;
+    this.size = size;
+    this.reference = reference;
+    this.link = link;
+    this.noReadahead =
+      this.conf.getBoolean(STORE_FILE_READER_NO_READAHEAD, DEFAULT_STORE_FILE_READER_NO_READAHEAD);
+  }
+
+  public HFileLink getLink() {
+    return link;
   }
 
   @Override
@@ -287,7 +296,8 @@ public class StoreFileInfo implements Configurable {
     return reader;
   }
 
-  ReaderContext createReaderContext(boolean doDropBehind, long readahead, ReaderType type)
+  ReaderContext createReaderContext(boolean doDropBehind, long readahead, ReaderType type,
+    String keyNamespace, SystemKeyCache systemKeyCache, ManagedKeyDataCache managedKeyDataCache)
     throws IOException {
     FSDataInputStreamWrapper in;
     FileStatus status;
@@ -316,7 +326,8 @@ public class StoreFileInfo implements Configurable {
     long length = status.getLen();
     ReaderContextBuilder contextBuilder =
       new ReaderContextBuilder().withInputStreamWrapper(in).withFileSize(length)
-        .withPrimaryReplicaReader(this.primaryReplica).withReaderType(type).withFileSystem(fs);
+        .withPrimaryReplicaReader(this.primaryReplica).withReaderType(type).withFileSystem(fs)
+        .withSystemKeyCache(systemKeyCache).withManagedKeyDataCache(managedKeyDataCache);
     if (this.reference != null) {
       contextBuilder.withFilePath(this.getPath());
     } else {
@@ -730,7 +741,7 @@ public class StoreFileInfo implements Configurable {
     }
   }
 
-  FileSystem getFileSystem() {
+  public FileSystem getFileSystem() {
     return this.fs;
   }
 
@@ -780,6 +791,16 @@ public class StoreFileInfo implements Configurable {
 
   int decreaseRefCount() {
     return this.refCount.decrementAndGet();
+  }
+
+  public static StoreFileInfo createStoreFileInfoForHFile(final Configuration conf,
+    final FileSystem fs, final Path initialPath, final boolean primaryReplica) throws IOException {
+    if (HFileLink.isHFileLink(initialPath) || isReference(initialPath)) {
+      throw new InvalidHFileException("Path " + initialPath + " is a Hfile link or a Regerence");
+    }
+    StoreFileInfo storeFileInfo =
+      new StoreFileInfo(conf, fs, null, initialPath, primaryReplica, null);
+    return storeFileInfo;
   }
 
 }

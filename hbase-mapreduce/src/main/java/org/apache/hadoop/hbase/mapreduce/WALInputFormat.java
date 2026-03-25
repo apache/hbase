@@ -318,7 +318,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
     for (Path inputPath : inputPaths) {
       FileSystem fs = inputPath.getFileSystem(conf);
       try {
-        List<FileStatus> files = getFiles(fs, inputPath, startTime, endTime);
+        List<FileStatus> files = getFiles(fs, inputPath, startTime, endTime, conf);
         allFiles.addAll(files);
       } catch (FileNotFoundException e) {
         if (ignoreMissing) {
@@ -349,11 +349,11 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
    *                  equal to this value else we will filter out the file. If name does not seem to
    *                  have a timestamp, we will just return it w/o filtering.
    */
-  private List<FileStatus> getFiles(FileSystem fs, Path dir, long startTime, long endTime)
-    throws IOException {
+  private List<FileStatus> getFiles(FileSystem fs, Path dir, long startTime, long endTime,
+    Configuration conf) throws IOException {
     List<FileStatus> result = new ArrayList<>();
     LOG.debug("Scanning " + dir.toString() + " for WAL files");
-    RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(dir);
+    RemoteIterator<LocatedFileStatus> iter = listLocatedFileStatus(fs, dir, conf);
     if (!iter.hasNext()) {
       return Collections.emptyList();
     }
@@ -361,7 +361,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
       LocatedFileStatus file = iter.next();
       if (file.isDirectory()) {
         // Recurse into sub directories
-        result.addAll(getFiles(fs, file.getPath(), startTime, endTime));
+        result.addAll(getFiles(fs, file.getPath(), startTime, endTime, conf));
       } else {
         addFile(result, file, startTime, endTime);
       }
@@ -395,5 +395,29 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
   public RecordReader<WALKey, WALEdit> createRecordReader(InputSplit split,
     TaskAttemptContext context) throws IOException, InterruptedException {
     return new WALKeyRecordReader();
+  }
+
+  /**
+   * Attempts to return the {@link LocatedFileStatus} for the given directory. If the directory does
+   * not exist, it will check if the directory is an archived log file and try to find it
+   */
+  private static RemoteIterator<LocatedFileStatus> listLocatedFileStatus(FileSystem fs, Path dir,
+    Configuration conf) throws IOException {
+    try {
+      return fs.listLocatedStatus(dir);
+    } catch (FileNotFoundException e) {
+      if (AbstractFSWALProvider.isArchivedLogFile(dir)) {
+        throw e;
+      }
+
+      LOG.warn("Log file {} not found, trying to find it in archive directory.", dir);
+      Path archiveFile = AbstractFSWALProvider.findArchivedLog(dir, conf);
+      if (archiveFile == null) {
+        LOG.error("Did not find archive file for {}", dir);
+        throw e;
+      }
+
+      return fs.listLocatedStatus(archiveFile);
+    }
   }
 }

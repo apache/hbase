@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -154,14 +155,18 @@ public class Append extends Mutation {
   /**
    * Add column and value to this Append operation.
    * @return This instance
+   * @deprecated Since 3.0.0, and the method signature will be changed in 4.0.0, where we will throw
+   *             IOException out when the row of the given cell does not match.
    */
+  @Deprecated
   @Override
   public Append add(final Cell cell) {
     try {
       super.add(cell);
     } catch (IOException e) {
-      // we eat the exception of wrong row for BC..
-      LOG.error(e.toString(), e);
+      // we can not simply change the method signature for a IA.Public method, so here we convert it
+      // to an unchecked exception
+      throw new UncheckedIOException(e);
     }
     return this;
   }

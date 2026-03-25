@@ -166,7 +166,7 @@ public abstract class RegionTransitionProcedure extends Procedure<MasterProcedur
   }
 
   @Override
-  public void remoteOperationCompleted(MasterProcedureEnv env) {
+  public void remoteOperationCompleted(MasterProcedureEnv env, byte[] remoteResultData) {
     // should not be called for region operation until we modified the open/close region procedure
     throw new UnsupportedOperationException();
   }

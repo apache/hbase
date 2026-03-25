@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableBoolean;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
@@ -471,6 +472,12 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   @Override
+  public void onConfigurationChange(Configuration config) {
+    l1Cache.onConfigurationChange(config);
+    l2Cache.onConfigurationChange(config);
+  }
+
+  @Override
   public Optional<Boolean> blockFitsIntoTheCache(HFileBlock block) {
     if (isMetaBlock(block.getBlockType())) {
       return l1Cache.blockFitsIntoTheCache(block);
@@ -480,12 +487,23 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   @Override
-  public Optional<Boolean> shouldCacheFile(String fileName) {
-    Optional<Boolean> l1Result = l1Cache.shouldCacheFile(fileName);
-    Optional<Boolean> l2Result = l2Cache.shouldCacheFile(fileName);
+  public Optional<Boolean> shouldCacheFile(HFileInfo hFileInfo, Configuration conf) {
+    return combineCacheResults(l1Cache.shouldCacheFile(hFileInfo, conf),
+      l2Cache.shouldCacheFile(hFileInfo, conf));
+  }
+
+  @Override
+  public Optional<Boolean> shouldCacheBlock(BlockCacheKey key, long maxTimeStamp,
+    Configuration conf) {
+    return combineCacheResults(l1Cache.shouldCacheBlock(key, maxTimeStamp, conf),
+      l2Cache.shouldCacheBlock(key, maxTimeStamp, conf));
+  }
+
+  private Optional<Boolean> combineCacheResults(Optional<Boolean> result1,
+    Optional<Boolean> result2) {
     final Mutable<Boolean> combinedResult = new MutableBoolean(true);
-    l1Result.ifPresent(b -> combinedResult.setValue(b && combinedResult.getValue()));
-    l2Result.ifPresent(b -> combinedResult.setValue(b && combinedResult.getValue()));
+    result1.ifPresent(b -> combinedResult.setValue(b && combinedResult.getValue()));
+    result2.ifPresent(b -> combinedResult.setValue(b && combinedResult.getValue()));
     return Optional.of(combinedResult.getValue());
   }
 
