@@ -797,8 +797,10 @@ public class AssignmentManager {
         preTransitCheck(regionNode, STATES_EXPECTED_ON_ASSIGN);
       }
       assert regionNode.getProcedure() == null;
-      return regionNode.setProcedure(
+      TransitRegionStateProcedure proc = regionNode.setProcedure(
         TransitRegionStateProcedure.assign(getProcedureEnvironment(), regionInfo, sn));
+      regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
+      return proc;
     } finally {
       regionNode.unlock();
     }
@@ -813,8 +815,10 @@ public class AssignmentManager {
     ServerName targetServer) {
     regionNode.lock();
     try {
-      return regionNode.setProcedure(TransitRegionStateProcedure.assign(getProcedureEnvironment(),
-        regionNode.getRegionInfo(), targetServer));
+      TransitRegionStateProcedure proc = regionNode.setProcedure(TransitRegionStateProcedure
+        .assign(getProcedureEnvironment(), regionNode.getRegionInfo(), targetServer));
+      regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
+      return proc;
     } finally {
       regionNode.unlock();
     }
