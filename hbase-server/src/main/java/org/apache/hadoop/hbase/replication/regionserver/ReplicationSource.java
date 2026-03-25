@@ -31,9 +31,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -74,7 +72,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Class that handles the source of a replication stream. Currently does not handle more than 1
@@ -150,12 +147,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
     "hbase.replication.wait.on.endpoint.seconds";
   public static final int DEFAULT_WAIT_ON_ENDPOINT_SECONDS = 30;
   private int waitOnEndpointSeconds = -1;
-
-  public static final String SHIPPER_MONITOR_INTERVAL =
-    "hbase.replication.source.shipper.monitor.interval.ms";
-  private static final long DEFAULT_SHIPPER_MONITOR_INTERVAL = 1 * 60 * 1000L; // 1 minute
-  private ScheduledExecutorService shipperMonitorExecutor;
-  private long monitorIntervalMs;
 
   private Thread initThread;
 
@@ -239,16 +230,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
     LOG.info("queueId={}, ReplicationSource: {}, currentBandwidth={}", queueId,
       replicationPeer.getId(), this.currentBandwidth);
-
-    this.monitorIntervalMs =
-      conf.getLong(SHIPPER_MONITOR_INTERVAL, DEFAULT_SHIPPER_MONITOR_INTERVAL);
-
-    this.shipperMonitorExecutor =
-      Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
-        .setNameFormat("ShipperMonitor-" + queueId).setDaemon(true).build());
-
-    this.shipperMonitorExecutor.scheduleAtFixedRate(this::restartDeadWorkersIfNeeded,
-      monitorIntervalMs, monitorIntervalMs, TimeUnit.MILLISECONDS);
   }
 
   private void decorateConf() {
@@ -777,10 +758,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
         this.metrics.terminate();
       }
     }
-
-    if (shipperMonitorExecutor != null) {
-      shipperMonitorExecutor.shutdownNow();
-    }
   }
 
   @Override
@@ -890,29 +867,23 @@ public class ReplicationSource implements ReplicationSourceInterface {
     return sleepForRetries;
   }
 
-  private void restartDeadWorkersIfNeeded() {
-    for (String walGroupId : workerThreads.keySet()) {
-      workerThreads.compute(walGroupId, (key, worker) -> {
-        if (worker == null) {
-          return null;
-        }
+  void restartShipper(String walGroupId, ReplicationSourceShipper oldWorker) {
+    workerThreads.compute(walGroupId, (key, current) -> {
+      if (current != oldWorker) {
+        return current; // already replaced
+      }
 
-        if (!worker.isAlive() && !worker.isFinished()) {
-          LOG.warn("Detected dead shipper for walGroupId={}. Restarting.", walGroupId);
+      LOG.warn("Restarting shipper for walGroupId={}", walGroupId);
 
-          try {
-            ReplicationSourceShipper newWorker = createNewShipper(walGroupId);
-            startShipper(newWorker);
-            return newWorker;
-          } catch (Exception e) {
-            LOG.error("Failed to restart shipper for walGroupId={}", walGroupId, e);
-            return worker; // keep old entry to retry later
-          }
-        }
-
-        return worker;
-      });
-    }
+      try {
+        ReplicationSourceShipper newWorker = createNewShipper(walGroupId);
+        startShipper(newWorker);
+        return newWorker;
+      } catch (Exception e) {
+        LOG.error("Failed to restart shipper for walGroupId={}", walGroupId, e);
+        return current; // retry later
+      }
+    });
   }
 
 }

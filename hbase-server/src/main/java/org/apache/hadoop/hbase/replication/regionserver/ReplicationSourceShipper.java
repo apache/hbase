@@ -145,11 +145,24 @@ public class ReplicationSourceShipper extends Thread {
         } else {
           shipEdits(entryBatch);
         }
-      } catch (InterruptedException | ReplicationRuntimeException e) {
-        // It is interrupted and needs to quit.
-        LOG.warn("Interrupted while waiting for next replication entry batch", e);
+      } catch (InterruptedException e) {
+        // Normal shutdown
+        if (!isActive()) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+
+        // Unexpected interruption → restart
+        abortAndRestart(e);
+        break;
+
+      } catch (ReplicationRuntimeException e) {
+        // Already handled upstream (or future safety)
+        LOG.warn("Shipper encountered fatal error", e);
         Thread.currentThread().interrupt();
+        break;
       }
+
     }
     // If the worker exits run loop without finishing its task, mark it as stopped.
     if (!isFinished()) {
@@ -188,7 +201,7 @@ public class ReplicationSourceShipper extends Thread {
   /**
    * Do the shipping logic
    */
-  private void shipEdits(WALEntryBatch entryBatch) {
+  void shipEdits(WALEntryBatch entryBatch) {
     List<Entry> entries = entryBatch.getWalEntries();
     int sleepMultiplier = 0;
     int currentSize = (int) entryBatch.getHeapSize();
@@ -256,12 +269,11 @@ public class ReplicationSourceShipper extends Thread {
         }
         break;
       } catch (IOException ioe) {
-        // Offset-Persist failure is treated as fatal to this worker since it might come from
-        // beforePersistingReplicationOffset.
-        // ReplicationSource will restart the Shipper, and WAL reading
+        // Offset-Persist failure is treated as fatal to this shipper since it might come from
+        // beforePersistingReplicationOffset. So abort and restart the Shipper, and WAL reading
         // will resume from the last successfully persisted offset
-        throw new ReplicationRuntimeException(
-          "Failed to persist replication offset; restarting shipper for WAL replay", ioe);
+        abortAndRestart(ioe);
+        return;
       } catch (Exception ex) {
         source.getSourceMetrics().incrementFailedBatches();
         LOG.warn("{} threw unknown exception:",
@@ -440,5 +452,16 @@ public class ReplicationSourceShipper extends Thread {
 
   long getSleepForRetries() {
     return sleepForRetries;
+  }
+
+  void abortAndRestart(Throwable cause) {
+    LOG.warn("Shipper for walGroupId={} aborting due to fatal error, will restart", walGroupId,
+      cause);
+
+    // Ask source to replace this worker
+    source.restartShipper(walGroupId, this);
+
+    // Interrupt to exit run loop
+    Thread.currentThread().interrupt();
   }
 }
