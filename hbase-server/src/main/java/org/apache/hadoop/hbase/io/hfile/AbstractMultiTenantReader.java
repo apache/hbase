@@ -759,9 +759,9 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
         LOG.debug("Section reader for tenant {} was closed by concurrent eviction (attempt {}/{})",
           Bytes.toStringBinary(tenantSectionId), attempt, maxRetries);
       }
-      throw new IOException("Failed to obtain section reader for tenant "
-        + Bytes.toStringBinary(tenantSectionId) + " after " + maxRetries
-        + " attempts due to concurrent eviction");
+      throw new IOException(
+        "Failed to obtain section reader for tenant " + Bytes.toStringBinary(tenantSectionId)
+          + " after " + maxRetries + " attempts due to concurrent eviction");
     } catch (ExecutionException e) {
       Throwable cause = e.getCause();
       if (cause instanceof IOException) {
@@ -1086,8 +1086,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     }
 
     /**
-     * Mark this holder as evicted. If no references are held, close immediately. Synchronized
-     * with {@link #retain} to prevent a TOCTOU race on refCount.
+     * Mark this holder as evicted. If no references are held, close immediately. Synchronized with
+     * {@link #retain} to prevent a TOCTOU race on refCount.
      */
     synchronized void markEvicted(boolean evictOnClose) {
       evicted.set(true);
