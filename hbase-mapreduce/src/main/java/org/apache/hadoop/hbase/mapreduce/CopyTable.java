@@ -253,8 +253,8 @@ public class CopyTable extends Configured implements Tool {
       + "--new.name=destTable --snapshot --bulkload sourceTableSnapshot");
     System.err.println();
     System.err.println(
-      " To copy the data of 'TestTable' from the secured local cluster to an insecure peer cluster"
-        + " (cluster-b)");
+      " To copy the data of 'TestTable' from the secured local cluster to a non-secured peer"
+        + " cluster (cluster-b)");
     System.err.println(" $ hbase org.apache.hadoop.hbase.mapreduce.CopyTable "
       + "-Dhbase.mapred.output.hbase.security.authentication=simple "
       + "--peer.adr=cluster-b-1.example.com,cluster-b-2.example.com,cluster-b-3.example.com:"
@@ -273,7 +273,7 @@ public class CopyTable extends Configured implements Tool {
       + "2181:/cluster-b" + " TestTable");
     System.err.println();
     System.err.println(
-      " To copy the data of 'TestTable' from the insecure local cluster to a secured peer cluster"
+      " To copy the data of 'TestTable' from a non-secured local cluster to a secured peer cluster"
         + " (cluster-b)");
     System.err.println(" $ hbase org.apache.hadoop.hbase.mapreduce.CopyTable "
       + "-Dhbase.mapred.output.hbase.security.authentication=kerberos "
