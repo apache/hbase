@@ -672,14 +672,11 @@ public class MultiTenantHFileIntegrationTest {
         for (byte[] tenantSectionId : allTenantSectionIds) {
           String tenantId = Bytes.toString(tenantSectionId);
           try {
-            java.lang.reflect.Method getSectionReaderMethod =
-              AbstractMultiTenantReader.class.getDeclaredMethod("getSectionReader", byte[].class);
-            getSectionReaderMethod.setAccessible(true);
-            Object sectionReaderLeaseObj = getSectionReaderMethod.invoke(mtReader, tenantSectionId);
+            AbstractMultiTenantReader.SectionReaderLease sectionReaderLease =
+              mtReader.getSectionReader(tenantSectionId);
 
-            if (sectionReaderLeaseObj != null) {
-              try (AbstractMultiTenantReader.SectionReaderLease lease =
-                (AbstractMultiTenantReader.SectionReaderLease) sectionReaderLeaseObj) {
+            if (sectionReaderLease != null) {
+              try (AbstractMultiTenantReader.SectionReaderLease lease = sectionReaderLease) {
                 HFileReaderImpl sectionHFileReader = lease.getReader();
 
                 HFileInfo sectionInfo = sectionHFileReader.getHFileInfo();

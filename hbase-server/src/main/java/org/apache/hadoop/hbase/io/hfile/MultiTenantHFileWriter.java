@@ -1359,6 +1359,11 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
       }
 
       @Override
+      public void write(int b) throws IOException {
+        delegate.write(b);
+      }
+
+      @Override
       public void write(byte[] b, int off, int len) throws IOException {
         delegate.write(b, off, len);
       }

@@ -744,14 +744,24 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     final ImmutableBytesWritable cacheKey =
       new ImmutableBytesWritable(tenantSectionId, 0, tenantSectionId.length);
     final SectionMetadata sectionMetadata = metadata;
+    final int maxRetries = 3;
     try {
-      SectionReaderHolder holder = sectionReaderCache.get(cacheKey, () -> {
-        byte[] sectionIdCopy = Bytes.copy(tenantSectionId);
-        SectionReader sectionReader = createSectionReader(sectionIdCopy, sectionMetadata);
-        return new SectionReaderHolder(sectionReader);
-      });
-      holder.retain();
-      return new SectionReaderLease(cacheKey, holder);
+      for (int attempt = 1; attempt <= maxRetries; attempt++) {
+        SectionReaderHolder holder = sectionReaderCache.get(cacheKey, () -> {
+          byte[] sectionIdCopy = Bytes.copy(tenantSectionId);
+          SectionReader sectionReader = createSectionReader(sectionIdCopy, sectionMetadata);
+          return new SectionReaderHolder(sectionReader);
+        });
+        if (holder.retain()) {
+          return new SectionReaderLease(cacheKey, holder);
+        }
+        sectionReaderCache.invalidate(cacheKey);
+        LOG.debug("Section reader for tenant {} was closed by concurrent eviction (attempt {}/{})",
+          Bytes.toStringBinary(tenantSectionId), attempt, maxRetries);
+      }
+      throw new IOException("Failed to obtain section reader for tenant "
+        + Bytes.toStringBinary(tenantSectionId) + " after " + maxRetries
+        + " attempts due to concurrent eviction");
     } catch (ExecutionException e) {
       Throwable cause = e.getCause();
       if (cause instanceof IOException) {
@@ -1043,19 +1053,31 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       return sectionReader;
     }
 
-    void retain() {
+    /**
+     * Increment the reference count if the holder is not already closed. Synchronized with
+     * {@link #markEvicted} to prevent a race where eviction closes this holder between
+     * {@code cache.get()} returning and the caller retaining.
+     * @return true if the retain succeeded; false if the holder was already closed
+     */
+    synchronized boolean retain() {
+      if (closed.get()) {
+        return false;
+      }
       int refs = refCount.incrementAndGet();
       if (LOG.isTraceEnabled()) {
         LOG.trace("Retained section reader {} (refCount={})",
           Bytes.toStringBinary(sectionReader.tenantSectionId), refs);
       }
+      return true;
     }
 
     void release(boolean evictOnClose) {
       int refs = refCount.decrementAndGet();
       if (refs < 0) {
-        LOG.warn("Section reader {} released too many times",
-          Bytes.toStringBinary(sectionReader.tenantSectionId));
+        LOG.error("Section reader {} released too many times (refCount={}), forcing close",
+          Bytes.toStringBinary(sectionReader.tenantSectionId), refs);
+        refCount.incrementAndGet();
+        closeInternal(evictOnClose);
         return;
       }
       if (refs == 0 && (evicted.get() || evictOnClose)) {
@@ -1063,7 +1085,11 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       }
     }
 
-    void markEvicted(boolean evictOnClose) {
+    /**
+     * Mark this holder as evicted. If no references are held, close immediately. Synchronized
+     * with {@link #retain} to prevent a TOCTOU race on refCount.
+     */
+    synchronized void markEvicted(boolean evictOnClose) {
       evicted.set(true);
       if (refCount.get() == 0) {
         closeInternal(evictOnClose);

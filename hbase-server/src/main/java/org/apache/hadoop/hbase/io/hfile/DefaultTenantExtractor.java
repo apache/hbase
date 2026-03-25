@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -35,6 +34,10 @@ public class DefaultTenantExtractor implements TenantExtractor {
    * @param prefixLength the length of the tenant prefix to extract from row keys
    */
   public DefaultTenantExtractor(int prefixLength) {
+    if (prefixLength <= 0) {
+      throw new IllegalArgumentException(
+        "Tenant prefix length must be positive, got: " + prefixLength);
+    }
     this.prefixLength = prefixLength;
   }
 
@@ -55,11 +58,6 @@ public class DefaultTenantExtractor implements TenantExtractor {
    * @return The tenant prefix as a byte array
    */
   private byte[] extractPrefix(Cell cell) {
-    if (prefixLength <= 0) {
-      return HConstants.EMPTY_BYTE_ARRAY;
-    }
-
-    // Get row length and ensure it's sufficient
     int rowLength = cell.getRowLength();
     if (rowLength < prefixLength) {
       throw new IllegalArgumentException("Row key too short for configured prefix length. "

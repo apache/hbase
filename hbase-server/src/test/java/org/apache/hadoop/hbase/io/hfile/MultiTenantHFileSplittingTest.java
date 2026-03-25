@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -71,7 +71,7 @@ import org.slf4j.LoggerFactory;
  * <li><strong>Verification:</strong> Validates split balance and data integrity</li>
  * </ol>
  */
-@Category(MediumTests.class)
+@Category(LargeTests.class)
 public class MultiTenantHFileSplittingTest {
 
   @ClassRule

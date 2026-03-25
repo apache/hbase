@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
@@ -325,8 +326,16 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
       return rawStream.seekToNewSource(toAbsolutePosition(targetPosition));
     }
 
-    // Other read methods use the underlying stream's implementations
-    // Note: We cannot override final methods like read(), read(byte[]), etc.
+    @Override
+    public boolean hasCapability(String capability) {
+      return rawStream.hasCapability(capability);
+    }
+
+    @Override
+    public int read(long position, ByteBuffer buf) throws IOException {
+      long absolutePosition = toAbsolutePosition(position);
+      return rawStream.read(absolutePosition, buf);
+    }
   }
 
   /**
