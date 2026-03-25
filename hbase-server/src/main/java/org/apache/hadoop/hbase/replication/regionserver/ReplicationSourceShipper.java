@@ -201,13 +201,13 @@ public class ReplicationSourceShipper extends Thread {
   /**
    * Do the shipping logic
    */
-  void shipEdits(WALEntryBatch entryBatch) {
+  private void shipEdits(WALEntryBatch entryBatch) {
     List<Entry> entries = entryBatch.getWalEntries();
     int sleepMultiplier = 0;
     int currentSize = (int) entryBatch.getHeapSize();
-    if (!entries.isEmpty()) {
-      source.getSourceMetrics()
-        .setTimeStampNextToReplicate(entries.get(entries.size() - 1).getKey().getWriteTime());
+    MetricsSource metrics = source.getSourceMetrics();
+    if (metrics != null && !entries.isEmpty()) {
+      metrics.setTimeStampNextToReplicate(entries.get(entries.size() - 1).getKey().getWriteTime());
     }
     while (isActive()) {
       try {
@@ -454,14 +454,12 @@ public class ReplicationSourceShipper extends Thread {
     return sleepForRetries;
   }
 
+  // Restart from last persisted offset
   void abortAndRestart(Throwable cause) {
     LOG.warn("Shipper for walGroupId={} aborting due to fatal error, will restart", walGroupId,
       cause);
-
     // Ask source to replace this worker
     source.restartShipper(walGroupId, this);
-
-    // Interrupt to exit run loop
     Thread.currentThread().interrupt();
   }
 }
