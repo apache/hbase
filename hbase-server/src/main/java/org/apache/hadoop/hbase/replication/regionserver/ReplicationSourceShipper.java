@@ -82,6 +82,11 @@ public class ReplicationSourceShipper extends Thread {
   private WALEntryBatch lastShippedBatch;
   private final List<Entry> entriesForCleanUpHFileRefs = new ArrayList<>();
 
+  private static final String OFFSET_UPDATE_INTERVAL_MS_KEY =
+    "hbase.replication.shipper.offset.update.interval.ms";
+  private static final String OFFSET_UPDATE_SIZE_THRESHOLD_KEY =
+    "hbase.replication.shipper.offset.update.size.threshold";
+
   public ReplicationSourceShipper(Configuration conf, String walGroupId, ReplicationSource source,
     ReplicationSourceWALReader walReader) {
     this.conf = conf;
@@ -97,10 +102,8 @@ public class ReplicationSourceShipper extends Thread {
       this.conf.getInt("replication.source.getEntries.timeout", DEFAULT_TIMEOUT);
     this.shipEditsTimeout = this.conf.getInt(HConstants.REPLICATION_SOURCE_SHIPEDITS_TIMEOUT,
       HConstants.REPLICATION_SOURCE_SHIPEDITS_TIMEOUT_DFAULT);
-    this.offsetUpdateIntervalMs =
-      conf.getLong("hbase.replication.shipper.offset.update.interval.ms", Long.MAX_VALUE);
-    this.offsetUpdateSizeThresholdBytes =
-      conf.getLong("hbase.replication.shipper.offset.update.size.threshold", -1L);
+    this.offsetUpdateIntervalMs = conf.getLong(OFFSET_UPDATE_INTERVAL_MS_KEY, Long.MAX_VALUE);
+    this.offsetUpdateSizeThresholdBytes = conf.getLong(OFFSET_UPDATE_SIZE_THRESHOLD_KEY, -1L);
   }
 
   @Override
@@ -121,7 +124,9 @@ public class ReplicationSourceShipper extends Thread {
         if (shouldPersistLogPosition()) {
           // Trigger offset persistence via existing retry/backoff mechanism in shipEdits()
           WALEntryBatch emptyBatch = createEmptyBatchForTimeBasedFlush();
-          if (emptyBatch != null) shipEdits(emptyBatch);
+          if (emptyBatch != null) {
+            shipEdits(emptyBatch);
+          }
         }
 
         long pollTimeout = getEntriesTimeout;
