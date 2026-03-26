@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security.access;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -29,8 +30,11 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
-import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -38,8 +42,19 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public abstract class AbstractReadOnlyController implements Coprocessor {
-  private MasterServices masterServices;
   private static final Logger LOG = LoggerFactory.getLogger(AbstractReadOnlyController.class);
+
+  private static final Set<TableName> writableTables =
+    Set.of(TableName.META_TABLE_NAME, MasterRegionFactory.TABLE_NAME);
+
+  public static boolean
+    isWritableInReadOnlyMode(final ObserverContext<? extends RegionCoprocessorEnvironment> c) {
+    return writableTables.contains(c.getEnvironment().getRegionInfo().getTable());
+  }
+
+  public static boolean isWritableInReadOnlyMode(final TableName tableName) {
+    return writableTables.contains(tableName);
+  }
 
   protected void internalReadOnlyGuard() throws DoNotRetryIOException {
     throw new DoNotRetryIOException("Operation not allowed in Read-Only Mode");
