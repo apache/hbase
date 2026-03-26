@@ -280,9 +280,8 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
     @Override
     public void seek(long position) throws IOException {
       if (position < 0) {
-        throw new IOException(
-          "Cannot seek to negative relative position: " + position + ", sectionOffset="
-            + sectionOffset);
+        throw new IOException("Cannot seek to negative relative position: " + position
+          + ", sectionOffset=" + sectionOffset);
       }
       long absolutePosition = toAbsolutePosition(position);
       LOG.debug("Section seek: relative pos {} -> absolute pos {}, sectionOffset={}", position,
@@ -311,9 +310,8 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
     @Override
     public int read(long position, byte[] buffer, int offset, int length) throws IOException {
       if (position < 0) {
-        throw new IOException(
-          "Cannot read from negative relative position: " + position + ", sectionOffset="
-            + sectionOffset);
+        throw new IOException("Cannot read from negative relative position: " + position
+          + ", sectionOffset=" + sectionOffset);
       }
       if (length < 0) {
         throw new IllegalArgumentException("Read length cannot be negative: " + length);

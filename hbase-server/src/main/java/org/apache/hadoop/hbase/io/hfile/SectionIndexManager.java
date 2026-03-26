@@ -258,17 +258,16 @@ public class SectionIndexManager {
             + (tenantPrefix != null ? Bytes.toStringBinary(tenantPrefix) : "default"));
       }
       if (sectionSize <= 0) {
-        throw new IOException(
-          "Section size must be positive, got: " + sectionSize + " for tenant: "
-            + (tenantPrefix != null ? Bytes.toStringBinary(tenantPrefix) : "default"));
+        throw new IOException("Section size must be positive, got: " + sectionSize + " for tenant: "
+          + (tenantPrefix != null ? Bytes.toStringBinary(tenantPrefix) : "default"));
       }
       byte[] prefix = tenantPrefix != null ? tenantPrefix : new byte[0];
       if (!entries.isEmpty()) {
         byte[] lastPrefix = entries.get(entries.size() - 1).getTenantPrefix();
         if (Bytes.compareTo(lastPrefix, prefix) > 0) {
-          throw new IOException("Section index entries must be in non-decreasing prefix order. "
-            + "Previous: " + Bytes.toStringBinary(lastPrefix) + ", current: "
-            + Bytes.toStringBinary(prefix));
+          throw new IOException(
+            "Section index entries must be in non-decreasing prefix order. " + "Previous: "
+              + Bytes.toStringBinary(lastPrefix) + ", current: " + Bytes.toStringBinary(prefix));
         }
       }
       entries.add(new SectionIndexEntry(prefix, offset, sectionSize));
