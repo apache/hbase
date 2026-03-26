@@ -259,7 +259,7 @@ const renderer = toClientRenderer(
             href={`https://github.com/apache/hbase/edit/master/${baseGithubPath}${mdxFileRoute}`}
             rel="noreferrer noopener"
             target="_blank"
-            className="text-fd-secondary-foreground bg-fd-secondary hover:text-fd-accent-foreground hover:bg-fd-accent w-fit rounded-xl border p-2 text-sm font-medium transition-colors"
+            className="no-print text-fd-secondary-foreground bg-fd-secondary hover:text-fd-accent-foreground hover:bg-fd-accent w-fit rounded-xl border p-2 text-sm font-medium transition-colors"
           >
             Edit on GitHub
           </a>
