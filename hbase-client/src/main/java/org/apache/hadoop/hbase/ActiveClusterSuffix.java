@@ -18,9 +18,13 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.Objects;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ActiveClusterSuffixProtos;
@@ -31,18 +35,27 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ActiveClusterSuffixProt
  */
 @InterfaceAudience.Private
 public class ActiveClusterSuffix {
-  private final String active_cluster_suffix;
+  private final String cluster_id;
+  private final String suffix;
 
-  /**
-   * New ActiveClusterSuffix.
-   */
-
-  public ActiveClusterSuffix(final String cs) {
-    this.active_cluster_suffix = cs;
+  public ActiveClusterSuffix(final String ci, final String suffix) {
+    this.cluster_id = ci;
+    this.suffix = suffix;
   }
 
-  public String getActiveClusterSuffix() {
-    return active_cluster_suffix;
+  public ActiveClusterSuffix(final String input) {
+    String[] parts = input.split(":", 2);
+    this.cluster_id = parts[0];
+    if (parts.length > 1) {
+      this.suffix = parts[1];
+    } else {
+      this.suffix = "";
+    }
+  }
+
+  public static ActiveClusterSuffix fromConfig(Configuration conf, ClusterId clusterId) {
+    return new ActiveClusterSuffix(clusterId.toString(), conf
+      .get(HConstants.HBASE_META_TABLE_SUFFIX, HConstants.HBASE_META_TABLE_SUFFIX_DEFAULT_VALUE));
   }
 
   /** Returns The active cluster suffix serialized using pb w/ pb magic prefix */
@@ -77,15 +90,14 @@ public class ActiveClusterSuffix {
 
   /** Returns A pb instance to represent this instance. */
   public ActiveClusterSuffixProtos.ActiveClusterSuffix convert() {
-    ActiveClusterSuffixProtos.ActiveClusterSuffix.Builder builder =
-      ActiveClusterSuffixProtos.ActiveClusterSuffix.newBuilder();
-    return builder.setActiveClusterSuffix(this.active_cluster_suffix).build();
+    return ActiveClusterSuffixProtos.ActiveClusterSuffix.newBuilder().setClusterId(cluster_id)
+      .setSuffix(suffix).build();
   }
 
   /** Returns A {@link ActiveClusterSuffix} made from the passed in <code>cs</code> */
   public static ActiveClusterSuffix
     convert(final ActiveClusterSuffixProtos.ActiveClusterSuffix cs) {
-    return new ActiveClusterSuffix(cs.getActiveClusterSuffix());
+    return new ActiveClusterSuffix(cs.getClusterId(), cs.getSuffix());
   }
 
   /**
@@ -93,6 +105,19 @@ public class ActiveClusterSuffix {
    */
   @Override
   public String toString() {
-    return this.active_cluster_suffix;
+    return String.format("%s:%s", this.cluster_id,
+      Strings.isNullOrEmpty(this.suffix) ? "<blank>" : this.suffix);
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o == null || getClass() != o.getClass()) return false;
+    ActiveClusterSuffix that = (ActiveClusterSuffix) o;
+    return Objects.equals(cluster_id, that.cluster_id) && Objects.equals(suffix, that.suffix);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(cluster_id, suffix);
   }
 }
