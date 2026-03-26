@@ -22,6 +22,18 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
+/**
+ * This interface is used to perform whatever task is necessary for reloading coprocessors on
+ * HMaster, HRegionServer, and HRegion. Since the steps required to reload coprocessors varies for
+ * each of these types, this interface helps with code flexibility by allowing a lamda function to
+ * be provided for the {@link #reload(Configuration) reload()} method. <br>
+ * <br>
+ * See {@link org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil#maybeUpdateCoprocessors
+ * CoprocessorConfigurationUtil.maybeUpdateCoprocessors()} and its usage in
+ * {@link org.apache.hadoop.hbase.conf.ConfigurationObserver#onConfigurationChange
+ * onConfigurationChange()} with HMaster, HRegionServer, and HRegion for an idea of how this
+ * interface is helpful.
+ */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 @FunctionalInterface

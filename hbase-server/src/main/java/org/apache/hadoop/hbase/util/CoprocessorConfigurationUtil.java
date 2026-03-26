@@ -199,6 +199,25 @@ public final class CoprocessorConfigurationUtil {
     }
   }
 
+  /**
+   * This method updates the coprocessors on the master, region server, or region if a change has
+   * been detected. Detected changes include changes in coprocessors or changes in read-only mode
+   * configuration. If a change is detected, then new coprocessors are loaded using the provided
+   * reload method. The new value for the read-only config variable is updated as well.
+   * @param newConf                   an updated configuration
+   * @param originalIsReadOnlyEnabled the original value for
+   *                                  {@value HConstants#HBASE_GLOBAL_READONLY_ENABLED_KEY}
+   * @param coprocessorHost           the coprocessor host for HMaster, HRegionServer, or HRegion
+   * @param coprocessorConfKey        configuration key used for setting master, region server, or
+   *                                  region coprocessors
+   * @param isMaintenanceMode         whether maintenance mode is active (mainly for HMaster)
+   * @param instance                  string value of the instance calling this method (mainly helps
+   *                                  with tracking region logging)
+   * @param stateSetter               lambda function that sets the read-only instance variable with
+   *                                  an updated value from the config
+   * @param reloadTask                lambda function that reloads coprocessors on the master,
+   *                                  region server, or region
+   */
   public static void maybeUpdateCoprocessors(Configuration newConf,
     boolean originalIsReadOnlyEnabled, CoprocessorHost<?, ?> coprocessorHost,
     String coprocessorConfKey, boolean isMaintenanceMode, String instance,
