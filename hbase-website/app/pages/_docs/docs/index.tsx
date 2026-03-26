@@ -148,6 +148,18 @@ const renderer = toClientRenderer(
         }
       }
 
+      // Bare fragment links must use a plain <a> — React Router's Link resolves
+      // to="#fragment" relative to the current pathname, producing e.g.
+      // /docs/single-page#transactions, which Chrome embeds as an absolute
+      // localhost URL in PDFs instead of an internal GoTo annotation.
+      if (transformedHref?.startsWith("#")) {
+        return (
+          <a href={transformedHref} {...rest}>
+            {children}
+          </a>
+        );
+      }
+
       // Use default Link component for all links (external links are handled by Link component)
       return (
         <Link to={transformedHref ?? "#"} {...rest}>
