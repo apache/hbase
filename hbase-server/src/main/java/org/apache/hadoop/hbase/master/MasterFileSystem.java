@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -395,31 +393,38 @@ public class MasterFileSystem {
   }
 
   private void negotiateActiveClusterSuffixFile(long wait) throws IOException {
+    this.activeClusterSuffix = ActiveClusterSuffix.fromConfig(conf, getClusterId());
     if (!isReadOnlyModeEnabled(conf)) {
       try {
         // verify the contents against the config set
         ActiveClusterSuffix acs = FSUtils.getActiveClusterSuffix(fs, rootdir);
-        LOG.debug("File Suffix {} : Configured suffix {} :  Cluster ID : {}", acs,
-          getSuffixFromConfig(), getClusterId());
-        if (Objects.equals(acs.getActiveClusterSuffix(), getSuffixFromConfig())) {
-          this.activeClusterSuffix = acs;
-        } else {
+        LOG.debug(
+          "Negotiating active cluster suffix file. File {} : File Suffix {} : Configured suffix {} :  Cluster ID : {}",
+          new Path(rootdir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME), acs, activeClusterSuffix,
+          getClusterId());
+        // Suffix file exists and we're in read/write mode. Content should match.
+        if (!this.activeClusterSuffix.equals(acs)) {
           // throw error
-          LOG.info("rootdir {} : Active Cluster File Suffix {} ", rootdir, acs);
+          LOG.info(
+            "[Read-replica feature] Another cluster is running in active (read-write) mode on this "
+              + "storage location. Active cluster ID: {}, This cluster ID {}. Rootdir location {} ",
+            acs, activeClusterSuffix, rootdir);
           throw new IOException("Cannot start master, because another cluster is running in active "
-            + "(read-write) mode on this storage location. Active Cluster Id: {} " + acs
-            + " This cluster Id: " + getClusterId());
+            + "(read-write) mode on this storage location. Active Cluster Id: " + acs
+            + ", This cluster Id: " + activeClusterSuffix);
         }
         LOG.info(
-          "This is the active cluster on this storage location, " + "File Suffix {} : Suffix {} : ",
-          acs, getActiveClusterSuffix());
+          "[Read-replica feature] This is the active cluster on this storage location with cluster id: {}",
+          activeClusterSuffix);
       } catch (FileNotFoundException fnfe) {
-        // this is the active cluster, create active cluster suffix file if it does not exist
-        FSUtils.setActiveClusterSuffix(fs, rootdir, computeAndSetSuffixFileDataToWrite(), wait);
+        // We're in read/write mode, but suffix file missing, let's create it
+        FSUtils.setActiveClusterSuffix(fs, rootdir, activeClusterSuffix, wait);
+        LOG.info("[Read-replica feature] Created Active cluster suffix file: {}, with content: {}",
+          HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME, activeClusterSuffix);
       }
     } else {
-      // this is a replica cluster
-      LOG.info("Replica cluster is being started in Read Only Mode");
+      // This is a read-only cluster, don't care about suffix file
+      LOG.info("[Read-replica feature] Replica cluster is being started in Read Only Mode");
     }
   }
 
@@ -430,26 +435,5 @@ public class MasterFileSystem {
   private boolean isReadOnlyModeEnabled(Configuration conf) {
     return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
       HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
-  }
-
-  private String getActiveClusterSuffixFromConfig(Configuration conf) {
-    return conf.get(HConstants.HBASE_META_TABLE_SUFFIX,
-      HConstants.HBASE_META_TABLE_SUFFIX_DEFAULT_VALUE);
-  }
-
-  public String getSuffixFromConfig() {
-    return getClusterId().toString() + ":" + getActiveClusterSuffixFromConfig(conf);
-  }
-
-  // Used only for testing
-  public byte[] getSuffixFileDataToCompare() {
-    String str = this.activeClusterSuffix.toString();
-    return str.getBytes(StandardCharsets.UTF_8);
-  }
-
-  public byte[] computeAndSetSuffixFileDataToWrite() {
-    String str = getClusterId().toString() + ":" + getActiveClusterSuffixFromConfig(conf);
-    this.activeClusterSuffix = new ActiveClusterSuffix(str);
-    return str.getBytes(StandardCharsets.UTF_8);
   }
 }

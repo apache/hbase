@@ -21,10 +21,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ActiveClusterSuffix;
+import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -83,12 +85,14 @@ public class TestActiveClusterSuffix {
     assertTrue(filePath + " should not be empty  ", fs.getFileStatus(filePath).getLen() > 0);
 
     MasterFileSystem mfs = TEST_UTIL.getHBaseCluster().getMaster().getMasterFileSystem();
-    // Compute string using currently set suffix and the cluster id
-    String cluster_suffix1 =
-      new String(mfs.getSuffixFileDataToCompare(), StandardCharsets.US_ASCII);
-    // Compute string member variable
-    String cluster_suffix2 = mfs.getActiveClusterSuffix().toString();
-    assertEquals(cluster_suffix1, cluster_suffix2);
+
+    try (FSDataInputStream in = fs.open(filePath)) {
+      ActiveClusterSuffix suffixFromFile = ActiveClusterSuffix.parseFrom(in.readAllBytes());
+      ActiveClusterSuffix suffixFromConfig =
+        ActiveClusterSuffix.fromConfig(TEST_UTIL.getConfiguration(), mfs.getClusterId());
+      assertEquals("Active Cluster Suffix file content doesn't match configuration", suffixFromFile,
+        suffixFromConfig);
+    }
   }
 
   @Test
@@ -112,14 +116,15 @@ public class TestActiveClusterSuffix {
     }
 
     MasterFileSystem mfs = TEST_UTIL.getHBaseCluster().getMaster().getMasterFileSystem();
+
     // Compute using file contents
-    String cluster_suffix1 =
-      new String(mfs.getSuffixFileDataToCompare(), StandardCharsets.US_ASCII);
+    ActiveClusterSuffix cluster_suffix1 = mfs.getActiveClusterSuffix();
     // Compute using config
-    String cluster_suffix2 = mfs.getSuffixFromConfig();
+    ActiveClusterSuffix cluster_suffix2 =
+      ActiveClusterSuffix.fromConfig(TEST_UTIL.getConfiguration(), new ClusterId(clusterId));
 
     assertEquals(cluster_suffix1, cluster_suffix2);
-    assertEquals(cluster_suffix, cluster_suffix1);
+    assertEquals(cluster_suffix, cluster_suffix1.toString());
   }
 
   @Test
