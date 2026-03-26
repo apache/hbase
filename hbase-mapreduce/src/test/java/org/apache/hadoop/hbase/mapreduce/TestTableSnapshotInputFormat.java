@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Result;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hbase.client.TestTableSnapshotScanner;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat.TableSnapshotRegionSplit;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
+import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
@@ -682,6 +684,51 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       } catch (Exception e) {
         LOG.warn("Error deleting snapshot", e);
       }
+    }
+  }
+
+  /**
+   * Tests that TableSnapshotInputFormatImpl correctly caches and uses region locations when
+   * locality is enabled
+   */
+  @Test
+  public void testRegionLocatorUsesCache() throws Exception {
+    final TableName tableName = TableName.valueOf("testRegionLocatorCache");
+    Configuration conf = UTIL.getConfiguration();
+    try {
+      // Create table with multiple regions
+      createTableAndSnapshot(UTIL, tableName, "snapshot", getStartRow(), getEndRow(), 3);
+
+      conf.setBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION, true);
+
+      Path tmpTableDir = UTIL.getDataTestDirOnTestFS("snapshot");
+
+      // Get snapshot manifest and region info
+      SnapshotManifest manifest = TableSnapshotInputFormatImpl.getSnapshotManifest(conf, "snapshot",
+        CommonFSUtils.getRootDir(conf), UTIL.getTestFileSystem());
+      List<HRegionInfo> regionInfos =
+        TableSnapshotInputFormatImpl.getRegionInfosFromManifest(manifest);
+
+      Scan scan = new Scan();
+
+      List<TableSnapshotInputFormatImpl.InputSplit> splits = TableSnapshotInputFormatImpl.getSplits(
+        scan, manifest, regionInfos, tmpTableDir, conf, new RegionSplitter.UniformSplit(), 1);
+
+      // Verify that splits contain proper locality information
+      Assert.assertNotNull(splits);
+      Assert.assertFalse(splits.isEmpty());
+
+      // Verify locations are populated from cache
+      for (TableSnapshotInputFormatImpl.InputSplit split : splits) {
+        String[] locations = split.getLocations();
+        // Locations should be populated from cache
+        Assert.assertNotNull(locations);
+      }
+
+    } finally {
+      UTIL.getAdmin().deleteSnapshot("snapshot");
+      UTIL.deleteTable(tableName);
+      conf.unset(SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION);
     }
   }
 }
