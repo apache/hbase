@@ -2380,14 +2380,15 @@ public class BucketCache implements BlockCache, HeapSize {
     }
 
     public boolean hasBlocksForFile(String fileName) {
-      return delegate.keySet().stream().filter(key -> key.getHfileName().equals(fileName))
-        .findFirst().isPresent();
+      return delegate.keySet().stream()
+        .filter(key -> BlockCacheUtil.matchesHFileName(key.getHfileName(), fileName)).findFirst()
+        .isPresent();
     }
 
     public Set<BlockCacheKey> getRamBlockCacheKeysForHFile(String fileName) {
       Set<BlockCacheKey> ramCacheKeySet = new HashSet<>();
       for (BlockCacheKey blockCacheKey : delegate.keySet()) {
-        if (blockCacheKey.getHfileName().equals(fileName)) {
+        if (BlockCacheUtil.matchesHFileName(blockCacheKey.getHfileName(), fileName)) {
           ramCacheKeySet.add(blockCacheKey);
         }
       }

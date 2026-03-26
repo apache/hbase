@@ -539,6 +539,10 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     if (row == null) {
       return null;
     }
+    if (rowLen > Short.MAX_VALUE) {
+      throw new IllegalArgumentException(
+        "Row length " + rowLen + " exceeds maximum (" + Short.MAX_VALUE + ")");
+    }
     int prefixLength = tenantExtractor.getPrefixLength();
     if (prefixLength > 0 && rowLen < prefixLength) {
       return null;
@@ -1606,6 +1610,11 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     });
     sectionReaderCache.invalidateAll();
     sectionReaderCache.cleanUp();
+
+    // Release load-on-open block buffers held by fileInfo
+    if (fileInfo != null) {
+      fileInfo.close();
+    }
 
     // Close filesystem block reader streams
     if (fsBlockReader != null) {

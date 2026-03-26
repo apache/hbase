@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
@@ -220,14 +221,6 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     // Custom tiering
     org.apache.hadoop.hbase.regionserver.CustomTieringMultiFileWriter.CUSTOM_TIERING_TIME_RANGE };
 
-  /** Whether write verification is enabled */
-  private boolean enableWriteVerification;
-  /** Configuration key for write verification */
-  private static final String WRITE_VERIFICATION_ENABLED =
-    "hbase.multi.tenant.write.verification.enabled";
-  /** Default write verification setting */
-  private static final boolean DEFAULT_WRITE_VERIFICATION_ENABLED = false;
-
   /** Current bloom filter writer — one per section */
   private BloomFilterWriter currentBloomFilterWriter;
   /** Whether bloom filter is enabled */
@@ -286,8 +279,6 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     this.cacheConf = cacheConf;
     this.tenantExtractor = tenantExtractor;
     this.fileContext = fileContext;
-    this.enableWriteVerification =
-      conf.getBoolean(WRITE_VERIFICATION_ENABLED, DEFAULT_WRITE_VERIFICATION_ENABLED);
 
     // Initialize bloom filter configuration using existing HBase properties
     // This reuses the standard io.storefile.bloom.enabled property instead of creating
@@ -346,12 +337,16 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     // Determine bloom configuration with precedence: column family > table property > builder >
     // default ROW
     BloomType bloomType = columnFamilyBloomType;
-    if (tableProperties != null && tableProperties.containsKey("BLOOMFILTER")) {
+    if (
+      tableProperties != null
+        && tableProperties.containsKey(ColumnFamilyDescriptorBuilder.BLOOMFILTER)
+    ) {
       try {
-        bloomType = BloomType.valueOf(tableProperties.get("BLOOMFILTER").toUpperCase());
+        bloomType = BloomType
+          .valueOf(tableProperties.get(ColumnFamilyDescriptorBuilder.BLOOMFILTER).toUpperCase());
       } catch (IllegalArgumentException e) {
         LOG.warn("Invalid bloom filter type in table properties: {}, ignoring override",
-          tableProperties.get("BLOOMFILTER"));
+          tableProperties.get(ColumnFamilyDescriptorBuilder.BLOOMFILTER));
       }
     }
     if (bloomType == null) {
@@ -560,7 +555,6 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
         if (keyCount > 0) {
           LOG.debug("Adding section-specific bloom filter with {} keys for section: {}", keyCount,
             Bytes.toStringBinary(currentTenantSectionId));
-          currentBloomFilterWriter.compactBloom();
           currentSectionWriter.addGeneralBloomFilter(currentBloomFilterWriter);
           // Append bloom metadata similar to StoreFileWriter
           currentSectionWriter.appendFileInfo(
@@ -651,11 +645,6 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
           + Bytes.toStringBinary(currentTenantSectionId));
       }
 
-      // Write verification if enabled
-      if (enableWriteVerification) {
-        verifySection(sectionStartOffset, sectionSize);
-      }
-
       // Record section in the index
       sectionIndexWriter.addEntry(currentTenantSectionId, sectionStartOffset, (int) sectionSize);
 
@@ -682,38 +671,6 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
       currentSectionDeleteFamilyCnt = 0;
       currentSectionMaxSeqId = 0;
       currentGeneralBloomParam = null;
-    }
-  }
-
-  /**
-   * Verify that the section was written correctly by checking basic structure.
-   * <p>
-   * Performs basic validation of section size and structure without expensive I/O operations.
-   * @param sectionStartOffset Starting offset of the section in the file
-   * @param sectionSize        Size of the section in bytes
-   * @throws IOException if verification fails or section structure is invalid
-   */
-  private void verifySection(long sectionStartOffset, long sectionSize) throws IOException {
-    LOG.debug("Verifying section at offset {} with size {}", sectionStartOffset, sectionSize);
-
-    // Basic verification: check that we can read the trailer
-    try {
-      // Seek to trailer position
-      int trailerSize = FixedFileTrailer.getTrailerSize(3); // v3 sections
-      long trailerOffset = sectionStartOffset + sectionSize - trailerSize;
-
-      if (trailerOffset < sectionStartOffset) {
-        throw new IOException("Section too small to contain trailer: size=" + sectionSize);
-      }
-
-      // Just verify the position is valid - actual trailer reading would require
-      // creating an input stream which is expensive
-      LOG.debug("Section verification passed: trailer would be at offset {}", trailerOffset);
-    } finally {
-      // Restore position
-      // Note: FSDataOutputStream doesn't support seek, so we can't actually verify
-      // Just log that verification was requested
-      LOG.debug("Write verification completed (limited check due to stream constraints)");
     }
   }
 
