@@ -1042,7 +1042,8 @@ possible configurations would overwhelm and obscure the important.
     mmap means the content will be in an mmaped file. Use mmap:PATH_TO_FILE. 'pmem'
     is bucket cache over a file on the persistent memory device.
     Use pmem:PATH_TO_FILE.
-    See http://hbase.apache.org/book.html#offheap.blockcache for more information.
+    See https://hbase.apache.org/docs/architecture/regionserver#off-heap-block-cache
+    for more information.
     </description>
   </property>
   <property>
@@ -1084,7 +1085,8 @@ possible configurations would overwhelm and obscure the important.
       <name>hfile.format.version</name>
       <value>3</value>
       <description>The HFile format version to use for new files.
-      Version 3 adds support for tags in hfiles (See http://hbase.apache.org/book.html#hbase.tags).
+      Version 3 adds support for tags in hfiles (See
+      https://hbase.apache.org/docs/security/data-access#tags).
       Also see the configuration 'hbase.replication.rpc.codec'.
       </description>
   </property>

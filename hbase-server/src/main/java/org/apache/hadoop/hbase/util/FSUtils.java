@@ -411,7 +411,7 @@ public final class FSUtils {
     } else {
       msg = "HBase file layout needs to be upgraded. Current filesystem version is " + version
         + " but software requires version " + HConstants.FILE_SYSTEM_VERSION
-        + ". Consult http://hbase.apache.org/book.html for further information about "
+        + ". Consult https://hbase.apache.org/docs for further information about "
         + "upgrading HBase.";
     }
 

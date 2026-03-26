@@ -220,7 +220,7 @@ module Shell
       puts 'HBase Shell'
       puts 'Use "help" to get list of supported commands.'
       puts 'Use "exit" to quit this interactive shell.'
-      puts 'For Reference, please visit: http://hbase.apache.org/2.0/book.html#shell'
+      puts 'For Reference, please visit: https://hbase.apache.org/docs/shell'
       print 'Version '
       command('version')
       puts
@@ -303,7 +303,7 @@ double-quote'd hexadecimal representation. For example:
   hbase> put 't1', "test\\xef\\xff", 'f1:', "\\x01\\x33\\x40"
 
 The HBase shell is the (J)Ruby IRB with the above HBase-specific commands added.
-For more on the HBase Shell, see http://hbase.apache.org/book.html
+For more on the HBase Shell, see https://hbase.apache.org/docs
       HERE
     end
 

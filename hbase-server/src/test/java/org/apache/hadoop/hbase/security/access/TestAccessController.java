@@ -203,7 +203,7 @@ public class TestAccessController extends SecureTestUtil {
   private static User USER_GROUP_WRITE;
 
   // TODO: convert this test to cover the full matrix in
-  // https://hbase.apache.org/book/appendix_acl_matrix.html
+  // https://hbase.apache.org/docs/acl-matrix
   // creating all Scope x Permission combinations
 
   private static TableName TEST_TABLE2 = TableName.valueOf("testtable2");
