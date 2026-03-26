@@ -31,7 +31,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -642,19 +641,19 @@ public final class FSUtils {
           data = in.readUTF();
           cs = new ActiveClusterSuffix(data);
         } catch (EOFException eof) {
-          LOG.warn("Active Cluster Suffix File {} is empty ", idPath);
+          LOG.warn("[Read-replica Feature] Active Cluster id file {} is empty ", idPath);
         } finally {
           in.close();
         }
+        rewriteAsPb(fs, rootdir, idPath, cs);
       }
       return cs;
     } else {
-      throw new FileNotFoundException("Active Cluster Suffix File " + idPath + " not found");
+      throw new FileNotFoundException(
+        "[Read-replica feature] Active Cluster Suffix File " + idPath + " not found");
     }
   }
 
-  /**
-   *   */
   private static void rewriteAsPb(final FileSystem fs, final Path rootdir, final Path p,
     final ClusterId cid) throws IOException {
     // Rewrite the file as pb. Move aside the old one first, write new
@@ -666,6 +665,19 @@ public final class FSUtils {
       throw new IOException("Failed delete of " + movedAsideName);
     }
     LOG.debug("Rewrote the hbase.id file as pb");
+  }
+
+  private static void rewriteAsPb(final FileSystem fs, final Path rootdir, final Path p,
+    final ActiveClusterSuffix cs) throws IOException {
+    // Rewrite the file as pb. Move aside the old one first, write new
+    // then delete the moved-aside file.
+    Path movedAsideName = new Path(p + "." + EnvironmentEdgeManager.currentTime());
+    if (!fs.rename(p, movedAsideName)) throw new IOException("Failed rename of " + p);
+    setActiveClusterSuffix(fs, rootdir, cs, 100);
+    if (!fs.delete(movedAsideName, false)) {
+      throw new IOException("Failed delete of " + movedAsideName);
+    }
+    LOG.debug("Rewrote the active.cluster.suffix.id file as pb");
   }
 
   /**
@@ -693,16 +705,15 @@ public final class FSUtils {
    * HBase root directory. If any operations on the ID file fails, and {@code wait} is a positive
    * value, the method will retry to produce the ID file until the thread is forcibly interrupted.
    */
-
-  public static void setActiveClusterSuffix(final FileSystem fs, final Path rootdir, byte[] bdata,
-    final long wait) throws IOException {
+  public static void setActiveClusterSuffix(final FileSystem fs, final Path rootdir,
+    final ActiveClusterSuffix cs, final long wait) throws IOException {
     final Path idFile = new Path(rootdir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
     final Path tempDir = new Path(rootdir, HConstants.HBASE_TEMP_DIRECTORY);
     final Path tempIdFile = new Path(tempDir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
-    String fsuffix = new String(bdata, StandardCharsets.US_ASCII);
 
-    LOG.debug("Create Active cluster Suffix file [{}] with Suffix: {}", idFile, fsuffix);
-    writeClusterInfo(fs, rootdir, idFile, tempIdFile, bdata, wait);
+    LOG.debug("[Read-replica feature] id file [{}] is present and contains cluster id: {}", idFile,
+      cs);
+    writeClusterInfo(fs, rootdir, idFile, tempIdFile, cs.toByteArray(), wait);
   }
 
   /**
