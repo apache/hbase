@@ -83,10 +83,13 @@ pipeline {
         }
       }
       steps {
+        sh '''#!/bin/bash -e
+          # wipe out stall repo and files
+          rm -rf *.patch
+          rm -rf hbase-site
+        '''
         unstash 'patch'
         sh '''#!/bin/bash -e
-          # wipe out stall repo
-          rm -rf hbase-site
           git clone --depth 1 --branch asf-site https://gitbox.apache.org/repos/asf/hbase-site.git
           patch=$(ls -1 *.patch | head -n 1)
           cd hbase-site;
