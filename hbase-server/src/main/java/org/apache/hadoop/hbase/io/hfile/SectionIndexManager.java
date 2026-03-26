@@ -251,13 +251,30 @@ public class SectionIndexManager {
      * @param offset       the file offset where the section starts
      * @param sectionSize  the size of the section in bytes
      */
-    public void addEntry(byte[] tenantPrefix, long offset, int sectionSize) {
-      SectionIndexEntry entry = new SectionIndexEntry(
-        tenantPrefix != null ? tenantPrefix : new byte[0], offset, sectionSize);
-      entries.add(entry);
+    public void addEntry(byte[] tenantPrefix, long offset, int sectionSize) throws IOException {
+      if (offset < 0) {
+        throw new IOException(
+          "Section offset must be non-negative, got: " + offset + " for tenant: "
+            + (tenantPrefix != null ? Bytes.toStringBinary(tenantPrefix) : "default"));
+      }
+      if (sectionSize <= 0) {
+        throw new IOException(
+          "Section size must be positive, got: " + sectionSize + " for tenant: "
+            + (tenantPrefix != null ? Bytes.toStringBinary(tenantPrefix) : "default"));
+      }
+      byte[] prefix = tenantPrefix != null ? tenantPrefix : new byte[0];
+      if (!entries.isEmpty()) {
+        byte[] lastPrefix = entries.get(entries.size() - 1).getTenantPrefix();
+        if (Bytes.compareTo(lastPrefix, prefix) > 0) {
+          throw new IOException("Section index entries must be in non-decreasing prefix order. "
+            + "Previous: " + Bytes.toStringBinary(lastPrefix) + ", current: "
+            + Bytes.toStringBinary(prefix));
+        }
+      }
+      entries.add(new SectionIndexEntry(prefix, offset, sectionSize));
 
       LOG.debug("Added section index entry: tenant={}, offset={}, size={}",
-        tenantPrefix != null ? Bytes.toStringBinary(tenantPrefix) : "default", offset, sectionSize);
+        Bytes.toStringBinary(prefix), offset, sectionSize);
     }
 
     /**

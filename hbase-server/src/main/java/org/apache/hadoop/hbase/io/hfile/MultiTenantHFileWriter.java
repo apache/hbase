@@ -832,38 +832,40 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     // HFile v4 structure: Section Index + File Info + Trailer
     // (Each section contains complete HFile v3 with its own blocks)
     // Note: v4 readers skip initMetaAndIndex, so no meta block index needed
+    try {
+      trailer = new FixedFileTrailer(getMajorVersion(), getMinorVersion());
 
-    trailer = new FixedFileTrailer(getMajorVersion(), getMinorVersion());
+      // 1. Write Section Index Block (replaces data block index in v4)
+      // This is the core of HFile v4 - maps tenant prefixes to section locations
+      LOG.info("Writing section index with {} sections", sectionCount);
+      long rootIndexOffset = sectionIndexWriter.writeIndexBlocks(outputStream);
+      sectionIndexRootOffset = rootIndexOffset;
+      trailer.setSectionIndexOffset(sectionIndexRootOffset);
+      long loadOnOpenOffset =
+        maxSectionDataEndOffset > 0 ? maxSectionDataEndOffset : rootIndexOffset;
+      if (loadOnOpenOffset > rootIndexOffset) {
+        // Clamp to ensure we never point past the actual section index start.
+        loadOnOpenOffset = rootIndexOffset;
+      }
+      trailer.setLoadOnOpenOffset(loadOnOpenOffset);
 
-    // 1. Write Section Index Block (replaces data block index in v4)
-    // This is the core of HFile v4 - maps tenant prefixes to section locations
-    LOG.info("Writing section index with {} sections", sectionCount);
-    long rootIndexOffset = sectionIndexWriter.writeIndexBlocks(outputStream);
-    sectionIndexRootOffset = rootIndexOffset;
-    trailer.setSectionIndexOffset(sectionIndexRootOffset);
-    long loadOnOpenOffset = maxSectionDataEndOffset > 0 ? maxSectionDataEndOffset : rootIndexOffset;
-    if (loadOnOpenOffset > rootIndexOffset) {
-      // Clamp to ensure we never point past the actual section index start.
-      loadOnOpenOffset = rootIndexOffset;
+      // 2. Write File Info Block (minimal v4-specific metadata)
+      LOG.info("Writing v4 file info");
+      finishFileInfo();
+      writeFileInfo(trailer, blockWriter.startWriting(BlockType.FILE_INFO));
+      blockWriter.writeHeaderAndData(outputStream);
+      totalUncompressedBytes += blockWriter.getUncompressedSizeWithHeader();
+
+      // 3. Write Trailer
+      finishClose(trailer);
+
+      LOG.info(
+        "MultiTenantHFileWriter closed: target={}, sections={}, entries={}, "
+          + "totalUncompressedBytes={}",
+        streamName, sectionCount, entryCount, totalUncompressedBytes);
+    } finally {
+      blockWriter.release();
     }
-    trailer.setLoadOnOpenOffset(loadOnOpenOffset);
-
-    // 2. Write File Info Block (minimal v4-specific metadata)
-    LOG.info("Writing v4 file info");
-    finishFileInfo();
-    writeFileInfo(trailer, blockWriter.startWriting(BlockType.FILE_INFO));
-    blockWriter.writeHeaderAndData(outputStream);
-    totalUncompressedBytes += blockWriter.getUncompressedSizeWithHeader();
-
-    // 3. Write Trailer
-    finishClose(trailer);
-
-    LOG.info(
-      "MultiTenantHFileWriter closed: target={}, sections={}, entries={}, "
-        + "totalUncompressedBytes={}",
-      streamName, sectionCount, entryCount, totalUncompressedBytes);
-
-    blockWriter.release();
   }
 
   /**
@@ -1452,17 +1454,14 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
       LOG.debug("Closing section for tenant section ID: {}",
         tenantSectionId == null ? "null" : Bytes.toStringBinary(tenantSectionId));
 
-      // Close the section writer safely
-      // HFileWriterImpl.close() can fail with NPE on empty bloom filters, but we want to
-      // still properly close the stream and resources
       try {
         super.close();
       } catch (RuntimeException e) {
-        LOG.warn("Error during section close, continuing with stream cleanup. Error: {}",
-          e.getMessage());
-        // We will still mark as closed and continue with resource cleanup
+        throw new IOException("Failed to close section writer for tenant "
+          + (tenantSectionId == null ? "null" : Bytes.toStringBinary(tenantSectionId)), e);
+      } finally {
+        closed = true;
       }
-      closed = true;
 
       LOG.debug("Closed section for tenant section: {}",
         tenantSectionId == null ? "default" : Bytes.toStringBinary(tenantSectionId));

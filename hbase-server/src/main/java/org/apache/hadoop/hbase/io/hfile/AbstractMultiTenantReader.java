@@ -25,7 +25,9 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -123,6 +125,9 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
   /** Private map to store section metadata */
   private final Map<ImmutableBytesWritable, SectionMetadata> sectionLocations =
     new LinkedHashMap<ImmutableBytesWritable, SectionMetadata>();
+
+  /** O(log n) index from section start offset to section key for fast offset-based lookup */
+  private final NavigableMap<Long, ImmutableBytesWritable> sectionOffsetIndex = new TreeMap<>();
 
   /** List for section navigation */
   private List<ImmutableBytesWritable> sectionIds;
@@ -433,8 +438,10 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
    */
   private void initSectionLocations() {
     for (SectionIndexManager.SectionIndexEntry entry : sectionIndexReader.getSections()) {
-      sectionLocations.put(new ImmutableBytesWritable(entry.getTenantPrefix()),
-        new SectionMetadata(entry.getOffset(), entry.getSectionSize()));
+      ImmutableBytesWritable key = new ImmutableBytesWritable(entry.getTenantPrefix());
+      SectionMetadata metadata = new SectionMetadata(entry.getOffset(), entry.getSectionSize());
+      sectionLocations.put(key, metadata);
+      sectionOffsetIndex.put(entry.getOffset(), key);
     }
 
     // Create list for section navigation
@@ -2142,14 +2149,13 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
    * @return the section reader containing this offset, or null if not found
    */
   private SectionReaderLease findSectionForOffset(long absoluteOffset) throws IOException {
-    for (Map.Entry<ImmutableBytesWritable, SectionMetadata> entry : sectionLocations.entrySet()) {
-      SectionMetadata metadata = entry.getValue();
-      if (
-        absoluteOffset >= metadata.getOffset()
-          && absoluteOffset < metadata.getOffset() + metadata.getSize()
-      ) {
-        return getSectionReader(entry.getKey().get());
-      }
+    Map.Entry<Long, ImmutableBytesWritable> floor = sectionOffsetIndex.floorEntry(absoluteOffset);
+    if (floor == null) {
+      return null;
+    }
+    SectionMetadata metadata = sectionLocations.get(floor.getValue());
+    if (metadata != null && absoluteOffset < metadata.getOffset() + metadata.getSize()) {
+      return getSectionReader(floor.getValue().get());
     }
     return null;
   }
