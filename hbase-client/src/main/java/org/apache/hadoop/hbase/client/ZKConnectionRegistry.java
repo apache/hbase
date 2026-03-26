@@ -85,7 +85,7 @@ class ZKConnectionRegistry implements ConnectionRegistry {
       synchronized (WARN_LOCK) {
         if (NEEDS_LOG_WARN) {
           LOG.warn(
-            "ZKConnectionRegistry is deprecated. See https://hbase.apache.org/book.html#client.rpcconnectionregistry");
+            "ZKConnectionRegistry is deprecated. See https://hbase.apache.org/docs/architecture/client#rpc-connection-registry-new-as-of-250");
           NEEDS_LOG_WARN = false;
         }
       }

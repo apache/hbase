@@ -34,14 +34,15 @@
 # export HBASE_HEAPSIZE=1G
 
 # Uncomment below if you intend to use off heap cache. For example, to allocate 8G of
-# offheap, set the value to "8G". See http://hbase.apache.org/book.html#direct.memory
+# offheap, set the value to "8G". See "Direct Memory Usage In HBase" in
+# https://hbase.apache.org/docs/architecture/regionserver#bucketcache-example-configuration
 # in the refguide for guidance setting this config.
 # export HBASE_OFFHEAPSIZE=1G
 
 # Extra Java runtime options.
 # Default settings are applied according to the detected JVM version. Override these default
 # settings by specifying a value here. For more details on possible settings,
-# see http://hbase.apache.org/book.html#_jvm_tuning
+# see https://hbase.apache.org/docs/regionserver-sizing#jvm-tuning
 # export HBASE_OPTS
 
 # Uncomment one of the below three options to enable java garbage collection logging for the server-side processes.
