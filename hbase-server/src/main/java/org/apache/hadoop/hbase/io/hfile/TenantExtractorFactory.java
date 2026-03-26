@@ -62,16 +62,16 @@ public class TenantExtractorFactory {
             + " falling back to SingleTenantExtractor", prefixLength);
           return new MultiTenantHFileWriter.SingleTenantExtractor();
         }
-        LOG.info("Multi-tenant enabled from HFile v4 trailer, prefixLength={}", prefixLength);
+        LOG.debug("Multi-tenant enabled from HFile v4 trailer, prefixLength={}", prefixLength);
         return new DefaultTenantExtractor(prefixLength);
       } else {
-        LOG.info("HFile v4 format, but multi-tenant not enabled in trailer");
+        LOG.debug("HFile v4 format, but multi-tenant not enabled in trailer");
         return new MultiTenantHFileWriter.SingleTenantExtractor();
       }
     }
 
     // For non-v4 files, always use SingleTenantExtractor
-    LOG.info("Non-v4 HFile format (v{}), using SingleTenantExtractor", trailer.getMajorVersion());
+    LOG.debug("Non-v4 HFile format (v{}), using SingleTenantExtractor", trailer.getMajorVersion());
     return new MultiTenantHFileWriter.SingleTenantExtractor();
   }
 
@@ -105,7 +105,7 @@ public class TenantExtractorFactory {
 
     // If multi-tenant is disabled, return SingleTenantExtractor
     if (!multiTenantEnabled) {
-      LOG.info("Multi-tenant functionality disabled for this table, using SingleTenantExtractor");
+      LOG.debug("Multi-tenant functionality disabled for this table, using SingleTenantExtractor");
       return new MultiTenantHFileWriter.SingleTenantExtractor();
     }
 
@@ -137,7 +137,7 @@ public class TenantExtractorFactory {
       prefixLength = clusterPrefixLength;
     }
 
-    LOG.info("Tenant configuration initialized: prefixLength={}, from table properties: {}",
+    LOG.debug("Tenant configuration initialized: prefixLength={}, from table properties: {}",
       prefixLength, (tablePrefixLengthStr != null));
 
     // Create and return a DefaultTenantExtractor with the configured parameters

@@ -83,8 +83,16 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
     }
 
     @Override
-    public synchronized HFileReaderImpl getReader() throws IOException {
-      if (!initialized) {
+    public HFileReaderImpl getReader() throws IOException {
+      if (initialized) {
+        return reader;
+      }
+
+      synchronized (this) {
+        if (initialized) {
+          return reader;
+        }
+
         // Create section context with section-specific settings using parent method
         ReaderContext sectionContext =
           buildSectionContext(metadata, ReaderContext.ReaderType.STREAM);

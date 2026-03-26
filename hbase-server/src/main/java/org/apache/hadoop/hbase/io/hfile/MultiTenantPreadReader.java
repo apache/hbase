@@ -83,7 +83,7 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
      * @param metadata        The section metadata
      */
     public PreadSectionReader(byte[] tenantSectionId, SectionMetadata metadata) {
-      super(tenantSectionId.clone(), metadata);
+      super(tenantSectionId, metadata);
       LOG.debug("Created PreadSectionReader for tenant section ID: {}",
         Bytes.toStringBinary(this.tenantSectionId));
     }

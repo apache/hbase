@@ -158,6 +158,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
   private int count;
 
   private static final String FOUR_SPACES = "    ";
+  private static final int BLOCK_READ_ERROR_SKIP_BYTES = 64;
 
   public HFilePrettyPrinter() {
     super();
@@ -444,8 +445,9 @@ public class HFilePrettyPrinter extends Configured implements Tool {
           out.println("Scanning HFile v4 - tenant boundaries may be shown");
         }
       }
-    } catch (Exception e) {
-      // Continue without tenant-specific processing
+    } catch (RuntimeException e) {
+      LOG.debug("Could not determine HFile version; continuing without tenant-specific processing",
+        e);
     }
 
     do {
@@ -1220,8 +1222,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
         } catch (Exception e) {
           out.println(
             FOUR_SPACES + "Error reading block at offset " + offset + ": " + e.getMessage());
-          // For non-v4 files, try to continue with next logical offset
-          offset += 64; // Skip ahead and try again
+          offset += BLOCK_READ_ERROR_SKIP_BYTES;
           if (offset > max) {
             break;
           }
@@ -1295,8 +1296,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
 
         } catch (Exception e) {
           out.println(indent + "Error reading block at offset " + offset + ": " + e.getMessage());
-          // Try to continue with next logical offset
-          offset += 64; // Skip ahead and try again
+          offset += BLOCK_READ_ERROR_SKIP_BYTES;
           if (offset > lastDataBlockOffset) {
             break;
           }

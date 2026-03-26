@@ -58,6 +58,9 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
   public MultiTenantFSDataInputStreamWrapper(FSDataInputStreamWrapper parent, long offset) {
     // Use test constructor to properly initialize both streams and avoid assertion issues
     super(parent.getStream(false), parent.getStream(true));
+    if (offset < 0) {
+      throw new IllegalArgumentException("Section offset must be non-negative, got: " + offset);
+    }
     this.parent = parent;
     this.sectionOffset = offset;
 
@@ -276,14 +279,14 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
 
     @Override
     public void seek(long position) throws IOException {
-      // Convert section-relative position to absolute file position
+      if (position < 0) {
+        throw new IOException(
+          "Cannot seek to negative relative position: " + position + ", sectionOffset="
+            + sectionOffset);
+      }
       long absolutePosition = toAbsolutePosition(position);
       LOG.debug("Section seek: relative pos {} -> absolute pos {}, sectionOffset={}", position,
         absolutePosition, sectionOffset);
-      // Validate that we're not seeking beyond reasonable bounds
-      if (position < 0) {
-        LOG.warn("Attempting to seek to negative relative position: {}", position);
-      }
       rawStream.seek(absolutePosition);
     }
 
@@ -307,17 +310,17 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
 
     @Override
     public int read(long position, byte[] buffer, int offset, int length) throws IOException {
-      // Convert section-relative position to absolute file position
-      long absolutePosition = toAbsolutePosition(position);
-      LOG.trace("Section pread: relative pos {} -> absolute pos {}, len={}, sectionOffset={}",
-        position, absolutePosition, length, sectionOffset);
-      // Validate read parameters
       if (position < 0) {
-        LOG.warn("Attempting to read from negative relative position: {}", position);
+        throw new IOException(
+          "Cannot read from negative relative position: " + position + ", sectionOffset="
+            + sectionOffset);
       }
       if (length < 0) {
         throw new IllegalArgumentException("Read length cannot be negative: " + length);
       }
+      long absolutePosition = toAbsolutePosition(position);
+      LOG.trace("Section pread: relative pos {} -> absolute pos {}, len={}, sectionOffset={}",
+        position, absolutePosition, length, sectionOffset);
       return rawStream.read(absolutePosition, buffer, offset, length);
     }
 

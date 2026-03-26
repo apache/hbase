@@ -89,29 +89,32 @@ public class TestMultiTenantBloomFilterDelegation {
     StoreFileInfo storeFileInfo = StoreFileInfo.createStoreFileInfoForHFile(conf, fs, file, true);
     storeFileInfo.initHFileInfo(contextReader);
     StoreFileReader reader = storeFileInfo.createReader(contextReader, cacheConfig);
-    storeFileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
-    reader.loadFileInfo();
-    reader.loadBloomfilter(BlockType.GENERAL_BLOOM_META, new BloomFilterMetrics());
-    reader.loadBloomfilter(BlockType.DELETE_FAMILY_BLOOM_META, new BloomFilterMetrics());
+    try {
+      storeFileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
+      reader.loadFileInfo();
+      reader.loadBloomfilter(BlockType.GENERAL_BLOOM_META, new BloomFilterMetrics());
+      reader.loadBloomfilter(BlockType.DELETE_FAMILY_BLOOM_META, new BloomFilterMetrics());
 
-    byte[] presentRow = Bytes.toBytes("bb-0001");
-    byte[] absentRow = Bytes.toBytes("bb-zzzz");
+      byte[] presentRow = Bytes.toBytes("bb-0001");
+      byte[] absentRow = Bytes.toBytes("bb-zzzz");
 
-    HFile.Reader hfileReader = reader.getHFileReader();
-    assertTrue(hfileReader instanceof MultiTenantBloomSupport);
-    MultiTenantBloomSupport bloomSupport = (MultiTenantBloomSupport) hfileReader;
+      HFile.Reader hfileReader = reader.getHFileReader();
+      assertTrue(hfileReader instanceof MultiTenantBloomSupport);
+      MultiTenantBloomSupport bloomSupport = (MultiTenantBloomSupport) hfileReader;
 
-    boolean expectedPresent =
-      bloomSupport.passesGeneralRowBloomFilter(presentRow, 0, presentRow.length);
-    assertTrue(expectedPresent);
-    Scan present = new Scan(new Get(presentRow));
-    assertEquals(expectedPresent, reader.passesBloomFilter(present, null));
+      boolean expectedPresent =
+        bloomSupport.passesGeneralRowBloomFilter(presentRow, 0, presentRow.length);
+      assertTrue(expectedPresent);
+      Scan present = new Scan(new Get(presentRow));
+      assertEquals(expectedPresent, reader.passesBloomFilter(present, null));
 
-    boolean expectedAbsent =
-      bloomSupport.passesGeneralRowBloomFilter(absentRow, 0, absentRow.length);
-    Scan absent = new Scan(new Get(absentRow));
-    assertEquals(expectedAbsent, reader.passesBloomFilter(absent, null));
-
-    fs.delete(baseDir, true);
+      boolean expectedAbsent =
+        bloomSupport.passesGeneralRowBloomFilter(absentRow, 0, absentRow.length);
+      Scan absent = new Scan(new Get(absentRow));
+      assertEquals(expectedAbsent, reader.passesBloomFilter(absent, null));
+    } finally {
+      reader.close(false);
+      fs.delete(baseDir, true);
+    }
   }
 }

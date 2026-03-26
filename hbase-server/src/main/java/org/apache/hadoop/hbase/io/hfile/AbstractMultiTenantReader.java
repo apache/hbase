@@ -291,7 +291,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       // Validate this is a root index block
       if (rootIndexBlock.getBlockType() != BlockType.ROOT_INDEX) {
         throw new IOException("Expected ROOT_INDEX block for tenant index in HFile v4, found "
-          + rootIndexBlock.getBlockType() + " at offset " + trailer.getLoadOnOpenDataOffset());
+          + rootIndexBlock.getBlockType() + " at offset " + sectionIndexOffset);
       }
 
       HFileBlock blockToRead = null;
@@ -835,7 +835,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     /** The underlying HFile reader */
     protected HFileReaderImpl reader;
     /** Whether this reader has been initialized */
-    protected boolean initialized = false;
+    protected volatile boolean initialized = false;
     /** The base offset for this section */
     protected long sectionBaseOffset;
 
@@ -2057,8 +2057,9 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       double balanceRatio = Math.abs((double) leftSideSize / idealSplitSize - 1.0);
 
       if (balanceRatio > 0.3) { // More than 30% deviation
-        LOG.warn("Best tenant boundary has poor balance ratio: {:.1f}% (tenant: {})",
-          balanceRatio * 100, Bytes.toStringBinary(bestBoundary.tenantSectionId));
+        LOG.warn("Best tenant boundary has poor balance ratio: {}% (tenant: {})",
+          String.format("%.1f", balanceRatio * 100),
+          Bytes.toStringBinary(bestBoundary.tenantSectionId));
         // Still return it - tenant boundary is more important than perfect balance
       }
     }

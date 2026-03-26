@@ -217,9 +217,8 @@ public class MultiTenantHFileSplittingTest {
   private void executeTestScenario(String[] tenants, int[] rowsPerTenant) throws Exception {
     LOG.info("=== Starting test scenario ===");
 
-    // Generate unique table name for this test
     String testName = Thread.currentThread().getStackTrace()[2].getMethodName();
-    TableName tableName = TableName.valueOf(testName + "_" + System.currentTimeMillis());
+    TableName tableName = TableName.valueOf(testName);
 
     // Validate input parameters
     if (tenants.length != rowsPerTenant.length) {
