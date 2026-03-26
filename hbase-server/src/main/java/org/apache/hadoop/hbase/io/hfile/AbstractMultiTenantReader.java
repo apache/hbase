@@ -1195,6 +1195,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
 
     /** Current tenant section ID */
     protected byte[] currentTenantSectionId;
+    /** Index of the current section in sectionIds for O(1) next-section lookup */
+    protected int currentSectionIndex = -1;
     /** Current scanner instance */
     protected HFileScanner currentScanner;
     /** Current section reader lease */
@@ -1238,11 +1240,13 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
 
       currentSectionReader = null;
       currentTenantSectionId = null;
+      currentSectionIndex = -1;
 
       if (newLease != null) {
         currentSectionLease = newLease;
         currentSectionReader = newLease.getSectionReader();
         currentTenantSectionId = sectionId;
+        currentSectionIndex = resolveCurrentSectionIndex(sectionId);
         try {
           currentScanner = currentSectionReader.getScanner(conf, cacheBlocks, pread, isCompaction);
         } catch (IOException | RuntimeException e) {
@@ -1250,6 +1254,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
           currentSectionLease = null;
           currentSectionReader = null;
           currentTenantSectionId = null;
+          currentSectionIndex = -1;
           throw e;
         }
       }
@@ -1503,23 +1508,25 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       }
     }
 
-    /**
-     * Find the next tenant section ID after the current one.
-     * @param currentSectionId The current section ID
-     * @return The next section ID, or null if none found
-     */
-    private byte[] findNextTenantSectionId(byte[] currentSectionId) {
-      // Linear search to find current position and return next
+    private int resolveCurrentSectionIndex(byte[] sectionId) {
       for (int i = 0; i < sectionIds.size(); i++) {
-        if (Bytes.equals(sectionIds.get(i).get(), currentSectionId)) {
-          // Found current section, return next if it exists
-          if (i < sectionIds.size() - 1) {
-            return sectionIds.get(i + 1).get();
-          }
-          break;
+        if (Bytes.equals(sectionIds.get(i).get(), sectionId)) {
+          return i;
         }
       }
+      return -1;
+    }
 
+    /**
+     * Find the next tenant section ID after the current one.
+     * @param currentSectionId The current section ID (unused, kept for call-site clarity)
+     * @return The next section ID, or null if this is the last section
+     */
+    private byte[] findNextTenantSectionId(byte[] currentSectionId) {
+      int nextIndex = currentSectionIndex + 1;
+      if (nextIndex >= 0 && nextIndex < sectionIds.size()) {
+        return sectionIds.get(nextIndex).get();
+      }
       return null;
     }
 
