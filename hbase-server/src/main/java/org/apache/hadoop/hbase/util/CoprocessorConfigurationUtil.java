@@ -22,15 +22,19 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorReloadTask;
 import org.apache.hadoop.hbase.security.access.BulkLoadReadOnlyController;
 import org.apache.hadoop.hbase.security.access.EndpointReadOnlyController;
 import org.apache.hadoop.hbase.security.access.MasterReadOnlyController;
 import org.apache.hadoop.hbase.security.access.RegionReadOnlyController;
 import org.apache.hadoop.hbase.security.access.RegionServerReadOnlyController;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Strings;
@@ -40,6 +44,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Strings;
  */
 @InterfaceAudience.Private
 public final class CoprocessorConfigurationUtil {
+  private static final Logger LOG = LoggerFactory.getLogger(CoprocessorConfigurationUtil.class);
 
   private CoprocessorConfigurationUtil() {
   }
@@ -191,6 +196,30 @@ public final class CoprocessorConfigurationUtil {
       CoprocessorConfigurationUtil.addCoprocessors(conf, coprocessorConfKey, cpList);
     } else {
       CoprocessorConfigurationUtil.removeCoprocessors(conf, coprocessorConfKey, cpList);
+    }
+  }
+
+  public static void maybeUpdateCoprocessors(Configuration newConf,
+    boolean originalIsReadOnlyEnabled, CoprocessorHost<?, ?> coprocessorHost,
+    String coprocessorConfKey, boolean isMaintenanceMode, String instance,
+    Consumer<Boolean> stateSetter, CoprocessorReloadTask reloadTask) {
+
+    boolean maybeUpdatedReadOnlyMode = ConfigurationUtil.isReadOnlyModeEnabled(newConf);
+    boolean hasReadOnlyModeChanged = originalIsReadOnlyEnabled != maybeUpdatedReadOnlyMode;
+    boolean hasCoprocessorConfigChanged = CoprocessorConfigurationUtil
+      .checkConfigurationChange(coprocessorHost, newConf, coprocessorConfKey);
+
+    // update region server coprocessor if the configuration has changed.
+    if ((hasCoprocessorConfigChanged || hasReadOnlyModeChanged) && !isMaintenanceMode) {
+      LOG.info("Updating coprocessors for {} because the configuration has changed", instance);
+      CoprocessorConfigurationUtil.syncReadOnlyConfigurations(newConf, coprocessorConfKey);
+      reloadTask.reload(newConf);
+    }
+
+    if (hasReadOnlyModeChanged) {
+      stateSetter.accept(maybeUpdatedReadOnlyMode);
+      LOG.info("Config {} has been dynamically changed to {} for {}",
+        HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, maybeUpdatedReadOnlyMode, instance);
     }
   }
 }

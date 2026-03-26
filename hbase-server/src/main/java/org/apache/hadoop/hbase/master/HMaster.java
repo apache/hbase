@@ -4506,36 +4506,14 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // append the quotas observer back to the master coprocessor key
     setQuotasObserver(newConf);
 
-    boolean maybeUpdatedReadOnlyMode = ConfigurationUtil.isReadOnlyModeEnabled(newConf);
-    boolean hasReadOnlyModeChanged = this.isGlobalReadOnlyEnabled != maybeUpdatedReadOnlyMode;
-    boolean hasCoprocessorConfigChanged = CoprocessorConfigurationUtil
-      .checkConfigurationChange(this.cpHost, newConf, CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
-    boolean shouldUpdateCoprocessors =
-      (hasCoprocessorConfigChanged || hasReadOnlyModeChanged) && !maintenanceMode;
+    boolean originalIsReadOnlyEnabled = this.isGlobalReadOnlyEnabled;
 
-    // update region server coprocessor if the configuration has changed.
-    if (shouldUpdateCoprocessors) {
-      Set<String> currentlyLoadedCps;
-      if (this.cpHost != null) {
-        currentlyLoadedCps = this.cpHost.getCoprocessorClassNames();
-        LOG.debug("About to update coprocessors loaded on HMaster {}. These are the current "
-          + "coprocessors before updating: {}", this, currentlyLoadedCps);
-      }
+    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(newConf, this.isGlobalReadOnlyEnabled,
+      this.cpHost, CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, this.maintenanceMode,
+      this.toString(), val -> this.isGlobalReadOnlyEnabled = val,
+      conf -> initializeCoprocessorHost(newConf));
 
-      LOG.info("Update the master coprocessor(s) because the configuration has changed");
-      CoprocessorConfigurationUtil.syncReadOnlyConfigurations(newConf,
-        CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
-      initializeCoprocessorHost(newConf);
-
-      currentlyLoadedCps = this.cpHost.getCoprocessorClassNames();
-      LOG.debug("Finished updating coprocessors on HMaster {}. These are the coprocessors "
-        + "after updating: {}", this, currentlyLoadedCps);
-    }
-
-    if (hasReadOnlyModeChanged) {
-      this.isGlobalReadOnlyEnabled = maybeUpdatedReadOnlyMode;
-      LOG.info("Config {} has been dynamically changed to {} for HMaster {}",
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, this.isGlobalReadOnlyEnabled, this);
+    if (this.isGlobalReadOnlyEnabled != originalIsReadOnlyEnabled) {
       AbstractReadOnlyController.manageActiveClusterIdFile(this.isGlobalReadOnlyEnabled,
         this.getMasterFileSystem());
     }

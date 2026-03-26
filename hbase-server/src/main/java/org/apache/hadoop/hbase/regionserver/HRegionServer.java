@@ -163,7 +163,6 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
-import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -3494,36 +3493,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       LOG.warn("Failed to initialize SuperUsers on reloading of the configuration");
     }
 
-    boolean maybeUpdatedReadOnlyMode = ConfigurationUtil.isReadOnlyModeEnabled(newConf);
-    boolean hasReadOnlyModeChanged = this.isGlobalReadOnlyEnabled != maybeUpdatedReadOnlyMode;
-    boolean hasCoprocessorConfigChanged = CoprocessorConfigurationUtil.checkConfigurationChange(
-      this.rsHost, newConf, CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
-    boolean shouldUpdateCoprocessors = hasCoprocessorConfigChanged || hasReadOnlyModeChanged;
-
-    // update region server coprocessor if the configuration has changed.
-    if (shouldUpdateCoprocessors) {
-      Set<String> currentlyLoadedCps;
-      if (this.rsHost != null) {
-        currentlyLoadedCps = this.rsHost.getCoprocessorClassNames();
-        LOG.debug("About to update coprocessors loaded on HRegionServer {}. These are the current "
-          + "coprocessors before updating: {}", this, currentlyLoadedCps);
-      }
-
-      LOG.info("Update region server coprocessors because the configuration has changed");
-      CoprocessorConfigurationUtil.syncReadOnlyConfigurations(newConf,
-        CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
-      this.rsHost = new RegionServerCoprocessorHost(this, newConf);
-
-      currentlyLoadedCps = this.rsHost.getCoprocessorClassNames();
-      LOG.debug("Finished updating coprocessors on HRegionServer {}. These are the coprocessors "
-        + "after updating: {}", this, currentlyLoadedCps);
-    }
-
-    if (hasReadOnlyModeChanged) {
-      this.isGlobalReadOnlyEnabled = maybeUpdatedReadOnlyMode;
-      LOG.info("Config {} has been dynamically changed to {} for region server {}",
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, this.isGlobalReadOnlyEnabled, this);
-    }
+    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(newConf, this.isGlobalReadOnlyEnabled,
+      this.rsHost, CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, false, this.toString(),
+      val -> this.isGlobalReadOnlyEnabled = val,
+      conf -> this.rsHost = new RegionServerCoprocessorHost(this, newConf));
   }
 
   @Override

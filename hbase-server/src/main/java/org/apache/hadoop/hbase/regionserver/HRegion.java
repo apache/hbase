@@ -180,7 +180,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -8994,38 +8993,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public void onConfigurationChange(Configuration newConf) {
     this.storeHotnessProtector.update(newConf);
 
-    boolean maybeUpdatedReadOnlyMode = ConfigurationUtil.isReadOnlyModeEnabled(newConf);
-    boolean hasReadOnlyModeChanged = this.isGlobalReadOnlyEnabled != maybeUpdatedReadOnlyMode;
-    boolean hasCoprocessorConfigChanged = CoprocessorConfigurationUtil.checkConfigurationChange(
-      this.coprocessorHost, newConf, CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-      CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY);
-    boolean shouldUpdateCoprocessors = hasCoprocessorConfigChanged || hasReadOnlyModeChanged;
-
-    // update coprocessorHost if the configuration has changed.
-    if (shouldUpdateCoprocessors) {
-      Set<String> currentlyLoadedCps;
-      if (this.coprocessorHost != null) {
-        currentlyLoadedCps = this.coprocessorHost.getCoprocessorClassNames();
-        LOG.trace("About to update coprocessors loaded on HRegion {}. These are the current "
-          + "coprocessors before updating: {}", this, currentlyLoadedCps);
-      }
-
-      LOG.info("Update the system coprocessors because the configuration has changed");
-      CoprocessorConfigurationUtil.syncReadOnlyConfigurations(newConf,
-        CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
-      decorateRegionConfiguration(newConf);
-      this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, newConf);
-
-      currentlyLoadedCps = this.coprocessorHost.getCoprocessorClassNames();
-      LOG.trace("Finished updating coprocessors on HRegion {}. These are the coprocessors "
-        + "after updating: {}", this, currentlyLoadedCps);
-    }
-
-    if (hasReadOnlyModeChanged) {
-      this.isGlobalReadOnlyEnabled = maybeUpdatedReadOnlyMode;
-      LOG.info("Config {} has been dynamically changed to {} for region {}",
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, this.isGlobalReadOnlyEnabled, this);
-    }
+    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(newConf, this.isGlobalReadOnlyEnabled,
+      this.coprocessorHost, CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, false, this.toString(),
+      val -> this.isGlobalReadOnlyEnabled = val, conf -> {
+        decorateRegionConfiguration(conf);
+        this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, newConf);
+      });
   }
 
   /**
