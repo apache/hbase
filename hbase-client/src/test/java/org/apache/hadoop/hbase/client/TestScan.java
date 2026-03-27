@@ -279,6 +279,14 @@ public class TestScan {
   }
 
   @Test
+  public void testSetFilterWithBatchAndNullFilter() {
+    Scan scan = new Scan();
+    scan.setBatch(5);
+    scan.setFilter(null);
+    // null filter should not throw
+  }
+
+  @Test
   public void testScanReadType() throws Exception {
     Scan scan = new Scan();
     assertEquals(ReadType.DEFAULT, scan.getReadType());
