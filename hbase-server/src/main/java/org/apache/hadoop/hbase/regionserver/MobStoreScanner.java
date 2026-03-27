@@ -19,8 +19,12 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Set;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.mob.MobCell;
@@ -43,6 +47,7 @@ public class MobStoreScanner extends StoreScanner {
   private boolean readEmptyValueOnMobCellMiss = false;
   private final HMobStore mobStore;
   private final List<MobCell> referencedMobCells;
+  private final Set<Path> mobFilesRead = new HashSet<>();
 
   public MobStoreScanner(HStore store, ScanInfo scanInfo, Scan scan,
     final NavigableSet<byte[]> columns, long readPt) throws IOException {
@@ -94,8 +99,21 @@ public class MobStoreScanner extends StoreScanner {
   private void freeAllReferencedMobCells() throws IOException {
     for (MobCell cell : referencedMobCells) {
       cell.close();
+      mobFilesRead.addAll(cell.getFilesRead());
     }
     referencedMobCells.clear();
+  }
+
+  /**
+   * Returns the set of store file paths and MOB file paths successfully read by this scanner.
+   * Combines paths from the underlying store scanner with paths from resolved MOB cells (populated
+   * when referenced mob cells are closed, e.g. in close() or shipped()).
+   */
+  @Override
+  public Set<Path> getFilesRead() {
+    Set<Path> allFiles = new HashSet<>(super.getFilesRead());
+    allFiles.addAll(mobFilesRead);
+    return Collections.unmodifiableSet(allFiles);
   }
 
   @Override
