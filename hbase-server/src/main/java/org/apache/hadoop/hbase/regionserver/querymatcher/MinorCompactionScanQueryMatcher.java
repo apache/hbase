@@ -47,6 +47,13 @@ public class MinorCompactionScanQueryMatcher extends CompactionScanQueryMatcher 
         // we should not use this delete marker to mask any cell yet.
         return MatchCode.INCLUDE;
       }
+      // Check before tracking: an older DeleteColumn or DeleteFamily is redundant if a newer
+      // one of equal or broader scope was already seen. Must check before trackDelete() since
+      // that overwrites tracker state. Seek past remaining cells for this column/row since
+      // they are all covered by the previously tracked delete.
+      if (deletes.isRedundantDelete(cell)) {
+        return columns.getNextRowOrNextColumn(cell);
+      }
       trackDelete(cell);
       return MatchCode.INCLUDE;
     }
