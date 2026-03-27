@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
@@ -256,11 +257,11 @@ public class TestScan {
       "Make sure copy constructor adds all the fields in the copied object");
   }
 
-  @Test(expected = IncompatibleFilterException.class)
+  @Test
   public void testSetFilterWithBatchThrows() {
     Scan scan = new Scan();
     scan.setBatch(5);
-    scan.setFilter(new PageFilter(10));
+    assertThrows(IncompatibleFilterException.class, () -> scan.setFilter(new PageFilter(10)));
   }
 
   @Test
