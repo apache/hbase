@@ -111,7 +111,11 @@ public class HMobStore extends HStore {
     this.homePath = MobUtils.getMobHome(conf);
     this.mobFamilyPath =
       MobUtils.getMobFamilyPath(conf, this.getTableName(), getColumnFamilyName());
-    CommonFSUtils.setStoragePolicy(this.getFileSystem(), mobFamilyPath, this.policyName);
+    FileSystem fs = this.getFileSystem();
+    if (!fs.exists(mobFamilyPath)) {
+      fs.mkdirs(mobFamilyPath);
+    }
+    CommonFSUtils.setStoragePolicy(fs, mobFamilyPath, this.policyName);
     List<Path> locations = new ArrayList<>(2);
     locations.add(mobFamilyPath);
     TableName tn = region.getTableDescriptor().getTableName();
