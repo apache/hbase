@@ -198,10 +198,8 @@ public class TestHRegionFileSystem {
       cfdA.setMobEnabled(true);
       cfdA.setMobThreshold(2L);
       admin.modifyColumnFamily(TABLE_NAME, cfdA.build());
-      while (
-          TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
-              .hasRegionsInTransition()
-      ) {
+      while (TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
+          .hasRegionsInTransition()) {
         Thread.sleep(200);
         LOG.debug("Waiting on table to finish schema altering");
       }
