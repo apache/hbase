@@ -290,6 +290,64 @@ function personality_modules
   done
 }
 
+# This is a workaround to fix the author check until YETUS-1266 is released.
+# TODO: Remove this when we upgraded to Yetus having YETUS-1266!
+## @description  Check the current directory for @author tags
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @return       0 on success
+## @return       1 on failure
+function author_postcompile
+{
+  # shellcheck disable=SC2155
+  declare -r appname=$(basename "${BASH_SOURCE-$0}")
+  declare -a globalignore
+
+  big_console_header "*** HBase Monkey-Patch: author_postcompile ***"
+
+  yetus_debug "HBase Monkey-Patch: author_postcompile"
+
+  if [[ "${BUILDMODE}" != full ]]; then
+    return
+  fi
+
+  big_console_header "Checking for @author tags: ${BUILDMODE}"
+
+  start_clock
+
+  if [[ -f "${PATCH_DIR}/excluded.txt" ]]; then
+    globalignore=("${GREP}" "-v" "-f" "${PATCH_DIR}/excluded.txt")
+  else
+    globalignore=("cat")
+  fi
+
+  "${GIT}" grep -n -I --extended-regexp -i -e '^[^-].*@author' \
+    | "${GREP}" -v "${appname}" \
+    | "${globalignore[@]}" \
+    >> "${PATCH_DIR}/author-tags-git.txt"
+
+  if [[ -z "${AUTHOR_IGNORE_LIST[0]}" ]]; then
+    cp -p "${PATCH_DIR}/author-tags-git.txt" "${PATCH_DIR}/${AUTHOR_LOGNAME}"
+  else
+    for i in "${AUTHOR_IGNORE_LIST[@]}"; do
+      printf "%s\n" "${i}"
+    done \
+      | "${SED}" 's/[][\\.^$*+?{}()|]/\\&/g' \
+      | "${SED}" 's/^/^/' \
+      > "${PATCH_DIR}/author-tags-filter.txt"
+
+    cat "${PATCH_DIR}/author-tags-filter.txt"
+
+    "${GREP}" -v -E \
+      -f "${PATCH_DIR}/author-tags-filter.txt" \
+      "${PATCH_DIR}/author-tags-git.txt" \
+      > "${PATCH_DIR}/${AUTHOR_LOGNAME}"
+  fi
+
+  author_generic
+}
+
 ## @description places where we override the built in assumptions about what tests to run
 ## @audience    private
 ## @stability   evolving
