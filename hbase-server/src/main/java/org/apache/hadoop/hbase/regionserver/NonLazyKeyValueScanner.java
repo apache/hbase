@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Set;
 import java.util.function.IntConsumer;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.fs.Path;
@@ -74,6 +76,15 @@ public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
   public Path getFilePath() {
     // Not a file by default.
     return null;
+  }
+
+  /**
+   * Returns the set of store file paths successfully read by this scanner. Default implementation
+   * returns an empty set for non-file scanners (e.g. memstore).
+   */
+  @Override
+  public Set<Path> getFilesRead() {
+    return Collections.emptySet();
   }
 
   @Override
