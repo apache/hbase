@@ -141,12 +141,6 @@ test("export documentation pdfs", async ({ browser, browserName }) => {
 
     await page.goto("/docs/single-page", { waitUntil: "networkidle" });
 
-    await page.evaluate((theme) => {
-      localStorage.setItem("theme", theme);
-      document.documentElement.classList.remove("light", "dark");
-      document.documentElement.classList.add(theme);
-    }, variant.theme);
-
     await page.waitForFunction(
       `document.documentElement.classList.contains(${JSON.stringify(variant.theme)})`,
       { timeout: 10000 }
