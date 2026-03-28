@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.FilterBase;
@@ -395,5 +396,37 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     ExtendedCell lastCell = memstore.get(memstore.size() - 1);
     Cell nextCell = qm.getKeyForNextColumn(lastCell);
     assertArrayEquals(nextCell.getQualifierArray(), col4);
+  }
+
+  /**
+   * DeleteColumn and DeleteFamily should return SEEK_NEXT_COL instead of SKIP, so the scanner seeks
+   * past the entire column rather than advancing one cell at a time.
+   */
+  @Test
+  public void testSeekOnRangeDelete() throws IOException {
+    // DeleteColumn: should seek past the column
+    assertDeleteMatchCode(KeepDeletedCells.FALSE, Type.DeleteColumn, MatchCode.SEEK_NEXT_COL);
+
+    // DeleteFamily: should seek past the column
+    assertDeleteMatchCode(KeepDeletedCells.FALSE, Type.DeleteFamily, MatchCode.SEEK_NEXT_COL);
+
+    // Delete (version): should still SKIP (point delete, not range)
+    assertDeleteMatchCode(KeepDeletedCells.FALSE, Type.Delete, MatchCode.SKIP);
+
+    // KEEP_DELETED_CELLS=TRUE: should SKIP (masked cells must remain visible)
+    assertDeleteMatchCode(KeepDeletedCells.TRUE, Type.DeleteColumn, MatchCode.SKIP);
+  }
+
+  private void assertDeleteMatchCode(KeepDeletedCells keepDeletedCells, Type type,
+    MatchCode expected) throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    UserScanQueryMatcher qm =
+      UserScanQueryMatcher.create(scan, new ScanInfo(this.conf, fam1, 0, 1, ttl, keepDeletedCells,
+        HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false), null, now - ttl, now, null);
+    boolean familyLevel = type == Type.DeleteFamily || type == Type.DeleteFamilyVersion;
+    byte[] qual = familyLevel ? HConstants.EMPTY_BYTE_ARRAY : col1;
+    KeyValue kv = new KeyValue(row1, fam1, qual, now, type);
+    qm.setToNewRow(kv);
+    assertEquals(expected, qm.match(kv));
   }
 }

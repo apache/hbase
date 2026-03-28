@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver.querymatcher;
 import java.io.IOException;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeepDeletedCells;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
@@ -70,6 +71,18 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
         seePastDeleteMarkers ? tr.withinTimeRange(timestamp) : tr.withinOrAfterTimeRange(timestamp);
       if (includeDeleteMarker) {
         this.deletes.add(cell);
+        // A DeleteColumn or DeleteFamily masks all remaining cells for this column/family.
+        // Seek past them instead of skipping one cell at a time.
+        // Only safe with plain ScanDeleteTracker. Not safe with newVersionBehavior (sequence
+        // IDs determine visibility), visibility labels (delete/put label mismatch), or
+        // seePastDeleteMarkers (KEEP_DELETED_CELLS).
+        if (
+          !seePastDeleteMarkers && deletes.getClass() == ScanDeleteTracker.class
+            && (typeByte == KeyValue.Type.DeleteColumn.getCode()
+              || typeByte == KeyValue.Type.DeleteFamily.getCode())
+        ) {
+          return columns.getNextRowOrNextColumn(cell);
+        }
       }
       return MatchCode.SKIP;
     }
