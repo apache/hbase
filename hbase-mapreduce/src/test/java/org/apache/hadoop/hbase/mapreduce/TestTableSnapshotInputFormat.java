@@ -149,8 +149,8 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
   @Test
   public void testTableSnapshotRegionRecordReaderGetFilesRead() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    String snapshotName = name.getMethodName() + "_snapshot";
+    final TableName tableName = TableName.valueOf(name);
+    String snapshotName = name + "_snapshot";
     try {
       // Setup: create table, load data, snapshot, and configure job with restore dir
       createTableAndSnapshot(UTIL, tableName, snapshotName, getStartRow(), getEndRow(), 1);
@@ -166,10 +166,10 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       // Get splits (one per region) and extract delegate split for restore path and region info
       TableSnapshotInputFormat tsif = new TableSnapshotInputFormat();
       List<InputSplit> splits = tsif.getSplits(job);
-      Assert.assertEquals(1, splits.size());
+      assertEquals(1, splits.size());
 
       InputSplit split = splits.get(0);
-      Assert.assertTrue(split instanceof TableSnapshotRegionSplit);
+      assertTrue(split instanceof TableSnapshotRegionSplit);
       TableSnapshotRegionSplit snapshotRegionSplit = (TableSnapshotRegionSplit) split;
       TableSnapshotInputFormatImpl.InputSplit implSplit = snapshotRegionSplit.getDelegate();
 
@@ -196,8 +196,8 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
           }
         }
       }
-      Assert.assertFalse("Should have at least one store file after snapshot restore",
-        expectedFiles.isEmpty());
+      assertFalse(expectedFiles.isEmpty(),
+        "Should have at least one store file after snapshot restore");
 
       // Create record reader, initialize with split (opens underlying ClientSideRegionScanner)
       TaskAttemptContext taskAttemptContext = mock(TaskAttemptContext.class);
@@ -205,13 +205,13 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
       RecordReader<ImmutableBytesWritable, Result> rr =
         tsif.createRecordReader(split, taskAttemptContext);
-      Assert.assertTrue(rr instanceof TableSnapshotRegionRecordReader);
+      assertTrue(rr instanceof TableSnapshotRegionRecordReader);
       TableSnapshotRegionRecordReader recordReader = (TableSnapshotRegionRecordReader) rr;
       recordReader.initialize(split, taskAttemptContext);
 
       // Before close: getFilesRead() must be empty
       Set<Path> filesReadBeforeClose = recordReader.getFilesRead();
-      Assert.assertTrue("Should return empty set before closing", filesReadBeforeClose.isEmpty());
+      assertTrue(filesReadBeforeClose.isEmpty(), "Should return empty set before closing");
 
       // Read a few key-values; getFilesRead() must still be empty until close
       int count = 0;
@@ -220,8 +220,8 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       }
 
       filesReadBeforeClose = recordReader.getFilesRead();
-      Assert.assertTrue("Should return empty set before closing even after reading",
-        filesReadBeforeClose.isEmpty());
+      assertTrue(filesReadBeforeClose.isEmpty(),
+        "Should return empty set before closing even after reading");
 
       // Close reader so underlying scanner reports files successfully read
       recordReader.close();
@@ -230,8 +230,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       Set<String> filesReadAfterClose =
         recordReader.getFilesRead().stream().map(Path::getName).collect(Collectors.toSet());
 
-      Assert.assertEquals("Should contain all expected file paths", expectedFiles,
-        filesReadAfterClose);
+      assertEquals(expectedFiles, filesReadAfterClose, "Should contain all expected file paths");
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
