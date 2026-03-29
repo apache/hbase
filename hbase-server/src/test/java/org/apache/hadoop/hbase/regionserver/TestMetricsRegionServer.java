@@ -364,4 +364,10 @@ public class TestMetricsRegionServer {
       "RpcThrottlingException_Type_ReadCapacityUnitExceeded_User_unknown_Table_unknown", 1L,
       serverSource);
   }
+
+  @Test
+  public void testSplitRequest() {
+    rsm.incrSplitRequest(null);
+    HELPER.assertCounter("splitRequestCount", 1, serverSource);
+  }
 }
