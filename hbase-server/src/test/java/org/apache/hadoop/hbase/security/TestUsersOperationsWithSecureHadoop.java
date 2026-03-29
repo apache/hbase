@@ -133,13 +133,14 @@ public class TestUsersOperationsWithSecureHadoop {
   }
 
   @Test
-  public void testAuthUtilLogin() throws Exception {
+  public void testAuthUtilLoginWithExistingLoginUser() throws Exception {
     String clientKeytab = getClientKeytabForTesting();
     String clientPrincipal = getClientPrincipalForTesting();
     Configuration conf = getSecuredConfiguration();
     conf.set(AuthUtil.HBASE_CLIENT_KEYTAB_FILE, clientKeytab);
     conf.set(AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL, clientPrincipal);
     UserGroupInformation.setConfiguration(conf);
+    UserGroupInformation.loginUserFromKeytab(clientPrincipal, clientKeytab);
 
     User user = AuthUtil.loginClient(conf);
     assertTrue(user.isLoginFromKeytab());
