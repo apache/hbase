@@ -19,8 +19,13 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import static org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil.insertData;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -29,6 +34,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.master.assignment.MergeTableRegionsProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -197,6 +203,113 @@ public class TestTruncateRegionProcedureWithRecovery extends TestTableDDLProcedu
     // Clean up the cloned table
     UTIL.getAdmin().disableTable(restoredTableName);
     UTIL.getAdmin().deleteTable(restoredTableName);
+  }
+
+  @Test
+  public void testMakeOfflineFailsIfRegionWasMergedAwayDuringRecoverySnapshotGap()
+    throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final String[] families = new String[] { "f1", "f2" };
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+
+    final byte[][] splitKeys = new byte[][] { Bytes.toBytes("30"), Bytes.toBytes("60") };
+    MasterProcedureTestingUtility.createTable(procExec, tableName, splitKeys, families);
+
+    MasterProcedureEnv environment = procExec.getEnvironment();
+    RegionInfo regionToTruncate = environment.getAssignmentManager().getAssignedRegions().stream()
+      .filter(r -> tableName.getNameAsString().equals(r.getTable().getNameAsString()))
+      .min((o1, o2) -> Bytes.compareTo(o1.getStartKey(), o2.getStartKey())).get();
+    TestableTruncateRegionProcedure procedure =
+      new TestableTruncateRegionProcedure(environment, regionToTruncate);
+
+    mergeRegionContainingTarget(procExec, tableName, regionToTruncate);
+    assertNull(
+      environment.getAssignmentManager().getRegionStates().getRegionStateNode(regionToTruncate));
+
+    procedure.executeStateForTest(environment, TruncateRegionState.TRUNCATE_REGION_MAKE_OFFLINE);
+
+    assertTrue("Truncate should fail once the merged-away parent region is missing",
+      procedure.isFailed());
+    assertNull("MAKE_OFFLINE must not recreate the removed RegionStateNode",
+      environment.getAssignmentManager().getRegionStates().getRegionStateNode(regionToTruncate));
+    assertFalse("MAKE_OFFLINE must not schedule child procedures after the region disappears",
+      procedure.hasPendingChildrenForTest());
+  }
+
+  @Test
+  public void testRollbackDoesNotRecreateRegionMergedAwayDuringRecoverySnapshotGap()
+    throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final String[] families = new String[] { "f1", "f2" };
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+
+    final byte[][] splitKeys = new byte[][] { Bytes.toBytes("30"), Bytes.toBytes("60") };
+    MasterProcedureTestingUtility.createTable(procExec, tableName, splitKeys, families);
+
+    MasterProcedureEnv environment = procExec.getEnvironment();
+    RegionInfo regionToTruncate = environment.getAssignmentManager().getAssignedRegions().stream()
+      .filter(r -> tableName.getNameAsString().equals(r.getTable().getNameAsString()))
+      .min((o1, o2) -> Bytes.compareTo(o1.getStartKey(), o2.getStartKey())).get();
+    TestableTruncateRegionProcedure procedure =
+      new TestableTruncateRegionProcedure(environment, regionToTruncate);
+
+    mergeRegionContainingTarget(procExec, tableName, regionToTruncate);
+    assertNull(
+      environment.getAssignmentManager().getRegionStates().getRegionStateNode(regionToTruncate));
+
+    procedure.rollbackStateForTest(environment, TruncateRegionState.TRUNCATE_REGION_MAKE_OFFLINE);
+
+    assertNull("Rollback must not recreate the removed RegionStateNode",
+      environment.getAssignmentManager().getRegionStates().getRegionStateNode(regionToTruncate));
+    assertFalse("Rollback must not schedule assign children for a removed region",
+      procedure.hasPendingChildrenForTest());
+  }
+
+  private void mergeRegionContainingTarget(ProcedureExecutor<MasterProcedureEnv> procExec,
+    TableName tableName, RegionInfo regionToTruncate) throws Exception {
+    List<RegionInfo> regions = UTIL.getAdmin().getRegions(tableName).stream()
+      .sorted(RegionInfo.COMPARATOR).collect(Collectors.toList());
+    RegionInfo adjacentRegionToMerge =
+      regions.stream().filter(region -> !region.equals(regionToTruncate)).findFirst()
+        .orElseThrow(() -> new AssertionError("No adjacent region available for merge"));
+    long mergeProcId =
+      procExec.submitProcedure(new MergeTableRegionsProcedure(procExec.getEnvironment(),
+        new RegionInfo[] { regionToTruncate, adjacentRegionToMerge }, false));
+    ProcedureTestingUtility.waitProcedure(procExec, mergeProcId);
+    ProcedureTestingUtility.assertProcNotFailed(procExec, mergeProcId);
+  }
+
+  public static class TestableTruncateRegionProcedure extends TruncateRegionProcedure {
+    private boolean childScheduled;
+
+    public TestableTruncateRegionProcedure() {
+      super();
+    }
+
+    public TestableTruncateRegionProcedure(MasterProcedureEnv env, RegionInfo region)
+      throws HBaseIOException {
+      super(env, region);
+    }
+
+    public Flow executeStateForTest(MasterProcedureEnv env, TruncateRegionState state)
+      throws InterruptedException {
+      return super.executeFromState(env, state);
+    }
+
+    public void rollbackStateForTest(MasterProcedureEnv env, TruncateRegionState state)
+      throws IOException {
+      super.rollbackState(env, state);
+    }
+
+    @Override
+    protected <T extends Procedure<MasterProcedureEnv>> void addChildProcedure(T... subProcedure) {
+      childScheduled = true;
+      super.addChildProcedure(subProcedure);
+    }
+
+    public boolean hasPendingChildrenForTest() {
+      return childScheduled;
+    }
   }
 
   public static class FailingTruncateRegionProcedure extends TruncateRegionProcedure {
