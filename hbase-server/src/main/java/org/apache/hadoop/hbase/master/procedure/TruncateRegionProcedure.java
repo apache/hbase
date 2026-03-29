@@ -21,9 +21,11 @@ import java.io.IOException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -101,6 +103,9 @@ public class TruncateRegionProcedure
           setNextState(TruncateRegionState.TRUNCATE_REGION_MAKE_OFFLINE);
           break;
         case TRUNCATE_REGION_MAKE_OFFLINE:
+          // Recovery snapshots release the region lock between states, so re-check that the
+          // original region still exists before creating an unassign TRSP for it.
+          checkOnline(env, getRegion());
           addChildProcedure(createUnAssignProcedures(env));
           setNextState(TruncateRegionState.TRUNCATE_REGION_REMOVE);
           break;
@@ -132,8 +137,7 @@ public class TruncateRegionProcedure
   }
 
   private void createRegionOnFileSystem(final MasterProcedureEnv env) throws IOException {
-    RegionStateNode regionNode =
-      env.getAssignmentManager().getRegionStates().getRegionStateNode(getRegion());
+    RegionStateNode regionNode = getExistingRegionStateNode(env);
     regionNode.lock();
     try {
       final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
@@ -146,8 +150,7 @@ public class TruncateRegionProcedure
   }
 
   private void deleteRegionFromFileSystem(final MasterProcedureEnv env) throws IOException {
-    RegionStateNode regionNode =
-      env.getAssignmentManager().getRegionStates().getRegionStateNode(getRegion());
+    RegionStateNode regionNode = getExistingRegionStateNode(env);
     regionNode.lock();
     try {
       final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
@@ -178,9 +181,12 @@ public class TruncateRegionProcedure
       case TRUNCATE_REGION_MAKE_OFFLINE:
         RegionStateNode regionNode =
           env.getAssignmentManager().getRegionStates().getRegionStateNode(getRegion());
-        if (regionNode == null) {
-          // Region was unassigned by state TRUNCATE_REGION_MAKE_OFFLINE.
-          // So Assign it back
+        if (
+          regionNode != null
+            && regionNode.isInState(State.CLOSED, State.OFFLINE, State.ABNORMALLY_CLOSED)
+        ) {
+          // Region was unassigned by state TRUNCATE_REGION_MAKE_OFFLINE. Assign it back only if it
+          // still exists.
           addChildProcedure(createAssignProcedures(env));
         }
         return;
@@ -188,6 +194,16 @@ public class TruncateRegionProcedure
         // The truncate doesn't have a rollback. The execution will succeed, at some point.
         throw new UnsupportedOperationException("unhandled state=" + state);
     }
+  }
+
+  private RegionStateNode getExistingRegionStateNode(final MasterProcedureEnv env)
+    throws UnknownRegionException {
+    RegionStateNode regionNode =
+      env.getAssignmentManager().getRegionStates().getRegionStateNode(getRegion());
+    if (regionNode == null) {
+      throw new UnknownRegionException("No RegionState found for " + getRegion().getEncodedName());
+    }
+    return regionNode;
   }
 
   @Override
