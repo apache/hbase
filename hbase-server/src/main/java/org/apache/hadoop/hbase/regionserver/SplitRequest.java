@@ -58,7 +58,7 @@ class SplitRequest implements Runnable {
   }
 
   private void doSplitting() {
-    server.getMetrics().incrSplitRequest();
+    server.getMetrics().incrSplitRequest(this.parent.getTable().getNameAsString());
     if (user != null && user.getUGI() != null) {
       user.getUGI().doAs((PrivilegedAction<Void>) () -> {
         requestRegionSplit();
