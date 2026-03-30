@@ -32,6 +32,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
 
+  /**
+   * Number of consecutive range delete markers (DeleteColumn/DeleteFamily) to skip before switching
+   * to seek. Seeking is more expensive than skipping for a single marker, but much faster when
+   * markers accumulate. This threshold avoids the seek overhead for the common case (one delete per
+   * row/column) while still kicking in when markers pile up.
+   */
+  private static final int SEEK_ON_DELETE_MARKER_THRESHOLD = 3;
+
   /** Keeps track of deletes */
   private final DeleteTracker deletes;
 
@@ -41,12 +49,20 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
   /** whether time range queries can see rows "behind" a delete */
   protected final boolean seePastDeleteMarkers;
 
+  /** Whether seek optimization for range delete markers is applicable */
+  private final boolean canSeekOnDeleteMarker;
+
+  /** Count of consecutive range delete markers seen */
+  private int rangeDeleteCount;
+
   protected NormalUserScanQueryMatcher(Scan scan, ScanInfo scanInfo, ColumnTracker columns,
     boolean hasNullColumn, DeleteTracker deletes, long oldestUnexpiredTS, long now) {
     super(scan, scanInfo, columns, hasNullColumn, oldestUnexpiredTS, now);
     this.deletes = deletes;
     this.get = scan.isGetScan();
     this.seePastDeleteMarkers = scanInfo.getKeepDeletedCells() != KeepDeletedCells.FALSE;
+    this.canSeekOnDeleteMarker =
+      !seePastDeleteMarkers && deletes.getClass() == ScanDeleteTracker.class;
   }
 
   @Override
@@ -72,20 +88,26 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
       if (includeDeleteMarker) {
         this.deletes.add(cell);
         // A DeleteColumn or DeleteFamily masks all remaining cells for this column/family.
-        // Seek past them instead of skipping one cell at a time.
+        // Seek past them instead of skipping one cell at a time, but only after seeing
+        // enough consecutive markers to justify the seek overhead.
         // Only safe with plain ScanDeleteTracker. Not safe with newVersionBehavior (sequence
         // IDs determine visibility), visibility labels (delete/put label mismatch), or
         // seePastDeleteMarkers (KEEP_DELETED_CELLS).
         if (
-          !seePastDeleteMarkers && deletes.getClass() == ScanDeleteTracker.class
-            && (typeByte == KeyValue.Type.DeleteColumn.getCode()
-              || typeByte == KeyValue.Type.DeleteFamily.getCode())
+          canSeekOnDeleteMarker && (typeByte == KeyValue.Type.DeleteFamily.getCode()
+            || (typeByte == KeyValue.Type.DeleteColumn.getCode() && cell.getQualifierLength() > 0))
         ) {
-          return columns.getNextRowOrNextColumn(cell);
+          if (++rangeDeleteCount >= SEEK_ON_DELETE_MARKER_THRESHOLD) {
+            rangeDeleteCount = 0;
+            return columns.getNextRowOrNextColumn(cell);
+          }
+        } else {
+          rangeDeleteCount = 0;
         }
       }
       return MatchCode.SKIP;
     }
+    rangeDeleteCount = 0;
     returnCode = checkDeleted(deletes, cell);
     if (returnCode != null) {
       return returnCode;
@@ -96,6 +118,7 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
   @Override
   protected void reset() {
     deletes.reset();
+    rangeDeleteCount = 0;
   }
 
   @Override

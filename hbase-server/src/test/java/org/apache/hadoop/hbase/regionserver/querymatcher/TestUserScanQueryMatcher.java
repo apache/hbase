@@ -399,34 +399,73 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
   }
 
   /**
-   * DeleteColumn and DeleteFamily should return SEEK_NEXT_COL instead of SKIP, so the scanner seeks
-   * past the entire column rather than advancing one cell at a time.
+   * After enough consecutive range delete markers, the matcher should switch from SKIP to
+   * SEEK_NEXT_COL. Point deletes and KEEP_DELETED_CELLS always SKIP.
    */
   @Test
   public void testSeekOnRangeDelete() throws IOException {
-    // DeleteColumn: should seek past the column
-    assertDeleteMatchCode(KeepDeletedCells.FALSE, Type.DeleteColumn, MatchCode.SEEK_NEXT_COL);
+    // DeleteColumn: first two SKIP, third triggers SEEK_NEXT_COL
+    assertDeleteMatchCodes(KeepDeletedCells.FALSE, Type.DeleteColumn, MatchCode.SKIP,
+      MatchCode.SKIP, MatchCode.SEEK_NEXT_COL);
 
-    // DeleteFamily: should seek past the column
-    assertDeleteMatchCode(KeepDeletedCells.FALSE, Type.DeleteFamily, MatchCode.SEEK_NEXT_COL);
+    // DeleteFamily: same threshold behavior
+    assertDeleteMatchCodes(KeepDeletedCells.FALSE, Type.DeleteFamily, MatchCode.SKIP,
+      MatchCode.SKIP, MatchCode.SEEK_NEXT_COL);
 
-    // Delete (version): should still SKIP (point delete, not range)
-    assertDeleteMatchCode(KeepDeletedCells.FALSE, Type.Delete, MatchCode.SKIP);
+    // Delete (version): always SKIP (point delete, not range)
+    assertDeleteMatchCodes(KeepDeletedCells.FALSE, Type.Delete, MatchCode.SKIP, MatchCode.SKIP,
+      MatchCode.SKIP, MatchCode.SKIP, MatchCode.SKIP);
 
-    // KEEP_DELETED_CELLS=TRUE: should SKIP (masked cells must remain visible)
-    assertDeleteMatchCode(KeepDeletedCells.TRUE, Type.DeleteColumn, MatchCode.SKIP);
+    // KEEP_DELETED_CELLS=TRUE: always SKIP
+    assertDeleteMatchCodes(KeepDeletedCells.TRUE, Type.DeleteColumn, MatchCode.SKIP, MatchCode.SKIP,
+      MatchCode.SKIP, MatchCode.SKIP, MatchCode.SKIP);
   }
 
-  private void assertDeleteMatchCode(KeepDeletedCells keepDeletedCells, Type type,
-    MatchCode expected) throws IOException {
+  /**
+   * DeleteColumn with empty qualifier must not cause seeking past a subsequent DeleteFamily.
+   * DeleteFamily masks all columns, so it must be tracked by the delete tracker.
+   */
+  @Test
+  public void testDeleteColumnEmptyQualifierDoesNotSkipDeleteFamily() throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    byte[] e = HConstants.EMPTY_BYTE_ARRAY;
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(scan, new ScanInfo(this.conf, fam1, 0, 1,
+      ttl, KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false), null,
+      now - ttl, now, null);
+
+    // Feed enough DCs with empty qualifier to hit the threshold, then a DF.
+    // The DF must NOT be seeked past -- it must be SKIP'd so the tracker picks it up.
+    KeyValue dc1 = new KeyValue(row1, fam1, e, now, Type.DeleteColumn);
+    KeyValue dc2 = new KeyValue(row1, fam1, e, now - 1, Type.DeleteColumn);
+    KeyValue dc3 = new KeyValue(row1, fam1, e, now - 2, Type.DeleteColumn);
+    KeyValue df = new KeyValue(row1, fam1, e, now - 3, Type.DeleteFamily);
+    KeyValue put = new KeyValue(row1, fam1, col1, now - 3, Type.Put, data);
+
+    qm.setToNewRow(dc1);
+    assertEquals(MatchCode.SKIP, qm.match(dc1));
+    assertEquals(MatchCode.SKIP, qm.match(dc2));
+    // Third DC hits threshold -- but since it's empty qualifier, it should NOT seek
+    // because a DeleteFamily might follow.
+    assertEquals(MatchCode.SKIP, qm.match(dc3));
+    // DF must be processed (SKIP), not seeked past
+    assertEquals(MatchCode.SKIP, qm.match(df));
+    // Put in col1 at t=now-3 should be masked by DF@t=now-3
+    MatchCode putCode = qm.match(put);
+    assertEquals(MatchCode.SEEK_NEXT_COL, putCode);
+  }
+
+  private void assertDeleteMatchCodes(KeepDeletedCells keepDeletedCells, Type type,
+    MatchCode... expected) throws IOException {
     long now = EnvironmentEdgeManager.currentTime();
     UserScanQueryMatcher qm =
       UserScanQueryMatcher.create(scan, new ScanInfo(this.conf, fam1, 0, 1, ttl, keepDeletedCells,
         HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false), null, now - ttl, now, null);
     boolean familyLevel = type == Type.DeleteFamily || type == Type.DeleteFamilyVersion;
     byte[] qual = familyLevel ? HConstants.EMPTY_BYTE_ARRAY : col1;
-    KeyValue kv = new KeyValue(row1, fam1, qual, now, type);
-    qm.setToNewRow(kv);
-    assertEquals(expected, qm.match(kv));
+    qm.setToNewRow(new KeyValue(row1, fam1, qual, now, type));
+    for (int i = 0; i < expected.length; i++) {
+      KeyValue kv = new KeyValue(row1, fam1, qual, now - i, type);
+      assertEquals("Mismatch at index " + i, expected[i], qm.match(kv));
+    }
   }
 }
