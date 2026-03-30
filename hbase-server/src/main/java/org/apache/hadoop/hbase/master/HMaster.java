@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
+import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT;
+import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY;
 import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.master.cleaner.HFileCleaner.CUSTOM_POOL_SIZE;
@@ -499,6 +501,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   public static final String WARMUP_BEFORE_MOVE = "hbase.master.warmup.before.move";
   private static final boolean DEFAULT_WARMUP_BEFORE_MOVE = true;
 
+  private volatile boolean isGlobalReadOnlyEnabled;
+
   /**
    * Use RSProcedureDispatcher instance to initiate master -> rs remote procedure execution. Use
    * this config to extend RSProcedureDispatcher (mainly for testing purpose).
@@ -584,6 +588,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           getChoreService().scheduleChore(clusterStatusPublisherChore);
         }
       }
+      this.isGlobalReadOnlyEnabled =
+        conf.getBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
       this.activeMasterManager = createActiveMasterManager(zooKeeper, serverName, this);
       cachedClusterId = new CachedClusterId(this, conf);
       this.regionServerTracker = new RegionServerTracker(zooKeeper, this);
@@ -1096,8 +1102,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (!maintenanceMode) {
       startupTaskGroup.addTask("Initializing master coprocessors");
       setQuotasObserver(conf);
-      CoprocessorConfigurationUtil.syncReadOnlyConfigurations(
-        ConfigurationUtil.isReadOnlyModeEnabled(conf), conf,
+      CoprocessorConfigurationUtil.syncReadOnlyConfigurations(conf,
         CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
       AbstractReadOnlyController.manageActiveClusterIdFile(
         ConfigurationUtil.isReadOnlyModeEnabled(conf), this.getMasterFileSystem());
@@ -4507,21 +4512,16 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // append the quotas observer back to the master coprocessor key
     setQuotasObserver(newConf);
 
-    boolean readOnlyMode = ConfigurationUtil.isReadOnlyModeEnabled(newConf);
-    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(readOnlyMode, newConf,
-      CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+    boolean originalIsReadOnlyEnabled = this.isGlobalReadOnlyEnabled;
 
-    // update region server coprocessor if the configuration has changed.
-    if (
-      CoprocessorConfigurationUtil.checkConfigurationChange(this.cpHost, newConf,
-        CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) && !maintenanceMode
-    ) {
-      LOG.info("Update the master coprocessor(s) because the configuration has changed");
-      initializeCoprocessorHost(newConf);
-      CoprocessorConfigurationUtil.syncReadOnlyConfigurations(readOnlyMode, this.conf,
-        CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
-      AbstractReadOnlyController.manageActiveClusterIdFile(
-        ConfigurationUtil.isReadOnlyModeEnabled(newConf), this.getMasterFileSystem());
+    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(newConf, this.isGlobalReadOnlyEnabled,
+      this.cpHost, CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, this.maintenanceMode,
+      this.toString(), val -> this.isGlobalReadOnlyEnabled = val,
+      conf -> initializeCoprocessorHost(newConf));
+
+    if (this.isGlobalReadOnlyEnabled != originalIsReadOnlyEnabled) {
+      AbstractReadOnlyController.manageActiveClusterIdFile(this.isGlobalReadOnlyEnabled,
+        this.getMasterFileSystem());
     }
   }
 

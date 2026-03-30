@@ -22,15 +22,19 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorReloadTask;
 import org.apache.hadoop.hbase.security.access.BulkLoadReadOnlyController;
 import org.apache.hadoop.hbase.security.access.EndpointReadOnlyController;
 import org.apache.hadoop.hbase.security.access.MasterReadOnlyController;
 import org.apache.hadoop.hbase.security.access.RegionReadOnlyController;
 import org.apache.hadoop.hbase.security.access.RegionServerReadOnlyController;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Strings;
@@ -40,6 +44,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Strings;
  */
 @InterfaceAudience.Private
 public final class CoprocessorConfigurationUtil {
+  private static final Logger LOG = LoggerFactory.getLogger(CoprocessorConfigurationUtil.class);
 
   private CoprocessorConfigurationUtil() {
   }
@@ -175,16 +180,65 @@ public final class CoprocessorConfigurationUtil {
     };
   }
 
-  public static void syncReadOnlyConfigurations(boolean readOnlyMode, Configuration conf,
-    String configurationKey) {
-    conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyMode);
+  /**
+   * This method adds or removes relevant ReadOnlyController coprocessors to the provided
+   * configuration based on whether read-only mode is enabled.
+   * @param conf               The up-to-date configuration used to determine how to handle
+   *                           coprocessors
+   * @param coprocessorConfKey The configuration key name
+   */
+  public static void syncReadOnlyConfigurations(Configuration conf, String coprocessorConfKey) {
+    boolean isReadOnlyModeEnabled = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
 
-    List<String> cpList = getReadOnlyCoprocessors(configurationKey);
-    // If readonly is true then add the coprocessor of master
-    if (readOnlyMode) {
-      CoprocessorConfigurationUtil.addCoprocessors(conf, configurationKey, cpList);
+    List<String> cpList = getReadOnlyCoprocessors(coprocessorConfKey);
+    if (isReadOnlyModeEnabled) {
+      CoprocessorConfigurationUtil.addCoprocessors(conf, coprocessorConfKey, cpList);
     } else {
-      CoprocessorConfigurationUtil.removeCoprocessors(conf, configurationKey, cpList);
+      CoprocessorConfigurationUtil.removeCoprocessors(conf, coprocessorConfKey, cpList);
+    }
+  }
+
+  /**
+   * This method updates the coprocessors on the master, region server, or region if a change has
+   * been detected. Detected changes include changes in coprocessors or changes in read-only mode
+   * configuration. If a change is detected, then new coprocessors are loaded using the provided
+   * reload method. The new value for the read-only config variable is updated as well.
+   * @param newConf                   an updated configuration
+   * @param originalIsReadOnlyEnabled the original value for
+   *                                  {@value HConstants#HBASE_GLOBAL_READONLY_ENABLED_KEY}
+   * @param coprocessorHost           the coprocessor host for HMaster, HRegionServer, or HRegion
+   * @param coprocessorConfKey        configuration key used for setting master, region server, or
+   *                                  region coprocessors
+   * @param isMaintenanceMode         whether maintenance mode is active (mainly for HMaster)
+   * @param instance                  string value of the instance calling this method (mainly helps
+   *                                  with tracking region logging)
+   * @param stateSetter               lambda function that sets the read-only instance variable with
+   *                                  an updated value from the config
+   * @param reloadTask                lambda function that reloads coprocessors on the master,
+   *                                  region server, or region
+   */
+  public static void maybeUpdateCoprocessors(Configuration newConf,
+    boolean originalIsReadOnlyEnabled, CoprocessorHost<?, ?> coprocessorHost,
+    String coprocessorConfKey, boolean isMaintenanceMode, String instance,
+    Consumer<Boolean> stateSetter, CoprocessorReloadTask reloadTask) {
+
+    boolean maybeUpdatedReadOnlyMode = ConfigurationUtil.isReadOnlyModeEnabled(newConf);
+    boolean hasReadOnlyModeChanged = originalIsReadOnlyEnabled != maybeUpdatedReadOnlyMode;
+    boolean hasCoprocessorConfigChanged = CoprocessorConfigurationUtil
+      .checkConfigurationChange(coprocessorHost, newConf, coprocessorConfKey);
+
+    // update region server coprocessor if the configuration has changed.
+    if ((hasCoprocessorConfigChanged || hasReadOnlyModeChanged) && !isMaintenanceMode) {
+      LOG.info("Updating coprocessors for {} because the configuration has changed", instance);
+      CoprocessorConfigurationUtil.syncReadOnlyConfigurations(newConf, coprocessorConfKey);
+      reloadTask.reload(newConf);
+    }
+
+    if (hasReadOnlyModeChanged) {
+      stateSetter.accept(maybeUpdatedReadOnlyMode);
+      LOG.info("Config {} has been dynamically changed to {} for {}",
+        HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, maybeUpdatedReadOnlyMode, instance);
     }
   }
 }

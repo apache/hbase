@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_SLOW_LOG_SYS_TABLE_CHORE_DURATION;
+import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT;
+import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.master.waleventtracker.WALEventTrackerTableCreator.WAL_EVENT_TRACKER_ENABLED_DEFAULT;
@@ -158,7 +160,6 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
-import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -316,6 +317,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   private LeaseManager leaseManager;
 
   private volatile boolean dataFsOk;
+  private volatile boolean isGlobalReadOnlyEnabled;
 
   static final String ABORT_TIMEOUT = "hbase.regionserver.abort.timeout";
   // Default abort timeout is 1200 seconds for safe
@@ -543,6 +545,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
       uncaughtExceptionHandler =
         (t, e) -> abort("Uncaught exception in executorService thread " + t.getName(), e);
+
+      this.isGlobalReadOnlyEnabled =
+        conf.getBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
 
       // If no master in cluster, skip trying to track one or look for a cluster status.
       if (!this.masterless) {
@@ -830,9 +835,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       if (!isStopped() && !isAborted()) {
         installShutdownHook();
 
-        CoprocessorConfigurationUtil.syncReadOnlyConfigurations(
-          ConfigurationUtil.isReadOnlyModeEnabled(conf), conf,
+        CoprocessorConfigurationUtil.syncReadOnlyConfigurations(conf,
           CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
+
         // Initialize the RegionServerCoprocessorHost now that our ephemeral
         // node was created, in case any coprocessors want to use ZooKeeper
         this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
@@ -3496,20 +3501,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       LOG.warn("Failed to initialize SuperUsers on reloading of the configuration");
     }
 
-    boolean readOnlyMode = ConfigurationUtil.isReadOnlyModeEnabled(newConf);
-    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(readOnlyMode, newConf,
-      CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
-
-    // update region server coprocessor if the configuration has changed.
-    if (
-      CoprocessorConfigurationUtil.checkConfigurationChange(this.rsHost, newConf,
-        CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY)
-    ) {
-      LOG.info("Update region server coprocessors because the configuration has changed");
-      this.rsHost = new RegionServerCoprocessorHost(this, newConf);
-      CoprocessorConfigurationUtil.syncReadOnlyConfigurations(readOnlyMode, this.conf,
-        CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
-    }
+    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(newConf, this.isGlobalReadOnlyEnabled,
+      this.rsHost, CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, false, this.toString(),
+      val -> this.isGlobalReadOnlyEnabled = val,
+      conf -> this.rsHost = new RegionServerCoprocessorHost(this, newConf));
   }
 
   @Override
