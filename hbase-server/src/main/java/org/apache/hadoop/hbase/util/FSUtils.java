@@ -564,7 +564,11 @@ public final class FSUtils {
     }
   }
 
-  public static <T extends ClusterIdFile> T getClusterFile(FileSystem fs, Path rootdir,
+  /**
+   * Use the given parser object to read and parse contents of Cluster Id file.
+   * e.g. Cluster Id or Active read-replica Cluster Id
+   */
+  public static <T extends ClusterIdFile> T getClusterIdFile(FileSystem fs, Path rootdir,
     ClusterIdFileParser<T> parser) throws IOException {
     Path idPath = new Path(rootdir, parser.getFileName());
     T cs = null;
@@ -612,7 +616,7 @@ public final class FSUtils {
     // then delete the moved-aside file.
     Path movedAsideName = new Path(p + "." + EnvironmentEdgeManager.currentTime());
     if (!fs.rename(p, movedAsideName)) throw new IOException("Failed rename of " + p);
-    setClusterFile(fs, rootdir, fileName, cs, 100);
+    setClusterIdFile(fs, rootdir, fileName, cs, 100);
     if (!fs.delete(movedAsideName, false)) {
       throw new IOException("Failed delete of " + movedAsideName);
     }
@@ -620,9 +624,9 @@ public final class FSUtils {
   }
 
   /**
-   * Writes a new unique identifier for this cluster to the "hbase.id" file in the HBase root
-   * directory. If any operations on the ID file fails, and {@code wait} is a positive value, the
-   * method will retry to produce the ID file until the thread is forcibly interrupted.
+   * Writes a new unique identifier for this cluster to the Cluster Id ("hbase.id" or "active.cluster.suffix.id")
+   * file in the HBase root directory. If any operations on the ID file fails, and {@code wait} is
+   * a positive value, the method will retry to produce the ID file until the thread is forcibly interrupted.
    * @param fs       the root directory FileSystem
    * @param rootdir  the path to the HBase root directory
    * @param fileName name of the file to be written
@@ -630,7 +634,7 @@ public final class FSUtils {
    * @param wait     how long (in milliseconds) to wait between retries
    * @throws IOException if writing to the FileSystem fails and no wait value
    */
-  public static <T extends ClusterIdFile> void setClusterFile(final FileSystem fs,
+  public static <T extends ClusterIdFile> void setClusterIdFile(final FileSystem fs,
     final Path rootdir, final String fileName, final T cs, final long wait) throws IOException {
     final Path idFile = new Path(rootdir, fileName);
     final Path tempDir = new Path(rootdir, HConstants.HBASE_TEMP_DIRECTORY);
@@ -647,7 +651,6 @@ public final class FSUtils {
    * {@code wait} is a positive value, the method will retry to produce the ID file until the thread
    * is forcibly interrupted.
    */
-
   private static void writeClusterInfo(final FileSystem fs, final Path rootdir, final Path idFile,
     final Path tempIdFile, byte[] fileData, final long wait) throws IOException {
     while (true) {

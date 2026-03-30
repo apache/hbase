@@ -20,8 +20,9 @@ package org.apache.hadoop.hbase;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Represent a cluster identification file on the master file system. e.g. Cluster ID = hbase.id
- * Read-replica active cluster id = active.cluster.suffix.id
+ * Represents a cluster identification file on the master file system.
+ * e.g. Cluster ID = hbase.id
+ *      Active read-replica cluster ID = active.cluster.suffix.id
  */
 @InterfaceAudience.Private
 public interface ClusterIdFile {

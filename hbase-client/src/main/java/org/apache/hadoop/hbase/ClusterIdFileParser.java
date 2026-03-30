@@ -22,18 +22,18 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Generic parser interface for Cluster Id files.
- * @param <T>
+ * @see ClusterIdFile
  */
 @InterfaceAudience.Private
 public interface ClusterIdFileParser<T> {
 
   /**
-   * Get default file name of cluster id data file.
+   * Get default file name of cluster id file.
    */
   String getFileName();
 
   /**
-   * Parse cluser id data from byte representation.
+   * Parse cluster id data from byte representation.
    * @param bytes the protobuf data
    * @return the cluster id data object
    */
