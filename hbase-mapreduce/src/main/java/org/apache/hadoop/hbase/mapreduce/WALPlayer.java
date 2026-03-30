@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2.MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_DEFAULT;
+import static org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2.MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY;
+
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -378,14 +381,35 @@ public class WALPlayer extends Configured implements Tool {
       Path outputDir = new Path(hfileOutPath);
       FileOutputFormat.setOutputPath(job, outputDir);
       job.setMapOutputValueClass(MapReduceExtendedCell.class);
-      try (Connection conn = ConnectionFactory.createConnection(conf);) {
-        List<TableInfo> tableInfoList = new ArrayList<TableInfo>();
-        for (TableName tableName : tableNames) {
+      try (Connection conn = ConnectionFactory.createConnection(conf)) {
+        if (
+          conf.getBoolean(MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY,
+            MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_DEFAULT)
+        ) {
+          // The HFiles will be output to something like this for each table:
+          // .../BULK_OUTPUT_CONF_KEY/namespace/table/columnFamily
+          List<TableInfo> tableInfoList = new ArrayList<TableInfo>();
+          for (TableName tableName : tableNames) {
+            Table table = conn.getTable(tableName);
+            RegionLocator regionLocator = getRegionLocator(tableName, conf, conn);
+            tableInfoList.add(new TableInfo(table.getDescriptor(), regionLocator));
+          }
+          MultiTableHFileOutputFormat.configureIncrementalLoad(job, tableInfoList);
+        } else {
+          // The HFiles will be output to something like: .../BULK_OUTPUT_CONF_KEY/columnFamily
+          // This is useful for scenarios where we are running the WALPlayer consecutively on just
+          // one table at a time, and BULK_OUTPUT_CONF_KEY is already set to a "namespace/table"
+          // directory path for each table.
+          if (tableNames.size() != 1) {
+            throw new IOException("Expected table names list to have only one table since "
+              + MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY + " is set to false. Got the following "
+              + "list of tables instead: " + tableNames);
+          }
+          TableName tableName = tableNames.get(0);
           Table table = conn.getTable(tableName);
           RegionLocator regionLocator = getRegionLocator(tableName, conf, conn);
-          tableInfoList.add(new TableInfo(table.getDescriptor(), regionLocator));
+          HFileOutputFormat2.configureIncrementalLoad(job, table.getDescriptor(), regionLocator);
         }
-        MultiTableHFileOutputFormat.configureIncrementalLoad(job, tableInfoList);
       }
       TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
         org.apache.hbase.thirdparty.com.google.common.base.Preconditions.class);

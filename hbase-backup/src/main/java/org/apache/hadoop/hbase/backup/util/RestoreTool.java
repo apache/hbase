@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.backup.util;
 
+import static org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2.MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,9 +35,11 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupRestoreFactory;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.RestoreJob;
+import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
@@ -158,11 +162,17 @@ public class RestoreTool {
   public void incrementalRestoreTable(Connection conn, Path tableBackupPath, Path[] logDirs,
     TableName[] tableNames, TableName[] newTableNames, String incrBackupId,
     boolean keepOriginalSplits) throws IOException {
-    try (Admin admin = conn.getAdmin()) {
+    try (Admin admin = conn.getAdmin(); BackupAdminImpl backupAdmin = new BackupAdminImpl(conn)) {
       if (tableNames.length != newTableNames.length) {
         throw new IOException("Number of source tables and target tables does not match!");
       }
-      FileSystem fileSys = tableBackupPath.getFileSystem(this.conf);
+      Configuration conf = new Configuration(this.conf);
+      FileSystem fileSys = tableBackupPath.getFileSystem(conf);
+
+      BackupInfo backupInfo = backupAdmin.getBackupInfo(incrBackupId);
+      if (backupInfo.isContinuousBackupEnabled()) {
+        conf.setBoolean(MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY, false);
+      }
 
       // for incremental backup image, expect the table already created either by user or previous
       // full backup. Here, check that all new tables exists
