@@ -17,34 +17,24 @@
  */
 package org.apache.hadoop.hbase.tool;
 
-import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
-
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 
 /**
- * Test cases for LoadIncrementalHFiles when SFT is enabled.
+ * Test cases for the atomic load error handling of the bulk load functionality.
  */
 @Tag(MiscTests.TAG)
 @Tag(LargeTests.TAG)
-public class BulkLoadHFilesTestSFT extends BulkLoadHFilesTestBase {
+public class TestBulkLoadHFilesSplitRecovery extends BulkLoadHFilesSplitRecoveryTestBase {
 
   @BeforeAll
-  public static void setUpBeforeClass() throws Exception {
+  public static void setupCluster() throws Exception {
+    util = new HBaseTestingUtil();
     util.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
-    util.getConfiguration().setInt(BulkLoadHFiles.MAX_FILES_PER_REGION_PER_FAMILY,
-      MAX_FILES_PER_REGION_PER_FAMILY);
-    util.getConfiguration().set(TRACKER_IMPL, StoreFileTrackerFactory.Trackers.FILE.name());
-    // change default behavior so that tag values are returned with normal rpcs
-    util.getConfiguration().set(HConstants.RPC_CODEC_CONF_KEY,
-      KeyValueCodecWithTags.class.getCanonicalName());
-    util.startMiniCluster();
-    setupNamespace();
+    util.startMiniCluster(1);
   }
 }

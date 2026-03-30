@@ -28,6 +28,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Reruns TestBulkLoadHFilesSplitRecovery using BulkLoadHFiles in secure mode. This suite is unable
@@ -62,6 +63,6 @@ public class SecureBulkLoadHFilesSplitRecoveryTest extends BulkLoadHFilesSplitRe
   // Disabling this test as it does not work in secure mode
   @Test
   @Disabled
-  public void testBulkLoadPhaseFailure() {
+  public void testBulkLoadPhaseFailure(TestInfo testInfo) {
   }
 }

@@ -19,29 +19,45 @@ package org.apache.hadoop.hbase.tool;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.security.HadoopSecurityEnabledUserProviderForTesting;
+import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.PermissionStorage;
+import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 
 /**
- * Test cases for the "load" half of the HFileOutputFormat bulk load functionality. These tests run
- * faster than the full MR cluster tests in TestHFileOutputFormat
+ * Reruns TestBulkLoadHFiles using BulkLoadHFiles in secure mode. This suite is unable to verify the
+ * security handoff/turnover as miniCluster is running as system user thus has root privileges and
+ * delegation tokens don't seem to work on miniDFS.
+ * <p/>
+ * Thus SecureBulkload can only be completely verified by running integration tests against a secure
+ * cluster. This suite is still invaluable as it verifies the other mechanisms that need to be
+ * supported as part of a LoadIncrementalFiles call.
  */
 @Tag(MiscTests.TAG)
 @Tag(LargeTests.TAG)
-public class BulkLoadHFilesTest extends BulkLoadHFilesTestBase {
+public class TestSecureBulkLoadHFiles extends BulkLoadHFilesTestBase {
 
   @BeforeAll
   public static void setUpBeforeClass() throws Exception {
-    util.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
+    // set the always on security provider
+    UserProvider.setUserProviderForTesting(util.getConfiguration(),
+      HadoopSecurityEnabledUserProviderForTesting.class);
+    // setup configuration
+    SecureTestUtil.enableSecurity(util.getConfiguration());
     util.getConfiguration().setInt(BulkLoadHFiles.MAX_FILES_PER_REGION_PER_FAMILY,
       MAX_FILES_PER_REGION_PER_FAMILY);
     // change default behavior so that tag values are returned with normal rpcs
     util.getConfiguration().set(HConstants.RPC_CODEC_CONF_KEY,
       KeyValueCodecWithTags.class.getCanonicalName());
+
     util.startMiniCluster();
+
+    // Wait for the ACL table to become available
+    util.waitTableEnabled(PermissionStorage.ACL_TABLE_NAME);
 
     setupNamespace();
   }
