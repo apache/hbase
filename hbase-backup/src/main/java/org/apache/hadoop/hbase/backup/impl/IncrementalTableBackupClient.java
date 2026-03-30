@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.backup.impl;
 import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
+import static org.apache.hadoop.hbase.backup.mapreduce.MapReduceBackupCopyJob.NUMBER_OF_LEVELS_TO_PRESERVE_KEY;
 import static org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2.MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY;
 
 import java.io.IOException;
@@ -47,7 +48,6 @@ import org.apache.hadoop.hbase.backup.BackupRequest;
 import org.apache.hadoop.hbase.backup.BackupRestoreFactory;
 import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
-import org.apache.hadoop.hbase.backup.mapreduce.MapReduceBackupCopyJob;
 import org.apache.hadoop.hbase.backup.mapreduce.MapReduceHFileSplitterJob;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
@@ -592,20 +592,27 @@ public class IncrementalTableBackupClient extends TableBackupClient {
 
   private void incrementalCopyBulkloadHFiles(FileSystem tgtFs, TableName tn) throws IOException {
     Path bulkOutDir = getBulkOutputDirForTable(tn);
-    Configuration conf = new Configuration(this.conf);
 
     if (tgtFs.exists(bulkOutDir)) {
-      conf.setInt(MapReduceBackupCopyJob.NUMBER_OF_LEVELS_TO_PRESERVE_KEY, 2);
+      conf.setInt(NUMBER_OF_LEVELS_TO_PRESERVE_KEY, 2);
+      LOG.debug("{} has been set to {}. This affects what source files are actually copied in the "
+        + "next Incremental copy HFiles job", NUMBER_OF_LEVELS_TO_PRESERVE_KEY,
+        conf.get(NUMBER_OF_LEVELS_TO_PRESERVE_KEY));
       Path tgtPath = getTargetDirForTable(tn);
-      RemoteIterator<LocatedFileStatus> locatedFiles = tgtFs.listFiles(bulkOutDir, true);
-      List<String> files = new ArrayList<>();
-      while (locatedFiles.hasNext()) {
-        LocatedFileStatus file = locatedFiles.next();
-        if (file.isFile() && HFile.isHFileFormat(tgtFs, file.getPath())) {
-          files.add(file.getPath().toString());
+      try {
+        RemoteIterator<LocatedFileStatus> locatedFiles = tgtFs.listFiles(bulkOutDir, true);
+        List<String> files = new ArrayList<>();
+        while (locatedFiles.hasNext()) {
+          LocatedFileStatus file = locatedFiles.next();
+          if (file.isFile() && HFile.isHFileFormat(tgtFs, file.getPath())) {
+            files.add(file.getPath().toString());
+          }
         }
+        incrementalCopyHFiles(files.toArray(files.toArray(new String[0])), tgtPath.toString());
+      } finally {
+        conf.unset(NUMBER_OF_LEVELS_TO_PRESERVE_KEY);
+        LOG.debug("{} has been unset", NUMBER_OF_LEVELS_TO_PRESERVE_KEY);
       }
-      incrementalCopyHFiles(files.toArray(files.toArray(new String[0])), tgtPath.toString());
     }
   }
 
