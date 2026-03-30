@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -27,7 +27,6 @@ import static org.junit.Assert.assertTrue;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.security.access.BulkLoadReadOnlyController;
 import org.apache.hadoop.hbase.security.access.EndpointReadOnlyController;
@@ -125,9 +124,9 @@ public class TestCoprocessorConfigurationUtil {
     assertArrayEquals(new String[] { "cp1" }, conf.getStrings(key));
   }
 
-  private void assertEnable(String key, List<String> expected) {
-    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(true, conf, key);
-    assertTrue(conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, false));
+  private void assertEnableReadOnlyMode(String key, List<String> expected) {
+    conf.setBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
+    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(conf, key);
     String[] result = conf.getStrings(key);
     assertNotNull(result);
     assertEquals(expected.size(), result.length);
@@ -136,34 +135,33 @@ public class TestCoprocessorConfigurationUtil {
 
   @Test
   public void testSyncReadOnlyConfigurationsReadOnlyEnableAllKeys() {
-    assertEnable(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+    assertEnableReadOnlyMode(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       List.of(MasterReadOnlyController.class.getName()));
 
-    assertEnable(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
+    assertEnableReadOnlyMode(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
       List.of(RegionServerReadOnlyController.class.getName()));
-    assertEnable(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+    assertEnableReadOnlyMode(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       List.of(RegionReadOnlyController.class.getName(), BulkLoadReadOnlyController.class.getName(),
         EndpointReadOnlyController.class.getName()));
   }
 
-  private void assertDisable(String key, List<String> initialCoprocs) {
+  private void assertDisableReadOnlyMode(String key, List<String> initialCoprocs) {
     conf.setStrings(key, initialCoprocs.toArray(new String[0]));
-    conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
-    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(false, conf, key);
-    assertFalse(conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, true));
+    conf.setBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, false);
+    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(conf, key);
     String[] result = conf.getStrings(key);
     assertTrue(result == null || result.length == 0);
   }
 
   @Test
   public void testSyncReadOnlyConfigurationsReadOnlyDisableAllKeys() {
-    assertDisable(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+    assertDisableReadOnlyMode(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       List.of(MasterReadOnlyController.class.getName()));
 
-    assertDisable(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
+    assertDisableReadOnlyMode(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
       List.of(RegionServerReadOnlyController.class.getName()));
 
-    assertDisable(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+    assertDisableReadOnlyMode(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       List.of(RegionReadOnlyController.class.getName(), BulkLoadReadOnlyController.class.getName(),
         EndpointReadOnlyController.class.getName()));
   }
@@ -172,7 +170,8 @@ public class TestCoprocessorConfigurationUtil {
   public void testSyncReadOnlyConfigurationsReadOnlyEnablePreservesExistingCoprocessors() {
     String key = CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY;
     conf.setStrings(key, "existingCp");
-    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(true, conf, key);
+    conf.setBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
+    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(conf, key);
     List<String> result = Arrays.asList(conf.getStrings(key));
     assertTrue(result.contains("existingCp"));
     assertTrue(result.contains(MasterReadOnlyController.class.getName()));
@@ -184,7 +183,7 @@ public class TestCoprocessorConfigurationUtil {
     String key = CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY;
     String existingCp = "org.example.OtherCP";
     conf.setStrings(key, existingCp, MasterReadOnlyController.class.getName());
-    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(false, conf, key);
+    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(conf, key);
     String[] cps = conf.getStrings(key);
     assertNotNull(cps);
     assertEquals(1, cps.length);
@@ -194,9 +193,10 @@ public class TestCoprocessorConfigurationUtil {
   @Test
   public void testSyncReadOnlyConfigurationsIsIdempotent() {
     Configuration conf = new Configuration(false);
+    conf.setBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
     String key = CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY;
-    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(true, conf, key);
-    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(true, conf, key);
+    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(conf, key);
+    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(conf, key);
     String[] cps = conf.getStrings(key);
     assertNotNull(cps);
     assertEquals(1, cps.length);

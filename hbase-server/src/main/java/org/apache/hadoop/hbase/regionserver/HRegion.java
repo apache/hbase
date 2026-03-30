@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT;
+import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY;
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_LOCAL;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.REGION_NAMES_KEY;
@@ -178,7 +180,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -390,6 +391,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private Path regionWalDir;
   private FileSystem walFS;
+
+  private volatile boolean isGlobalReadOnlyEnabled;
 
   // set to true if the region is restored from snapshot for reading by ClientSideRegionScanner
   private boolean isRestoredRegion = false;
@@ -941,8 +944,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     decorateRegionConfiguration(conf);
 
-    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(
-      ConfigurationUtil.isReadOnlyModeEnabled(conf), this.conf,
+    this.isGlobalReadOnlyEnabled =
+      conf.getBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(this.conf,
       CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
 
     if (rsServices != null) {
@@ -8515,7 +8519,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     ServiceDescriptor serviceDesc = instance.getDescriptorForType();
     String serviceName = CoprocessorRpcUtils.getServiceName(serviceDesc);
     if (coprocessorServiceHandlers.containsKey(serviceName)) {
-      LOG.error("Coprocessor service {} already registered, rejecting request from {} in region {}",
+      LOG.warn("Coprocessor service {} already registered, rejecting request from {} in region {}",
         serviceName, instance, this);
       return false;
     }
@@ -8986,25 +8990,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * {@inheritDoc}
    */
   @Override
-  public void onConfigurationChange(Configuration conf) {
-    this.storeHotnessProtector.update(conf);
+  public void onConfigurationChange(Configuration newConf) {
+    this.storeHotnessProtector.update(newConf);
 
-    boolean readOnlyMode = ConfigurationUtil.isReadOnlyModeEnabled(conf);
-    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(readOnlyMode, conf,
-      CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
-
-    // update coprocessorHost if the configuration has changed.
-    if (
-      CoprocessorConfigurationUtil.checkConfigurationChange(this.coprocessorHost, conf,
-        CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY)
-    ) {
-      LOG.info("Update the system coprocessors because the configuration has changed");
-      decorateRegionConfiguration(conf);
-      this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
-      CoprocessorConfigurationUtil.syncReadOnlyConfigurations(readOnlyMode, this.conf,
-        CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
-    }
+    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(newConf, this.isGlobalReadOnlyEnabled,
+      this.coprocessorHost, CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, false, this.toString(),
+      val -> this.isGlobalReadOnlyEnabled = val, conf -> {
+        decorateRegionConfiguration(conf);
+        this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, newConf);
+      });
   }
 
   /**
@@ -9159,5 +9153,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       allowedOnPath = ".*/src/test/.*")
   boolean isReadsEnabled() {
     return this.writestate.readsEnabled;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public ConfigurationManager getConfigurationManager() {
+    return configurationManager;
   }
 }
