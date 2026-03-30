@@ -22,11 +22,14 @@ import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarker
 import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_KEY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -40,6 +43,9 @@ import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
@@ -93,16 +99,18 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
     TableName tableName = TableName.valueOf("table_" + methodName);
     Table t1 = TEST_UTIL.createTable(tableName, famName);
 
-    try (BackupSystemTable table = new BackupSystemTable(TEST_UTIL.getConnection())) {
-      int before = table.getBackupHistory().size();
+    try (BackupSystemTable backupSystemTable = new BackupSystemTable(TEST_UTIL.getConnection())) {
+      int before = backupSystemTable.getBackupHistory().size();
 
       // Run continuous backup
+      LOG.info("Running full backup with continuous backup enabled on table: {}", tableName);
       String backup1 = backupTables(BackupType.FULL, List.of(tableName), BACKUP_ROOT_DIR, true);
+      LOG.info("Full backup complete with ID {} for table: {}", backup1, tableName);
       assertTrue(checkSucceeded(backup1));
 
       // Verify backup history increased and all the backups are succeeded
       LOG.info("Verify backup history increased and all the backups are succeeded");
-      List<BackupInfo> backups = table.getBackupHistory();
+      List<BackupInfo> backups = backupSystemTable.getBackupHistory();
       assertEquals(before + 1, backups.size(), "Backup history should increase");
 
       // Verify backup manifest contains the correct tables
@@ -115,12 +123,12 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
       Thread.sleep(10000);
 
       // Run incremental backup
-      LOG.info("Run incremental backup now");
-      before = table.getBackupHistory().size();
+      LOG.info("Run incremental backup now on table: {}", tableName);
+      before = backupSystemTable.getBackupHistory().size();
       String backup2 =
         backupTables(BackupType.INCREMENTAL, List.of(tableName), BACKUP_ROOT_DIR, true);
       assertTrue(checkSucceeded(backup2));
-      LOG.info("Incremental backup completed");
+      LOG.info("Incremental backup completed for table: {}", tableName);
 
       // Verify the temporary backup directory was deleted
       Path backupTmpDir = new Path(BACKUP_ROOT_DIR, ".tmp");
@@ -129,18 +137,107 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
         "Bulk load output directory " + bulkLoadOutputDir + " should have been deleted");
 
       // Verify backup history increased and all the backups are succeeded
-      backups = table.getBackupHistory();
+      backups = backupSystemTable.getBackupHistory();
       assertEquals(before + 1, backups.size(), "Backup history should increase");
 
+      String originalTableChecksum = TEST_UTIL.checksumRows(t1);
+
+      LOG.info("Truncating table: {}", tableName);
       TEST_UTIL.truncateTable(tableName);
 
       // Restore incremental backup
       TableName[] tables = new TableName[] { tableName };
       BackupAdminImpl client = new BackupAdminImpl(TEST_UTIL.getConnection());
+      LOG.info("Restoring table: {}", tableName);
+      // In the restore request, the original table is both the "from table" and the "to table".
+      // This means the table is being restored "into itself". It is not being restored into
+      // separate table.
       client.restore(
         BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backup2, false, tables, tables, true));
 
-      assertEquals(NB_ROWS_IN_BATCH, TEST_UTIL.countRows(tableName));
+      LOG.info("Verifying data integrity for restored table: {}", tableName);
+      verifyRestoredTableDataIntegrity(tables[0], originalTableChecksum, NB_ROWS_IN_BATCH);
+    }
+  }
+
+  @Test
+  public void testMultiTableContinuousBackupWithIncrementalBackupSuccess() throws Exception {
+    String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
+    List<Table> tables = new ArrayList<>();
+    List<TableName> tableNames = new ArrayList<>();
+    tableNames.add(TableName.valueOf("table_" + methodName + "_0"));
+    tableNames.add(TableName.valueOf("table_" + methodName + "_1"));
+    tableNames.add(TableName.valueOf("ns1", "ns1_table_" + methodName + "_0"));
+    tableNames.add(TableName.valueOf("ns1", "ns1_table_" + methodName + "_1"));
+    tableNames.add(TableName.valueOf("sameTableNameDifferentNamespace"));
+    tableNames.add(TableName.valueOf("ns3", "sameTableNameDifferentNamespace"));
+
+    for (TableName table : tableNames) {
+      LOG.info("Creating table: {}", table);
+      tables.add(TEST_UTIL.createTable(table, famName));
+    }
+
+    try (BackupSystemTable backupSystemTable = new BackupSystemTable(TEST_UTIL.getConnection())) {
+      int before = backupSystemTable.getBackupHistory().size();
+
+      // Run continuous backup on multiple tables
+      LOG.info("Running full backup with continuous backup enabled on tables: {}", tableNames);
+      String backup1 = backupTables(BackupType.FULL, tableNames, BACKUP_ROOT_DIR, true);
+      LOG.info("Full backup complete with ID {} for tables: {}", backup1, tableNames);
+      assertTrue(checkSucceeded(backup1));
+
+      // Verify backup history increased and all backups have succeeded
+      LOG.info("Verify backup history increased and all backups have succeeded");
+      List<BackupInfo> backups = backupSystemTable.getBackupHistory();
+      assertEquals(before + 1, backups.size(), "Backup history should increase");
+
+      // Verify backup manifest contains the correct tables
+      LOG.info("Verify backup manifest contains the correct tables");
+      BackupManifest manifest = getLatestBackupManifest(backups);
+      assertEquals(Sets.newHashSet(tableNames), new HashSet<>(manifest.getTableList()),
+        "Backup should contain the expected tables");
+
+      loadTables(tables);
+      Thread.sleep(10000);
+
+      // Run incremental backup
+      LOG.info("Running incremental backup on tables: {}", tableNames);
+      before = backupSystemTable.getBackupHistory().size();
+      String backup2 = backupTables(BackupType.INCREMENTAL, tableNames, BACKUP_ROOT_DIR, true);
+      assertTrue(checkSucceeded(backup2));
+      LOG.info("Incremental backup completed with ID {} for tables: {}", backup2, tableNames);
+
+      // Verify backup history increased and all the backups are succeeded
+      backups = backupSystemTable.getBackupHistory();
+      assertEquals(before + 1, backups.size(), "Backup history should increase");
+
+      // We need to get each table's original row checksum before truncating each table
+      LinkedHashMap<TableName, String> originalTableChecksums = new LinkedHashMap<>();
+      for (Table table : tables) {
+        LOG.info("Getting row checksum for table: {}", table);
+        originalTableChecksums.put(table.getName(), TEST_UTIL.checksumRows(table));
+      }
+
+      for (TableName tableName : tableNames) {
+        LOG.info("Truncating table: {}", tableName);
+        TEST_UTIL.truncateTable(tableName);
+      }
+
+      // Restore incremental backup
+      TableName[] tableNamesArray = tableNames.toArray(new TableName[0]);
+      BackupAdminImpl client = new BackupAdminImpl(TEST_UTIL.getConnection());
+      LOG.info("Restoring tables: {}", tableNames);
+      // In the restore request, the original tables are both the list of "from tables" and the
+      // list of "to tables". This means the tables are being restored "into themselves". They are
+      // not being restored into separate tables.
+      client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backup2, false,
+        tableNamesArray, tableNamesArray, true));
+
+      for (TableName tableName : originalTableChecksums.keySet()) {
+        LOG.info("Verifying data integrity for restored table: {}", tableName);
+        verifyRestoredTableDataIntegrity(tableName, originalTableChecksums.get(tableName),
+          NB_ROWS_IN_BATCH);
+      }
     }
   }
 
@@ -230,6 +327,47 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
       p = new Put(Bytes.toBytes("rowLoad" + i));
       p.addColumn(famName, qualName, Bytes.toBytes("val" + i));
       table.put(p);
+    }
+  }
+
+  protected static void loadTables(List<Table> tables) throws Exception {
+    for (Table table : tables) {
+      LOG.info("Loading data into table: {}", table);
+      loadTable(table);
+    }
+  }
+
+  private void verifyRestoredTableDataIntegrity(TableName restoredTableName,
+    String originalTableChecksum, int expectedRowCount) throws Exception {
+    try (Table restoredTable = TEST_UTIL.getConnection().getTable(restoredTableName);
+      ResultScanner scanner = restoredTable.getScanner(new Scan())) {
+
+      // Verify the checksum for the original table (before it was truncated) matches the checksum
+      // of the restored table.
+      String restoredTableChecksum = TEST_UTIL.checksumRows(restoredTable);
+      assertEquals(originalTableChecksum, restoredTableChecksum,
+        "The restored table's row checksum did not match the original table's checksum");
+
+      // Verify the data in the restored table is the same as when it was originally loaded
+      // into the table.
+      int count = 0;
+      for (Result result : scanner) {
+        // The data has a numerical match between its row key and value (such as rowLoad1 and
+        // value1)
+        // We can use this to ensure a row key has the expected value.
+        String rowKey = Bytes.toString(result.getRow());
+        int index = Integer.parseInt(rowKey.replace("rowLoad", ""));
+
+        // Verify the Value
+        byte[] actualValue = result.getValue(famName, qualName);
+        assertNotNull(actualValue, "Value missing for row key: " + rowKey);
+        String expectedValue = "val" + index;
+        assertEquals(expectedValue, Bytes.toString(actualValue),
+          "Value mismatch for row key: " + rowKey);
+
+        count++;
+      }
+      assertEquals(expectedRowCount, count);
     }
   }
 }
