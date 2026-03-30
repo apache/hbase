@@ -398,7 +398,8 @@ public class MasterFileSystem {
     if (!isReadOnlyModeEnabled(conf)) {
       try {
         // verify the contents against the config set
-        ActiveClusterSuffix acs = FSUtils.getClusterFile(fs, rootdir, new ActiveClusterSuffix.Parser());
+        ActiveClusterSuffix acs =
+          FSUtils.getClusterFile(fs, rootdir, new ActiveClusterSuffix.Parser());
         if (acs == null) {
           throw new FileNotFoundException("[Read-replica feature] Active Cluster Suffix File "
             + new Path(rootdir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME) + " not found");
