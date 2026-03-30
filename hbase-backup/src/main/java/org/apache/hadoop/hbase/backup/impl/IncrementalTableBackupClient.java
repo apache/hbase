@@ -595,9 +595,10 @@ public class IncrementalTableBackupClient extends TableBackupClient {
 
     if (tgtFs.exists(bulkOutDir)) {
       conf.setInt(NUMBER_OF_LEVELS_TO_PRESERVE_KEY, 2);
-      LOG.debug("{} has been set to {}. This affects what source files are actually copied in the "
-        + "next Incremental copy HFiles job", NUMBER_OF_LEVELS_TO_PRESERVE_KEY,
-        conf.get(NUMBER_OF_LEVELS_TO_PRESERVE_KEY));
+      LOG.debug(
+        "{} has been set to {}. This affects what source files are actually copied in the "
+          + "next Incremental copy HFiles job",
+        NUMBER_OF_LEVELS_TO_PRESERVE_KEY, conf.get(NUMBER_OF_LEVELS_TO_PRESERVE_KEY));
       Path tgtPath = getTargetDirForTable(tn);
       try {
         RemoteIterator<LocatedFileStatus> locatedFiles = tgtFs.listFiles(bulkOutDir, true);
