@@ -78,7 +78,6 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
   private boolean logScannerActivity = false;
   private int logCutOffLatency = 1000;
   protected final int id;
-  private long scanPrepareTimeMs = 0;
   private long scanExecutionTimeMs = 0;
   private long rpcCallTimeMs = 0;
   private long threadPoolWaitTimeMs = 0;
@@ -153,7 +152,15 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
       getTableName(), row);
   }
 
-  protected void doPrepare(boolean reload) throws IOException {
+  /**
+   * @param reload force reload of server location
+   */
+  @Override
+  public void prepare(boolean reload) throws IOException {
+    if (Thread.interrupted()) {
+      throw new InterruptedIOException();
+    }
+
     if (
       reload && getTableName() != null && !getTableName().equals(TableName.META_TABLE_NAME)
         && getConnection().isTableDisabled(getTableName())
@@ -173,23 +180,6 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
     // check how often we retry.
     if (reload) {
       incRPCRetriesMetrics(scanMetrics, isRegionServerRemote);
-    }
-  }
-
-  /**
-   * @param reload force reload of server location
-   */
-  @Override
-  public void prepare(boolean reload) throws IOException {
-    if (Thread.interrupted()) {
-      throw new InterruptedIOException();
-    }
-
-    long prepareStartTimeMs = EnvironmentEdgeManager.currentTime();
-    try {
-      doPrepare(reload);
-    } finally {
-      scanPrepareTimeMs += (EnvironmentEdgeManager.currentTime() - prepareStartTimeMs);
     }
   }
 
@@ -506,19 +496,21 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
     if (scanMetrics == null) {
       return;
     }
-    scanMetrics.addToCounter(ScanMetrics.CLIENT_THREAD_POOL_WAIT_TIME_MS_METRIC_NAME,
+    scanMetrics.addToCounter(ScanMetrics.THREAD_POOL_WAIT_TIME_MS_METRIC_NAME,
       threadPoolWaitTimeMs);
-    scanMetrics.addToCounter(ScanMetrics.CLIENT_THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME,
+    scanMetrics.addToCounter(ScanMetrics.THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME,
       threadPoolExecutionTimeMs);
-    scanMetrics.addToCounter(ScanMetrics.CLIENT_SCAN_PREPARE_TIME_MS_METRIC_NAME,
-      scanPrepareTimeMs);
-    scanMetrics.addToCounter(ScanMetrics.CLIENT_SCAN_EXECUTION_TIME_MS_METRIC_NAME,
+    scanMetrics.addToCounter(ScanMetrics.SCAN_EXECUTION_TIME_MS_METRIC_NAME,
       scanExecutionTimeMs);
-    scanMetrics.addToCounter(ScanMetrics.CLIENT_RPC_ROUND_TRIP_TIME_MS_METRIC_NAME, rpcCallTimeMs);
+    scanMetrics.addToCounter(ScanMetrics.RPC_ROUND_TRIP_TIME_MS_METRIC_NAME, rpcCallTimeMs);
     threadPoolWaitTimeMs = 0;
     threadPoolExecutionTimeMs = 0;
-    scanPrepareTimeMs = 0;
     scanExecutionTimeMs = 0;
     rpcCallTimeMs = 0;
+  }
+
+  // Need in ScannerCallableWithReplias during closeScanner call.
+  long getScanExecutionTimeMs() {
+    return scanExecutionTimeMs;
   }
 }

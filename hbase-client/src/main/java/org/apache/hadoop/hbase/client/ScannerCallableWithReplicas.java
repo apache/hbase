@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ResultBoundedCompletionService.QueueingFuture;
 import org.apache.hadoop.hbase.client.ScannerCallable.MoreResults;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -73,6 +74,8 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
   private Set<ScannerCallable> outstandingCallables = new HashSet<>();
   private boolean someRPCcancelled = false; // required for testing purposes only
   private int regionReplication = 0;
+  private long metaLookupTimeMs = 0;
+  private long scannerCloseTimeMs = 0;
 
   public ScannerCallableWithReplicas(TableName tableName, ClusterConnection cConnection,
     ScannerCallable baseCallable, ExecutorService pool, int timeBeforeReplicas, Scan scan,
@@ -152,6 +155,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
         LOG.trace("Closing scanner id=" + currentScannerCallable.scannerId);
       }
       Result[] r = currentScannerCallable.call(timeout);
+      scannerCloseTimeMs += currentScannerCallable.getScanExecutionTimeMs();
       currentScannerCallable = null;
       return r;
     } else if (currentScannerCallable == null) {
@@ -171,6 +175,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
 
     if (regionReplication <= 0) {
       RegionLocations rl = null;
+      long metaLookupStartTimeMs = EnvironmentEdgeManager.currentTime();
       try {
         rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(true,
           RegionReplicaUtil.DEFAULT_REPLICA_ID, cConnection, tableName,
@@ -188,6 +193,9 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
           // For completeness
           throw e;
         }
+      }
+      finally {
+        metaLookupTimeMs += (EnvironmentEdgeManager.currentTime() - metaLookupStartTimeMs);
       }
       regionReplication = rl.size();
     }
@@ -518,6 +526,15 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
   }
 
   public void populateScanMetrics(ScanMetrics scanMetrics) {
+    if (scanMetrics == null) {
+      return;
+    }
+    scanMetrics.addToCounter(ScanMetrics.META_LOOKUP_TIME_MS_METRIC_NAME,
+      metaLookupTimeMs);
+    metaLookupTimeMs = 0;
+    scanMetrics.addToCounter(ScanMetrics.SCANNER_CLOSE_TIME_MS_METRIC_NAME,
+      scannerCloseTimeMs);
+    scannerCloseTimeMs = 0;
     if (currentScannerCallable != null) {
       currentScannerCallable.populateScanMetrics(scanMetrics);
     }
