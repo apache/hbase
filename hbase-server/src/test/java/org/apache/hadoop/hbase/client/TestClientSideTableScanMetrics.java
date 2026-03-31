@@ -27,6 +27,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -61,8 +62,12 @@ public class TestClientSideTableScanMetrics extends FromClientSideBase {
 
   static AtomicInteger sleepTimeMs = new AtomicInteger(0);
 
+  private static final TableName TABLE_NAME =
+    TableName.valueOf(TestClientSideTableScanMetrics.class.getSimpleName());
+
   public static class SleepOnScanCoprocessor implements RegionCoprocessor, RegionObserver {
     static final int SLEEP_TIME_MS = 5;
+    static final AtomicBoolean throwOnNextOnce = new AtomicBoolean(false);
 
     @Override
     public Optional<RegionObserver> getRegionObserver() {
@@ -83,6 +88,12 @@ public class TestClientSideTableScanMetrics extends FromClientSideBase {
     @Override
     public boolean preScannerNext(ObserverContext<RegionCoprocessorEnvironment> c,
         InternalScanner s, List<Result> results, int limit, boolean hasMore) throws IOException {
+      if (
+        TABLE_NAME.equals(c.getEnvironment().getRegionInfo().getTable())
+          && throwOnNextOnce.compareAndSet(true, false)
+      ) {
+        throw new IOException("Injected fault for testing remoteExc path");
+      }
       try {
         Thread.sleep(SLEEP_TIME_MS);
         sleepTimeMs.addAndGet(SLEEP_TIME_MS);
@@ -105,9 +116,6 @@ public class TestClientSideTableScanMetrics extends FromClientSideBase {
   }
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-
-  private static final TableName TABLE_NAME =
-    TableName.valueOf(TestClientSideTableScanMetrics.class.getSimpleName());
 
   private static final byte[] CF = Bytes.toBytes("cf");
 
@@ -156,6 +164,7 @@ public class TestClientSideTableScanMetrics extends FromClientSideBase {
   @Before
   public void testCaseSetup() {
     sleepTimeMs.set(0);
+    SleepOnScanCoprocessor.throwOnNextOnce.set(false);
   }
 
   protected Scan generateScan(byte[] smallerRow, byte[] largerRow) throws IOException {
@@ -343,5 +352,47 @@ public class TestClientSideTableScanMetrics extends FromClientSideBase {
     Assert.assertTrue("scannerCloseTime (" + scannerCloseTime
       + ") should be <= cacheLoadWaitTimeMs (" + cacheLoadWaitTimeMs + ")",
       scannerCloseTime <= cacheLoadWaitTimeMs);
+  }
+
+  @Test
+  public void testScanMetricsWithRemoteException() throws Exception {
+    SleepOnScanCoprocessor.throwOnNextOnce.set(true);
+
+    Scan scan = generateScan(HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+    scan.setScanMetricsEnabled(true);
+    ScanMetrics scanMetrics = assertScannedRowsAndGetScanMetrics(scan, 5);
+    Assert.assertNotNull(scanMetrics);
+    Map<String, Long> metricsMap = scanMetrics.getMetricsMap(false);
+
+    long regionsScanned = metricsMap.get(ScanMetrics.REGIONS_SCANNED_METRIC_NAME);
+    Assert.assertEquals(NUM_REGIONS + 1, regionsScanned);
+    long rpcCalls = metricsMap.get(ScanMetrics.RPC_CALLS_METRIC_NAME);
+    Assert.assertEquals("rpcCalls should be 1 + NUM_REGIONS due to 1 extra retry",
+      1 + NUM_REGIONS, rpcCalls);
+
+    long cacheLoadWaitTimeMs = metricsMap.get(ScanMetrics.CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME);
+    long threadPoolExecutionTimeMs =
+      metricsMap.get(ScanMetrics.THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME);
+    long scanExecutionTimeMs = metricsMap.get(ScanMetrics.SCAN_EXECUTION_TIME_MS_METRIC_NAME);
+    long rpcRoundTripTimeMs = metricsMap.get(ScanMetrics.RPC_ROUND_TRIP_TIME_MS_METRIC_NAME);
+
+    Assert.assertTrue(
+      cacheLoadWaitTimeMs >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
+    Assert.assertTrue(
+      threadPoolExecutionTimeMs >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
+    Assert.assertTrue(
+      scanExecutionTimeMs >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
+    Assert.assertTrue(
+      rpcRoundTripTimeMs >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
+
+    Assert.assertTrue("rpcRoundTripTimeMs (" + rpcRoundTripTimeMs
+      + ") should be <= scanExecutionTimeMs (" + scanExecutionTimeMs + ")",
+      rpcRoundTripTimeMs <= scanExecutionTimeMs);
+    Assert.assertTrue("scanExecutionTimeMs (" + scanExecutionTimeMs
+      + ") should be <= threadPoolExecutionTimeMs (" + threadPoolExecutionTimeMs + ")",
+      scanExecutionTimeMs <= threadPoolExecutionTimeMs);
+    Assert.assertTrue("threadPoolExecutionTimeMs (" + threadPoolExecutionTimeMs
+      + ") should be <= cacheLoadWaitTimeMs (" + cacheLoadWaitTimeMs + ")",
+      threadPoolExecutionTimeMs <= cacheLoadWaitTimeMs);
   }
 }
