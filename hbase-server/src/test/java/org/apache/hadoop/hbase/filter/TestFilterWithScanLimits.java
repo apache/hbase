@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -36,22 +35,18 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test if Filter is incompatible with scan-limits
  */
-@Category({ FilterTests.class, LargeTests.class })
+@Tag(FilterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestFilterWithScanLimits extends FilterTestingCluster {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFilterWithScanLimits.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFilterWithScanLimits.class);
 
@@ -88,14 +83,15 @@ public class TestFilterWithScanLimits extends FilterTestingCluster {
       table.close();
     } catch (Exception e) {
       // no correct result is expected
-      assertNotNull("No IncompatibleFilterException catched", e);
+      assertNotNull(e, "No IncompatibleFilterException catched");
     }
     LOG.debug("check the fetched kv number");
-    assertEquals("We should not get result(s) returned.", 0, kv_number);
+    assertEquals(0, kv_number, "We should not get result(s) returned.");
   }
 
-  @BeforeClass
-  public static void prepareData() {
+  @BeforeAll
+  public static void prepareData() throws Exception {
+    FilterTestingCluster.setUp();
     try {
       createTable(tableName, columnFamily);
       Table table = openTable(tableName);
@@ -116,7 +112,7 @@ public class TestFilterWithScanLimits extends FilterTestingCluster {
       table.put(puts);
       table.close();
     } catch (IOException e) {
-      assertNull("Exception found while putting data into table", e);
+      assertNull(e, "Exception found while putting data into table");
     }
   }
 
