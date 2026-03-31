@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
@@ -37,7 +37,6 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -52,23 +51,18 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.net.DNSToSwitchMapping;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestBaseLoadBalancer extends BalancerTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBaseLoadBalancer.class);
 
   private static MockBalancer loadBalancer;
   private static final Logger LOG = LoggerFactory.getLogger(TestBaseLoadBalancer.class);
@@ -84,10 +78,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     new int[] { 1, 3 }, new int[] { 2, 3 }, new int[] { 3, 3 }, new int[] { 25, 3 },
     new int[] { 2, 10 }, new int[] { 2, 100 }, new int[] { 12, 10 }, new int[] { 12, 100 }, };
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void beforeAllTests() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
@@ -203,14 +194,15 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
   }
 
   @Test
-  public void testRandomAssignment() throws Exception {
+  public void testRandomAssignment(TestInfo testInfo) throws Exception {
+    String methodName = testInfo.getTestMethod().get().getName();
     for (int i = 1; i != 5; ++i) {
       LOG.info("run testRandomAssignment() with idle servers:" + i);
-      testRandomAssignment(i);
+      testRandomAssignment(i, methodName);
     }
   }
 
-  private void testRandomAssignment(int numberOfIdleServers) throws Exception {
+  private void testRandomAssignment(int numberOfIdleServers, String methodName) throws Exception {
     assert numberOfIdleServers > 0;
     List<ServerName> idleServers = new ArrayList<>(numberOfIdleServers);
     for (int i = 0; i != numberOfIdleServers; ++i) {
@@ -233,19 +225,20 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     when(services.getServerManager()).thenReturn(sm);
     when(services.getConfiguration()).thenReturn(conf);
     balancer.setMasterServices(services);
-    RegionInfo hri1 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setStartKey("key1".getBytes()).setEndKey("key2".getBytes()).setSplit(false).setRegionId(100)
-      .build();
+    RegionInfo hri1 =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(methodName)).setStartKey("key1".getBytes())
+        .setEndKey("key2".getBytes()).setSplit(false).setRegionId(100).build();
     assertNull(balancer.randomAssignment(hri1, Collections.emptyList()));
     assertNull(balancer.randomAssignment(hri1, null));
     for (int i = 0; i != 3; ++i) {
       ServerName sn = balancer.randomAssignment(hri1, allServers);
-      assertTrue("actual:" + sn + ", except:" + idleServers, idleServers.contains(sn));
+      assertTrue(idleServers.contains(sn), "actual:" + sn + ", except:" + idleServers);
     }
   }
 
   @Test
-  public void testRegionAvailability() throws Exception {
+  public void testRegionAvailability(TestInfo testInfo) throws Exception {
+    String methodName = testInfo.getTestMethod().get().getName();
     // Create a cluster with a few servers, assign them to specific racks
     // then assign some regions. The tests should check whether moving a
     // replica from one node to a specific other node or rack lowers the
@@ -255,15 +248,15 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     List<RegionInfo> list1 = new ArrayList<>();
     List<RegionInfo> list2 = new ArrayList<>();
     // create a region (region1)
-    RegionInfo hri1 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setStartKey("key1".getBytes()).setEndKey("key2".getBytes()).setSplit(false).setRegionId(100)
-      .build();
+    RegionInfo hri1 =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(methodName)).setStartKey("key1".getBytes())
+        .setEndKey("key2".getBytes()).setSplit(false).setRegionId(100).build();
     // create a replica of the region (replica_of_region1)
     RegionInfo hri2 = RegionReplicaUtil.getRegionInfoForReplica(hri1, 1);
     // create a second region (region2)
-    RegionInfo hri3 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setStartKey("key2".getBytes()).setEndKey("key3".getBytes()).setSplit(false).setRegionId(101)
-      .build();
+    RegionInfo hri3 =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(methodName)).setStartKey("key2".getBytes())
+        .setEndKey("key3".getBytes()).setSplit(false).setRegionId(101).build();
     list0.add(hri1); // only region1
     list1.add(hri2); // only replica_of_region1
     list2.add(hri3); // only region2
@@ -319,20 +312,21 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
   }
 
   @Test
-  public void testRegionAvailabilityWithRegionMoves() throws Exception {
+  public void testRegionAvailabilityWithRegionMoves(TestInfo testInfo) throws Exception {
+    String methodName = testInfo.getTestMethod().get().getName();
     List<RegionInfo> list0 = new ArrayList<>();
     List<RegionInfo> list1 = new ArrayList<>();
     List<RegionInfo> list2 = new ArrayList<>();
     // create a region (region1)
-    RegionInfo hri1 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setStartKey("key1".getBytes()).setEndKey("key2".getBytes()).setSplit(false).setRegionId(100)
-      .build();
+    RegionInfo hri1 =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(methodName)).setStartKey("key1".getBytes())
+        .setEndKey("key2".getBytes()).setSplit(false).setRegionId(100).build();
     // create a replica of the region (replica_of_region1)
     RegionInfo hri2 = RegionReplicaUtil.getRegionInfoForReplica(hri1, 1);
     // create a second region (region2)
-    RegionInfo hri3 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setStartKey("key2".getBytes()).setEndKey("key3".getBytes()).setSplit(false).setRegionId(101)
-      .build();
+    RegionInfo hri3 =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(methodName)).setStartKey("key2".getBytes())
+        .setEndKey("key3".getBytes()).setSplit(false).setRegionId(101).build();
     list0.add(hri1); // only region1
     list1.add(hri2); // only replica_of_region1
     list2.add(hri3); // only region2
@@ -395,8 +389,8 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     Set<ServerName> onlineServerSet = new TreeSet<>(servers);
     Set<RegionInfo> assignedRegions = new TreeSet<>(RegionInfo.COMPARATOR);
     for (Map.Entry<ServerName, List<RegionInfo>> a : assignment.entrySet()) {
-      assertTrue("Region assigned to server that was not listed as online",
-        onlineServerSet.contains(a.getKey()));
+      assertTrue(onlineServerSet.contains(a.getKey()),
+        "Region assigned to server that was not listed as online");
       for (RegionInfo r : a.getValue())
         assignedRegions.add(r);
     }

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.snapshot;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -26,7 +26,6 @@ import java.util.HashSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -38,23 +37,18 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Test that the snapshot hfile cleaner finds hfiles referenced in a snapshot
  */
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestSnapshotHFileCleaner {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotHFileCleaner.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final String TABLE_NAME_STR = "testSnapshotManifest";
@@ -63,40 +57,37 @@ public class TestSnapshotHFileCleaner {
   private static FileSystem fs;
   private static Configuration conf;
 
-  @Rule
-  public TestName name = new TestName();
-
   /**
    * Setup the test environment
    */
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     rootDir = CommonFSUtils.getRootDir(conf);
     fs = FileSystem.get(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws IOException {
     // cleanup
     fs.delete(rootDir, true);
   }
 
   @Test
-  public void testFindsSnapshotFilesWhenCleaning() throws IOException {
+  public void testFindsSnapshotFilesWhenCleaning(TestInfo testInfo) throws IOException {
     CommonFSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
-    Path rootDir = CommonFSUtils.getRootDir(conf);
+    rootDir = CommonFSUtils.getRootDir(conf);
     Path archivedHfileDir =
       new Path(TEST_UTIL.getDataTestDir(), HConstants.HFILE_ARCHIVE_DIRECTORY);
 
-    FileSystem fs = FileSystem.get(conf);
+    fs = FileSystem.get(conf);
     SnapshotHFileCleaner cleaner = new SnapshotHFileCleaner();
     cleaner.setConf(conf);
 
     // write an hfile to the snapshot directory
     String snapshotName = "snapshot";
     byte[] snapshot = Bytes.toBytes(snapshotName);
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
     HRegionInfo mockRegion = new HRegionInfo(tableName);
     Path regionSnapshotDir = new Path(snapshotDir, mockRegion.getEncodedName());

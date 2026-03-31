@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.FileSystems;
@@ -27,29 +29,20 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestStochasticLoadBalancerHeterogeneousCostRules extends BalancerTestBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStochasticLoadBalancerHeterogeneousCostRules.class);
-  @Rule
-  public TestName name = new TestName();
-
   static final String DEFAULT_RULES_FILE_NAME = "hbase-balancer.rules";
   private HeterogeneousRegionCountCostFunction costFunction;
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
@@ -60,17 +53,18 @@ public class TestStochasticLoadBalancerHeterogeneousCostRules extends BalancerTe
    */
   private String rulesFilename;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws IOException {
     // Ensure test dir is created
     HTU.getTestFileSystem().mkdirs(HTU.getDataTestDir());
   }
 
-  @Before
-  public void before() throws IOException {
+  @BeforeEach
+  public void before(TestInfo testInfo) throws IOException {
     // New rules file name per test.
     this.rulesFilename =
-      HTU.getDataTestDir(this.name.getMethodName() + "." + DEFAULT_RULES_FILE_NAME).toString();
+      HTU.getDataTestDir(testInfo.getTestMethod().get().getName() + "." + DEFAULT_RULES_FILE_NAME)
+        .toString();
     // Set the created rules filename into the configuration.
     HTU.getConfiguration().set(
       HeterogeneousRegionCountCostFunction.HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_FILE,
@@ -112,7 +106,7 @@ public class TestStochasticLoadBalancerHeterogeneousCostRules extends BalancerTe
       "non-existent-file!");
     this.costFunction = new HeterogeneousRegionCountCostFunction(HTU.getConfiguration());
     this.costFunction.loadRules();
-    Assert.assertEquals(0, this.costFunction.getNumberOfRulesLoaded());
+    assertEquals(0, this.costFunction.getNumberOfRulesLoaded());
   }
 
   @Test
@@ -122,17 +116,17 @@ public class TestStochasticLoadBalancerHeterogeneousCostRules extends BalancerTe
     // in the configuration.
     this.costFunction = new HeterogeneousRegionCountCostFunction(HTU.getConfiguration());
     this.costFunction.loadRules();
-    Assert.assertEquals(0, this.costFunction.getNumberOfRulesLoaded());
+    assertEquals(0, this.costFunction.getNumberOfRulesLoaded());
 
     createRulesFile(this.rulesFilename, Collections.singletonList("bad rules format"));
     this.costFunction = new HeterogeneousRegionCountCostFunction(HTU.getConfiguration());
     this.costFunction.loadRules();
-    Assert.assertEquals(0, this.costFunction.getNumberOfRulesLoaded());
+    assertEquals(0, this.costFunction.getNumberOfRulesLoaded());
 
     createRulesFile(this.rulesFilename, Arrays.asList("srv[1-2] 10", "bad_rules format", "a"));
     this.costFunction = new HeterogeneousRegionCountCostFunction(HTU.getConfiguration());
     this.costFunction.loadRules();
-    Assert.assertEquals(1, this.costFunction.getNumberOfRulesLoaded());
+    assertEquals(1, this.costFunction.getNumberOfRulesLoaded());
   }
 
   @Test
@@ -146,7 +140,7 @@ public class TestStochasticLoadBalancerHeterogeneousCostRules extends BalancerTe
     createRulesFile(this.rulesFilename, Arrays.asList("^server1$ 10", "^server2 21"));
     this.costFunction = new HeterogeneousRegionCountCostFunction(HTU.getConfiguration());
     this.costFunction.loadRules();
-    Assert.assertEquals(2, this.costFunction.getNumberOfRulesLoaded());
+    assertEquals(2, this.costFunction.getNumberOfRulesLoaded());
   }
 
   @Test
@@ -160,7 +154,7 @@ public class TestStochasticLoadBalancerHeterogeneousCostRules extends BalancerTe
     createRulesFile(this.rulesFilename, Collections.singletonList("server[ 1"));
     this.costFunction = new HeterogeneousRegionCountCostFunction(HTU.getConfiguration());
     this.costFunction.loadRules();
-    Assert.assertEquals(0, this.costFunction.getNumberOfRulesLoaded());
+    assertEquals(0, this.costFunction.getNumberOfRulesLoaded());
   }
 
   @Test
@@ -171,12 +165,12 @@ public class TestStochasticLoadBalancerHeterogeneousCostRules extends BalancerTe
     createRulesFile(this.rulesFilename, Arrays.asList("^server1$ 10", "^server2 21"));
     this.costFunction = new HeterogeneousRegionCountCostFunction(HTU.getConfiguration());
     this.costFunction.loadRules();
-    Assert.assertEquals(2, this.costFunction.getNumberOfRulesLoaded());
+    assertEquals(2, this.costFunction.getNumberOfRulesLoaded());
 
     // loading malformed configuration does not overload current
     cleanup(this.rulesFilename);
     this.costFunction.loadRules();
-    Assert.assertEquals(2, this.costFunction.getNumberOfRulesLoaded());
+    assertEquals(2, this.costFunction.getNumberOfRulesLoaded());
   }
 
   @Test
@@ -200,7 +194,7 @@ public class TestStochasticLoadBalancerHeterogeneousCostRules extends BalancerTe
         path.toString());
       this.costFunction = new HeterogeneousRegionCountCostFunction(configuration);
       this.costFunction.loadRules();
-      Assert.assertEquals(1, this.costFunction.getNumberOfRulesLoaded());
+      assertEquals(1, this.costFunction.getNumberOfRulesLoaded());
     } finally {
       HTU.shutdownMiniCluster();
     }
