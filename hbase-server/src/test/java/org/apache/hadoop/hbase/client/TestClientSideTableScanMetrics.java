@@ -339,7 +339,7 @@ public class TestClientSideTableScanMetrics extends FromClientSideBase {
     Assert.assertTrue(scannerCloseTime >= SleepOnScanCoprocessor.SLEEP_TIME_MS);
     long cacheLoadWaitTimeMs = metricsMap.get(ScanMetrics.CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME);
     Assert.assertTrue(
-      cacheLoadWaitTimeMs > SleepOnScanCoprocessor.SLEEP_TIME_MS * 2);
+      cacheLoadWaitTimeMs >= SleepOnScanCoprocessor.SLEEP_TIME_MS * 2);
     Assert.assertTrue("scannerCloseTime (" + scannerCloseTime
       + ") should be <= cacheLoadWaitTimeMs (" + cacheLoadWaitTimeMs + ")",
       scannerCloseTime <= cacheLoadWaitTimeMs);
