@@ -620,7 +620,7 @@ public final class FSUtils {
     if (!fs.delete(movedAsideName, false)) {
       throw new IOException("Failed delete of " + movedAsideName);
     }
-    LOG.debug("Rewrote the {}} file as pb", fileName);
+    LOG.debug("Rewrote the {} file as pb", fileName);
   }
 
   /**
