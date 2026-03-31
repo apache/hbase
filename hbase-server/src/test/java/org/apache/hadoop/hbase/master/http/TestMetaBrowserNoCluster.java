@@ -20,40 +20,33 @@ package org.apache.hadoop.hbase.master.http;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import javax.servlet.http.HttpServletRequest;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.http.TestMetaBrowser.MockRequestBuilder;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * Cluster-backed correctness tests for the functionality provided by {@link MetaBrowser}.
- */
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
+@ExtendWith(MockitoExtension.class)
 public class TestMetaBrowserNoCluster {
-
-  @ClassRule
-  public static final HBaseClassTestRule testRule =
-    HBaseClassTestRule.forClass(TestMetaBrowserNoCluster.class);
 
   @Mock
   private AsyncConnection connection;
 
-  @Before
+  @BeforeEach
   public void before() {
-    MockitoAnnotations.initMocks(this);
   }
 
   @Test
