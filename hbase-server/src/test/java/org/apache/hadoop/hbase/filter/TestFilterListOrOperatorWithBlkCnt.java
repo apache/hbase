@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
@@ -36,13 +35,11 @@ import org.apache.hadoop.hbase.filter.MultiRowRangeFilter.RowRange;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,12 +47,8 @@ import org.slf4j.LoggerFactory;
  * This test is for the optimization added in HBASE-15243.
  * FilterList with two MultiRowRangeFilter's is constructed using Operator.MUST_PASS_ONE.
  */
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestFilterListOrOperatorWithBlkCnt {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFilterListOrOperatorWithBlkCnt.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Logger LOG =
@@ -66,12 +59,7 @@ public class TestFilterListOrOperatorWithBlkCnt {
   private TableName tableName;
   private int numRows = 10000;
 
-  @Rule
-  public TestName name = new TestName();
-
-  /**
-   *   */
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     long blkSize = 4096;
     /*
@@ -83,9 +71,7 @@ public class TestFilterListOrOperatorWithBlkCnt {
     TEST_UTIL.startMiniCluster();
   }
 
-  /**
-   *   */
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -95,8 +81,9 @@ public class TestFilterListOrOperatorWithBlkCnt {
   }
 
   @Test
-  public void testMultiRowRangeWithFilterListOrOperatorWithBlkCnt() throws IOException {
-    tableName = TableName.valueOf(name.getMethodName());
+  public void testMultiRowRangeWithFilterListOrOperatorWithBlkCnt(TestInfo testInfo)
+    throws IOException {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(numRows, ht, family, qf, value);
 

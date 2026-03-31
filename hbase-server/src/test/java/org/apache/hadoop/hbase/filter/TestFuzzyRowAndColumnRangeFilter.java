@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
@@ -39,39 +38,27 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-/**
- */
-@Category({ FilterTests.class, MediumTests.class })
+@Tag(FilterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestFuzzyRowAndColumnRangeFilter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFuzzyRowAndColumnRangeFilter.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Logger LOG = LoggerFactory.getLogger(TestFuzzyRowAndColumnRangeFilter.class);
 
-  @Rule
-  public TestName name = new TestName();
-
   /**
    * @throws java.lang.Exception
    */
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
   }
@@ -79,32 +66,16 @@ public class TestFuzzyRowAndColumnRangeFilter {
   /**
    * @throws java.lang.Exception
    */
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @Before
-  public void setUp() throws Exception {
-    // Nothing to do.
-  }
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @After
-  public void tearDown() throws Exception {
-    // Nothing to do.
-  }
-
   @Test
-  public void Test() throws Exception {
+  public void Test(TestInfo testInfo) throws Exception {
     String cf = "f";
-    Table ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), Bytes.toBytes(cf),
-      Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(testInfo.getTestMethod().get().getName()),
+      Bytes.toBytes(cf), Integer.MAX_VALUE);
 
     // 10 byte row key - (2 bytes 4 bytes 4 bytes)
     // 4 byte qualifier
