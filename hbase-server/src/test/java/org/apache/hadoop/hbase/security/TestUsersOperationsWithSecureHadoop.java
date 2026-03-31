@@ -62,12 +62,15 @@ public class TestUsersOperationsWithSecureHadoop {
 
   private static String CLIENT_NAME;
 
+  private static String OTHER_CLIENT_NAME;
+
   @BeforeClass
   public static void setUp() throws Exception {
     KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
     PRINCIPAL = "hbase/" + HOST;
     CLIENT_NAME = "foo";
-    KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL, CLIENT_NAME);
+    OTHER_CLIENT_NAME = "bar";
+    KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL, CLIENT_NAME, OTHER_CLIENT_NAME);
     HBaseKerberosUtils.setPrincipalForTesting(PRINCIPAL + "@" + KDC.getRealm());
     HBaseKerberosUtils.setKeytabFileForTesting(KEYTAB_FILE.getAbsolutePath());
     HBaseKerberosUtils.setClientPrincipalForTesting(CLIENT_NAME + "@" + KDC.getRealm());
@@ -140,11 +143,42 @@ public class TestUsersOperationsWithSecureHadoop {
     conf.set(AuthUtil.HBASE_CLIENT_KEYTAB_FILE, clientKeytab);
     conf.set(AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL, clientPrincipal);
     UserGroupInformation.setConfiguration(conf);
-    UserGroupInformation.loginUserFromKeytab(clientPrincipal, clientKeytab);
+
+    UserGroupInformation.loginUserFromKeytab(CLIENT_NAME, clientKeytab);
 
     User user = AuthUtil.loginClient(conf);
     assertTrue(user.isLoginFromKeytab());
     assertEquals(CLIENT_NAME, user.getShortName());
     assertEquals(getClientPrincipalForTesting(), user.getName());
+  }
+
+  @Test
+  public void testAuthUtilLoginWithDifferentExistingUser() throws Exception {
+    String clientKeytab = getClientKeytabForTesting();
+    String clientPrincipal = getClientPrincipalForTesting();
+    Configuration conf = getSecuredConfiguration();
+    conf.set(AuthUtil.HBASE_CLIENT_KEYTAB_FILE, clientKeytab);
+    conf.set(AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL, clientPrincipal);
+    UserGroupInformation.setConfiguration(conf);
+
+    // Login with other principal first
+    String otherPrincipal = OTHER_CLIENT_NAME + "@" + KDC.getRealm();
+    UserGroupInformation.loginUserFromKeytab(otherPrincipal, clientKeytab);
+
+    User user = AuthUtil.loginClient(conf);
+    assertTrue(user.isLoginFromKeytab());
+    // The existing login user (bar) doesn't match the principal configured in
+    // HBASE_CLIENT_KERBEROS_PRINCIPAL (foo), so loginClient should re-login
+    // with the configured principal.
+    assertEquals(CLIENT_NAME, user.getShortName());
+    assertEquals(getClientPrincipalForTesting(), user.getName());
+
+    conf.set(AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL, otherPrincipal);
+
+    user = AuthUtil.loginClient(conf);
+    assertTrue(user.isLoginFromKeytab());
+    // After updating HBASE_CLIENT_KERBEROS_PRINCIPAL to bar, loginClient should re-login with bar.
+    assertEquals(OTHER_CLIENT_NAME, user.getShortName());
+    assertEquals(otherPrincipal, user.getName());
   }
 }
