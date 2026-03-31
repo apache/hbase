@@ -502,14 +502,18 @@ public class RestoreSnapshotHelper {
     for (Path familyDir : FSUtils.getFamilyDirs(fs, regionDir)) {
       byte[] family = Bytes.toBytes(familyDir.getName());
 
-      StoreFileTracker tracker = StoreFileTrackerFactory.create(conf, true,
-        StoreContext.getBuilder().withColumnFamilyDescriptor(tableDesc.getColumnFamily(family))
-          .withFamilyStoreDirectoryPath(familyDir).withRegionFileSystem(regionFS).build());
       Set<String> familyFiles = getTableRegionFamilyFiles(familyDir);
       List<SnapshotRegionManifest.StoreFile> snapshotFamilyFiles =
         snapshotFiles.remove(familyDir.getName());
-      List<StoreFileInfo> filesToTrack = new ArrayList<>();
       if (snapshotFamilyFiles != null) {
+        // Family exists in the snapshot, create tracker with merged table descriptor config
+        // so that table-level settings are picked up.
+        Configuration sftConf =
+          StoreUtils.createStoreConfiguration(conf, tableDesc, tableDesc.getColumnFamily(family));
+        StoreFileTracker tracker = StoreFileTrackerFactory.create(sftConf, true,
+          StoreContext.getBuilder().withColumnFamilyDescriptor(tableDesc.getColumnFamily(family))
+            .withFamilyStoreDirectoryPath(familyDir).withRegionFileSystem(regionFS).build());
+        List<StoreFileInfo> filesToTrack = new ArrayList<>();
         List<SnapshotRegionManifest.StoreFile> hfilesToAdd = new ArrayList<>();
         for (SnapshotRegionManifest.StoreFile storeFile : snapshotFamilyFiles) {
           if (familyFiles.contains(storeFile.getName())) {
@@ -543,6 +547,10 @@ public class RestoreSnapshotHelper {
           // mark the reference file to be added to tracker
           filesToTrack.add(tracker.getStoreFileInfo(new Path(familyDir, fileName), true));
         }
+
+        // simply reset list of tracked files with the matching files
+        // and the extra one present in the snapshot
+        tracker.set(filesToTrack);
       } else {
         // Family doesn't exists in the snapshot
         LOG.trace("Removing family=" + Bytes.toString(family) + " in snapshot=" + snapshotName
@@ -550,19 +558,18 @@ public class RestoreSnapshotHelper {
         HFileArchiver.archiveFamilyByFamilyDir(fs, conf, regionInfo, familyDir, family);
         fs.delete(familyDir, true);
       }
-
-      // simply reset list of tracked files with the matching files
-      // and the extra one present in the snapshot
-      tracker.set(filesToTrack);
     }
 
     // Add families not present in the table
     for (Map.Entry<String, List<SnapshotRegionManifest.StoreFile>> familyEntry : snapshotFiles
       .entrySet()) {
       Path familyDir = new Path(regionDir, familyEntry.getKey());
-      StoreFileTracker tracker =
-        StoreFileTrackerFactory.create(conf, true, StoreContext.getBuilder()
-          .withFamilyStoreDirectoryPath(familyDir).withRegionFileSystem(regionFS).build());
+      Configuration sftConf = StoreUtils.createStoreConfiguration(conf, tableDesc,
+        tableDesc.getColumnFamily(Bytes.toBytes(familyEntry.getKey())));
+      StoreFileTracker tracker = StoreFileTrackerFactory.create(sftConf, true, StoreContext
+        .getBuilder()
+        .withColumnFamilyDescriptor(tableDesc.getColumnFamily(Bytes.toBytes(familyEntry.getKey())))
+        .withFamilyStoreDirectoryPath(familyDir).withRegionFileSystem(regionFS).build());
       List<StoreFileInfo> files = new ArrayList<>();
       if (!fs.mkdirs(familyDir)) {
         throw new IOException("Unable to create familyDir=" + familyDir);
