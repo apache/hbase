@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -51,15 +50,12 @@ import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,18 +64,13 @@ import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 /**
  * Test filters at the HRegion doorstep.
  */
-@Category({ FilterTests.class, MediumTests.class })
+@Tag(FilterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestFilter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestFilter.class);
 
   private final static Logger LOG = LoggerFactory.getLogger(TestFilter.class);
   private HRegion region;
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-
-  @Rule
-  public TestName name = new TestName();
 
   //
   // Rows, Qualifiers, and Values are in two groups, One and Two.
@@ -132,7 +123,7 @@ public class TestFilter {
   private long numRows = (long) ROWS_ONE.length + ROWS_TWO.length;
   private long colsPerRow = (long) FAMILIES.length * QUALIFIERS_ONE.length;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     TableDescriptor tableDescriptor = TableDescriptorBuilder
       .newBuilder(TableName.valueOf("TestFilter"))
@@ -217,7 +208,7 @@ public class TestFilter {
     numRows -= 2;
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     HBaseTestingUtil.closeRegionAndWAL(region);
   }
@@ -275,8 +266,8 @@ public class TestFilter {
     // the results should belong to ROWS_THREE[1]
     scanner.next(results);
     for (Cell keyValue : results) {
-      assertTrue("The rows with ROWS_TWO as row key should be appearing.",
-        CellUtil.matchingRows(keyValue, ROWS_THREE[1]));
+      assertTrue(CellUtil.matchingRows(keyValue, ROWS_THREE[1]),
+        "The rows with ROWS_TWO as row key should be appearing.");
     }
     // again try to reseek to a value before ROWS_THREE[1]
     scanner.reseek(ROWS_ONE[1]);
@@ -284,8 +275,8 @@ public class TestFilter {
     // This time no seek would have been done to ROWS_ONE[1]
     scanner.next(results);
     for (Cell keyValue : results) {
-      assertFalse("Cannot rewind back to a value less than previous reseek.",
-        Bytes.toString(CellUtil.cloneRow(keyValue)).contains("testRowOne"));
+      assertFalse(Bytes.toString(CellUtil.cloneRow(keyValue)).contains("testRowOne"),
+        "Cannot rewind back to a value less than previous reseek.");
     }
   }
 
@@ -508,16 +499,15 @@ public class TestFilter {
       scannerCounter++;
 
       if (scannerCounter >= pageSize) {
-        Assert.assertTrue("The WhileMatchFilter should now filter all remaining",
-          filter.filterAllRemaining());
+        assertTrue(filter.filterAllRemaining(),
+          "The WhileMatchFilter should now filter all remaining");
       }
       if (!isMoreResults) {
         break;
       }
     }
     scanner.close();
-    Assert.assertEquals("The page filter returned more rows than expected", pageSize,
-      scannerCounter);
+    assertEquals(pageSize, scannerCounter, "The page filter returned more rows than expected");
   }
 
   @Test
@@ -533,8 +523,8 @@ public class TestFilter {
       ArrayList<Cell> values = new ArrayList<>();
       boolean isMoreResults = scanner.next(values);
       if (!isMoreResults || !Bytes.toString(CellUtil.cloneRow(values.get(0))).startsWith(prefix)) {
-        Assert.assertTrue("The WhileMatchFilter should now filter all remaining",
-          filter.filterAllRemaining());
+        assertTrue(filter.filterAllRemaining(),
+          "The WhileMatchFilter should now filter all remaining");
       }
       if (!isMoreResults) {
         break;
@@ -562,14 +552,14 @@ public class TestFilter {
       scannerCounter++;
 
       if (scannerCounter >= pageSize) {
-        assertTrue("The WhileMatchFilter should now filter all remaining",
-          filter.filterAllRemaining());
+        assertTrue(filter.filterAllRemaining(),
+          "The WhileMatchFilter should now filter all remaining");
       }
       if (!isMoreResults) {
         break;
       }
     }
-    assertEquals("The page filter returned more rows than expected", pageSize, scannerCounter);
+    assertEquals(pageSize, scannerCounter, "The page filter returned more rows than expected");
   }
 
   /**
@@ -612,7 +602,7 @@ public class TestFilter {
     InternalScanner scanner = this.region.getScanner(s);
     ArrayList<Cell> values = new ArrayList<>();
     scanner.next(values);
-    assertTrue("All rows should be filtered out", values.isEmpty());
+    assertTrue(values.isEmpty(), "All rows should be filtered out");
   }
 
   /**
@@ -631,8 +621,8 @@ public class TestFilter {
       ArrayList<Cell> values = new ArrayList<>();
       boolean isMoreResults = scanner.next(values);
       if (!isMoreResults || !Bytes.toString(CellUtil.cloneRow(values.get(0))).startsWith(prefix)) {
-        assertTrue("The WhileMatchFilter should now filter all remaining",
-          filter.filterAllRemaining());
+        assertTrue(filter.filterAllRemaining(),
+          "The WhileMatchFilter should now filter all remaining");
       }
       if (!isMoreResults) {
         break;
@@ -655,8 +645,8 @@ public class TestFilter {
     while (true) {
       ArrayList<Cell> values = new ArrayList<>();
       boolean isMoreResults = scanner.next(values);
-      assertTrue("The WhileMatchFilter should now filter all remaining",
-        filter.filterAllRemaining());
+      assertTrue(filter.filterAllRemaining(),
+        "The WhileMatchFilter should now filter all remaining");
       if (!isMoreResults) {
         break;
       }
@@ -1436,11 +1426,11 @@ public class TestFilter {
 
   // HBASE-9747
   @Test
-  public void testFilterListWithPrefixFilter() throws IOException {
+  public void testFilterListWithPrefixFilter(TestInfo testInfo) throws IOException {
     byte[] family = Bytes.toBytes("f1");
     byte[] qualifier = Bytes.toBytes("q1");
     TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName()))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     HRegion testRegion = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
@@ -1758,13 +1748,13 @@ public class TestFilter {
       Arrays.sort(results.toArray(new Cell[results.size()]), CellComparator.getInstance());
       LOG.info("counter=" + i + ", " + results);
       if (results.isEmpty()) break;
-      assertTrue("Scanned too many rows! Only expected " + expectedRows
-        + " total but already scanned " + (i + 1), expectedRows > i);
-      assertEquals("Expected " + expectedKeys + " keys per row but " + "returned " + results.size(),
-        expectedKeys, results.size());
+      assertTrue(expectedRows > i, "Scanned too many rows! Only expected " + expectedRows
+        + " total but already scanned " + (i + 1));
+      assertEquals(expectedKeys, results.size(),
+        "Expected " + expectedKeys + " keys per row but " + "returned " + results.size());
       results.clear();
     }
-    assertEquals("Expected " + expectedRows + " rows but scanned " + i + " rows", expectedRows, i);
+    assertEquals(expectedRows, i, "Expected " + expectedRows + " rows but scanned " + i + " rows");
   }
 
   private void verifyScanNoEarlyOut(Scan s, long expectedRows, long expectedKeys)
@@ -1777,13 +1767,13 @@ public class TestFilter {
       Arrays.sort(results.toArray(new Cell[results.size()]), CellComparator.getInstance());
       LOG.info("counter=" + i + ", " + results);
       if (results.isEmpty()) break;
-      assertTrue("Scanned too many rows! Only expected " + expectedRows
-        + " total but already scanned " + (i + 1), expectedRows > i);
-      assertEquals("Expected " + expectedKeys + " keys per row but " + "returned " + results.size(),
-        expectedKeys, results.size());
+      assertTrue(expectedRows > i, "Scanned too many rows! Only expected " + expectedRows
+        + " total but already scanned " + (i + 1));
+      assertEquals(expectedKeys, results.size(),
+        "Expected " + expectedKeys + " keys per row but " + "returned " + results.size());
       results.clear();
     }
-    assertEquals("Expected " + expectedRows + " rows but scanned " + i + " rows", expectedRows, i);
+    assertEquals(expectedRows, i, "Expected " + expectedRows + " rows but scanned " + i + " rows");
   }
 
   private void verifyScanFull(Scan s, KeyValue[] kvs) throws IOException {
@@ -1795,23 +1785,22 @@ public class TestFilter {
       done = scanner.next(results);
       Arrays.sort(results.toArray(new Cell[results.size()]), CellComparator.getInstance());
       if (results.isEmpty()) break;
-      assertTrue(
+      assertTrue(kvs.length >= idx + results.size(),
         "Scanned too many keys! Only expected " + kvs.length + " total but already scanned "
           + (results.size() + idx)
-          + (results.isEmpty() ? "" : "(" + results.get(0).toString() + ")"),
-        kvs.length >= idx + results.size());
+          + (results.isEmpty() ? "" : "(" + results.get(0).toString() + ")"));
       for (Cell kv : results) {
         LOG.info("row=" + row + ", result=" + kv.toString() + ", match=" + kvs[idx].toString());
-        assertTrue("Row mismatch", CellUtil.matchingRows(kv, kvs[idx]));
-        assertTrue("Family mismatch", CellUtil.matchingFamily(kv, kvs[idx]));
-        assertTrue("Qualifier mismatch", CellUtil.matchingQualifier(kv, kvs[idx]));
-        assertTrue("Value mismatch", CellUtil.matchingValue(kv, kvs[idx]));
+        assertTrue(CellUtil.matchingRows(kv, kvs[idx]), "Row mismatch");
+        assertTrue(CellUtil.matchingFamily(kv, kvs[idx]), "Family mismatch");
+        assertTrue(CellUtil.matchingQualifier(kv, kvs[idx]), "Qualifier mismatch");
+        assertTrue(CellUtil.matchingValue(kv, kvs[idx]), "Value mismatch");
         idx++;
       }
       results.clear();
     }
     LOG.info("Looked at " + row + " rows with " + idx + " keys");
-    assertEquals("Expected " + kvs.length + " total keys but scanned " + idx, kvs.length, idx);
+    assertEquals(kvs.length, idx, "Expected " + kvs.length + " total keys but scanned " + idx);
   }
 
   private void verifyScanFullNoValues(Scan s, KeyValue[] kvs, boolean useLen) throws IOException {
@@ -1823,34 +1812,33 @@ public class TestFilter {
       more = scanner.next(results);
       Arrays.sort(results.toArray(new Cell[results.size()]), CellComparator.getInstance());
       if (results.isEmpty()) break;
-      assertTrue(
+      assertTrue(kvs.length >= idx + results.size(),
         "Scanned too many keys! Only expected " + kvs.length + " total but already scanned "
           + (results.size() + idx)
-          + (results.isEmpty() ? "" : "(" + results.get(0).toString() + ")"),
-        kvs.length >= idx + results.size());
+          + (results.isEmpty() ? "" : "(" + results.get(0).toString() + ")"));
       for (Cell kv : results) {
         LOG.info("row=" + row + ", result=" + kv.toString() + ", match=" + kvs[idx].toString());
 
-        assertTrue("Row mismatch", CellUtil.matchingRows(kv, kvs[idx]));
-        assertTrue("Family mismatch", CellUtil.matchingFamily(kv, kvs[idx]));
-        assertTrue("Qualifier mismatch", CellUtil.matchingQualifier(kv, kvs[idx]));
-        assertFalse("Should not have returned whole value", CellUtil.matchingValue(kv, kvs[idx]));
+        assertTrue(CellUtil.matchingRows(kv, kvs[idx]), "Row mismatch");
+        assertTrue(CellUtil.matchingFamily(kv, kvs[idx]), "Family mismatch");
+        assertTrue(CellUtil.matchingQualifier(kv, kvs[idx]), "Qualifier mismatch");
+        assertFalse(CellUtil.matchingValue(kv, kvs[idx]), "Should not have returned whole value");
         if (useLen) {
-          assertEquals("Value in result is not SIZEOF_INT", Bytes.SIZEOF_INT, kv.getValueLength());
+          assertEquals(Bytes.SIZEOF_INT, kv.getValueLength(), "Value in result is not SIZEOF_INT");
           LOG.info("idx = " + idx + ", len=" + kvs[idx].getValueLength() + ", actual="
             + Bytes.toInt(CellUtil.cloneValue(kv)));
-          assertEquals("Scan value should be the length of the actual value. ",
-            kvs[idx].getValueLength(), Bytes.toInt(CellUtil.cloneValue(kv)));
+          assertEquals(kvs[idx].getValueLength(), Bytes.toInt(CellUtil.cloneValue(kv)),
+            "Scan value should be the length of the actual value. ");
           LOG.info("good");
         } else {
-          assertEquals("Value in result is not empty", 0, kv.getValueLength());
+          assertEquals(0, kv.getValueLength(), "Value in result is not empty");
         }
         idx++;
       }
       results.clear();
     }
     LOG.info("Looked at " + row + " rows with " + idx + " keys");
-    assertEquals("Expected " + kvs.length + " total keys but scanned " + idx, kvs.length, idx);
+    assertEquals(kvs.length, idx, "Expected " + kvs.length + " total keys but scanned " + idx);
   }
 
   @Test
@@ -2182,11 +2170,11 @@ public class TestFilter {
   }
 
   @Test
-  @Ignore("TODO: intentionally disabled?")
-  public void testNestedFilterListWithSCVF() throws IOException {
+  @Disabled("TODO: intentionally disabled?")
+  public void testNestedFilterListWithSCVF(TestInfo testInfo) throws IOException {
     byte[] columnStatus = Bytes.toBytes("S");
     TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName()))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILIES[0])).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     HRegion testRegion = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,7 +27,6 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -44,32 +43,24 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test qualifierFilter with empty qualifier column
  */
-@Category({ FilterTests.class, SmallTests.class })
+@Tag(FilterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestQualifierFilterWithEmptyQualifier {
 
   private final static Logger LOG =
     LoggerFactory.getLogger(TestQualifierFilterWithEmptyQualifier.class);
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestQualifierFilterWithEmptyQualifier.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private HRegion region;
-
-  @Rule
-  public TestName name = new TestName();
 
   private static final byte[][] ROWS = { Bytes.toBytes("testRowOne-0"),
     Bytes.toBytes("testRowOne-1"), Bytes.toBytes("testRowOne-2"), Bytes.toBytes("testRowOne-3") };
@@ -79,7 +70,7 @@ public class TestQualifierFilterWithEmptyQualifier {
   private static final byte[] VALUE = Bytes.toBytes("testValueOne");
   private long numRows = (long) ROWS.length;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     TableDescriptor htd =
       TableDescriptorBuilder.newBuilder(TableName.valueOf("TestQualifierFilter"))
@@ -102,7 +93,7 @@ public class TestQualifierFilterWithEmptyQualifier {
     this.region.flush(true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     HBaseTestingUtil.closeRegionAndWAL(region);
   }
@@ -147,12 +138,12 @@ public class TestQualifierFilterWithEmptyQualifier {
       if (results.isEmpty()) {
         break;
       }
-      assertTrue("Scanned too many rows! Only expected " + expectedRows
-        + " total but already scanned " + (i + 1), expectedRows > i);
-      assertEquals("Expected " + expectedKeys + " keys per row but " + "returned " + results.size(),
-        expectedKeys, results.size());
+      assertTrue(expectedRows > i, "Scanned too many rows! Only expected " + expectedRows
+        + " total but already scanned " + (i + 1));
+      assertEquals(expectedKeys, results.size(),
+        "Expected " + expectedKeys + " keys per row but " + "returned " + results.size());
       results.clear();
     }
-    assertEquals("Expected " + expectedRows + " rows but scanned " + i + " rows", expectedRows, i);
+    assertEquals(i, expectedRows, "Expected " + expectedRows + " rows but scanned " + i + " rows");
   }
 }

@@ -25,7 +25,7 @@ import static org.apache.hadoop.hbase.namequeues.WALEventTrackerTableAccessor.WA
 import static org.apache.hadoop.hbase.namequeues.WALEventTrackerTableAccessor.WAL_LENGTH_COLUMN;
 import static org.apache.hadoop.hbase.namequeues.WALEventTrackerTableAccessor.WAL_NAME_COLUMN;
 import static org.apache.hadoop.hbase.namequeues.WALEventTrackerTableAccessor.WAL_STATE_COLUMN;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.Waiter;
@@ -51,27 +50,23 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(MediumTests.TAG)
+@Tag(RegionServerTests.TAG)
 public class TestWALEventTracker {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALEventTracker.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestNamedQueueRecorder.class);
   private static HBaseTestingUtil TEST_UTIL;
   public static Configuration CONF;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     CONF = HBaseConfiguration.create();
     CONF.setBoolean(WAL_EVENT_TRACKER_ENABLED_KEY, true);
@@ -82,13 +77,13 @@ public class TestWALEventTracker {
     TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardown() throws Exception {
     LOG.info("Calling teardown");
     TEST_UTIL.shutdownMiniHBaseCluster();
   }
 
-  @Before
+  @BeforeEach
   public void waitForWalEventTrackerTableCreation() {
     Waiter.waitFor(CONF, 10000,
       (Waiter.Predicate) () -> TEST_UTIL.getAdmin().tableExists(WAL_EVENT_TRACKER_TABLE_NAME));
