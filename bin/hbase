@@ -641,7 +641,7 @@ elif [ "$COMMAND" = "restore" ] ; then
   fi
 elif [ "$COMMAND" = "upgrade" ] ; then
   echo "This command was used to upgrade to HBase 0.96, it was removed in HBase 2.0.0."
-  echo "Please follow the documentation at http://hbase.apache.org/book.html#upgrading."
+  echo "Please follow the documentation at https://hbase.apache.org/docs/upgrading."
   exit 1
 elif [ "$COMMAND" = "snapshot" ] ; then
   SUBCOMMAND=$1

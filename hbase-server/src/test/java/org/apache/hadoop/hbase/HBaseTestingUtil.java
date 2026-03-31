@@ -2479,8 +2479,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Expire a ZooKeeper session as recommended in ZooKeeper documentation
-   * http://hbase.apache.org/book.html#trouble.zookeeper
+   * Expire a ZooKeeper session as recommended in ZooKeeper documentation <a href=
+   * "https://hbase.apache.org/docs/troubleshooting#troubleshooting-zookeeper">Troubleshooting
+   * ZooKeeper</a>
    * <p/>
    * There are issues when doing this:
    * <ol>
