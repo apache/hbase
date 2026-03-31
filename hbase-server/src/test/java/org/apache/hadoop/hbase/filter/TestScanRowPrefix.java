@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.codec.binary.Hex;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -31,33 +33,30 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test if Scan.setStartStopRowForPrefixScan works as intended.
  */
-@Category({ FilterTests.class, MediumTests.class })
+@Tag(FilterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestScanRowPrefix extends FilterTestingCluster {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestScanRowPrefix.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestScanRowPrefix.class);
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeAll
+  public static void setUpBeforeClass() throws Exception {
+    FilterTestingCluster.setUp();
+  }
 
   @Test
-  public void testPrefixScanning() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testPrefixScanning(TestInfo testInfo) throws IOException {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     createTable(tableName, "F");
     Table table = openTable(tableName);
 
@@ -217,10 +216,10 @@ public class TestScanRowPrefix extends FilterTestingCluster {
           + tableOfTwoListsOfByteArrays("Expected", expectedKeys, "Actual  ", actualKeys);
       }
 
-      Assert.assertArrayEquals(fullMessage, expectedKeys.toArray(), actualKeys.toArray());
+      assertArrayEquals(expectedKeys.toArray(), actualKeys.toArray(), fullMessage);
     } catch (IOException e) {
       e.printStackTrace();
-      Assert.fail();
+      fail();
     }
   }
 
