@@ -141,16 +141,29 @@ public interface HBaseRpcController extends RpcController, CellScannable {
     return null;
   }
 
+  /**
+   * Sets the timestamp when the RPC request was sent over the wire (includes request serialization)
+   */
   default void setRequestSendTimestampInMs(long timestamp) {
   }
 
+  /**
+   * Sets the timestamp when the RPC response was received from the server (includes response
+   * deserialization)
+   */
   default void setResponseReceiveTimestampInMs(long timestamp) {
   }
 
+  /**
+   * Returns the timestamp when the RPC request was sent over the wire, or 0 if not set
+   */
   default long getRequestSendTimestampInMs() {
     return 0;
   }
 
+  /**
+   * Returns the timestamp when the RPC response was received from the server, or 0 if not set
+   */
   default long getResponseReceiveTimestampInMs() {
     return 0;
   }
