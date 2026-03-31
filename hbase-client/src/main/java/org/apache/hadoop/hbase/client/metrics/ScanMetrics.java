@@ -47,8 +47,7 @@ public class ScanMetrics extends ServerSideScanMetrics {
   public static final String REGIONS_SCANNED_METRIC_NAME = "REGIONS_SCANNED";
   public static final String RPC_RETRIES_METRIC_NAME = "RPC_RETRIES";
   public static final String REMOTE_RPC_RETRIES_METRIC_NAME = "REMOTE_RPC_RETRIES";
-  public static final String THREAD_POOL_WAIT_TIME_MS_METRIC_NAME =
-    "THREAD_POOL_WAIT_TIME_MS";
+  public static final String THREAD_POOL_WAIT_TIME_MS_METRIC_NAME = "THREAD_POOL_WAIT_TIME_MS";
   public static final String THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME =
     "THREAD_POOL_EXECUTION_TIME_MS";
   public static final String META_LOOKUP_TIME_MS_METRIC_NAME = "META_LOOKUP_TIME_MS";
@@ -109,20 +108,16 @@ public class ScanMetrics extends ServerSideScanMetrics {
   public final AtomicLong threadPoolExecutionTimeMs =
     createCounter(THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME);
 
-  public final AtomicLong metaLookupTimeMs =
-    createCounter(META_LOOKUP_TIME_MS_METRIC_NAME);
+  public final AtomicLong metaLookupTimeMs = createCounter(META_LOOKUP_TIME_MS_METRIC_NAME);
 
-  public final AtomicLong scannerCloseTimeMs =
-    createCounter(SCANNER_CLOSE_TIME_MS_METRIC_NAME);
+  public final AtomicLong scannerCloseTimeMs = createCounter(SCANNER_CLOSE_TIME_MS_METRIC_NAME);
 
-  public final AtomicLong scanExecutionTimeMs =
-    createCounter(SCAN_EXECUTION_TIME_MS_METRIC_NAME);
+  public final AtomicLong scanExecutionTimeMs = createCounter(SCAN_EXECUTION_TIME_MS_METRIC_NAME);
 
-  public final AtomicLong rpcRoundTripTimeMs =
-    createCounter(RPC_ROUND_TRIP_TIME_MS_METRIC_NAME);
+  public final AtomicLong rpcRoundTripTimeMs = createCounter(RPC_ROUND_TRIP_TIME_MS_METRIC_NAME);
 
-  public final AtomicLong cacheLoadWaitTimeMs =
-    createCounter(CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME);
+  public final AtomicLong cacheLoadWaitTimeMs = createCounter(CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME);
+
   /**
    * Constructor
    */

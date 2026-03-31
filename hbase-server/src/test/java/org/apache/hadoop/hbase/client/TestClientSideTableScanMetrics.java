@@ -24,12 +24,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -42,7 +41,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -54,7 +53,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
-@Category({ ClientTests.class, LargeTests.class })
+@Category({ ClientTests.class, MediumTests.class })
 public class TestClientSideTableScanMetrics extends FromClientSideBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -76,7 +75,7 @@ public class TestClientSideTableScanMetrics extends FromClientSideBase {
 
     @Override
     public void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Scan scan)
-        throws IOException {
+      throws IOException {
       try {
         Thread.sleep(SLEEP_TIME_MS);
         sleepTimeMs.addAndGet(SLEEP_TIME_MS);
@@ -87,7 +86,7 @@ public class TestClientSideTableScanMetrics extends FromClientSideBase {
 
     @Override
     public boolean preScannerNext(ObserverContext<RegionCoprocessorEnvironment> c,
-        InternalScanner s, List<Result> results, int limit, boolean hasMore) throws IOException {
+      InternalScanner s, List<Result> results, int limit, boolean hasMore) throws IOException {
       if (
         TABLE_NAME.equals(c.getEnvironment().getRegionInfo().getTable())
           && throwOnNextOnce.compareAndSet(true, false)
@@ -104,8 +103,8 @@ public class TestClientSideTableScanMetrics extends FromClientSideBase {
     }
 
     @Override
-    public void preScannerClose(ObserverContext<RegionCoprocessorEnvironment> c,
-        InternalScanner s) throws IOException {
+    public void preScannerClose(ObserverContext<RegionCoprocessorEnvironment> c, InternalScanner s)
+      throws IOException {
       try {
         Thread.sleep(SLEEP_TIME_MS);
         sleepTimeMs.addAndGet(SLEEP_TIME_MS);
@@ -210,18 +209,17 @@ public class TestClientSideTableScanMetrics extends FromClientSideBase {
     long scanExec = metricsMap.get(ScanMetrics.SCAN_EXECUTION_TIME_MS_METRIC_NAME);
     long rpcRoundTrip = metricsMap.get(ScanMetrics.RPC_ROUND_TRIP_TIME_MS_METRIC_NAME);
 
-    // Per region two times the slowness is introduced, once for preScannerOpen and once for preScannerNext.
-    Assert.assertTrue(
-      cacheLoad >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
-    Assert.assertTrue(
-      scanExec >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
-    Assert.assertTrue(
-      rpcRoundTrip >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
+    // Per region two times the slowness is introduced, once for preScannerOpen and once for
+    // preScannerNext.
+    Assert.assertTrue(cacheLoad >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
+    Assert.assertTrue(scanExec >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
+    Assert.assertTrue(rpcRoundTrip >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
 
-    Assert.assertTrue("rpcRoundTrip (" + rpcRoundTrip + ") should be <= scanExecution ("
-      + scanExec + ")", rpcRoundTrip <= scanExec);
-    Assert.assertTrue("scanExecution (" + scanExec + ") should be <= cacheLoad ("
-      + cacheLoad + ")", scanExec <= cacheLoad);
+    Assert.assertTrue(
+      "rpcRoundTrip (" + rpcRoundTrip + ") should be <= scanExecution (" + scanExec + ")",
+      rpcRoundTrip <= scanExec);
+    Assert.assertTrue("scanExecution (" + scanExec + ") should be <= cacheLoad (" + cacheLoad + ")",
+      scanExec <= cacheLoad);
   }
 
   @Test
@@ -237,16 +235,17 @@ public class TestClientSideTableScanMetrics extends FromClientSideBase {
     long regionsScanned = metricsMap.get(ScanMetrics.REGIONS_SCANNED_METRIC_NAME);
     Assert.assertEquals(NUM_REGIONS, regionsScanned);
 
-    // Meta lookup time for forward scan happens in ScannerCallableWithReplicas.call() but for reverse scan it happens in ReverseScannerCallable.prepare() except the first time. Thus, asserting on minimum value of meta lookup time across both directions of scan.
+    // Meta lookup time for forward scan happens in ScannerCallableWithReplicas.call() but for
+    // reverse scan it happens in ReverseScannerCallable.prepare() except the first time. Thus,
+    // asserting on minimum value of meta lookup time across both directions of scan.
     long metaLookupTime = metricsMap.get(ScanMetrics.META_LOOKUP_TIME_MS_METRIC_NAME);
-    Assert.assertTrue(
-      metaLookupTime >= SleepOnScanCoprocessor.SLEEP_TIME_MS * 2);
+    Assert.assertTrue(metaLookupTime >= SleepOnScanCoprocessor.SLEEP_TIME_MS * 2);
 
     long cacheLoad = metricsMap.get(ScanMetrics.CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME);
+    Assert.assertTrue(cacheLoad >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
     Assert.assertTrue(
-      cacheLoad >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
-    Assert.assertTrue("metaLookupTime (" + metaLookupTime + ") should be <= cacheLoad ("
-      + cacheLoad + ")", metaLookupTime <= cacheLoad);
+      "metaLookupTime (" + metaLookupTime + ") should be <= cacheLoad (" + cacheLoad + ")",
+      metaLookupTime <= cacheLoad);
   }
 
   @Test
@@ -285,7 +284,7 @@ public class TestClientSideTableScanMetrics extends FromClientSideBase {
       int countOfRows = 0;
       ScanMetrics scanMetrics;
       try (Table table = CONN.getTable(TABLE_NAME, singleThreadPool);
-           ResultScanner scanner = table.getScanner(scan)) {
+        ResultScanner scanner = table.getScanner(scan)) {
         for (Result result : scanner) {
           Assert.assertFalse(result.isEmpty());
           countOfRows++;
@@ -301,18 +300,23 @@ public class TestClientSideTableScanMetrics extends FromClientSideBase {
 
       long threadPoolWaitTimeMs = metricsMap.get(ScanMetrics.THREAD_POOL_WAIT_TIME_MS_METRIC_NAME);
       Assert.assertTrue(threadPoolWaitTimeMs >= minWaitTimeMs);
-      long threadPoolExecutionTimeMs = metricsMap.get(ScanMetrics.THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME);
-      Assert.assertTrue(threadPoolExecutionTimeMs >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
-      long scanExecutionTimeMs = metricsMap.get(ScanMetrics.SCAN_EXECUTION_TIME_MS_METRIC_NAME);
+      long threadPoolExecutionTimeMs =
+        metricsMap.get(ScanMetrics.THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME);
       Assert.assertTrue(
-        scanExecutionTimeMs >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
+        threadPoolExecutionTimeMs >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
+      long scanExecutionTimeMs = metricsMap.get(ScanMetrics.SCAN_EXECUTION_TIME_MS_METRIC_NAME);
+      Assert
+        .assertTrue(scanExecutionTimeMs >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
       long cacheLoadWaitTimeMs = metricsMap.get(ScanMetrics.CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME);
 
-      Assert.assertTrue("scanExecutionTimeMs (" + scanExecutionTimeMs
-        + ") should be <= threadPoolExecutionTimeMs (" + threadPoolExecutionTimeMs + ")",
-        scanExecutionTimeMs <= threadPoolExecutionTimeMs);
-      Assert.assertTrue("threadPoolExecutionTimeMs (" + threadPoolExecutionTimeMs
-        + ") should be <= cacheLoadWaitTimeMs (" + cacheLoadWaitTimeMs + ")",
+      Assert
+        .assertTrue(
+          "scanExecutionTimeMs (" + scanExecutionTimeMs
+            + ") should be <= threadPoolExecutionTimeMs (" + threadPoolExecutionTimeMs + ")",
+          scanExecutionTimeMs <= threadPoolExecutionTimeMs);
+      Assert.assertTrue(
+        "threadPoolExecutionTimeMs (" + threadPoolExecutionTimeMs
+          + ") should be <= cacheLoadWaitTimeMs (" + cacheLoadWaitTimeMs + ")",
         threadPoolExecutionTimeMs <= cacheLoadWaitTimeMs);
       Assert.assertTrue("threadPoolWaitTimeMs (" + threadPoolWaitTimeMs
         + ") should be <= cacheLoadWaitTimeMs (" + cacheLoadWaitTimeMs + ")",
@@ -329,8 +333,7 @@ public class TestClientSideTableScanMetrics extends FromClientSideBase {
     scan.setCaching(1);
 
     ScanMetrics scanMetrics;
-    try (Table table = CONN.getTable(TABLE_NAME);
-         ResultScanner scanner = table.getScanner(scan)) {
+    try (Table table = CONN.getTable(TABLE_NAME); ResultScanner scanner = table.getScanner(scan)) {
       Result result = scanner.next();
       Assert.assertNotNull(result);
       Assert.assertFalse(result.isEmpty());
@@ -347,8 +350,7 @@ public class TestClientSideTableScanMetrics extends FromClientSideBase {
     long scannerCloseTime = metricsMap.get(ScanMetrics.SCANNER_CLOSE_TIME_MS_METRIC_NAME);
     Assert.assertTrue(scannerCloseTime >= SleepOnScanCoprocessor.SLEEP_TIME_MS);
     long cacheLoadWaitTimeMs = metricsMap.get(ScanMetrics.CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME);
-    Assert.assertTrue(
-      cacheLoadWaitTimeMs >= SleepOnScanCoprocessor.SLEEP_TIME_MS * 2);
+    Assert.assertTrue(cacheLoadWaitTimeMs >= SleepOnScanCoprocessor.SLEEP_TIME_MS * 2);
     Assert.assertTrue("scannerCloseTime (" + scannerCloseTime
       + ") should be <= cacheLoadWaitTimeMs (" + cacheLoadWaitTimeMs + ")",
       scannerCloseTime <= cacheLoadWaitTimeMs);
@@ -367,8 +369,8 @@ public class TestClientSideTableScanMetrics extends FromClientSideBase {
     long regionsScanned = metricsMap.get(ScanMetrics.REGIONS_SCANNED_METRIC_NAME);
     Assert.assertEquals(NUM_REGIONS + 1, regionsScanned);
     long rpcCalls = metricsMap.get(ScanMetrics.RPC_CALLS_METRIC_NAME);
-    Assert.assertEquals("rpcCalls should be 1 + NUM_REGIONS due to 1 extra retry",
-      1 + NUM_REGIONS, rpcCalls);
+    Assert.assertEquals("rpcCalls should be 1 + NUM_REGIONS due to 1 extra retry", 1 + NUM_REGIONS,
+      rpcCalls);
 
     long cacheLoadWaitTimeMs = metricsMap.get(ScanMetrics.CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME);
     long threadPoolExecutionTimeMs =
@@ -376,14 +378,13 @@ public class TestClientSideTableScanMetrics extends FromClientSideBase {
     long scanExecutionTimeMs = metricsMap.get(ScanMetrics.SCAN_EXECUTION_TIME_MS_METRIC_NAME);
     long rpcRoundTripTimeMs = metricsMap.get(ScanMetrics.RPC_ROUND_TRIP_TIME_MS_METRIC_NAME);
 
-    Assert.assertTrue(
-      cacheLoadWaitTimeMs >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
+    Assert
+      .assertTrue(cacheLoadWaitTimeMs >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
     Assert.assertTrue(
       threadPoolExecutionTimeMs >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
-    Assert.assertTrue(
-      scanExecutionTimeMs >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
-    Assert.assertTrue(
-      rpcRoundTripTimeMs >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
+    Assert
+      .assertTrue(scanExecutionTimeMs >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
+    Assert.assertTrue(rpcRoundTripTimeMs >= SleepOnScanCoprocessor.SLEEP_TIME_MS * NUM_REGIONS * 2);
 
     Assert.assertTrue("rpcRoundTripTimeMs (" + rpcRoundTripTimeMs
       + ") should be <= scanExecutionTimeMs (" + scanExecutionTimeMs + ")",
@@ -391,8 +392,9 @@ public class TestClientSideTableScanMetrics extends FromClientSideBase {
     Assert.assertTrue("scanExecutionTimeMs (" + scanExecutionTimeMs
       + ") should be <= threadPoolExecutionTimeMs (" + threadPoolExecutionTimeMs + ")",
       scanExecutionTimeMs <= threadPoolExecutionTimeMs);
-    Assert.assertTrue("threadPoolExecutionTimeMs (" + threadPoolExecutionTimeMs
-      + ") should be <= cacheLoadWaitTimeMs (" + cacheLoadWaitTimeMs + ")",
+    Assert.assertTrue(
+      "threadPoolExecutionTimeMs (" + threadPoolExecutionTimeMs
+        + ") should be <= cacheLoadWaitTimeMs (" + cacheLoadWaitTimeMs + ")",
       threadPoolExecutionTimeMs <= cacheLoadWaitTimeMs);
   }
 }

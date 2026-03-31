@@ -44,11 +44,12 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
-import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
@@ -262,7 +263,8 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
     return responseReceiveTimestampInMs - requestSendTimestampInMs;
   }
 
-  private ScanResponse doScan(RpcController controller, ScanRequest request) throws ServiceException {
+  private ScanResponse doScan(RpcController controller, ScanRequest request)
+    throws ServiceException {
     try {
       ScanResponse response = getStub().scan(controller, request);
       return response;
@@ -302,8 +304,8 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
         long now = EnvironmentEdgeManager.currentTime();
         if (now - timestamp > logCutOffLatency) {
           int rows = rrs == null ? 0 : rrs.length;
-          LOG.info(
-            "Took " + (now - timestamp) + "ms to fetch " + rows + " rows from scanner=" + scannerId);
+          LOG.info("Took " + (now - timestamp) + "ms to fetch " + rows + " rows from scanner="
+            + scannerId);
         }
       }
       updateServerSideMetrics(scanMetrics, response);
@@ -500,8 +502,7 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
       threadPoolWaitTimeMs);
     scanMetrics.addToCounter(ScanMetrics.THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME,
       threadPoolExecutionTimeMs);
-    scanMetrics.addToCounter(ScanMetrics.SCAN_EXECUTION_TIME_MS_METRIC_NAME,
-      scanExecutionTimeMs);
+    scanMetrics.addToCounter(ScanMetrics.SCAN_EXECUTION_TIME_MS_METRIC_NAME, scanExecutionTimeMs);
     scanMetrics.addToCounter(ScanMetrics.RPC_ROUND_TRIP_TIME_MS_METRIC_NAME, rpcCallTimeMs);
     threadPoolWaitTimeMs = 0;
     threadPoolExecutionTimeMs = 0;

@@ -344,8 +344,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       val = done.get();
     } catch (IOException e) {
       throw new ServiceException(e);
-    }
-    finally {
+    } finally {
       hrc.setRequestSendTimestampInMs(call.getRequestSendTimestampInMs());
       hrc.setResponseReceiveTimestampInMs(call.getResponseReceiveTimestampInMs());
     }

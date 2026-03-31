@@ -190,7 +190,8 @@ public class TestReplicasClient {
         CountDownLatch latch = getSecondaryCdl().get();
         try {
           if (secondarySleepTime.get() > 0) {
-            LOG.info("Sleeping for " + secondarySleepTime.get() + " ms while fetching secondary replica");
+            LOG.info(
+              "Sleeping for " + secondarySleepTime.get() + " ms while fetching secondary replica");
             Thread.sleep(secondarySleepTime.get());
           }
           if (latch.getCount() > 0) {
@@ -880,26 +881,30 @@ public class TestReplicasClient {
       Assert.assertEquals("rpcCalls should be 2", 2, rpcCalls);
 
       long cacheLoad = metricsMap.get(ScanMetrics.CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME);
-      long threadPoolExec =
-        metricsMap.get(ScanMetrics.THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME);
+      long threadPoolExec = metricsMap.get(ScanMetrics.THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME);
       long scanExec = metricsMap.get(ScanMetrics.SCAN_EXECUTION_TIME_MS_METRIC_NAME);
       long rpcRoundTrip = metricsMap.get(ScanMetrics.RPC_ROUND_TRIP_TIME_MS_METRIC_NAME);
 
-      Assert.assertTrue("cacheLoadWaitTimeMs should be >= " + secondaryReplicaSleepTime
-        + ", got " + cacheLoad, cacheLoad >= secondaryReplicaSleepTime);
+      Assert.assertTrue(
+        "cacheLoadWaitTimeMs should be >= " + secondaryReplicaSleepTime + ", got " + cacheLoad,
+        cacheLoad >= secondaryReplicaSleepTime);
       Assert.assertTrue("threadPoolExecutionTimeMs should be >= " + secondaryReplicaSleepTime
         + ", got " + threadPoolExec, threadPoolExec >= secondaryReplicaSleepTime);
-      Assert.assertTrue("scanExecutionTimeMs should be >= " + secondaryReplicaSleepTime
-        + ", got " + scanExec, scanExec >= secondaryReplicaSleepTime);
-      Assert.assertTrue("rpcRoundTripTimeMs should be >= " + secondaryReplicaSleepTime
-        + ", got " + rpcRoundTrip, rpcRoundTrip >= secondaryReplicaSleepTime);
+      Assert.assertTrue(
+        "scanExecutionTimeMs should be >= " + secondaryReplicaSleepTime + ", got " + scanExec,
+        scanExec >= secondaryReplicaSleepTime);
+      Assert.assertTrue(
+        "rpcRoundTripTimeMs should be >= " + secondaryReplicaSleepTime + ", got " + rpcRoundTrip,
+        rpcRoundTrip >= secondaryReplicaSleepTime);
 
-      Assert.assertTrue("rpcRoundTrip (" + rpcRoundTrip + ") should be <= scanExecution ("
-        + scanExec + ")", rpcRoundTrip <= scanExec);
+      Assert.assertTrue(
+        "rpcRoundTrip (" + rpcRoundTrip + ") should be <= scanExecution (" + scanExec + ")",
+        rpcRoundTrip <= scanExec);
       Assert.assertTrue("scanExecution (" + scanExec + ") should be <= threadPoolExecution ("
         + threadPoolExec + ")", scanExec <= threadPoolExec);
-      Assert.assertTrue("threadPoolExecution (" + threadPoolExec + ") should be <= cacheLoad ("
-        + cacheLoad + ")", threadPoolExec <= cacheLoad);
+      Assert.assertTrue(
+        "threadPoolExecution (" + threadPoolExec + ") should be <= cacheLoad (" + cacheLoad + ")",
+        threadPoolExec <= cacheLoad);
     } finally {
       SlowMeCopro.getPrimaryCdl().get().countDown();
       SlowMeCopro.secondarySleepTime.set(0);
@@ -918,9 +923,7 @@ public class TestReplicasClient {
     openRegion(hriSecondary);
 
     try {
-      table.put(Arrays.asList(
-        new Put(b1).addColumn(f, b1, b1),
-        new Put(b2).addColumn(f, b2, b2),
+      table.put(Arrays.asList(new Put(b1).addColumn(f, b1, b1), new Put(b2).addColumn(f, b2, b2),
         new Put(b3).addColumn(f, b3, b3)));
       flushRegion(hriPrimary);
       Thread.sleep(2 * REFRESH_PERIOD);
@@ -959,31 +962,33 @@ public class TestReplicasClient {
       Assert.assertEquals("regionsScanned should be 1", 1, regionsScanned);
 
       long rpcCalls = metricsMap.get(ScanMetrics.RPC_CALLS_METRIC_NAME);
-      
+
       Assert.assertEquals("rpcCalls should be 5", 5, rpcCalls);
 
       long cacheLoad = metricsMap.get(ScanMetrics.CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME);
-      long threadPoolExec =
-        metricsMap.get(ScanMetrics.THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME);
+      long threadPoolExec = metricsMap.get(ScanMetrics.THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME);
       long scanExec = metricsMap.get(ScanMetrics.SCAN_EXECUTION_TIME_MS_METRIC_NAME);
       long rpcRoundTrip = metricsMap.get(ScanMetrics.RPC_ROUND_TRIP_TIME_MS_METRIC_NAME);
 
       long minExpected = 2 * replicaSleepTime;
-      Assert.assertTrue("cacheLoadWaitTimeMs should be >= " + minExpected
-        + ", got " + cacheLoad, cacheLoad >= minExpected);
-      Assert.assertTrue("threadPoolExecutionTimeMs should be >= " + minExpected
-        + ", got " + threadPoolExec, threadPoolExec >= minExpected);
-      Assert.assertTrue("scanExecutionTimeMs should be >= " + minExpected
-        + ", got " + scanExec, scanExec >= minExpected);
-      Assert.assertTrue("rpcRoundTripTimeMs should be >= " + minExpected
-        + ", got " + rpcRoundTrip, rpcRoundTrip >= minExpected);
+      Assert.assertTrue("cacheLoadWaitTimeMs should be >= " + minExpected + ", got " + cacheLoad,
+        cacheLoad >= minExpected);
+      Assert.assertTrue(
+        "threadPoolExecutionTimeMs should be >= " + minExpected + ", got " + threadPoolExec,
+        threadPoolExec >= minExpected);
+      Assert.assertTrue("scanExecutionTimeMs should be >= " + minExpected + ", got " + scanExec,
+        scanExec >= minExpected);
+      Assert.assertTrue("rpcRoundTripTimeMs should be >= " + minExpected + ", got " + rpcRoundTrip,
+        rpcRoundTrip >= minExpected);
 
-      Assert.assertTrue("rpcRoundTrip (" + rpcRoundTrip + ") should be <= scanExecution ("
-        + scanExec + ")", rpcRoundTrip <= scanExec);
+      Assert.assertTrue(
+        "rpcRoundTrip (" + rpcRoundTrip + ") should be <= scanExecution (" + scanExec + ")",
+        rpcRoundTrip <= scanExec);
       Assert.assertTrue("scanExecution (" + scanExec + ") should be <= threadPoolExecution ("
         + threadPoolExec + ")", scanExec <= threadPoolExec);
-      Assert.assertTrue("threadPoolExecution (" + threadPoolExec + ") should be <= cacheLoad ("
-        + cacheLoad + ")", threadPoolExec <= cacheLoad);
+      Assert.assertTrue(
+        "threadPoolExecution (" + threadPoolExec + ") should be <= cacheLoad (" + cacheLoad + ")",
+        threadPoolExec <= cacheLoad);
     } finally {
       SlowMeCopro.getPrimaryCdl().get().countDown();
       SlowMeCopro.getSecondaryCdl().get().countDown();

@@ -338,7 +338,8 @@ public abstract class ClientScanner extends AbstractClientScanner {
       loadCache();
     } finally {
       if (scanMetrics != null) {
-        scanMetrics.addToCounter(ScanMetrics.CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME, EnvironmentEdgeManager.currentTime() - cacheLoadStartTimeMs);
+        scanMetrics.addToCounter(ScanMetrics.CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME,
+          EnvironmentEdgeManager.currentTime() - cacheLoadStartTimeMs);
       }
     }
 

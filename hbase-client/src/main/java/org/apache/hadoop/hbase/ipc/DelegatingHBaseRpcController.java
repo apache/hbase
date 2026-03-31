@@ -163,7 +163,7 @@ public class DelegatingHBaseRpcController implements HBaseRpcController {
   public long getRequestSendTimestampInMs() {
     return delegate.getRequestSendTimestampInMs();
   }
-  
+
   @Override
   public void setResponseReceiveTimestampInMs(long timestamp) {
     delegate.setResponseReceiveTimestampInMs(timestamp);

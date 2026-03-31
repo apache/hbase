@@ -25,7 +25,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
@@ -34,7 +33,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ResultBoundedCompletionService.QueueingFuture;
 import org.apache.hadoop.hbase.client.ScannerCallable.MoreResults;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -193,8 +191,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
           // For completeness
           throw e;
         }
-      }
-      finally {
+      } finally {
         metaLookupTimeMs += (EnvironmentEdgeManager.currentTime() - metaLookupStartTimeMs);
       }
       regionReplication = rl.size();
@@ -219,7 +216,8 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     addCallsForCurrentReplica(cs, rpcTimeoutForCall);
     int startIndex = 0;
 
-    ResultBoundedCompletionService<Pair<Result[], ScannerCallable>>.QueueingFuture<Pair<Result[], ScannerCallable>> f = null;
+    ResultBoundedCompletionService<Pair<Result[], ScannerCallable>>.QueueingFuture<
+      Pair<Result[], ScannerCallable>> f = null;
     try {
       // wait for the timeout to see whether the primary responds back
       f = cs.poll(timeBeforeReplicas, TimeUnit.MICROSECONDS); // Yes, microseconds
@@ -265,7 +263,8 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     }
 
     try {
-      f = cs.pollForFirstSuccessfullyCompletedTask(timeout, TimeUnit.MILLISECONDS, startIndex, endIndex);
+      f = cs.pollForFirstSuccessfullyCompletedTask(timeout, TimeUnit.MILLISECONDS, startIndex,
+        endIndex);
 
       if (f == null) {
         throw new IOException("Failed to get result within timeout, timeout=" + timeout + "ms");
@@ -294,7 +293,9 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
 
   @SuppressWarnings("FutureReturnValueIgnored")
   private void updateCurrentlyServingReplica(ScannerCallable scanner, Result[] result,
-    AtomicBoolean done, ExecutorService pool, ResultBoundedCompletionService<Pair<Result[], ScannerCallable>>.QueueingFuture<Pair<Result[], ScannerCallable>> future) {
+    AtomicBoolean done, ExecutorService pool,
+    ResultBoundedCompletionService<Pair<Result[], ScannerCallable>>.QueueingFuture<
+      Pair<Result[], ScannerCallable>> future) {
     if (done.compareAndSet(false, true)) {
       if (currentScannerCallable != scanner) replicaSwitched.set(true);
       currentScannerCallable = scanner;
@@ -529,11 +530,9 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     if (scanMetrics == null) {
       return;
     }
-    scanMetrics.addToCounter(ScanMetrics.META_LOOKUP_TIME_MS_METRIC_NAME,
-      metaLookupTimeMs);
+    scanMetrics.addToCounter(ScanMetrics.META_LOOKUP_TIME_MS_METRIC_NAME, metaLookupTimeMs);
     metaLookupTimeMs = 0;
-    scanMetrics.addToCounter(ScanMetrics.SCANNER_CLOSE_TIME_MS_METRIC_NAME,
-      scannerCloseTimeMs);
+    scanMetrics.addToCounter(ScanMetrics.SCANNER_CLOSE_TIME_MS_METRIC_NAME, scannerCloseTimeMs);
     scannerCloseTimeMs = 0;
     if (currentScannerCallable != null) {
       currentScannerCallable.populateScanMetrics(scanMetrics);

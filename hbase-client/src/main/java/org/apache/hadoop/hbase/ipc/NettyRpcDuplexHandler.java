@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -40,7 +41,6 @@ import org.apache.hbase.thirdparty.io.netty.util.concurrent.PromiseCombiner;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * The netty rpc handler.

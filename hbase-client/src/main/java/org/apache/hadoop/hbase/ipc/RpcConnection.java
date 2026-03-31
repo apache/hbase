@@ -372,7 +372,8 @@ abstract class RpcConnection {
         Message.Builder builder = call.responseDefaultType.newBuilderForType();
         if (!builder.mergeDelimitedFrom(in)) {
           // The javadoc of mergeDelimitedFrom says returning false means the stream reaches EOF
-          // before reading any bytes out, so here we need to manually finish create the EOFException
+          // before reading any bytes out, so here we need to manually finish create the
+          // EOFException
           // and finish the call
           call.setException(new EOFException("EOF while reading response with type: "
             + call.responseDefaultType.getClass().getName()));
@@ -388,7 +389,8 @@ abstract class RpcConnection {
         // The problem here is that we do not know when to release it.
         byte[] cellBlock = new byte[size];
         in.readFully(cellBlock);
-        cellBlockScanner = cellBlockBuilder.createCellScanner(this.codec, this.compressor, cellBlock);
+        cellBlockScanner =
+          cellBlockBuilder.createCellScanner(this.codec, this.compressor, cellBlock);
       } else {
         cellBlockScanner = null;
       }
@@ -472,7 +474,7 @@ abstract class RpcConnection {
       throw e;
     }
   }
-  
+
   private void setResponseReceiveTimestampInMs(Call call) {
     call.setResponseReceiveTimestampInMs(EnvironmentEdgeManager.currentTime());
   }
