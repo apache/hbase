@@ -73,6 +73,6 @@ of the metric registries in the MetricRegistries.global() instance.
 
 References
 1. https://hbase.apache.org/docs/upgrading/version-number
-2. http://metrics.dropwizard.io/
+2. https://metrics.dropwizard.io/
 3. https://hadoop.apache.org/docs/r2.7.2/api/org/apache/hadoop/metrics2/package-summary.html
 4. https://issues.apache.org/jira/browse/HBASE-9774
