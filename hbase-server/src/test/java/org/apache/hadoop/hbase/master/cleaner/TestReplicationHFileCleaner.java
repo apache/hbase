@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -31,7 +31,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
@@ -52,24 +51,20 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestReplicationHFileCleaner {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationHFileCleaner.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationHFileCleaner.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -83,7 +78,7 @@ public class TestReplicationHFileCleaner {
   private static Map<String, Object> params;
   private Path root;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
     server = new DummyServer();
@@ -100,12 +95,12 @@ public class TestReplicationHFileCleaner {
     fs = FileSystem.get(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws ReplicationException, IOException {
     root = TEST_UTIL.getDataTestDirOnTestFS();
     rp.getPeerStorage().addPeer(peerId,
@@ -113,7 +108,7 @@ public class TestReplicationHFileCleaner {
       true, SyncReplicationState.NONE);
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws ReplicationException {
     try {
       fs.delete(root, true);
@@ -138,19 +133,21 @@ public class TestReplicationHFileCleaner {
     Path file = new Path(root, "testIsFileDeletableWithNoHFileRefs");
     fs.createNewFile(file);
     // 2. Assert file is successfully created
-    assertTrue("Test file not created!", fs.exists(file));
+    assertTrue(fs.exists(file), "Test file not created!");
     ReplicationHFileCleaner cleaner = createCleaner();
     // 3. Assert that file as is should be deletable
-    assertTrue("Cleaner should allow to delete this file as there is no hfile reference node "
-      + "for it in the queue.", cleaner.isFileDeletable(fs.getFileStatus(file)));
+    assertTrue(cleaner.isFileDeletable(fs.getFileStatus(file)),
+      "Cleaner should allow to delete this file as there is no hfile reference node "
+        + "for it in the queue.");
 
     List<Pair<Path, Path>> files = new ArrayList<>(1);
     files.add(new Pair<>(null, file));
     // 4. Add the file to hfile-refs queue
     rq.addHFileRefs(peerId, files);
     // 5. Assert file should not be deletable
-    assertFalse("Cleaner should not allow to delete this file as there is a hfile reference node "
-      + "for it in the queue.", cleaner.isFileDeletable(fs.getFileStatus(file)));
+    assertFalse(cleaner.isFileDeletable(fs.getFileStatus(file)),
+      "Cleaner should not allow to delete this file as there is a hfile reference node "
+        + "for it in the queue.");
   }
 
   @Test
@@ -158,10 +155,10 @@ public class TestReplicationHFileCleaner {
     // 1. Create two files and assert that they do not exist
     Path notDeletablefile = new Path(root, "testGetDeletableFiles_1");
     fs.createNewFile(notDeletablefile);
-    assertTrue("Test file not created!", fs.exists(notDeletablefile));
+    assertTrue(fs.exists(notDeletablefile), "Test file not created!");
     Path deletablefile = new Path(root, "testGetDeletableFiles_2");
     fs.createNewFile(deletablefile);
-    assertTrue("Test file not created!", fs.exists(deletablefile));
+    assertTrue(fs.exists(deletablefile), "Test file not created!");
 
     List<FileStatus> files = new ArrayList<>(2);
     FileStatus f = new FileStatus();

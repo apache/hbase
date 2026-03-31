@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -30,7 +30,6 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -54,26 +53,20 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFavoredStochasticBalancerPickers.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestFavoredStochasticBalancerPickers.class);
@@ -86,10 +79,7 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
   private Admin admin;
   private SingleProcessHBaseCluster cluster;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     // Enable favored nodes based load balancer
@@ -100,7 +90,7 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
     conf.setBoolean("hbase.master.balancer.stochastic.execute.maxSteps", true);
   }
 
-  @Before
+  @BeforeEach
   public void startCluster() throws Exception {
     TEST_UTIL.startMiniCluster(SLAVES);
     TEST_UTIL.getDFSCluster().waitClusterUp();
@@ -110,15 +100,15 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
     admin.balancerSwitch(false, true);
   }
 
-  @After
+  @AfterEach
   public void stopCluster() throws Exception {
     TEST_UTIL.cleanupTestDir();
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void testPickers() throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testPickers(TestInfo testInfo) throws Exception {
+    TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     ColumnFamilyDescriptor columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY).build();
     TableDescriptor desc =
@@ -216,7 +206,7 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
         }
       }
     }
-    assertTrue("load picker did not pick expected regions in 100 iterations.", userRegionPicked);
+    assertTrue(userRegionPicked, "load picker did not pick expected regions in 100 iterations.");
   }
 
   /*
