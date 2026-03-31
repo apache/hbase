@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.region;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -29,21 +28,17 @@ import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFac
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Make sure we do not loss data after changing SFT implementation
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestChangeSFTForMasterRegion {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestChangeSFTForMasterRegion.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -51,7 +46,7 @@ public class TestChangeSFTForMasterRegion {
 
   private static byte[] FAMILY = Bytes.toBytes("family");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.getConfiguration().set(MasterRegionFactory.TRACKER_IMPL,
       StoreFileTrackerFactory.Trackers.DEFAULT.name());
@@ -63,7 +58,7 @@ public class TestChangeSFTForMasterRegion {
     UTIL.createTable(NAME, FAMILY).close();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     UTIL.shutdownMiniCluster();
   }

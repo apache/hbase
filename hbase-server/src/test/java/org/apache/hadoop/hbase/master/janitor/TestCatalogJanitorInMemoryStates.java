@@ -17,23 +17,21 @@
  */
 package org.apache.hadoop.hbase.master.janitor;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -56,21 +54,17 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCatalogJanitorInMemoryStates {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCatalogJanitorInMemoryStates.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCatalogJanitorInMemoryStates.class);
 
@@ -78,15 +72,12 @@ public class TestCatalogJanitorInMemoryStates {
 
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
 
-  @Rule
-  public final TableNameTestRule name = new TableNameTestRule();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -95,7 +86,7 @@ public class TestCatalogJanitorInMemoryStates {
    * Test clearing a split parent from memory.
    */
   @Test
-  public void testInMemoryParentCleanup()
+  public void testInMemoryParentCleanup(TestInfo testInfo)
     throws IOException, InterruptedException, ExecutionException {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     final AssignmentManager am = master.getAssignmentManager();
@@ -104,7 +95,7 @@ public class TestCatalogJanitorInMemoryStates {
     Admin admin = TEST_UTIL.getAdmin();
     admin.catalogJanitorSwitch(false);
 
-    final TableName tableName = name.getTableName();
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table t = TEST_UTIL.createTable(tableName, FAMILY);
     TEST_UTIL.loadTable(t, FAMILY, false);
 
@@ -116,12 +107,13 @@ public class TestCatalogJanitorInMemoryStates {
     List<HRegionLocation> daughters = splitRegion(parent.getRegion());
     LOG.info("Parent region: " + parent);
     LOG.info("Daughter regions: " + daughters);
-    assertNotNull("Should have found daughter regions for " + parent, daughters);
+    assertNotNull(daughters, "Should have found daughter regions for " + parent);
 
-    assertNotNull("Parent region should exist in RegionStates",
-      am.getRegionStates().getRegionStateNodeFromName(parent.getRegion().getRegionName()));
-    assertTrue("Parent region should exist in ServerManager",
-      sm.isRegionInServerManagerStates(parent.getRegion()));
+    assertNotNull(
+      am.getRegionStates().getRegionStateNodeFromName(parent.getRegion().getRegionName()),
+      "Parent region should exist in RegionStates");
+    assertTrue(sm.isRegionInServerManagerStates(parent.getRegion()),
+      "Parent region should exist in ServerManager");
 
     // clean the parent
     Result r = MetaMockingUtil.getMetaTableRowResult(parent.getRegion(), null,
@@ -142,10 +134,10 @@ public class TestCatalogJanitorInMemoryStates {
       }
     });
 
-    assertNull("Parent region should have been removed from RegionStates",
-      am.getRegionStates().getRegionStateNodeFromName(parent.getRegion().getRegionName()));
-    assertFalse("Parent region should have been removed from ServerManager",
-      sm.isRegionInServerManagerStates(parent.getRegion()));
+    assertNull(am.getRegionStates().getRegionStateNodeFromName(parent.getRegion().getRegionName()),
+      "Parent region should have been removed from RegionStates");
+    assertFalse(sm.isRegionInServerManagerStates(parent.getRegion()),
+      "Parent region should have been removed from ServerManager");
 
   }
 

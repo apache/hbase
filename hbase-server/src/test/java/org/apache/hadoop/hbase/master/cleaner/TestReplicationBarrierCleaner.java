@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -32,7 +32,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
@@ -55,44 +54,36 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestReplicationBarrierCleaner {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationBarrierCleaner.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestHFileCleaner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationBarrierCleaner.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
-  @Rule
-  public final TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     try (Table table = UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
       ResultScanner scanner = table.getScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY)
@@ -176,8 +167,8 @@ public class TestReplicationBarrierCleaner {
   }
 
   @Test
-  public void testCleanNoPeers() throws IOException {
-    TableName tableName1 = TableName.valueOf(name.getMethodName() + "_1");
+  public void testCleanNoPeers(TestInfo testInfo) throws IOException {
+    TableName tableName1 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "_1");
     RegionInfo region11 =
       RegionInfoBuilder.newBuilder(tableName1).setEndKey(Bytes.toBytes(1)).build();
     addBarrier(region11, 10, 20, 30, 40, 50, 60);
@@ -187,7 +178,7 @@ public class TestReplicationBarrierCleaner {
     addBarrier(region12, 20, 30, 40, 50, 60, 70);
     fillCatalogFamily(region12);
 
-    TableName tableName2 = TableName.valueOf(name.getMethodName() + "_2");
+    TableName tableName2 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "_2");
     RegionInfo region21 =
       RegionInfoBuilder.newBuilder(tableName2).setEndKey(Bytes.toBytes(1)).build();
     addBarrier(region21, 100, 200, 300, 400);
@@ -220,8 +211,8 @@ public class TestReplicationBarrierCleaner {
   }
 
   @Test
-  public void testDeleteBarriers() throws IOException, ReplicationException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testDeleteBarriers(TestInfo testInfo) throws IOException, ReplicationException {
+    TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     RegionInfo region = RegionInfoBuilder.newBuilder(tableName).build();
     addBarrier(region, 10, 20, 30, 40, 50, 60);
     // two peers
@@ -260,8 +251,9 @@ public class TestReplicationBarrierCleaner {
   }
 
   @Test
-  public void testDeleteRowForDeletedRegion() throws IOException, ReplicationException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testDeleteRowForDeletedRegion(TestInfo testInfo)
+    throws IOException, ReplicationException {
+    TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     RegionInfo region = RegionInfoBuilder.newBuilder(tableName).build();
     addBarrier(region, 40, 50, 60);
     fillCatalogFamily(region);
@@ -290,8 +282,8 @@ public class TestReplicationBarrierCleaner {
   }
 
   @Test
-  public void testDeleteRowForDeletedRegionNoPeers() throws IOException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testDeleteRowForDeletedRegionNoPeers(TestInfo testInfo) throws IOException {
+    TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     RegionInfo region = RegionInfoBuilder.newBuilder(tableName).build();
     addBarrier(region, 40, 50, 60);
 

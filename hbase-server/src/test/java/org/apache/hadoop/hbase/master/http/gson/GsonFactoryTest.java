@@ -17,32 +17,27 @@
  */
 package org.apache.hadoop.hbase.master.http.gson;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Map;
 import java.util.TreeMap;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class GsonFactoryTest {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(GsonFactoryTest.class);
 
   private static Gson gson;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() {
     gson = GsonFactory.buildGson();
   }
