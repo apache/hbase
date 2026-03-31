@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
@@ -122,6 +123,7 @@ public class MockMasterServices extends MockNoopMasterServices {
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
     this.serverManager = new ServerManager(this, new DummyRegionServerList());
     this.tableStateManager = mock(TableStateManager.class);
+    assignmentManager.initializationPostMetaOnline();
     when(this.tableStateManager.getTableState(any())).thenReturn(new TableState(
       TableName.valueOf("AnyTableNameSetInMockMasterServcies"), TableState.State.ENABLED));
 
@@ -305,7 +307,8 @@ public class MockMasterServices extends MockNoopMasterServices {
     }
 
     @Override
-    public void updateRegionLocation(RegionStateNode regionNode) throws IOException {
+    public CompletableFuture<Void> updateRegionLocation(RegionStateNode regionNode) {
+      return CompletableFuture.completedFuture(null);
     }
   }
 

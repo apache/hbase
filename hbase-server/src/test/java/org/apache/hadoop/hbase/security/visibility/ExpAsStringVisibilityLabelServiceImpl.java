@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
@@ -273,7 +274,9 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
     final List<String> authLabelsFinal = authLabels;
     return new VisibilityExpEvaluator() {
       @Override
-      public boolean evaluate(Cell cell) throws IOException {
+      public boolean evaluate(Cell c) throws IOException {
+        assert c instanceof ExtendedCell;
+        ExtendedCell cell = (ExtendedCell) c;
         boolean visibilityTagPresent = false;
         // Save an object allocation where we can
         if (cell.getTagsLength() > 0) {

@@ -159,10 +159,10 @@ public class ZstdCodec implements Configurable, CompressionCodec {
   // Package private
 
   static int getBufferSize(Configuration conf) {
-    return conf.getInt(ZSTD_BUFFER_SIZE_KEY,
+    int size = conf.getInt(ZSTD_BUFFER_SIZE_KEY,
       conf.getInt(CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_BUFFER_SIZE_KEY,
-        // IO_COMPRESSION_CODEC_ZSTD_BUFFER_SIZE_DEFAULT is 0! We can't allow that.
-        ZSTD_BUFFER_SIZE_DEFAULT));
+        CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_BUFFER_SIZE_DEFAULT));
+    return size > 0 ? size : ZSTD_BUFFER_SIZE_DEFAULT;
   }
 
 }

@@ -35,6 +35,7 @@ import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.PrivateConstants;
@@ -402,6 +403,11 @@ public abstract class Compactor<T extends CellSink> {
 
   protected abstract void abortWriter(T writer) throws IOException;
 
+  protected List<ExtendedCell> decorateCells(List<ExtendedCell> cells) {
+    // no op
+    return cells;
+  }
+
   /**
    * Performs the compaction.
    * @param fd                FileDetails of cell sink writer
@@ -422,7 +428,7 @@ public abstract class Compactor<T extends CellSink> {
     long bytesWrittenProgressForShippedCall = 0;
     // Since scanner.next() can return 'false' but still be delivering data,
     // we have to use a do/while loop.
-    List<Cell> cells = new ArrayList<>();
+    List<ExtendedCell> cells = new ArrayList<>();
     long currentTime = EnvironmentEdgeManager.currentTime();
     long lastMillis = 0;
     if (LOG.isDebugEnabled()) {
@@ -439,11 +445,20 @@ public abstract class Compactor<T extends CellSink> {
 
     throughputController.start(compactionName);
     Shipper shipper = (scanner instanceof Shipper) ? (Shipper) scanner : null;
-    long shippedCallSizeLimit =
-      (long) request.getFiles().size() * this.store.getColumnFamilyDescriptor().getBlocksize();
+    // when hitting the block size limit, i.e, compactScannerSizeLimit, we need to reset the block
+    // size progress otherwise the scanner will only return 1 cell in the next method because all
+    // the block scanned are still referenced, so we need to call shipped to release them.
+    // Usually compactScannerSizeLimit will be much greater than blockSize * fileSize, but anyway,
+    // let's use Math.min for safety.
+    // See HBASE-29742
+    long shippedCallSizeLimit = Math.min(compactScannerSizeLimit,
+      (long) request.getFiles().size() * this.store.getColumnFamilyDescriptor().getBlocksize());
     try {
       do {
-        hasMore = scanner.next(cells, scannerContext);
+        // InternalScanner is for CPs so we do not want to leak ExtendedCell to the interface, but
+        // all the server side implementation should only add ExtendedCell to the List, otherwise it
+        // will cause serious assertions in our code
+        hasMore = scanner.next((List) cells, scannerContext);
         currentTime = EnvironmentEdgeManager.currentTime();
         if (LOG.isDebugEnabled()) {
           now = currentTime;
@@ -455,7 +470,8 @@ public abstract class Compactor<T extends CellSink> {
         // output to writer:
         Cell lastCleanCell = null;
         long lastCleanCellSeqId = 0;
-        for (Cell c : cells) {
+        cells = decorateCells(cells);
+        for (ExtendedCell c : cells) {
           if (cleanSeqId && c.getSequenceId() <= smallestReadPoint) {
             lastCleanCell = c;
             lastCleanCellSeqId = c.getSequenceId();
@@ -464,7 +480,6 @@ public abstract class Compactor<T extends CellSink> {
             lastCleanCell = null;
             lastCleanCellSeqId = 0;
           }
-          writer.append(c);
           int len = c.getSerializedSize();
           ++progress.currentCompactedKVs;
           progress.totalCompactedSize += len;
@@ -478,25 +493,33 @@ public abstract class Compactor<T extends CellSink> {
             return false;
           }
         }
-        if (shipper != null && bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
-          if (lastCleanCell != null) {
-            // HBASE-16931, set back sequence id to avoid affecting scan order unexpectedly.
-            // ShipperListener will do a clone of the last cells it refer, so need to set back
-            // sequence id before ShipperListener.beforeShipped
-            PrivateCellUtil.setSequenceId(lastCleanCell, lastCleanCellSeqId);
+        writer.appendAll(cells);
+        if (bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
+          if (shipper != null) {
+            if (lastCleanCell != null) {
+              // HBASE-16931, set back sequence id to avoid affecting scan order unexpectedly.
+              // ShipperListener will do a clone of the last cells it refer, so need to set back
+              // sequence id before ShipperListener.beforeShipped
+              PrivateCellUtil.setSequenceId(lastCleanCell, lastCleanCellSeqId);
+            }
+            // Clone the cells that are in the writer so that they are freed of references,
+            // if they are holding any.
+            ((ShipperListener) writer).beforeShipped();
+            // The SHARED block references, being read for compaction, will be kept in prevBlocks
+            // list(See HFileScannerImpl#prevBlocks). In case of scan flow, after each set of cells
+            // being returned to client, we will call shipped() which can clear this list. Here by
+            // we are doing the similar thing. In between the compaction (after every N cells
+            // written with collective size of 'shippedCallSizeLimit') we will call shipped which
+            // may clear prevBlocks list.
+            shipper.shipped();
           }
-          // Clone the cells that are in the writer so that they are freed of references,
-          // if they are holding any.
-          ((ShipperListener) writer).beforeShipped();
-          // The SHARED block references, being read for compaction, will be kept in prevBlocks
-          // list(See HFileScannerImpl#prevBlocks). In case of scan flow, after each set of cells
-          // being returned to client, we will call shipped() which can clear this list. Here by
-          // we are doing the similar thing. In between the compaction (after every N cells
-          // written with collective size of 'shippedCallSizeLimit') we will call shipped which
-          // may clear prevBlocks list.
-          shipper.shipped();
+          // clear the block progress in ScannerContext, so we can reuse it. In normal rpc call,
+          // ScannerContext will be dropped after shipping, so we do not need to clear the block
+          // progress there
+          scannerContext.clearBlockSizeProgress();
           bytesWrittenProgressForShippedCall = 0;
         }
+
         if (lastCleanCell != null) {
           // HBASE-16931, set back sequence id to avoid affecting scan order unexpectedly
           PrivateCellUtil.setSequenceId(lastCleanCell, lastCleanCellSeqId);

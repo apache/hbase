@@ -53,6 +53,8 @@ message SlowLogPayload {
   repeated NameBytesPair connection_attribute = 18;
   repeated NameBytesPair request_attribute = 19;
 
+  optional int64 fs_read_time = 20;
+
   // SLOW_LOG is RPC call slow in nature whereas LARGE_LOG is RPC call quite large.
   // Majority of times, slow logs are also large logs and hence, ALL is combination of
   // both

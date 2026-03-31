@@ -23,14 +23,20 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 class ServletConfig {
-  private String name;
-  private String pathSpec;
-  private String clazz;
+  private final String name;
+  private final String pathSpec;
+  private final String clazz;
+  private final boolean expected;
 
   public ServletConfig(String name, String pathSpec, String clazz) {
+    this(name, pathSpec, clazz, true);
+  }
+
+  public ServletConfig(String name, String pathSpec, String clazz, boolean expected) {
     this.name = name;
     this.pathSpec = pathSpec;
     this.clazz = clazz;
+    this.expected = expected;
   }
 
   public String getName() {
@@ -43,5 +49,9 @@ class ServletConfig {
 
   public String getClazz() {
     return clazz;
+  }
+
+  public boolean isExpected() {
+    return expected;
   }
 }

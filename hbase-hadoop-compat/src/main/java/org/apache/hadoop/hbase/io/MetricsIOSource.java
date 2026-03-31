@@ -47,6 +47,9 @@ public interface MetricsIOSource extends BaseSource {
   String FS_PREAD_TIME_HISTO_KEY = "fsPReadTime";
   String FS_WRITE_HISTO_KEY = "fsWriteTime";
 
+  String SLOW_FS_READS_KEY = "fsSlowReadsCount";
+  String SLOW_FS_READS_DESC = "Number of HFile reads which were slower than a configured threshold";
+
   String CHECKSUM_FAILURES_KEY = "fsChecksumFailureCount";
 
   String FS_READ_TIME_HISTO_DESC =
@@ -76,4 +79,6 @@ public interface MetricsIOSource extends BaseSource {
    * @param t time it took, in milliseconds
    */
   void updateFsWriteTime(long t);
+
+  void incrSlowFsRead();
 }

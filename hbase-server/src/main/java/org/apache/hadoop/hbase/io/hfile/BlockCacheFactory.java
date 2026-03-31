@@ -18,14 +18,17 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_IOENGINE_KEY;
+import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_PERSISTENT_PATH_KEY;
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -46,18 +49,6 @@ public final class BlockCacheFactory {
    */
   public static final String BLOCKCACHE_POLICY_KEY = "hfile.block.cache.policy";
   public static final String BLOCKCACHE_POLICY_DEFAULT = "LRU";
-
-  /**
-   * If the chosen ioengine can persist its state across restarts, the path to the file to persist
-   * to. This file is NOT the data file. It is a file into which we will serialize the map of what
-   * is in the data file. For example, if you pass the following argument as
-   * BUCKET_CACHE_IOENGINE_KEY ("hbase.bucketcache.ioengine"),
-   * <code>file:/tmp/bucketcache.data </code>, then we will write the bucketcache data to the file
-   * <code>/tmp/bucketcache.data</code> but the metadata on where the data is in the supplied file
-   * is an in-memory map that needs to be persisted across restarts. Where to store this in-memory
-   * state is what you supply here: e.g. <code>/tmp/bucketcache.map</code>.
-   */
-  public static final String BUCKET_CACHE_PERSISTENT_PATH_KEY = "hbase.bucketcache.persistent.path";
 
   public static final String BUCKET_CACHE_WRITER_THREADS_KEY = "hbase.bucketcache.writer.threads";
 
@@ -91,10 +82,33 @@ public final class BlockCacheFactory {
   @Deprecated
   static final String DEPRECATED_BLOCKCACHE_BLOCKSIZE_KEY = "hbase.offheapcache.minblocksize";
 
+  /**
+   * The window period length in minutes for CacheStats rolling metrics.
+   */
+  public static final String BLOCKCACHE_STATS_PERIOD_MINUTES_KEY =
+    "hbase.blockcache.stats.period.minutes";
+
+  /**
+   * Default window period length in minutes.
+   */
+  public static final int DEFAULT_BLOCKCACHE_STATS_PERIOD_MINUTES = 5;
+
+  /**
+   * The total number of periods in the window.
+   */
+  public static final String BLOCKCACHE_STATS_PERIODS = "hbase.blockcache.stats.periods";
+
+  /**
+   * Default number of periods in the window. We define 12 periods of 5 minutes to give an hourly
+   * split of 5 minutes periods.
+   */
+  public static final int DEFAULT_BLOCKCACHE_STATS_PERIODS = 12;
+
   private BlockCacheFactory() {
   }
 
-  public static BlockCache createBlockCache(Configuration conf) {
+  public static BlockCache createBlockCache(Configuration conf,
+    Map<String, HRegion> onlineRegions) {
     FirstLevelBlockCache l1Cache = createFirstLevelCache(conf);
     if (l1Cache == null) {
       return null;
@@ -107,7 +121,7 @@ public final class BlockCacheFactory {
         : new InclusiveCombinedBlockCache(l1Cache, l2CacheInstance);
     } else {
       // otherwise use the bucket cache.
-      BucketCache bucketCache = createBucketCache(conf);
+      BucketCache bucketCache = createBucketCache(conf, onlineRegions);
       if (!conf.getBoolean("hbase.bucketcache.combinedcache.enabled", true)) {
         // Non combined mode is off from 2.0
         LOG.warn(
@@ -115,6 +129,10 @@ public final class BlockCacheFactory {
       }
       return bucketCache == null ? l1Cache : new CombinedBlockCache(l1Cache, bucketCache);
     }
+  }
+
+  public static BlockCache createBlockCache(Configuration conf) {
+    return createBlockCache(conf, null);
   }
 
   private static FirstLevelBlockCache createFirstLevelCache(final Configuration c) {
@@ -190,7 +208,8 @@ public final class BlockCacheFactory {
 
   }
 
-  private static BucketCache createBucketCache(Configuration c) {
+  private static BucketCache createBucketCache(Configuration c,
+    Map<String, HRegion> onlineRegions) {
     // Check for L2. ioengine name must be non-null.
     String bucketCacheIOEngineName = c.get(BUCKET_CACHE_IOENGINE_KEY, null);
     if (bucketCacheIOEngineName == null || bucketCacheIOEngineName.length() <= 0) {
@@ -236,7 +255,8 @@ public final class BlockCacheFactory {
           BucketCache.DEFAULT_ERROR_TOLERATION_DURATION);
       // Bucket cache logs its stats on creation internal to the constructor.
       bucketCache = new BucketCache(bucketCacheIOEngineName, bucketCacheSize, blockSize,
-        bucketSizes, writerThreads, writerQueueLen, persistentPath, ioErrorsTolerationDuration, c);
+        bucketSizes, writerThreads, writerQueueLen, persistentPath, ioErrorsTolerationDuration, c,
+        onlineRegions);
     } catch (IOException ioex) {
       LOG.error("Can't instantiate bucket cache", ioex);
       throw new RuntimeException(ioex);

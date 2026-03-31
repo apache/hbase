@@ -264,7 +264,9 @@ public class TestMasterProcedureSchedulerConcurrency {
       boolean waiting = true;
       while (waiting && queue.size() > 0) {
         proc = queue.poll(100000000L);
-        if (proc == null) continue;
+        if (proc == null) {
+          continue;
+        }
         switch (getTableOperationType(proc)) {
           case CREATE:
           case DELETE:
@@ -294,6 +296,7 @@ public class TestMasterProcedureSchedulerConcurrency {
         default:
           throw new UnsupportedOperationException();
       }
+      queue.completionCleanup(proc);
     }
 
     public TableName getTableName(Procedure proc) {

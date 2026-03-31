@@ -35,9 +35,10 @@ import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -247,7 +248,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   /****************************** Region related hooks ******************************/
 
   @Override
-  public void postOpen(ObserverContext<RegionCoprocessorEnvironment> e) {
+  public void postOpen(ObserverContext<? extends RegionCoprocessorEnvironment> e) {
     // Read the entire labels table and populate the zk
     if (e.getEnvironment().getRegion().getRegionInfo().getTable().equals(LABELS_TABLE_NAME)) {
       this.labelsRegion = true;
@@ -279,7 +280,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   }
 
   @Override
-  public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+  public void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
     if (c.getEnvironment().getRegion().getRegionInfo().getTable().isSystemTable()) {
       return;
@@ -299,8 +300,9 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
       boolean sanityFailure = false;
       boolean modifiedTagFound = false;
       Pair<Boolean, Tag> pair = new Pair<>(false, null);
-      for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
-        pair = checkForReservedVisibilityTagPresence(cellScanner.current(), pair);
+      for (ExtendedCellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
+        ExtendedCell cell = cellScanner.current();
+        pair = checkForReservedVisibilityTagPresence(cell, pair);
         if (!pair.getFirst()) {
           // Don't disallow reserved tags if authorization is disabled
           if (authorizationEnabled) {
@@ -338,21 +340,21 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
             }
           }
           if (visibilityTags != null) {
-            List<Cell> updatedCells = new ArrayList<>();
-            for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
-              Cell cell = cellScanner.current();
+            List<ExtendedCell> updatedCells = new ArrayList<>();
+            for (ExtendedCellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
+              ExtendedCell cell = cellScanner.current();
               List<Tag> tags = PrivateCellUtil.getTags(cell);
               if (modifiedTagFound) {
                 // Rewrite the tags by removing the modified tags.
                 removeReplicationVisibilityTag(tags);
               }
               tags.addAll(visibilityTags);
-              Cell updatedCell = PrivateCellUtil.createCell(cell, tags);
+              ExtendedCell updatedCell = PrivateCellUtil.createCell(cell, tags);
               updatedCells.add(updatedCell);
             }
             m.getFamilyCellMap().clear();
             // Clear and add new Cells to the Mutation.
-            for (Cell cell : updatedCells) {
+            for (ExtendedCell cell : updatedCells) {
               if (m instanceof Put) {
                 Put p = (Put) m;
                 p.add(cell);
@@ -368,8 +370,9 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   }
 
   @Override
-  public void prePrepareTimeStampForDeleteVersion(ObserverContext<RegionCoprocessorEnvironment> ctx,
-    Mutation delete, Cell cell, byte[] byteNow, Get get) throws IOException {
+  public void prePrepareTimeStampForDeleteVersion(
+    ObserverContext<? extends RegionCoprocessorEnvironment> ctx, Mutation delete, Cell cell,
+    byte[] byteNow, Get get) throws IOException {
     // Nothing to do if we are not filtering by visibility
     if (!authorizationEnabled) {
       return;
@@ -430,7 +433,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
    * @return If the boolean is false then it indicates that the cell has a RESERVERD_VIS_TAG and
    *         with boolean as true, not null tag indicates that a string modified tag was found.
    */
-  private Pair<Boolean, Tag> checkForReservedVisibilityTagPresence(Cell cell,
+  private Pair<Boolean, Tag> checkForReservedVisibilityTagPresence(ExtendedCell cell,
     Pair<Boolean, Tag> pair) throws IOException {
     if (pair == null) {
       pair = new Pair<>(false, null);
@@ -480,7 +483,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   }
 
   @Override
-  public void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> e, Scan scan)
+  public void preScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> e, Scan scan)
     throws IOException {
     if (!initialized) {
       throw new VisibilityControllerNotReadyException("VisibilityController not yet initialized!");
@@ -520,7 +523,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
 
   @Override
   public DeleteTracker postInstantiateDeleteTracker(
-    ObserverContext<RegionCoprocessorEnvironment> ctx, DeleteTracker delTracker)
+    ObserverContext<? extends RegionCoprocessorEnvironment> ctx, DeleteTracker delTracker)
     throws IOException {
     // Nothing to do if we are not filtering by visibility
     if (!authorizationEnabled) {
@@ -540,8 +543,9 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   }
 
   @Override
-  public RegionScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-    final Scan scan, final RegionScanner s) throws IOException {
+  public RegionScanner postScannerOpen(
+    final ObserverContext<? extends RegionCoprocessorEnvironment> c, final Scan scan,
+    final RegionScanner s) throws IOException {
     User user = VisibilityUtils.getActiveUser();
     if (user != null && user.getShortName() != null) {
       scannerOwners.put(s, user.getShortName());
@@ -550,7 +554,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   }
 
   @Override
-  public boolean preScannerNext(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public boolean preScannerNext(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final InternalScanner s, final List<Result> result, final int limit, final boolean hasNext)
     throws IOException {
     requireScannerOwner(s);
@@ -558,13 +562,13 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   }
 
   @Override
-  public void preScannerClose(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public void preScannerClose(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final InternalScanner s) throws IOException {
     requireScannerOwner(s);
   }
 
   @Override
-  public void postScannerClose(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public void postScannerClose(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final InternalScanner s) throws IOException {
     // clean up any associated owner mapping
     scannerOwners.remove(s);
@@ -584,8 +588,8 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   }
 
   @Override
-  public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get, List<Cell> results)
-    throws IOException {
+  public void preGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> e, Get get,
+    List<Cell> results) throws IOException {
     if (!initialized) {
       throw new VisibilityControllerNotReadyException("VisibilityController not yet initialized");
     }
@@ -627,29 +631,29 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
 
   @Override
   public List<Pair<Cell, Cell>> postIncrementBeforeWAL(
-    ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+    ObserverContext<? extends RegionCoprocessorEnvironment> ctx, Mutation mutation,
     List<Pair<Cell, Cell>> cellPairs) throws IOException {
     List<Pair<Cell, Cell>> resultPairs = new ArrayList<>(cellPairs.size());
     for (Pair<Cell, Cell> pair : cellPairs) {
-      resultPairs
-        .add(new Pair<>(pair.getFirst(), createNewCellWithTags(mutation, pair.getSecond())));
+      resultPairs.add(new Pair<>(pair.getFirst(),
+        createNewCellWithTags(mutation, (ExtendedCell) pair.getSecond())));
     }
     return resultPairs;
   }
 
   @Override
   public List<Pair<Cell, Cell>> postAppendBeforeWAL(
-    ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+    ObserverContext<? extends RegionCoprocessorEnvironment> ctx, Mutation mutation,
     List<Pair<Cell, Cell>> cellPairs) throws IOException {
     List<Pair<Cell, Cell>> resultPairs = new ArrayList<>(cellPairs.size());
     for (Pair<Cell, Cell> pair : cellPairs) {
-      resultPairs
-        .add(new Pair<>(pair.getFirst(), createNewCellWithTags(mutation, pair.getSecond())));
+      resultPairs.add(new Pair<>(pair.getFirst(),
+        createNewCellWithTags(mutation, (ExtendedCell) pair.getSecond())));
     }
     return resultPairs;
   }
 
-  private Cell createNewCellWithTags(Mutation mutation, Cell newCell) throws IOException {
+  private Cell createNewCellWithTags(Mutation mutation, ExtendedCell newCell) throws IOException {
     List<Tag> tags = Lists.newArrayList();
     CellVisibility cellVisibility = null;
     try {
@@ -983,7 +987,12 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
     @Override
     public ReturnCode filterCell(final Cell cell) throws IOException {
       List<Tag> putVisTags = new ArrayList<>();
-      Byte putCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(cell, putVisTags);
+      Byte putCellVisTagsFormat = null;
+      if (cell instanceof ExtendedCell) {
+        putCellVisTagsFormat =
+          VisibilityUtils.extractVisibilityTags((ExtendedCell) cell, putVisTags);
+      }
+
       if (putVisTags.isEmpty() && deleteCellVisTags.isEmpty()) {
         // Early out if there are no tags in the cell
         return ReturnCode.INCLUDE;

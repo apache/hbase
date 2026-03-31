@@ -110,7 +110,8 @@ public class TestExceptionInUnassignedRegion {
   public static class ThrowInCloseCP implements RegionCoprocessor, RegionObserver {
 
     @Override
-    public void preClose(ObserverContext<RegionCoprocessorEnvironment> c, boolean abortRequested) {
+    public void preClose(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      boolean abortRequested) {
       if (!c.getEnvironment().getRegion().getRegionInfo().getTable().isSystemTable()) {
         throw new RuntimeException();
       }

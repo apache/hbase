@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.procedure2.store.wal;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -30,11 +31,11 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -48,11 +49,10 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -61,11 +61,9 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.Int64Value;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestWALProcedureStore {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALProcedureStore.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWALProcedureStore.class);
 
@@ -73,7 +71,7 @@ public class TestWALProcedureStore {
 
   private WALProcedureStore procStore;
 
-  private HBaseCommonTestingUtil htu;
+  private final HBaseCommonTestingUtil htu = new HBaseCommonTestingUtil();
   private FileSystem fs;
   private Path testDir;
   private Path logDir;
@@ -82,15 +80,15 @@ public class TestWALProcedureStore {
     conf.setBoolean(WALProcedureStore.EXEC_WAL_CLEANUP_ON_LOAD_CONF_KEY, true);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
-    htu = new HBaseCommonTestingUtil();
     testDir = htu.getDataTestDir();
     htu.getConfiguration().set(HConstants.HBASE_DIR, testDir.toString());
     fs = testDir.getFileSystem(htu.getConfiguration());
     htu.getConfiguration().set(HConstants.HBASE_DIR, testDir.toString());
     assertTrue(testDir.depth() > 1);
 
+    TestSequentialProcedure.seqId.set(0);
     setupConfig(htu.getConfiguration());
     logDir = new Path(testDir, "proc-logs");
     procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), logDir);
@@ -99,7 +97,7 @@ public class TestWALProcedureStore {
     procStore.load(new LoadCounter());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     procStore.stop(false);
     fs.delete(logDir, true);
@@ -170,8 +168,8 @@ public class TestWALProcedureStore {
     for (int i = 0; i < deleteOrder.length; i++) {
       procStore.delete(procs[deleteOrder[i]].getProcId());
       procStore.removeInactiveLogsForTesting();
-      assertFalse(logs.get(deleteOrder[i]).toString(),
-        procStore.getActiveLogs().contains(logs.get(deleteOrder[i])));
+      assertFalse(procStore.getActiveLogs().contains(logs.get(deleteOrder[i])),
+        logs.get(deleteOrder[i]).toString());
       assertEquals(procStore.getActiveLogs().size(), procs.length - i);
     }
   }
@@ -421,11 +419,11 @@ public class TestWALProcedureStore {
     final int[] updatedProcs, final int[] nonUpdatedProcs) {
     for (int index : updatedProcs) {
       long procId = procs[index].getProcId();
-      assertTrue("Procedure id : " + procId, tracker.isModified(procId));
+      assertTrue(tracker.isModified(procId), "Procedure id : " + procId);
     }
     for (int index : nonUpdatedProcs) {
       long procId = procs[index].getProcId();
-      assertFalse("Procedure id : " + procId, tracker.isModified(procId));
+      assertFalse(tracker.isModified(procId), "Procedure id : " + procId);
     }
   }
 
@@ -433,13 +431,13 @@ public class TestWALProcedureStore {
     final int[] deletedProcs, final int[] nonDeletedProcs) {
     for (int index : deletedProcs) {
       long procId = procs[index].getProcId();
-      assertEquals("Procedure id : " + procId, ProcedureStoreTracker.DeleteState.YES,
-        tracker.isDeleted(procId));
+      assertEquals(ProcedureStoreTracker.DeleteState.YES, tracker.isDeleted(procId),
+        "Procedure id : " + procId);
     }
     for (int index : nonDeletedProcs) {
       long procId = procs[index].getProcId();
-      assertEquals("Procedure id : " + procId, ProcedureStoreTracker.DeleteState.NO,
-        tracker.isDeleted(procId));
+      assertEquals(ProcedureStoreTracker.DeleteState.NO, tracker.isDeleted(procId),
+        "Procedure id : " + procId);
     }
   }
 
@@ -522,7 +520,7 @@ public class TestWALProcedureStore {
 
     LoadCounter loader = new LoadCounter();
     storeRestart(loader);
-    assertTrue(procStore.getCorruptedLogs() != null);
+    assertNotNull(procStore.getCorruptedLogs());
     assertEquals(1, procStore.getCorruptedLogs().size());
     assertEquals(87, loader.getLoadedCount());
     assertEquals(0, loader.getCorruptedCount());
@@ -557,7 +555,7 @@ public class TestWALProcedureStore {
     // the first log was removed,
     // we have insert-txn and updates in the others so everything is fine
     FileStatus[] logs = fs.listStatus(logDir);
-    assertEquals(Arrays.toString(logs), 2, logs.length);
+    assertEquals(2, logs.length, Arrays.toString(logs));
     Arrays.sort(logs, new Comparator<FileStatus>() {
       @Override
       public int compare(FileStatus o1, FileStatus o2) {
@@ -577,9 +575,9 @@ public class TestWALProcedureStore {
     assertEquals(0, loader.getLoadedCount());
     assertEquals(rootProcs.length, loader.getCorruptedCount());
     for (Procedure<?> proc : loader.getCorrupted()) {
-      assertTrue(proc.toString(), proc.getParentProcId() <= rootProcs.length);
-      assertTrue(proc.toString(),
-        proc.getProcId() > rootProcs.length && proc.getProcId() <= (rootProcs.length * 2));
+      assertTrue(proc.getParentProcId() <= rootProcs.length, proc.toString());
+      assertTrue(proc.getProcId() > rootProcs.length && proc.getProcId() <= (rootProcs.length * 2),
+        proc.toString());
     }
   }
 
@@ -788,7 +786,7 @@ public class TestWALProcedureStore {
       restartAndAssert(procId != count ? count : 0, count - (i + 1), 0, 0);
     }
     procStore.removeInactiveLogsForTesting();
-    assertEquals("WALs=" + procStore.getActiveLogs(), 1, procStore.getActiveLogs().size());
+    assertEquals(1, procStore.getActiveLogs().size(), "WALs=" + procStore.getActiveLogs());
   }
 
   @Test
@@ -835,10 +833,11 @@ public class TestWALProcedureStore {
   }
 
   public static class TestSequentialProcedure extends SequentialProcedure<Void> {
-    private static long seqid = 0;
+
+    private static final AtomicLong seqId = new AtomicLong(0);
 
     public TestSequentialProcedure() {
-      setProcId(++seqid);
+      setProcId(seqId.incrementAndGet());
     }
 
     @Override

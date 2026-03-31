@@ -142,8 +142,15 @@ class MasterRegionFlusherAndCompactor implements Closeable {
       Path globalStoreArchiveDir = HFileArchiveUtil.getStoreArchivePathForArchivePath(
         globalArchivePath, region.getRegionInfo(), store.getColumnFamilyDescriptor().getName());
       try {
-        MasterRegionUtils.moveFilesUnderDir(fs, storeArchiveDir, globalStoreArchiveDir,
-          archivedHFileSuffix);
+        if (fs.exists(storeArchiveDir)) {
+          MasterRegionUtils.moveFilesUnderDir(fs, storeArchiveDir, globalStoreArchiveDir,
+            archivedHFileSuffix);
+        } else {
+          LOG.warn(
+            "Archived dir {} does not exist, there is no need to move archived hfiles from {} "
+              + "to global dir {} .",
+            storeArchiveDir, storeArchiveDir, globalStoreArchiveDir);
+        }
       } catch (IOException e) {
         LOG.warn("Failed to move archived hfiles from {} to global dir {}", storeArchiveDir,
           globalStoreArchiveDir, e);

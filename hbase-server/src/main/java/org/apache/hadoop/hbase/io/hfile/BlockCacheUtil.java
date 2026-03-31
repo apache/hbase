@@ -17,15 +17,24 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.apache.hadoop.hbase.io.hfile.HFileBlock.FILL_HEADER;
+
 import java.io.IOException;
+import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -50,29 +59,30 @@ public class BlockCacheUtil {
   /**
    * Needed generating JSON.
    */
-  private static final Gson GSON = GsonUtil.createGson()
-    .registerTypeAdapter(FastLongHistogram.class, new TypeAdapter<FastLongHistogram>() {
+  private static final Gson GSON =
+    GsonUtil.createGson().excludeFieldsWithModifiers(Modifier.PRIVATE)
+      .registerTypeAdapter(FastLongHistogram.class, new TypeAdapter<FastLongHistogram>() {
 
-      @Override
-      public void write(JsonWriter out, FastLongHistogram value) throws IOException {
-        AgeSnapshot snapshot = new AgeSnapshot(value);
-        out.beginObject();
-        out.name("mean").value(snapshot.getMean());
-        out.name("min").value(snapshot.getMin());
-        out.name("max").value(snapshot.getMax());
-        out.name("75thPercentile").value(snapshot.get75thPercentile());
-        out.name("95thPercentile").value(snapshot.get95thPercentile());
-        out.name("98thPercentile").value(snapshot.get98thPercentile());
-        out.name("99thPercentile").value(snapshot.get99thPercentile());
-        out.name("999thPercentile").value(snapshot.get999thPercentile());
-        out.endObject();
-      }
+        @Override
+        public void write(JsonWriter out, FastLongHistogram value) throws IOException {
+          AgeSnapshot snapshot = new AgeSnapshot(value);
+          out.beginObject();
+          out.name("mean").value(snapshot.getMean());
+          out.name("min").value(snapshot.getMin());
+          out.name("max").value(snapshot.getMax());
+          out.name("75thPercentile").value(snapshot.get75thPercentile());
+          out.name("95thPercentile").value(snapshot.get95thPercentile());
+          out.name("98thPercentile").value(snapshot.get98thPercentile());
+          out.name("99thPercentile").value(snapshot.get99thPercentile());
+          out.name("999thPercentile").value(snapshot.get999thPercentile());
+          out.endObject();
+        }
 
-      @Override
-      public FastLongHistogram read(JsonReader in) throws IOException {
-        throw new UnsupportedOperationException();
-      }
-    }).setPrettyPrinting().create();
+        @Override
+        public FastLongHistogram read(JsonReader in) throws IOException {
+          throw new UnsupportedOperationException();
+        }
+      }).setPrettyPrinting().create();
 
   /** Returns The block content as String. */
   public static String toString(final CachedBlock cb, final long now) {
@@ -238,10 +248,59 @@ public class BlockCacheUtil {
     }
   }
 
+  public static Set<String> listAllFilesNames(Map<String, HRegion> onlineRegions) {
+    Set<String> files = new HashSet<>();
+    onlineRegions.values().forEach(r -> {
+      r.getStores().forEach(s -> {
+        s.getStorefiles().forEach(f -> files.add(f.getPath().getName()));
+      });
+    });
+    return files;
+  }
+
   private static final int DEFAULT_MAX = 1000000;
 
   public static int getMaxCachedBlocksByFile(Configuration conf) {
     return conf == null ? DEFAULT_MAX : conf.getInt("hbase.ui.blockcache.by.file.max", DEFAULT_MAX);
+  }
+
+  /**
+   * Similarly to HFileBlock.Writer.getBlockForCaching(), creates a HFileBlock instance without
+   * checksum for caching. This is needed for when we cache blocks via readers (either prefetch or
+   * client read), otherwise we may fail equality comparison when checking against same block that
+   * may already have been cached at write time.
+   * @param cacheConf the related CacheConfig object.
+   * @param block     the HFileBlock instance to be converted.
+   * @return the resulting HFileBlock instance without checksum.
+   */
+  public static HFileBlock getBlockForCaching(CacheConfig cacheConf, HFileBlock block) {
+    // Calculate how many bytes we need for checksum on the tail of the block.
+    int numBytes = cacheConf.shouldCacheCompressed(block.getBlockType().getCategory())
+      ? 0
+      : (int) ChecksumUtil.numBytes(block.getOnDiskDataSizeWithHeader(),
+        block.getHFileContext().getBytesPerChecksum());
+    ByteBuff buff = block.getBufferReadOnly();
+    HFileBlockBuilder builder = new HFileBlockBuilder();
+    return builder.withBlockType(block.getBlockType())
+      .withOnDiskSizeWithoutHeader(block.getOnDiskSizeWithoutHeader())
+      .withUncompressedSizeWithoutHeader(block.getUncompressedSizeWithoutHeader())
+      .withPrevBlockOffset(block.getPrevBlockOffset()).withByteBuff(buff)
+      .withFillHeader(FILL_HEADER).withOffset(block.getOffset())
+      .withOnDiskDataSizeWithHeader(block.getOnDiskDataSizeWithHeader() + numBytes)
+      .withNextBlockOnDiskSize(block.getNextBlockOnDiskSize())
+      .withHFileContext(cloneContext(block.getHFileContext()))
+      .withByteBuffAllocator(cacheConf.getByteBuffAllocator()).withShared(!buff.hasArray()).build();
+  }
+
+  public static HFileContext cloneContext(HFileContext context) {
+    HFileContext newContext = new HFileContextBuilder().withBlockSize(context.getBlocksize())
+      .withBytesPerCheckSum(0).withChecksumType(ChecksumType.NULL) // no checksums in cached data
+      .withCompression(context.getCompression())
+      .withDataBlockEncoding(context.getDataBlockEncoding())
+      .withHBaseCheckSum(context.isUseHBaseChecksum()).withCompressTags(context.isCompressTags())
+      .withIncludesMvcc(context.isIncludesMvcc()).withIncludesTags(context.isIncludesTags())
+      .withColumnFamily(context.getColumnFamily()).withTableName(context.getTableName()).build();
+    return newContext;
   }
 
   /**

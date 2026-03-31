@@ -17,18 +17,25 @@
  */
 package org.apache.hadoop.hbase.http;
 
+import java.util.EnumSet;
+import javax.servlet.DispatcherType;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.org.eclipse.jetty.security.ConstraintMapping;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.security.ConstraintSecurityHandler;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletContextHandler;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.util.security.Constraint;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.nested.ServletConstraint;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.security.ConstraintMapping;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.security.ConstraintSecurityHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.FilterHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.ServletContextHandler;
 
 /**
  * HttpServer utility.
  */
 @InterfaceAudience.Private
 public final class HttpServerUtil {
+
+  public static final String PATH_SPEC_ANY = "/*";
+
   /**
    * Add constraints to a Jetty Context to disallow undesirable Http methods.
    * @param ctxHandler         The context to modify
@@ -36,7 +43,7 @@ public final class HttpServerUtil {
    */
   public static void constrainHttpMethods(ServletContextHandler ctxHandler,
     boolean allowOptionsMethod) {
-    Constraint c = new Constraint();
+    ServletConstraint c = new ServletConstraint();
     c.setAuthenticate(true);
 
     ConstraintMapping cmt = new ConstraintMapping();
@@ -57,6 +64,24 @@ public final class HttpServerUtil {
     }
 
     ctxHandler.setSecurityHandler(securityHandler);
+  }
+
+  public static void addClickjackingPreventionFilter(ServletContextHandler ctxHandler,
+    Configuration conf, String pathSpec) {
+    FilterHolder holder = new FilterHolder();
+    holder.setName("clickjackingprevention");
+    holder.setClassName(ClickjackingPreventionFilter.class.getName());
+    holder.setInitParameters(ClickjackingPreventionFilter.getDefaultParameters(conf));
+    ctxHandler.addFilter(holder, pathSpec, EnumSet.allOf(DispatcherType.class));
+  }
+
+  public static void addSecurityHeadersFilter(ServletContextHandler ctxHandler, Configuration conf,
+    boolean isSecure, String pathSpec) {
+    FilterHolder holder = new FilterHolder();
+    holder.setName("securityheaders");
+    holder.setClassName(SecurityHeadersFilter.class.getName());
+    holder.setInitParameters(SecurityHeadersFilter.getDefaultParameters(conf, isSecure));
+    ctxHandler.addFilter(holder, pathSpec, EnumSet.allOf(DispatcherType.class));
   }
 
   private HttpServerUtil() {

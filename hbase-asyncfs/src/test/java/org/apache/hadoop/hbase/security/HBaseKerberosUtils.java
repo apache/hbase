@@ -18,8 +18,6 @@
 package org.apache.hadoop.hbase.security;
 
 import java.io.File;
-import java.io.IOException;
-import java.net.InetAddress;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.AuthUtil;
@@ -170,23 +168,6 @@ public final class HBaseKerberosUtils {
     keystoresDir.mkdirs();
     String sslConfDir = KeyStoreTestUtil.getClasspathDir(clazz);
     KeyStoreTestUtil.setupSSLConfig(keystoresDir.getAbsolutePath(), sslConfDir, conf, false);
-  }
-
-  public static UserGroupInformation loginAndReturnUGI(Configuration conf, String username)
-    throws IOException {
-    String hostname = InetAddress.getLocalHost().getHostName();
-    String keyTabFileConfKey = "hbase." + username + ".keytab.file";
-    String keyTabFileLocation = conf.get(keyTabFileConfKey);
-    String principalConfKey = "hbase." + username + ".kerberos.principal";
-    String principal = org.apache.hadoop.security.SecurityUtil
-      .getServerPrincipal(conf.get(principalConfKey), hostname);
-    if (keyTabFileLocation == null || principal == null) {
-      LOG.warn(
-        "Principal or key tab file null for : " + principalConfKey + ", " + keyTabFileConfKey);
-    }
-    UserGroupInformation ugi =
-      UserGroupInformation.loginUserFromKeytabAndReturnUGI(principal, keyTabFileLocation);
-    return ugi;
   }
 
   public static UserGroupInformation loginKerberosPrincipal(String krbKeytab, String krbPrincipal)

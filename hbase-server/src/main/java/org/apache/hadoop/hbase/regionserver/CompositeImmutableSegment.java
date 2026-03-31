@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.SortedSet;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -93,7 +94,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
    * @return either the given cell or its clone
    */
   @Override
-  public Cell maybeCloneWithAllocator(Cell cell, boolean forceCloneOfBigCell) {
+  public ExtendedCell maybeCloneWithAllocator(ExtendedCell cell, boolean forceCloneOfBigCell) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
@@ -192,17 +193,17 @@ public class CompositeImmutableSegment extends ImmutableSegment {
 
   // *** Methods for SegmentsScanner
   @Override
-  public Cell last() {
+  public ExtendedCell last() {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
   @Override
-  public Iterator<Cell> iterator() {
+  public Iterator<ExtendedCell> iterator() {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
   @Override
-  public SortedSet<Cell> headSet(Cell firstKeyOnRow) {
+  public SortedSet<ExtendedCell> headSet(ExtendedCell firstKeyOnRow) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
@@ -218,18 +219,18 @@ public class CompositeImmutableSegment extends ImmutableSegment {
 
   /** Returns a set of all cells in the segment */
   @Override
-  protected CellSet getCellSet() {
+  protected CellSet<ExtendedCell> getCellSet() {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
   @Override
-  protected void internalAdd(Cell cell, boolean mslabUsed, MemStoreSizing memstoreSizing,
+  protected void internalAdd(ExtendedCell cell, boolean mslabUsed, MemStoreSizing memstoreSizing,
     boolean sizeAddedPreOperation) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
   @Override
-  protected void updateMetaInfo(Cell cellToAdd, boolean succ, boolean mslabUsed,
+  protected void updateMetaInfo(ExtendedCell cellToAdd, boolean succ, boolean mslabUsed,
     MemStoreSizing memstoreSizing, boolean sizeAddedPreOperation) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
@@ -240,7 +241,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
    * @return a subset of the segment cell set, which starts with the given cell
    */
   @Override
-  protected SortedSet<Cell> tailSet(Cell firstCell) {
+  protected SortedSet<ExtendedCell> tailSet(ExtendedCell firstCell) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 

@@ -19,29 +19,29 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.procedure.DisableTableProcedure;
+import org.apache.hadoop.hbase.master.procedure.MigrateNamespaceTableProcedure;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -66,38 +66,46 @@ public class TableNamespaceManager {
 
   private final MasterServices masterServices;
 
+  private volatile boolean migrationDone;
+
   TableNamespaceManager(MasterServices masterServices) {
     this.masterServices = masterServices;
   }
 
-  private void migrateNamespaceTable() throws IOException {
-    try (Table nsTable = masterServices.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
-      ResultScanner scanner = nsTable.getScanner(
-        new Scan().addFamily(TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES).readAllVersions());
-      BufferedMutator mutator =
-        masterServices.getConnection().getBufferedMutator(TableName.META_TABLE_NAME)) {
-      for (Result result;;) {
-        result = scanner.next();
-        if (result == null) {
-          break;
-        }
-        Put put = new Put(result.getRow());
-        result
-          .getColumnCells(TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES,
-            TableDescriptorBuilder.NAMESPACE_COL_DESC_BYTES)
-          .forEach(c -> put.addColumn(HConstants.NAMESPACE_FAMILY,
-            HConstants.NAMESPACE_COL_DESC_QUALIFIER, c.getTimestamp(), CellUtil.cloneValue(c)));
-        mutator.mutate(put);
+  private void tryMigrateNamespaceTable() throws IOException, InterruptedException {
+    Optional<MigrateNamespaceTableProcedure> opt = masterServices.getProcedures().stream()
+      .filter(p -> p instanceof MigrateNamespaceTableProcedure)
+      .map(p -> (MigrateNamespaceTableProcedure) p).findAny();
+    if (!opt.isPresent()) {
+      // the procedure is not present, check whether have the ns family in meta table
+      TableDescriptor metaTableDesc =
+        masterServices.getTableDescriptors().get(TableName.META_TABLE_NAME);
+      if (metaTableDesc.hasColumnFamily(HConstants.NAMESPACE_FAMILY)) {
+        // normal case, upgrading is done or the cluster is created with 3.x code
+        migrationDone = true;
+      } else {
+        // submit the migration procedure
+        MigrateNamespaceTableProcedure proc = new MigrateNamespaceTableProcedure();
+        masterServices.getMasterProcedureExecutor().submitProcedure(proc);
       }
+    } else {
+      if (opt.get().isFinished()) {
+        // the procedure is already done
+        migrationDone = true;
+      }
+      // we have already submitted the procedure, continue
     }
-    // schedule a disable procedure instead of block waiting here, as when disabling a table we will
-    // wait until master is initialized, but we are part of the initialization...
-    masterServices.getMasterProcedureExecutor().submitProcedure(
-      new DisableTableProcedure(masterServices.getMasterProcedureExecutor().getEnvironment(),
-        TableName.NAMESPACE_TABLE_NAME, false));
   }
 
-  private void loadNamespaceIntoCache() throws IOException {
+  private void addToCache(Result result, byte[] family, byte[] qualifier) throws IOException {
+    Cell cell = result.getColumnLatestCell(family, qualifier);
+    NamespaceDescriptor ns =
+      ProtobufUtil.toNamespaceDescriptor(HBaseProtos.NamespaceDescriptor.parseFrom(CodedInputStream
+        .newInstance(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength())));
+    cache.put(ns.getName(), ns);
+  }
+
+  private void loadFromMeta() throws IOException {
     try (Table table = masterServices.getConnection().getTable(TableName.META_TABLE_NAME);
       ResultScanner scanner = table.getScanner(HConstants.NAMESPACE_FAMILY)) {
       for (Result result;;) {
@@ -105,22 +113,65 @@ public class TableNamespaceManager {
         if (result == null) {
           break;
         }
-        Cell cell = result.getColumnLatestCell(HConstants.NAMESPACE_FAMILY,
-          HConstants.NAMESPACE_COL_DESC_QUALIFIER);
-        NamespaceDescriptor ns = ProtobufUtil
-          .toNamespaceDescriptor(HBaseProtos.NamespaceDescriptor.parseFrom(CodedInputStream
-            .newInstance(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength())));
-        cache.put(ns.getName(), ns);
+        addToCache(result, HConstants.NAMESPACE_FAMILY, HConstants.NAMESPACE_COL_DESC_QUALIFIER);
       }
     }
   }
 
-  public void start() throws IOException {
-    TableState nsTableState = MetaTableAccessor.getTableState(masterServices.getConnection(),
-      TableName.NAMESPACE_TABLE_NAME);
-    if (nsTableState != null && nsTableState.isEnabled()) {
-      migrateNamespaceTable();
+  private void loadFromNamespace() throws IOException {
+    try (Table table = masterServices.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
+      ResultScanner scanner =
+        table.getScanner(TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES)) {
+      for (Result result;;) {
+        result = scanner.next();
+        if (result == null) {
+          break;
+        }
+        addToCache(result, TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES,
+          TableDescriptorBuilder.NAMESPACE_COL_DESC_BYTES);
+      }
     }
+  }
+
+  private boolean shouldLoadFromMeta() throws IOException {
+    if (migrationDone) {
+      return true;
+    }
+    // the implementation is bit tricky
+    // if there is already a disable namespace table procedure or the namespace table is already
+    // disabled, we are safe to read from meta table as the migration is already done. If not, since
+    // we are part of the master initialization work, so we can make sure that when reaching here,
+    // the master has not been marked as initialize yet. And DisableTableProcedure can only be
+    // executed after master is initialized, so here we are safe to read from namespace table,
+    // without worrying about that the namespace table is disabled while we are reading and crash
+    // the master startup.
+    if (
+      masterServices.getTableStateManager().isTableState(TableName.NAMESPACE_TABLE_NAME,
+        TableState.State.DISABLED)
+    ) {
+      return true;
+    }
+    if (
+      masterServices.getProcedures().stream().filter(p -> p instanceof DisableTableProcedure)
+        .anyMatch(
+          p -> ((DisableTableProcedure) p).getTableName().equals(TableName.NAMESPACE_TABLE_NAME))
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  private void loadNamespaceIntoCache() throws IOException {
+    if (shouldLoadFromMeta()) {
+      loadFromMeta();
+    } else {
+      loadFromNamespace();
+    }
+
+  }
+
+  public void start() throws IOException, InterruptedException {
+    tryMigrateNamespaceTable();
     loadNamespaceIntoCache();
   }
 
@@ -135,7 +186,14 @@ public class TableNamespaceManager {
     return cache.get(name);
   }
 
+  private void checkMigrationDone() throws IOException {
+    if (!migrationDone) {
+      throw new HBaseIOException("namespace migration is ongoing, modification is disallowed");
+    }
+  }
+
   public void addOrUpdateNamespace(NamespaceDescriptor ns) throws IOException {
+    checkMigrationDone();
     insertNamespaceToMeta(masterServices.getConnection(), ns);
     cache.put(ns.getName(), ns);
   }
@@ -152,6 +210,7 @@ public class TableNamespaceManager {
   }
 
   public void deleteNamespace(String namespaceName) throws IOException {
+    checkMigrationDone();
     Delete d = new Delete(Bytes.toBytes(namespaceName));
     try (Table table = masterServices.getConnection().getTable(TableName.META_TABLE_NAME)) {
       table.delete(d);
@@ -172,6 +231,10 @@ public class TableNamespaceManager {
       throw new ConstraintException(
         "The max tables quota for " + desc.getName() + " is less than or equal to zero.");
     }
+  }
+
+  public void setMigrationDone() {
+    migrationDone = true;
   }
 
   public static long getMaxTables(NamespaceDescriptor ns) throws IOException {

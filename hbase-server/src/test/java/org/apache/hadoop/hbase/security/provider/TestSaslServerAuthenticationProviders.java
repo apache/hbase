@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -34,23 +33,12 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ SmallTests.class, SecurityTests.class })
+@Tag(SmallTests.TAG)
+@Tag(SecurityTests.TAG)
 public class TestSaslServerAuthenticationProviders {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSaslServerAuthenticationProviders.class);
-
-  @Before
-  public void reset() {
-    // Clear out any potentially bogus state from the providers class
-    SaslServerAuthenticationProviders.reset();
-  }
 
   @Test
   public void testCannotAddTheSameProviderTwice() {
@@ -61,30 +49,11 @@ public class TestSaslServerAuthenticationProviders {
     SaslServerAuthenticationProviders.addProviderIfNotExists(p1, registeredProviders);
     assertEquals(1, registeredProviders.size());
 
-    try {
-      SaslServerAuthenticationProviders.addProviderIfNotExists(p2, registeredProviders);
-    } catch (RuntimeException e) {
-    }
+    assertThrows(RuntimeException.class,
+      () -> SaslServerAuthenticationProviders.addProviderIfNotExists(p2, registeredProviders));
 
-    assertSame("Expected the original provider to be present", p1,
-      registeredProviders.entrySet().iterator().next().getValue());
-  }
-
-  @Test
-  public void testInstanceIsCached() {
-    Configuration conf = HBaseConfiguration.create();
-    SaslServerAuthenticationProviders providers1 =
-      SaslServerAuthenticationProviders.getInstance(conf);
-    SaslServerAuthenticationProviders providers2 =
-      SaslServerAuthenticationProviders.getInstance(conf);
-    assertSame(providers1, providers2);
-
-    SaslServerAuthenticationProviders.reset();
-
-    SaslServerAuthenticationProviders providers3 =
-      SaslServerAuthenticationProviders.getInstance(conf);
-    assertNotSame(providers1, providers3);
-    assertEquals(providers1.getNumRegisteredProviders(), providers3.getNumRegisteredProviders());
+    assertSame(p1, registeredProviders.entrySet().iterator().next().getValue(),
+      "Expected the original provider to be present");
   }
 
   @Test
@@ -93,15 +62,14 @@ public class TestSaslServerAuthenticationProviders {
     conf.set(SaslServerAuthenticationProviders.EXTRA_PROVIDERS_KEY,
       InitCheckingSaslServerAuthenticationProvider.class.getName());
 
-    SaslServerAuthenticationProviders providers =
-      SaslServerAuthenticationProviders.getInstance(conf);
+    SaslServerAuthenticationProviders providers = new SaslServerAuthenticationProviders(conf);
 
     SaslServerAuthenticationProvider provider =
       providers.selectProvider(InitCheckingSaslServerAuthenticationProvider.ID);
     assertEquals(InitCheckingSaslServerAuthenticationProvider.class, provider.getClass());
 
-    assertTrue("Provider was not inititalized",
-      ((InitCheckingSaslServerAuthenticationProvider) provider).isInitialized());
+    assertTrue(((InitCheckingSaslServerAuthenticationProvider) provider).isInitialized(),
+      "Provider was not inititalized");
   }
 
   public static class InitCheckingSaslServerAuthenticationProvider

@@ -578,8 +578,8 @@ public class TestKeyValue {
     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
     for (KeyValue kv : keyValues) {
       DataOutputStream os = new DataOutputStream(byteArrayOutputStream);
-      ByteBufferUtils.putInt(os, KeyValueUtil.getSerializedSize(kv, true));
-      KeyValueUtil.oswrite(kv, os, true);
+      ByteBufferUtils.putInt(os, kv.getSerializedSize(true));
+      kv.write(os, true);
     }
     DataInputStream is =
       new DataInputStream(new ByteArrayInputStream(byteArrayOutputStream.toByteArray()));

@@ -34,4 +34,5 @@ package org.apache.hadoop.hbase.testclassification;
  * @see LargeTests
  */
 public interface IntegrationTests {
+  public static final String TAG = "org.apache.hadoop.hbase.testclassification.IntegrationTests";
 }

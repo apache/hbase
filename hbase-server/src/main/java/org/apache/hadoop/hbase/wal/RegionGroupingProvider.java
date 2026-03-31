@@ -18,21 +18,19 @@
 package org.apache.hadoop.hbase.wal;
 
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.META_WAL_PROVIDER_ID;
-import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.WAL_FILE_NAME_DELIMITER;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
-import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -53,7 +51,7 @@ import org.slf4j.LoggerFactory;
  * Optionally, a FQCN to a custom implementation may be given.
  */
 @InterfaceAudience.Private
-public class RegionGroupingProvider implements WALProvider {
+public class RegionGroupingProvider extends AbstractWALProvider {
   private static final Logger LOG = LoggerFactory.getLogger(RegionGroupingProvider.class);
 
   /**
@@ -130,22 +128,15 @@ public class RegionGroupingProvider implements WALProvider {
   private final KeyLocker<String> createLock = new KeyLocker<>();
 
   private RegionGroupingStrategy strategy;
-  private WALFactory factory;
-  private Configuration conf;
-  private List<WALActionsListener> listeners = new ArrayList<>();
-  private String providerId;
+
   private Class<? extends WALProvider> providerClass;
-  private Abortable abortable;
 
   @Override
-  public void init(WALFactory factory, Configuration conf, String providerId, Abortable abortable)
+  protected void doInit(WALFactory factory, Configuration conf, String providerId)
     throws IOException {
     if (null != strategy) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
-    this.conf = conf;
-    this.factory = factory;
-    this.abortable = abortable;
 
     if (META_WAL_PROVIDER_ID.equals(providerId)) {
       // do not change the provider id if it is for meta
@@ -177,8 +168,67 @@ public class RegionGroupingProvider implements WALProvider {
     return provider;
   }
 
+  private WALProvider getWALProvider(RegionInfo region) throws IOException {
+    String group;
+    if (META_WAL_PROVIDER_ID.equals(this.providerId)) {
+      group = META_WAL_GROUP_NAME;
+    } else {
+      byte[] id;
+      byte[] namespace;
+      if (region != null) {
+        id = region.getEncodedNameAsBytes();
+        namespace = region.getTable().getNamespace();
+      } else {
+        id = HConstants.EMPTY_BYTE_ARRAY;
+        namespace = null;
+      }
+      group = strategy.group(id, namespace);
+    }
+    WALProvider provider = cached.get(group);
+    if (provider == null) {
+      Lock lock = createLock.acquireLock(group);
+      try {
+        provider = cached.get(group);
+        if (provider == null) {
+          provider = createProvider(group);
+          // Notice that there is an assumption that the addWALActionsListener method must be called
+          // before the getWAL method, so we can make sure there is no sub WALProvider yet, so we
+          // only add the listener to our listeners list without calling addWALActionListener for
+          // each WALProvider. Although it is no hurt to execute an extra loop to call
+          // addWALActionListener for each WALProvider, but if the extra code actually works, then
+          // we will have other big problems. So leave it as is.
+          listeners.forEach(provider::addWALActionsListener);
+          cached.put(group, provider);
+        }
+      } finally {
+        lock.unlock();
+      }
+    }
+    return provider;
+  }
+
   @Override
-  public List<WAL> getWALs() {
+  protected WAL getWAL0(RegionInfo region) throws IOException {
+    String group;
+    if (META_WAL_PROVIDER_ID.equals(this.providerId)) {
+      group = META_WAL_GROUP_NAME;
+    } else {
+      byte[] id;
+      byte[] namespace;
+      if (region != null) {
+        id = region.getEncodedNameAsBytes();
+        namespace = region.getTable().getNamespace();
+      } else {
+        id = HConstants.EMPTY_BYTE_ARRAY;
+        namespace = null;
+      }
+      group = strategy.group(id, namespace);
+    }
+    return getWAL(group);
+  }
+
+  @Override
+  protected List<WAL> getWALs0() {
     return cached.values().stream().flatMap(p -> p.getWALs().stream()).collect(Collectors.toList());
   }
 
@@ -200,28 +250,31 @@ public class RegionGroupingProvider implements WALProvider {
     return provider.getWAL(null);
   }
 
-  @Override
-  public WAL getWAL(RegionInfo region) throws IOException {
-    String group;
-    if (META_WAL_PROVIDER_ID.equals(this.providerId)) {
-      group = META_WAL_GROUP_NAME;
-    } else {
-      byte[] id;
-      byte[] namespace;
-      if (region != null) {
-        id = region.getEncodedNameAsBytes();
-        namespace = region.getTable().getNamespace();
-      } else {
-        id = HConstants.EMPTY_BYTE_ARRAY;
-        namespace = null;
-      }
-      group = strategy.group(id, namespace);
+  static class IdentityGroupingStrategy implements RegionGroupingStrategy {
+    @Override
+    public void init(Configuration config, String providerId) {
     }
-    return getWAL(group);
+
+    @Override
+    public String group(final byte[] identifier, final byte[] namespace) {
+      return Bytes.toString(identifier);
+    }
   }
 
   @Override
-  public void shutdown() throws IOException {
+  protected WAL createRemoteWAL(RegionInfo region, FileSystem remoteFs, Path remoteWALDir,
+    String prefix, String suffix) throws IOException {
+    WALProvider provider = getWALProvider(region);
+    if (provider instanceof AbstractWALProvider) {
+      return ((AbstractWALProvider) provider).createRemoteWAL(region, remoteFs, remoteWALDir,
+        prefix, suffix);
+    }
+    throw new IOException(
+      provider.getClass().getSimpleName() + " does not support creating remote WAL");
+  }
+
+  @Override
+  protected void shutdown0() throws IOException {
     // save the last exception and rethrow
     IOException failure = null;
     for (WALProvider provider : cached.values()) {
@@ -241,7 +294,7 @@ public class RegionGroupingProvider implements WALProvider {
   }
 
   @Override
-  public void close() throws IOException {
+  protected void close0() throws IOException {
     // save the last exception and rethrow
     IOException failure = null;
     for (WALProvider provider : cached.values()) {
@@ -260,19 +313,8 @@ public class RegionGroupingProvider implements WALProvider {
     }
   }
 
-  static class IdentityGroupingStrategy implements RegionGroupingStrategy {
-    @Override
-    public void init(Configuration config, String providerId) {
-    }
-
-    @Override
-    public String group(final byte[] identifier, final byte[] namespace) {
-      return Bytes.toString(identifier);
-    }
-  }
-
   @Override
-  public long getNumLogFiles() {
+  protected long getNumLogFiles0() {
     long numLogFiles = 0;
     for (WALProvider provider : cached.values()) {
       numLogFiles += provider.getNumLogFiles();
@@ -281,7 +323,7 @@ public class RegionGroupingProvider implements WALProvider {
   }
 
   @Override
-  public long getLogFileSize() {
+  protected long getLogFileSize0() {
     long logFileSize = 0;
     for (WALProvider provider : cached.values()) {
       logFileSize += provider.getLogFileSize();
@@ -289,13 +331,4 @@ public class RegionGroupingProvider implements WALProvider {
     return logFileSize;
   }
 
-  @Override
-  public void addWALActionsListener(WALActionsListener listener) {
-    // Notice that there is an assumption that this method must be called before the getWAL above,
-    // so we can make sure there is no sub WALProvider yet, so we only add the listener to our
-    // listeners list without calling addWALActionListener for each WALProvider. Although it is no
-    // hurt to execute an extra loop to call addWALActionListener for each WALProvider, but if the
-    // extra code actually works, then we will have other big problems. So leave it as is.
-    listeners.add(listener);
-  }
 }

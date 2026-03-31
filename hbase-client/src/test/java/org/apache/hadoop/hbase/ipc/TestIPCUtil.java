@@ -19,7 +19,8 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -29,7 +30,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
@@ -37,19 +37,17 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.FutureUtils;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.io.netty.channel.DefaultEventLoop;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
 
-@Category({ ClientTests.class, SmallTests.class })
-public class TestIPCUtil {
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIPCUtil.class);
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
+public class TestIPCUtil {
 
   private static Throwable create(Class<? extends Throwable> clazz) throws InstantiationException,
     IllegalAccessException, InvocationTargetException, NoSuchMethodException {
@@ -158,5 +156,24 @@ public class TestIPCUtil {
     } finally {
       eventLoop.shutdownGracefully().get();
     }
+  }
+
+  @Test
+  public void testIsFatalConnectionException() {
+    // intentionally not reference the class object directly, so here we will not load the class, to
+    // make sure that in isFatalConnectionException, we can use initialized = false when calling
+    // Class.forName
+    ExceptionResponse resp = ExceptionResponse.newBuilder()
+      .setExceptionClassName("org.apache.hadoop.hbase.ipc.DummyFatalConnectionException").build();
+    assertTrue(IPCUtil.isFatalConnectionException(resp));
+
+    resp = ExceptionResponse.newBuilder()
+      .setExceptionClassName("org.apache.hadoop.hbase.ipc.DummyException").build();
+    assertFalse(IPCUtil.isFatalConnectionException(resp));
+
+    // class not found
+    resp = ExceptionResponse.newBuilder()
+      .setExceptionClassName("org.apache.hadoop.hbase.ipc.WhatEver").build();
+    assertFalse(IPCUtil.isFatalConnectionException(resp));
   }
 }

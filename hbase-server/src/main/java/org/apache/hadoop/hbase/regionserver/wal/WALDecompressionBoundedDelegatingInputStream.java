@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import org.apache.commons.io.IOUtils;
@@ -67,19 +66,22 @@ class WALDecompressionBoundedDelegatingInputStream extends InputStream {
     if (pos >= limit) {
       return -1;
     }
-    int readLen = (int) Math.min(len, limit - pos);
-    try {
-      IOUtils.readFully(in, b, off, readLen);
-    } catch (EOFException e) {
+    int toRead = (int) Math.min(len, limit - pos);
+    int readBytes = IOUtils.read(in, b, off, toRead);
+    // increase pos by however many we actually read
+    pos += readBytes;
+
+    if (readBytes != toRead) {
       // This is trick here, we will always try to read enough bytes to fill the buffer passed in,
       // or we reach the end of this compression block, if there are not enough bytes, we just
       // return -1 to let the upper layer fail with EOF
       // In WAL value decompression this is OK as if we can not read all the data, we will finally
       // get an EOF somewhere
-      LOG.debug("Got EOF while we want to read {} bytes from stream", readLen, e);
+      LOG.debug("Got EOF while we want to read {} bytes from stream, but only read {}", toRead,
+        readBytes);
       return -1;
     }
-    return readLen;
+    return toRead;
   }
 
   @Override

@@ -83,7 +83,7 @@ public class TestAsyncRegionLocator {
     }
 
     @Override
-    public void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> e, Scan scan)
+    public void preScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> e, Scan scan)
       throws IOException {
       if (SLEEP_MS > 0) {
         Threads.sleepWithoutInterrupt(SLEEP_MS);
@@ -100,7 +100,7 @@ public class TestAsyncRegionLocator {
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     ConnectionRegistry registry =
-      ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
+      ConnectionRegistryFactory.create(TEST_UTIL.getConfiguration(), User.getCurrent());
     CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
       registry.getClusterId().get(), null, User.getCurrent());
     LOCATOR = CONN.getLocator();

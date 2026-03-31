@@ -66,12 +66,12 @@ public final class TagUtil {
   }
 
   /** Returns A List&lt;Tag&gt; of any Tags found in <code>cell</code> else null. */
-  public static List<Tag> carryForwardTags(final Cell cell) {
+  public static List<Tag> carryForwardTags(final ExtendedCell cell) {
     return carryForwardTags(null, cell);
   }
 
   /** Add to <code>tagsOrNull</code> any Tags <code>cell</code> is carrying or null if none. */
-  public static List<Tag> carryForwardTags(final List<Tag> tagsOrNull, final Cell cell) {
+  public static List<Tag> carryForwardTags(final List<Tag> tagsOrNull, final ExtendedCell cell) {
     Iterator<Tag> itr = PrivateCellUtil.tagsIterator(cell);
     if (itr == EMPTY_TAGS_ITR) {
       // If no Tags, return early.
@@ -87,7 +87,7 @@ public final class TagUtil {
     return tags;
   }
 
-  public static byte[] concatTags(byte[] tags, Cell cell) {
+  public static byte[] concatTags(byte[] tags, ExtendedCell cell) {
     int cellTagsLen = cell.getTagsLength();
     if (cellTagsLen == 0) {
       // If no Tags, return early.

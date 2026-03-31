@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.util.AtomicUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -58,7 +59,7 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter implements FSHL
       .writeDelimitedTo(output);
     for (Cell cell : entry.getEdit().getCells()) {
       // cellEncoder must assume little about the stream, since we write PB and cells in turn.
-      cellEncoder.write(cell);
+      cellEncoder.write((ExtendedCell) cell);
     }
     length.set(output.getPos());
   }
@@ -100,13 +101,18 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter implements FSHL
 
   @Override
   protected void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
-    short replication, long blockSize, StreamSlowMonitor monitor)
+    short replication, long blockSize, StreamSlowMonitor monitor, boolean noLocalWrite)
     throws IOException, StreamLacksCapabilityException {
     FSDataOutputStreamBuilder<?, ?> builder = fs.createFile(path).overwrite(overwritable)
       .bufferSize(bufferSize).replication(replication).blockSize(blockSize);
     if (builder instanceof DistributedFileSystem.HdfsDataOutputStreamBuilder) {
-      this.output =
-        ((DistributedFileSystem.HdfsDataOutputStreamBuilder) builder).replicate().build();
+      DistributedFileSystem.HdfsDataOutputStreamBuilder dfsBuilder =
+        (DistributedFileSystem.HdfsDataOutputStreamBuilder) builder;
+      dfsBuilder.replicate();
+      if (noLocalWrite) {
+        dfsBuilder.noLocalWrite();
+      }
+      this.output = dfsBuilder.build();
     } else {
       this.output = builder.build();
     }

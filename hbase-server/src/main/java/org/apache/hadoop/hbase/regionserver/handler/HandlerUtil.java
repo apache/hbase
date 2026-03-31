@@ -36,6 +36,7 @@ final class HandlerUtil {
     return new RetryCounterFactory(
       new RetryCounter.RetryConfig().setBackoffPolicy(new RetryCounter.ExponentialBackoffPolicy())
         .setSleepInterval(100).setMaxSleepTime(30000).setMaxAttempts(Integer.MAX_VALUE)
-        .setTimeUnit(TimeUnit.MILLISECONDS).setJitter(0.01f)).create();
+        .setTimeUnit(TimeUnit.MILLISECONDS).setJitter(0.01f))
+      .create();
   }
 }

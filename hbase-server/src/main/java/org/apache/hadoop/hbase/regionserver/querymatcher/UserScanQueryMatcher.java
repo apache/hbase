@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.util.NavigableSet;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
@@ -57,9 +59,9 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
 
   private int count = 0;
 
-  private Cell curColCell = null;
+  private ExtendedCell curColCell = null;
 
-  private static Cell createStartKey(Scan scan, ScanInfo scanInfo) {
+  private static ExtendedCell createStartKey(Scan scan, ScanInfo scanInfo) {
     if (scan.includeStartRow()) {
       return createStartKeyFromRow(scan.getStartRow(), scanInfo);
     } else {
@@ -104,11 +106,19 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
   }
 
   @Override
-  public Cell getNextKeyHint(Cell cell) throws IOException {
+  public ExtendedCell getNextKeyHint(ExtendedCell cell) throws IOException {
     if (filter == null) {
       return null;
     } else {
-      return filter.getNextCellHint(cell);
+      Cell hint = filter.getNextCellHint(cell);
+      if (hint == null || hint instanceof ExtendedCell) {
+        return (ExtendedCell) hint;
+      } else {
+        throw new DoNotRetryIOException("Incorrect filter implementation, "
+          + "the Cell returned by getNextKeyHint is not an ExtendedCell. Filter class: "
+          + filter.getClass().getName());
+      }
+
     }
   }
 
@@ -120,7 +130,7 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     }
   }
 
-  protected final MatchCode matchColumn(Cell cell, long timestamp, byte typeByte)
+  protected final MatchCode matchColumn(ExtendedCell cell, long timestamp, byte typeByte)
     throws IOException {
     int tsCmp = tr.compare(timestamp);
     if (tsCmp > 0) {
@@ -187,7 +197,7 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
    * INCLUDE_AND_SEEK_NEXT_ROW    INCLUDE_AND_SEEK_NEXT_ROW    INCLUDE_AND_SEEK_NEXT_ROW
    * </pre>
    */
-  private final MatchCode mergeFilterResponse(Cell cell, MatchCode matchCode,
+  private final MatchCode mergeFilterResponse(ExtendedCell cell, MatchCode matchCode,
     ReturnCode filterResponse) {
     switch (filterResponse) {
       case SKIP:
@@ -259,7 +269,7 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
   protected abstract boolean moreRowsMayExistsAfter(int cmpToStopRow);
 
   @Override
-  public boolean moreRowsMayExistAfter(Cell cell) {
+  public boolean moreRowsMayExistAfter(ExtendedCell cell) {
     // If a 'get' Scan -- we are doing a Get (every Get is a single-row Scan in implementation) --
     // then we are looking at one row only, the one specified in the Get coordinate..so we know
     // for sure that there are no more rows on this Scan

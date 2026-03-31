@@ -198,7 +198,38 @@ public interface AsyncAdmin {
    * Modify an existing table, more IRB friendly version.
    * @param desc modified description of the table
    */
-  CompletableFuture<Void> modifyTable(TableDescriptor desc);
+  default CompletableFuture<Void> modifyTable(TableDescriptor desc) {
+    return modifyTable(desc, true);
+  }
+
+  /**
+   * Modify an existing table, more IRB friendly version.
+   * @param desc          description of the table
+   * @param reopenRegions By default, 'modifyTable' reopens all regions, potentially causing a RIT
+   *                      (Region In Transition) storm in large tables. If set to 'false', regions
+   *                      will remain unaware of the modification until they are individually
+   *                      reopened. Please note that this may temporarily result in configuration
+   *                      inconsistencies among regions.
+   */
+  CompletableFuture<Void> modifyTable(TableDescriptor desc, boolean reopenRegions);
+
+  /**
+   * Reopen all regions of a table. This is useful after calling
+   * {@link #modifyTable(TableDescriptor, boolean)} with reopenRegions=false to gradually roll out
+   * table descriptor changes to regions. Regions are reopened in-place (no move).
+   * @param tableName table whose regions to reopen
+   * @return CompletableFuture that completes when all regions have been reopened
+   */
+  CompletableFuture<Void> reopenTableRegions(TableName tableName);
+
+  /**
+   * Reopen specific regions of a table. Useful for canary testing table descriptor changes on a
+   * subset of regions before rolling out to the entire table.
+   * @param tableName table whose regions to reopen
+   * @param regions   specific regions to reopen
+   * @return CompletableFuture that completes when specified regions have been reopened
+   */
+  CompletableFuture<Void> reopenTableRegions(TableName tableName, List<RegionInfo> regions);
 
   /**
    * Change the store file tracker of the given table.
@@ -617,6 +648,12 @@ public interface AsyncAdmin {
    *                   server.
    */
   CompletableFuture<Void> splitRegion(byte[] regionName, byte[] splitPoint);
+
+  /**
+   * Truncate an individual region.
+   * @param regionName region to truncate
+   */
+  CompletableFuture<Void> truncateRegion(byte[] regionName);
 
   /**
    * Assign an individual region.
@@ -1252,6 +1289,15 @@ public interface AsyncAdmin {
   CompletableFuture<Void> rollWALWriter(ServerName serverName);
 
   /**
+   * Roll log writer for all RegionServers. Note that unlike
+   * {@link Admin#rollWALWriter(ServerName)}, this method is synchronous, which means it will block
+   * until all RegionServers have completed the log roll, or a RegionServer fails due to an
+   * exception that retry will not work.
+   * @return server and the highest wal filenum of server before performing log roll
+   */
+  CompletableFuture<Map<ServerName, Long>> rollAllWALWriters();
+
+  /**
    * Clear compacting queues on a region server.
    * @param serverName The servername of the region server.
    * @param queues     the set of queue name
@@ -1374,6 +1420,7 @@ public interface AsyncAdmin {
    * @deprecated Since 2.5.0. Will be removed in 4.0.0. Use {@link #balance(BalanceRequest)}
    *             instead.
    */
+  @Deprecated
   default CompletableFuture<Boolean> balance(boolean forcible) {
     return balance(BalanceRequest.newBuilder().setIgnoreRegionsInTransition(forcible).build())
       .thenApply(BalanceResponse::isBalancerRan);
@@ -1837,4 +1884,12 @@ public interface AsyncAdmin {
    * Flush master local region
    */
   CompletableFuture<Void> flushMasterStore();
+
+  /**
+   * Get the list of cached files
+   */
+  CompletableFuture<List<String>> getCachedFilesList(ServerName serverName);
+
+  @InterfaceAudience.Private
+  CompletableFuture<Void> restoreBackupSystemTable(String snapshotName);
 }

@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.regionserver;
 import java.util.Iterator;
 import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -41,8 +41,8 @@ public class MutableSegment extends Segment {
     ClassSize.align(Segment.DEEP_OVERHEAD + ClassSize.CONCURRENT_SKIPLISTMAP
       + ClassSize.SYNC_TIMERANGE_TRACKER + ClassSize.REFERENCE + ClassSize.ATOMIC_BOOLEAN);
 
-  protected MutableSegment(CellSet cellSet, CellComparator comparator, MemStoreLAB memStoreLAB,
-    MemStoreSizing memstoreSizing) {
+  protected MutableSegment(CellSet<ExtendedCell> cellSet, CellComparator comparator,
+    MemStoreLAB memStoreLAB, MemStoreSizing memstoreSizing) {
     super(cellSet, comparator, memStoreLAB, TimeRangeTracker.create(TimeRangeTracker.Type.SYNC));
     incMemStoreSize(0, DEEP_OVERHEAD, 0, 0); // update the mutable segment metadata
     if (memstoreSizing != null) {
@@ -55,24 +55,25 @@ public class MutableSegment extends Segment {
    * @param cell      the cell to add
    * @param mslabUsed whether using MSLAB
    */
-  public void add(Cell cell, boolean mslabUsed, MemStoreSizing memStoreSizing,
+  public void add(ExtendedCell cell, boolean mslabUsed, MemStoreSizing memStoreSizing,
     boolean sizeAddedPreOperation) {
     internalAdd(cell, mslabUsed, memStoreSizing, sizeAddedPreOperation);
   }
 
-  public void upsert(Cell cell, long readpoint, MemStoreSizing memStoreSizing,
+  public void upsert(ExtendedCell cell, long readpoint, MemStoreSizing memStoreSizing,
     boolean sizeAddedPreOperation) {
     internalAdd(cell, false, memStoreSizing, sizeAddedPreOperation);
 
     // Get the Cells for the row/family/qualifier regardless of timestamp.
     // For this case we want to clean up any other puts
-    Cell firstCell = PrivateCellUtil.createFirstOnRowColTS(cell, HConstants.LATEST_TIMESTAMP);
-    SortedSet<Cell> ss = this.tailSet(firstCell);
-    Iterator<Cell> it = ss.iterator();
+    ExtendedCell firstCell =
+      PrivateCellUtil.createFirstOnRowColTS(cell, HConstants.LATEST_TIMESTAMP);
+    SortedSet<ExtendedCell> ss = this.tailSet(firstCell);
+    Iterator<ExtendedCell> it = ss.iterator();
     // versions visible to oldest scanner
     int versionsVisible = 0;
     while (it.hasNext()) {
-      Cell cur = it.next();
+      ExtendedCell cur = it.next();
 
       if (cell == cur) {
         // ignore the one just put in
@@ -118,7 +119,7 @@ public class MutableSegment extends Segment {
    * Returns the first cell in the segment
    * @return the first cell in the segment
    */
-  Cell first() {
+  ExtendedCell first() {
     return this.getCellSet().first();
   }
 

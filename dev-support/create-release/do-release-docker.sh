@@ -102,6 +102,10 @@ shift $((OPTIND-1))
 if (( $# > 0 )); then
   error "Arguments can only be provided with option flags, invalid args: $*"
 fi
+
+if [ "$DEBUG" = "1" ]; then
+  set -x
+fi
 export DEBUG
 
 if [ -z "$WORKDIR" ] || [ ! -d "$WORKDIR" ]; then
@@ -221,6 +225,7 @@ ASF_PASSWORD=$ASF_PASSWORD
 RELEASE_STEP=$RELEASE_STEP
 API_DIFF_TAG=$API_DIFF_TAG
 HOST_OS=$HOST_OS
+DEBUG=$DEBUG
 EOF
 
 JAVA_MOUNT=()

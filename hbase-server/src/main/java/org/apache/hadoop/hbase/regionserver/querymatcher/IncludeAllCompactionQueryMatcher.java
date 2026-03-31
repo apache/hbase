@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -34,7 +34,7 @@ public class IncludeAllCompactionQueryMatcher extends MinorCompactionScanQueryMa
   }
 
   @Override
-  public MatchCode match(Cell cell) throws IOException {
+  public MatchCode match(ExtendedCell cell) throws IOException {
     return MatchCode.INCLUDE;
   }
 

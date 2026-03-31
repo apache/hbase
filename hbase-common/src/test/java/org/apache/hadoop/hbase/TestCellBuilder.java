@@ -79,7 +79,7 @@ public class TestCellBuilder {
     byte[] value = new byte[] { OLD_DATA };
     byte[] tags = new byte[] { OLD_DATA };
     long seqId = 999;
-    Cell cell = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(row)
+    ExtendedCell cell = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(row)
       .setFamily(family).setQualifier(qualifier).setType(KeyValue.Type.Put.getCode())
       .setValue(value).setTags(tags).setSequenceId(seqId).build();
     row[0] = NEW_DATA;
@@ -103,7 +103,7 @@ public class TestCellBuilder {
     byte[] value = new byte[] { OLD_DATA };
     byte[] tags = new byte[] { OLD_DATA };
     long seqId = 999;
-    Cell cell = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row)
+    ExtendedCell cell = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row)
       .setFamily(family).setQualifier(qualifier).setType(KeyValue.Type.Put.getCode())
       .setValue(value).setTags(tags).setSequenceId(seqId).build();
     row[0] = NEW_DATA;

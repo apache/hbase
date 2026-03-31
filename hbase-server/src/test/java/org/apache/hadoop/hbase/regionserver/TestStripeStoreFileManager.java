@@ -95,15 +95,15 @@ public class TestStripeStoreFileManager {
     MockHStoreFile sf = createFile();
     manager.insertNewFiles(al(sf));
     assertEquals(1, manager.getStorefileCount());
-    Collection<HStoreFile> filesForGet = manager.getFilesForScan(KEY_A, true, KEY_A, true);
+    Collection<HStoreFile> filesForGet = manager.getFilesForScan(KEY_A, true, KEY_A, true, false);
     assertEquals(1, filesForGet.size());
     assertTrue(filesForGet.contains(sf));
 
     // Add some stripes and make sure we get this file for every stripe.
     manager.addCompactionResults(al(),
       al(createFile(OPEN_KEY, KEY_B), createFile(KEY_B, OPEN_KEY)));
-    assertTrue(manager.getFilesForScan(KEY_A, true, KEY_A, true).contains(sf));
-    assertTrue(manager.getFilesForScan(KEY_C, true, KEY_C, true).contains(sf));
+    assertTrue(manager.getFilesForScan(KEY_A, true, KEY_A, true, false).contains(sf));
+    assertTrue(manager.getFilesForScan(KEY_C, true, KEY_C, true, false).contains(sf));
   }
 
   @Test
@@ -117,7 +117,7 @@ public class TestStripeStoreFileManager {
     Collection<HStoreFile> allFiles = manager.clearFiles();
     assertEquals(4, allFiles.size());
     assertEquals(0, manager.getStorefileCount());
-    assertEquals(0, manager.getStorefiles().size());
+    assertEquals(0, manager.getStoreFiles().size());
   }
 
   private static ArrayList<HStoreFile> dumpIterator(Iterator<HStoreFile> iter) {
@@ -541,7 +541,7 @@ public class TestStripeStoreFileManager {
 
   private void verifyInvalidCompactionScenario(StripeStoreFileManager manager,
     ArrayList<HStoreFile> filesToCompact, ArrayList<HStoreFile> filesToInsert) throws Exception {
-    Collection<HStoreFile> allFiles = manager.getStorefiles();
+    Collection<HStoreFile> allFiles = manager.getStoreFiles();
     assertThrows(IllegalStateException.class,
       () -> manager.addCompactionResults(filesToCompact, filesToInsert));
     verifyAllFiles(manager, allFiles); // must have the same files.
@@ -556,7 +556,7 @@ public class TestStripeStoreFileManager {
     Collection<HStoreFile> results) throws Exception {
     start = start != null ? start : HConstants.EMPTY_START_ROW;
     end = end != null ? end : HConstants.EMPTY_END_ROW;
-    Collection<HStoreFile> sfs = manager.getFilesForScan(start, true, end, false);
+    Collection<HStoreFile> sfs = manager.getFilesForScan(start, true, end, false, false);
     assertEquals(results.size(), sfs.size());
     for (HStoreFile result : results) {
       assertTrue(sfs.contains(result));
@@ -574,7 +574,10 @@ public class TestStripeStoreFileManager {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Path testFilePath = StoreFileWriter.getUniqueFile(fs, CFDIR);
     fs.create(testFilePath).close();
-    MockHStoreFile sf = new MockHStoreFile(TEST_UTIL, testFilePath, size, 0, false, seqNum);
+    StoreFileInfo storeFileInfo = StoreFileInfo
+      .createStoreFileInfoForHFile(TEST_UTIL.getConfiguration(), fs, testFilePath, true);
+    MockHStoreFile sf =
+      new MockHStoreFile(TEST_UTIL, testFilePath, size, 0, false, seqNum, storeFileInfo);
     if (startKey != null) {
       sf.setMetadataValue(StripeStoreFileManager.STRIPE_START_KEY, startKey);
     }

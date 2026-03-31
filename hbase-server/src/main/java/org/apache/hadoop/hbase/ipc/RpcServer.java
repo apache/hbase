@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -37,12 +38,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
@@ -51,7 +55,9 @@ import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.provider.SaslServerAuthenticationProviders;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
+import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.hadoop.hbase.util.Pair;
@@ -66,6 +72,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
@@ -94,6 +101,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
   private final boolean authorize;
   private volatile boolean isOnlineLogProviderEnabled;
   protected boolean isSecurityEnabled;
+  protected final SaslServerAuthenticationProviders saslProviders;
 
   public static final byte CURRENT_VERSION = 0;
 
@@ -116,6 +124,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
     LoggerFactory.getLogger("SecurityLogger." + Server.class.getName());
   protected SecretManager<TokenIdentifier> secretManager;
   protected final Map<String, String> saslProps;
+  protected final String serverPrincipal;
 
   protected ServiceAuthorizationManager authManager;
 
@@ -210,11 +219,13 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
 
   protected final RpcScheduler scheduler;
 
-  protected UserProvider userProvider;
+  protected final UserProvider userProvider;
 
   protected final ByteBuffAllocator bbAllocator;
 
   protected volatile boolean allowFallbackToSimpleAuth;
+
+  volatile RpcCoprocessorHost cpHost;
 
   /**
    * Used to get details for scan with a scanner_id<br/>
@@ -299,12 +310,18 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
     if (isSecurityEnabled) {
       saslProps = SaslUtil.initSaslProperties(conf.get("hbase.rpc.protection",
         QualityOfProtection.AUTHENTICATION.name().toLowerCase(Locale.ROOT)));
+      serverPrincipal = Preconditions.checkNotNull(userProvider.getCurrentUserName(),
+        "can not get current user name when security is enabled");
     } else {
       saslProps = Collections.emptyMap();
+      serverPrincipal = HConstants.EMPTY_STRING;
     }
+    this.saslProviders = new SaslServerAuthenticationProviders(conf);
 
     this.isOnlineLogProviderEnabled = getIsOnlineLogProviderEnabled(conf);
     this.scheduler = scheduler;
+
+    initializeCoprocessorHost(getConf());
   }
 
   @Override
@@ -317,6 +334,13 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       refreshAuthManager(newConf, new HBasePolicyProvider());
     }
     refreshSlowLogConfiguration(newConf);
+    if (
+      CoprocessorConfigurationUtil.checkConfigurationChange(this.cpHost, newConf,
+        CoprocessorHost.RPC_COPROCESSOR_CONF_KEY)
+    ) {
+      LOG.info("Update the RPC coprocessor(s) because the configuration has changed");
+      initializeCoprocessorHost(newConf);
+    }
   }
 
   private void refreshSlowLogConfiguration(Configuration newConf) {
@@ -422,7 +446,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
    * the protobuf response.
    */
   @Override
-  public Pair<Message, CellScanner> call(RpcCall call, MonitoredRPCHandler status)
+  public Pair<Message, ExtendedCellScanner> call(RpcCall call, MonitoredRPCHandler status)
     throws IOException {
     try {
       MethodDescriptor md = call.getMethod();
@@ -441,11 +465,13 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       int processingTime = (int) (endTime - startTime);
       int qTime = (int) (startTime - receiveTime);
       int totalTime = (int) (endTime - receiveTime);
+      long fsReadTime = ThreadLocalServerSideScanMetrics.getFsReadTimeCounter().get();
       if (LOG.isTraceEnabled()) {
         LOG.trace(
-          "{}, response: {}, receiveTime: {}, queueTime: {}, processingTime: {}, totalTime: {}",
+          "{}, response: {}, receiveTime: {}, queueTime: {}, processingTime: {}, "
+            + "totalTime: {}, fsReadTime: {}",
           CurCall.get().toString(), TextFormat.shortDebugString(result),
-          CurCall.get().getReceiveTime(), qTime, processingTime, totalTime);
+          CurCall.get().getReceiveTime(), qTime, processingTime, totalTime, fsReadTime);
       }
       // Use the raw request call size for now.
       long requestSize = call.getSize();
@@ -471,13 +497,13 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
         // note that large responses will often also be slow.
         logResponse(param, md.getName(), md.getName() + "(" + param.getClass().getName() + ")",
           tooLarge, tooSlow, status.getClient(), startTime, processingTime, qTime, responseSize,
-          responseBlockSize, userName);
+          responseBlockSize, fsReadTime, userName);
         if (this.namedQueueRecorder != null && this.isOnlineLogProviderEnabled) {
           // send logs to ring buffer owned by slowLogRecorder
           final String className =
             server == null ? StringUtils.EMPTY : server.getClass().getSimpleName();
           this.namedQueueRecorder.addRecord(new RpcLogDetails(call, param, status.getClient(),
-            responseSize, responseBlockSize, className, tooSlow, tooLarge));
+            responseSize, responseBlockSize, fsReadTime, className, tooSlow, tooLarge));
         }
       }
       return new Pair<>(result, controller.cellScanner());
@@ -521,7 +547,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
    */
   void logResponse(Message param, String methodName, String call, boolean tooLarge, boolean tooSlow,
     String clientAddress, long startTime, int processingTime, int qTime, long responseSize,
-    long blockBytesScanned, String userName) {
+    long blockBytesScanned, long fsReadTime, String userName) {
     final String className = server == null ? StringUtils.EMPTY : server.getClass().getSimpleName();
     // base information that is reported regardless of type of call
     Map<String, Object> responseInfo = new HashMap<>();
@@ -530,6 +556,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
     responseInfo.put("queuetimems", qTime);
     responseInfo.put("responsesize", responseSize);
     responseInfo.put("blockbytesscanned", blockBytesScanned);
+    responseInfo.put("fsreadtime", fsReadTime);
     responseInfo.put("client", clientAddress);
     responseInfo.put("class", className);
     responseInfo.put("method", methodName);
@@ -746,10 +773,9 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
   }
 
   /**
-   * Used by {@link org.apache.hadoop.hbase.procedure2.store.region.RegionProcedureStore}. For
-   * master's rpc call, it may generate new procedure and mutate the region which store procedure.
-   * There are some check about rpc when mutate region, such as rpc timeout check. So unset the rpc
-   * call to avoid the rpc check.
+   * Used by {@link org.apache.hadoop.hbase.master.region.MasterRegion}, to avoid hit row lock
+   * timeout when updating master region in a rpc call. See HBASE-23895, HBASE-29251 and HBASE-29294
+   * for more details.
    * @return the currently ongoing rpc call
    */
   public static Optional<RpcCall> unsetCurrentCall() {
@@ -759,8 +785,8 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
   }
 
   /**
-   * Used by {@link org.apache.hadoop.hbase.procedure2.store.region.RegionProcedureStore}. Set the
-   * rpc call back after mutate region.
+   * Used by {@link org.apache.hadoop.hbase.master.region.MasterRegion}. Set the rpc call back after
+   * mutate region.
    */
   public static void setCurrentCall(RpcCall rpcCall) {
     CurCall.set(rpcCall);
@@ -777,6 +803,16 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
   }
 
   /**
+   * Returns the RPC connection attributes for the current RPC request. These attributes are sent by
+   * the client when initiating a new connection to the HBase server. The attributes are sent in
+   * {@code ConnectionHeader.attribute} protobuf message.
+   * @return the attribute map. It will be empty if the method is called outside of an RPC context.
+   */
+  public static Map<String, byte[]> getConnectionAttributes() {
+    return getCurrentCall().map(RpcCall::getConnectionAttributes).orElse(Map.of());
+  }
+
+  /**
    * The number of open RPC conections
    * @return the number of open rpc connections
    */
@@ -790,7 +826,10 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
     return getRequestUser().map(User::getShortName);
   }
 
-  /** Returns Address of remote client if a request is ongoing, else null */
+  /**
+   * Returns the address of the remote client associated with the current RPC request or not present
+   * if no address is set.
+   */
   public static Optional<InetAddress> getRemoteAddress() {
     return getCurrentCall().map(RpcCall::getRemoteAddress);
   }
@@ -877,5 +916,20 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
 
   protected boolean needAuthorization() {
     return authorize;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public List<BlockingServiceAndInterface> getServices() {
+    return services;
+  }
+
+  private void initializeCoprocessorHost(Configuration conf) {
+    this.cpHost = new RpcCoprocessorHost(conf);
+  }
+
+  @Override
+  public RpcCoprocessorHost getRpcCoprocessorHost() {
+    return cpHost;
   }
 }

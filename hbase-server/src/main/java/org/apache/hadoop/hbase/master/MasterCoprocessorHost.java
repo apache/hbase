@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.ObserverRpcCallContext;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
@@ -202,8 +203,12 @@ public class MasterCoprocessorHost
       super(masterObserverGetter, user);
     }
 
-    public MasterObserverOperation(User user, boolean bypassable) {
-      super(masterObserverGetter, user, bypassable);
+    public MasterObserverOperation(ObserverRpcCallContext rpcCallContext) {
+      super(masterObserverGetter, rpcCallContext);
+    }
+
+    public MasterObserverOperation(ObserverRpcCallContext rpcCallContext, boolean bypassable) {
+      super(masterObserverGetter, rpcCallContext, bypassable);
     }
   }
 
@@ -852,6 +857,60 @@ public class MasterCoprocessorHost
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.postCompletedSplitRegionAction(this, regionInfoA, regionInfoB);
+      }
+    });
+  }
+
+  /**
+   * Invoked just before calling the truncate region procedure
+   * @param regionInfo region being truncated
+   */
+  public void preTruncateRegion(RegionInfo regionInfo) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) {
+        observer.preTruncateRegion(this, regionInfo);
+      }
+    });
+  }
+
+  /**
+   * Invoked after calling the truncate region procedure
+   * @param regionInfo region being truncated
+   */
+  public void postTruncateRegion(RegionInfo regionInfo) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) {
+        observer.postTruncateRegion(this, regionInfo);
+      }
+    });
+  }
+
+  /**
+   * Invoked just before calling the truncate region procedure
+   * @param region Region to be truncated
+   * @param user   The user
+   */
+  public void preTruncateRegionAction(final RegionInfo region, User user) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preTruncateRegionAction(this, region);
+      }
+    });
+  }
+
+  /**
+   * Invoked after calling the truncate region procedure
+   * @param region Region which was truncated
+   * @param user   The user
+   */
+  public void postTruncateRegionAction(final RegionInfo region, User user) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postTruncateRegionAction(this, region);
       }
     });
   }
@@ -2057,6 +2116,24 @@ public class MasterCoprocessorHost
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.postHasUserPermissions(this, userName, permissions);
+      }
+    });
+  }
+
+  public void preUpdateConfiguration(Configuration preReloadConf) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preUpdateMasterConfiguration(this, preReloadConf);
+      }
+    });
+  }
+
+  public void postUpdateConfiguration(Configuration postReloadConf) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postUpdateMasterConfiguration(this, postReloadConf);
       }
     });
   }

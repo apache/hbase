@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
  * {@link org.apache.hadoop.hbase.client.Scan#setTimestamp(long)}.
  */
 @InterfaceAudience.Public
-public class TimestampsFilter extends FilterBase {
+public class TimestampsFilter extends FilterBase implements HintingFilter {
 
   private final boolean canHint;
   TreeSet<Long> timestamps;

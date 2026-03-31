@@ -37,7 +37,7 @@ public interface Abortable {
   void abort(String why, Throwable e);
 
   /**
-   * It just call another abort method and the Throwable parameter is null.
+   * It just calls another abort method and the Throwable parameter is null.
    * @param why Why we're aborting.
    * @see Abortable#abort(String, Throwable)
    */

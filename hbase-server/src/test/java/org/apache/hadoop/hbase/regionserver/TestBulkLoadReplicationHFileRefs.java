@@ -32,9 +32,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilder;
-import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCellBuilder;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -161,7 +161,7 @@ public class TestBulkLoadReplicationHFileRefs extends TestReplicationBase {
     Map<TableName, List<String>> excludeTableCFs = Maps.newHashMap();
     excludeTableCFs.put(REPLICATE_TABLE, Lists.newArrayList(Bytes.toString(CF_B)));
     ReplicationPeerConfig peerConfig =
-      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey())
+      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getRpcConnnectionURI())
         .setReplicateAllUserTables(true).setExcludeTableCFsMap(excludeTableCFs).build();
     admin1.addReplicationPeer(PEER_ID2, peerConfig);
     Assert.assertTrue(peerConfig.needToReplicate(REPLICATE_TABLE));
@@ -192,7 +192,7 @@ public class TestBulkLoadReplicationHFileRefs extends TestReplicationBase {
     Map<TableName, List<String>> excludeTableCFs = Maps.newHashMap();
     excludeTableCFs.put(NO_REPLICATE_TABLE, null);
     ReplicationPeerConfig peerConfig =
-      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey())
+      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getRpcConnnectionURI())
         .setReplicateAllUserTables(true).setExcludeTableCFsMap(excludeTableCFs).build();
     admin1.addReplicationPeer(PEER_ID2, peerConfig);
     assertTrue(peerConfig.needToReplicate(REPLICATE_TABLE));
@@ -223,7 +223,7 @@ public class TestBulkLoadReplicationHFileRefs extends TestReplicationBase {
 
     // Add peer, setReplicateAllUserTables true, but exclude one namespace.
     ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
-      .setClusterKey(UTIL2.getClusterKey()).setReplicateAllUserTables(true)
+      .setClusterKey(UTIL2.getRpcConnnectionURI()).setReplicateAllUserTables(true)
       .setExcludeNamespaces(Sets.newHashSet(NO_REPLICATE_NAMESPACE)).build();
     admin1.addReplicationPeer(PEER_ID2, peerConfig);
     assertTrue(peerConfig.needToReplicate(REPLICATE_TABLE));
@@ -256,7 +256,7 @@ public class TestBulkLoadReplicationHFileRefs extends TestReplicationBase {
   }
 
   private String createHFileForFamilies(byte[] family) throws IOException {
-    CellBuilder cellBuilder = CellBuilderFactory.create(CellBuilderType.DEEP_COPY);
+    ExtendedCellBuilder cellBuilder = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY);
     cellBuilder.setRow(row).setFamily(family).setQualifier(qualifier).setValue(value)
       .setType(Cell.Type.Put);
 

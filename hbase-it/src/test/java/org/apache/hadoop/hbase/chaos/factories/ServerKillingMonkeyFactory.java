@@ -37,9 +37,13 @@ import org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy;
  */
 public class ServerKillingMonkeyFactory extends MonkeyFactory {
 
+  private long restartRandomRsExceptMetaSleepTime;
+  private long restartActiveMasterSleepTime;
+  private long rollingBatchRestartRSSleepTime;
   private long gracefulRollingRestartTSSLeepTime;
   private long rollingBatchSuspendRSSleepTime;
   private float rollingBatchSuspendtRSRatio;
+  private long action1Period;
 
   @Override
   public ChaosMonkey build() {
@@ -48,10 +52,10 @@ public class ServerKillingMonkeyFactory extends MonkeyFactory {
     // Destructive actions to mess things around. Cannot run batch restart
     // @formatter:off
     Action[] actions1 = new Action[] {
-      new RestartRandomRsExceptMetaAction(60000),
-      new RestartActiveMasterAction(5000),
+      new RestartRandomRsExceptMetaAction(restartRandomRsExceptMetaSleepTime),
+      new RestartActiveMasterAction(restartActiveMasterSleepTime),
       // only allow 2 servers to be dead
-      new RollingBatchRestartRsAction(5000, 1.0f, 2, true),
+      new RollingBatchRestartRsAction(rollingBatchRestartRSSleepTime, 1.0f, 2, true),
       new ForceBalancerAction(),
       new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
       new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
@@ -63,12 +67,21 @@ public class ServerKillingMonkeyFactory extends MonkeyFactory {
     Action[] actions2 = new Action[] { new DumpClusterStatusAction() };
 
     return new PolicyBasedChaosMonkey(properties, util,
-      new CompositeSequentialPolicy(new DoActionsOncePolicy(60 * 1000, actions1),
-        new PeriodicRandomActionPolicy(60 * 1000, actions1)),
-      new PeriodicRandomActionPolicy(60 * 1000, actions2));
+      new CompositeSequentialPolicy(new DoActionsOncePolicy(action1Period, actions1),
+        new PeriodicRandomActionPolicy(action1Period, actions1)),
+      new PeriodicRandomActionPolicy(action1Period, actions2));
   }
 
   private void loadProperties() {
+    restartRandomRsExceptMetaSleepTime = Long
+      .parseLong(this.properties.getProperty(MonkeyConstants.RESTART_RANDOM_RS_EXCEPTION_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_RESTART_RANDOM_RS_EXCEPTION_SLEEP_TIME + ""));
+    restartActiveMasterSleepTime =
+      Long.parseLong(this.properties.getProperty(MonkeyConstants.RESTART_ACTIVE_MASTER_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_RESTART_ACTIVE_MASTER_SLEEP_TIME + ""));
+    rollingBatchRestartRSSleepTime = Long
+      .parseLong(this.properties.getProperty(MonkeyConstants.ROLLING_BATCH_RESTART_RS_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_ROLLING_BATCH_RESTART_RS_SLEEP_TIME + ""));
     gracefulRollingRestartTSSLeepTime =
       Long.parseLong(this.properties.getProperty(MonkeyConstants.GRACEFUL_RESTART_RS_SLEEP_TIME,
         MonkeyConstants.DEFAULT_GRACEFUL_RESTART_RS_SLEEP_TIME + ""));
@@ -78,5 +91,8 @@ public class ServerKillingMonkeyFactory extends MonkeyFactory {
     rollingBatchSuspendtRSRatio =
       Float.parseFloat(this.properties.getProperty(MonkeyConstants.ROLLING_BATCH_SUSPEND_RS_RATIO,
         MonkeyConstants.DEFAULT_ROLLING_BATCH_SUSPEND_RS_RATIO + ""));
+    action1Period =
+      Long.parseLong(this.properties.getProperty(MonkeyConstants.PERIODIC_ACTION1_PERIOD,
+        MonkeyConstants.DEFAULT_PERIODIC_ACTION1_PERIOD + ""));
   }
 }

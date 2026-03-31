@@ -26,6 +26,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
@@ -75,9 +76,9 @@ public class RpcConnectionRegistry extends AbstractRpcBasedConnectionRegistry {
 
   private final String connectionString;
 
-  RpcConnectionRegistry(Configuration conf) throws IOException {
-    super(conf, HEDGED_REQS_FANOUT_KEY, INITIAL_REFRESH_DELAY_SECS, PERIODIC_REFRESH_INTERVAL_SECS,
-      MIN_SECS_BETWEEN_REFRESHES);
+  RpcConnectionRegistry(Configuration conf, User user) throws IOException {
+    super(conf, user, HEDGED_REQS_FANOUT_KEY, INITIAL_REFRESH_DELAY_SECS,
+      PERIODIC_REFRESH_INTERVAL_SECS, MIN_SECS_BETWEEN_REFRESHES);
     connectionString = buildConnectionString(conf);
   }
 

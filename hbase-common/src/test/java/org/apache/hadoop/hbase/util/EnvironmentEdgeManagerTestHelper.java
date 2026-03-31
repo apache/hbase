@@ -33,4 +33,36 @@ public final class EnvironmentEdgeManagerTestHelper {
   public static void injectEdge(EnvironmentEdge edge) {
     EnvironmentEdgeManager.injectEdge(edge);
   }
+
+  private static final class PackageEnvironmentEdgeWrapper implements EnvironmentEdge {
+
+    private final EnvironmentEdge delegate;
+
+    private final String packageName;
+
+    PackageEnvironmentEdgeWrapper(EnvironmentEdge delegate, String packageName) {
+      this.delegate = delegate;
+      this.packageName = packageName;
+    }
+
+    @Override
+    public long currentTime() {
+      StackTraceElement[] elements = new Exception().getStackTrace();
+      // the first element is us, the second one is EnvironmentEdgeManager, so let's check the third
+      // one
+      if (elements.length > 2 && elements[2].getClassName().startsWith(packageName)) {
+        return delegate.currentTime();
+      } else {
+        return System.currentTimeMillis();
+      }
+    }
+  }
+
+  /**
+   * Inject a {@link EnvironmentEdge} which only takes effect when calling directly from the classes
+   * in the given package.
+   */
+  public static void injectEdgeForPackage(EnvironmentEdge edge, String packageName) {
+    injectEdge(new PackageEnvironmentEdgeWrapper(edge, packageName));
+  }
 }

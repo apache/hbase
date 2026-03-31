@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -46,6 +48,8 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
   private static final Logger LOG = LoggerFactory.getLogger(ClientSideRegionScanner.class);
 
   private HRegion region;
+  private MobFileCache mobFileCache;
+  private BlockCache blockCache;
   RegionScanner scanner;
   List<Cell> values;
   boolean hasMore = true;
@@ -59,7 +63,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
 
     // open region from the snapshot directory
     region = HRegion.newHRegion(CommonFSUtils.getTableDir(rootDir, htd.getTableName()), null, fs,
-      conf, hri, htd, null);
+      conf, hri, htd, null, null);
     region.setRestoredRegion(true);
     // non RS process does not have a block cache, and this a client side scanner,
     // create one for MapReduce jobs to cache the INDEX block by setting to use
@@ -69,12 +73,14 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
       String.valueOf(HConstants.HBASE_CLIENT_SCANNER_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT));
     // don't allow L2 bucket cache for non RS process to avoid unexpected disk usage.
     conf.unset(HConstants.BUCKET_CACHE_IOENGINE_KEY);
-    region.setBlockCache(BlockCacheFactory.createBlockCache(conf));
+    blockCache = BlockCacheFactory.createBlockCache(conf);
+    region.setBlockCache(blockCache);
     // we won't initialize the MobFileCache when not running in RS process. so provided an
     // initialized cache. Consider the case: an CF was set from an mob to non-mob. if we only
     // initialize cache for MOB region, NPE from HMobStore will still happen. So Initialize the
     // cache for every region although it may hasn't any mob CF, BTW the cache is very light-weight.
-    region.setMobFileCache(new MobFileCache(conf));
+    mobFileCache = new MobFileCache(conf);
+    region.setMobFileCache(mobFileCache);
     region.initialize();
 
     // create an internal region scanner
@@ -85,6 +91,12 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
       initScanMetrics(scan);
     } else {
       this.scanMetrics = scanMetrics;
+      setIsScanMetricsByRegionEnabled(scan.isScanMetricsByRegionEnabled());
+    }
+    if (isScanMetricsByRegionEnabled()) {
+      this.scanMetrics.moveToNextRegion();
+      this.scanMetrics.initScanMetricsRegionInfo(region.getRegionInfo().getEncodedName(), null);
+      // The server name will be null in scan metrics as this is a client side region scanner
     }
     region.startRegionOperation();
   }
@@ -105,8 +117,8 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
       for (Cell cell : values) {
         resultSize += PrivateCellUtil.estimatedSerializedSizeOf(cell);
       }
-      this.scanMetrics.countOfBytesInResults.addAndGet(resultSize);
-      this.scanMetrics.countOfRowsScanned.incrementAndGet();
+      this.scanMetrics.addToCounter(ScanMetrics.BYTES_IN_RESULTS_METRIC_NAME, resultSize);
+      this.scanMetrics.addToCounter(ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, 1);
     }
 
     return result;
@@ -130,6 +142,19 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
       } catch (IOException ex) {
         LOG.warn("Exception while closing region", ex);
       }
+    }
+
+    // In typical region operation, RegionServerServices would handle the lifecycle of
+    // the MobFileCache and BlockCache. In ClientSideRegionScanner, we need to handle
+    // the lifecycle of these components ourselves to avoid resource leaks.
+    if (mobFileCache != null) {
+      mobFileCache.shutdown();
+      mobFileCache = null;
+    }
+
+    if (blockCache != null) {
+      blockCache.shutdown();
+      blockCache = null;
     }
   }
 

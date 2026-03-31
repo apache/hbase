@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -27,24 +27,19 @@ import static org.mockito.Mockito.when;
 
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestFailedServersLog {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFailedServersLog.class);
 
   static final int TEST_PORT = 9999;
 
@@ -52,7 +47,7 @@ public class TestFailedServersLog {
 
   private org.apache.logging.log4j.core.Appender mockAppender;
 
-  @Before
+  @BeforeEach
   public void setup() {
     mockAppender = mock(org.apache.logging.log4j.core.Appender.class);
     when(mockAppender.getName()).thenReturn("mockAppender");
@@ -62,7 +57,7 @@ public class TestFailedServersLog {
 
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
       .getLogger(FailedServers.class)).removeAppender(mockAppender);

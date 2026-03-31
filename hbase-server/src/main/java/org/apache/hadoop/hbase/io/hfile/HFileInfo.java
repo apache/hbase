@@ -22,7 +22,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.SequenceInputStream;
-import java.security.Key;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -37,11 +36,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.crypto.Cipher;
-import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
-import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -92,7 +90,7 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
   static final int MAX_MINOR_VERSION = 3;
 
   /** Last key in the file. Filled in when we read in the file info */
-  private Cell lastKeyCell = null;
+  private ExtendedCell lastKeyCell = null;
   /** Average key length read from file info */
   private int avgKeyLen = -1;
   /** Average value length read from file info */
@@ -122,6 +120,7 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
 
   private FixedFileTrailer trailer;
   private HFileContext hfileContext;
+  private boolean initialized = false;
 
   public HFileInfo() {
     super();
@@ -349,7 +348,7 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
         context.getInputStreamWrapper().getStream(isHBaseChecksum), context.getFileSize());
       Path path = context.getFilePath();
       checkFileVersion(path);
-      this.hfileContext = createHFileContext(path, trailer, conf);
+      this.hfileContext = createHFileContext(context, path, trailer, conf);
       context.getInputStreamWrapper().unbuffer();
     } catch (Throwable t) {
       IOUtils.closeQuietly(context.getInputStreamWrapper(),
@@ -363,6 +362,10 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
    * should be called after initTrailerAndContext
    */
   public void initMetaAndIndex(HFile.Reader reader) throws IOException {
+    if (initialized) {
+      return;
+    }
+
     ReaderContext context = reader.getContext();
     try {
       HFileBlock.FSReader blockReader = reader.getUncachedBlockReader();
@@ -400,30 +403,19 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
       throw new CorruptHFileException(
         "Problem reading data index and meta index from file " + context.getFilePath(), t);
     }
+    initialized = true;
   }
 
-  private HFileContext createHFileContext(Path path, FixedFileTrailer trailer, Configuration conf)
-    throws IOException {
-    HFileContextBuilder builder = new HFileContextBuilder().withHBaseCheckSum(true)
-      .withHFileName(path.getName()).withCompression(trailer.getCompressionCodec())
-      .withCellComparator(FixedFileTrailer.createComparator(trailer.getComparatorClassName()));
-    // Check for any key material available
-    byte[] keyBytes = trailer.getEncryptionKey();
-    if (keyBytes != null) {
-      Encryption.Context cryptoContext = Encryption.newContext(conf);
-      Key key = EncryptionUtil.unwrapKey(conf, keyBytes);
-      // Use the algorithm the key wants
-      Cipher cipher = Encryption.getCipher(conf, key.getAlgorithm());
-      if (cipher == null) {
-        throw new IOException(
-          "Cipher '" + key.getAlgorithm() + "' is not available" + ", path=" + path);
-      }
-      cryptoContext.setCipher(cipher);
-      cryptoContext.setKey(key);
-      builder.withEncryptionContext(cryptoContext);
-    }
-    HFileContext context = builder.build();
-    return context;
+  private HFileContext createHFileContext(ReaderContext readerContext, Path path,
+    FixedFileTrailer trailer, Configuration conf) throws IOException {
+    return new HFileContextBuilder().withHBaseCheckSum(true).withHFileName(path.getName())
+      .withCompression(trailer.getCompressionCodec())
+      .withDecompressionContext(
+        trailer.getCompressionCodec().getHFileDecompressionContextForConfiguration(conf))
+      .withCellComparator(FixedFileTrailer.createComparator(trailer.getComparatorClassName()))
+      .withEncryptionContext(SecurityUtil.createEncryptionContext(conf, path, trailer,
+        readerContext.getManagedKeyDataCache(), readerContext.getSystemKeyCache()))
+      .build();
   }
 
   private void loadMetaInfo(HFileBlock.BlockIterator blockIter, HFileContext hfileContext)
@@ -512,7 +504,7 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
     return loadOnOpenBlocks;
   }
 
-  public Cell getLastKeyCell() {
+  public ExtendedCell getLastKeyCell() {
     return lastKeyCell;
   }
 

@@ -55,19 +55,29 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
   /**
    * Should QutoaRetriever manage the state of the connection, or leave it be.
    */
-  private boolean isManagedConnection = false;
+  private final boolean isManagedConnection;
 
-  QuotaRetriever() {
+  public QuotaRetriever(final Connection conn) throws IOException {
+    this(conn, (QuotaFilter) null);
   }
 
-  void init(final Configuration conf, final Scan scan) throws IOException {
+  public QuotaRetriever(final Connection conn, final QuotaFilter filter) throws IOException {
+    this(conn, QuotaTableUtil.makeScan(filter));
+  }
+
+  public QuotaRetriever(final Connection conn, final Scan scan) throws IOException {
+    isManagedConnection = false;
+    init(conn, scan);
+  }
+
+  QuotaRetriever(final Configuration conf, final Scan scan) throws IOException {
     // Set this before creating the connection and passing it down to make sure
     // it's cleaned up if we fail to construct the Scanner.
-    this.isManagedConnection = true;
+    isManagedConnection = true;
     init(ConnectionFactory.createConnection(conf), scan);
   }
 
-  void init(final Connection conn, final Scan scan) throws IOException {
+  private void init(final Connection conn, final Scan scan) throws IOException {
     this.connection = Objects.requireNonNull(conn);
     this.table = this.connection.getTable(QuotaTableUtil.QUOTA_TABLE_NAME);
     try {
@@ -159,7 +169,10 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
    * @param conf Configuration object to use.
    * @return the QuotaRetriever
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. Use
+   *             {@link #QuotaRetriever(Configuration, Scan)} instead.
    */
+  @Deprecated
   public static QuotaRetriever open(final Configuration conf) throws IOException {
     return open(conf, null);
   }
@@ -170,12 +183,14 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
    * @param filter the QuotaFilter
    * @return the QuotaRetriever
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. Use
+   *             {@link #QuotaRetriever(Configuration, Scan)} instead.
    */
+  @Deprecated
   public static QuotaRetriever open(final Configuration conf, final QuotaFilter filter)
     throws IOException {
     Scan scan = QuotaTableUtil.makeScan(filter);
-    QuotaRetriever scanner = new QuotaRetriever();
-    scanner.init(conf, scan);
-    return scanner;
+    return new QuotaRetriever(conf, scan);
   }
+
 }

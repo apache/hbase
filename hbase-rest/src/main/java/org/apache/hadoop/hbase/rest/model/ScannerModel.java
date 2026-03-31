@@ -21,10 +21,12 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Objects;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -45,6 +47,7 @@ import org.apache.hadoop.hbase.filter.FamilyFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.filter.FuzzyRowFilter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.MultiRowRangeFilter;
@@ -65,17 +68,19 @@ import org.apache.hadoop.hbase.filter.TimestampsFilter;
 import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.rest.RestUtil;
+import org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
-
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.ScannerMessage.Scanner;
 
 /**
  * A representation of Scanner parameters.
@@ -115,6 +120,41 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   private List<String> labels = new ArrayList<>();
   private boolean cacheBlocks = true;
   private int limit = -1;
+
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = IncludeStartRowFilter.class)
+  private boolean includeStartRow = true;
+
+  @JsonInclude(value = JsonInclude.Include.NON_DEFAULT)
+  private boolean includeStopRow = false;
+
+  @XmlAttribute
+  public boolean isIncludeStopRow() {
+    return includeStopRow;
+  }
+
+  public void setIncludeStopRow(boolean includeStopRow) {
+    this.includeStopRow = includeStopRow;
+  }
+
+  @XmlAttribute
+  public boolean isIncludeStartRow() {
+    return includeStartRow;
+  }
+
+  public void setIncludeStartRow(boolean includeStartRow) {
+    this.includeStartRow = includeStartRow;
+  }
+
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+      value = { "EQ_CHECK_FOR_OPERAND_NOT_COMPATIBLE_WITH_THIS", "HE_EQUALS_NO_HASHCODE",
+        "HE_EQUALS_USE_HASHCODE" },
+      justification = "1.The supplied value from the JSON Value Filter is of Type Boolean, hence supressing the check, 2.hashCode method will not be invoked, hence supressing the check")
+  private static class IncludeStartRowFilter {
+    @Override
+    public boolean equals(Object value) {
+      return Boolean.TRUE.equals(value);
+    }
+  }
 
   /**
    * Implement lazily-instantiated singleton as per recipe here:
@@ -202,6 +242,136 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
 
     }
 
+    /**
+     * This DTO omits the pseudo-getters in MultiRowRangeFilter.RowRange which break Jackson
+     * deserialization. It also avoids adding those as dummy JSON elements.
+     */
+    static class RowRangeModel {
+
+      protected byte[] startRow;
+
+      protected boolean startRowInclusive = true;
+
+      protected byte[] stopRow;
+
+      protected boolean stopRowInclusive = false;
+
+      public RowRangeModel() {
+      }
+
+      public RowRangeModel(MultiRowRangeFilter.RowRange rr) {
+        this.startRow = rr.getStartRow();
+        this.startRowInclusive = rr.isStartRowInclusive();
+        this.stopRow = rr.getStopRow();
+        this.stopRowInclusive = rr.isStopRowInclusive();
+      }
+
+      public MultiRowRangeFilter.RowRange build() {
+        return new MultiRowRangeFilter.RowRange(startRow, startRowInclusive, stopRow,
+          stopRowInclusive);
+      }
+
+      public byte[] getStartRow() {
+        return startRow;
+      }
+
+      public byte[] getStopRow() {
+        return stopRow;
+      }
+
+      /** Returns if start row is inclusive. */
+      public boolean isStartRowInclusive() {
+        return startRowInclusive;
+      }
+
+      /** Returns if stop row is inclusive. */
+      public boolean isStopRowInclusive() {
+        return stopRowInclusive;
+      }
+
+      @Override
+      public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + Arrays.hashCode(startRow);
+        result = prime * result + Arrays.hashCode(stopRow);
+        result = prime * result + Objects.hash(startRowInclusive, stopRowInclusive);
+        return result;
+      }
+
+      @Override
+      public boolean equals(Object obj) {
+        if (this == obj) {
+          return true;
+        }
+        if (!(obj instanceof RowRangeModel)) {
+          return false;
+        }
+        RowRangeModel other = (RowRangeModel) obj;
+        return Arrays.equals(startRow, other.startRow)
+          && startRowInclusive == other.startRowInclusive && Arrays.equals(stopRow, other.stopRow)
+          && stopRowInclusive == other.stopRowInclusive;
+      }
+
+    }
+
+    static class FuzzyKeyModel {
+
+      protected byte[] key;
+
+      protected byte[] mask;
+
+      public FuzzyKeyModel() {
+      }
+
+      public FuzzyKeyModel(Pair<byte[], byte[]> keyWithMask) {
+        this.key = keyWithMask.getFirst();
+        this.mask = keyWithMask.getSecond();
+      }
+
+      public Pair<byte[], byte[]> build() {
+        return new Pair<>(key, mask);
+      }
+
+      public byte[] getKey() {
+        return key;
+      }
+
+      public void setKey(byte[] key) {
+        this.key = key;
+      }
+
+      public byte[] getMask() {
+        return mask;
+      }
+
+      public void setMask(byte[] mask) {
+        this.mask = mask;
+      }
+
+      @Override
+      public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + Arrays.hashCode(key);
+        result = prime * result + Arrays.hashCode(mask);
+        return result;
+      }
+
+      @Override
+      public boolean equals(Object obj) {
+        if (this == obj) {
+          return true;
+        }
+        if (!(obj instanceof FuzzyKeyModel)) {
+          return false;
+        }
+        FuzzyKeyModel other = (FuzzyKeyModel) obj;
+        return Arrays.equals(key, other.key) && Arrays.equals(mask, other.mask);
+      }
+
+    }
+
     // A grab bag of fields, would have been a union if this were C.
     // These are null by default and will only be serialized if set (non null).
     @XmlAttribute
@@ -241,9 +411,11 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     @XmlElement
     public List<String> prefixes;
     @XmlElement
-    private List<RowRange> ranges;
+    private List<RowRangeModel> ranges;
     @XmlElement
     public List<Long> timestamps;
+    @XmlElement
+    private List<FuzzyKeyModel> fuzzyKeys;
 
     static enum FilterType {
       ColumnCountGetFilter,
@@ -268,7 +440,8 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
       SkipFilter,
       TimestampsFilter,
       ValueFilter,
-      WhileMatchFilter
+      WhileMatchFilter,
+      FuzzyRowFilter
     }
 
     public FilterModel() {
@@ -332,8 +505,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         case MultiRowRangeFilter:
           this.ranges = new ArrayList<>();
           for (RowRange range : ((MultiRowRangeFilter) filter).getRowRanges()) {
-            this.ranges.add(new RowRange(range.getStartRow(), range.isStartRowInclusive(),
-              range.getStopRow(), range.isStopRowInclusive()));
+            this.ranges.add(new RowRangeModel(range));
           }
           break;
         case PageFilter:
@@ -381,6 +553,12 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         case WhileMatchFilter:
           this.filters = new ArrayList<>();
           this.filters.add(new FilterModel(((WhileMatchFilter) filter).getFilter()));
+          break;
+        case FuzzyRowFilter:
+          this.fuzzyKeys = new ArrayList<>(((FuzzyRowFilter) filter).getFuzzyKeys().size());
+          for (Pair<byte[], byte[]> keyWithMask : ((FuzzyRowFilter) filter).getFuzzyKeys()) {
+            this.fuzzyKeys.add(new FuzzyKeyModel(keyWithMask));
+          }
           break;
         default:
           throw new RuntimeException("unhandled filter type " + type);
@@ -437,7 +615,11 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         }
           break;
         case MultiRowRangeFilter: {
-          filter = new MultiRowRangeFilter(ranges);
+          ArrayList<MultiRowRangeFilter.RowRange> rowRanges = new ArrayList<>(ranges.size());
+          for (RowRangeModel rangeModel : ranges) {
+            rowRanges.add(rangeModel.build());
+          }
+          filter = new MultiRowRangeFilter(rowRanges);
         }
           break;
         case PageFilter:
@@ -488,6 +670,14 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
           break;
         case WhileMatchFilter:
           filter = new WhileMatchFilter(filters.get(0).build());
+          break;
+        case FuzzyRowFilter: {
+          ArrayList<Pair<byte[], byte[]>> fuzzyKeyArgs = new ArrayList<>(fuzzyKeys.size());
+          for (FuzzyKeyModel keyModel : fuzzyKeys) {
+            fuzzyKeyArgs.add(keyModel.build());
+          }
+          filter = new FuzzyRowFilter(fuzzyKeyArgs);
+        }
           break;
         default:
           throw new RuntimeException("unhandled filter type: " + type);
@@ -575,6 +765,8 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         model.addLabel(label);
       }
     }
+    model.setIncludeStartRow(scan.includeStartRow());
+    model.setIncludeStopRow(scan.includeStopRow());
     return model;
   }
 
@@ -809,7 +1001,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     Scanner.Builder builder = Scanner.newBuilder();
     if (!Bytes.equals(startRow, HConstants.EMPTY_START_ROW)) {
       builder.setStartRow(UnsafeByteOperations.unsafeWrap(startRow));
@@ -842,13 +1034,15 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         builder.addLabels(label);
     }
     builder.setCacheBlocks(cacheBlocks);
-    return builder.build().toByteArray();
+    builder.setIncludeStartRow(includeStartRow);
+    builder.setIncludeStopRow(includeStopRow);
+    return builder.build();
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     Scanner.Builder builder = Scanner.newBuilder();
-    ProtobufUtil.mergeFrom(builder, message);
+    RestUtil.mergeFrom(builder, cis);
     if (builder.hasStartRow()) {
       startRow = builder.getStartRow().toByteArray();
     }
@@ -887,6 +1081,12 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     }
     if (builder.hasCacheBlocks()) {
       this.cacheBlocks = builder.getCacheBlocks();
+    }
+    if (builder.hasIncludeStartRow()) {
+      this.includeStartRow = builder.getIncludeStartRow();
+    }
+    if (builder.hasIncludeStopRow()) {
+      this.includeStopRow = builder.getIncludeStopRow();
     }
     return this;
   }

@@ -39,6 +39,7 @@ import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.ipc.FatalConnectionException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -203,7 +205,7 @@ public final class ConnectionUtils {
       controller.setCallTimeout(
         (int) Math.min(Integer.MAX_VALUE, TimeUnit.NANOSECONDS.toMillis(timeoutNs)));
     }
-    controller.setPriority(priority);
+    controller.setPriority(priority, tableName);
     if (tableName != null) {
       controller.setTableName(tableName);
     }
@@ -231,7 +233,7 @@ public final class ConnectionUtils {
     return estimatedHeapSizeOfResult;
   }
 
-  static Result filterCells(Result result, Cell keepCellsAfter) {
+  static Result filterCells(Result result, ExtendedCell keepCellsAfter) {
     if (keepCellsAfter == null) {
       // do not need to filter
       return result;
@@ -240,7 +242,7 @@ public final class ConnectionUtils {
     if (!PrivateCellUtil.matchingRows(keepCellsAfter, result.getRow(), 0, result.getRow().length)) {
       return result;
     }
-    Cell[] rawCells = result.rawCells();
+    ExtendedCell[] rawCells = result.rawExtendedCells();
     int index = Arrays.binarySearch(rawCells, keepCellsAfter,
       CellComparator.getInstance()::compareWithoutRow);
     if (index < 0) {
@@ -339,9 +341,9 @@ public final class ConnectionUtils {
     if (scanMetrics == null) {
       return;
     }
-    scanMetrics.countOfRPCcalls.incrementAndGet();
+    scanMetrics.addToCounter(ScanMetrics.RPC_CALLS_METRIC_NAME, 1);
     if (isRegionServerRemote) {
-      scanMetrics.countOfRemoteRPCcalls.incrementAndGet();
+      scanMetrics.addToCounter(ScanMetrics.REMOTE_RPC_CALLS_METRIC_NAME, 1);
     }
   }
 
@@ -349,9 +351,9 @@ public final class ConnectionUtils {
     if (scanMetrics == null) {
       return;
     }
-    scanMetrics.countOfRPCRetries.incrementAndGet();
+    scanMetrics.addToCounter(ScanMetrics.RPC_RETRIES_METRIC_NAME, 1);
     if (isRegionServerRemote) {
-      scanMetrics.countOfRemoteRPCRetries.incrementAndGet();
+      scanMetrics.addToCounter(ScanMetrics.REMOTE_RPC_RETRIES_METRIC_NAME, 1);
     }
   }
 
@@ -366,9 +368,9 @@ public final class ConnectionUtils {
         resultSize += PrivateCellUtil.estimatedSerializedSizeOf(cell);
       }
     }
-    scanMetrics.countOfBytesInResults.addAndGet(resultSize);
+    scanMetrics.addToCounter(ScanMetrics.BYTES_IN_RESULTS_METRIC_NAME, resultSize);
     if (isRegionServerRemote) {
-      scanMetrics.countOfBytesInRemoteResults.addAndGet(resultSize);
+      scanMetrics.addToCounter(ScanMetrics.BYTES_IN_REMOTE_RESULTS_METRIC_NAME, resultSize);
     }
   }
 
@@ -388,7 +390,14 @@ public final class ConnectionUtils {
     if (scanMetrics == null) {
       return;
     }
-    scanMetrics.countOfRegions.incrementAndGet();
+    scanMetrics.addToCounter(ScanMetrics.REGIONS_SCANNED_METRIC_NAME, 1);
+  }
+
+  static void incMillisBetweenNextsMetrics(ScanMetrics scanMetrics, long millis) {
+    if (scanMetrics == null) {
+      return;
+    }
+    scanMetrics.addToCounter(ScanMetrics.MILLIS_BETWEEN_NEXTS_METRIC_NAME, millis);
   }
 
   /**
@@ -478,13 +487,20 @@ public final class ConnectionUtils {
     return future;
   }
 
-  // validate for well-formedness
-  static void validatePut(Put put, int maxKeyValueSize) {
-    if (put.isEmpty()) {
-      throw new IllegalArgumentException("No columns to insert");
+  // Validate individual Mutation
+  static void validateMutation(Mutation mutation, int maxKeyValueSize) {
+    // Skip Delete
+    if (mutation instanceof Delete) return;
+
+    // 1. Check if empty
+    if (mutation.isEmpty()) {
+      throw new IllegalArgumentException(
+        "No columns to " + mutation.getClass().getSimpleName().toLowerCase());
     }
+
+    // 2. Check if size exceeds maxKeyValueSize
     if (maxKeyValueSize > 0) {
-      for (List<Cell> list : put.getFamilyCellMap().values()) {
+      for (List<Cell> list : mutation.getFamilyCellMap().values()) {
         for (Cell cell : list) {
           if (cell.getSerializedSize() > maxKeyValueSize) {
             throw new IllegalArgumentException("KeyValue size too large");
@@ -494,39 +510,10 @@ public final class ConnectionUtils {
     }
   }
 
-  static void validatePutsInRowMutations(RowMutations rowMutations, int maxKeyValueSize) {
+  // Validate RowMutations
+  static void validateRowMutations(RowMutations rowMutations, int maxKeyValueSize) {
     for (Mutation mutation : rowMutations.getMutations()) {
-      if (mutation instanceof Put) {
-        validatePut((Put) mutation, maxKeyValueSize);
-      }
-    }
-  }
-
-  /**
-   * Select the priority for the rpc call.
-   * <p/>
-   * The rules are:
-   * <ol>
-   * <li>If user set a priority explicitly, then just use it.</li>
-   * <li>For system table, use {@link HConstants#SYSTEMTABLE_QOS}.</li>
-   * <li>For other tables, use {@link HConstants#NORMAL_QOS}.</li>
-   * </ol>
-   * @param priority  the priority set by user, can be {@link HConstants#PRIORITY_UNSET}.
-   * @param tableName the table we operate on
-   */
-  static int calcPriority(int priority, TableName tableName) {
-    if (priority != HConstants.PRIORITY_UNSET) {
-      return priority;
-    } else {
-      return getPriority(tableName);
-    }
-  }
-
-  static int getPriority(TableName tableName) {
-    if (tableName.isSystemTable()) {
-      return HConstants.SYSTEMTABLE_QOS;
-    } else {
-      return HConstants.NORMAL_QOS;
+      validateMutation(mutation, maxKeyValueSize);
     }
   }
 
@@ -662,5 +649,14 @@ public final class ConnectionUtils {
     } else {
       controller.setFailed(error.toString());
     }
+  }
+
+  public static boolean isUnexpectedPreambleHeaderException(IOException e) {
+    if (!(e instanceof RemoteException)) {
+      return false;
+    }
+    RemoteException re = (RemoteException) e;
+    return FatalConnectionException.class.getName().equals(re.getClassName())
+      && re.getMessage().startsWith("Expected HEADER=");
   }
 }

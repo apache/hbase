@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -61,11 +62,11 @@ public class TestOpenRegionProcedureBackoff {
     }
 
     @Override
-    void persistToMeta(RegionStateNode regionNode) throws IOException {
+    CompletableFuture<Void> persistToMeta(RegionStateNode regionNode) {
       if (FAIL) {
-        throw new IOException("Inject Error!");
+        return FutureUtils.failedFuture(new IOException("Inject Error!"));
       }
-      super.persistToMeta(regionNode);
+      return super.persistToMeta(regionNode);
     }
   }
 

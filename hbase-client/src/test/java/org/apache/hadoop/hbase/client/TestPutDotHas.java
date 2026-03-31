@@ -17,25 +17,22 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ClientTests.class, SmallTests.class })
 /**
  * Addresses HBASE-6047 We test put.has call with all of its polymorphic magic
  */
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestPutDotHas {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPutDotHas.class);
 
   public static final byte[] ROW_01 = Bytes.toBytes("row-01");
   public static final byte[] QUALIFIER_01 = Bytes.toBytes("qualifier-01");
@@ -44,39 +41,39 @@ public class TestPutDotHas {
   public static final long TS = 1234567L;
   public Put put = new Put(ROW_01);
 
-  @Before
+  @BeforeEach
   public void setUp() {
     put.addColumn(FAMILY_01, QUALIFIER_01, TS, VALUE_01);
   }
 
   @Test
   public void testHasIgnoreValueIgnoreTS() {
-    Assert.assertTrue(put.has(FAMILY_01, QUALIFIER_01));
-    Assert.assertFalse(put.has(QUALIFIER_01, FAMILY_01));
+    assertTrue(put.has(FAMILY_01, QUALIFIER_01));
+    assertFalse(put.has(QUALIFIER_01, FAMILY_01));
   }
 
   @Test
   public void testHasIgnoreValue() {
-    Assert.assertTrue(put.has(FAMILY_01, QUALIFIER_01, TS));
-    Assert.assertFalse(put.has(FAMILY_01, QUALIFIER_01, TS + 1));
+    assertTrue(put.has(FAMILY_01, QUALIFIER_01, TS));
+    assertFalse(put.has(FAMILY_01, QUALIFIER_01, TS + 1));
   }
 
   @Test
   public void testHasIgnoreTS() {
-    Assert.assertTrue(put.has(FAMILY_01, QUALIFIER_01, VALUE_01));
-    Assert.assertFalse(put.has(FAMILY_01, VALUE_01, QUALIFIER_01));
+    assertTrue(put.has(FAMILY_01, QUALIFIER_01, VALUE_01));
+    assertFalse(put.has(FAMILY_01, VALUE_01, QUALIFIER_01));
   }
 
   @Test
   public void testHas() {
-    Assert.assertTrue(put.has(FAMILY_01, QUALIFIER_01, TS, VALUE_01));
+    assertTrue(put.has(FAMILY_01, QUALIFIER_01, TS, VALUE_01));
     // Bad TS
-    Assert.assertFalse(put.has(FAMILY_01, QUALIFIER_01, TS + 1, VALUE_01));
+    assertFalse(put.has(FAMILY_01, QUALIFIER_01, TS + 1, VALUE_01));
     // Bad Value
-    Assert.assertFalse(put.has(FAMILY_01, QUALIFIER_01, TS, QUALIFIER_01));
+    assertFalse(put.has(FAMILY_01, QUALIFIER_01, TS, QUALIFIER_01));
     // Bad Family
-    Assert.assertFalse(put.has(QUALIFIER_01, QUALIFIER_01, TS, VALUE_01));
+    assertFalse(put.has(QUALIFIER_01, QUALIFIER_01, TS, VALUE_01));
     // Bad Qual
-    Assert.assertFalse(put.has(FAMILY_01, FAMILY_01, TS, VALUE_01));
+    assertFalse(put.has(FAMILY_01, FAMILY_01, TS, VALUE_01));
   }
 }

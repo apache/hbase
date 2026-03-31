@@ -92,8 +92,13 @@ public class HBaseTrustManager extends X509ExtendedTrustManager {
   public void checkClientTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
     throws CertificateException {
     x509ExtendedTrustManager.checkClientTrusted(chain, authType, engine);
-    if (hostnameVerificationEnabled) {
+    if (hostnameVerificationEnabled && engine != null) {
       try {
+        if (engine.getPeerHost() == null) {
+          LOG.warn(
+            "Cannot perform client hostname verification, because peer information is not available");
+          return;
+        }
         performHostVerification(InetAddress.getByName(engine.getPeerHost()), chain[0]);
       } catch (UnknownHostException e) {
         throw new CertificateException("Failed to verify host", e);

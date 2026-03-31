@@ -78,7 +78,7 @@ public class TestBalancer {
     AssignmentManager assignmentManager = master.getAssignmentManager();
     RegionStates regionStates = assignmentManager.getRegionStates();
     ServerName sn1 = ServerName.parseServerName("asf903.gq1.ygridcore.net,52690,1517835491385");
-    regionStates.getOrCreateServer(sn1);
+    regionStates.createServer(sn1);
 
     TableStateManager tableStateManager = master.getTableStateManager();
     ServerManager serverManager = master.getServerManager();

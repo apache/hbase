@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
@@ -90,8 +92,9 @@ public interface RegionServerObserver {
   /**
    * This will be called before executing replication request to shipping log entries.
    * @param ctx the environment to interact with the framework and region server.
-   * @deprecated As of release 2.0.0 with out any replacement. This is maintained for internal usage
-   *             by AccessController. Do not use these hooks in custom co-processors.
+   * @deprecated As of release 2.0.0 with out any replacement, plan to remove in 4.0.0. This is
+   *             maintained for internal usage by AccessController. Do not use these hooks in custom
+   *             co-processors.
    */
   @Deprecated
   default void preReplicateLogEntries(final ObserverContext<RegionServerCoprocessorEnvironment> ctx)
@@ -101,8 +104,9 @@ public interface RegionServerObserver {
   /**
    * This will be called after executing replication request to shipping log entries.
    * @param ctx the environment to interact with the framework and region server.
-   * @deprecated As of release 2.0.0 with out any replacement. This is maintained for internal usage
-   *             by AccessController. Do not use these hooks in custom co-processors.
+   * @deprecated As of release 2.0.0 with out any replacement, plan to remove in 4.0.0. This is
+   *             maintained for internal usage by AccessController. Do not use these hooks in custom
+   *             co-processors.
    */
   @Deprecated
   default void postReplicateLogEntries(
@@ -167,6 +171,47 @@ public interface RegionServerObserver {
     ObserverContext<RegionServerCoprocessorEnvironment> ctx, AdminProtos.WALEntry walEntry,
     Mutation mutation) throws IOException {
 
+  }
+
+  /**
+   * Called before clearing the block caches for one or more regions
+   * @param ctx the coprocessor instance's environment
+   * @throws IOException if you need to signal an IO error
+   */
+  default void preClearRegionBlockCache(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+    throws IOException {
+  }
+
+  /**
+   * Called after clearing the block caches for one or more regions
+   * @param ctx   the coprocessor instance's environment
+   * @param stats statistics about the cache evictions that happened
+   * @throws IOException if you need to signal an IO error
+   */
+  default void postClearRegionBlockCache(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
+    CacheEvictionStats stats) throws IOException {
+  }
+
+  /**
+   * Called before reloading the RegionServer's {@link Configuration} from disk
+   * @param ctx           the coprocessor instance's environment
+   * @param preReloadConf the {@link Configuration} in use prior to reload
+   * @throws IOException if you need to signal an IO error
+   */
+  default void preUpdateRegionServerConfiguration(
+    ObserverContext<RegionServerCoprocessorEnvironment> ctx, Configuration preReloadConf)
+    throws IOException {
+  }
+
+  /**
+   * Called after reloading the RegionServer's {@link Configuration} from disk
+   * @param ctx            the coprocessor instance's environment
+   * @param postReloadConf the {@link Configuration} that was loaded
+   * @throws IOException if you need to signal an IO error
+   */
+  default void postUpdateRegionServerConfiguration(
+    ObserverContext<RegionServerCoprocessorEnvironment> ctx, Configuration postReloadConf)
+    throws IOException {
   }
 
 }

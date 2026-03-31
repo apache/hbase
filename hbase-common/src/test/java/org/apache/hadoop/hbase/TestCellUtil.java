@@ -22,7 +22,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
@@ -92,7 +91,7 @@ public class TestCellUtil {
   /**
    * Cell used in test. Has row only.
    */
-  private static class TestCell implements Cell {
+  private static class TestCell implements ExtendedCell {
     private final byte[] row;
 
     TestCell(final int i) {
@@ -116,67 +115,56 @@ public class TestCellUtil {
 
     @Override
     public byte[] getFamilyArray() {
-      // TODO Auto-generated method stub
       return null;
     }
 
     @Override
     public int getFamilyOffset() {
-      // TODO Auto-generated method stub
       return 0;
     }
 
     @Override
     public byte getFamilyLength() {
-      // TODO Auto-generated method stub
       return 0;
     }
 
     @Override
     public byte[] getQualifierArray() {
-      // TODO Auto-generated method stub
       return null;
     }
 
     @Override
     public int getQualifierOffset() {
-      // TODO Auto-generated method stub
       return 0;
     }
 
     @Override
     public int getQualifierLength() {
-      // TODO Auto-generated method stub
       return 0;
     }
 
     @Override
     public long getTimestamp() {
-      // TODO Auto-generated method stub
       return 0;
     }
 
     @Override
     public byte getTypeByte() {
-      // TODO Auto-generated method stub
       return 0;
     }
 
     @Override
     public byte[] getValueArray() {
-      // TODO Auto-generated method stub
       return null;
     }
 
     @Override
     public int getValueOffset() {
-      // TODO Auto-generated method stub
       return 0;
     }
 
     @Override
     public int getValueLength() {
-      // TODO Auto-generated method stub
       return 0;
     }
 
@@ -187,31 +175,41 @@ public class TestCellUtil {
 
     @Override
     public byte[] getTagsArray() {
-      // TODO Auto-generated method stub
       return null;
     }
 
     @Override
     public int getTagsOffset() {
-      // TODO Auto-generated method stub
       return 0;
     }
 
     @Override
     public long getSequenceId() {
-      // TODO Auto-generated method stub
       return 0;
     }
 
     @Override
     public int getTagsLength() {
-      // TODO Auto-generated method stub
       return 0;
     }
 
     @Override
     public long heapSize() {
       return 0;
+    }
+
+    @Override
+    public void setSequenceId(long seqId) throws IOException {
+
+    }
+
+    @Override
+    public void setTimestamp(long ts) throws IOException {
+
+    }
+
+    @Override
+    public void setTimestamp(byte[] ts) throws IOException {
     }
   }
 
@@ -444,7 +442,7 @@ public class TestCellUtil {
     KeyValue kv =
       new KeyValue(r, f, q, 0, q.length, 1234L, KeyValue.Type.Put, v, 0, v.length, tags);
     ByteBuffer buffer = ByteBuffer.wrap(kv.getBuffer());
-    Cell bbCell = new ByteBufferKeyValue(buffer, 0, buffer.remaining());
+    ExtendedCell bbCell = new ByteBufferKeyValue(buffer, 0, buffer.remaining());
     byte[] rDest = CellUtil.cloneRow(bbCell);
     assertTrue(Bytes.equals(r, rDest));
     byte[] fDest = CellUtil.cloneFamily(bbCell);
@@ -520,29 +518,8 @@ public class TestCellUtil {
   }
 
   @Test
-  public void testWriteCell() throws IOException {
-    byte[] r = Bytes.toBytes("row1");
-    byte[] f = Bytes.toBytes("cf1");
-    byte[] q1 = Bytes.toBytes("qual1");
-    byte[] v = Bytes.toBytes("val1");
-    byte[] tags = Bytes.toBytes("tag1");
-    KeyValue kv =
-      new KeyValue(r, f, q1, 0, q1.length, 1234L, KeyValue.Type.Put, v, 0, v.length, tags);
-    NonExtendedCell nonExtCell = new NonExtendedCell(kv);
-    ByteArrayOutputStream os = new ByteArrayOutputStream();
-    PrivateCellUtil.writeCell(nonExtCell, os, true);
-    byte[] byteArray = os.toByteArray();
-    KeyValue res = new KeyValue(byteArray);
-    assertTrue(CellUtil.equals(kv, res));
-  }
-
-  // Workaround for jdk 11 - reflective access to interface default methods for testGetType
-  private static abstract class CellForMockito implements Cell {
-  }
-
-  @Test
   public void testGetType() {
-    CellForMockito c = Mockito.mock(CellForMockito.class);
+    ExtendedCell c = Mockito.mock(ExtendedCell.class);
     Mockito.when(c.getType()).thenCallRealMethod();
     for (Cell.Type type : Cell.Type.values()) {
       Mockito.when(c.getTypeByte()).thenReturn(type.getCode());
@@ -561,114 +538,6 @@ public class TestCellUtil {
       c.getType();
       fail("The code of Maximum can't be handled by Cell.Type");
     } catch (UnsupportedOperationException e) {
-    }
-  }
-
-  private static class NonExtendedCell implements Cell {
-    private KeyValue kv;
-
-    public NonExtendedCell(KeyValue kv) {
-      this.kv = kv;
-    }
-
-    @Override
-    public byte[] getRowArray() {
-      return this.kv.getRowArray();
-    }
-
-    @Override
-    public int getRowOffset() {
-      return this.kv.getRowOffset();
-    }
-
-    @Override
-    public short getRowLength() {
-      return this.kv.getRowLength();
-    }
-
-    @Override
-    public byte[] getFamilyArray() {
-      return this.kv.getFamilyArray();
-    }
-
-    @Override
-    public int getFamilyOffset() {
-      return this.kv.getFamilyOffset();
-    }
-
-    @Override
-    public byte getFamilyLength() {
-      return this.kv.getFamilyLength();
-    }
-
-    @Override
-    public byte[] getQualifierArray() {
-      return this.kv.getQualifierArray();
-    }
-
-    @Override
-    public int getQualifierOffset() {
-      return this.kv.getQualifierOffset();
-    }
-
-    @Override
-    public int getQualifierLength() {
-      return this.kv.getQualifierLength();
-    }
-
-    @Override
-    public long getTimestamp() {
-      return this.kv.getTimestamp();
-    }
-
-    @Override
-    public byte getTypeByte() {
-      return this.kv.getTypeByte();
-    }
-
-    @Override
-    public long getSequenceId() {
-      return this.kv.getSequenceId();
-    }
-
-    @Override
-    public byte[] getValueArray() {
-      return this.kv.getValueArray();
-    }
-
-    @Override
-    public int getValueOffset() {
-      return this.kv.getValueOffset();
-    }
-
-    @Override
-    public int getValueLength() {
-      return this.kv.getValueLength();
-    }
-
-    @Override
-    public int getSerializedSize() {
-      return this.kv.getSerializedSize();
-    }
-
-    @Override
-    public byte[] getTagsArray() {
-      return this.kv.getTagsArray();
-    }
-
-    @Override
-    public int getTagsOffset() {
-      return this.kv.getTagsOffset();
-    }
-
-    @Override
-    public int getTagsLength() {
-      return this.kv.getTagsLength();
-    }
-
-    @Override
-    public long heapSize() {
-      return this.kv.heapSize();
     }
   }
 }

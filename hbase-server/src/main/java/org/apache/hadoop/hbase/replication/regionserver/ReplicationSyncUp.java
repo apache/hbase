@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.master.replication.OfflineTableReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationGroupOffset;
@@ -272,11 +273,12 @@ public class ReplicationSyncUp extends Configured implements Tool {
       getConf().setClass(ReplicationStorageFactory.REPLICATION_QUEUE_IMPL,
         OfflineTableReplicationQueueStorage.class, ReplicationQueueStorage.class);
       DummyServer server = new DummyServer(getConf(), zkw);
-      replication.initialize(server, fs, new Path(logDir, server.toString()), oldLogDir,
-        new WALFactory(conf,
-          ServerName
-            .valueOf(getClass().getSimpleName() + ",16010," + EnvironmentEdgeManager.currentTime()),
-          null, false));
+      replication
+        .initialize(server, fs, new Path(logDir, server.toString()), oldLogDir,
+          new WALFactory(conf,
+            ServerName.valueOf(
+              getClass().getSimpleName() + ",16010," + EnvironmentEdgeManager.currentTime()),
+            null));
       ReplicationSourceManager manager = replication.getReplicationManager();
       manager.init();
       Set<ServerName> regionServers = listRegionServers(fs, logDir);
@@ -382,6 +384,11 @@ public class ReplicationSyncUp extends Configured implements Tool {
 
     @Override
     public AsyncClusterConnection getAsyncClusterConnection() {
+      return null;
+    }
+
+    @Override
+    public KeyManagementService getKeyManagementService() {
       return null;
     }
   }

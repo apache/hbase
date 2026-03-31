@@ -34,7 +34,7 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -105,8 +105,8 @@ public class TestHFileScannerImplReferenceCount {
   private Path workDir;
   private FileSystem fs;
   private Path hfilePath;
-  private Cell firstCell = null;
-  private Cell secondCell = null;
+  private ExtendedCell firstCell = null;
+  private ExtendedCell secondCell = null;
   private ByteBuffAllocator allocator;
 
   @BeforeClass

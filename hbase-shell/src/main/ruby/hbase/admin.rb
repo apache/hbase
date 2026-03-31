@@ -114,6 +114,9 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Switch compaction on/off at runtime on a region server
     def compaction_switch(on_or_off, regionserver_names)
+      unless /true|false/i.match(on_or_off.to_s)
+        raise ArgumentError, 'compaction_switch first argument only accepts "true" or "false"'
+      end
       region_servers = regionserver_names.flatten.compact
       servers = java.util.ArrayList.new
       if region_servers.any?
@@ -177,6 +180,12 @@ module Hbase
     alias hlog_roll wal_roll
 
     #----------------------------------------------------------------------------------------------
+    # Requests all region servers to roll wal writer
+    def wal_roll_all
+      @admin.rollAllWALWriters
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Requests a table or region split
     def split(table_or_region_name, split_point = nil)
       split_point_bytes = nil
@@ -193,6 +202,16 @@ module Hbase
         else
           @admin.split(TableName.valueOf(table_or_region_name), split_point_bytes)
         end
+      end
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Requests a region truncate
+    def truncate_region(region_name)
+      begin
+        org.apache.hadoop.hbase.util.FutureUtils.get(@admin.truncateRegionAsync(region_name.to_java_bytes))
+      rescue java.lang.IllegalArgumentException, org.apache.hadoop.hbase.UnknownRegionException
+        @admin.truncate_region(region_name.to_java_bytes)
       end
     end
 
@@ -476,8 +495,6 @@ module Hbase
         'admin',
         nil
       )
-      zk = @zk_wrapper.getRecoverableZooKeeper.getZooKeeper
-      @zk_main = org.apache.zookeeper.ZooKeeperMain.new(zk)
       org.apache.hadoop.hbase.zookeeper.ZKDump.dump(@zk_wrapper)
     end
 
@@ -596,6 +613,34 @@ module Hbase
     # Move a region
     def move(encoded_region_name, server = nil)
       @admin.move(encoded_region_name.to_java_bytes, server ? server.to_java_bytes : nil)
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Reopen regions of a table
+    def reopen_regions(table_name, regions = nil)
+      table_name_obj = TableName.valueOf(table_name)
+      if regions.nil? || regions.empty?
+        @admin.reopenTableRegions(table_name_obj)
+      else
+        # Get all regions of the table
+        all_regions = @admin.getRegions(table_name_obj)
+        target_regions = java.util.ArrayList.new
+
+        regions.each do |r|
+          # r could be encoded name or full name
+          found = false
+          all_regions.each do |region_info|
+            if region_info.getEncodedName == r || region_info.getRegionNameAsString == r
+              target_regions.add(region_info)
+              found = true
+              break
+            end
+          end
+          raise ArgumentError, "Region #{r} not found in table #{table_name}" unless found
+        end
+
+        @admin.reopenTableRegions(table_name_obj, target_regions)
+      end
     end
 
     #----------------------------------------------------------------------------------------------
@@ -774,6 +819,7 @@ module Hbase
       # Get table descriptor
       tdb = TableDescriptorBuilder.newBuilder(@admin.getDescriptor(table_name))
       hasTableUpdate = false
+      reopen_regions = true
 
       # Process all args
       args.each do |arg|
@@ -782,6 +828,14 @@ module Hbase
 
         # Normalize args to support shortcut delete syntax
         arg = { METHOD => 'delete', NAME => arg['delete'] } if arg['delete']
+
+        if arg.key?(REOPEN_REGIONS)
+          if !['true', 'false'].include?(arg[REOPEN_REGIONS].downcase)
+            raise(ArgumentError, "Invalid 'REOPEN_REGIONS' for non-boolean value.")
+          end
+          reopen_regions = JBoolean.valueOf(arg[REOPEN_REGIONS])
+          arg.delete(REOPEN_REGIONS)
+        end
 
         # There are 3 possible options.
         # 1) Column family spec. Distinguished by having a NAME and no METHOD.
@@ -906,9 +960,13 @@ module Hbase
 
       # Bulk apply all table modifications.
       if hasTableUpdate
-        future = @admin.modifyTableAsync(tdb.build)
-
-        if wait == true
+        future = @admin.modifyTableAsync(tdb.build, reopen_regions)
+        if reopen_regions == false
+          puts("WARNING: You are using REOPEN_REGIONS => 'false' to modify a table, which will
+          result in inconsistencies in the configuration of online regions and other risks. If you
+          encounter any issues, use the original 'alter' command to make the modification again!")
+          future.get
+        elsif wait == true
           puts 'Updating all regions with the new schema...'
           future.get
         end
@@ -981,7 +1039,7 @@ module Hbase
           r_load_source_map = sl.getReplicationLoadSourceMap
           build_source_string(r_load_source_map, r_source_string)
 
-          puts(format('    %<host>s:', host: server_name.getHostname))
+          puts(format('    %<host>s:%<port>s %<startcode>s', host: server_name.getHostname, port:server_name.getPort, startcode: server_name.getStartcode))
           if type.casecmp('SOURCE').zero?
             puts(format('%<source>s', source: r_source_string))
           elsif type.casecmp('SINK').zero?
@@ -1005,11 +1063,11 @@ module Hbase
             puts('    no active tasks')
           end
         end
-        puts(format('%d live servers', cluster_metrics.getServersSize))
-        for server in cluster_metrics.getServers
-          puts(format('    %s:%d %d', server.getHostname, server.getPort, server.getStartcode))
+        puts(format('%d live servers', cluster_metrics.getLiveServerMetrics.size))
+        cluster_metrics.getLiveServerMetrics.keySet.each do |server_name|
+          puts(format('    %s:%d %d', server_name.getHostname, server_name.getPort, server_name.getStartcode))
           printed = false
-          for task in cluster_metrics.getLiveServerMetrics.get(server).getTasks
+          for task in cluster_metrics.getLiveServerMetrics.get(server_name).getTasks
             next unless task.getState.name == 'RUNNING'
             puts(format('        %s', task.toString))
             printed = true
@@ -1172,7 +1230,7 @@ module Hbase
         if org.apache.hadoop.hbase.regionserver.BloomType.constants.include?(bloomtype)
           cfdb.setBloomFilterType(org.apache.hadoop.hbase.regionserver.BloomType.valueOf(bloomtype))
         else
-          raise(ArgumentError, "BloomFilter type #{bloomtype} is not supported. Use one of " + org.apache.hadoop.hbase.regionserver.StoreFile::BloomType.constants.join(' '))
+          raise(ArgumentError, "BloomFilter type #{bloomtype} is not supported. Use one of " + org.apache.hadoop.hbase.regionserver.BloomType.constants.join(' '))
         end
       end
       if arg.include?(ColumnFamilyDescriptorBuilder::COMPRESSION)
@@ -1192,6 +1250,10 @@ module Hbase
           )
           cfdb.setEncryptionKey(org.apache.hadoop.hbase.security.EncryptionUtil.wrapKey(@conf, key,
                                                                                           algorithm))
+        end
+        if arg.include?(ColumnFamilyDescriptorBuilder::ENCRYPTION_KEY_NAMESPACE)
+          cfdb.setEncryptionKeyNamespace(arg.delete(
+            ColumnFamilyDescriptorBuilder::ENCRYPTION_KEY_NAMESPACE))
         end
       end
       if arg.include?(ColumnFamilyDescriptorBuilder::COMPRESSION_COMPACT)
@@ -1450,7 +1512,7 @@ module Hbase
     def list_namespace(regex = '.*')
       pattern = java.util.regex.Pattern.compile(regex)
       list = @admin.listNamespaces
-      list.select { |s| pattern.match(s) }
+      list.select { |s| pattern.matcher(s).matches }
     end
 
     #----------------------------------------------------------------------------------------------
@@ -1557,6 +1619,8 @@ module Hbase
     # Parse arguments and update TableDescriptorBuilder accordingly
     # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
     def update_tdb_from_arg(tdb, arg)
+      tdb.setErasureCodingPolicy(arg.delete(TableDescriptorBuilder::ERASURE_CODING_POLICY)) \
+        if arg.include?(TableDescriptorBuilder::ERASURE_CODING_POLICY)
       tdb.setMaxFileSize(arg.delete(TableDescriptorBuilder::MAX_FILESIZE)) if arg.include?(TableDescriptorBuilder::MAX_FILESIZE)
       tdb.setReadOnly(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::READONLY))) if arg.include?(TableDescriptorBuilder::READONLY)
       tdb.setCompactionEnabled(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::COMPACTION_ENABLED))) if arg.include?(TableDescriptorBuilder::COMPACTION_ENABLED)

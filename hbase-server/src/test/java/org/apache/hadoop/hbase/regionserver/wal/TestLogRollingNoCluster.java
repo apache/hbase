@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.ClassRule;
@@ -167,7 +168,8 @@ public class TestLogRollingNoCluster {
           }
           WALEdit edit = new WALEdit();
           byte[] bytes = Bytes.toBytes(i);
-          edit.add(new KeyValue(bytes, bytes, bytes, now, EMPTY_1K_ARRAY));
+          WALEditInternalHelper.addExtendedCell(edit,
+            new KeyValue(bytes, bytes, bytes, now, EMPTY_1K_ARRAY));
           RegionInfo hri = RegionInfoBuilder.FIRST_META_REGIONINFO;
           NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
           for (byte[] fam : this.metaTableDescriptor.getColumnFamilyNames()) {

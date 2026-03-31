@@ -93,15 +93,18 @@ public abstract class Filter {
   }
 
   /**
-   * Give the filter a chance to transform the passed KeyValue. If the Cell is changed a new Cell
-   * object must be returned.
+   * Give the filter a chance to transform the passed Cell. If the Cell is changed a new Cell object
+   * must be returned.
+   * <p/>
+   * <strong>NOTICE:</strong> Filter will be evaluate at server side so the returned {@link Cell}
+   * must be an {@link org.apache.hadoop.hbase.ExtendedCell}, although it is marked as IA.Private.
    * @see org.apache.hadoop.hbase.KeyValue#shallowCopy() The transformed KeyValue is what is
    *      eventually returned to the client. Most filters will return the passed KeyValue unchanged.
    * @see org.apache.hadoop.hbase.filter.KeyOnlyFilter#transformCell(Cell) for an example of a
    *      transformation. Concrete implementers can signal a failure condition in their code by
    *      throwing an {@link IOException}.
-   * @param v the KeyValue in question
-   * @return the changed KeyValue
+   * @param v the Cell in question
+   * @return the changed Cell
    * @throws IOException in case an I/O or an filter specific failure needs to be signaled.
    */
   abstract public Cell transformCell(final Cell v) throws IOException;
@@ -177,6 +180,8 @@ public abstract class Filter {
    * the next key it must seek to. After receiving the match code SEEK_NEXT_USING_HINT, the
    * QueryMatcher would call this function to find out which key it must next seek to. Concrete
    * implementers can signal a failure condition in their code by throwing an {@link IOException}.
+   * <strong>NOTICE:</strong> Filter will be evaluate at server side so the returned {@link Cell}
+   * must be an {@link org.apache.hadoop.hbase.ExtendedCell}, although it is marked as IA.Private.
    * @return KeyValue which must be next seeked. return null if the filter is not sure which key to
    *         seek to next.
    * @throws IOException in case an I/O or an filter specific failure needs to be signaled.

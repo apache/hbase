@@ -17,22 +17,17 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Arrays;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ SmallTests.class })
+@Tag(SmallTests.TAG)
 public class TestProfileOutputServlet {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProfileOutputServlet.class);
 
   @Test
   public void testSanitization() {
@@ -43,12 +38,8 @@ public class TestProfileOutputServlet {
     }
     List<String> bad = Arrays.asList("function(){console.log(\"oops\")}", "<strong>uhoh</strong>");
     for (String input : bad) {
-      try {
-        ProfileOutputServlet.sanitize(input);
-        fail("Expected sanitization of \"" + input + "\" to fail");
-      } catch (RuntimeException e) {
-        // Pass
-      }
+      assertThrows(RuntimeException.class, () -> ProfileOutputServlet.sanitize(input),
+        "Expected sanitization of \"" + input + "\" to fail");
     }
   }
 

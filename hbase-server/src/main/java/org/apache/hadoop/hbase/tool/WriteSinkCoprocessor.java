@@ -67,12 +67,13 @@ public class WriteSinkCoprocessor implements RegionCoprocessor, RegionObserver {
   private String regionName;
 
   @Override
-  public void preOpen(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException {
+  public void preOpen(ObserverContext<? extends RegionCoprocessorEnvironment> e)
+    throws IOException {
     regionName = e.getEnvironment().getRegion().getRegionInfo().getRegionNameAsString();
   }
 
   @Override
-  public void preBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public void preBatchMutate(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
     if (ops.incrementAndGet() % 20000 == 0) {
       LOG.info("Wrote " + ops.get() + " times in region " + regionName);

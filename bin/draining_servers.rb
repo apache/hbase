@@ -25,7 +25,6 @@ include Java
 
 java_import org.apache.hadoop.hbase.HBaseConfiguration
 java_import org.apache.hadoop.hbase.client.ConnectionFactory
-java_import org.apache.hadoop.hbase.client.HBaseAdmin
 java_import org.apache.hadoop.hbase.zookeeper.ZKUtil
 java_import org.apache.hadoop.hbase.zookeeper.ZNodePaths
 java_import org.slf4j.LoggerFactory
@@ -136,8 +135,12 @@ end
 
 hostOrServers = ARGV[1..ARGV.size]
 
-# Create a logger and save it to ruby global
-$LOG = LoggerFactory.getLogger(NAME)
+# disable debug/info logging on this script for clarity
+log_level = 'ERROR'
+org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop.hbase', log_level)
+org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.zookeeper', log_level)
+org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop', log_level)
+
 case ARGV[0]
 when 'add'
   if ARGV.length < 2

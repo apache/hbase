@@ -89,7 +89,7 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
     }
 
     @Override
-    public boolean preScannerNext(ObserverContext<RegionCoprocessorEnvironment> c,
+    public boolean preScannerNext(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
       if (c.getEnvironment().getRegionInfo().isMetaRegion()) {
         int concurrency = CONCURRENCY.incrementAndGet();
@@ -108,7 +108,7 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
     }
 
     @Override
-    public boolean postScannerNext(ObserverContext<RegionCoprocessorEnvironment> c,
+    public boolean postScannerNext(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
       if (c.getEnvironment().getRegionInfo().isMetaRegion()) {
         CONCURRENCY.decrementAndGet();
@@ -125,10 +125,10 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
     TEST_UTIL.startMiniCluster(3);
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
     ConnectionRegistry registry =
-      ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
+      ConnectionRegistryFactory.create(TEST_UTIL.getConfiguration(), User.getCurrent());
     CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
       registry.getClusterId().get(), null, User.getCurrent());
-    LOCATOR = new AsyncNonMetaRegionLocator(CONN);
+    LOCATOR = new AsyncNonMetaRegionLocator(CONN, AsyncConnectionImpl.RETRY_TIMER);
     SPLIT_KEYS = IntStream.range(1, 256).mapToObj(i -> Bytes.toBytes(String.format("%02x", i)))
       .toArray(byte[][]::new);
     TEST_UTIL.createTable(TABLE_NAME, FAMILY, SPLIT_KEYS);

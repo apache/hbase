@@ -34,8 +34,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -324,7 +324,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
       compactMOBs, this.ioOptimizedMode, ioOptimizedMode, maxMobFileSize, major, getStoreInfo());
     // Since scanner.next() can return 'false' but still be delivering data,
     // we have to use a do/while loop.
-    List<Cell> cells = new ArrayList<>();
+    List<ExtendedCell> cells = new ArrayList<>();
     // Limit to "hbase.hstore.compaction.kv.max" (default 10) to avoid OOME
     long currentTime = EnvironmentEdgeManager.currentTime();
     long lastMillis = 0;
@@ -351,10 +351,10 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
       .build();
     throughputController.start(compactionName);
     KeyValueScanner kvs = (scanner instanceof KeyValueScanner) ? (KeyValueScanner) scanner : null;
-    long shippedCallSizeLimit =
-      (long) request.getFiles().size() * this.store.getColumnFamilyDescriptor().getBlocksize();
+    long shippedCallSizeLimit = Math.min(compactScannerSizeLimit,
+      (long) request.getFiles().size() * this.store.getColumnFamilyDescriptor().getBlocksize());
 
-    Cell mobCell = null;
+    ExtendedCell mobCell = null;
     List<String> committedMobWriterFileNames = new ArrayList<>();
     try {
 
@@ -371,7 +371,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
           progress.cancel();
           return false;
         }
-        for (Cell c : cells) {
+        for (ExtendedCell c : cells) {
           if (compactMOBs) {
             if (MobUtils.isMobReferenceCell(c)) {
               String fName = MobUtils.getMobFileName(c);
@@ -525,7 +525,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
             mobCells++;
             // append the original keyValue in the mob file.
             mobFileWriter.append(c);
-            Cell reference = MobUtils.createMobRefCell(c, fileName, this.mobStore.getRefCellTags());
+            ExtendedCell reference =
+              MobUtils.createMobRefCell(c, fileName, this.mobStore.getRefCellTags());
             // write the cell whose value is the path of a mob file to the store file.
             writer.append(reference);
             cellsCountCompactedToMob++;
@@ -556,6 +557,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
           if (kvs != null && bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
             ((ShipperListener) writer).beforeShipped();
             kvs.shipped();
+            scannerContext.clearBlockSizeProgress();
             bytesWrittenProgressForShippedCall = 0;
           }
         }

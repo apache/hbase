@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeepDeletedCells;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
@@ -51,7 +52,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
-import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
@@ -331,16 +331,21 @@ public class TestMajorCompaction {
     int count1 = 0;
     int count2 = 0;
     for (HStoreFile f : r.getStore(COLUMN_FAMILY_TEXT).getStorefiles()) {
-      HFileScanner scanner = f.getReader().getScanner(false, false);
-      scanner.seekTo();
-      do {
-        byte[] row = CellUtil.cloneRow(scanner.getCell());
-        if (Bytes.equals(row, STARTROW)) {
-          count1++;
-        } else if (Bytes.equals(row, secondRowBytes)) {
-          count2++;
+      try (StoreFileScanner scanner = f.getPreadScanner(false, Long.MAX_VALUE, 0, false)) {
+        scanner.seek(KeyValue.LOWESTKEY);
+        for (Cell cell;;) {
+          cell = scanner.next();
+          if (cell == null) {
+            break;
+          }
+          byte[] row = CellUtil.cloneRow(cell);
+          if (Bytes.equals(row, STARTROW)) {
+            count1++;
+          } else if (Bytes.equals(row, secondRowBytes)) {
+            count2++;
+          }
         }
-      } while (scanner.next());
+      }
     }
     assertEquals(countRow1, count1);
     assertEquals(countRow2, count2);
@@ -349,13 +354,12 @@ public class TestMajorCompaction {
   private int count() throws IOException {
     int count = 0;
     for (HStoreFile f : r.getStore(COLUMN_FAMILY_TEXT).getStorefiles()) {
-      HFileScanner scanner = f.getReader().getScanner(false, false);
-      if (!scanner.seekTo()) {
-        continue;
+      try (StoreFileScanner scanner = f.getPreadScanner(false, Long.MAX_VALUE, 0, false)) {
+        scanner.seek(KeyValue.LOWESTKEY);
+        while (scanner.next() != null) {
+          count++;
+        }
       }
-      do {
-        count++;
-      } while (scanner.next());
     }
     return count;
   }

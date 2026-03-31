@@ -21,32 +21,29 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Properties;
-import java.util.Set;
 import org.apache.commons.validator.routines.InetAddressValidator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.client.ZKClientConfig;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
 /**
  * Utility methods for reading, and building the ZooKeeper configuration. The order and priority for
- * reading the config are as follows: (1). Property with "hbase.zookeeper.property." prefix from
- * HBase XML (2). other zookeeper related properties in HBASE XML
+ * reading the config are as follows:
+ * <ol>
+ * <li>Property with "hbase.zookeeper.property." prefix from HBase XML is added with "zookeeper."
+ * prefix</li>
+ * <li>other zookeeper related properties in HBASE XML</li>
+ * </ol>
  */
 @InterfaceAudience.Private
 public final class ZKConfig {
 
   private static final String VARIABLE_START = "${";
   private static final String ZOOKEEPER_JAVA_PROPERTY_PREFIX = "zookeeper.";
-
-  /** Supported ZooKeeper client TLS properties */
-  static final Set<String> ZOOKEEPER_CLIENT_TLS_PROPERTIES =
-    ImmutableSet.of("client.secure", "clientCnxnSocket", "ssl.keyStore.location",
-      "ssl.keyStore.password", "ssl.keyStore.passwordPath", "ssl.trustStore.location",
-      "ssl.trustStore.password", "ssl.trustStore.passwordPath");
 
   private ZKConfig() {
   }
@@ -58,20 +55,31 @@ public final class ZKConfig {
    * @return Properties holding mappings representing ZooKeeper config file.
    */
   public static Properties makeZKProps(Configuration conf) {
-    return makeZKPropsFromHbaseConfig(conf);
+    return makeZKServerPropsFromHBaseConfig(conf);
+  }
+
+  private static Properties extractZKClientPropsFromHBaseConfig(final Configuration conf) {
+    return extractZKPropsFromHBaseConfig(conf, ZOOKEEPER_JAVA_PROPERTY_PREFIX);
+  }
+
+  // This is only used for the in-process ZK Quorums used mainly for testing, not for
+  // deployments with an external Zookeeper.
+  private static Properties extractZKServerPropsFromHBaseConfig(final Configuration conf) {
+    return extractZKPropsFromHBaseConfig(conf, "");
   }
 
   /**
-   * Make a Properties object holding ZooKeeper config. Parses the corresponding config options from
-   * the HBase XML configs and generates the appropriate ZooKeeper properties.
-   * @param conf Configuration to read from.
-   * @return Properties holding mappings representing ZooKeeper config file.
+   * Map all hbase.zookeeper.property.KEY properties to targetPrefix.KEY. Synchronize on conf so no
+   * loading of configs while we iterate This is rather messy, as we use the same prefix for both
+   * ZKClientConfig and for the HQuorum properties. ZKClientConfig props all have the zookeeper.
+   * prefix, while the HQuorum server props don't, and ZK automagically sets a system property
+   * adding a zookeeper. prefix to the non HQuorum properties, so we need to add the "zookeeper."
+   * prefix for ZKClientConfig but not for the HQuorum props.
    */
-  private static Properties makeZKPropsFromHbaseConfig(Configuration conf) {
+  private static Properties extractZKPropsFromHBaseConfig(final Configuration conf,
+    final String targetPrefix) {
     Properties zkProperties = new Properties();
 
-    // Directly map all of the hbase.zookeeper.property.KEY properties.
-    // Synchronize on conf so no loading of configs while we iterate
     synchronized (conf) {
       for (Entry<String, String> entry : conf) {
         String key = entry.getKey();
@@ -82,10 +90,23 @@ public final class ZKConfig {
           if (value.contains(VARIABLE_START)) {
             value = conf.get(key);
           }
-          zkProperties.setProperty(zkKey, value);
+          zkProperties.setProperty(targetPrefix + zkKey, value);
         }
       }
     }
+
+    return zkProperties;
+  }
+
+  /**
+   * Make a Properties object holding ZooKeeper config for the optional in-process ZK Quorum
+   * servers. Parses the corresponding config options from the HBase XML configs and generates the
+   * appropriate ZooKeeper properties.
+   * @param conf Configuration to read from.
+   * @return Properties holding mappings representing ZooKeeper config file.
+   */
+  private static Properties makeZKServerPropsFromHBaseConfig(Configuration conf) {
+    Properties zkProperties = extractZKServerPropsFromHBaseConfig(conf);
 
     // If clientPort is not set, assign the default.
     if (zkProperties.getProperty(HConstants.CLIENT_PORT_STR) == null) {
@@ -132,7 +153,6 @@ public final class ZKConfig {
    * @return Quorum servers
    */
   public static String getZKQuorumServersString(Configuration conf) {
-    setZooKeeperClientSystemProperties(HConstants.ZK_CFG_PROPERTY_PREFIX, conf);
     return getZKQuorumServersStringFromHbaseConfig(conf);
   }
 
@@ -322,13 +342,19 @@ public final class ZKConfig {
     }
   }
 
+  public static ZKClientConfig getZKClientConfig(Configuration conf) {
+    Properties zkProperties = extractZKClientPropsFromHBaseConfig(conf);
+    ZKClientConfig zkClientConfig = new ZKClientConfig();
+    zkProperties.forEach((k, v) -> zkClientConfig.setProperty(k.toString(), v.toString()));
+    return zkClientConfig;
+  }
+
   /**
    * Get the client ZK Quorum servers string
    * @param conf the configuration to read
    * @return Client quorum servers, or null if not specified
    */
   public static String getClientZKQuorumServersString(Configuration conf) {
-    setZooKeeperClientSystemProperties(HConstants.ZK_CFG_PROPERTY_PREFIX, conf);
     String clientQuromServers = conf.get(HConstants.CLIENT_ZOOKEEPER_QUORUM);
     if (clientQuromServers == null) {
       return null;
@@ -340,28 +366,5 @@ public final class ZKConfig {
     // Build the ZK quorum server string with "server:clientport" list, separated by ','
     final String[] serverHosts = StringUtils.getStrings(clientQuromServers);
     return buildZKQuorumServerString(serverHosts, clientZkClientPort);
-  }
-
-  private static void setZooKeeperClientSystemProperties(String prefix, Configuration conf) {
-    synchronized (conf) {
-      for (Entry<String, String> entry : conf) {
-        String key = entry.getKey();
-        if (!key.startsWith(prefix)) {
-          continue;
-        }
-        String zkKey = key.substring(prefix.length());
-        if (!ZOOKEEPER_CLIENT_TLS_PROPERTIES.contains(zkKey)) {
-          continue;
-        }
-        String value = entry.getValue();
-        // If the value has variables substitutions, need to do a get.
-        if (value.contains(VARIABLE_START)) {
-          value = conf.get(key);
-        }
-        if (System.getProperty(ZOOKEEPER_JAVA_PROPERTY_PREFIX + zkKey) == null) {
-          System.setProperty(ZOOKEEPER_JAVA_PROPERTY_PREFIX + zkKey, value);
-        }
-      }
-    }
   }
 }

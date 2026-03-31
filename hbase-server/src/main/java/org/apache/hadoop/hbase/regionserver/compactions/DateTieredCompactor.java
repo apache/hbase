@@ -46,7 +46,7 @@ public class DateTieredCompactor extends AbstractMultiOutputCompactor<DateTiered
     super(conf, store);
   }
 
-  private boolean needEmptyFile(CompactionRequestImpl request) {
+  protected boolean needEmptyFile(CompactionRequestImpl request) {
     // if we are going to compact the last N files, then we need to emit an empty file to retain the
     // maxSeqId if we haven't written out anything.
     OptionalLong maxSeqId = StoreUtils.getMaxSequenceIdInList(request.getFiles());
@@ -70,12 +70,18 @@ public class DateTieredCompactor extends AbstractMultiOutputCompactor<DateTiered
         public DateTieredMultiFileWriter createWriter(InternalScanner scanner, FileDetails fd,
           boolean shouldDropBehind, boolean major, Consumer<Path> writerCreationTracker)
           throws IOException {
-          DateTieredMultiFileWriter writer = new DateTieredMultiFileWriter(lowerBoundaries,
-            lowerBoundariesPolicies, needEmptyFile(request));
+          DateTieredMultiFileWriter writer =
+            createMultiWriter(request, lowerBoundaries, lowerBoundariesPolicies);
           initMultiWriter(writer, scanner, fd, shouldDropBehind, major, writerCreationTracker);
           return writer;
         }
       }, throughputController, user);
+  }
+
+  protected DateTieredMultiFileWriter createMultiWriter(final CompactionRequestImpl request,
+    final List<Long> lowerBoundaries, final Map<Long, String> lowerBoundariesPolicies) {
+    return new DateTieredMultiFileWriter(lowerBoundaries, lowerBoundariesPolicies,
+      needEmptyFile(request), c -> c.getTimestamp());
   }
 
   @Override

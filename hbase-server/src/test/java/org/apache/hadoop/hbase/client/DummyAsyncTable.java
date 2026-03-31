@@ -180,4 +180,11 @@ public class DummyAsyncTable<C extends ScanResultConsumerBase> implements AsyncT
     CoprocessorCallback<R> callback) {
     return null;
   }
+
+  @Override
+  public <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(
+    Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
+    PartialResultCoprocessorCallback<S, R> callback) {
+    return null;
+  }
 }

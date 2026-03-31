@@ -1,0 +1,41 @@
+{
+  "books": [
+    {
+      "title": "HBase: The Definitive Guide",
+      "subtitle": "Random Access to Your Planet-Size Data",
+      "author": "Lars George",
+      "publisher": "O'Reilly Media",
+      "released": "August 2011",
+      "pages": 556,
+      "url": "http://shop.oreilly.com/product/0636920014348.do"
+    },
+    {
+      "title": "HBase In Action",
+      "subtitle": "",
+      "author": "Nick Dimiduk and Amandeep Khurana",
+      "publisher": "Manning",
+      "released": "Fall 2012",
+      "pages": 350,
+      "url": "http://www.manning.com/dimidukkhurana/"
+    },
+    {
+      "title": "HBase Administration Cookbook",
+      "subtitle": "",
+      "author": "Yifeng Jiang",
+      "publisher": "PACKT Publishing",
+      "released": "August 2012",
+      "pages": 335,
+      "url": "http://www.packtpub.com/hbase-administration-for-optimum-database-performance-cookbook/book"
+    },
+    {
+      "title": "HBase High Performance Cookbook",
+      "subtitle": "",
+      "author": "Ruchir Choudhry",
+      "publisher": "PACKT Publishing",
+      "released": "January 2017",
+      "pages": 350,
+      "url": "https://www.packtpub.com/big-data-and-business-intelligence/hbase-high-performance-cookbook"
+    }
+  ]
+}
+

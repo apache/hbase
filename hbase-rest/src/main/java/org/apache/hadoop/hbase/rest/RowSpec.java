@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.rest;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -45,8 +46,13 @@ public class RowSpec {
   private long endTime = DEFAULT_END_TIMESTAMP;
   private int maxVersions = 1;
   private int maxValues = Integer.MAX_VALUE;
+  private boolean partialTimeRange;
 
   public RowSpec(String path) throws IllegalArgumentException {
+    this(path, null);
+  }
+
+  public RowSpec(String path, String keyEncoding) throws IllegalArgumentException {
     int i = 0;
     while (path.charAt(i) == '/') {
       i++;
@@ -55,6 +61,34 @@ public class RowSpec {
     i = parseColumns(path, i);
     i = parseTimestamp(path, i);
     i = parseQueryParams(path, i);
+
+    if (keyEncoding != null) {
+      // See https://en.wikipedia.org/wiki/Base64#Variants_summary_table
+      Base64.Decoder decoder;
+      switch (keyEncoding) {
+        case "b64":
+        case "base64":
+        case "b64url":
+        case "base64url":
+          decoder = Base64.getUrlDecoder();
+          break;
+        case "b64basic":
+        case "base64basic":
+          decoder = Base64.getDecoder();
+          break;
+        default:
+          throw new IllegalArgumentException("unknown key encoding '" + keyEncoding + "'");
+      }
+      this.row = decoder.decode(this.row);
+      if (this.endRow != null) {
+        this.endRow = decoder.decode(this.endRow);
+      }
+      TreeSet<byte[]> decodedColumns = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+      for (byte[] encodedColumn : this.columns) {
+        decodedColumns.add(decoder.decode(encodedColumn));
+      }
+      this.columns = decodedColumns;
+    }
   }
 
   private int parseRowKeys(final String path, int i) throws IllegalArgumentException {
@@ -183,6 +217,7 @@ public class RowSpec {
       endTime = time1;
     } else {
       endTime = time0;
+      partialTimeRange = true;
     }
     return i;
   }
@@ -393,4 +428,9 @@ public class RowSpec {
     result.append("}");
     return result.toString();
   }
+
+  public boolean isPartialTimeRange() {
+    return partialTimeRange;
+  }
+
 }

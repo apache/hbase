@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.codec;
 
 import java.io.InputStream;
 import java.io.OutputStream;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.io.CellOutputStream;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -46,7 +46,7 @@ public interface Codec {
    * Implementations should implicitly clean up any resources allocated when the Decoder/CellScanner
    * runs off the end of the cell block. Do this rather than require the user call close explicitly.
    */
-  interface Decoder extends CellScanner {
+  interface Decoder extends ExtendedCellScanner {
   }
 
   Decoder getDecoder(InputStream is);

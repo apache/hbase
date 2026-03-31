@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.codec;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -46,7 +46,7 @@ public class MessageCodec implements Codec {
     }
 
     @Override
-    public void write(Cell cell) throws IOException {
+    public void write(ExtendedCell cell) throws IOException {
       checkFlushed();
       CellProtos.Cell.Builder builder = CellProtos.Cell.newBuilder();
       // This copies bytes from Cell to ByteString. I don't see anyway around the copy.
@@ -75,7 +75,7 @@ public class MessageCodec implements Codec {
     }
 
     @Override
-    protected Cell parseCell() throws IOException {
+    protected ExtendedCell parseCell() throws IOException {
       return ProtobufUtil.toCell(cellBuilder, CellProtos.Cell.parseDelimitedFrom(this.in), false);
     }
   }

@@ -31,8 +31,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-
 /**
  * Compact passed set of files. Create an instance and then call
  * {@link #compact(CompactionRequestImpl, ThroughputController, User)}
@@ -67,7 +65,7 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
   @Override
   protected List<Path> commitWriter(StoreFileWriter writer, FileDetails fd,
     CompactionRequestImpl request) throws IOException {
-    List<Path> newFiles = Lists.newArrayList(writer.getPath());
+    List<Path> newFiles = writer.getPaths();
     writer.appendMetadata(fd.maxSeqId, request.isAllFiles(), request.getFiles());
     writer.close();
     return newFiles;
@@ -75,17 +73,19 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
 
   @Override
   protected final void abortWriter(StoreFileWriter writer) throws IOException {
-    Path leftoverFile = writer.getPath();
+    List<Path> leftoverFiles = writer.getPaths();
     try {
       writer.close();
     } catch (IOException e) {
       LOG.warn("Failed to close the writer after an unfinished compaction.", e);
     }
     try {
-      store.getFileSystem().delete(leftoverFile, false);
+      for (Path path : leftoverFiles) {
+        store.getFileSystem().delete(path, false);
+      }
     } catch (IOException e) {
       LOG.warn("Failed to delete the leftover file {} after an unfinished compaction.",
-        leftoverFile, e);
+        leftoverFiles, e);
     }
   }
 

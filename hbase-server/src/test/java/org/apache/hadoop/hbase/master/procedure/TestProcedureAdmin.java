@@ -155,14 +155,18 @@ public class TestProcedureAdmin {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    RegionInfo[] regions =
-      MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f");
+    MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f");
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
     // Submit a procedure
     long procId = procExec
       .submitProcedure(new DisableTableProcedure(procExec.getEnvironment(), tableName, true));
     // Wait for one step to complete
+    ProcedureTestingUtility.waitProcedure(procExec, procId);
+    // After HBASE-28210, the injection of kill before update is moved before we add rollback
+    // step, so here we need to run two steps, otherwise we will not consider the procedure as
+    // executed
+    MasterProcedureTestingUtility.restartMasterProcedureExecutor(procExec);
     ProcedureTestingUtility.waitProcedure(procExec, procId);
 
     // Set the mayInterruptIfRunning flag to false

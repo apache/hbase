@@ -26,11 +26,14 @@ import static org.mockito.Mockito.when;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.metrics.MetricRegistries;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.regionserver.metrics.MetricsTableRequests;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.JvmPauseMonitor;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -64,6 +67,12 @@ public class TestMetricsRegionServer {
     wrapper = new MetricsRegionServerWrapperStub();
     rsm = new MetricsRegionServer(wrapper, new Configuration(false), null);
     serverSource = rsm.getMetricsSource();
+  }
+
+  @After
+  public void tearDown() {
+    // Clean up global registries after each test to avoid interference
+    MetricRegistries.global().clear();
   }
 
   @Test
@@ -127,17 +136,25 @@ public class TestMetricsRegionServer {
     HELPER.assertGauge("l1CacheCount", 50, serverSource);
     HELPER.assertCounter("l1CacheEvictionCount", 1000, serverSource);
     HELPER.assertGauge("l1CacheHitCount", 200, serverSource);
+    HELPER.assertGauge("l1CacheHitCachingCount", 200, serverSource);
     HELPER.assertGauge("l1CacheMissCount", 100, serverSource);
+    HELPER.assertGauge("l1CacheMissCachingCount", 100, serverSource);
     HELPER.assertGauge("l1CacheHitRatio", 80, serverSource);
+    HELPER.assertGauge("l1CacheHitCachingRatio", 80, serverSource);
     HELPER.assertGauge("l1CacheMissRatio", 20, serverSource);
+    HELPER.assertGauge("l1CacheMissCachingRatio", 20, serverSource);
     HELPER.assertGauge("l2CacheFreeSize", 200, serverSource);
     HELPER.assertGauge("l2CacheSize", 456, serverSource);
     HELPER.assertGauge("l2CacheCount", 75, serverSource);
     HELPER.assertCounter("l2CacheEvictionCount", 2000, serverSource);
     HELPER.assertGauge("l2CacheHitCount", 800, serverSource);
+    HELPER.assertGauge("l2CacheHitCachingCount", 800, serverSource);
     HELPER.assertGauge("l2CacheMissCount", 200, serverSource);
+    HELPER.assertGauge("l2CacheMissCachingCount", 200, serverSource);
     HELPER.assertGauge("l2CacheHitRatio", 90, serverSource);
+    HELPER.assertGauge("l2CacheHitCachingRatio", 90, serverSource);
     HELPER.assertGauge("l2CacheMissRatio", 10, serverSource);
+    HELPER.assertGauge("l2CacheMissCachingRatio", 10, serverSource);
     HELPER.assertCounter("updatesBlockedTime", 419, serverSource);
   }
 
@@ -312,5 +329,39 @@ public class TestMetricsRegionServer {
     assertTrue(HELPER.checkGaugeExists("ServerWriteQueryPerSecond_count", serverSource));
     rsm.updateWriteQueryMeter(region, 500L);
     HELPER.assertGauge("ServerWriteQueryPerSecond_count", 500L, serverSource);
+  }
+
+  @Test
+  public void testThrottleExceptionMetricsIntegration() {
+    // Record different types of throttle exceptions
+    rsm.recordThrottleException(RpcThrottlingException.Type.NumRequestsExceeded, "alice", "users");
+    rsm.recordThrottleException(RpcThrottlingException.Type.WriteSizeExceeded, "bob", "logs");
+    rsm.recordThrottleException(RpcThrottlingException.Type.ReadSizeExceeded, "charlie",
+      "metadata");
+
+    // Record the same exception multiple times to test increment
+    rsm.recordThrottleException(RpcThrottlingException.Type.NumRequestsExceeded, "alice", "users");
+    rsm.recordThrottleException(RpcThrottlingException.Type.NumRequestsExceeded, "alice", "users");
+
+    // Verify the specific counters were created and have correct values using HELPER
+    HELPER.assertCounter("RpcThrottlingException_Type_NumRequestsExceeded_User_alice_Table_users",
+      3L, serverSource);
+    HELPER.assertCounter("RpcThrottlingException_Type_WriteSizeExceeded_User_bob_Table_logs", 1L,
+      serverSource);
+    HELPER.assertCounter("RpcThrottlingException_Type_ReadSizeExceeded_User_charlie_Table_metadata",
+      1L, serverSource);
+
+    // Test metric name sanitization through the integration
+    rsm.recordThrottleException(RpcThrottlingException.Type.RequestSizeExceeded,
+      "user.with@special", "table:with,problematic=chars");
+    HELPER.assertCounter(
+      "RpcThrottlingException_Type_RequestSizeExceeded_User_user.with@special_Table_table_with_problematic_chars",
+      1L, serverSource);
+
+    // Test null handling through the integration
+    rsm.recordThrottleException(RpcThrottlingException.Type.ReadCapacityUnitExceeded, null, null);
+    HELPER.assertCounter(
+      "RpcThrottlingException_Type_ReadCapacityUnitExceeded_User_unknown_Table_unknown", 1L,
+      serverSource);
   }
 }

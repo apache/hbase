@@ -461,12 +461,13 @@ public final class X509TestContext {
   }
 
   public void regenerateStores(X509KeyType keyStoreKeyType, X509KeyType trustStoreKeyType,
-    KeyStoreFileType keyStoreFileType, KeyStoreFileType trustStoreFileType)
+    KeyStoreFileType keyStoreFileType, KeyStoreFileType trustStoreFileType,
+    String... subjectAltNames)
     throws GeneralSecurityException, IOException, OperatorCreationException {
 
     trustStoreKeyPair = X509TestHelpers.generateKeyPair(trustStoreKeyType);
     keyStoreKeyPair = X509TestHelpers.generateKeyPair(keyStoreKeyType);
-    createCertificates();
+    createCertificates(subjectAltNames);
 
     switch (keyStoreFileType) {
       case JKS:
@@ -499,7 +500,7 @@ public final class X509TestContext {
     }
   }
 
-  private void createCertificates()
+  private void createCertificates(String... subjectAltNames)
     throws GeneralSecurityException, IOException, OperatorCreationException {
     X500NameBuilder caNameBuilder = new X500NameBuilder(BCStyle.INSTANCE);
     caNameBuilder.addRDN(BCStyle.CN,
@@ -510,7 +511,7 @@ public final class X509TestContext {
     X500NameBuilder nameBuilder = new X500NameBuilder(BCStyle.INSTANCE);
     nameBuilder.addRDN(BCStyle.CN,
       MethodHandles.lookup().lookupClass().getCanonicalName() + " Zookeeper Test");
-    keyStoreCertificate = newCert(nameBuilder.build());
+    keyStoreCertificate = newCert(nameBuilder.build(), subjectAltNames);
   }
 
   /**

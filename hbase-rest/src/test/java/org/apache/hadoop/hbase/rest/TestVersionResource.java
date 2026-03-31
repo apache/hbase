@@ -17,16 +17,16 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
@@ -36,23 +36,20 @@ import org.apache.hadoop.hbase.rest.model.VersionModel;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.apache.hadoop.hbase.util.VersionInfo;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 
-@Category({ RestTests.class, MediumTests.class })
+@Tag(RestTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestVersionResource {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVersionResource.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestVersionResource.class);
 
@@ -61,7 +58,7 @@ public class TestVersionResource {
   private static Client client;
   private static JAXBContext context;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
@@ -69,7 +66,7 @@ public class TestVersionResource {
     context = JAXBContext.newInstance(VersionModel.class, StorageClusterVersionModel.class);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     REST_TEST_UTIL.shutdownServletContainer();
     TEST_UTIL.shutdownMiniCluster();
@@ -77,8 +74,9 @@ public class TestVersionResource {
 
   private static void validate(VersionModel model) {
     assertNotNull(model);
-    assertNotNull(model.getRESTVersion());
-    assertEquals(RESTServlet.VERSION_STRING, model.getRESTVersion());
+    String restVersion = model.getRESTVersion();
+    assertNotNull(restVersion);
+    assertEquals(RESTServlet.VERSION_STRING, restVersion);
     String osVersion = model.getOSVersion();
     assertNotNull(osVersion);
     assertTrue(osVersion.contains(System.getProperty("os.name")));
@@ -94,6 +92,13 @@ public class TestVersionResource {
     assertNotNull(jerseyVersion);
     // TODO: fix when we actually get a jersey version
     // assertEquals(jerseyVersion, ServletContainer.class.getPackage().getImplementationVersion());
+
+    String version = model.getVersion();
+    assertNotNull(version);
+    assertEquals(VersionInfo.getVersion(), version);
+    String revision = model.getRevision();
+    assertNotNull(revision);
+    assertEquals(VersionInfo.getRevision(), revision);
   }
 
   @Test
@@ -102,7 +107,7 @@ public class TestVersionResource {
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_TEXT, response.getHeader("content-type"));
     String body = Bytes.toString(response.getBody());
-    assertTrue(body.length() > 0);
+    assertFalse(body.isEmpty());
     assertTrue(body.contains(RESTServlet.VERSION_STRING));
     assertTrue(body.contains(System.getProperty("java.vm.vendor")));
     assertTrue(body.contains(System.getProperty("java.version")));

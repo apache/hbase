@@ -18,7 +18,12 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -113,6 +118,23 @@ public class TestHFileReaderImpl {
       }
 
       assertEquals("expected only one remaining block but got " + blocks.get(), 1, blocks.get());
+    }
+  }
+
+  @Test
+  public void testReadWorksWhenCacheCorrupt() throws Exception {
+    BlockCache mockedCache = mock(BlockCache.class);
+    when(mockedCache.getBlock(any(), anyBoolean(), anyBoolean(), anyBoolean(), any()))
+      .thenThrow(new RuntimeException("Injected error"));
+    Path p = makeNewFile();
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    Configuration conf = TEST_UTIL.getConfiguration();
+    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf, mockedCache), true, conf);
+    long offset = 0;
+    while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
+      HFileBlock block = reader.readBlock(offset, -1, false, true, false, true, null, null, false);
+      assertNotNull(block);
+      offset += block.getOnDiskSizeWithHeader();
     }
   }
 

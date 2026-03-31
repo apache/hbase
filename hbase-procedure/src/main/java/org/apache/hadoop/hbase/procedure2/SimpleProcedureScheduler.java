@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.procedure2;
 
 import java.util.Collections;
 import java.util.List;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -81,5 +83,11 @@ public class SimpleProcedureScheduler extends AbstractProcedureScheduler {
   @Override
   public LockedResource getLockResource(LockedResourceType resourceType, String resourceName) {
     return null;
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).appendSuper(super.toString())
+      .append("runnables", runnables).build();
   }
 }

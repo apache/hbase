@@ -121,7 +121,7 @@ public abstract class AbstractProtobufWALReader
    * Get or create the input stream used by cell decoder.
    * <p/>
    * For implementing replication, we may need to limit the bytes we can read, so here we provide a
-   * method so sub classes can wrap the original input stream.
+   * method so subclasses can wrap the original input stream.
    */
   protected abstract InputStream getCellCodecInputStream(FSDataInputStream stream);
 
@@ -366,7 +366,7 @@ public abstract class AbstractProtobufWALReader
     this.fileLength = stat.getLen();
     this.walEditsStopOffset = this.fileLength;
     long currentPos = stream.getPos();
-    // we will reset walEditsStopOffset if trailer if available
+    // we will reset walEditsStopOffset if trailer is available
     trailerPresent = setTrailerIfPresent(stream);
     if (currentPos != stream.getPos()) {
       // seek back
@@ -509,18 +509,18 @@ public abstract class AbstractProtobufWALReader
    * This is used to determine whether we have already reached the WALTrailer. As the size and magic
    * are at the end of the WAL file, it is possible that these two options are missing while
    * writing, so we will consider there is no trailer. And when we actually reach the WALTrailer, we
-   * will try to decode it as WALKey and we will fail but the error could be vary as it is parsing
+   * will try to decode it as WALKey and we will fail but the error could be varied as it is parsing
    * WALTrailer actually.
    * @return whether this is a WALTrailer and we should throw EOF to upper layer the file is done
    */
   protected final boolean isWALTrailer(long startPosition) throws IOException {
-    // We have nothing in the WALTrailer PB message now so its size is just a int length size and a
+    // We have nothing in the WALTrailer PB message now so its size is just an int length size and a
     // magic at the end
     int trailerSize = PB_WAL_COMPLETE_MAGIC.length + Bytes.SIZEOF_INT;
     if (fileLength - startPosition >= trailerSize) {
       // We still have more than trailerSize bytes before reaching the EOF so this is not a trailer.
       // We also test for == here because if this is a valid trailer, we can read it while opening
-      // the reader so we should not reach here
+      // the reader, so we should not reach here
       return false;
     }
     inputStream.seek(startPosition);
@@ -548,7 +548,7 @@ public abstract class AbstractProtobufWALReader
         return false;
       }
     }
-    // in fact we should not reach here, as this means the trailer bytes are all matched and
+    // in fact, we should not reach here, as this means the trailer bytes are all matched and
     // complete, then we should not call this method...
     return true;
   }

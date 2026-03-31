@@ -571,4 +571,10 @@ public interface Region extends ConfigurationObserver {
    *         if you try to set a configuration.
    */
   Configuration getReadOnlyConfiguration();
+
+  /**
+   * The minimum block size configuration from all relevant column families. This is used when
+   * estimating quota consumption.
+   */
+  int getMinBlockSizeBytes();
 }

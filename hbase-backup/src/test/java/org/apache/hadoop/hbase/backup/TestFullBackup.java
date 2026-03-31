@@ -17,25 +17,25 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.HashSet;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(LargeTests.class)
-public class TestFullBackup extends TestBackupBase {
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFullBackup.class);
+@Tag(LargeTests.TAG)
+public class TestFullBackup extends TestBackupBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFullBackup.class);
 
@@ -56,6 +56,11 @@ public class TestFullBackup extends TestBackupBase {
         String backupId = data.getBackupId();
         assertTrue(checkSucceeded(backupId));
       }
+
+      BackupInfo newestBackup = backups.get(0);
+      BackupManifest manifest =
+        HBackupFileSystem.getManifest(conf1, new Path(BACKUP_ROOT_DIR), newestBackup.getBackupId());
+      assertEquals(Sets.newHashSet(table1, table2), new HashSet<>(manifest.getTableList()));
     }
     LOG.info("backup complete");
   }

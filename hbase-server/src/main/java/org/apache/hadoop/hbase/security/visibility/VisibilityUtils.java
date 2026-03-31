@@ -34,7 +34,7 @@ import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
@@ -202,7 +202,7 @@ public class VisibilityUtils {
    * @param tags - the array that will be populated if visibility tags are present
    * @return The visibility tags serialization format
    */
-  public static Byte extractVisibilityTags(Cell cell, List<Tag> tags) {
+  public static Byte extractVisibilityTags(ExtendedCell cell, List<Tag> tags) {
     Byte serializationFormat = null;
     Iterator<Tag> tagsIterator = PrivateCellUtil.tagsIterator(cell);
     while (tagsIterator.hasNext()) {
@@ -225,7 +225,8 @@ public class VisibilityUtils {
    * @return - the serailization format of the tag. Can be null if no tags are found or if there is
    *         no visibility tag found
    */
-  public static Byte extractAndPartitionTags(Cell cell, List<Tag> visTags, List<Tag> nonVisTags) {
+  public static Byte extractAndPartitionTags(ExtendedCell cell, List<Tag> visTags,
+    List<Tag> nonVisTags) {
     Byte serializationFormat = null;
     Iterator<Tag> tagsIterator = PrivateCellUtil.tagsIterator(cell);
     while (tagsIterator.hasNext()) {
@@ -242,7 +243,7 @@ public class VisibilityUtils {
     return serializationFormat;
   }
 
-  public static boolean isVisibilityTagsPresent(Cell cell) {
+  public static boolean isVisibilityTagsPresent(ExtendedCell cell) {
     Iterator<Tag> tagsIterator = PrivateCellUtil.tagsIterator(cell);
     while (tagsIterator.hasNext()) {
       Tag tag = tagsIterator.next();

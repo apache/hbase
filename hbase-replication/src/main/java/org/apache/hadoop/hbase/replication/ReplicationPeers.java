@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -24,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -155,8 +157,15 @@ public class ReplicationPeers implements ConfigurationObserver {
     SyncReplicationState syncReplicationState = peerStorage.getPeerSyncReplicationState(peerId);
     SyncReplicationState newSyncReplicationState =
       peerStorage.getPeerNewSyncReplicationState(peerId);
-    return new ReplicationPeerImpl(ReplicationUtils.getPeerClusterConfiguration(peerConfig, conf),
-      peerId, peerConfig, enabled, syncReplicationState, newSyncReplicationState);
+    Configuration peerClusterConf;
+    try {
+      peerClusterConf = ReplicationPeerConfigUtil.getPeerClusterConfiguration(conf, peerConfig);
+    } catch (IOException e) {
+      throw new ReplicationException(
+        "failed to apply cluster key to configuration for peer config " + peerConfig, e);
+    }
+    return new ReplicationPeerImpl(peerClusterConf, peerId, peerConfig, enabled,
+      syncReplicationState, newSyncReplicationState);
   }
 
   @Override
@@ -166,8 +175,8 @@ public class ReplicationPeers implements ConfigurationObserver {
     for (ReplicationPeerImpl peer : peerCache.values()) {
       try {
         peer.onConfigurationChange(
-          ReplicationUtils.getPeerClusterConfiguration(peer.getPeerConfig(), conf));
-      } catch (ReplicationException e) {
+          ReplicationPeerConfigUtil.getPeerClusterConfiguration(conf, peer.getPeerConfig()));
+      } catch (IOException e) {
         LOG.warn("failed to reload configuration for peer {}", peer.getId(), e);
       }
     }

@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -75,7 +76,7 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
 
   @Override
   void append(RegionEntryBuffer buffer) throws IOException {
-    Map<String, CellSet> familyCells = new HashMap<>();
+    Map<String, CellSet<ExtendedCell>> familyCells = new HashMap<>();
     Map<String, Long> familySeqIds = new HashMap<>();
     boolean isMetaTable = buffer.tableName.equals(META_TABLE_NAME);
     // First iterate all Cells to find which column families are present and to stamp Cell with
@@ -87,28 +88,29 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
         if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
           continue;
         }
+        // only ExtendedCell can set sequence id, so it is safe to cast it to ExtendedCell later.
         PrivateCellUtil.setSequenceId(cell, seqId);
         String familyName = Bytes.toString(CellUtil.cloneFamily(cell));
         // comparator need to be specified for meta
         familyCells
           .computeIfAbsent(familyName,
-            key -> new CellSet(
+            key -> new CellSet<>(
               isMetaTable ? MetaCellComparator.META_COMPARATOR : CellComparatorImpl.COMPARATOR))
-          .add(cell);
+          .add((ExtendedCell) cell);
         familySeqIds.compute(familyName, (k, v) -> v == null ? seqId : Math.max(v, seqId));
       }
     }
 
     // Create a new hfile writer for each column family, write edits then close writer.
     String regionName = Bytes.toString(buffer.encodedRegionName);
-    for (Map.Entry<String, CellSet> cellsEntry : familyCells.entrySet()) {
+    for (Map.Entry<String, CellSet<ExtendedCell>> cellsEntry : familyCells.entrySet()) {
       String familyName = cellsEntry.getKey();
       StoreFileWriter writer = createRecoveredHFileWriter(buffer.tableName, regionName,
         familySeqIds.get(familyName), familyName, isMetaTable);
       LOG.trace("Created {}", writer.getPath());
       openingWritersNum.incrementAndGet();
       try {
-        for (Cell cell : cellsEntry.getValue()) {
+        for (ExtendedCell cell : cellsEntry.getValue()) {
           writer.append(cell);
         }
         // Append the max seqid to hfile, used when recovery.

@@ -22,12 +22,12 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.net.BindException;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
@@ -98,6 +99,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -108,6 +110,7 @@ import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -119,7 +122,12 @@ import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.AccessController;
+import org.apache.hadoop.hbase.security.access.PermissionStorage;
+import org.apache.hadoop.hbase.security.access.SecureTestUtil;
+import org.apache.hadoop.hbase.security.token.TokenProvider;
 import org.apache.hadoop.hbase.security.visibility.VisibilityLabelsCache;
+import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -129,9 +137,6 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
-import org.apache.hadoop.hbase.util.RegionSplitter;
-import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -140,6 +145,7 @@ import org.apache.hadoop.hbase.zookeeper.EmptyWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -147,7 +153,6 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
-import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -183,24 +188,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 @InterfaceStability.Evolving
 public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
-  /**
-   * System property key to get test directory value. Name is as it is because mini dfs has
-   * hard-codings to put test data here. It should NOT be used directly in HBase, as it's a property
-   * used in mini dfs.
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Can be used only with mini dfs.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-19410">HBASE-19410</a>
-   */
-  @Deprecated
-  private static final String TEST_DIRECTORY_KEY = "test.build.data";
-
-  public static final String REGIONS_PER_SERVER_KEY = "hbase.test.regions-per-server";
-  /**
-   * The default number of regions per regionserver when creating a pre-split table.
-   */
   public static final int DEFAULT_REGIONS_PER_SERVER = 3;
-
-  public static final String PRESPLIT_TEST_TABLE_KEY = "hbase.test.pre-split-table";
-  public static final boolean PRESPLIT_TEST_TABLE = true;
 
   private MiniDFSCluster dfsCluster = null;
   private FsDatasetAsyncDiskServiceFixer dfsClusterFixer = null;
@@ -365,6 +353,38 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
+   * Start mini secure cluster with given kdc and principals.
+   * @param kdc              Mini kdc server
+   * @param servicePrincipal Service principal without realm.
+   * @param spnegoPrincipal  Spnego principal without realm.
+   * @return Handler to shutdown the cluster
+   */
+  public Closeable startSecureMiniCluster(MiniKdc kdc, String servicePrincipal,
+    String spnegoPrincipal) throws Exception {
+    Configuration conf = getConfiguration();
+
+    SecureTestUtil.enableSecurity(conf);
+    VisibilityTestUtil.enableVisiblityLabels(conf);
+    SecureTestUtil.verifyConfiguration(conf);
+
+    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+      AccessController.class.getName() + ',' + TokenProvider.class.getName());
+
+    HBaseKerberosUtils.setSecuredConfiguration(conf, servicePrincipal + '@' + kdc.getRealm(),
+      spnegoPrincipal + '@' + kdc.getRealm());
+
+    startMiniCluster();
+    try {
+      waitUntilAllRegionsAssigned(PermissionStorage.ACL_TABLE_NAME);
+    } catch (Exception e) {
+      shutdownMiniCluster();
+      throw e;
+    }
+
+    return this::shutdownMiniCluster;
+  }
+
+  /**
    * Returns this classes's instance of {@link Configuration}. Be careful how you use the returned
    * Configuration since {@link Connection} instances can be shared. The Map of Connections is keyed
    * by the Configuration. If say, a Connection was being used against a cluster that had been
@@ -384,13 +404,12 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Home our data in a dir under {@link #DEFAULT_BASE_TEST_DIRECTORY}. Give it a random name so can
-   * have many concurrent tests running if we need to. It needs to amend the
-   * {@link #TEST_DIRECTORY_KEY} System property, as it's what minidfscluster bases it data dir on.
-   * Moding a System property is not the way to do concurrent instances -- another instance could
-   * grab the temporary value unintentionally -- but not anything can do about it at moment; single
-   * instance only is how the minidfscluster works. We also create the underlying directory names
-   * for hadoop.log.dir, mapreduce.cluster.local.dir and hadoop.tmp.dir, and set the values in the
-   * conf, and as a system property for hadoop.tmp.dir (We do not create them!).
+   * have many concurrent tests running if we need to. Moding a System property is not the way to do
+   * concurrent instances -- another instance could grab the temporary value unintentionally -- but
+   * not anything can do about it at moment; single instance only is how the minidfscluster works.
+   * We also create the underlying directory names for hadoop.log.dir, mapreduce.cluster.local.dir
+   * and hadoop.tmp.dir, and set the values in the conf, and as a system property for hadoop.tmp.dir
+   * (We do not create them!).
    * @return The calculated data test build directory, if newly-created.
    */
   @Override
@@ -677,8 +696,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    */
   private void createDirsAndSetProperties() throws IOException {
     setupClusterTestDir();
-    conf.set(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
-    System.setProperty(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
+    conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, clusterTestDir.getCanonicalPath());
     createDirAndSetProperty("test.cache.data");
     createDirAndSetProperty("hadoop.tmp.dir");
     hadoopLogDir = createDirAndSetProperty("hadoop.log.dir");
@@ -712,6 +730,11 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     createDirAndSetProperty("dfs.journalnode.edits.dir");
     createDirAndSetProperty("dfs.provided.aliasmap.inmemory.leveldb.dir");
     createDirAndSetProperty("fs.s3a.committer.staging.tmp.path");
+
+    // disable metrics logger since it depend on commons-logging internal classes and we do not want
+    // commons-logging on our classpath
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_METRICS_LOGGER_PERIOD_SECONDS_KEY, 0);
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_KEY, 0);
   }
 
   /**
@@ -832,7 +855,6 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     miniClusterRunning = true;
 
     setupClusterTestDir();
-    System.setProperty(TEST_DIRECTORY_KEY, this.clusterTestDir.getPath());
 
     // Bring up mini dfs cluster. This spews a bunch of warnings about missing
     // scheme. Complaints are 'Scheme is undefined for build/test/data/dfs/name1'.
@@ -1699,6 +1721,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    */
   public HRegion createLocalHRegion(RegionInfo info, Configuration conf, TableDescriptor desc,
     WAL wal) throws IOException {
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     return HRegion.createHRegion(info, getDataTestDir(), conf, desc, wal);
   }
 
@@ -2176,8 +2200,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     // The WAL subsystem will use the default rootDir rather than the passed in rootDir
     // unless I pass along via the conf.
     Configuration confForWAL = new Configuration(conf);
-    confForWAL.set(HConstants.HBASE_DIR, rootDir.toString());
-    return new WALFactory(confForWAL, "hregion-" + RandomStringUtils.randomNumeric(8)).getWAL(hri);
+    CommonFSUtils.setRootDir(confForWAL, rootDir);
+    return new WALFactory(confForWAL, "hregion-" + RandomStringUtils.insecure().nextNumeric(8))
+      .getWAL(hri);
   }
 
   /**
@@ -2276,6 +2301,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Starts a <code>MiniMRCluster</code> with a default number of <code>TaskTracker</code>'s.
+   * MiniMRCluster caches hadoop.log.dir when first started. It is not possible to start multiple
+   * MiniMRCluster instances with different log dirs.
    * @throws IOException When starting the cluster fails.
    */
   public MiniMRCluster startMiniMapReduceCluster() throws IOException {
@@ -2287,34 +2314,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Tasktracker has a bug where changing the hadoop.log.dir system property will not change its
-   * internal static LOG_DIR variable.
-   */
-  private void forceChangeTaskLogDir() {
-    Field logDirField;
-    try {
-      logDirField = TaskLog.class.getDeclaredField("LOG_DIR");
-      logDirField.setAccessible(true);
-
-      Field modifiersField = ReflectionUtils.getModifiersField();
-      modifiersField.setAccessible(true);
-      modifiersField.setInt(logDirField, logDirField.getModifiers() & ~Modifier.FINAL);
-
-      logDirField.set(null, new File(hadoopLogDir, "userlogs"));
-    } catch (SecurityException e) {
-      throw new RuntimeException(e);
-    } catch (NoSuchFieldException e) {
-      throw new RuntimeException(e);
-    } catch (IllegalArgumentException e) {
-      throw new RuntimeException(e);
-    } catch (IllegalAccessException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  /**
    * Starts a <code>MiniMRCluster</code>. Call {@link #setFileSystemURI(String)} to use a different
-   * filesystem.
+   * filesystem. MiniMRCluster caches hadoop.log.dir when first started. It is not possible to start
+   * multiple MiniMRCluster instances with different log dirs.
    * @param servers The number of <code>TaskTracker</code>'s to start.
    * @throws IOException When starting the cluster fails.
    */
@@ -2325,8 +2327,6 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     LOG.info("Starting mini mapreduce cluster...");
     setupClusterTestDir();
     createDirsAndSetProperties();
-
-    forceChangeTaskLogDir();
 
     //// hadoop2 specific settings
     // Tests were failing because this process used 6GB of virtual memory and was getting killed.
@@ -2347,10 +2347,14 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
         jvmOpts + " --add-opens java.base/java.lang=ALL-UNNAMED");
     }
 
+    // Disable fs cache for DistributedFileSystem, to avoid YARN RM close the shared FileSystem
+    // instance and cause trouble in HBase. See HBASE-29802 for more details.
+    JobConf mrClusterConf = new JobConf(conf);
+    mrClusterConf.setBoolean("fs.hdfs.impl.disable.cache", true);
     // Allow the user to override FS URI for this map-reduce cluster to use.
     mrCluster =
       new MiniMRCluster(servers, FS_URI != null ? FS_URI : FileSystem.get(conf).getUri().toString(),
-        1, null, null, new JobConf(this.conf));
+        1, null, null, mrClusterConf);
     JobConf jobConf = MapreduceTestingShim.getJobConf(mrCluster);
     if (jobConf == null) {
       jobConf = mrCluster.createJobConf();
@@ -3227,6 +3231,24 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     }
   }
 
+  public String getRpcConnnectionURI() throws UnknownHostException {
+    return "hbase+rpc://" + MasterRegistry.getMasterAddr(conf);
+  }
+
+  public String getZkConnectionURI() {
+    return "hbase+zk://" + conf.get(HConstants.ZOOKEEPER_QUORUM) + ":"
+      + conf.get(HConstants.ZOOKEEPER_CLIENT_PORT)
+      + conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
+  }
+
+  /**
+   * Get the zk based cluster key for this cluster.
+   * @deprecated since 2.7.0, will be removed in 4.0.0. Now we use connection uri to specify the
+   *             connection info of a cluster. Keep here only for compatibility.
+   * @see #getRpcConnnectionURI()
+   * @see #getZkConnectionURI()
+   */
+  @Deprecated
   public String getClusterKey() {
     return conf.get(HConstants.ZOOKEEPER_QUORUM) + ":" + conf.get(HConstants.ZOOKEEPER_CLIENT_PORT)
       + ":"
@@ -3344,139 +3366,6 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     }
   }
 
-  /**
-   * Creates a pre-split table for load testing. If the table already exists, logs a warning and
-   * continues.
-   * @return the number of regions the table was split into
-   */
-  public static int createPreSplitLoadTestTable(Configuration conf, TableName tableName,
-    byte[] columnFamily, Algorithm compression, DataBlockEncoding dataBlockEncoding)
-    throws IOException {
-    return createPreSplitLoadTestTable(conf, tableName, columnFamily, compression,
-      dataBlockEncoding, DEFAULT_REGIONS_PER_SERVER, 1, Durability.USE_DEFAULT);
-  }
-
-  /**
-   * Creates a pre-split table for load testing. If the table already exists, logs a warning and
-   * continues.
-   * @return the number of regions the table was split into
-   */
-  public static int createPreSplitLoadTestTable(Configuration conf, TableName tableName,
-    byte[] columnFamily, Algorithm compression, DataBlockEncoding dataBlockEncoding,
-    int numRegionsPerServer, int regionReplication, Durability durability) throws IOException {
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
-    builder.setDurability(durability);
-    builder.setRegionReplication(regionReplication);
-    ColumnFamilyDescriptorBuilder cfBuilder =
-      ColumnFamilyDescriptorBuilder.newBuilder(columnFamily);
-    cfBuilder.setDataBlockEncoding(dataBlockEncoding);
-    cfBuilder.setCompressionType(compression);
-    return createPreSplitLoadTestTable(conf, builder.build(), cfBuilder.build(),
-      numRegionsPerServer);
-  }
-
-  /**
-   * Creates a pre-split table for load testing. If the table already exists, logs a warning and
-   * continues.
-   * @return the number of regions the table was split into
-   */
-  public static int createPreSplitLoadTestTable(Configuration conf, TableName tableName,
-    byte[][] columnFamilies, Algorithm compression, DataBlockEncoding dataBlockEncoding,
-    int numRegionsPerServer, int regionReplication, Durability durability) throws IOException {
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
-    builder.setDurability(durability);
-    builder.setRegionReplication(regionReplication);
-    ColumnFamilyDescriptor[] hcds = new ColumnFamilyDescriptor[columnFamilies.length];
-    for (int i = 0; i < columnFamilies.length; i++) {
-      ColumnFamilyDescriptorBuilder cfBuilder =
-        ColumnFamilyDescriptorBuilder.newBuilder(columnFamilies[i]);
-      cfBuilder.setDataBlockEncoding(dataBlockEncoding);
-      cfBuilder.setCompressionType(compression);
-      hcds[i] = cfBuilder.build();
-    }
-    return createPreSplitLoadTestTable(conf, builder.build(), hcds, numRegionsPerServer);
-  }
-
-  /**
-   * Creates a pre-split table for load testing. If the table already exists, logs a warning and
-   * continues.
-   * @return the number of regions the table was split into
-   */
-  public static int createPreSplitLoadTestTable(Configuration conf, TableDescriptor desc,
-    ColumnFamilyDescriptor hcd) throws IOException {
-    return createPreSplitLoadTestTable(conf, desc, hcd, DEFAULT_REGIONS_PER_SERVER);
-  }
-
-  /**
-   * Creates a pre-split table for load testing. If the table already exists, logs a warning and
-   * continues.
-   * @return the number of regions the table was split into
-   */
-  public static int createPreSplitLoadTestTable(Configuration conf, TableDescriptor desc,
-    ColumnFamilyDescriptor hcd, int numRegionsPerServer) throws IOException {
-    return createPreSplitLoadTestTable(conf, desc, new ColumnFamilyDescriptor[] { hcd },
-      numRegionsPerServer);
-  }
-
-  /**
-   * Creates a pre-split table for load testing. If the table already exists, logs a warning and
-   * continues.
-   * @return the number of regions the table was split into
-   */
-  public static int createPreSplitLoadTestTable(Configuration conf, TableDescriptor desc,
-    ColumnFamilyDescriptor[] hcds, int numRegionsPerServer) throws IOException {
-    return createPreSplitLoadTestTable(conf, desc, hcds, new RegionSplitter.HexStringSplit(),
-      numRegionsPerServer);
-  }
-
-  /**
-   * Creates a pre-split table for load testing. If the table already exists, logs a warning and
-   * continues.
-   * @return the number of regions the table was split into
-   */
-  public static int createPreSplitLoadTestTable(Configuration conf, TableDescriptor td,
-    ColumnFamilyDescriptor[] cds, SplitAlgorithm splitter, int numRegionsPerServer)
-    throws IOException {
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(td);
-    for (ColumnFamilyDescriptor cd : cds) {
-      if (!td.hasColumnFamily(cd.getName())) {
-        builder.setColumnFamily(cd);
-      }
-    }
-    td = builder.build();
-    int totalNumberOfRegions = 0;
-    Connection unmanagedConnection = ConnectionFactory.createConnection(conf);
-    Admin admin = unmanagedConnection.getAdmin();
-
-    try {
-      // create a table a pre-splits regions.
-      // The number of splits is set as:
-      // region servers * regions per region server).
-      int numberOfServers = admin.getRegionServers().size();
-      if (numberOfServers == 0) {
-        throw new IllegalStateException("No live regionservers");
-      }
-
-      totalNumberOfRegions = numberOfServers * numRegionsPerServer;
-      LOG.info("Number of live regionservers: " + numberOfServers + ", "
-        + "pre-splitting table into " + totalNumberOfRegions + " regions " + "(regions per server: "
-        + numRegionsPerServer + ")");
-
-      byte[][] splits = splitter.split(totalNumberOfRegions);
-
-      admin.createTable(td, splits);
-    } catch (MasterNotRunningException e) {
-      LOG.error("Master not running", e);
-      throw new IOException(e);
-    } catch (TableExistsException e) {
-      LOG.warn("Table " + td.getTableName() + " already exists, continuing");
-    } finally {
-      admin.close();
-      unmanagedConnection.close();
-    }
-    return totalNumberOfRegions;
-  }
-
   public static int getMetaRSPort(Connection connection) throws IOException {
     try (RegionLocator locator = connection.getRegionLocator(TableName.META_TABLE_NAME)) {
       return locator.getRegionLocation(Bytes.toBytes("")).getPort();
@@ -3557,9 +3446,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     return new ExplainingPredicate<IOException>() {
       @Override
       public String explainFailure() throws IOException {
-        final RegionStates regionStates =
-          getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
-        return "found in transition: " + regionStates.getRegionsInTransition().toString();
+        final AssignmentManager am = getMiniHBaseCluster().getMaster().getAssignmentManager();
+        return "found in transition: " + am.getRegionsInTransition().toString();
       }
 
       @Override
@@ -3569,6 +3457,34 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
         AssignmentManager am = master.getAssignmentManager();
         if (am == null) return false;
         return !am.hasRegionsInTransition();
+      }
+    };
+  }
+
+  /**
+   * Returns a {@link Predicate} for checking that there are no procedure to region transition in
+   * master
+   */
+  public ExplainingPredicate<IOException> predicateNoRegionTransitScheduled() {
+    return new ExplainingPredicate<IOException>() {
+      @Override
+      public String explainFailure() throws IOException {
+        final AssignmentManager am = getMiniHBaseCluster().getMaster().getAssignmentManager();
+        return "Number of procedure scheduled for region transit: "
+          + am.getRegionTransitScheduledCount();
+      }
+
+      @Override
+      public boolean evaluate() throws IOException {
+        HMaster master = getMiniHBaseCluster().getMaster();
+        if (master == null) {
+          return false;
+        }
+        AssignmentManager am = master.getAssignmentManager();
+        if (am == null) {
+          return false;
+        }
+        return am.getRegionTransitScheduledCount() == 0;
       }
     };
   }
@@ -3651,10 +3567,25 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
+   * Wait until no regions in transition.
+   * @param timeout How long to wait.
+   */
+  public void waitUntilNoRegionTransitScheduled(final long timeout) throws IOException {
+    waitFor(timeout, predicateNoRegionTransitScheduled());
+  }
+
+  /**
    * Wait until no regions in transition. (time limit 15min)
    */
   public void waitUntilNoRegionsInTransition() throws IOException {
     waitUntilNoRegionsInTransition(15 * 60000);
+  }
+
+  /**
+   * Wait until no TRSP is present
+   */
+  public void waitUntilNoRegionTransitScheduled() throws IOException {
+    waitUntilNoRegionTransitScheduled(15 * 60000);
   }
 
   /**
@@ -3845,5 +3776,23 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       }
       throw e;
     }
+  }
+
+  public void createRegionDir(RegionInfo hri) throws IOException {
+    Path rootDir = getDataTestDir();
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, hri.getTable());
+    Path regionDir = new Path(tableDir, hri.getEncodedName());
+    FileSystem fs = getTestFileSystem();
+    if (!fs.exists(regionDir)) {
+      fs.mkdirs(regionDir);
+    }
+  }
+
+  public void createRegionDir(RegionInfo regionInfo, MasterFileSystem masterFileSystem)
+    throws IOException {
+    Path tableDir =
+      CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(conf), regionInfo.getTable());
+    HRegionFileSystem.createRegionOnFileSystem(conf, masterFileSystem.getFileSystem(), tableDir,
+      regionInfo);
   }
 }

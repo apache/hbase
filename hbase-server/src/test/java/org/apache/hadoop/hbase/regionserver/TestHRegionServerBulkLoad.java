@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -226,8 +227,8 @@ public class TestHRegionServerBulkLoad {
     }
 
     @Override
-    public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
-      InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+    public InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      Store store, InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
       CompactionRequest request) throws IOException {
       try {
         Thread.sleep(sleepDuration);
@@ -397,8 +398,8 @@ public class TestHRegionServerBulkLoad {
     @Override
     public void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey, WALEdit logEdit) {
       for (Cell cell : logEdit.getCells()) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        for (Map.Entry entry : kv.toStringMap().entrySet()) {
+        KeyValue kv = KeyValueUtil.ensureKeyValue((ExtendedCell) cell);
+        for (Map.Entry<String, Object> entry : kv.toStringMap().entrySet()) {
           if (entry.getValue().equals(Bytes.toString(WALEdit.BULK_LOAD))) {
             found = true;
           }

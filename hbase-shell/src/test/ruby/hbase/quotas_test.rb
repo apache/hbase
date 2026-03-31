@@ -246,14 +246,29 @@ module Hbase
 
     define_test 'switch rpc throttle' do
       result = nil
+      output = capture_stdout { result = command(:rpc_throttle_enabled) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      result = nil
       output = capture_stdout { result = command(:disable_rpc_throttle) }
       assert(output.include?('Previous rpc throttle state : true'))
       assert(result == true)
 
       result = nil
+      output = capture_stdout { result = command(:rpc_throttle_enabled) }
+      assert(output.include?('false'))
+      assert(result == false)
+
+      result = nil
       output = capture_stdout { result = command(:enable_rpc_throttle) }
       assert(output.include?('Previous rpc throttle state : false'))
       assert(result == false)
+
+      result = nil
+      output = capture_stdout { result = command(:rpc_throttle_enabled) }
+      assert(output.include?('true'))
+      assert(result == true)
     end
 
     define_test 'can set and remove region server quota' do

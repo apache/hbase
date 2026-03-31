@@ -21,9 +21,9 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import org.apache.commons.lang3.ArrayUtils;
@@ -50,6 +50,8 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -458,13 +460,15 @@ public class RegionSplitter {
                 }
               }
 
+              // Sort the ServerNames by the number of regions they have
+              final List<ServerName> serversLeft = Lists.newArrayList(daughterRegions.keySet());
+              serversLeft.sort(Comparator.comparing(rsSizes::get));
+
               // Round-robin through the ServerName list. Choose the lightest-loaded servers
               // first to keep the master from load-balancing regions as we split.
-              for (Map.Entry<ServerName,
-                LinkedList<Pair<byte[], byte[]>>> daughterRegion : daughterRegions.entrySet()) {
+              for (final ServerName rsLoc : serversLeft) {
                 Pair<byte[], byte[]> dr = null;
-                ServerName rsLoc = daughterRegion.getKey();
-                LinkedList<Pair<byte[], byte[]>> regionList = daughterRegion.getValue();
+                final LinkedList<Pair<byte[], byte[]>> regionList = daughterRegions.get(rsLoc);
 
                 // Find a region in the ServerName list that hasn't been moved
                 LOG.debug("Finding a region on " + rsLoc);
@@ -680,7 +684,9 @@ public class RegionSplitter {
             // Check every Column Family for that region -- check does not have references.
             boolean refFound = false;
             for (ColumnFamilyDescriptor c : htd.getColumnFamilies()) {
-              if ((refFound = regionFs.hasReferences(c.getNameAsString()))) {
+              StoreFileTracker sft = StoreFileTrackerFactory
+                .create(regionFs.getFileSystem().getConf(), htd, c, regionFs);
+              if ((refFound = sft.hasReferences())) {
                 break;
               }
             }
@@ -976,6 +982,9 @@ public class RegionSplitter {
      * @return the midpoint of the 2 numbers
      */
     public BigInteger split2(BigInteger a, BigInteger b) {
+      if (b.equals(lastRowInt)) {
+        b = b.add(BigInteger.ONE);
+      }
       return a.add(b).divide(BigInteger.valueOf(2)).abs();
     }
 

@@ -84,7 +84,7 @@ public class TestAsyncTableScanException {
     }
 
     @Override
-    public boolean postScannerNext(ObserverContext<RegionCoprocessorEnvironment> c,
+    public boolean postScannerNext(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
       REQ_COUNT.incrementAndGet();
       if ((ERROR_AT == REQ_COUNT.get()) || ERROR) {

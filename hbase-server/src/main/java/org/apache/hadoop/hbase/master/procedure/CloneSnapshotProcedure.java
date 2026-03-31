@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+import org.apache.hadoop.hbase.fs.ErasureCodingUtils;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
@@ -155,6 +156,16 @@ public class CloneSnapshotProcedure extends AbstractStateMachineTableProcedure<C
           updateTableDescriptorWithSFT();
           newRegions = createFilesystemLayout(env, tableDescriptor, newRegions);
           env.getMasterServices().getTableDescriptors().update(tableDescriptor, true);
+          if (tableDescriptor.getErasureCodingPolicy() != null) {
+            setNextState(CloneSnapshotState.CLONE_SNAPSHOT_SET_ERASURE_CODING_POLICY);
+          } else {
+            setNextState(CloneSnapshotState.CLONE_SNAPSHOT_ADD_TO_META);
+          }
+          break;
+        case CLONE_SNAPSHOT_SET_ERASURE_CODING_POLICY:
+          ErasureCodingUtils.setPolicy(env.getMasterFileSystem().getFileSystem(),
+            env.getMasterFileSystem().getRootDir(), getTableName(),
+            tableDescriptor.getErasureCodingPolicy());
           setNextState(CloneSnapshotState.CLONE_SNAPSHOT_ADD_TO_META);
           break;
         case CLONE_SNAPSHOT_ADD_TO_META:
@@ -471,6 +482,12 @@ public class CloneSnapshotProcedure extends AbstractStateMachineTableProcedure<C
           LOG.info(msg);
           monitorStatus.setStatus(msg + " Waiting for table to be enabled...");
 
+          // Extract the parent to children regions mapping so we can update meta later.
+          // If we don't update the split information, the parent region will be garbage-collected.
+          // And once the snapshot is deleted, HFiles of the parent region can be prematurely
+          // deleted, causing permanent data loss.
+          parentsToChildrenPairMap = metaChanges.getParentToChildrenPairMap();
+
           // 2. Let the next step to add the regions to meta
           return metaChanges.getRegionsToAdd();
         } catch (Exception e) {
@@ -524,8 +541,6 @@ public class CloneSnapshotProcedure extends AbstractStateMachineTableProcedure<C
   private void addRegionsToMeta(final MasterProcedureEnv env) throws IOException {
     newRegions = CreateTableProcedure.addTableToMeta(env, tableDescriptor, newRegions);
 
-    // TODO: parentsToChildrenPairMap is always empty, which makes updateMetaParentRegions()
-    // a no-op. This part seems unnecessary. Figure out. - Appy 12/21/17
     RestoreSnapshotHelper.RestoreMetaChanges metaChanges =
       new RestoreSnapshotHelper.RestoreMetaChanges(tableDescriptor, parentsToChildrenPairMap);
     metaChanges.updateMetaParentRegions(env.getMasterServices().getConnection(), newRegions);

@@ -327,25 +327,27 @@ public class TestMasterQuotasObserver {
   }
 
   public int getNumSpaceQuotas() throws Exception {
-    QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConfiguration());
-    int numSpaceQuotas = 0;
-    for (QuotaSettings quotaSettings : scanner) {
-      if (quotaSettings.getQuotaType() == QuotaType.SPACE) {
-        numSpaceQuotas++;
+    try (QuotaRetriever scanner = new QuotaRetriever(TEST_UTIL.getConnection())) {
+      int numSpaceQuotas = 0;
+      for (QuotaSettings quotaSettings : scanner) {
+        if (quotaSettings.getQuotaType() == QuotaType.SPACE) {
+          numSpaceQuotas++;
+        }
       }
+      return numSpaceQuotas;
     }
-    return numSpaceQuotas;
   }
 
   public int getThrottleQuotas() throws Exception {
-    QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConfiguration());
-    int throttleQuotas = 0;
-    for (QuotaSettings quotaSettings : scanner) {
-      if (quotaSettings.getQuotaType() == QuotaType.THROTTLE) {
-        throttleQuotas++;
+    try (QuotaRetriever scanner = new QuotaRetriever(TEST_UTIL.getConnection())) {
+      int throttleQuotas = 0;
+      for (QuotaSettings quotaSettings : scanner) {
+        if (quotaSettings.getQuotaType() == QuotaType.THROTTLE) {
+          throttleQuotas++;
+        }
       }
+      return throttleQuotas;
     }
-    return throttleQuotas;
   }
 
   private void createTable(Admin admin, TableName tn) throws Exception {

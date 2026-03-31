@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
  * maxColumnInclusive specify if the ranges are inclusive or not.
  */
 @InterfaceAudience.Public
-public class ColumnRangeFilter extends FilterBase {
+public class ColumnRangeFilter extends FilterBase implements HintingFilter {
   protected byte[] minColumn = null;
   protected boolean minColumnInclusive = true;
   protected byte[] maxColumn = null;

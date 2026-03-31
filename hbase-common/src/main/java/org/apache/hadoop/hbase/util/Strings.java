@@ -17,7 +17,15 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
@@ -93,5 +101,50 @@ public final class Strings {
     }
     int numPaddingCharacters = length - input.length();
     return StringUtils.repeat(padding, numPaddingCharacters) + input;
+  }
+
+  /**
+   * Parse the query string of an URI to a key value map. If a single key occurred multiple times,
+   * only the first one will take effect.
+   */
+  public static Map<String, String> parseURIQueries(URI uri) {
+    if (StringUtils.isBlank(uri.getRawQuery())) {
+      return Collections.emptyMap();
+    }
+    return Splitter.on('&').trimResults().splitToStream(uri.getRawQuery()).map(kv -> {
+      int idx = kv.indexOf('=');
+      try {
+        if (idx > 0) {
+          return Pair.newPair(
+            URLDecoder.decode(kv.substring(0, idx), StandardCharsets.UTF_8.name()),
+            URLDecoder.decode(kv.substring(idx + 1), StandardCharsets.UTF_8.name()));
+        } else {
+          return Pair.newPair(URLDecoder.decode(kv, StandardCharsets.UTF_8.name()), "");
+        }
+      } catch (UnsupportedEncodingException e) {
+        // should not happen
+        throw new AssertionError(e);
+      }
+    }).collect(Collectors.toMap(Pair::getFirst, Pair::getSecond, (v1, v2) -> v1));
+  }
+
+  /**
+   * Apply the key value pairs in the query string of the given URI to the given Configuration. If a
+   * single key occurred multiple times, only the first one will take effect.
+   */
+  public static void applyURIQueriesToConf(URI uri, Configuration conf) {
+    parseURIQueries(uri).forEach(conf::set);
+  }
+
+  /**
+   * Note: This method was taken from org.apache.hadoop.util.StringUtils.humanReadableInt(long).
+   * Reason: that method got deprecated and this method provides an easy-to-understand usage of
+   * StringUtils.TraditionalBinaryPrefix.long2String. Given an integer, return a string that is in
+   * an approximate, but human readable format.
+   * @param number the number to format
+   * @return a human readable form of the integer
+   */
+  public static String humanReadableInt(long number) {
+    return org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix.long2String(number, "", 1);
   }
 }

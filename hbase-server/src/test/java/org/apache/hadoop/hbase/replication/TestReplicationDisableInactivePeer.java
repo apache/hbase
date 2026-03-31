@@ -21,6 +21,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.fail;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -42,6 +43,13 @@ public class TestReplicationDisableInactivePeer extends TestReplicationBase {
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestReplicationDisableInactivePeer.class);
+
+  @Override
+  protected String getClusterKey(HBaseTestingUtil util) throws Exception {
+    // in this test we will restart the peer cluster, and the master address will be changed, so we
+    // need to use zk based connection uri
+    return util.getZkConnectionURI();
+  }
 
   /**
    * Test disabling an inactive peer. Add a peer which is inactive, trying to insert, disable the

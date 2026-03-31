@@ -192,4 +192,15 @@ public abstract class AbstractStateMachineTableProcedure<TState>
     }
     regionNode.checkOnline();
   }
+
+  /**
+   * Some procedures cannot safely run while a table is being modified. Helper method to allow them
+   * to check if such a procedure is running on a table.
+   */
+  protected final boolean isTableModificationInProgress(MasterProcedureEnv env) {
+    return env.getMasterServices().getMasterProcedureExecutor().getProcedures().stream()
+      .filter(p -> !p.isFinished()).filter(p -> p instanceof TableProcedureInterface)
+      .map(p -> (TableProcedureInterface) p).filter(p -> getTableName().equals(p.getTableName()))
+      .anyMatch(TableQueue::requireTableExclusiveLock);
+  }
 }

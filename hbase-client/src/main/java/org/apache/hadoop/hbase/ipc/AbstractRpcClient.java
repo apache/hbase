@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.toIOE;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.wrapException;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hbase.codec.KeyValueCodec;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProviders;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.PoolMap;
@@ -115,6 +117,8 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   protected final UserProvider userProvider;
   protected final CellBlockBuilder cellBlockBuilder;
 
+  protected final SaslClientAuthenticationProviders providers;
+
   protected final int minIdleTimeBeforeClose; // if the connection is idle for more than this
   // time (in ms), it will be closed at any moment.
   protected final int maxRetries; // the max. no. of retries for socket connections
@@ -183,6 +187,8 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       conf.getInt(HConstants.HBASE_CLIENT_PERSERVER_REQUESTS_THRESHOLD,
         HConstants.DEFAULT_HBASE_CLIENT_PERSERVER_REQUESTS_THRESHOLD);
 
+    this.providers = new SaslClientAuthenticationProviders(conf);
+
     this.connections = new PoolMap<>(getPoolType(conf), getPoolSize(conf));
 
     this.cleanupIdleConnectionTask = IDLE_CONN_SWEEPER.scheduleAtFixedRate(new Runnable() {
@@ -209,7 +215,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       for (T conn : connections.values()) {
         // Remove connection if it has not been chosen by anyone for more than maxIdleTime, and the
         // connection itself has already shutdown. The latter check is because we may still
-        // have some pending calls on connection so we should not shutdown the connection outside.
+        // have some pending calls on connection, so we should not shut down the connection outside.
         // The connection itself will disconnect if there is no pending call for maxIdleTime.
         if (conn.getLastTouched() < closeBeforeTime && !conn.isActive()) {
           if (LOG.isTraceEnabled()) {
@@ -454,7 +460,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     }
   }
 
-  private static Address createAddr(ServerName sn) {
+  static Address createAddr(ServerName sn) {
     return Address.fromParts(sn.getHostname(), sn.getPort());
   }
 
@@ -540,6 +546,12 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   @Override
   public RpcChannel createRpcChannel(ServerName sn, User user, int rpcTimeout) {
     return new RpcChannelImplementation(this, createAddr(sn), user, rpcTimeout);
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  PoolMap<ConnectionId, T> getConnections() {
+    return connections;
   }
 
   private static class AbstractRpcChannel {

@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
@@ -413,7 +414,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     WALEdit edit1 = new WALEdit();
 
     for (byte[] kv : kvs) {
-      edit1.add(new KeyValue(kv, kv, kv));
+      WALEditInternalHelper.addExtendedCell(edit1, new KeyValue(kv, kv, kv));
     }
     return new Entry(key1, edit1);
   }

@@ -39,11 +39,16 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.ConnectionRegistryFactory;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -71,6 +76,7 @@ import org.apache.hadoop.hbase.replication.ZKReplicationQueueStorageForMigration
 import org.apache.hadoop.hbase.replication.ZKReplicationQueueStorageForMigration.ZkReplicationQueueData;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
@@ -402,6 +408,57 @@ public class ReplicationPeerManager implements ConfigurationObserver {
     queueStorage.removePeerFromHFileRefs(peerId);
   }
 
+  private void checkClusterKey(String clusterKey, ReplicationEndpoint endpoint)
+    throws DoNotRetryIOException {
+    if (endpoint != null && !(endpoint instanceof HBaseReplicationEndpoint)) {
+      return;
+    }
+    // Endpoints implementing HBaseReplicationEndpoint need to check cluster key
+    URI connectionUri = ConnectionRegistryFactory.tryParseAsConnectionURI(clusterKey);
+    try {
+      if (connectionUri != null) {
+        ConnectionRegistryFactory.validate(connectionUri);
+      } else {
+        ZKConfig.validateClusterKey(clusterKey);
+      }
+    } catch (IOException e) {
+      throw new DoNotRetryIOException("Invalid cluster key: " + clusterKey, e);
+    }
+    if (endpoint != null && endpoint.canReplicateToSameCluster()) {
+      return;
+    }
+    // make sure we do not replicate to same cluster
+    String peerClusterId;
+    try {
+      if (connectionUri != null) {
+        // fetch cluster id through standard admin API
+        try (Connection conn = ConnectionFactory.createConnection(connectionUri, conf);
+          Admin admin = conn.getAdmin()) {
+          peerClusterId =
+            admin.getClusterMetrics(EnumSet.of(ClusterMetrics.Option.CLUSTER_ID)).getClusterId();
+        }
+      } else {
+        // Create the peer cluster config for get peer cluster id
+        Configuration peerConf = HBaseConfiguration.createClusterConf(conf, clusterKey);
+        try (ZKWatcher zkWatcher = new ZKWatcher(peerConf, this + "check-peer-cluster-id", null)) {
+          peerClusterId = ZKClusterId.readClusterIdZNode(zkWatcher);
+        }
+      }
+    } catch (IOException | KeeperException e) {
+      // we just want to check whether we will replicate to the same cluster, so if we get an error
+      // while getting the cluster id of the peer cluster, it means we are not connecting to
+      // ourselves, as we are still alive. So here we just log the error and continue
+      LOG.warn("Can't get peerClusterId for clusterKey=" + clusterKey, e);
+      return;
+    }
+    // In rare case, zookeeper setting may be messed up. That leads to the incorrect
+    // peerClusterId value, which is the same as the source clusterId
+    if (clusterId.equals(peerClusterId)) {
+      throw new DoNotRetryIOException("Invalid cluster key: " + clusterKey
+        + ", should not replicate to itself for HBaseInterClusterReplicationEndpoint");
+    }
+  }
+
   private void checkPeerConfig(ReplicationPeerConfig peerConfig) throws DoNotRetryIOException {
     String replicationEndpointImpl = peerConfig.getReplicationEndpointImpl();
     ReplicationEndpoint endpoint = null;
@@ -416,14 +473,7 @@ public class ReplicationPeerManager implements ConfigurationObserver {
           e);
       }
     }
-    // Endpoints implementing HBaseReplicationEndpoint need to check cluster key
-    if (endpoint == null || endpoint instanceof HBaseReplicationEndpoint) {
-      checkClusterKey(peerConfig.getClusterKey());
-      // Check if endpoint can replicate to the same cluster
-      if (endpoint == null || !endpoint.canReplicateToSameCluster()) {
-        checkSameClusterKey(peerConfig.getClusterKey());
-      }
-    }
+    checkClusterKey(peerConfig.getClusterKey(), endpoint);
 
     if (peerConfig.replicateAllUserTables()) {
       // If replicate_all flag is true, it means all user tables will be replicated to peer cluster.
@@ -563,33 +613,6 @@ public class ReplicationPeerManager implements ConfigurationObserver {
     }
   }
 
-  private void checkClusterKey(String clusterKey) throws DoNotRetryIOException {
-    try {
-      ZKConfig.validateClusterKey(clusterKey);
-    } catch (IOException e) {
-      throw new DoNotRetryIOException("Invalid cluster key: " + clusterKey, e);
-    }
-  }
-
-  private void checkSameClusterKey(String clusterKey) throws DoNotRetryIOException {
-    String peerClusterId = "";
-    try {
-      // Create the peer cluster config for get peer cluster id
-      Configuration peerConf = HBaseConfiguration.createClusterConf(conf, clusterKey);
-      try (ZKWatcher zkWatcher = new ZKWatcher(peerConf, this + "check-peer-cluster-id", null)) {
-        peerClusterId = ZKClusterId.readClusterIdZNode(zkWatcher);
-      }
-    } catch (IOException | KeeperException e) {
-      throw new DoNotRetryIOException("Can't get peerClusterId for clusterKey=" + clusterKey, e);
-    }
-    // In rare case, zookeeper setting may be messed up. That leads to the incorrect
-    // peerClusterId value, which is the same as the source clusterId
-    if (clusterId.equals(peerClusterId)) {
-      throw new DoNotRetryIOException("Invalid cluster key: " + clusterKey
-        + ", should not replicate to itself for HBaseInterClusterReplicationEndpoint");
-    }
-  }
-
   public List<String> getSerialPeerIdsBelongsTo(TableName tableName) {
     return peers.values().stream().filter(p -> p.getPeerConfig().isSerial())
       .filter(p -> p.getPeerConfig().needToReplicate(tableName)).map(p -> p.getPeerId())
@@ -666,26 +689,17 @@ public class ReplicationPeerManager implements ConfigurationObserver {
         ReplicationUtils.LEGACY_REGION_REPLICATION_ENDPOINT_NAME
           .equals(peerConfig.getReplicationEndpointImpl())
       ) {
-        // we do not use this endpoint for region replication any more, see HBASE-26233
-        LOG.info("Legacy region replication peer found, removing: {}", peerConfig);
-        // do it asynchronous to not block the start up of HMaster
-        new Thread("Remove legacy replication peer " + peerId) {
-
-          @Override
-          public void run() {
-            try {
-              // need to delete two times to make sure we delete all the queues, see the comments in
-              // above
-              // removeAllQueues method for more details.
-              queueStorage.removeAllQueues(peerId);
-              queueStorage.removeAllQueues(peerId);
-              // delete queue first and then peer, because we use peer as a flag.
-              peerStorage.removePeer(peerId);
-            } catch (Exception e) {
-              LOG.warn("Failed to delete legacy replication peer {}", peerId);
-            }
-          }
-        }.start();
+        // If memstore region replication is enabled, there will be a special replication peer
+        // usually called 'region_replica_replication'. We do not need to load it or migrate its
+        // replication queue data since we do not rely on general replication framework for
+        // region replication in 3.x now, please see HBASE-26233 for more details.
+        // We can not delete it now since region server with old version still want to update
+        // the replicated wal position to zk, if we delete the replication queue zk node, rs
+        // will crash. See HBASE-29169 for more details.
+        // In MigrateReplicationQueueFromZkToTableProcedure, finally we will call a deleteAllData on
+        // the old replication queue storage, to make sure that we will delete the the queue data
+        // for this peer and also the peer info in replication peer storage
+        LOG.info("Found old region replica replication peer '{}', skip loading it", peerId);
         continue;
       }
       peerConfig = ReplicationPeerConfigUtil.updateReplicationBasePeerConfigs(conf, peerConfig);
@@ -794,10 +808,17 @@ public class ReplicationPeerManager implements ConfigurationObserver {
     return future;
   }
 
+  // this is for upgrading from 2.x to 3.x, in 3.x we will not load the 'region_replica_replication'
+  // peer, but we still need to know whether we have it on the old storage
+  boolean hasRegionReplicaReplicationPeer() throws ReplicationException {
+    return peerStorage.listPeerIds().stream()
+      .anyMatch(p -> p.equals(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER));
+  }
+
   /**
    * Submit the migration tasks to the given {@code executor}.
    */
-  CompletableFuture<?> migrateQueuesFromZk(ZKWatcher zookeeper, ExecutorService executor) {
+  CompletableFuture<Void> migrateQueuesFromZk(ZKWatcher zookeeper, ExecutorService executor) {
     // the replication queue table creation is asynchronous and will be triggered by addPeer, so
     // here we need to manually initialize it since we will not call addPeer.
     try {
@@ -810,5 +831,18 @@ public class ReplicationPeerManager implements ConfigurationObserver {
     return CompletableFuture.allOf(runAsync(() -> migrateQueues(oldStorage), executor),
       runAsync(() -> migrateLastPushedSeqIds(oldStorage), executor),
       runAsync(() -> migrateHFileRefs(oldStorage), executor));
+  }
+
+  void deleteLegacyRegionReplicaReplicationPeer() throws ReplicationException {
+    for (String peerId : peerStorage.listPeerIds()) {
+      ReplicationPeerConfig peerConfig = peerStorage.getPeerConfig(peerId);
+      if (
+        ReplicationUtils.LEGACY_REGION_REPLICATION_ENDPOINT_NAME
+          .equals(peerConfig.getReplicationEndpointImpl())
+      ) {
+        LOG.info("Delete old region replica replication peer '{}'", peerId);
+        peerStorage.removePeer(peerId);
+      }
+    }
   }
 }

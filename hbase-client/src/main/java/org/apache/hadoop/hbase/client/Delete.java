@@ -25,6 +25,7 @@ import java.util.UUID;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -171,10 +172,8 @@ public class Delete extends Mutation {
    * @return this for invocation chaining
    */
   public Delete addFamily(final byte[] family, final long timestamp) {
-    if (timestamp < 0) {
-      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + timestamp);
-    }
-    List<Cell> list = getCellList(family);
+    checkTimestamp(timestamp);
+    List<ExtendedCell> list = getCellList(family);
     if (!list.isEmpty()) {
       list.clear();
     }
@@ -190,10 +189,8 @@ public class Delete extends Mutation {
    * @return this for invocation chaining
    */
   public Delete addFamilyVersion(final byte[] family, final long timestamp) {
-    if (timestamp < 0) {
-      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + timestamp);
-    }
-    List<Cell> list = getCellList(family);
+    checkTimestamp(ts);
+    List<ExtendedCell> list = getCellList(family);
     list.add(new KeyValue(row, family, null, timestamp, KeyValue.Type.DeleteFamilyVersion));
     return this;
   }
@@ -218,10 +215,8 @@ public class Delete extends Mutation {
    * @return this for invocation chaining
    */
   public Delete addColumns(final byte[] family, final byte[] qualifier, final long timestamp) {
-    if (timestamp < 0) {
-      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + timestamp);
-    }
-    List<Cell> list = getCellList(family);
+    checkTimestamp(ts);
+    List<ExtendedCell> list = getCellList(family);
     list.add(new KeyValue(this.row, family, qualifier, timestamp, KeyValue.Type.DeleteColumn));
     return this;
   }
@@ -247,10 +242,8 @@ public class Delete extends Mutation {
    * @return this for invocation chaining
    */
   public Delete addColumn(byte[] family, byte[] qualifier, long timestamp) {
-    if (timestamp < 0) {
-      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + timestamp);
-    }
-    List<Cell> list = getCellList(family);
+    checkTimestamp(ts);
+    List<ExtendedCell> list = getCellList(family);
     KeyValue kv = new KeyValue(this.row, family, qualifier, timestamp, KeyValue.Type.Delete);
     list.add(kv);
     return this;

@@ -70,6 +70,7 @@ public final class CheckAndMutate implements Row {
     private byte[] value;
     private Filter filter;
     private TimeRange timeRange;
+    private boolean queryMetricsEnabled = false;
 
     private Builder(byte[] row) {
       this.row = Preconditions.checkNotNull(row, "row is null");
@@ -133,6 +134,21 @@ public final class CheckAndMutate implements Row {
       return this;
     }
 
+    /**
+     * Enables the return of {@link QueryMetrics} alongside the corresponding result for this query
+     * <p>
+     * This is intended for advanced users who need result-granular, server-side metrics
+     * <p>
+     * Does not work
+     * @param queryMetricsEnabled {@code true} to enable collection of per-result query metrics
+     *                            {@code false} to disable metrics collection (resulting in
+     *                            {@code null} metrics)
+     */
+    public Builder queryMetricsEnabled(boolean queryMetricsEnabled) {
+      this.queryMetricsEnabled = queryMetricsEnabled;
+      return this;
+    }
+
     private void preCheck(Row action) {
       Preconditions.checkNotNull(action, "action is null");
       if (!Bytes.equals(row, action.getRow())) {
@@ -154,9 +170,10 @@ public final class CheckAndMutate implements Row {
     public CheckAndMutate build(Put put) {
       preCheck(put);
       if (filter != null) {
-        return new CheckAndMutate(row, filter, timeRange, put);
+        return new CheckAndMutate(row, filter, timeRange, put, queryMetricsEnabled);
       } else {
-        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, put);
+        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, put,
+          queryMetricsEnabled);
       }
     }
 
@@ -168,9 +185,10 @@ public final class CheckAndMutate implements Row {
     public CheckAndMutate build(Delete delete) {
       preCheck(delete);
       if (filter != null) {
-        return new CheckAndMutate(row, filter, timeRange, delete);
+        return new CheckAndMutate(row, filter, timeRange, delete, queryMetricsEnabled);
       } else {
-        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, delete);
+        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, delete,
+          queryMetricsEnabled);
       }
     }
 
@@ -182,9 +200,10 @@ public final class CheckAndMutate implements Row {
     public CheckAndMutate build(Increment increment) {
       preCheck(increment);
       if (filter != null) {
-        return new CheckAndMutate(row, filter, timeRange, increment);
+        return new CheckAndMutate(row, filter, timeRange, increment, queryMetricsEnabled);
       } else {
-        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, increment);
+        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, increment,
+          queryMetricsEnabled);
       }
     }
 
@@ -196,9 +215,10 @@ public final class CheckAndMutate implements Row {
     public CheckAndMutate build(Append append) {
       preCheck(append);
       if (filter != null) {
-        return new CheckAndMutate(row, filter, timeRange, append);
+        return new CheckAndMutate(row, filter, timeRange, append, queryMetricsEnabled);
       } else {
-        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, append);
+        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, append,
+          queryMetricsEnabled);
       }
     }
 
@@ -210,9 +230,10 @@ public final class CheckAndMutate implements Row {
     public CheckAndMutate build(RowMutations mutations) {
       preCheck(mutations);
       if (filter != null) {
-        return new CheckAndMutate(row, filter, timeRange, mutations);
+        return new CheckAndMutate(row, filter, timeRange, mutations, queryMetricsEnabled);
       } else {
-        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, mutations);
+        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, mutations,
+          queryMetricsEnabled);
       }
     }
   }
@@ -234,9 +255,10 @@ public final class CheckAndMutate implements Row {
   private final Filter filter;
   private final TimeRange timeRange;
   private final Row action;
+  private final boolean queryMetricsEnabled;
 
   private CheckAndMutate(byte[] row, byte[] family, byte[] qualifier, final CompareOperator op,
-    byte[] value, TimeRange timeRange, Row action) {
+    byte[] value, TimeRange timeRange, Row action, boolean queryMetricsEnabled) {
     this.row = row;
     this.family = family;
     this.qualifier = qualifier;
@@ -245,9 +267,11 @@ public final class CheckAndMutate implements Row {
     this.filter = null;
     this.timeRange = timeRange != null ? timeRange : TimeRange.allTime();
     this.action = action;
+    this.queryMetricsEnabled = queryMetricsEnabled;
   }
 
-  private CheckAndMutate(byte[] row, Filter filter, TimeRange timeRange, Row action) {
+  private CheckAndMutate(byte[] row, Filter filter, TimeRange timeRange, Row action,
+    boolean queryMetricsEnabled) {
     this.row = row;
     this.family = null;
     this.qualifier = null;
@@ -256,6 +280,7 @@ public final class CheckAndMutate implements Row {
     this.filter = filter;
     this.timeRange = timeRange != null ? timeRange : TimeRange.allTime();
     this.action = action;
+    this.queryMetricsEnabled = queryMetricsEnabled;
   }
 
   /** Returns the row */
@@ -302,5 +327,10 @@ public final class CheckAndMutate implements Row {
   /** Returns the action done if check succeeds */
   public Row getAction() {
     return action;
+  }
+
+  /** Returns whether query metrics are enabled */
+  public boolean isQueryMetricsEnabled() {
+    return queryMetricsEnabled;
   }
 }

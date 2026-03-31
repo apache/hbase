@@ -25,7 +25,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -45,6 +44,9 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -115,8 +117,7 @@ public class TestHRegionFileSystem {
       cfdA.setValue(HStore.BLOCK_STORAGE_POLICY_KEY, "ONE_SSD");
       admin.modifyColumnFamily(TABLE_NAME, cfdA.build());
       while (
-        TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
-          .hasRegionsInTransition()
+        TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().hasRegionsInTransition()
       ) {
         Thread.sleep(200);
         LOG.debug("Waiting on table to finish schema altering");
@@ -126,8 +127,7 @@ public class TestHRegionFileSystem {
       cfdB.setStoragePolicy("ALL_SSD");
       admin.modifyColumnFamily(TABLE_NAME, cfdB.build());
       while (
-        TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
-          .hasRegionsInTransition()
+        TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().hasRegionsInTransition()
       ) {
         Thread.sleep(200);
         LOG.debug("Waiting on table to finish schema altering");
@@ -178,6 +178,60 @@ public class TestHRegionFileSystem {
       assertEquals("ALL_SSD", spA);
       assertNotNull(spB);
       assertEquals("ONE_SSD", spB);
+    } finally {
+      table.close();
+      TEST_UTIL.deleteTable(TABLE_NAME);
+      TEST_UTIL.shutdownMiniCluster();
+    }
+  }
+  @Test
+  public void testMobStoreStoragePolicy() throws Exception {
+    TEST_UTIL = new HBaseTestingUtil();
+    Configuration conf = TEST_UTIL.getConfiguration();
+    TEST_UTIL.startMiniCluster();
+    Table table = TEST_UTIL.createTable(TABLE_NAME, FAMILIES);
+    assertEquals("Should start with empty table", 0, TEST_UTIL.countRows(table));
+    HRegionFileSystem regionFs = getHRegionFS(TEST_UTIL.getConnection(), table, conf);
+    try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
+      ColumnFamilyDescriptorBuilder cfdA = ColumnFamilyDescriptorBuilder.newBuilder(FAMILIES[0]);
+      cfdA.setValue(HStore.BLOCK_STORAGE_POLICY_KEY, "ONE_SSD");
+      cfdA.setMobEnabled(true);
+      cfdA.setMobThreshold(2L);
+      admin.modifyColumnFamily(TABLE_NAME, cfdA.build());
+      while (TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
+          .hasRegionsInTransition()) {
+        Thread.sleep(200);
+        LOG.debug("Waiting on table to finish schema altering");
+      }
+
+      // flush memstore snapshot into 3 files
+      for (long i = 0; i < 3; i++) {
+        Put put = new Put(Bytes.toBytes(i));
+        put.addColumn(FAMILIES[0], Bytes.toBytes(i), Bytes.toBytes(i));
+        put.addColumn(FAMILIES[0], Bytes.toBytes(i + "qf"), Bytes.toBytes(i + "value"));
+        table.put(put);
+        admin.flush(TABLE_NAME);
+      }
+      // there should be 3 files in store dir
+      FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
+      Path storePath = regionFs.getStoreDir(Bytes.toString(FAMILIES[0]));
+      Path mobStorePath = MobUtils.getMobFamilyPath(conf, TABLE_NAME, Bytes.toString(FAMILIES[0]));
+
+      FileStatus[] storeFiles = CommonFSUtils.listStatus(fs, storePath);
+      FileStatus[] mobStoreFiles = CommonFSUtils.listStatus(fs, mobStorePath);
+      assertNotNull(storeFiles);
+      assertEquals(3, storeFiles.length);
+      assertNotNull(mobStoreFiles);
+      assertEquals(3, mobStoreFiles.length);
+
+      for (FileStatus status : storeFiles) {
+        assertEquals("ONE_SSD",
+            ((HFileSystem) regionFs.getFileSystem()).getStoragePolicyName(status.getPath()));
+      }
+      for (FileStatus status : mobStoreFiles) {
+        assertEquals("ONE_SSD",
+            ((HFileSystem) regionFs.getFileSystem()).getStoragePolicyName(status.getPath()));
+      }
     } finally {
       table.close();
       TEST_UTIL.deleteTable(TABLE_NAME);
@@ -362,20 +416,25 @@ public class TestHRegionFileSystem {
 
     RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs, rootDir, hri);
-
+    StoreContext storeContext = StoreContext.getBuilder()
+      .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of(familyName))
+      .withFamilyStoreDirectoryPath(
+        new Path(regionFs.getTableDir(), new Path(hri.getRegionNameAsString(), familyName)))
+      .withRegionFileSystem(regionFs).build();
+    StoreFileTracker sft = StoreFileTrackerFactory.create(conf, false, storeContext);
     // New region, no store files
-    Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(familyName);
+    List<StoreFileInfo> storeFiles = sft.load();
     assertEquals(0, storeFiles != null ? storeFiles.size() : 0);
 
     // Create a new file in temp (no files in the family)
     Path buildPath = regionFs.createTempName();
     fs.createNewFile(buildPath);
-    storeFiles = regionFs.getStoreFiles(familyName);
+    storeFiles = sft.load();
     assertEquals(0, storeFiles != null ? storeFiles.size() : 0);
 
     // commit the file
     Path dstPath = regionFs.commitStoreFile(familyName, buildPath);
-    storeFiles = regionFs.getStoreFiles(familyName);
+    storeFiles = sft.load();
     assertEquals(0, storeFiles != null ? storeFiles.size() : 0);
     assertFalse(fs.exists(buildPath));
 

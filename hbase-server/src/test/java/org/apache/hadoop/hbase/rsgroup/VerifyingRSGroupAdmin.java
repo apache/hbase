@@ -412,8 +412,34 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     return admin.splitRegionAsync(regionName, splitPoint);
   }
 
+  @Override
+  public void truncateRegion(byte[] regionName) throws IOException {
+    admin.truncateRegion(regionName);
+  }
+
+  @Override
+  public Future<Void> truncateRegionAsync(byte[] regionName) throws IOException {
+    return admin.truncateRegionAsync(regionName);
+  }
+
   public Future<Void> modifyTableAsync(TableDescriptor td) throws IOException {
-    return admin.modifyTableAsync(td);
+    return modifyTableAsync(td, true);
+  }
+
+  public Future<Void> modifyTableAsync(TableDescriptor td, boolean reopenRegions)
+    throws IOException {
+    return admin.modifyTableAsync(td, reopenRegions);
+  }
+
+  @Override
+  public Future<Void> reopenTableRegionsAsync(TableName tableName) throws IOException {
+    return admin.reopenTableRegionsAsync(tableName);
+  }
+
+  @Override
+  public Future<Void> reopenTableRegionsAsync(TableName tableName, List<RegionInfo> regions)
+    throws IOException {
+    return admin.reopenTableRegionsAsync(tableName, regions);
   }
 
   public void shutdown() throws IOException {
@@ -509,6 +535,11 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
 
   public void rollWALWriter(ServerName serverName) throws IOException, FailedLogCloseException {
     admin.rollWALWriter(serverName);
+  }
+
+  @Override
+  public Map<ServerName, Long> rollAllWALWriters() throws IOException {
+    return admin.rollAllWALWriters();
   }
 
   public CompactionState getCompactionState(TableName tableName) throws IOException {
@@ -960,6 +991,16 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   @Override
+  public List<String> getCachedFilesList(ServerName serverName) throws IOException {
+    return admin.getCachedFilesList(serverName);
+  }
+
+  @Override
+  public void restoreBackupSystemTable(String snapshotName) throws IOException {
+    admin.restoreBackupSystemTable(snapshotName);
+  }
+
+  @Override
   public boolean replicationPeerModificationSwitch(boolean on, boolean drainProcedures)
     throws IOException {
     return admin.replicationPeerModificationSwitch(on, drainProcedures);
@@ -969,4 +1010,5 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   public boolean isReplicationPeerModificationEnabled() throws IOException {
     return admin.isReplicationPeerModificationEnabled();
   }
+
 }

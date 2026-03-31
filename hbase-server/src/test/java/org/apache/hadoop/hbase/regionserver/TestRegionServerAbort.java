@@ -221,8 +221,8 @@ public class TestRegionServerAbort {
     }
 
     @Override
-    public void prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit,
-      Durability durability) throws IOException {
+    public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
+      WALEdit edit, Durability durability) throws IOException {
       if (put.getAttribute(DO_ABORT) != null) {
         // TODO: Change this so it throws a CP Abort Exception instead.
         RegionServerServices rss =

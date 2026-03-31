@@ -39,12 +39,14 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ClientInternalHelper;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
@@ -171,12 +173,15 @@ public class TestWALSplitToHFile {
   }
 
   private WAL createWAL(Configuration c, Path hbaseRootDir, String logName) throws IOException {
-    FSHLog wal = new FSHLog(FileSystem.get(c), hbaseRootDir, logName, c);
+    FileSystem fs = hbaseRootDir.getFileSystem(c);
+    fs.mkdirs(new Path(hbaseRootDir, logName));
+    FSHLog wal = new FSHLog(fs, hbaseRootDir, logName, c);
     wal.init();
     return wal;
   }
 
   private WAL createWAL(FileSystem fs, Path hbaseRootDir, String logName) throws IOException {
+    fs.mkdirs(new Path(hbaseRootDir, logName));
     FSHLog wal = new FSHLog(fs, hbaseRootDir, logName, this.conf);
     wal.init();
     return wal;
@@ -341,10 +346,10 @@ public class TestWALSplitToHFile {
         region.put(new Put(Bytes.toBytes(i)).addColumn(cfd.getName(), QUALIFIER, VALUE1));
         Result result = region.get(new Get(Bytes.toBytes(i)).addFamily(cfd.getName()));
         assertTrue(Bytes.equals(VALUE1, result.getValue(cfd.getName(), QUALIFIER)));
-        List<Cell> cells = result.listCells();
-        assertEquals(1, cells.size());
+        ExtendedCell[] cells = ClientInternalHelper.getExtendedRawCells(result);
+        assertEquals(1, cells.length);
         seqIdMap.computeIfAbsent(i, r -> new HashMap<>()).put(cfd.getNameAsString(),
-          cells.get(0).getSequenceId());
+          cells[0].getSequenceId());
       }
     }
 
@@ -362,10 +367,9 @@ public class TestWALSplitToHFile {
       for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
         Result result = region2.get(new Get(Bytes.toBytes(i)).addFamily(cfd.getName()));
         assertTrue(Bytes.equals(VALUE1, result.getValue(cfd.getName(), QUALIFIER)));
-        List<Cell> cells = result.listCells();
-        assertEquals(1, cells.size());
-        assertEquals((long) seqIdMap.get(i).get(cfd.getNameAsString()),
-          cells.get(0).getSequenceId());
+        ExtendedCell[] cells = ClientInternalHelper.getExtendedRawCells(result);
+        assertEquals(1, cells.length);
+        assertEquals((long) seqIdMap.get(i).get(cfd.getNameAsString()), cells[0].getSequenceId());
       }
     }
   }

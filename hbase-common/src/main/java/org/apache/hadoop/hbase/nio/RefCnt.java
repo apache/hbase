@@ -35,7 +35,7 @@ import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakTracker;
 @InterfaceAudience.Private
 public class RefCnt extends AbstractReferenceCounted {
 
-  private static final ResourceLeakDetector<RefCnt> detector =
+  public static final ResourceLeakDetector<RefCnt> detector =
     ResourceLeakDetectorFactory.instance().newResourceLeakDetector(RefCnt.class);
   private final Recycler recycler;
   private final ResourceLeakTracker<RefCnt> leak;

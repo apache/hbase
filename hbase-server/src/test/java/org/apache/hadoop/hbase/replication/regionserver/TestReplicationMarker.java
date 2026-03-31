@@ -105,7 +105,7 @@ public class TestReplicationMarker {
     utility1.startMiniCluster(1);
     Admin admin1 = utility1.getAdmin();
     ReplicationPeerConfigBuilder rpcBuilder = ReplicationPeerConfig.newBuilder();
-    rpcBuilder.setClusterKey(utility2.getClusterKey());
+    rpcBuilder.setClusterKey(utility2.getRpcConnnectionURI());
     admin1.addReplicationPeer("1", rpcBuilder.build());
 
     ReplicationSourceManager manager = utility1.getHBaseCluster().getRegionServer(0)

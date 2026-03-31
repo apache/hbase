@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -54,7 +55,7 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
+import org.apache.hadoop.hbase.io.crypto.MockAesKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.mob.MobConstants;
@@ -110,11 +111,11 @@ public class TestHMobStore {
   private byte[] value2 = Bytes.toBytes("value2");
   private Path mobFilePath;
   private Date currentDate = new Date();
-  private Cell seekKey1;
-  private Cell seekKey2;
-  private Cell seekKey3;
+  private ExtendedCell seekKey1;
+  private ExtendedCell seekKey2;
+  private ExtendedCell seekKey3;
   private NavigableSet<byte[]> qualifiers = new ConcurrentSkipListSet<>(Bytes.BYTES_COMPARATOR);
-  private List<Cell> expected = new ArrayList<>();
+  private List<ExtendedCell> expected = new ArrayList<>();
   private long id = EnvironmentEdgeManager.currentTime();
   private Get get = new Get(row);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -310,7 +311,7 @@ public class TestHMobStore {
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
       scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
 
-    List<Cell> results = new ArrayList<>();
+    List<ExtendedCell> results = new ArrayList<>();
     scanner.next(results);
     Collections.sort(results, CellComparatorImpl.COMPARATOR);
     scanner.close();
@@ -318,7 +319,7 @@ public class TestHMobStore {
     // Compare
     Assert.assertEquals(expected.size(), results.size());
     for (int i = 0; i < results.size(); i++) {
-      Cell cell = results.get(i);
+      ExtendedCell cell = results.get(i);
       Assert.assertTrue(MobUtils.isMobReferenceCell(cell));
     }
   }
@@ -398,7 +399,7 @@ public class TestHMobStore {
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
       scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
 
-    List<Cell> results = new ArrayList<>();
+    List<ExtendedCell> results = new ArrayList<>();
     scanner.next(results);
     Collections.sort(results, CellComparatorImpl.COMPARATOR);
     scanner.close();
@@ -406,7 +407,7 @@ public class TestHMobStore {
     // Compare
     Assert.assertEquals(expected.size(), results.size());
     for (int i = 0; i < results.size(); i++) {
-      Cell cell = results.get(i);
+      ExtendedCell cell = results.get(i);
       // this is not mob reference cell.
       Assert.assertFalse(MobUtils.isMobReferenceCell(cell));
       Assert.assertEquals(expected.get(i), results.get(i));
@@ -468,7 +469,7 @@ public class TestHMobStore {
   public void testMOBStoreEncryption() throws Exception {
     final Configuration conf = TEST_UTIL.getConfiguration();
 
-    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockAesKeyProvider.class.getName());
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
     Bytes.secureRandom(keyBytes);

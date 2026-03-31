@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -232,7 +233,7 @@ public class WALCellCodec implements Codec {
     }
 
     @Override
-    public void write(Cell cell) throws IOException {
+    public void write(ExtendedCell cell) throws IOException {
       // We first write the KeyValue infrastructure as VInts.
       StreamUtils.writeRawVInt32(out, KeyValueUtil.keyLength(cell));
       StreamUtils.writeRawVInt32(out, cell.getValueLength());
@@ -287,7 +288,7 @@ public class WALCellCodec implements Codec {
     }
 
     @Override
-    protected Cell parseCell() throws IOException {
+    protected ExtendedCell parseCell() throws IOException {
       int keylength = StreamUtils.readRawVarint32(in);
       int vlength = StreamUtils.readRawVarint32(in);
       int tagsLength = StreamUtils.readRawVarint32(in);
@@ -393,11 +394,11 @@ public class WALCellCodec implements Codec {
     }
 
     @Override
-    public void write(Cell cell) throws IOException {
+    public void write(ExtendedCell cell) throws IOException {
       checkFlushed();
       // Make sure to write tags into WAL
-      ByteBufferUtils.putInt(this.out, KeyValueUtil.getSerializedSize(cell, true));
-      KeyValueUtil.oswrite(cell, this.out, true);
+      ByteBufferUtils.putInt(this.out, cell.getSerializedSize(true));
+      cell.write(out, true);
     }
   }
 

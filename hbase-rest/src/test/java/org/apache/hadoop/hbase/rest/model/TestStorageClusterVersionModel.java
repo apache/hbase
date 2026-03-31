@@ -17,20 +17,16 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RestTests.class, SmallTests.class })
+@Tag(RestTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestStorageClusterVersionModel extends TestModelBase<StorageClusterVersionModel> {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStorageClusterVersionModel.class);
 
   private static final String VERSION = "0.0.1-testing";
 
@@ -55,6 +51,7 @@ public class TestStorageClusterVersionModel extends TestModelBase<StorageCluster
   }
 
   @Override
+  @Test
   public void testFromPB() throws Exception {
     // ignore test no pb
   }

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -129,7 +130,26 @@ public class CompressionContext {
       } else {
         lowerIn.reset(in, inLength);
         IOUtils.readFully(compressedIn, outArray, outOffset, outLength);
+        // if the uncompressed size was larger than the configured buffer size for the codec,
+        // the BlockCompressorStream will have left an extra 4 bytes hanging. This represents a size
+        // for the next segment, and it should be 0. See HBASE-28390
+        if (lowerIn.available() == 4) {
+          int remaining = rawReadInt(lowerIn);
+          assert remaining == 0;
+        }
       }
+    }
+
+    /**
+     * Read an integer from the stream in big-endian byte order.
+     */
+    private int rawReadInt(InputStream in) throws IOException {
+      int b1 = in.read();
+      int b2 = in.read();
+      int b3 = in.read();
+      int b4 = in.read();
+      if ((b1 | b2 | b3 | b4) < 0) throw new EOFException();
+      return ((b1 << 24) + (b2 << 16) + (b3 << 8) + (b4 << 0));
     }
 
     public void clear() {

@@ -26,9 +26,12 @@ import java.util.Objects;
 import java.util.Optional;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -66,11 +69,15 @@ public class KeyOnlyFilter extends FilterBase {
   }
 
   @Override
-  public Cell transformCell(Cell cell) {
-    return createKeyOnlyCell(cell);
+  public Cell transformCell(Cell cell) throws IOException {
+    if (cell instanceof ExtendedCell) {
+      return createKeyOnlyCell((ExtendedCell) cell);
+    }
+    throw new DoNotRetryIOException(
+      "Customized cell implementation is not support: " + cell.getClass().getName());
   }
 
-  private Cell createKeyOnlyCell(Cell c) {
+  private Cell createKeyOnlyCell(ExtendedCell c) {
     if (c instanceof ByteBufferExtendedCell) {
       return new KeyOnlyByteBufferExtendedCell((ByteBufferExtendedCell) c, lenAsVal);
     } else {
@@ -144,12 +151,12 @@ public class KeyOnlyFilter extends FilterBase {
     return Objects.hash(this.lenAsVal);
   }
 
-  static class KeyOnlyCell implements Cell {
-    private Cell cell;
+  static class KeyOnlyCell implements ExtendedCell {
+    private ExtendedCell cell;
     private int keyLen;
     private boolean lenAsVal;
 
-    public KeyOnlyCell(Cell c, boolean lenAsVal) {
+    public KeyOnlyCell(ExtendedCell c, boolean lenAsVal) {
       this.cell = c;
       this.lenAsVal = lenAsVal;
       this.keyLen = KeyValueUtil.keyLength(c);
@@ -266,6 +273,21 @@ public class KeyOnlyFilter extends FilterBase {
     @Override
     public long heapSize() {
       return cell.heapSize();
+    }
+
+    @Override
+    public void setSequenceId(long seqId) throws IOException {
+      PrivateCellUtil.setSequenceId(cell, seqId);
+    }
+
+    @Override
+    public void setTimestamp(long ts) throws IOException {
+      PrivateCellUtil.setTimestamp(cell, ts);
+    }
+
+    @Override
+    public void setTimestamp(byte[] ts) throws IOException {
+      PrivateCellUtil.setTimestamp(cell, ts);
     }
   }
 

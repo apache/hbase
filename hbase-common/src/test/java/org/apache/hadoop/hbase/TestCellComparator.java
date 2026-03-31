@@ -76,7 +76,7 @@ public class TestCellComparator {
 
     kv1 = new KeyValue(row1, fam1, qual1, 1L, KeyValue.Type.Put);
     kv2 = new KeyValue(row1, fam1, qual1, 1L, KeyValue.Type.Put);
-    assertTrue(CellUtil.equals(kv1, kv2));
+    assertTrue(PrivateCellUtil.equals(kv1, kv2));
   }
 
   @Test

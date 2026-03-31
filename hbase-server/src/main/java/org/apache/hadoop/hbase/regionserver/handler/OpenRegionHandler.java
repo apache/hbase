@@ -166,8 +166,9 @@ public class OpenRegionHandler extends EventHandler {
         cleanupFailedOpen(region);
       }
     } finally {
-      rsServices.reportRegionStateTransition(new RegionStateTransitionContext(
-        TransitionCode.FAILED_OPEN, HConstants.NO_SEQNUM, Procedure.NO_PROC_ID, -1, regionInfo));
+      rsServices
+        .reportRegionStateTransition(new RegionStateTransitionContext(TransitionCode.FAILED_OPEN,
+          HConstants.NO_SEQNUM, Procedure.NO_PROC_ID, -1, regionInfo, -1));
     }
   }
 
@@ -253,7 +254,7 @@ public class OpenRegionHandler extends EventHandler {
     public void run() {
       try {
         this.services.postOpenDeployTasks(
-          new PostOpenDeployContext(region, Procedure.NO_PROC_ID, masterSystemTime));
+          new PostOpenDeployContext(region, Procedure.NO_PROC_ID, masterSystemTime, -1));
       } catch (Throwable e) {
         String msg = "Exception running postOpenDeployTasks; region="
           + this.region.getRegionInfo().getEncodedName();

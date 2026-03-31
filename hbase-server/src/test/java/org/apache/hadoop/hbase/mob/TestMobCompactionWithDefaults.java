@@ -97,8 +97,6 @@ public class TestMobCompactionWithDefaults {
   protected int numRegions = 20;
   protected int rows = 1000;
 
-  protected MobFileCleanerChore cleanerChore;
-
   protected Boolean useFileBasedSFT;
 
   public TestMobCompactionWithDefaults(Boolean useFileBasedSFT) {
@@ -139,7 +137,6 @@ public class TestMobCompactionWithDefaults {
   public void setUp() throws Exception {
     htuStart();
     admin = HTU.getAdmin();
-    cleanerChore = new MobFileCleanerChore();
     familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(fam).setMobEnabled(true)
       .setMobThreshold(mobLen).setMaxVersions(1).build();
     tableDescriptor = HTU.createModifyableTableDescriptor(TestMobUtils.getTableName(test))

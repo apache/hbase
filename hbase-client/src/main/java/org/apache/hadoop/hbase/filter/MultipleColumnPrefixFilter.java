@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
  * with columns like 'ball', 'act'.
  */
 @InterfaceAudience.Public
-public class MultipleColumnPrefixFilter extends FilterBase {
+public class MultipleColumnPrefixFilter extends FilterBase implements HintingFilter {
   private static final Logger LOG = LoggerFactory.getLogger(MultipleColumnPrefixFilter.class);
   protected byte[] hint = null;
   protected TreeSet<byte[]> sortedPrefixes = createTreeSet();

@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
@@ -56,7 +56,7 @@ public class ReplicationSinkServiceImpl implements ReplicationSinkService {
   private int statsPeriodInSecond;
 
   @Override
-  public void replicateLogEntries(List<AdminProtos.WALEntry> entries, CellScanner cells,
+  public void replicateLogEntries(List<AdminProtos.WALEntry> entries, ExtendedCellScanner cells,
     String replicationClusterId, String sourceBaseNamespaceDirPath,
     String sourceHFileArchiveDirPath) throws IOException {
     this.replicationSink.replicateEntries(entries, cells, replicationClusterId,

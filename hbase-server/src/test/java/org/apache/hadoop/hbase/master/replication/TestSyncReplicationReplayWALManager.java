@@ -91,7 +91,7 @@ public class TestSyncReplicationReplayWALManager {
     ServerMetrics serverMetrics = mock(ServerMetrics.class);
     doAnswer(inv -> onlineServers.stream()
       .collect(Collectors.toMap(Function.identity(), k -> serverMetrics))).when(serverManager)
-        .getOnlineServers();
+      .getOnlineServers();
 
     MasterFileSystem mfs = mock(MasterFileSystem.class);
     when(mfs.getFileSystem()).thenReturn(UTIL.getTestFileSystem());

@@ -84,6 +84,7 @@ public class TestBucketWriterThread {
     final int writerThreadsCount = 1;
     this.bc = new MockBucketCache("offheap", capacity, 1, new int[] { 1 }, writerThreadsCount,
       capacity, null, 100/* Tolerate ioerrors for 100ms */);
+    this.bc.waitForCacheInitialization(10000);
     assertEquals(writerThreadsCount, bc.writerThreads.length);
     assertEquals(writerThreadsCount, bc.writerQueues.size());
     // Get reference to our single WriterThread instance.
@@ -122,6 +123,8 @@ public class TestBucketWriterThread {
     Mockito.when(tooBigCacheable.getSerializedLength()).thenReturn(Integer.MAX_VALUE);
     this.bc.cacheBlock(this.plainKey, tooBigCacheable);
     doDrainOfOneEntry(this.bc, this.wt, this.q);
+    assertTrue(bc.blocksByHFile.isEmpty());
+    assertTrue(bc.getBackingMap().isEmpty());
   }
 
   /**
@@ -135,9 +138,11 @@ public class TestBucketWriterThread {
     RAMQueueEntry rqe = q.remove();
     RAMQueueEntry spiedRqe = Mockito.spy(rqe);
     Mockito.doThrow(new IOException("Mocked!")).when(spiedRqe).writeToCache(Mockito.any(),
-      Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+      Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     this.q.add(spiedRqe);
     doDrainOfOneEntry(bc, wt, q);
+    assertTrue(bc.blocksByHFile.isEmpty());
+    assertTrue(bc.getBackingMap().isEmpty());
     // Cache disabled when ioes w/o ever healing.
     assertTrue(!bc.isCacheEnabled());
   }
@@ -153,7 +158,7 @@ public class TestBucketWriterThread {
     final CacheFullException cfe = new CacheFullException(0, 0);
     BucketEntry mockedBucketEntry = Mockito.mock(BucketEntry.class);
     Mockito.doThrow(cfe).doReturn(mockedBucketEntry).when(spiedRqe).writeToCache(Mockito.any(),
-      Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+      Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     this.q.add(spiedRqe);
     doDrainOfOneEntry(bc, wt, q);
   }

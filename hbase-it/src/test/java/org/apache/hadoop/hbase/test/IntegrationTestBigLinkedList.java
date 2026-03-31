@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hbase.test;
 
+import static org.apache.hadoop.hbase.IntegrationTestingUtility.DEFAULT_REGIONS_PER_SERVER;
+import static org.apache.hadoop.hbase.IntegrationTestingUtility.PRESPLIT_TEST_TABLE;
+import static org.apache.hadoop.hbase.IntegrationTestingUtility.PRESPLIT_TEST_TABLE_KEY;
+import static org.apache.hadoop.hbase.IntegrationTestingUtility.REGIONS_PER_SERVER_KEY;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.FileNotFoundException;
@@ -40,7 +45,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.IntegrationTestBase;
@@ -108,8 +112,8 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -206,7 +210,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
  * </pre>
  * </p>
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestBigLinkedList extends IntegrationTestBase {
   protected static final byte[] NO_KEY = new byte[1];
   protected static String TABLE_NAME_KEY = "IntegrationTestBigLinkedList.table";
@@ -751,16 +755,12 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
             .build();
 
           // If we want to pre-split compute how many splits.
-          if (
-            conf.getBoolean(HBaseTestingUtil.PRESPLIT_TEST_TABLE_KEY,
-              HBaseTestingUtil.PRESPLIT_TEST_TABLE)
-          ) {
+          if (conf.getBoolean(PRESPLIT_TEST_TABLE_KEY, PRESPLIT_TEST_TABLE)) {
             int numberOfServers = admin.getRegionServers().size();
             if (numberOfServers == 0) {
               throw new IllegalStateException("No live regionservers");
             }
-            int regionsPerServer = conf.getInt(HBaseTestingUtil.REGIONS_PER_SERVER_KEY,
-              HBaseTestingUtil.DEFAULT_REGIONS_PER_SERVER);
+            int regionsPerServer = conf.getInt(REGIONS_PER_SERVER_KEY, DEFAULT_REGIONS_PER_SERVER);
             int totalNumberOfRegions = numberOfServers * regionsPerServer;
             LOG.info("Number of live regionservers: " + numberOfServers + ", "
               + "pre-splitting table into " + totalNumberOfRegions + " regions "
@@ -1872,7 +1872,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     }
     int ret = ToolRunner.run(conf, new Loop(), new String[] { "1", "1", "2000000",
       util.getDataTestDirOnTestFS("IntegrationTestBigLinkedList").toString(), "1" });
-    org.junit.Assert.assertEquals(0, ret);
+    org.junit.jupiter.api.Assertions.assertEquals(0, ret);
   }
 
   private void usage() {
@@ -1899,9 +1899,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     System.err.println(" -D" + TABLE_NAME_KEY + "=<tableName>");
     System.err.println(
       "    Run using the <tableName> as the tablename.  Defaults to " + DEFAULT_TABLE_NAME);
-    System.err.println(" -D" + HBaseTestingUtil.REGIONS_PER_SERVER_KEY + "=<# regions>");
+    System.err.println(" -D" + REGIONS_PER_SERVER_KEY + "=<# regions>");
     System.err.println("    Create table with presplit regions per server.  Defaults to "
-      + HBaseTestingUtil.DEFAULT_REGIONS_PER_SERVER);
+      + DEFAULT_REGIONS_PER_SERVER);
 
     System.err.println(" -DuseMob=<true|false>");
     System.err.println(

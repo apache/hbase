@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.quotas.RegionServerRpcQuotaManager;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
@@ -54,7 +55,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * judicious adding API. Changes cause ripples through the code base.
  */
 @InterfaceAudience.Private
-public interface RegionServerServices extends Server, MutableOnlineRegions, FavoredNodesForRegion {
+public interface RegionServerServices
+  extends Server, MutableOnlineRegions, FavoredNodesForRegion, KeyManagementService {
 
   /** Returns the WAL for a particular region. Pass null for getting the default (common) WAL */
   WAL getWAL(RegionInfo regionInfo) throws IOException;
@@ -93,11 +95,14 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
     private final HRegion region;
     private final long openProcId;
     private final long masterSystemTime;
+    private final long initiatingMasterActiveTime;
 
-    public PostOpenDeployContext(HRegion region, long openProcId, long masterSystemTime) {
+    public PostOpenDeployContext(HRegion region, long openProcId, long masterSystemTime,
+      long initiatingMasterActiveTime) {
       this.region = region;
       this.openProcId = openProcId;
       this.masterSystemTime = masterSystemTime;
+      this.initiatingMasterActiveTime = initiatingMasterActiveTime;
     }
 
     public HRegion getRegion() {
@@ -111,6 +116,10 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
     public long getMasterSystemTime() {
       return masterSystemTime;
     }
+
+    public long getInitiatingMasterActiveTime() {
+      return initiatingMasterActiveTime;
+    }
   }
 
   /**
@@ -123,23 +132,26 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
     private final TransitionCode code;
     private final long openSeqNum;
     private final long masterSystemTime;
+    private final long initiatingMasterActiveTime;
     private final long[] procIds;
     private final RegionInfo[] hris;
 
     public RegionStateTransitionContext(TransitionCode code, long openSeqNum, long masterSystemTime,
-      RegionInfo... hris) {
+      long initiatingMasterActiveTime, RegionInfo... hris) {
       this.code = code;
       this.openSeqNum = openSeqNum;
       this.masterSystemTime = masterSystemTime;
+      this.initiatingMasterActiveTime = initiatingMasterActiveTime;
       this.hris = hris;
       this.procIds = new long[hris.length];
     }
 
     public RegionStateTransitionContext(TransitionCode code, long openSeqNum, long procId,
-      long masterSystemTime, RegionInfo hri) {
+      long masterSystemTime, RegionInfo hri, long initiatingMasterActiveTime) {
       this.code = code;
       this.openSeqNum = openSeqNum;
       this.masterSystemTime = masterSystemTime;
+      this.initiatingMasterActiveTime = initiatingMasterActiveTime;
       this.hris = new RegionInfo[] { hri };
       this.procIds = new long[] { procId };
     }
@@ -162,6 +174,10 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
 
     public long[] getProcIds() {
       return procIds;
+    }
+
+    public long getInitiatingMasterActiveTime() {
+      return initiatingMasterActiveTime;
     }
   }
 

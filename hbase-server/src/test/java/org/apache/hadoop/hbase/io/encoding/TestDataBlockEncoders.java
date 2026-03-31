@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -225,7 +226,7 @@ public class TestDataBlockEncoders {
     for (boolean seekBefore : new boolean[] { false, true }) {
       checkSeekingConsistency(encodedSeekers, seekBefore, sampleKv.get(sampleKv.size() - 1));
       KeyValue midKv = sampleKv.get(sampleKv.size() / 2);
-      Cell lastMidKv = PrivateCellUtil.createLastOnRowCol(midKv);
+      ExtendedCell lastMidKv = PrivateCellUtil.createLastOnRowCol(midKv);
       checkSeekingConsistency(encodedSeekers, seekBefore, lastMidKv);
     }
     LOG.info("Done");
@@ -278,7 +279,7 @@ public class TestDataBlockEncoders {
     for (boolean seekBefore : new boolean[] { false, true }) {
       checkSeekingConsistency(encodedSeekers, seekBefore, sampleKv.get(sampleKv.size() - 1));
       KeyValue midKv = sampleKv.get(sampleKv.size() / 2);
-      Cell lastMidKv = PrivateCellUtil.createLastOnRowCol(midKv);
+      ExtendedCell lastMidKv = PrivateCellUtil.createLastOnRowCol(midKv);
       checkSeekingConsistency(encodedSeekers, seekBefore, lastMidKv);
     }
     LOG.info("Done");
@@ -326,7 +327,7 @@ public class TestDataBlockEncoders {
       int i = 0;
       do {
         KeyValue expectedKeyValue = sampleKv.get(i);
-        Cell cell = seeker.getCell();
+        ExtendedCell cell = seeker.getCell();
         if (
           PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, expectedKeyValue,
             cell) != 0
@@ -359,7 +360,7 @@ public class TestDataBlockEncoders {
       DataBlockEncoder encoder = encoding.getEncoder();
       ByteBuffer encodedBuffer = encodeKeyValues(encoding, sampleKv,
         getEncodingContext(conf, Compression.Algorithm.NONE, encoding), this.useOffheapData);
-      Cell key = encoder.getFirstKeyCellInBlock(new SingleByteBuff(encodedBuffer));
+      ExtendedCell key = encoder.getFirstKeyCellInBlock(new SingleByteBuff(encodedBuffer));
       KeyValue firstKv = sampleKv.get(0);
       if (0 != PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, key, firstKv)) {
         int commonPrefix = PrivateCellUtil.findCommonPrefixInFlatKey(key, firstKv, false, true);
@@ -392,21 +393,21 @@ public class TestDataBlockEncoders {
   }
 
   private void checkSeekingConsistency(List<DataBlockEncoder.EncodedSeeker> encodedSeekers,
-    boolean seekBefore, Cell keyValue) {
-    Cell expectedKeyValue = null;
+    boolean seekBefore, ExtendedCell keyValue) {
+    ExtendedCell expectedKeyValue = null;
     ByteBuffer expectedKey = null;
     ByteBuffer expectedValue = null;
     for (DataBlockEncoder.EncodedSeeker seeker : encodedSeekers) {
       seeker.seekToKeyInBlock(keyValue, seekBefore);
       seeker.rewind();
 
-      Cell actualKeyValue = seeker.getCell();
+      ExtendedCell actualKeyValue = seeker.getCell();
       ByteBuffer actualKey = null;
       actualKey = ByteBuffer.wrap(((KeyValue) seeker.getKey()).getKey());
       ByteBuffer actualValue = seeker.getValueShallowCopy();
 
       if (expectedKeyValue != null) {
-        assertTrue(CellUtil.equals(expectedKeyValue, actualKeyValue));
+        assertTrue(PrivateCellUtil.equals(expectedKeyValue, actualKeyValue));
       } else {
         expectedKeyValue = actualKeyValue;
       }

@@ -29,13 +29,13 @@ import java.util.List;
 import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
+import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -61,7 +62,9 @@ import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.wal.WALFactory;
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -88,10 +91,10 @@ public class TestDefaultMemStore {
   public TestName name = new TestName();
   protected AbstractMemStore memstore;
   protected static final int ROW_COUNT = 10;
+  protected static final int SCAN_ROW_COUNT = 25000;
   protected static final int QUALIFIER_COUNT = ROW_COUNT;
   protected static final byte[] FAMILY = Bytes.toBytes("column");
   protected MultiVersionConcurrencyControl mvcc;
-  protected AtomicLong startSeqNum = new AtomicLong(0);
   protected ChunkCreator chunkCreator;
 
   private String getName() {
@@ -105,6 +108,11 @@ public class TestDefaultMemStore {
     this.chunkCreator = ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0,
       null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     this.memstore = new DefaultMemStore();
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    this.memstore.close();
   }
 
   @AfterClass
@@ -352,6 +360,48 @@ public class TestDefaultMemStore {
 
     s = this.memstore.getScanners(mvcc.getReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[] { kv1, kv2 });
+  }
+
+  private long getBytesReadFromMemstore() throws IOException {
+    final byte[] f = Bytes.toBytes("family");
+    final byte[] q1 = Bytes.toBytes("q1");
+    final byte[] v = Bytes.toBytes("value");
+    int numKvs = 10;
+
+    MultiVersionConcurrencyControl.WriteEntry w = mvcc.begin();
+
+    KeyValue kv;
+    KeyValue[] kvs = new KeyValue[numKvs];
+    long totalCellSize = 0;
+    for (int i = 0; i < numKvs; i++) {
+      byte[] row = Bytes.toBytes(i);
+      kv = new KeyValue(row, f, q1, v);
+      kv.setSequenceId(w.getWriteNumber());
+      memstore.add(kv, null);
+      kvs[i] = kv;
+      totalCellSize += Segment.getCellLength(kv);
+    }
+    mvcc.completeAndWait(w);
+
+    ThreadLocalServerSideScanMetrics.getBytesReadFromMemstoreAndReset();
+    KeyValueScanner s = this.memstore.getScanners(mvcc.getReadPoint()).get(0);
+    assertScannerResults(s, kvs);
+    return totalCellSize;
+  }
+
+  @Test
+  public void testBytesReadFromMemstore() throws IOException {
+    ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(true);
+    long totalCellSize = getBytesReadFromMemstore();
+    Assert.assertEquals(totalCellSize,
+      ThreadLocalServerSideScanMetrics.getBytesReadFromMemstoreAndReset());
+  }
+
+  @Test
+  public void testBytesReadFromMemstoreWithScanMetricsDisabled() throws IOException {
+    ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(false);
+    getBytesReadFromMemstore();
+    Assert.assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromMemstoreAndReset());
   }
 
   /**
@@ -810,8 +860,8 @@ public class TestDefaultMemStore {
   //////////////////////////////////////////////////////////////////////////////
   // Helpers
   //////////////////////////////////////////////////////////////////////////////
-  private static byte[] makeQualifier(final int i1, final int i2) {
-    return Bytes.toBytes(Integer.toString(i1) + ";" + Integer.toString(i2));
+  protected static byte[] makeQualifier(final int i1, final int i2) {
+    return Bytes.toBytes(i1 + ";" + i2);
   }
 
   /**
@@ -824,7 +874,7 @@ public class TestDefaultMemStore {
     memstore = new DefaultMemStore(conf, CellComparatorImpl.COMPARATOR);
     MemStoreSize oldSize = memstore.size();
 
-    List<Cell> l = new ArrayList<>();
+    List<ExtendedCell> l = new ArrayList<>();
     KeyValue kv1 = KeyValueTestUtil.create("r", "f", "q", 100, "v");
     KeyValue kv2 = KeyValueTestUtil.create("r", "f", "q", 101, "v");
     KeyValue kv3 = KeyValueTestUtil.create("r", "f", "q", 102, "v");
@@ -886,7 +936,7 @@ public class TestDefaultMemStore {
       t = runSnapshot(memstore);
 
       // test the case that the timeOfOldestEdit is updated after a KV upsert
-      List<Cell> l = new ArrayList<>();
+      List<ExtendedCell> l = new ArrayList<>();
       KeyValue kv1 = KeyValueTestUtil.create("r", "f", "q", 100, "v");
       kv1.setSequenceId(100);
       l.add(kv1);
@@ -1056,15 +1106,13 @@ public class TestDefaultMemStore {
 
   private static void addRows(int count, final MemStore mem) {
     long nanos = System.nanoTime();
-
     for (int i = 0; i < count; i++) {
       if (i % 1000 == 0) {
-
-        System.out.println(i + " Took for 1k usec: " + (System.nanoTime() - nanos) / 1000);
+        LOG.info("{} Took for 1k usec: {}", i, (System.nanoTime() - nanos) / 1000);
         nanos = System.nanoTime();
       }
-      long timestamp = System.currentTimeMillis();
 
+      long timestamp = System.currentTimeMillis();
       for (int ii = 0; ii < QUALIFIER_COUNT; ii++) {
         byte[] row = Bytes.toBytes(i);
         byte[] qf = makeQualifier(i, ii);
@@ -1073,31 +1121,34 @@ public class TestDefaultMemStore {
     }
   }
 
-  static void doScan(MemStore ms, int iteration) throws IOException {
+  private static int doScan(MemStore ms, int iteration) throws IOException {
     long nanos = System.nanoTime();
     KeyValueScanner s = ms.getScanners(0).get(0);
     s.seek(KeyValueUtil.createFirstOnRow(new byte[] {}));
 
-    System.out.println(iteration + " create/seek took: " + (System.nanoTime() - nanos) / 1000);
+    LOG.info("Iteration {} create/seek took: {}", iteration, (System.nanoTime() - nanos) / 1000);
     int cnt = 0;
-    while (s.next() != null)
+    while (s.next() != null) {
       ++cnt;
-
-    System.out
-      .println(iteration + " took usec: " + (System.nanoTime() - nanos) / 1000 + " for: " + cnt);
-
+    }
+    LOG.info("Iteration {} took usec: {} for: {}", iteration, (System.nanoTime() - nanos) / 1000,
+      cnt);
+    return cnt;
   }
 
-  public static void main(String[] args) throws IOException {
-    MemStore ms = new DefaultMemStore();
-
+  protected void scanMemStore(MemStore ms, int expectedCount) throws IOException {
     long n1 = System.nanoTime();
-    addRows(25000, ms);
-    System.out.println("Took for insert: " + (System.nanoTime() - n1) / 1000);
+    addRows(SCAN_ROW_COUNT, ms);
+    LOG.info("Took for insert: {}", (System.nanoTime() - n1) / 1000);
 
-    System.out.println("foo");
+    for (int i = 0; i < 50; i++) {
+      int cnt = doScan(ms, i);
+      assertEquals(expectedCount, cnt);
+    }
+  }
 
-    for (int i = 0; i < 50; i++)
-      doScan(ms, i);
+  @Test
+  public void testScan() throws IOException {
+    scanMemStore(memstore, SCAN_ROW_COUNT * QUALIFIER_COUNT);
   }
 }

@@ -28,8 +28,8 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.regionserver.querymatcher.NewVersionBehaviorTracker;
@@ -56,7 +56,7 @@ public class VisibilityNewVersionBehaivorTracker extends NewVersionBehaviorTrack
     List<Tag> tags;
     Byte format;
 
-    private TagInfo(Cell c) {
+    private TagInfo(ExtendedCell c) {
       tags = new ArrayList<>();
       format = VisibilityUtils.extractVisibilityTags(c, tags);
     }
@@ -98,7 +98,7 @@ public class VisibilityNewVersionBehaivorTracker extends NewVersionBehaviorTrack
     }
 
     @Override
-    public void addVersionDelete(Cell cell) {
+    public void addVersionDelete(ExtendedCell cell) {
       SortedMap<Long, TagInfo> set = deletesMap.get(cell.getTimestamp());
       if (set == null) {
         set = new TreeMap<>();
@@ -117,7 +117,7 @@ public class VisibilityNewVersionBehaivorTracker extends NewVersionBehaviorTrack
   }
 
   @Override
-  public void add(Cell cell) {
+  public void add(ExtendedCell cell) {
     prepare(cell);
     byte type = cell.getTypeByte();
     switch (KeyValue.Type.codeToType(type)) {
@@ -143,7 +143,7 @@ public class VisibilityNewVersionBehaivorTracker extends NewVersionBehaviorTrack
     }
   }
 
-  private boolean tagMatched(Cell put, TagInfo delInfo) throws IOException {
+  private boolean tagMatched(ExtendedCell put, TagInfo delInfo) throws IOException {
     List<Tag> putVisTags = new ArrayList<>();
     Byte putCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(put, putVisTags);
     return putVisTags.isEmpty() == delInfo.tags.isEmpty()
@@ -153,7 +153,7 @@ public class VisibilityNewVersionBehaivorTracker extends NewVersionBehaviorTrack
   }
 
   @Override
-  public DeleteResult isDeleted(Cell cell) {
+  public DeleteResult isDeleted(ExtendedCell cell) {
     try {
       long duplicateMvcc = prepare(cell);
 

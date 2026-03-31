@@ -154,13 +154,14 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   public FSHLog(final FileSystem fs, Abortable abortable, final Path root, final String logDir,
     final Configuration conf) throws IOException {
     this(fs, abortable, root, logDir, HConstants.HREGION_OLDLOGDIR_NAME, conf, null, true, null,
-      null);
+      null, null, null);
   }
 
   public FSHLog(final FileSystem fs, final Path rootDir, final String logDir,
     final String archiveDir, final Configuration conf, final List<WALActionsListener> listeners,
     final boolean failIfWALExists, final String prefix, final String suffix) throws IOException {
-    this(fs, null, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix);
+    this(fs, null, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix,
+      null, null);
   }
 
   /**
@@ -185,9 +186,9 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   public FSHLog(final FileSystem fs, final Abortable abortable, final Path rootDir,
     final String logDir, final String archiveDir, final Configuration conf,
     final List<WALActionsListener> listeners, final boolean failIfWALExists, final String prefix,
-    final String suffix) throws IOException {
+    final String suffix, FileSystem remoteFs, Path remoteWALDir) throws IOException {
     super(fs, abortable, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
-      suffix);
+      suffix, remoteFs, remoteWALDir);
     this.minTolerableReplication =
       conf.getInt(TOLERABLE_LOW_REPLICATION, CommonFSUtils.getDefaultReplication(fs, this.walDir));
     this.lowReplicationRollLimit =
@@ -254,7 +255,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    * @return Writer instance
    */
   @Override
-  protected Writer createWriterInstance(final Path path) throws IOException {
+  protected Writer createWriterInstance(FileSystem fs, Path path) throws IOException {
     Writer writer = FSHLogProvider.createWriter(conf, fs, path, false, this.blocksize);
     if (writer instanceof ProtobufLogWriter) {
       preemptiveSync((ProtobufLogWriter) writer);
@@ -602,12 +603,9 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     return new DatanodeInfo[0];
   }
 
-  Writer getWriter() {
-    return this.writer;
+  @Override
+  protected Writer createCombinedWriter(Writer localWriter, Writer remoteWriter) {
+    // put remote writer first as usually it will cost more time to finish, so we write to it first
+    return CombinedWriter.create(remoteWriter, localWriter);
   }
-
-  void setWriter(Writer writer) {
-    this.writer = writer;
-  }
-
 }

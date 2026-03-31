@@ -17,19 +17,21 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.CellUtil.createCellScanner;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.calcPriority;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.resetController;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import static org.apache.hadoop.hbase.util.FutureUtils.unwrapCompletionException;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -44,11 +46,12 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.mutable.MutableBoolean;
-import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCellScannable;
 import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.RetryImmediatelyException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -118,7 +121,8 @@ class AsyncBatchRpcRetryingCaller<T> {
 
   // we can not use HRegionLocation as the map key because the hashCode and equals method of
   // HRegionLocation only consider serverName.
-  private static final class RegionRequest {
+  // package private for testing log output
+  static final class RegionRequest {
 
     public final HRegionLocation loc;
 
@@ -212,14 +216,47 @@ class AsyncBatchRpcRetryingCaller<T> {
     }
   }
 
-  private void logException(int tries, Supplier<Stream<RegionRequest>> regionsSupplier,
+  private void logRegionsException(int tries, Supplier<Stream<RegionRequest>> regionsSupplier,
     Throwable error, ServerName serverName) {
     if (tries > startLogErrorsCnt) {
       String regions =
         regionsSupplier.get().map(r -> "'" + r.loc.getRegion().getRegionNameAsString() + "'")
           .collect(Collectors.joining(",", "[", "]"));
-      LOG.warn("Process batch for " + regions + " in " + tableName + " from " + serverName
-        + " failed, tries=" + tries, error);
+      LOG.warn("Process batch for {} from {} failed, tries={}", regions, serverName, tries, error);
+    }
+  }
+
+  private static final int MAX_SAMPLED_ERRORS = 3;
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/(src/test/|AsyncBatchRpcRetryingCaller).*")
+  static void logActionsException(int tries, int startLogErrorsCnt, RegionRequest regionReq,
+    IdentityHashMap<Action, Throwable> action2Error, ServerName serverName) {
+    if (tries <= startLogErrorsCnt || action2Error.isEmpty()) {
+      return;
+    }
+    if (LOG.isWarnEnabled()) {
+      StringWriter sw = new StringWriter();
+      PrintWriter action2ErrorWriter = new PrintWriter(sw);
+      action2ErrorWriter.println();
+      Iterator<Map.Entry<Action, Throwable>> iter = action2Error.entrySet().iterator();
+      for (int i = 0; i < MAX_SAMPLED_ERRORS && iter.hasNext(); i++) {
+        Map.Entry<Action, Throwable> entry = iter.next();
+        action2ErrorWriter.print(entry.getKey().getAction());
+        action2ErrorWriter.print(" => ");
+        entry.getValue().printStackTrace(action2ErrorWriter);
+      }
+      action2ErrorWriter.flush();
+      LOG.warn("Process batch for {} on {}, {}/{} actions failed, tries={}, sampled {} errors: {}",
+        regionReq.loc.getRegion().getRegionNameAsString(), serverName, action2Error.size(),
+        regionReq.actions.size(), tries, Math.min(MAX_SAMPLED_ERRORS, action2Error.size()),
+        sw.toString());
+    }
+    // if trace is enabled, we log all the details
+    if (LOG.isTraceEnabled()) {
+      action2Error.forEach((action, error) -> LOG.trace(
+        "Process action {} in batch for {} on {} failed, tries={}", action.getAction(),
+        regionReq.loc.getRegion().getRegionNameAsString(), serverName, tries, error));
     }
   }
 
@@ -274,7 +311,7 @@ class AsyncBatchRpcRetryingCaller<T> {
   }
 
   private ClientProtos.MultiRequest buildReq(Map<byte[], RegionRequest> actionsByRegion,
-    List<CellScannable> cells, Map<Integer, Integer> indexMap) throws IOException {
+    List<ExtendedCellScannable> cells, Map<Integer, Integer> indexMap) throws IOException {
     ClientProtos.MultiRequest.Builder multiRequestBuilder = ClientProtos.MultiRequest.newBuilder();
     ClientProtos.RegionAction.Builder regionActionBuilder = ClientProtos.RegionAction.newBuilder();
     ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
@@ -297,7 +334,7 @@ class AsyncBatchRpcRetryingCaller<T> {
   @SuppressWarnings("unchecked")
   private void onComplete(Action action, RegionRequest regionReq, int tries, ServerName serverName,
     RegionResult regionResult, List<Action> failedActions, Throwable regionException,
-    MutableBoolean retryImmediately) {
+    MutableBoolean retryImmediately, IdentityHashMap<Action, Throwable> action2Error) {
     Object result = regionResult.result.getOrDefault(action.getOriginalIndex(), regionException);
     if (result == null) {
       LOG.error("Server " + serverName + " sent us neither result nor exception for row '"
@@ -307,7 +344,7 @@ class AsyncBatchRpcRetryingCaller<T> {
       failedActions.add(action);
     } else if (result instanceof Throwable) {
       Throwable error = translateException((Throwable) result);
-      logException(tries, () -> Stream.of(regionReq), error, serverName);
+      action2Error.put(action, error);
       conn.getLocator().updateCachedLocationOnError(regionReq.loc, error);
       if (error instanceof DoNotRetryIOException || tries >= maxAttempts) {
         failOne(action, tries, error, EnvironmentEdgeManager.currentTime(),
@@ -333,8 +370,13 @@ class AsyncBatchRpcRetryingCaller<T> {
       RegionResult regionResult = resp.getResults().get(rn);
       Throwable regionException = resp.getException(rn);
       if (regionResult != null) {
+        // Here we record the exceptions and log it at once, to avoid flooding log output if lots of
+        // actions are failed. For example, if the region's memstore is full, all actions will
+        // received a RegionTooBusyException, see HBASE-29390.
+        IdentityHashMap<Action, Throwable> action2Error = new IdentityHashMap<>();
         regionReq.actions.forEach(action -> onComplete(action, regionReq, tries, serverName,
-          regionResult, failedActions, regionException, retryImmediately));
+          regionResult, failedActions, regionException, retryImmediately, action2Error));
+        logActionsException(tries, startLogErrorsCnt, regionReq, action2Error, serverName);
       } else {
         Throwable error;
         if (regionException == null) {
@@ -344,7 +386,7 @@ class AsyncBatchRpcRetryingCaller<T> {
         } else {
           error = translateException(regionException);
         }
-        logException(tries, () -> Stream.of(regionReq), error, serverName);
+        logRegionsException(tries, () -> Stream.of(regionReq), error, serverName);
         conn.getLocator().updateCachedLocationOnError(regionReq.loc, error);
         if (error instanceof DoNotRetryIOException || tries >= maxAttempts) {
           failAll(regionReq.actions.stream(), tries, error, serverName);
@@ -382,7 +424,7 @@ class AsyncBatchRpcRetryingCaller<T> {
       return;
     }
     ClientProtos.MultiRequest req;
-    List<CellScannable> cells = new ArrayList<>();
+    List<ExtendedCellScannable> cells = new ArrayList<>();
     // Map from a created RegionAction to the original index for a RowMutations within
     // the original list of actions. This will be used to process the results when there
     // is RowMutations/CheckAndMutate in the action list.
@@ -394,11 +436,11 @@ class AsyncBatchRpcRetryingCaller<T> {
       return;
     }
     HBaseRpcController controller = conn.rpcControllerFactory.newController();
-    resetController(controller, Math.min(rpcTimeoutNs, remainingNs),
-      calcPriority(serverReq.getPriority(), tableName), tableName);
+    resetController(controller, Math.min(rpcTimeoutNs, remainingNs), serverReq.getPriority(),
+      tableName);
     controller.setRequestAttributes(requestAttributes);
     if (!cells.isEmpty()) {
-      controller.setCellScanner(createCellScanner(cells));
+      controller.setCellScanner(PrivateCellUtil.createExtendedCellScanner(cells));
     }
     stub.multi(controller, req, resp -> {
       if (controller.failed()) {
@@ -453,7 +495,7 @@ class AsyncBatchRpcRetryingCaller<T> {
   private void onError(Map<byte[], RegionRequest> actionsByRegion, int tries, Throwable t,
     ServerName serverName) {
     Throwable error = translateException(t);
-    logException(tries, () -> actionsByRegion.values().stream(), error, serverName);
+    logRegionsException(tries, () -> actionsByRegion.values().stream(), error, serverName);
     actionsByRegion.forEach(
       (rn, regionReq) -> conn.getLocator().updateCachedLocationOnError(regionReq.loc, error));
     if (error instanceof DoNotRetryIOException || tries >= maxAttempts) {

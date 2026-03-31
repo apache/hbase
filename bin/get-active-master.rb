@@ -24,9 +24,10 @@ java_import org.apache.hadoop.hbase.zookeeper.ZKWatcher
 java_import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker
 
 # disable debug/info logging on this script for clarity
-log_level = org.apache.log4j.Level::ERROR
-org.apache.log4j.Logger.getLogger('org.apache.hadoop.hbase').setLevel(log_level)
-org.apache.log4j.Logger.getLogger('org.apache.zookeeper').setLevel(log_level)
+log_level = 'ERROR'
+org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop.hbase', log_level)
+org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.zookeeper', log_level)
+org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop', log_level)
 
 config = HBaseConfiguration.create
 

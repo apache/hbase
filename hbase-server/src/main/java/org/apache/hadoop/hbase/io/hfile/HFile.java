@@ -32,16 +32,18 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.MetricsIO;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
+import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.regionserver.CellSink;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
+import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -187,11 +189,15 @@ public final class HFile {
     return CHECKSUM_FAILURES.sum();
   }
 
-  public static final void updateReadLatency(long latencyMillis, boolean pread) {
+  public static final void updateReadLatency(long latencyMillis, boolean pread, boolean tooSlow) {
+    ThreadLocalServerSideScanMetrics.addFsReadTime(latencyMillis);
     if (pread) {
       MetricsIO.getInstance().updateFsPreadTime(latencyMillis);
     } else {
       MetricsIO.getInstance().updateFsReadTime(latencyMillis);
+    }
+    if (tooSlow) {
+      MetricsIO.getInstance().incrSlowFsRead();
     }
   }
 
@@ -206,6 +212,17 @@ public final class HFile {
 
     /** Add an element to the file info map. */
     void appendFileInfo(byte[] key, byte[] value) throws IOException;
+
+    /**
+     * Add TimestampRange and earliest put timestamp to Metadata
+     */
+    void appendTrackedTimestampsToMetadata() throws IOException;
+
+    /**
+     * Add Custom cell timestamp to Metadata
+     */
+    public void appendCustomCellTimestampsToMetadata(TimeRangeTracker timeRangeTracker)
+      throws IOException;
 
     /** Returns the path to this {@link HFile} */
     Path getPath();
@@ -390,15 +407,15 @@ public final class HFile {
 
     HFileBlock getMetaBlock(String metaBlockName, boolean cacheBlock) throws IOException;
 
-    Optional<Cell> getLastKey();
+    Optional<ExtendedCell> getLastKey();
 
-    Optional<Cell> midKey() throws IOException;
+    Optional<ExtendedCell> midKey() throws IOException;
 
     long length();
 
     long getEntries();
 
-    Optional<Cell> getFirstKey();
+    Optional<ExtendedCell> getFirstKey();
 
     long indexSize();
 
@@ -451,6 +468,8 @@ public final class HFile {
     HFileBlock.FSReader getUncachedBlockReader();
 
     boolean prefetchComplete();
+
+    boolean prefetchStarted();
 
     /**
      * To close the stream's socket. Note: This can be concurrently called from multiple threads and
@@ -535,10 +554,12 @@ public final class HFile {
     boolean primaryReplicaReader, Configuration conf) throws IOException {
     Preconditions.checkNotNull(cacheConf, "Cannot create Reader with null CacheConf");
     FSDataInputStreamWrapper stream = new FSDataInputStreamWrapper(fs, path);
+    // Key management not yet implemented in precursor PR
     ReaderContext context =
       new ReaderContextBuilder().withFilePath(path).withInputStreamWrapper(stream)
         .withFileSize(fs.getFileStatus(path).getLen()).withFileSystem(stream.getHfs())
-        .withPrimaryReplicaReader(primaryReplicaReader).withReaderType(ReaderType.PREAD).build();
+        .withPrimaryReplicaReader(primaryReplicaReader).withReaderType(ReaderType.PREAD)
+        .withManagedKeyDataCache(null).withSystemKeyCache(null).build();
     HFileInfo fileInfo = new HFileInfo(context, conf);
     Reader reader = createReader(context, fileInfo, cacheConf, conf);
     fileInfo.initMetaAndIndex(reader);

@@ -309,10 +309,14 @@ public final class CellUtil {
       public boolean advance() throws IOException {
         while (true) {
           if (this.cellScanner == null) {
-            if (!this.iterator.hasNext()) return false;
+            if (!this.iterator.hasNext()) {
+              return false;
+            }
             this.cellScanner = this.iterator.next().cellScanner();
           }
-          if (this.cellScanner.advance()) return true;
+          if (this.cellScanner.advance()) {
+            return true;
+          }
           this.cellScanner = null;
         }
       }
@@ -357,13 +361,17 @@ public final class CellUtil {
 
       @Override
       public Cell current() {
-        if (cells == null) return null;
+        if (cells == null) {
+          return null;
+        }
         return (index < 0) ? null : this.cells[index];
       }
 
       @Override
       public boolean advance() {
-        if (cells == null) return false;
+        if (cells == null) {
+          return false;
+        }
         return ++index < this.cells.length;
       }
     };
@@ -549,23 +557,26 @@ public final class CellUtil {
       buf.length);
   }
 
+  /**
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. Tags are now internal only, you should not
+   *             try to check it through the {@link Cell} interface.
+   */
+  @Deprecated
   public static boolean matchingTags(final Cell left, final Cell right) {
-    return PrivateCellUtil.matchingTags(left, right, left.getTagsLength(), right.getTagsLength());
+    return PrivateCellUtil.matchingTags((ExtendedCell) left, (ExtendedCell) right);
   }
 
   /**
    * Return true if a delete type, a {@link KeyValue.Type#Delete} or a {KeyValue.Type#DeleteFamily}
    * or a {@link KeyValue.Type#DeleteColumn} KeyValue type.
    */
-  @SuppressWarnings("deprecation")
   public static boolean isDelete(final Cell cell) {
-    return PrivateCellUtil.isDelete(cell.getTypeByte());
+    return PrivateCellUtil.isDelete(PrivateCellUtil.getTypeByte(cell));
   }
 
   /** Returns True if this cell is a Put. */
-  @SuppressWarnings("deprecation")
   public static boolean isPut(Cell cell) {
-    return cell.getTypeByte() == KeyValue.Type.Put.getCode();
+    return PrivateCellUtil.getTypeByte(cell) == KeyValue.Type.Put.getCode();
   }
 
   /**
@@ -616,13 +627,21 @@ public final class CellUtil {
     sb.append('/');
     sb.append(KeyValue.humanReadableTimestamp(cell.getTimestamp()));
     sb.append('/');
-    sb.append(KeyValue.Type.codeToType(cell.getTypeByte()));
+    if (cell instanceof ExtendedCell) {
+      sb.append(KeyValue.Type.codeToType(((ExtendedCell) cell).getTypeByte()));
+    } else {
+      sb.append(cell.getType());
+    }
+
     if (!(cell instanceof KeyValue.KeyOnlyKeyValue)) {
       sb.append("/vlen=");
       sb.append(cell.getValueLength());
     }
-    sb.append("/seqid=");
-    sb.append(cell.getSequenceId());
+    if (cell instanceof ExtendedCell) {
+      sb.append("/seqid=");
+      sb.append(((ExtendedCell) cell).getSequenceId());
+    }
+
     return sb.toString();
   }
 
@@ -638,8 +657,12 @@ public final class CellUtil {
     String value = null;
     if (verbose) {
       // TODO: pretty print tags as well
-      if (cell.getTagsLength() > 0) {
-        tag = Bytes.toStringBinary(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
+      if (cell instanceof RawCell) {
+        RawCell rawCell = (RawCell) cell;
+        if (rawCell.getTagsLength() > 0) {
+          tag = Bytes.toStringBinary(rawCell.getTagsArray(), rawCell.getTagsOffset(),
+            rawCell.getTagsLength());
+        }
       }
       if (!(cell instanceof KeyValue.KeyOnlyKeyValue)) {
         value =
@@ -662,7 +685,8 @@ public final class CellUtil {
 
   public static boolean equals(Cell a, Cell b) {
     return matchingRows(a, b) && matchingFamily(a, b) && matchingQualifier(a, b)
-      && matchingTimestamp(a, b) && PrivateCellUtil.matchingType(a, b);
+      && matchingTimestamp(a, b)
+      && PrivateCellUtil.getTypeByte(a) == PrivateCellUtil.getTypeByte(b);
   }
 
   public static boolean matchingTimestamp(Cell a, Cell b) {
@@ -827,6 +851,8 @@ public final class CellUtil {
   }
 
   public static Cell cloneIfNecessary(Cell cell) {
-    return (cell instanceof ByteBufferExtendedCell ? KeyValueUtil.copyToNewKeyValue(cell) : cell);
+    return (cell instanceof ByteBufferExtendedCell
+      ? KeyValueUtil.copyToNewKeyValue((ExtendedCell) cell)
+      : cell);
   }
 }

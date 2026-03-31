@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
@@ -42,7 +43,8 @@ public final class CoprocessorDescriptorBuilder {
   private final String className;
   private String jarPath;
   private int priority = Coprocessor.PRIORITY_USER;
-  private Map<String, String> properties = new TreeMap();
+  // HBASE-29706 Fix hashcode calculation. Use NavigableMap instead of Map
+  private NavigableMap<String, String> properties = new TreeMap<>();
 
   public CoprocessorDescriptorBuilder setJarPath(String jarPath) {
     this.jarPath = jarPath;
@@ -76,10 +78,10 @@ public final class CoprocessorDescriptorBuilder {
     private final String className;
     private final String jarPath;
     private final int priority;
-    private final Map<String, String> properties;
+    private final NavigableMap<String, String> properties;
 
     private CoprocessorDescriptorImpl(String className, String jarPath, int priority,
-      Map<String, String> properties) {
+      NavigableMap<String, String> properties) {
       this.className = className;
       this.jarPath = jarPath;
       this.priority = priority;
@@ -102,14 +104,37 @@ public final class CoprocessorDescriptorBuilder {
     }
 
     @Override
-    public Map<String, String> getProperties() {
-      return Collections.unmodifiableMap(properties);
+    public NavigableMap<String, String> getProperties() {
+      return Collections.unmodifiableNavigableMap(properties);
     }
 
     @Override
     public String toString() {
       return "class:" + className + ", jarPath:" + jarPath + ", priority:" + priority
         + ", properties:" + properties;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj) {
+        return true;
+      }
+      if (!(obj instanceof CoprocessorDescriptor)) {
+        return false;
+      }
+      CoprocessorDescriptor other = (CoprocessorDescriptor) obj;
+      if (
+        priority != other.getPriority() || !Objects.equals(className, other.getClassName())
+          || !Objects.equals(getJarPath(), other.getJarPath())
+      ) {
+        return false;
+      }
+      return Objects.equals(getProperties(), other.getProperties());
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(className, jarPath, priority, properties);
     }
   }
 }

@@ -23,14 +23,15 @@ import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -71,7 +72,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   protected final RequestHeader header;
   protected Message param; // the parameter passed
   // Optional cell data passed outside of protobufs.
-  protected final CellScanner cellScanner;
+  protected final ExtendedCellScanner cellScanner;
   protected final T connection; // connection to client
   protected final long receiveTime; // the time received when response is null
   // the time served when response is not null
@@ -95,6 +96,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
 
   protected final User user;
   protected final InetAddress remoteAddress;
+  protected final X509Certificate[] clientCertificateChain;
   protected RpcCallback rpcCallback;
 
   private long responseCellSize = 0;
@@ -117,8 +119,8 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH",
       justification = "Can't figure why this complaint is happening... see below")
   ServerCall(int id, BlockingService service, MethodDescriptor md, RequestHeader header,
-    Message param, CellScanner cellScanner, T connection, long size, InetAddress remoteAddress,
-    long receiveTime, int timeout, ByteBuffAllocator byteBuffAllocator,
+    Message param, ExtendedCellScanner cellScanner, T connection, long size,
+    InetAddress remoteAddress, long receiveTime, int timeout, ByteBuffAllocator byteBuffAllocator,
     CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup) {
     this.id = id;
     this.service = service;
@@ -134,9 +136,11 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     if (connection != null) {
       this.user = connection.user;
       this.retryImmediatelySupported = connection.retryImmediatelySupported;
+      this.clientCertificateChain = connection.clientCertificateChain;
     } else {
       this.user = null;
       this.retryImmediatelySupported = false;
+      this.clientCertificateChain = null;
     }
     this.remoteAddress = remoteAddress;
     this.timeout = timeout;
@@ -235,6 +239,19 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   }
 
   @Override
+  public byte[] getRequestAttribute(String key) {
+    if (this.requestAttributes == null) {
+      for (HBaseProtos.NameBytesPair nameBytesPair : header.getAttributeList()) {
+        if (nameBytesPair.getName().equals(key)) {
+          return nameBytesPair.getValue().toByteArray();
+        }
+      }
+      return null;
+    }
+    return this.requestAttributes.get(key);
+  }
+
+  @Override
   public int getPriority() {
     return this.header.getPriority();
   }
@@ -255,7 +272,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   }
 
   @Override
-  public synchronized void setResponse(Message m, final CellScanner cells, Throwable t,
+  public synchronized void setResponse(Message m, final ExtendedCellScanner cells, Throwable t,
     String errorMsg) {
     if (this.isError) {
       return;
@@ -321,6 +338,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
       bc = new BufferChain(responseBufs);
     } catch (IOException e) {
       RpcServer.LOG.warn("Exception while creating response " + e);
+      bc = createFallbackErrorResponse(e);
     }
     this.response = bc;
     // Once a response message is created and set to this.response, this Call can be treated as
@@ -355,6 +373,32 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     }
     // Set the exception as the result of the method invocation.
     headerBuilder.setException(exceptionBuilder.build());
+  }
+
+  /*
+   * Creates a fallback error response when the primary response creation fails. This method is
+   * invoked as a last resort when an IOException occurs during the normal response creation
+   * process. It attempts to create a minimal error response containing only the error information,
+   * without any cell blocks or additional data. The purpose is to ensure that the client receives
+   * some indication of the failure rather than experiencing a silent connection drop. This provides
+   * better error handling on the client side.
+   */
+  private BufferChain createFallbackErrorResponse(IOException originalException) {
+    try {
+      ResponseHeader.Builder headerBuilder = ResponseHeader.newBuilder();
+      headerBuilder.setCallId(this.id);
+      String responseErrorMsg =
+        "Failed to create response due to: " + originalException.getMessage();
+      setExceptionResponse(originalException, responseErrorMsg, headerBuilder);
+      Message header = headerBuilder.build();
+      ByteBuffer headerBuf = createHeaderAndMessageBytes(null, header, 0, null);
+      this.isError = true;
+      return new BufferChain(new ByteBuffer[] { headerBuf });
+    } catch (IOException e) {
+      RpcServer.LOG.error("Failed to create error response for client, connection may be dropped",
+        e);
+      return null;
+    }
   }
 
   static ByteBuffer createHeaderAndMessageBytes(Message result, Message header, int cellBlockSize,
@@ -486,6 +530,11 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   }
 
   @Override
+  public Optional<X509Certificate[]> getClientCertificateChain() {
+    return Optional.ofNullable(clientCertificateChain);
+  }
+
+  @Override
   public InetAddress getRemoteAddress() {
     return remoteAddress;
   }
@@ -521,7 +570,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   }
 
   @Override
-  public CellScanner getCellScanner() {
+  public ExtendedCellScanner getCellScanner() {
     return cellScanner;
   }
 

@@ -59,8 +59,8 @@ class ClusterSchemaServiceImpl extends AbstractService implements ClusterSchemaS
     try {
       notifyStarted();
       this.tableNamespaceManager.start();
-    } catch (IOException ioe) {
-      notifyFailed(ioe);
+    } catch (IOException | InterruptedException e) {
+      notifyFailed(e);
     }
   }
 

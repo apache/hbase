@@ -22,7 +22,6 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
@@ -41,6 +40,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
@@ -186,6 +187,7 @@ public class TestRegionNormalizerWorkQueue {
     final RegionNormalizerWorkQueue<Integer> queue = new RegionNormalizerWorkQueue<>();
     final ConcurrentLinkedQueue<Long> takeTimes = new ConcurrentLinkedQueue<>();
     final AtomicBoolean finished = new AtomicBoolean(false);
+    final int count = 5;
     final Runnable consumer = () -> {
       try {
         while (!finished.get()) {
@@ -199,11 +201,12 @@ public class TestRegionNormalizerWorkQueue {
 
     CompletableFuture<Void> worker = CompletableFuture.runAsync(consumer);
     final long testStart = System.nanoTime();
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < count; i++) {
       Thread.sleep(10);
       queue.put(i);
     }
-
+    // should have timing information for 5 calls to take.
+    Waiter.waitFor(HBaseConfiguration.create(), 1000, () -> count == takeTimes.size());
     // set finished = true and pipe one more value in case the thread needs an extra pass through
     // the loop.
     finished.set(true);
@@ -211,9 +214,7 @@ public class TestRegionNormalizerWorkQueue {
     worker.get(1, TimeUnit.SECONDS);
 
     final Iterator<Long> times = takeTimes.iterator();
-    assertTrue("should have timing information for at least 2 calls to take.",
-      takeTimes.size() >= 5);
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < count; i++) {
       assertThat(
         "Observations collected in takeTimes should increase by roughly 10ms every interval",
         times.next(), greaterThan(testStart + TimeUnit.MILLISECONDS.toNanos(i * 10)));

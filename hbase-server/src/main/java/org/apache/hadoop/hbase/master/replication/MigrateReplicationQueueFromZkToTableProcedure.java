@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.replication;
 
+import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MigrateReplicationQueueFromZkToTableState.MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_CLEAN_UP;
 import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MigrateReplicationQueueFromZkToTableState.MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_DISABLE_CLEANER;
 import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MigrateReplicationQueueFromZkToTableState.MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_DISABLE_PEER;
 import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MigrateReplicationQueueFromZkToTableState.MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_ENABLE_CLEANER;
@@ -36,16 +37,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.master.procedure.GlobalProcedureInterface;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.PeerProcedureInterface;
+import org.apache.hadoop.hbase.procedure2.ProcedureFutureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ZKReplicationQueueStorageForMigration;
-import org.apache.hadoop.hbase.util.FutureUtils;
-import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.hbase.util.RetryCounter;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
@@ -53,6 +55,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MigrateReplicationQueueFromZkToTableState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MigrateReplicationQueueFromZkToTableStateData;
@@ -73,7 +76,7 @@ public class MigrateReplicationQueueFromZkToTableProcedure
 
   private List<String> disabledPeerIds;
 
-  private CompletableFuture<?> future;
+  private CompletableFuture<Void> future;
 
   private ExecutorService executor;
 
@@ -82,6 +85,14 @@ public class MigrateReplicationQueueFromZkToTableProcedure
   @Override
   public String getGlobalId() {
     return getClass().getSimpleName();
+  }
+
+  private CompletableFuture<Void> getFuture() {
+    return future;
+  }
+
+  private void setFuture(CompletableFuture<Void> f) {
+    future = f;
   }
 
   private ProcedureSuspendedException suspend(Configuration conf, LongConsumer backoffConsumer)
@@ -153,6 +164,26 @@ public class MigrateReplicationQueueFromZkToTableProcedure
     LOG.info("No pending peer procedures found, continue...");
   }
 
+  private void finishMigartion() {
+    shutdownExecutorService();
+    setNextState(MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_WAIT_UPGRADING);
+    resetRetry();
+  }
+
+  private void cleanup(MasterProcedureEnv env) throws ProcedureSuspendedException {
+    ZKReplicationQueueStorageForMigration oldStorage = new ZKReplicationQueueStorageForMigration(
+      env.getMasterServices().getZooKeeper(), env.getMasterConfiguration());
+    try {
+      oldStorage.deleteAllData();
+      env.getReplicationPeerManager().deleteLegacyRegionReplicaReplicationPeer();
+    } catch (KeeperException | ReplicationException e) {
+      throw suspend(env.getMasterConfiguration(),
+        backoff -> LOG.warn(
+          "failed to delete old replication queue data, sleep {} secs and retry later",
+          backoff / 1000, e));
+    }
+  }
+
   @Override
   protected Flow executeFromState(MasterProcedureEnv env,
     MigrateReplicationQueueFromZkToTableState state)
@@ -166,23 +197,25 @@ public class MigrateReplicationQueueFromZkToTableProcedure
         waitUntilNoPeerProcedure(env);
         List<ReplicationPeerDescription> peers = env.getReplicationPeerManager().listPeers(null);
         if (peers.isEmpty()) {
-          LOG.info("No active replication peer found, delete old replication queue data and quit");
-          ZKReplicationQueueStorageForMigration oldStorage =
-            new ZKReplicationQueueStorageForMigration(env.getMasterServices().getZooKeeper(),
-              env.getMasterConfiguration());
+          // we will not load the region_replica_replication peer, so here we need to check the
+          // storage directly
           try {
-            oldStorage.deleteAllData();
-          } catch (KeeperException e) {
-            throw suspend(env.getMasterConfiguration(),
-              backoff -> LOG.warn(
-                "failed to delete old replication queue data, sleep {} secs and retry later",
-                backoff / 1000, e));
+            if (env.getReplicationPeerManager().hasRegionReplicaReplicationPeer()) {
+              LOG.info(
+                "No active replication peer found but we still have '{}' peer, need to"
+                  + "wait until all region servers are upgraded",
+                ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER);
+              setNextState(MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_WAIT_UPGRADING);
+              return Flow.HAS_MORE_STATE;
+            }
+          } catch (ReplicationException e) {
+            throw suspend(env.getMasterConfiguration(), backoff -> LOG
+              .warn("failed to list peer ids, sleep {} secs and retry later", backoff / 1000, e));
           }
+          LOG.info("No active replication peer found, just clean up all replication queue data");
           setNextState(MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_ENABLE_CLEANER);
           return Flow.HAS_MORE_STATE;
         }
-        // here we do not care the peers which have already been disabled, as later we do not need
-        // to enable them
         disabledPeerIds = peers.stream().filter(ReplicationPeerDescription::isEnabled)
           .map(ReplicationPeerDescription::getPeerId).collect(Collectors.toList());
         setNextState(MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_DISABLE_PEER);
@@ -195,52 +228,23 @@ public class MigrateReplicationQueueFromZkToTableProcedure
         setNextState(MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_MIGRATE);
         return Flow.HAS_MORE_STATE;
       case MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_MIGRATE:
-        if (future != null) {
-          // should have finished when we arrive here
-          assert future.isDone();
-          try {
-            future.get();
-          } catch (Exception e) {
-            future = null;
-            throw suspend(env.getMasterConfiguration(),
-              backoff -> LOG.warn("failed to migrate queue data, sleep {} secs and retry later",
-                backoff / 1000, e));
+        try {
+          if (
+            ProcedureFutureUtil.checkFuture(this, this::getFuture, this::setFuture,
+              this::finishMigartion)
+          ) {
+            return Flow.HAS_MORE_STATE;
           }
-          shutdownExecutorService();
-          setNextState(MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_WAIT_UPGRADING);
-          resetRetry();
-          return Flow.HAS_MORE_STATE;
+          ProcedureFutureUtil.suspendIfNecessary(this, this::setFuture,
+            env.getReplicationPeerManager()
+              .migrateQueuesFromZk(env.getMasterServices().getZooKeeper(), getExecutorService()),
+            env, this::finishMigartion);
+        } catch (IOException e) {
+          throw suspend(env.getMasterConfiguration(),
+            backoff -> LOG.warn("failed to migrate queue data, sleep {} secs and retry later",
+              backoff / 1000, e));
         }
-        future = env.getReplicationPeerManager()
-          .migrateQueuesFromZk(env.getMasterServices().getZooKeeper(), getExecutorService());
-        FutureUtils.addListener(future, (r, e) -> {
-          // should acquire procedure execution lock to make sure that the procedure executor has
-          // finished putting this procedure to the WAITING_TIMEOUT state, otherwise there could be
-          // race and cause unexpected result
-          IdLock procLock =
-            env.getMasterServices().getMasterProcedureExecutor().getProcExecutionLock();
-          IdLock.Entry lockEntry;
-          try {
-            lockEntry = procLock.getLockEntry(getProcId());
-          } catch (IOException ioe) {
-            LOG.error("Error while acquiring execution lock for procedure {}"
-              + " when trying to wake it up, aborting...", this, ioe);
-            env.getMasterServices().abort("Can not acquire procedure execution lock", e);
-            return;
-          }
-          try {
-            setTimeoutFailure(env);
-          } finally {
-            procLock.releaseLockEntry(lockEntry);
-          }
-        });
-        // here we set timeout to -1 so the ProcedureExecutor will not schedule a Timer for us
-        setTimeout(-1);
-        setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
-        // skip persistence is a must now since when restarting, if the procedure is in
-        // WAITING_TIMEOUT state and has -1 as timeout, it will block there forever...
-        skipPersistence();
-        throw new ProcedureSuspendedException();
+        return Flow.HAS_MORE_STATE;
       case MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_WAIT_UPGRADING:
         long rsWithLowerVersion =
           env.getMasterServices().getServerManager().getOnlineServers().values().stream()
@@ -256,13 +260,21 @@ public class MigrateReplicationQueueFromZkToTableProcedure
               rsWithLowerVersion, MIN_MAJOR_VERSION, backoff / 1000));
         }
       case MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_ENABLE_PEER:
-        for (String peerId : disabledPeerIds) {
-          addChildProcedure(new EnablePeerProcedure(peerId));
+        if (CollectionUtils.isNotEmpty(disabledPeerIds)) {
+          for (String peerId : disabledPeerIds) {
+            addChildProcedure(new EnablePeerProcedure(peerId));
+          }
         }
         setNextState(MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_ENABLE_CLEANER);
         return Flow.HAS_MORE_STATE;
       case MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_ENABLE_CLEANER:
         enableReplicationLogCleaner(env);
+        setNextState(MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_CLEAN_UP);
+        return Flow.HAS_MORE_STATE;
+      case MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_CLEAN_UP:
+        // this is mainly for deleting the region replica replication queue data, but anyway, since
+        // we should have migrated all data, here we can simply delete everything
+        cleanup(env);
         return Flow.NO_MORE_STATE;
       default:
         throw new UnsupportedOperationException("unhandled state=" + state);
@@ -314,7 +326,7 @@ public class MigrateReplicationQueueFromZkToTableProcedure
     super.serializeStateData(serializer);
     MigrateReplicationQueueFromZkToTableStateData.Builder builder =
       MigrateReplicationQueueFromZkToTableStateData.newBuilder();
-    if (disabledPeerIds != null) {
+    if (CollectionUtils.isNotEmpty(disabledPeerIds)) {
       builder.addAllDisabledPeerId(disabledPeerIds);
     }
     serializer.serialize(builder.build());
@@ -325,6 +337,8 @@ public class MigrateReplicationQueueFromZkToTableProcedure
     super.deserializeStateData(serializer);
     MigrateReplicationQueueFromZkToTableStateData data =
       serializer.deserialize(MigrateReplicationQueueFromZkToTableStateData.class);
-    disabledPeerIds = data.getDisabledPeerIdList().stream().collect(Collectors.toList());
+    if (data.getDisabledPeerIdCount() > 0) {
+      disabledPeerIds = data.getDisabledPeerIdList().stream().collect(Collectors.toList());
+    }
   }
 }

@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -61,6 +62,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexReader;
 import org.apache.hadoop.hbase.io.hfile.NoOpIndexBlockEncoder.NoOpEncodedSeeker;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
+import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -75,6 +77,8 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
 
 @RunWith(Parameterized.class)
 @Category({ IOTests.class, MediumTests.class })
@@ -140,6 +144,76 @@ public class TestHFileBlockIndex {
     testBlockIndexInternals(false);
     clear();
     testBlockIndexInternals(true);
+  }
+
+  private void writeDataBlocksAndCreateIndex(HFileBlock.Writer hbw, FSDataOutputStream outputStream,
+    HFileBlockIndex.BlockIndexWriter biw) throws IOException {
+    for (int i = 0; i < NUM_DATA_BLOCKS; ++i) {
+      hbw.startWriting(BlockType.DATA).write(Bytes.toBytes(String.valueOf(RNG.nextInt(1000))));
+      long blockOffset = outputStream.getPos();
+      hbw.writeHeaderAndData(outputStream);
+
+      byte[] firstKey = null;
+      byte[] family = Bytes.toBytes("f");
+      byte[] qualifier = Bytes.toBytes("q");
+      for (int j = 0; j < 16; ++j) {
+        byte[] k = new KeyValue(RandomKeyValueUtil.randomOrderedKey(RNG, i * 16 + j), family,
+          qualifier, EnvironmentEdgeManager.currentTime(), KeyValue.Type.Put).getKey();
+        keys.add(k);
+        if (j == 8) {
+          firstKey = k;
+        }
+      }
+      assertTrue(firstKey != null);
+      if (firstKeyInFile == null) {
+        firstKeyInFile = firstKey;
+      }
+      biw.addEntry(firstKey, blockOffset, hbw.getOnDiskSizeWithHeader());
+
+      writeInlineBlocks(hbw, outputStream, biw, false);
+    }
+    writeInlineBlocks(hbw, outputStream, biw, true);
+    rootIndexOffset = biw.writeIndexBlocks(outputStream);
+    outputStream.close();
+  }
+
+  @Test
+  public void testBlockIndexWithOffHeapBuffer() throws Exception {
+    ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+    path = new Path(TEST_UTIL.getDataTestDir(), "block_index_testBlockIndexWithOffHeapBuffer");
+    assertEquals(0, keys.size());
+    HFileContext meta = new HFileContextBuilder().withHBaseCheckSum(true)
+      .withIncludesMvcc(includesMemstoreTS).withIncludesTags(true).withCompression(compr)
+      .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM).build();
+    ByteBuffAllocator allocator = ByteBuffAllocator.create(TEST_UTIL.getConfiguration(), true);
+    HFileBlock.Writer hbw = new HFileBlock.Writer(TEST_UTIL.getConfiguration(), null, meta,
+      allocator, meta.getBlocksize());
+    FSDataOutputStream outputStream = fs.create(path);
+
+    final AtomicInteger counter = new AtomicInteger();
+    RefCnt.detector.setLeakListener(new ResourceLeakDetector.LeakListener() {
+      @Override
+      public void onLeak(String s, String s1) {
+        counter.incrementAndGet();
+      }
+    });
+
+    long maxSize = NUM_DATA_BLOCKS * 1000;
+    long blockSize = 1000;
+    LruBlockCache cache = new LruBlockCache(maxSize, blockSize);
+    CacheConfig cacheConfig = new CacheConfig(TEST_UTIL.getConfiguration(), null, cache, allocator);
+
+    HFileBlockIndex.BlockIndexWriter biw =
+      new HFileBlockIndex.BlockIndexWriter(hbw, cacheConfig, path.getName(), null);
+
+    writeDataBlocksAndCreateIndex(hbw, outputStream, biw);
+
+    System.gc();
+    Thread.sleep(1000);
+
+    allocator.allocate(128 * 1024).release();
+
+    assertEquals(0, counter.get());
   }
 
   private void clear() throws IOException {
@@ -271,33 +345,7 @@ public class TestHFileBlockIndex {
     FSDataOutputStream outputStream = fs.create(path);
     HFileBlockIndex.BlockIndexWriter biw =
       new HFileBlockIndex.BlockIndexWriter(hbw, null, null, null);
-    for (int i = 0; i < NUM_DATA_BLOCKS; ++i) {
-      hbw.startWriting(BlockType.DATA).write(Bytes.toBytes(String.valueOf(RNG.nextInt(1000))));
-      long blockOffset = outputStream.getPos();
-      hbw.writeHeaderAndData(outputStream);
-
-      byte[] firstKey = null;
-      byte[] family = Bytes.toBytes("f");
-      byte[] qualifier = Bytes.toBytes("q");
-      for (int j = 0; j < 16; ++j) {
-        byte[] k = new KeyValue(RandomKeyValueUtil.randomOrderedKey(RNG, i * 16 + j), family,
-          qualifier, EnvironmentEdgeManager.currentTime(), KeyValue.Type.Put).getKey();
-        keys.add(k);
-        if (j == 8) {
-          firstKey = k;
-        }
-      }
-      assertTrue(firstKey != null);
-      if (firstKeyInFile == null) {
-        firstKeyInFile = firstKey;
-      }
-      biw.addEntry(firstKey, blockOffset, hbw.getOnDiskSizeWithHeader());
-
-      writeInlineBlocks(hbw, outputStream, biw, false);
-    }
-    writeInlineBlocks(hbw, outputStream, biw, true);
-    rootIndexOffset = biw.writeIndexBlocks(outputStream);
-    outputStream.close();
+    writeDataBlocksAndCreateIndex(hbw, outputStream, biw);
 
     numLevels = biw.getNumLevels();
     numRootEntries = biw.getNumRootEntries();

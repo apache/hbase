@@ -38,7 +38,12 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerManager;
@@ -61,6 +66,7 @@ import org.apache.hadoop.hbase.replication.master.ReplicationLogCleanerBarrier;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
@@ -68,15 +74,23 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 public class MockNoopMasterServices implements MasterServices {
   private final Configuration conf;
   private final MetricsMaster metricsMaster;
+  private final long masterActiveTime;
 
   public MockNoopMasterServices(final Configuration conf) {
     this.conf = conf;
     this.metricsMaster = new MetricsMaster(new MetricsMasterWrapperImpl(mock(HMaster.class)));
+    this.masterActiveTime = EnvironmentEdgeManager.currentTime();
   }
 
   @Override
   public void checkTableModifiable(TableName tableName) throws IOException {
     // no-op
+  }
+
+  @Override
+  public long truncateRegion(RegionInfo regionInfo, long nonceGroup, long nonce)
+    throws IOException {
+    return 0;
   }
 
   @Override
@@ -107,7 +121,27 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
+  public SystemKeyCache getSystemKeyCache() {
+    return null;
+  }
+
+  @Override
+  public ManagedKeyDataCache getManagedKeyDataCache() {
+    return null;
+  }
+
+  @Override
+  public KeymetaAdmin getKeymetaAdmin() {
+    return null;
+  }
+
+  @Override
   public CatalogJanitor getCatalogJanitor() {
+    return null;
+  }
+
+  @Override
+  public HbckChore getHbckChore() {
     return null;
   }
 
@@ -119,6 +153,11 @@ public class MockNoopMasterServices implements MasterServices {
   @Override
   public MasterWalManager getMasterWalManager() {
     return null;
+  }
+
+  @Override
+  public boolean rotateSystemKeyIfChanged() {
+    return false;
   }
 
   @Override
@@ -258,6 +297,12 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
+  public long modifyTable(TableName tableName, TableDescriptor descriptor, long nonceGroup,
+    long nonce, boolean reopenRegions) throws IOException {
+    return -1;
+  }
+
+  @Override
   public long enableTable(final TableName tableName, final long nonceGroup, final long nonce)
     throws IOException {
     return -1;
@@ -307,6 +352,11 @@ public class MockNoopMasterServices implements MasterServices {
   @Override
   public boolean isActiveMaster() {
     return true;
+  }
+
+  @Override
+  public long getMasterActiveTime() {
+    return masterActiveTime;
   }
 
   @Override
@@ -541,5 +591,14 @@ public class MockNoopMasterServices implements MasterServices {
   public long flushTable(TableName tableName, List<byte[]> columnFamilies, long nonceGroup,
     long nonce) throws IOException {
     return 0;
+  }
+
+  public long rollAllWALWriters(long nonceGroup, long nonce) throws IOException {
+    return 0;
+  }
+
+  @Override
+  public KeyManagementService getKeyManagementService() {
+    return this;
   }
 }

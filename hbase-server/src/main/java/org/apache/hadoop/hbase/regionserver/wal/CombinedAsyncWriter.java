@@ -19,14 +19,11 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
-import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALProvider.AsyncWriter;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
@@ -34,43 +31,11 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
  * An {@link AsyncWriter} wrapper which writes data to a set of {@link AsyncWriter} instances.
  */
 @InterfaceAudience.Private
-public final class CombinedAsyncWriter implements AsyncWriter {
-
-  private static final Logger LOG = LoggerFactory.getLogger(CombinedAsyncWriter.class);
-
-  private final ImmutableList<AsyncWriter> writers;
+public final class CombinedAsyncWriter extends CombinedWriterBase<AsyncWriter>
+  implements AsyncWriter {
 
   private CombinedAsyncWriter(ImmutableList<AsyncWriter> writers) {
-    this.writers = writers;
-  }
-
-  @Override
-  public long getLength() {
-    return writers.get(0).getLength();
-  }
-
-  @Override
-  public long getSyncedLength() {
-    return writers.get(0).getSyncedLength();
-  }
-
-  @Override
-  public void close() throws IOException {
-    Exception error = null;
-    for (AsyncWriter writer : writers) {
-      try {
-        writer.close();
-      } catch (Exception e) {
-        LOG.warn("close writer failed", e);
-        if (error == null) {
-          error = e;
-        }
-      }
-    }
-    if (error != null) {
-      throw new IOException("Failed to close at least one writer, please see the warn log above. "
-        + "The cause is the first exception occurred", error);
-    }
+    super(writers);
   }
 
   @Override

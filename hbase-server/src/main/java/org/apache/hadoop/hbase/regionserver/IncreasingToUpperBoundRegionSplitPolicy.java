@@ -22,6 +22,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -97,7 +98,10 @@ public class IncreasingToUpperBoundRegionSplitPolicy extends ConstantSizeRegionS
     int tableRegionsCount = 0;
     try {
       List<? extends Region> hri = rss.getRegions(tablename);
-      tableRegionsCount = hri == null || hri.isEmpty() ? 0 : hri.size();
+      if (hri != null && !hri.isEmpty()) {
+        tableRegionsCount = (int) hri.stream()
+          .filter(r -> r.getRegionInfo().getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID).count();
+      }
     } catch (IOException e) {
       LOG.debug("Failed getOnlineRegions " + tablename, e);
     }

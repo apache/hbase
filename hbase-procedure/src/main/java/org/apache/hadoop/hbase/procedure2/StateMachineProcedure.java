@@ -249,6 +249,11 @@ public abstract class StateMachineProcedure<TEnvironment, TState> extends Proced
     }
   }
 
+  @Override
+  protected final boolean isRollbackSupported() {
+    return isRollbackSupported(getCurrentState());
+  }
+
   /**
    * Used by the default implementation of abort() to know if the current state can be aborted and
    * rollback can be triggered.

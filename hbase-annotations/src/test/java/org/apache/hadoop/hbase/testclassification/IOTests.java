@@ -36,4 +36,5 @@ package org.apache.hadoop.hbase.testclassification;
  * @see org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests
  */
 public interface IOTests {
+  public static final String TAG = "org.apache.hadoop.hbase.testclassification.IOTests";
 }

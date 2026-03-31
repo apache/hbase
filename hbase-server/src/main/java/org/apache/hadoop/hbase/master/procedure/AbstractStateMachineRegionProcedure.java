@@ -41,6 +41,12 @@ public abstract class AbstractStateMachineRegionProcedure<TState>
     this.hri = hri;
   }
 
+  protected AbstractStateMachineRegionProcedure(MasterProcedureEnv env, RegionInfo hri,
+    ProcedurePrepareLatch latch) {
+    super(env, latch);
+    this.hri = hri;
+  }
+
   protected AbstractStateMachineRegionProcedure() {
     // Required by the Procedure framework to create the procedure on replay
     super();

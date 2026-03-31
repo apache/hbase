@@ -17,21 +17,24 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import static org.apache.hadoop.hbase.zookeeper.ZKConfig.ZOOKEEPER_CLIENT_TLS_PROPERTIES;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Properties;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.zookeeper.client.ZKClientConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
 @Category({ MiscTests.class, SmallTests.class })
 public class TestZKConfig {
@@ -39,6 +42,12 @@ public class TestZKConfig {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestZKConfig.class);
+
+  /** Supported ZooKeeper client TLS properties */
+  private static final Set<String> ZOOKEEPER_CLIENT_TLS_PROPERTIES = ImmutableSet.of(
+    "client.secure", "clientCnxnSocket", "ssl.keyStore.location", "ssl.keyStore.password",
+    "ssl.keyStore.passwordPath", "ssl.keyStore.type", "ssl.trustStore.location",
+    "ssl.trustStore.password", "ssl.trustStore.passwordPath", "ssl.trustStore.type");
 
   @Test
   public void testZKConfigLoading() throws Exception {
@@ -92,7 +101,7 @@ public class TestZKConfig {
   }
 
   @Test
-  public void testZooKeeperTlsPropertiesClient() {
+  public void testZooKeeperTlsProperties() {
     // Arrange
     Configuration conf = HBaseConfiguration.create();
     for (String p : ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
@@ -102,18 +111,17 @@ public class TestZKConfig {
     }
 
     // Act
-    ZKConfig.getClientZKQuorumServersString(conf);
+    ZKClientConfig zkClientConfig = ZKConfig.getZKClientConfig(conf);
 
     // Assert
     for (String p : ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
-      String zkprop = "zookeeper." + p;
-      assertEquals("Invalid or unset system property: " + zkprop, p, System.getProperty(zkprop));
-      System.clearProperty(zkprop);
+      assertEquals("Invalid or unset system property: " + p, p,
+        zkClientConfig.getProperty("zookeeper." + p));
     }
   }
 
   @Test
-  public void testZooKeeperTlsPropertiesServer() {
+  public void testZooKeeperTlsPropertiesHQuorumPeer() {
     // Arrange
     Configuration conf = HBaseConfiguration.create();
     for (String p : ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
@@ -123,13 +131,11 @@ public class TestZKConfig {
     }
 
     // Act
-    ZKConfig.getZKQuorumServersString(conf);
+    Properties zkProps = ZKConfig.makeZKProps(conf);
 
     // Assert
     for (String p : ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
-      String zkprop = "zookeeper." + p;
-      assertEquals("Invalid or unset system property: " + zkprop, p, System.getProperty(zkprop));
-      System.clearProperty(zkprop);
+      assertEquals("Invalid or unset system property: " + p, p, zkProps.getProperty(p));
     }
   }
 

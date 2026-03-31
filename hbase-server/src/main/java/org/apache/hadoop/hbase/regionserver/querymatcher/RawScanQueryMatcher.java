@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -35,11 +35,11 @@ public abstract class RawScanQueryMatcher extends UserScanQueryMatcher {
   }
 
   @Override
-  public MatchCode match(Cell cell) throws IOException {
+  public MatchCode match(ExtendedCell cell) throws IOException {
     if (filter != null && filter.filterAllRemaining()) {
       return MatchCode.DONE_SCAN;
     }
-    MatchCode returnCode = preCheck(cell);
+    MatchCode returnCode = preCheckRaw(cell);
     if (returnCode != null) {
       return returnCode;
     }

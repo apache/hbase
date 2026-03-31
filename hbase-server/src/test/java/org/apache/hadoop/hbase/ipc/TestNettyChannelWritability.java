@@ -32,13 +32,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompatibilityFactory;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
@@ -112,7 +112,7 @@ public class TestNettyChannelWritability {
 
   private void sendAndReceive(Configuration conf, NettyRpcServer rpcServer, int requestCount)
     throws Exception {
-    List<Cell> cells = new ArrayList<>();
+    List<ExtendedCell> cells = new ArrayList<>();
     int count = 3;
     for (int i = 0; i < count; i++) {
       cells.add(CELL);
@@ -136,9 +136,10 @@ public class TestNettyChannelWritability {
     }
   }
 
-  private void sendMessage(List<Cell> cells,
+  private void sendMessage(List<ExtendedCell> cells,
     TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface stub) throws Exception {
-    HBaseRpcController pcrc = new HBaseRpcControllerImpl(CellUtil.createCellScanner(cells));
+    HBaseRpcController pcrc =
+      new HBaseRpcControllerImpl(PrivateCellUtil.createExtendedCellScanner(cells));
     String message = "hello";
     assertEquals(message,
       stub.echo(pcrc, TestProtos.EchoRequestProto.newBuilder().setMessage(message).build())

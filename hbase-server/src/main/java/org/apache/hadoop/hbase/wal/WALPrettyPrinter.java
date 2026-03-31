@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -285,9 +286,10 @@ public class WALPrettyPrinter {
         // initialize list into which we will store atomic actions
         List<Map<String, Object>> actions = new ArrayList<>();
         for (Cell cell : edit.getCells()) {
+          assert cell instanceof ExtendedCell;
           // add atomic operation to txn
-          Map<String, Object> op =
-            new HashMap<>(toStringMap(cell, outputOnlyRowKey, rowPrefix, row, outputValues));
+          Map<String, Object> op = new HashMap<>(
+            toStringMap((ExtendedCell) cell, outputOnlyRowKey, rowPrefix, row, outputValues));
           if (op.isEmpty()) {
             continue;
           }
@@ -351,7 +353,7 @@ public class WALPrettyPrinter {
     out.println("cell total size sum: " + op.get("total_size_sum"));
   }
 
-  public static Map<String, Object> toStringMap(Cell cell, boolean printRowKeyOnly,
+  public static Map<String, Object> toStringMap(ExtendedCell cell, boolean printRowKeyOnly,
     String rowPrefix, String row, boolean outputValues) {
     Map<String, Object> stringMap = new HashMap<>();
     String rowKey =
@@ -393,7 +395,7 @@ public class WALPrettyPrinter {
     return stringMap;
   }
 
-  public static Map<String, Object> toStringMap(Cell cell) {
+  public static Map<String, Object> toStringMap(ExtendedCell cell) {
     return toStringMap(cell, false, null, null, false);
   }
 

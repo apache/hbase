@@ -111,6 +111,18 @@ public class ZNodeClusterManager extends Configured implements ClusterManager {
       CmdType.bool.toString() + getCommandProvider(service).isRunningCommand(service)));
   }
 
+  @Override
+  public boolean isSuspended(ServiceType service, String hostname, int port) throws IOException {
+    String ret = createZNode(hostname, getCommandProvider(service).getStateCommand(service));
+    return ret != null && ret.trim().equals("T");
+  }
+
+  @Override
+  public boolean isResumed(ServiceType service, String hostname, int port) throws IOException {
+    String ret = createZNode(hostname, getCommandProvider(service).getStateCommand(service));
+    return ret != null && !ret.trim().equals("T");
+  }
+
   enum CmdType {
     exec,
     bool

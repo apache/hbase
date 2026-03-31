@@ -18,32 +18,26 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.channels.SocketChannel;
-import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.codec.Codec;
-import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.provider.Arguments;
 
-@Category({ RPCTests.class, MediumTests.class })
+@Tag(RPCTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: rpcServerImpl={0}")
 public class TestBlockingIPC extends AbstractTestIPC {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBlockingIPC.class);
+  public TestBlockingIPC(Class<? extends RpcServer> rpcServerImpl) {
+    super(rpcServerImpl);
+  }
 
-  @Override
-  protected RpcServer createRpcServer(String name,
-    List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
-    Configuration conf, RpcScheduler scheduler) throws IOException {
-    return RpcServerFactory.createRpcServer(null, name, services, bindAddress, conf, scheduler);
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(SimpleRpcServer.class), Arguments.of(NettyRpcServer.class));
   }
 
   @Override
@@ -73,38 +67,22 @@ public class TestBlockingIPC extends AbstractTestIPC {
     };
   }
 
-  private static class TestFailingRpcServer extends SimpleRpcServer {
-
-    TestFailingRpcServer(Server server, String name,
-      List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
-      Configuration conf, RpcScheduler scheduler) throws IOException {
-      super(server, name, services, bindAddress, conf, scheduler, true);
-    }
-
-    final class FailingConnection extends SimpleServerRpcConnection {
-      private FailingConnection(TestFailingRpcServer rpcServer, SocketChannel channel,
-        long lastContact) {
-        super(rpcServer, channel, lastContact);
-      }
+  @Override
+  protected AbstractRpcClient<?> createBadAuthRpcClient(Configuration conf) {
+    return new BlockingRpcClient(conf) {
 
       @Override
-      public void processRequest(ByteBuff buf) throws IOException, InterruptedException {
-        // this will throw exception after the connection header is read, and an RPC is sent
-        // from client
-        throw new DoNotRetryIOException("Failing for test");
+      protected BlockingRpcConnection createConnection(ConnectionId remoteId) throws IOException {
+        return new BlockingRpcConnection(this, remoteId) {
+          @Override
+          protected byte[] getConnectionHeaderPreamble() {
+            byte[] header = super.getConnectionHeaderPreamble();
+            // set an invalid auth code
+            header[header.length - 1] = -10;
+            return header;
+          }
+        };
       }
-    }
-
-    @Override
-    protected SimpleServerRpcConnection getConnection(SocketChannel channel, long time) {
-      return new FailingConnection(this, channel, time);
-    }
-  }
-
-  @Override
-  protected RpcServer createTestFailingRpcServer(String name,
-    List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
-    Configuration conf, RpcScheduler scheduler) throws IOException {
-    return new TestFailingRpcServer(null, name, services, bindAddress, conf, scheduler);
+    };
   }
 }

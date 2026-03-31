@@ -792,7 +792,7 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Unassign a Region.
-   * @param regionName Region name to assign.
+   * @param regionName Region name to unassign.
    * @throws IOException if a remote or network exception occurs
    */
   void unassign(byte[] regionName) throws IOException;
@@ -1034,6 +1034,20 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
+   * Truncate an individual region.
+   * @param regionName region to truncate
+   * @throws IOException if a remote or network exception occurs
+   */
+  void truncateRegion(byte[] regionName) throws IOException;
+
+  /**
+   * Truncate an individual region. Asynchronous operation.
+   * @param regionName region to truncate
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> truncateRegionAsync(byte[] regionName) throws IOException;
+
+  /**
    * Modify an existing table, more IRB (ruby) friendly version. Asynchronous operation. This means
    * that it may be a while before your schema change is updated across all of the table. You can
    * use Future.get(long, TimeUnit) to wait on the operation to complete. It may throw
@@ -1044,7 +1058,65 @@ public interface Admin extends Abortable, Closeable {
    * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
    *         operation to complete
    */
-  Future<Void> modifyTableAsync(TableDescriptor td) throws IOException;
+  default Future<Void> modifyTableAsync(TableDescriptor td) throws IOException {
+    return modifyTableAsync(td, true);
+  }
+
+  /**
+   * The same as {@link #modifyTableAsync(TableDescriptor td)}, except for the reopenRegions
+   * parameter, which controls whether the process of modifying the table should reopen all regions.
+   * @param td            description of the table
+   * @param reopenRegions By default, 'modifyTable' reopens all regions, potentially causing a RIT
+   *                      (Region In Transition) storm in large tables. If set to 'false', regions
+   *                      will remain unaware of the modification until they are individually
+   *                      reopened. Please note that this may temporarily result in configuration
+   *                      inconsistencies among regions.
+   * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
+   *         operation to complete
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> modifyTableAsync(TableDescriptor td, boolean reopenRegions) throws IOException;
+
+  /**
+   * Reopen all regions of a table. This is useful after calling
+   * {@link #modifyTableAsync(TableDescriptor, boolean)} with reopenRegions=false to gradually roll
+   * out table descriptor changes to regions. Regions are reopened in-place (no move).
+   * @param tableName table whose regions to reopen
+   * @throws IOException if a remote or network exception occurs
+   */
+  default void reopenTableRegions(TableName tableName) throws IOException {
+    get(reopenTableRegionsAsync(tableName), getSyncWaitTimeout(), TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Reopen specific regions of a table. Useful for canary testing table descriptor changes on a
+   * subset of regions before rolling out to the entire table.
+   * @param tableName table whose regions to reopen
+   * @param regions   specific regions to reopen
+   * @throws IOException if a remote or network exception occurs
+   */
+  default void reopenTableRegions(TableName tableName, List<RegionInfo> regions)
+    throws IOException {
+    get(reopenTableRegionsAsync(tableName, regions), getSyncWaitTimeout(), TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Asynchronously reopen all regions of a table.
+   * @param tableName table whose regions to reopen
+   * @return Future for tracking completion
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> reopenTableRegionsAsync(TableName tableName) throws IOException;
+
+  /**
+   * Asynchronously reopen specific regions of a table.
+   * @param tableName table whose regions to reopen
+   * @param regions   specific regions to reopen
+   * @return Future for tracking completion
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> reopenTableRegionsAsync(TableName tableName, List<RegionInfo> regions)
+    throws IOException;
 
   /**
    * Change the store file tracker of the given table.
@@ -1372,6 +1444,16 @@ public interface Admin extends Abortable, Closeable {
    * @throws FailedLogCloseException if we failed to close the WAL
    */
   void rollWALWriter(ServerName serverName) throws IOException, FailedLogCloseException;
+
+  /**
+   * Roll log writer for all RegionServers. Note that unlike
+   * {@link Admin#rollWALWriter(ServerName)}, this method is synchronous, which means it will block
+   * until all RegionServers have completed the log roll, or a RegionServer fails due to an
+   * exception that retry will not work.
+   * @return server and the highest wal filenum of server before performing log roll
+   * @throws IOException if a remote or network exception occurs
+   */
+  Map<ServerName, Long> rollAllWALWriters() throws IOException;
 
   /**
    * Helper that delegates to getClusterMetrics().getMasterCoprocessorNames().
@@ -2615,4 +2697,12 @@ public interface Admin extends Abortable, Closeable {
    * Flush master local region
    */
   void flushMasterStore() throws IOException;
+
+  /**
+   * Get the list of cached files
+   */
+  List<String> getCachedFilesList(ServerName serverName) throws IOException;
+
+  @InterfaceAudience.Private
+  void restoreBackupSystemTable(String snapshotName) throws IOException;
 }

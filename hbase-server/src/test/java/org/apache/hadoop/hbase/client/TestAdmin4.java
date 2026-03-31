@@ -79,7 +79,7 @@ public class TestAdmin4 extends TestAdminBase {
       assertTrue(ADMIN.replicationPeerModificationSwitch(false));
       IOException error =
         assertThrows(IOException.class, () -> ADMIN.addReplicationPeer("peer", ReplicationPeerConfig
-          .newBuilder().setClusterKey(TEST_UTIL.getClusterKey() + "-test").build()));
+          .newBuilder().setClusterKey(TEST_UTIL.getRpcConnnectionURI()).build()));
       assertThat(error.getCause().getMessage(),
         containsString("Replication peer modification disabled"));
       // enable again, and the previous value should be false

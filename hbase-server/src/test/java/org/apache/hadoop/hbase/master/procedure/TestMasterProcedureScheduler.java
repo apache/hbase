@@ -27,7 +27,9 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -65,12 +67,15 @@ public class TestMasterProcedureScheduler {
 
   private MasterProcedureScheduler queue;
 
+  private Map<Long, Procedure<?>> procedures;
+
   @Rule
   public TestName name = new TestName();
 
   @Before
   public void setUp() throws IOException {
-    queue = new MasterProcedureScheduler(pid -> null);
+    procedures = new HashMap<>();
+    queue = new MasterProcedureScheduler(procedures::get);
     queue.start();
   }
 
@@ -95,7 +100,7 @@ public class TestMasterProcedureScheduler {
       // insert items
       for (int j = 1; j <= NUM_ITEMS; ++j) {
         queue.addBack(new TestTableProcedure(i * 1000 + j, tableName,
-          TableProcedureInterface.TableOperationType.EDIT));
+          TableProcedureInterface.TableOperationType.REGION_EDIT));
         assertEquals(++count, queue.size());
       }
     }
@@ -222,7 +227,7 @@ public class TestMasterProcedureScheduler {
     assertEquals(null, queue.poll(0));
 
     // Release the write lock and acquire the read lock
-    queue.wakeTableExclusiveLock(proc, tableName);
+    releaseTableExclusiveLockAndComplete(proc, tableName);
 
     // Fetch the 2nd item and take the read lock
     Procedure<?> rdProc = queue.poll();
@@ -248,7 +253,7 @@ public class TestMasterProcedureScheduler {
     assertEquals(null, queue.poll(0));
 
     // Release the write lock and acquire the read lock
-    queue.wakeTableExclusiveLock(wrProc, tableName);
+    releaseTableExclusiveLockAndComplete(wrProc, tableName);
 
     // Fetch the 4th item and take the read lock
     rdProc = queue.poll();
@@ -641,6 +646,13 @@ public class TestMasterProcedureScheduler {
       childProcs);
   }
 
+  private void releaseTableExclusiveLockAndComplete(Procedure<?> proc, TableName tableName) {
+    // release xlock
+    queue.wakeTableExclusiveLock(proc, tableName);
+    // mark the procedure as complete
+    queue.completionCleanup(proc);
+  }
+
   private void testInheritedXLockAndChildrenSharedLock(final TableName tableName,
     final TestTableProcedure rootProc, final TestRegionProcedure[] childProcs) throws Exception {
     queue.addBack(rootProc);
@@ -671,13 +683,13 @@ public class TestMasterProcedureScheduler {
     assertEquals(null, queue.poll(0));
 
     // release xlock
-    queue.wakeTableExclusiveLock(parentProc, tableName);
+    releaseTableExclusiveLockAndComplete(parentProc, tableName);
 
     // fetch the other xlock proc
     Procedure<?> proc = queue.poll();
     assertEquals(100, proc.getProcId());
     assertEquals(false, queue.waitTableExclusiveLock(proc, tableName));
-    queue.wakeTableExclusiveLock(proc, tableName);
+    releaseTableExclusiveLockAndComplete(proc, tableName);
   }
 
   @Test
@@ -694,29 +706,35 @@ public class TestMasterProcedureScheduler {
     // simulate 3 procedures: 1 (root), (2) child of root, (3) child of proc-2
     testInheritedXLockAndChildrenXLock(tableName,
       new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.EDIT),
+      new TestTableProcedure(1, 1, 2, tableName, TableProcedureInterface.TableOperationType.EDIT),
       new TestTableProcedure(1, 2, 3, tableName, TableProcedureInterface.TableOperationType.EDIT));
   }
 
   private void testInheritedXLockAndChildrenXLock(final TableName tableName,
-    final TestTableProcedure rootProc, final TestTableProcedure childProc) throws Exception {
+    final TestTableProcedure rootProc, final TestTableProcedure... childProcs) throws Exception {
+    procedures.put(rootProc.getProcId(), rootProc);
+    for (TestTableProcedure childProc : childProcs) {
+      procedures.put(childProc.getProcId(), childProc);
+    }
     queue.addBack(rootProc);
 
     // fetch and acquire first xlock proc
     Procedure<?> parentProc = queue.poll();
-    assertEquals(rootProc, parentProc);
+    assertSame(rootProc, parentProc);
     assertEquals(false, queue.waitTableExclusiveLock(parentProc, tableName));
 
+    TestTableProcedure childProc = childProcs[childProcs.length - 1];
     // add child procedure
     queue.addFront(childProc);
 
     // fetch the other xlock proc
     Procedure<?> proc = queue.poll();
-    assertEquals(childProc, proc);
+    assertSame(childProc, proc);
     assertEquals(false, queue.waitTableExclusiveLock(proc, tableName));
-    queue.wakeTableExclusiveLock(proc, tableName);
+    releaseTableExclusiveLockAndComplete(proc, tableName);
 
     // release xlock
-    queue.wakeTableExclusiveLock(parentProc, tableName);
+    releaseTableExclusiveLockAndComplete(proc, tableName);
   }
 
   @Test
@@ -744,7 +762,7 @@ public class TestMasterProcedureScheduler {
     assertEquals(1, proc.getProcId());
 
     // release the xlock
-    queue.wakeTableExclusiveLock(proc, tableName);
+    releaseTableExclusiveLockAndComplete(proc, tableName);
 
     proc = queue.poll();
     assertEquals(2, proc.getProcId());

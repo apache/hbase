@@ -114,7 +114,7 @@ public class TestExceptionInAssignRegion {
 
   public static class ThrowInOpenCP implements RegionCoprocessor, RegionObserver {
     @Override
-    public void preOpen(ObserverContext<RegionCoprocessorEnvironment> c) {
+    public void preOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c) {
       if (countDownLatch.getCount() == 1) {
         // We want to throw exception only first time in move region call
         // After that RS aborts and we don't want to throw in any other open region

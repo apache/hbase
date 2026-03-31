@@ -33,4 +33,5 @@ message StoreFileEntry {
 message StoreFileList {
   required uint64 timestamp = 1;
   repeated StoreFileEntry store_file = 2;
+  optional uint64 version = 3 [default = 1];
 }

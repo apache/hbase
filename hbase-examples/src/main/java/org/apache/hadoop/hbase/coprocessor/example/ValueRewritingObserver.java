@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -69,15 +70,16 @@ public class ValueRewritingObserver implements RegionObserver, RegionCoprocessor
   }
 
   @Override
-  public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    final InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
-    CompactionRequest request) {
+  public InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, final InternalScanner scanner, ScanType scanType,
+    CompactionLifeCycleTracker tracker, CompactionRequest request) {
     InternalScanner modifyingScanner = new InternalScanner() {
       @Override
-      public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
+      public boolean next(List<? super ExtendedCell> result, ScannerContext scannerContext)
+        throws IOException {
         boolean ret = scanner.next(result, scannerContext);
         for (int i = 0; i < result.size(); i++) {
-          Cell c = result.get(i);
+          Cell c = (Cell) result.get(i);
           // Replace the Cell if the value is the one we're replacing
           if (CellUtil.isPut(c) && comparator.compare(CellUtil.cloneValue(c), sourceValue) == 0) {
             try {
@@ -90,7 +92,9 @@ public class ValueRewritingObserver implements RegionObserver, RegionCoprocessor
               byte[] clonedValue = new byte[replacedValue.length];
               System.arraycopy(replacedValue, 0, clonedValue, 0, replacedValue.length);
               cellBuilder.setValue(clonedValue);
-              result.set(i, cellBuilder.build());
+              // all cells in HBase are ExtendedCells, so you are fine to cast it to ExtendedCell,
+              // just do not use its methods since it may change without any deprecation cycle
+              result.set(i, (ExtendedCell) cellBuilder.build());
             } finally {
               cellBuilder.clear();
             }

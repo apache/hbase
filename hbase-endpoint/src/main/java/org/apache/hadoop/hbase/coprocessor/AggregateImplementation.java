@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import static org.apache.hadoop.hbase.client.coprocessor.AggregationHelper.getParsedGenericInstance;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
@@ -26,12 +27,19 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.function.Function;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.ClientUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
+import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.quotas.OperationQuota;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -77,34 +85,42 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
     RpcCallback<AggregateResponse> done) {
     InternalScanner scanner = null;
     AggregateResponse response = null;
+    PartialResultContext partialResultContext = null;
     T max = null;
+    boolean hasMoreRows = true;
     try {
       ColumnInterpreter<T, S, P, Q, R> ci = constructColumnInterpreterFromRequest(request);
       T temp;
       Scan scan = ProtobufUtil.toScan(request.getScan());
+      partialResultContext = newPartialResultContext(scan);
       scanner = env.getRegion().getScanner(scan);
       List<Cell> results = new ArrayList<>();
       byte[] colFamily = scan.getFamilies()[0];
       NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
+      // qualifier can be null.
       byte[] qualifier = null;
       if (qualifiers != null && !qualifiers.isEmpty()) {
         qualifier = qualifiers.pollFirst();
       }
-      // qualifier can be null.
-      boolean hasMoreRows = false;
       do {
+        if (shouldBreakForThrottling(request, scan, partialResultContext)) {
+          break;
+        }
         hasMoreRows = scanner.next(results);
         int listSize = results.size();
         for (int i = 0; i < listSize; i++) {
           temp = ci.getValue(colFamily, qualifier, results.get(i));
           max = (max == null || (temp != null && ci.compare(temp, max) > 0)) ? temp : max;
         }
+        postScanPartialResultUpdate(results, partialResultContext);
         results.clear();
       } while (hasMoreRows);
-      if (max != null) {
-        AggregateResponse.Builder builder = AggregateResponse.newBuilder();
-        builder.addFirstPart(ci.getProtoForCellType(max).toByteString());
-        response = builder.build();
+      response = singlePartResponse(request, hasMoreRows, partialResultContext, max,
+        ci::getProtoForCellType);
+      if (log.isDebugEnabled()) {
+        log.debug("Maximum from this region is {}: {} (partial result: {}) (client {})",
+          env.getRegion().getRegionInfo().getRegionNameAsString(), max, hasMoreRows,
+          RpcServer.getRequestUser());
       }
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
@@ -112,9 +128,8 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       if (scanner != null) {
         IOUtils.closeQuietly(scanner);
       }
+      closeQuota(partialResultContext);
     }
-    log.info("Maximum from this region is "
-      + env.getRegion().getRegionInfo().getRegionNameAsString() + ": " + max);
     done.run(response);
   }
 
@@ -129,11 +144,14 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
     RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
     InternalScanner scanner = null;
+    PartialResultContext partialResultContext = null;
     T min = null;
+    boolean hasMoreRows = true;
     try {
       ColumnInterpreter<T, S, P, Q, R> ci = constructColumnInterpreterFromRequest(request);
       T temp;
       Scan scan = ProtobufUtil.toScan(request.getScan());
+      partialResultContext = newPartialResultContext(scan);
       scanner = env.getRegion().getScanner(scan);
       List<Cell> results = new ArrayList<>();
       byte[] colFamily = scan.getFamilies()[0];
@@ -142,19 +160,25 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       if (qualifiers != null && !qualifiers.isEmpty()) {
         qualifier = qualifiers.pollFirst();
       }
-      boolean hasMoreRows = false;
       do {
+        if (shouldBreakForThrottling(request, scan, partialResultContext)) {
+          break;
+        }
         hasMoreRows = scanner.next(results);
         int listSize = results.size();
         for (int i = 0; i < listSize; i++) {
           temp = ci.getValue(colFamily, qualifier, results.get(i));
           min = (min == null || (temp != null && ci.compare(temp, min) < 0)) ? temp : min;
         }
+        postScanPartialResultUpdate(results, partialResultContext);
         results.clear();
       } while (hasMoreRows);
-      if (min != null) {
-        response = AggregateResponse.newBuilder()
-          .addFirstPart(ci.getProtoForCellType(min).toByteString()).build();
+      response = singlePartResponse(request, hasMoreRows, partialResultContext, min,
+        ci::getProtoForCellType);
+      if (log.isDebugEnabled()) {
+        log.debug("Minimum from this region is {}: {} (partial result: {}) (client {})",
+          env.getRegion().getRegionInfo().getRegionNameAsString(), min, hasMoreRows,
+          RpcServer.getRequestUser());
       }
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
@@ -162,9 +186,8 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       if (scanner != null) {
         IOUtils.closeQuietly(scanner);
       }
+      closeQuota(partialResultContext);
     }
-    log.info("Minimum from this region is "
-      + env.getRegion().getRegionInfo().getRegionNameAsString() + ": " + min);
     done.run(response);
   }
 
@@ -179,12 +202,15 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
     RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
     InternalScanner scanner = null;
+    PartialResultContext partialResultContext = null;
     long sum = 0L;
+    boolean hasMoreRows = true;
     try {
       ColumnInterpreter<T, S, P, Q, R> ci = constructColumnInterpreterFromRequest(request);
       S sumVal = null;
       T temp;
       Scan scan = ProtobufUtil.toScan(request.getScan());
+      partialResultContext = newPartialResultContext(scan);
       scanner = env.getRegion().getScanner(scan);
       byte[] colFamily = scan.getFamilies()[0];
       NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
@@ -193,8 +219,10 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
         qualifier = qualifiers.pollFirst();
       }
       List<Cell> results = new ArrayList<>();
-      boolean hasMoreRows = false;
       do {
+        if (shouldBreakForThrottling(request, scan, partialResultContext)) {
+          break;
+        }
         hasMoreRows = scanner.next(results);
         int listSize = results.size();
         for (int i = 0; i < listSize; i++) {
@@ -203,11 +231,15 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
             sumVal = ci.add(sumVal, ci.castToReturnType(temp));
           }
         }
+        postScanPartialResultUpdate(results, partialResultContext);
         results.clear();
       } while (hasMoreRows);
-      if (sumVal != null) {
-        response = AggregateResponse.newBuilder()
-          .addFirstPart(ci.getProtoForPromotedType(sumVal).toByteString()).build();
+      response = singlePartResponse(request, hasMoreRows, partialResultContext, sumVal,
+        ci::getProtoForPromotedType);
+      if (log.isDebugEnabled()) {
+        log.debug("Sum from this region is {}: {} (partial result: {}) (client {})",
+          env.getRegion().getRegionInfo().getRegionNameAsString(), sum, hasMoreRows,
+          RpcServer.getRequestUser());
       }
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
@@ -215,9 +247,8 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       if (scanner != null) {
         IOUtils.closeQuietly(scanner);
       }
+      closeQuota(partialResultContext);
     }
-    log.debug("Sum from this region is " + env.getRegion().getRegionInfo().getRegionNameAsString()
-      + ": " + sum);
     done.run(response);
   }
 
@@ -232,8 +263,11 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
     long counter = 0L;
     List<Cell> results = new ArrayList<>();
     InternalScanner scanner = null;
+    PartialResultContext partialResultContext = null;
+    boolean hasMoreRows = true;
     try {
       Scan scan = ProtobufUtil.toScan(request.getScan());
+      partialResultContext = newPartialResultContext(scan);
       byte[][] colFamilies = scan.getFamilies();
       byte[] colFamily = colFamilies != null ? colFamilies[0] : null;
       NavigableSet<byte[]> qualifiers =
@@ -246,26 +280,34 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
         scan.setFilter(new FirstKeyOnlyFilter());
       }
       scanner = env.getRegion().getScanner(scan);
-      boolean hasMoreRows = false;
       do {
+        if (shouldBreakForThrottling(request, scan, partialResultContext)) {
+          break;
+        }
         hasMoreRows = scanner.next(results);
-        if (results.size() > 0) {
+        if (!results.isEmpty()) {
           counter++;
         }
+        postScanPartialResultUpdate(results, partialResultContext);
         results.clear();
       } while (hasMoreRows);
       ByteBuffer bb = ByteBuffer.allocate(8).putLong(counter);
       bb.rewind();
-      response = AggregateResponse.newBuilder().addFirstPart(ByteString.copyFrom(bb)).build();
+      response = responseBuilder(request, hasMoreRows, partialResultContext)
+        .addFirstPart(ByteString.copyFrom(bb)).build();
+      if (log.isDebugEnabled()) {
+        log.debug("Row counter from this region is {}: {} (partial result: {}) (client {})",
+          env.getRegion().getRegionInfo().getRegionNameAsString(), counter, hasMoreRows,
+          RpcServer.getRequestUser());
+      }
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
     } finally {
       if (scanner != null) {
         IOUtils.closeQuietly(scanner);
       }
+      closeQuota(partialResultContext);
     }
-    log.info("Row counter from this region is "
-      + env.getRegion().getRegionInfo().getRegionNameAsString() + ": " + counter);
     done.run(response);
   }
 
@@ -284,11 +326,13 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
     RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
     InternalScanner scanner = null;
+    PartialResultContext partialResultContext = null;
     try {
       ColumnInterpreter<T, S, P, Q, R> ci = constructColumnInterpreterFromRequest(request);
       S sumVal = null;
       Long rowCountVal = 0L;
       Scan scan = ProtobufUtil.toScan(request.getScan());
+      partialResultContext = newPartialResultContext(scan);
       scanner = env.getRegion().getScanner(scan);
       byte[] colFamily = scan.getFamilies()[0];
       NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
@@ -297,10 +341,13 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
         qualifier = qualifiers.pollFirst();
       }
       List<Cell> results = new ArrayList<>();
-      boolean hasMoreRows = false;
+      boolean hasMoreRows = true;
 
       do {
         results.clear();
+        if (shouldBreakForThrottling(request, scan, partialResultContext)) {
+          break;
+        }
         hasMoreRows = scanner.next(results);
         int listSize = results.size();
         for (int i = 0; i < listSize; i++) {
@@ -308,14 +355,27 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
             ci.add(sumVal, ci.castToReturnType(ci.getValue(colFamily, qualifier, results.get(i))));
         }
         rowCountVal++;
+        postScanPartialResultUpdate(results, partialResultContext);
       } while (hasMoreRows);
-      if (sumVal != null) {
-        ByteString first = ci.getProtoForPromotedType(sumVal).toByteString();
+
+      if (sumVal != null && !request.getClientSupportsPartialResult()) {
         AggregateResponse.Builder pair = AggregateResponse.newBuilder();
+        ByteString first = ci.getProtoForPromotedType(sumVal).toByteString();
         pair.addFirstPart(first);
         ByteBuffer bb = ByteBuffer.allocate(8).putLong(rowCountVal);
         bb.rewind();
         pair.setSecondPart(ByteString.copyFrom(bb));
+        response = pair.build();
+      } else if (request.getClientSupportsPartialResult()) {
+        AggregateResponse.Builder pair =
+          responseBuilder(request, hasMoreRows, partialResultContext);
+        if (sumVal != null) {
+          ByteString first = ci.getProtoForPromotedType(sumVal).toByteString();
+          pair.addFirstPart(first);
+          ByteBuffer bb = ByteBuffer.allocate(8).putLong(rowCountVal);
+          bb.rewind();
+          pair.setSecondPart(ByteString.copyFrom(bb));
+        }
         response = pair.build();
       }
     } catch (IOException e) {
@@ -324,6 +384,7 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       if (scanner != null) {
         IOUtils.closeQuietly(scanner);
       }
+      closeQuota(partialResultContext);
     }
     done.run(response);
   }
@@ -341,11 +402,13 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
     RpcCallback<AggregateResponse> done) {
     InternalScanner scanner = null;
     AggregateResponse response = null;
+    PartialResultContext partialResultContext = null;
     try {
       ColumnInterpreter<T, S, P, Q, R> ci = constructColumnInterpreterFromRequest(request);
       S sumVal = null, sumSqVal = null, tempVal = null;
       long rowCountVal = 0L;
       Scan scan = ProtobufUtil.toScan(request.getScan());
+      partialResultContext = newPartialResultContext(scan);
       scanner = env.getRegion().getScanner(scan);
       byte[] colFamily = scan.getFamilies()[0];
       NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
@@ -355,9 +418,12 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       }
       List<Cell> results = new ArrayList<>();
 
-      boolean hasMoreRows = false;
+      boolean hasMoreRows = true;
 
       do {
+        if (shouldBreakForThrottling(request, scan, partialResultContext)) {
+          break;
+        }
         tempVal = null;
         hasMoreRows = scanner.next(results);
         int listSize = results.size();
@@ -365,20 +431,35 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
           tempVal =
             ci.add(tempVal, ci.castToReturnType(ci.getValue(colFamily, qualifier, results.get(i))));
         }
+        postScanPartialResultUpdate(results, partialResultContext);
         results.clear();
         sumVal = ci.add(sumVal, tempVal);
         sumSqVal = ci.add(sumSqVal, ci.multiply(tempVal, tempVal));
         rowCountVal++;
       } while (hasMoreRows);
-      if (sumVal != null) {
+
+      if (sumVal != null && !request.getClientSupportsPartialResult()) {
+        AggregateResponse.Builder pair = AggregateResponse.newBuilder();
         ByteString first_sumVal = ci.getProtoForPromotedType(sumVal).toByteString();
         ByteString first_sumSqVal = ci.getProtoForPromotedType(sumSqVal).toByteString();
-        AggregateResponse.Builder pair = AggregateResponse.newBuilder();
         pair.addFirstPart(first_sumVal);
         pair.addFirstPart(first_sumSqVal);
         ByteBuffer bb = ByteBuffer.allocate(8).putLong(rowCountVal);
         bb.rewind();
         pair.setSecondPart(ByteString.copyFrom(bb));
+        response = pair.build();
+      } else if (request.getClientSupportsPartialResult()) {
+        AggregateResponse.Builder pair =
+          responseBuilder(request, hasMoreRows, partialResultContext);
+        if (sumVal != null) {
+          ByteString first_sumVal = ci.getProtoForPromotedType(sumVal).toByteString();
+          ByteString first_sumSqVal = ci.getProtoForPromotedType(sumSqVal).toByteString();
+          pair.addFirstPart(first_sumVal);
+          pair.addFirstPart(first_sumSqVal);
+          ByteBuffer bb = ByteBuffer.allocate(8).putLong(rowCountVal);
+          bb.rewind();
+          pair.setSecondPart(ByteString.copyFrom(bb));
+        }
         response = pair.build();
       }
     } catch (IOException e) {
@@ -387,6 +468,7 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       if (scanner != null) {
         IOUtils.closeQuietly(scanner);
       }
+      closeQuota(partialResultContext);
     }
     done.run(response);
   }
@@ -402,10 +484,12 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
     RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
     InternalScanner scanner = null;
+    PartialResultContext partialResultContext = null;
     try {
       ColumnInterpreter<T, S, P, Q, R> ci = constructColumnInterpreterFromRequest(request);
       S sumVal = null, sumWeights = null, tempVal = null, tempWeight = null;
       Scan scan = ProtobufUtil.toScan(request.getScan());
+      partialResultContext = newPartialResultContext(scan);
       scanner = env.getRegion().getScanner(scan);
       byte[] colFamily = scan.getFamilies()[0];
       NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
@@ -417,9 +501,11 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       }
       List<Cell> results = new ArrayList<>();
 
-      boolean hasMoreRows = false;
-
+      boolean hasMoreRows = true;
       do {
+        if (shouldBreakForThrottling(request, scan, partialResultContext)) {
+          break;
+        }
         tempVal = null;
         tempWeight = null;
         hasMoreRows = scanner.next(results);
@@ -432,25 +518,137 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
               ci.add(tempWeight, ci.castToReturnType(ci.getValue(colFamily, weightQualifier, kv)));
           }
         }
+        postScanPartialResultUpdate(results, partialResultContext);
         results.clear();
         sumVal = ci.add(sumVal, tempVal);
         sumWeights = ci.add(sumWeights, tempWeight);
       } while (hasMoreRows);
-      ByteString first_sumVal = ci.getProtoForPromotedType(sumVal).toByteString();
-      S s = sumWeights == null ? ci.castToReturnType(ci.getMinValue()) : sumWeights;
-      ByteString first_sumWeights = ci.getProtoForPromotedType(s).toByteString();
-      AggregateResponse.Builder pair = AggregateResponse.newBuilder();
-      pair.addFirstPart(first_sumVal);
-      pair.addFirstPart(first_sumWeights);
-      response = pair.build();
+      if (sumVal != null && !request.getClientSupportsPartialResult()) {
+        AggregateResponse.Builder pair = AggregateResponse.newBuilder();
+        ByteString first_sumVal = ci.getProtoForPromotedType(sumVal).toByteString();
+        S s = sumWeights == null ? ci.castToReturnType(ci.getMinValue()) : sumWeights;
+        ByteString first_sumWeights = ci.getProtoForPromotedType(s).toByteString();
+        pair.addFirstPart(first_sumVal);
+        pair.addFirstPart(first_sumWeights);
+        response = pair.build();
+      } else if (request.getClientSupportsPartialResult()) {
+        AggregateResponse.Builder pair =
+          responseBuilder(request, hasMoreRows, partialResultContext);
+        if (sumVal != null) {
+          ByteString first_sumVal = ci.getProtoForPromotedType(sumVal).toByteString();
+          S s = sumWeights == null ? ci.castToReturnType(ci.getMinValue()) : sumWeights;
+          ByteString first_sumWeights = ci.getProtoForPromotedType(s).toByteString();
+          pair.addFirstPart(first_sumVal);
+          pair.addFirstPart(first_sumWeights);
+        }
+        response = pair.build();
+      }
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
     } finally {
       if (scanner != null) {
         IOUtils.closeQuietly(scanner);
       }
+      closeQuota(partialResultContext);
     }
     done.run(response);
+  }
+
+  private final static class PartialResultContext {
+    private long rowsRead = 0;
+    private final int quotaCheckInterval;
+    private OperationQuota quota = null;
+    private long waitIntervalMs = 0;
+    private Cell lastRowSuccessfullyProcessed = null;
+    private long previousReadConsumed = 0;
+    private long previousReadConsumedDifference = 0;
+
+    private PartialResultContext(int quotaCheckInterval) {
+      this.quotaCheckInterval = quotaCheckInterval;
+    }
+  }
+
+  private PartialResultContext newPartialResultContext(Scan scan) {
+    if (scan.getCaching() > 0) {
+      // If the scan has caching set, we will use that as the quota check interval.
+      return new PartialResultContext(scan.getCaching());
+    } else {
+      return new PartialResultContext(
+        env.getConfiguration().getInt(HConstants.HBASE_CLIENT_SCANNER_CACHING, 1000));
+    }
+  }
+
+  private boolean shouldBreakForThrottling(AggregateRequest request, Scan scan,
+    PartialResultContext context) throws IOException {
+    if (
+      request.getClientSupportsPartialResult() && context.rowsRead % context.quotaCheckInterval == 0
+    ) {
+      long maxBlockBytesScanned;
+      if (context.quota == null) {
+        maxBlockBytesScanned = Long.MAX_VALUE;
+      } else {
+        maxBlockBytesScanned = context.quota.getMaxResultSize();
+      }
+      try {
+        context.quota =
+          env.checkScanQuota(scan, maxBlockBytesScanned, context.previousReadConsumedDifference);
+      } catch (RpcThrottlingException e) {
+        if (log.isDebugEnabled()) {
+          log.debug("Ending early for throttling for region {}",
+            env.getRegion().getRegionInfo().getRegionNameAsString());
+        }
+        context.waitIntervalMs = e.getWaitInterval();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private void postScanPartialResultUpdate(List<Cell> results, PartialResultContext context) {
+    context.rowsRead += 1;
+    if (context.quota != null) {
+      context.quota.addScanResultCells(results);
+    }
+    if (!results.isEmpty()) {
+      Cell result = results.get(results.size() - 1);
+      context.lastRowSuccessfullyProcessed = result;
+    }
+  }
+
+  @Nullable
+  private <ACC, RES extends Message> AggregateResponse singlePartResponse(AggregateRequest request,
+    boolean hasMoreRows, PartialResultContext partialResultContext, ACC acc,
+    Function<ACC, RES> toRes) {
+    AggregateResponse response = null;
+    if (acc != null && !request.getClientSupportsPartialResult()) {
+      ByteString first = toRes.apply(acc).toByteString();
+      response = AggregateResponse.newBuilder().addFirstPart(first).build();
+    } else if (request.getClientSupportsPartialResult()) {
+      AggregateResponse.Builder responseBuilder =
+        responseBuilder(request, hasMoreRows, partialResultContext);
+      if (acc != null) {
+        responseBuilder.addFirstPart(toRes.apply(acc).toByteString());
+      }
+      response = responseBuilder.build();
+    }
+    return response;
+  }
+
+  private AggregateResponse.Builder responseBuilder(AggregateRequest request, boolean hasMoreRows,
+    PartialResultContext context) {
+    AggregateResponse.Builder builder = AggregateResponse.newBuilder();
+    if (request.getClientSupportsPartialResult() && hasMoreRows) {
+      if (context.lastRowSuccessfullyProcessed != null) {
+        byte[] lastRowSuccessfullyProcessed =
+          CellUtil.cloneRow(context.lastRowSuccessfullyProcessed);
+        builder.setNextChunkStartRow(ByteString.copyFrom(
+          ClientUtil.calculateTheClosestNextRowKeyForPrefix(lastRowSuccessfullyProcessed)));
+      } else {
+        builder.setNextChunkStartRow(request.getScan().getStartRow());
+      }
+      builder.setWaitIntervalMs(context.waitIntervalMs);
+    }
+    return builder;
   }
 
   @SuppressWarnings("unchecked")
@@ -503,4 +701,14 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
   public void stop(CoprocessorEnvironment env) throws IOException {
     // nothing to do
   }
+
+  private void closeQuota(PartialResultContext context) {
+    if (context != null && context.quota != null) {
+      context.quota.close();
+      long readConsumed = context.quota.getReadConsumed();
+      context.previousReadConsumedDifference = readConsumed - context.previousReadConsumed;
+      context.previousReadConsumed = readConsumed;
+    }
+  }
+
 }

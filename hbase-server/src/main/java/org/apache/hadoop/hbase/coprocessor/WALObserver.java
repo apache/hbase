@@ -56,25 +56,31 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceStability.Evolving
 public interface WALObserver {
   /**
-   * Called before a {@link WALEdit} is writen to WAL. Do not amend the WALKey. It is
-   * InterfaceAudience.Private. Changing the WALKey will cause damage.
-   * @deprecated Since hbase-2.0.0. To be replaced with an alternative that does not expose
-   *             InterfaceAudience classes such as WALKey and WALEdit. Will be removed in
-   *             hbase-3.0.0.
+   * Called before a {@link WALEdit} is writen to WAL.
+   * <p>
+   * The method is marked as deprecated in 2.0.0, but later we abstracted the WALKey interface for
+   * coprocessors, now it is OK to expose this to coprocessor users, so we revert the deprecation.
+   * But you still need to be careful while changing {@link WALEdit}, as when reaching here, if you
+   * add some cells to WALEdit, it will only be written to WAL but no in memstore, but when
+   * replaying you will get these cells and there are CP hooks to intercept these cells.
+   * <p>
+   * See HBASE-28580.
    */
-  @Deprecated
   default void preWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
     RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
   }
 
   /**
-   * Called after a {@link WALEdit} is writen to WAL. Do not amend the WALKey. It is
-   * InterfaceAudience.Private. Changing the WALKey will cause damage.
-   * @deprecated Since hbase-2.0.0. To be replaced with an alternative that does not expose
-   *             InterfaceAudience classes such as WALKey and WALEdit. Will be removed in
-   *             hbase-3.0.0.
+   * Called after a {@link WALEdit} is writen to WAL.
+   * <p>
+   * The method is marked as deprecated in 2.0.0, but later we abstracted the WALKey interface for
+   * coprocessors, now it is OK to expose this to coprocessor users, so we revert the deprecation.
+   * But you still need to be careful while changing {@link WALEdit}, as when reaching here, if you
+   * add some cells to WALEdit, it will only be written to WAL but no in memstore, but when
+   * replaying you will get these cells and there are CP hooks to intercept these cells.
+   * <p>
+   * See HBASE-28580.
    */
-  @Deprecated
   default void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
     RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
   }

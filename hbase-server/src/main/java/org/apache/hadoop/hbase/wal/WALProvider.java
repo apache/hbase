@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.AsyncFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.replication.regionserver.PeerActionListener;
+import org.apache.hadoop.hbase.replication.regionserver.SyncReplicationPeerInfoProvider;
 import org.apache.hadoop.hbase.replication.regionserver.WALFileLengthProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -127,5 +129,13 @@ public interface WALProvider {
   default WALFileLengthProvider getWALFileLengthProvider() {
     return path -> getWALs().stream().map(w -> w.getLogFileSizeIfBeingWritten(path))
       .filter(o -> o.isPresent()).findAny().orElse(OptionalLong.empty());
+  }
+
+  // sync replication related
+  default PeerActionListener getPeerActionListener() {
+    return PeerActionListener.DUMMY;
+  }
+
+  default void setSyncReplicationPeerInfoProvider(SyncReplicationPeerInfoProvider provider) {
   }
 }

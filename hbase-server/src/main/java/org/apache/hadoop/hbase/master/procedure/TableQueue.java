@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.procedure2.LockStatus;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -45,19 +47,20 @@ class TableQueue extends Queue<TableName> {
   /**
    * @param proc must not be null
    */
-  private static boolean requireTableExclusiveLock(TableProcedureInterface proc) {
+  static boolean requireTableExclusiveLock(TableProcedureInterface proc) {
     switch (proc.getTableOperationType()) {
       case CREATE:
       case DELETE:
       case DISABLE:
+      case SNAPSHOT:
       case ENABLE:
+      case RESTORE_BACKUP_SYSTEM_TABLE:
         return true;
       case EDIT:
         // we allow concurrent edit on the ns family in meta table
         return !proc.getTableName().equals(TableProcedureInterface.DUMMY_NAMESPACE_TABLE_NAME);
       case READ:
       case FLUSH:
-      case SNAPSHOT:
         return false;
       // region operations are using the shared-lock on the table
       // and then they will grab an xlock on the region.
@@ -69,10 +72,17 @@ class TableQueue extends Queue<TableName> {
       case REGION_GC:
       case MERGED_REGIONS_GC:
       case REGION_SNAPSHOT:
+      case REGION_TRUNCATE:
         return false;
       default:
         break;
     }
     throw new UnsupportedOperationException("unexpected type " + proc.getTableOperationType());
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).appendSuper(super.toString())
+      .append("namespaceLockStatus", namespaceLockStatus.describeLockStatus()).build();
   }
 }

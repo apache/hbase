@@ -39,7 +39,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.TreeMap;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -202,8 +202,11 @@ public class TestCompactor {
     }
 
     @Override
-    public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
-      if (kvs.isEmpty()) return false;
+    public boolean next(List<? super ExtendedCell> result, ScannerContext scannerContext)
+      throws IOException {
+      if (kvs.isEmpty()) {
+        return false;
+      }
       result.add(kvs.remove(0));
       return !kvs.isEmpty();
     }

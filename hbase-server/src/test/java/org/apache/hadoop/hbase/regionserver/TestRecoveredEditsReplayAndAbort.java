@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
@@ -124,7 +125,8 @@ public class TestRecoveredEditsReplayAndAbort {
     Path rootDir = TEST_UTIL.getDataTestDir();
     Path tableDir = CommonFSUtils.getTableDir(rootDir, info.getTable());
     HRegionFileSystem.createRegionOnFileSystem(CONF, TEST_UTIL.getTestFileSystem(), tableDir, info);
-    region = HRegion.newHRegion(tableDir, wal, TEST_UTIL.getTestFileSystem(), CONF, info, htd, rs);
+    region = HRegion.newHRegion(tableDir, wal, TEST_UTIL.getTestFileSystem(), CONF, info, htd, rs,
+      rs.getKeyManagementService());
     // create some recovered.edits
     final WALFactory wals = new WALFactory(CONF, method);
     try {
@@ -147,7 +149,8 @@ public class TestRecoveredEditsReplayAndAbort {
           // 200KB kv
           byte[] value = new byte[200 * 1024];
           Bytes.random(value);
-          edit.add(new KeyValue(row, fam1, Bytes.toBytes(j), time, KeyValue.Type.Put, value));
+          WALEditInternalHelper.addExtendedCell(edit,
+            new KeyValue(row, fam1, Bytes.toBytes(j), time, KeyValue.Type.Put, value));
           writer.append(new WAL.Entry(
             new WALKeyImpl(regionName, tableName, j, time, HConstants.DEFAULT_CLUSTER_ID), edit));
         }

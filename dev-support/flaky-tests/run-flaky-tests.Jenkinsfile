@@ -16,12 +16,14 @@
 // under the License.
 pipeline {
   agent {
-    node {
+    dockerfile {
+      dir 'dev-support/docker'
       label 'hbase'
+      args '-v /etc/passwd:/etc/passwd:ro -v /etc/group:/etc/group:ro'
     }
   }
   triggers {
-    cron('@hourly') // See https://jenkins.io/doc/book/pipeline/syntax/#cron-syntax
+    cron('H H/12 * * *') // See https://jenkins.io/doc/book/pipeline/syntax/#cron-syntax
   }
   options {
     // this should roughly match how long we tell the flaky dashboard to look at
@@ -31,20 +33,19 @@ pipeline {
   }
   environment {
     ASF_NIGHTLIES = 'https://nightlies.apache.org'
+    JAVA_HOME = '/usr/lib/jvm/java-17'
   }
   parameters {
     booleanParam(name: 'DEBUG', defaultValue: false, description: 'Produce a lot more meta-information.')
-  }
-  tools {
-    // this should match what the yetus nightly job for the branch will use
-    maven 'maven_latest'
-    jdk "jdk_1.8_latest"
   }
   stages {
     stage ('run flaky tests') {
       steps {
         sh '''#!/usr/bin/env bash
           set -e
+          MVN="${MAVEN_HOME}/bin/mvn"
+          # print the maven version and java version
+          ${MVN} --version
           declare -a curl_args=(--fail)
           tmpdir=$(realpath target)
           declare -a mvn_args=(--batch-mode -fn -Dbuild.id="${BUILD_ID}" -Dmaven.repo.local="${WORKSPACE}/local-repository" -Djava.io.tmpdir=${tmpdir})
@@ -53,10 +54,14 @@ pipeline {
             mvn_args=("${mvn_args[@]}" -X)
             set -x
           fi
+          # need to build against hadoop 3.0 profile for branch-2 when using jdk 11+
+          if [[ "${BRANCH_NAME}" == *"branch-2"* ]]; then
+            mvn_args=("${mvn_args[@]}" -Dhadoop.profile=3.0)
+          fi
           curl "${curl_args[@]}" -o includes.txt "${JENKINS_URL}/job/HBase-Find-Flaky-Tests/job/${BRANCH_NAME}/lastSuccessfulBuild/artifact/output/includes"
           if [ -s includes.txt ]; then
             rm -rf local-repository/org/apache/hbase
-            mvn clean "${mvn_args[@]}"
+            ${MVN} clean "${mvn_args[@]}"
             rm -rf "target/machine" && mkdir -p "target/machine"
             if [ -x dev-support/gather_machine_environment.sh ]; then
               "./dev-support/gather_machine_environment.sh" "target/machine"
@@ -65,11 +70,11 @@ pipeline {
             else
               echo "Skipped gathering machine environment because we couldn't read the script to do so."
             fi
-            mvn -T0.25C package "${mvn_args[@]}" -Dtest="$(cat includes.txt)" -Dmaven.test.redirectTestOutputToFile=true -Dsurefire.firstPartForkCount=0.25C -Dsurefire.secondPartForkCount=0.25C
+            ${MVN} -T0.25C package "${mvn_args[@]}" -Dtest="$(cat includes.txt)" -Dmaven.test.redirectTestOutputToFile=true -Dsurefire.firstPartForkCount=0.25C -Dsurefire.secondPartForkCount=0.25C
           else
             echo "set of flaky tests is currently empty."
           fi
-'''
+        '''
       }
     }
   }

@@ -117,7 +117,7 @@ public class TestDisablePeerModification {
     RESUME = new CountDownLatch(1);
     AsyncAdmin admin = UTIL.getAsyncConnection().getAdmin();
     ReplicationPeerConfig rpc =
-      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL.getClusterKey() + "-test")
+      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL.getRpcConnnectionURI() + "-test")
         .setReplicationEndpointImpl(DummyReplicationEndpoint.class.getName()).build();
     CompletableFuture<Void> addFuture = admin.addReplicationPeer("test_peer_" + async, rpc);
     ARRIVE.await();

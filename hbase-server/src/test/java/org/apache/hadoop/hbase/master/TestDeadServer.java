@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
@@ -83,7 +84,7 @@ public class TestDeadServer {
     assertTrue(ds.isDeadServer(deadServer));
     Set<ServerName> deadServerNames = ds.copyServerNames();
     for (ServerName eachDeadServer : deadServerNames) {
-      Assert.assertNotNull(ds.getTimeOfDeath(eachDeadServer));
+      assertNotEquals(0, ds.getDeathTimestamp(eachDeadServer));
     }
     final ServerName deadServerHostComingAlive = ServerName.valueOf("127.0.0.1", 9090, 223341L);
     assertTrue(ds.cleanPreviousInstance(deadServerHostComingAlive));
@@ -125,10 +126,10 @@ public class TestDeadServer {
     Assert.assertEquals(2, copy.size());
 
     Assert.assertEquals(hostname1234, copy.get(0).getFirst());
-    Assert.assertEquals(new Long(2L), copy.get(0).getSecond());
+    Assert.assertEquals(Long.valueOf(2L), copy.get(0).getSecond());
 
     Assert.assertEquals(hostname12345, copy.get(1).getFirst());
-    Assert.assertEquals(new Long(3L), copy.get(1).getSecond());
+    Assert.assertEquals(Long.valueOf(3L), copy.get(1).getSecond());
 
     EnvironmentEdgeManager.reset();
   }

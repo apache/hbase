@@ -50,8 +50,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -87,6 +87,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.AfterClass;
@@ -120,6 +121,7 @@ public abstract class AbstractTestFSWAL {
     final Path hbaseWALDir = TEST_UTIL.createWALRootDir();
     DIR = new Path(hbaseWALDir, currentTest.getMethodName());
     assertNotEquals(hbaseDir, hbaseWALDir);
+    FS.mkdirs(DIR);
   }
 
   @BeforeClass
@@ -183,7 +185,7 @@ public abstract class AbstractTestFSWAL {
     for (int i = 0; i < times; i++) {
       long timestamp = EnvironmentEdgeManager.currentTime();
       WALEdit cols = new WALEdit();
-      cols.add(new KeyValue(row, row, row, timestamp, row));
+      WALEditInternalHelper.addExtendedCell(cols, new KeyValue(row, row, row, timestamp, row));
       WALKeyImpl key =
         new WALKeyImpl(hri.getEncodedNameAsBytes(), htd.getTableName(), SequenceId.NO_SEQUENCE_ID,
           timestamp, WALKey.EMPTY_UUIDS, HConstants.NO_NONCE, HConstants.NO_NONCE, mvcc, scopes);
@@ -392,17 +394,16 @@ public abstract class AbstractTestFSWAL {
   @Test(expected = IOException.class)
   public void testFailedToCreateWALIfParentRenamed()
     throws IOException, CommonFSUtils.StreamLacksCapabilityException {
-    final String name = "testFailedToCreateWALIfParentRenamed";
-    AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), name,
-      HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
+    AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF),
+      currentTest.getMethodName(), HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
     long filenum = EnvironmentEdgeManager.currentTime();
     Path path = wal.computeFilename(filenum);
-    wal.createWriterInstance(path);
+    wal.createWriterInstance(FS, path);
     Path parent = path.getParent();
     path = wal.computeFilename(filenum + 1);
     Path newPath = new Path(parent.getParent(), parent.getName() + "-splitting");
     FS.rename(parent, newPath);
-    wal.createWriterInstance(path);
+    wal.createWriterInstance(FS, path);
     fail("It should fail to create the new WAL");
   }
 
@@ -459,9 +460,9 @@ public abstract class AbstractTestFSWAL {
       // Construct a WALEdit and add it a few times to the WAL.
       WALEdit edits = new WALEdit();
       for (Put p : puts) {
-        CellScanner cs = p.cellScanner();
+        ExtendedCellScanner cs = p.cellScanner();
         while (cs.advance()) {
-          edits.add(cs.current());
+          WALEditInternalHelper.addExtendedCell(edits, cs.current());
         }
       }
       // Add any old cluster id.
@@ -517,7 +518,7 @@ public abstract class AbstractTestFSWAL {
     long timestamp = EnvironmentEdgeManager.currentTime();
     byte[] row = Bytes.toBytes("row");
     WALEdit cols = new WALEdit();
-    cols.add(new KeyValue(row, row, row, timestamp, row));
+    WALEditInternalHelper.addExtendedCell(cols, new KeyValue(row, row, row, timestamp, row));
     WALKeyImpl key =
       new WALKeyImpl(ri.getEncodedNameAsBytes(), td.getTableName(), SequenceId.NO_SEQUENCE_ID,
         timestamp, WALKey.EMPTY_UUIDS, HConstants.NO_NONCE, HConstants.NO_NONCE, mvcc, scopes);
@@ -543,6 +544,7 @@ public abstract class AbstractTestFSWAL {
 
   private AbstractFSWAL<?> createHoldingWAL(String testName, AtomicBoolean startHoldingForAppend,
     CountDownLatch holdAppend) throws IOException {
+    FS.mkdirs(new Path(CommonFSUtils.getRootDir(CONF), testName));
     AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getRootDir(CONF), testName,
       HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
     // newWAL has already called wal.init()
@@ -624,7 +626,7 @@ public abstract class AbstractTestFSWAL {
       }, startHoldingForAppend, closeFinished, holdAppend);
 
       // now check the region's unflushed seqIds.
-      long seqId = wal.getEarliestMemStoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
+      long seqId = getEarliestMemStoreSeqNum(wal, region.getRegionInfo().getEncodedNameAsBytes());
       assertEquals("Found seqId for the region which is already closed", HConstants.NO_SEQNUM,
         seqId);
     } finally {
@@ -632,6 +634,16 @@ public abstract class AbstractTestFSWAL {
       region.close();
       wal.close();
     }
+  }
+
+  public static long getEarliestMemStoreSeqNum(WAL wal, byte[] encodedRegionName) {
+    if (wal != null) {
+      if (wal instanceof AbstractFSWAL) {
+        return ((AbstractFSWAL<?>) wal).getSequenceIdAccounting()
+          .getLowestSequenceId(encodedRegionName);
+      }
+    }
+    return HConstants.NO_SEQNUM;
   }
 
   private static final Set<byte[]> STORES_TO_FLUSH =

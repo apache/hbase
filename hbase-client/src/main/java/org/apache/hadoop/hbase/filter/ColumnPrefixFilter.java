@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
  * with columns like 'ball', 'act'.
  */
 @InterfaceAudience.Public
-public class ColumnPrefixFilter extends FilterBase {
+public class ColumnPrefixFilter extends FilterBase implements HintingFilter {
   protected byte[] prefix = null;
 
   public ColumnPrefixFilter(final byte[] prefix) {

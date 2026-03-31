@@ -77,7 +77,7 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
       () -> TEST_UTIL.getMiniHBaseCluster().getRegions(TableName.META_TABLE_NAME).size()
           >= numOfMetaReplica);
 
-    registry = ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
+    registry = ConnectionRegistryFactory.create(TEST_UTIL.getConfiguration(), User.getCurrent());
     CONN = new AsyncConnectionImpl(conf, registry, registry.getClusterId().get(), null,
       User.getCurrent());
   }
@@ -99,7 +99,7 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
         int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
         try {
           RegionLocations metaLocations = CONN.registry.getMetaRegionLocations()
-            .get(CONN.connConf.getReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
+            .get(CONN.connConf.getMetaReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
           numOfReplicas = metaLocations.size();
         } catch (Exception e) {
           LOG.error("Failed to get table {}'s region replication, ", META_TABLE_NAME, e);
@@ -126,7 +126,7 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
           int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
           try {
             RegionLocations metaLocations = CONN.registry.getMetaRegionLocations()
-              .get(CONN.connConf.getReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
+              .get(CONN.connConf.getMetaReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
             numOfReplicas = metaLocations.size();
           } catch (Exception e) {
             LOG.error("Failed to get table {}'s region replication, ", META_TABLE_NAME, e);

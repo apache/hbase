@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine.DATE_TIERED_STORE_ENGINE;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompoundConfiguration;
@@ -27,10 +29,15 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.conf.ConfigKey;
+import org.apache.hadoop.hbase.fs.ErasureCodingUtils;
+import org.apache.hadoop.hbase.regionserver.DataTieringManager;
+import org.apache.hadoop.hbase.regionserver.DataTieringType;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
+import org.apache.hadoop.hbase.regionserver.StoreEngine;
 import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.FIFOCompactionPolicy;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -77,6 +84,15 @@ public final class TableDescriptorChecker {
 
     // Setting logs to warning instead of throwing exception if sanityChecks are disabled
     boolean logWarn = !shouldSanityCheck(conf);
+
+    // Check value types
+    warnOrThrowExceptionForFailure(logWarn, () -> ConfigKey.validate(conf));
+    warnOrThrowExceptionForFailure(logWarn, () -> {
+      for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+        ConfigKey.validate(new CompoundConfiguration().addStringMap(cfd.getConfiguration())
+          .addBytesMap(cfd.getValues()));
+      }
+    });
 
     // check max file size
     long maxFileSizeLowerLimit = 2 * 1024 * 1024L; // 2M is the default lower limit
@@ -145,6 +161,11 @@ public final class TableDescriptorChecker {
     // check bloom filter type
     checkBloomFilterType(conf, td);
 
+    if (td.getErasureCodingPolicy() != null) {
+      warnOrThrowExceptionForFailure(logWarn,
+        () -> ErasureCodingUtils.verifySupport(conf, td.getErasureCodingPolicy()));
+    }
+
     for (ColumnFamilyDescriptor hcd : td.getColumnFamilies()) {
       if (hcd.getTimeToLive() <= 0) {
         String message = "TTL for column family " + hcd.getNameAsString() + " must be positive.";
@@ -184,19 +205,15 @@ public final class TableDescriptorChecker {
       }
 
       // check in-memory compaction
-      try {
-        hcd.getInMemoryCompaction();
-      } catch (IllegalArgumentException e) {
-        warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
-      }
+      warnOrThrowExceptionForFailure(logWarn, hcd::getInMemoryCompaction);
+
+      checkDateTieredCompactionForTimeRangeDataTiering(conf, td);
     }
   }
 
   private static void checkReplicationScope(final Configuration conf, final TableDescriptor td)
     throws IOException {
-    // Setting logs to warning instead of throwing exception if sanityChecks are disabled
-    boolean logWarn = !shouldSanityCheck(conf);
-    try {
+    warnOrThrowExceptionForFailure(conf, () -> {
       for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
         // check replication scope
         WALProtos.ScopeType scop = WALProtos.ScopeType.valueOf(cfd.getScope());
@@ -207,15 +224,41 @@ public final class TableDescriptorChecker {
           throw new DoNotRetryIOException(message);
         }
       }
-    } catch (IOException e) {
-      warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
-    }
+    });
+  }
 
+  private static void checkDateTieredCompactionForTimeRangeDataTiering(final Configuration conf,
+    final TableDescriptor td) throws IOException {
+    // Table level configurations
+    checkDateTieredCompactionForTimeRangeDataTiering(conf);
+    for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+      // Column family level configurations
+      Configuration cfdConf =
+        new CompoundConfiguration().add(conf).addStringMap(cfd.getConfiguration());
+      checkDateTieredCompactionForTimeRangeDataTiering(cfdConf);
+    }
+  }
+
+  private static void checkDateTieredCompactionForTimeRangeDataTiering(final Configuration conf)
+    throws IOException {
+    final String errorMessage =
+      "Time Range Data Tiering should be enabled with Date Tiered Compaction.";
+
+    warnOrThrowExceptionForFailure(false, () -> {
+
+      // Determine whether Date Tiered Compaction will be enabled when Time Range Data Tiering is
+      // enabled after the configuration change.
+      if (DataTieringType.TIME_RANGE.name().equals(conf.get(DataTieringManager.DATATIERING_KEY))) {
+        if (!DATE_TIERED_STORE_ENGINE.equals(conf.get(StoreEngine.STORE_ENGINE_CLASS_KEY))) {
+          throw new IllegalArgumentException(errorMessage);
+        }
+      }
+    });
   }
 
   private static void checkCompactionPolicy(final Configuration conf, final TableDescriptor td)
     throws IOException {
-    try {
+    warnOrThrowExceptionForFailure(false, () -> {
       // FIFO compaction has some requirements
       // Actually FCP ignores periodic major compactions
       String className = td.getValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY);
@@ -268,16 +311,12 @@ public final class TableDescriptorChecker {
           throw new IOException(message);
         }
       }
-    } catch (IOException e) {
-      warnOrThrowExceptionForFailure(false, e.getMessage(), e);
-    }
+    });
   }
 
   private static void checkBloomFilterType(final Configuration conf, final TableDescriptor td)
     throws IOException {
-    // Setting logs to warning instead of throwing exception if sanityChecks are disabled
-    boolean logWarn = !shouldSanityCheck(conf);
-    try {
+    warnOrThrowExceptionForFailure(conf, () -> {
       for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
         Configuration cfdConf = new CompoundConfiguration().addStringMap(cfd.getConfiguration());
         try {
@@ -286,50 +325,36 @@ public final class TableDescriptorChecker {
           throw new DoNotRetryIOException("Failed to get bloom filter param", e);
         }
       }
-    } catch (IOException e) {
-      warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
-    }
+    });
   }
 
   public static void checkCompression(final Configuration conf, final TableDescriptor td)
     throws IOException {
-    // Setting logs to warning instead of throwing exception if sanityChecks are disabled
-    boolean logWarn = !shouldSanityCheck(conf);
-    try {
+    warnOrThrowExceptionForFailure(conf, () -> {
       for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
         CompressionTest.testCompression(cfd.getCompressionType());
         CompressionTest.testCompression(cfd.getCompactionCompressionType());
         CompressionTest.testCompression(cfd.getMajorCompactionCompressionType());
         CompressionTest.testCompression(cfd.getMinorCompactionCompressionType());
       }
-    } catch (IOException e) {
-      warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
-    }
+    });
   }
 
   public static void checkEncryption(final Configuration conf, final TableDescriptor td)
     throws IOException {
-    // Setting logs to warning instead of throwing exception if sanityChecks are disabled
-    boolean logWarn = !shouldSanityCheck(conf);
-    try {
+    warnOrThrowExceptionForFailure(conf, () -> {
       for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
         EncryptionTest.testEncryption(conf, cfd.getEncryptionType(), cfd.getEncryptionKey());
       }
-    } catch (IOException e) {
-      warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
-    }
+    });
   }
 
   public static void checkClassLoading(final Configuration conf, final TableDescriptor td)
     throws IOException {
-    // Setting logs to warning instead of throwing exception if sanityChecks are disabled
-    boolean logWarn = !shouldSanityCheck(conf);
-    try {
+    warnOrThrowExceptionForFailure(conf, () -> {
       RegionSplitPolicy.getSplitPolicyClass(td, conf);
       RegionCoprocessorHost.testTableCoprocessorAttrs(conf, td);
-    } catch (Exception e) {
-      warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
-    }
+    });
   }
 
   // HBASE-13350 - Helper method to log warning on sanity check failures if checks disabled.
@@ -340,5 +365,25 @@ public final class TableDescriptorChecker {
         + " to false at conf or table descriptor if you want to bypass sanity checks", cause);
     }
     LOG.warn(message);
+  }
+
+  private static void warnOrThrowExceptionForFailure(Configuration conf, ThrowingRunnable runnable)
+    throws IOException {
+    boolean logWarn = !shouldSanityCheck(conf);
+    warnOrThrowExceptionForFailure(logWarn, runnable);
+  }
+
+  private static void warnOrThrowExceptionForFailure(boolean logWarn, ThrowingRunnable runnable)
+    throws IOException {
+    try {
+      runnable.run();
+    } catch (Exception e) {
+      warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
+    }
+  }
+
+  @FunctionalInterface
+  interface ThrowingRunnable {
+    void run() throws Exception;
   }
 }

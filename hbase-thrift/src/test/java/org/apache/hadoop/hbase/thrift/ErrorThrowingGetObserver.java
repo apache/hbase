@@ -56,8 +56,8 @@ public class ErrorThrowingGetObserver implements RegionCoprocessor, RegionObserv
   public static final String SHOULD_ERROR_ATTRIBUTE = "error";
 
   @Override
-  public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get, List<Cell> results)
-    throws IOException {
+  public void preGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> e, Get get,
+    List<Cell> results) throws IOException {
     byte[] errorType = get.getAttribute(SHOULD_ERROR_ATTRIBUTE);
     if (errorType != null) {
       ErrorType type = ErrorType.valueOf(Bytes.toString(errorType));

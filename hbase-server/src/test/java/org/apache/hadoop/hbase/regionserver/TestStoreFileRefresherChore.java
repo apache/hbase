@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.FailingStoreFileTrackerForTest;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -80,36 +82,36 @@ public class TestStoreFileRefresherChore {
   }
 
   private TableDescriptor getTableDesc(TableName tableName, int regionReplication,
-    byte[]... families) {
-    TableDescriptorBuilder builder =
-      TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(regionReplication);
+    String trackerName, byte[]... families) {
+    return getTableDesc(tableName, regionReplication, false, trackerName, families);
+  }
+
+  private TableDescriptor getTableDesc(TableName tableName, int regionReplication, boolean readOnly,
+    String trackerName, byte[]... families) {
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName)
+      .setRegionReplication(regionReplication).setReadOnly(readOnly);
+    if (trackerName != null) {
+      builder.setValue(TRACKER_IMPL, trackerName);
+    }
     Arrays.stream(families).map(family -> ColumnFamilyDescriptorBuilder.newBuilder(family)
       .setMaxVersions(Integer.MAX_VALUE).build()).forEachOrdered(builder::setColumnFamily);
     return builder.build();
   }
 
-  static class FailingHRegionFileSystem extends HRegionFileSystem {
-    boolean fail = false;
+  public static class FailingHRegionFileSystem extends HRegionFileSystem {
+    public boolean fail = false;
 
     FailingHRegionFileSystem(Configuration conf, FileSystem fs, Path tableDir,
       RegionInfo regionInfo) {
       super(conf, fs, tableDir, regionInfo);
     }
 
-    @Override
-    public List<StoreFileInfo> getStoreFiles(String familyName) throws IOException {
-      if (fail) {
-        throw new IOException("simulating FS failure");
-      }
-      return super.getStoreFiles(familyName);
-    }
   }
 
   private HRegion initHRegion(TableDescriptor htd, byte[] startKey, byte[] stopKey, int replicaId)
     throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
     Path tableDir = CommonFSUtils.getTableDir(testDir, htd.getTableName());
-
     RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).setStartKey(startKey)
       .setEndKey(stopKey).setRegionId(0L).setReplicaId(replicaId).build();
     HRegionFileSystem fs =
@@ -120,9 +122,8 @@ public class TestStoreFileRefresherChore {
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
       MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     HRegion region = new HRegion(fs, wals.getWAL(info), conf, htd, null);
-
+    fs.createRegionOnFileSystem(walConf, fs.getFileSystem(), tableDir, info);
     region.initialize();
-
     return region;
   }
 
@@ -195,7 +196,9 @@ public class TestStoreFileRefresherChore {
     when(regionServer.getOnlineRegionsLocalContext()).thenReturn(regions);
     when(regionServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
 
-    TableDescriptor htd = getTableDesc(TableName.valueOf(name.getMethodName()), 2, families);
+    String trackerName = FailingStoreFileTrackerForTest.class.getName();
+    TableDescriptor htd =
+      getTableDesc(TableName.valueOf(name.getMethodName()), 2, trackerName, families);
     HRegion primary = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 0);
     HRegion replica1 = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 1);
     regions.add(primary);
@@ -235,4 +238,48 @@ public class TestStoreFileRefresherChore {
       // expected
     }
   }
+
+  @Test
+  public void testRefreshReadOnlyTable() throws IOException {
+    int period = 0;
+    byte[][] families = new byte[][] { Bytes.toBytes("cf") };
+    byte[] qf = Bytes.toBytes("cq");
+
+    HRegionServer regionServer = mock(HRegionServer.class);
+    List<HRegion> regions = new ArrayList<>();
+    when(regionServer.getOnlineRegionsLocalContext()).thenReturn(regions);
+    when(regionServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
+
+    TableDescriptor htd = getTableDesc(TableName.valueOf(name.getMethodName()), 2, null, families);
+    HRegion primary = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 0);
+    HRegion replica1 = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 1);
+    regions.add(primary);
+    regions.add(replica1);
+
+    StorefileRefresherChore chore =
+      new StorefileRefresherChore(period, false, regionServer, new StoppableImplementation());
+
+    // write some data to primary and flush
+    putData(primary, 0, 100, qf, families);
+    primary.flush(true);
+    verifyData(primary, 0, 100, qf, families);
+
+    verifyDataExpectFail(replica1, 0, 100, qf, families);
+    chore.chore();
+    verifyData(replica1, 0, 100, qf, families);
+
+    // write some data to primary and flush before refresh the store files for the replica
+    putData(primary, 100, 100, qf, families);
+    primary.flush(true);
+    verifyData(primary, 0, 200, qf, families);
+
+    // then the table is set to readonly
+    htd = getTableDesc(TableName.valueOf(name.getMethodName()), 2, true, null, families);
+    primary.setTableDescriptor(htd);
+    replica1.setTableDescriptor(htd);
+
+    chore.chore(); // we cannot refresh the store files
+    verifyDataExpectFail(replica1, 100, 100, qf, families);
+  }
+
 }

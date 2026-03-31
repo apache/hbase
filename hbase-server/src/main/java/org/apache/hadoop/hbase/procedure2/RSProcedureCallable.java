@@ -26,7 +26,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * A general interface for a sub procedure runs at RS side.
  */
 @InterfaceAudience.Private
-public interface RSProcedureCallable extends Callable<Void> {
+public interface RSProcedureCallable extends Callable<byte[]> {
 
   /**
    * Initialize the callable

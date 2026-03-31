@@ -127,12 +127,16 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   private long rootProcId = NO_PROC_ID;
   private long procId = NO_PROC_ID;
   private long submittedTime;
+  private boolean isCriticalSystemTable;
 
   // Runtime state, updated every operation
   private ProcedureState state = ProcedureState.INITIALIZING;
   private RemoteProcedureException exception = null;
   private int[] stackIndexes = null;
   private int childrenLatch = 0;
+  // since we do not always maintain stackIndexes if the root procedure does not support rollback,
+  // we need a separated flag to indicate whether a procedure was executed
+  private boolean wasExecuted;
 
   private volatile int timeout = NO_TIMEOUT;
   private volatile long lastUpdate;
@@ -340,6 +344,25 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * Called when the procedure is ready to be added to the queue after the loading/replay operation.
    */
   protected void afterReplay(TEnvironment env) {
+    // no-op
+  }
+
+  /**
+   * Called before we call the execute method of this procedure, but after we acquire the execution
+   * lock and procedure scheduler lock.
+   */
+  protected void beforeExec(TEnvironment env) throws ProcedureSuspendedException {
+    // no-op
+  }
+
+  /**
+   * Called after we call the execute method of this procedure, and also after we initialize all the
+   * sub procedures and persist the the state if persistence is needed.
+   * <p>
+   * This is for doing some hooks after we initialize the sub procedures. See HBASE-29259 for more
+   * details on why we can not release the region lock inside the execute method.
+   */
+  protected void afterExec(TEnvironment env) {
     // no-op
   }
 
@@ -584,6 +607,14 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    */
   protected void setParentProcId(long parentProcId) {
     this.parentProcId = parentProcId;
+  }
+
+  public void setCriticalSystemTable(boolean isCriticalSystemTable) {
+    this.isCriticalSystemTable = isCriticalSystemTable;
+  }
+
+  public boolean isCriticalSystemTable() {
+    return isCriticalSystemTable;
   }
 
   protected void setRootProcId(long rootProcId) {
@@ -870,6 +901,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
       stackIndexes = Arrays.copyOf(stackIndexes, count + 1);
       stackIndexes[count] = index;
     }
+    wasExecuted = true;
   }
 
   protected synchronized boolean removeStackIndex() {
@@ -890,14 +922,30 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
     for (int i = 0; i < this.stackIndexes.length; ++i) {
       this.stackIndexes[i] = stackIndexes.get(i);
     }
+    // for backward compatible, where a procedure is serialized before we added the executed flag,
+    // the flag will be false so we need to set the wasExecuted flag here
+    this.wasExecuted = true;
   }
 
-  protected synchronized boolean wasExecuted() {
-    return stackIndexes != null;
+  protected synchronized void setExecuted() {
+    this.wasExecuted = true;
+  }
+
+  public synchronized boolean wasExecuted() {
+    return wasExecuted;
   }
 
   protected synchronized int[] getStackIndexes() {
     return stackIndexes;
+  }
+
+  /**
+   * Return whether the procedure supports rollback. If the procedure does not support rollback, we
+   * can skip the rollback state management which could increase the performance. See HBASE-28210
+   * and HBASE-28212.
+   */
+  protected boolean isRollbackSupported() {
+    return true;
   }
 
   // ==========================================================================

@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.loginKerberosP
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.setSecuredConfiguration;
 
 import java.io.File;
+import java.util.Collections;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl;
@@ -66,8 +67,8 @@ public class TestSaslTlsIPCRejectPlainText extends AbstractTestTlsRejectPlainTex
     UGI = loginKerberosPrincipal(KEYTAB_FILE.getCanonicalPath(), PRINCIPAL);
     setSecuredConfiguration(util.getConfiguration());
     SecurityInfo securityInfoMock = Mockito.mock(SecurityInfo.class);
-    Mockito.when(securityInfoMock.getServerPrincipal())
-      .thenReturn(HBaseKerberosUtils.KRB_PRINCIPAL);
+    Mockito.when(securityInfoMock.getServerPrincipals())
+      .thenReturn(Collections.singletonList(HBaseKerberosUtils.KRB_PRINCIPAL));
     SecurityInfo.addInfo("TestProtobufRpcProto", securityInfoMock);
   }
 

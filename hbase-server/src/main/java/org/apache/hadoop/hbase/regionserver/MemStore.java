@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -31,7 +33,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * </p>
  */
 @InterfaceAudience.Private
-public interface MemStore {
+public interface MemStore extends Closeable {
 
   /**
    * Creates a snapshot of the current memstore. Snapshot must be cleared by call to
@@ -64,14 +66,14 @@ public interface MemStore {
    * @param memstoreSizing The delta in memstore size will be passed back via this. This will
    *                       include both data size and heap overhead delta.
    */
-  void add(final Cell cell, MemStoreSizing memstoreSizing);
+  void add(final ExtendedCell cell, MemStoreSizing memstoreSizing);
 
   /**
    * Write the updates
    * @param memstoreSizing The delta in memstore size will be passed back via this. This will
    *                       include both data size and heap overhead delta.
    */
-  void add(Iterable<Cell> cells, MemStoreSizing memstoreSizing);
+  void add(Iterable<ExtendedCell> cells, MemStoreSizing memstoreSizing);
 
   /** Returns Oldest timestamp of all the Cells in the MemStore */
   long timeOfOldestEdit();
@@ -91,7 +93,7 @@ public interface MemStore {
    * @param memstoreSizing The delta in memstore size will be passed back via this. This will
    *                       include both data size and heap overhead delta.
    */
-  void upsert(Iterable<Cell> cells, long readpoint, MemStoreSizing memstoreSizing);
+  void upsert(Iterable<ExtendedCell> cells, long readpoint, MemStoreSizing memstoreSizing);
 
   /**
    * @return scanner over the memstore. This might include scanner over the snapshot when one is
@@ -131,4 +133,15 @@ public interface MemStore {
   default void stopReplayingFromWAL() {
     return;
   }
+
+  /**
+   * Close the memstore.
+   * <p>
+   * Usually this should only be called when there is nothing in the memstore, unless we are going
+   * to abort ourselves.
+   * <p>
+   * For normal cases, this method is only used to fix the reference counting, see HBASE-27941.
+   */
+  @Override
+  void close();
 }

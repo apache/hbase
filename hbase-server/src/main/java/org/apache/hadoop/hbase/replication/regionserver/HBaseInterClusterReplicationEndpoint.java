@@ -106,7 +106,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   private boolean isSerial = false;
   // Initialising as 0 to guarantee at least one logging message
   private long lastSinkFetchTime = 0;
-  private volatile boolean stopping = false;
 
   @Override
   public void init(Context context) throws IOException {
@@ -449,7 +448,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     }
 
     List<List<Entry>> batches = createBatches(replicateContext.getEntries());
-    while (this.isRunning() && !this.stopping) {
+    while (this.isRunning()) {
       if (!isPeerEnabled()) {
         if (sleepForRetries("Replication is disabled", sleepMultiplier)) {
           sleepMultiplier++;
@@ -512,14 +511,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
 
   protected boolean isPeerEnabled() {
     return ctx.getReplicationPeer().isPeerEnabled();
-  }
-
-  @Override
-  protected void doStop() {
-    // Allow currently running replication tasks to finish
-    this.stopping = true;
-    disconnect(); // don't call super.doStop()
-    notifyStopped();
   }
 
   protected CompletableFuture<Integer> replicateEntries(List<Entry> entries, int batchIndex,

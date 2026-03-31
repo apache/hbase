@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
  * fast-forwarding during scan. Thus, the scan will be quite efficient.
  */
 @InterfaceAudience.Public
-public class MultiRowRangeFilter extends FilterBase {
+public class MultiRowRangeFilter extends FilterBase implements HintingFilter {
 
   private static final int ROW_BEFORE_FIRST_RANGE = -1;
 

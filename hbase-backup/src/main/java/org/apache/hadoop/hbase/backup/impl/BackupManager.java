@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
+import static org.apache.hadoop.hbase.backup.impl.BackupSystemTable.Order.NEW_TO_OLD;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,17 +28,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupHFileCleaner;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
+import org.apache.hadoop.hbase.backup.BackupMasterObserver;
 import org.apache.hadoop.hbase.backup.BackupObserver;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.BackupType;
-import org.apache.hadoop.hbase.backup.HBackupFileSystem;
-import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
 import org.apache.hadoop.hbase.backup.master.BackupLogCleaner;
 import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.backup.regionserver.LogRollRegionServerProcedureManager;
@@ -46,7 +47,6 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.procedure.ProcedureManagerHost;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -123,11 +123,17 @@ public class BackupManager implements Closeable {
     plugins = conf.get(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS);
     conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
       (plugins == null ? "" : plugins + ",") + BackupHFileCleaner.class.getName());
+
+    String observerClass = BackupMasterObserver.class.getName();
+    String masterCoProc = conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      (masterCoProc == null ? "" : masterCoProc + ",") + observerClass);
+
     if (LOG.isDebugEnabled()) {
       LOG.debug(
         "Added log cleaner: {}. Added master procedure manager: {}."
-          + "Added master procedure manager: {}",
-        cleanerClass, masterProcedureClass, BackupHFileCleaner.class.getName());
+          + " Added master procedure manager: {}. Added master observer: {}",
+        cleanerClass, masterProcedureClass, BackupHFileCleaner.class.getName(), observerClass);
     }
   }
 
@@ -196,7 +202,8 @@ public class BackupManager implements Closeable {
    * @throws BackupException exception
    */
   public BackupInfo createBackupInfo(String backupId, BackupType type, List<TableName> tableList,
-    String targetRootDir, int workers, long bandwidth) throws BackupException {
+    String targetRootDir, int workers, long bandwidth, boolean noChecksumVerify)
+    throws BackupException {
     if (targetRootDir == null) {
       throw new BackupException("Wrong backup request parameter: target backup root directory");
     }
@@ -233,6 +240,7 @@ public class BackupManager implements Closeable {
       targetRootDir);
     backupInfo.setBandwidth(bandwidth);
     backupInfo.setWorkers(workers);
+    backupInfo.setNoChecksumVerify(noChecksumVerify);
     return backupInfo;
   }
 
@@ -244,7 +252,8 @@ public class BackupManager implements Closeable {
    * @throws IOException exception
    */
   private String getOngoingBackupId() throws IOException {
-    ArrayList<BackupInfo> sessions = systemTable.getBackupInfos(BackupState.RUNNING);
+    List<BackupInfo> sessions =
+      systemTable.getBackupHistory(NEW_TO_OLD, 1, withState(BackupState.RUNNING));
     if (sessions.size() == 0) {
       return null;
     }
@@ -266,102 +275,6 @@ public class BackupManager implements Closeable {
 
   public void setBackupInfo(BackupInfo backupInfo) {
     this.backupInfo = backupInfo;
-  }
-
-  /**
-   * Get direct ancestors of the current backup.
-   * @param backupInfo The backup info for the current backup
-   * @return The ancestors for the current backup
-   * @throws IOException exception
-   */
-  public ArrayList<BackupImage> getAncestors(BackupInfo backupInfo) throws IOException {
-    LOG.debug("Getting the direct ancestors of the current backup {}", backupInfo.getBackupId());
-
-    ArrayList<BackupImage> ancestors = new ArrayList<>();
-
-    // full backup does not have ancestor
-    if (backupInfo.getType() == BackupType.FULL) {
-      LOG.debug("Current backup is a full backup, no direct ancestor for it.");
-      return ancestors;
-    }
-
-    // get all backup history list in descending order
-    ArrayList<BackupInfo> allHistoryList = getBackupHistory(true);
-    for (BackupInfo backup : allHistoryList) {
-
-      BackupImage.Builder builder = BackupImage.newBuilder();
-
-      BackupImage image = builder.withBackupId(backup.getBackupId()).withType(backup.getType())
-        .withRootDir(backup.getBackupRootDir()).withTableList(backup.getTableNames())
-        .withStartTime(backup.getStartTs()).withCompleteTime(backup.getCompleteTs()).build();
-
-      // Only direct ancestors for a backup are required and not entire history of backup for this
-      // table resulting in verifying all of the previous backups which is unnecessary and backup
-      // paths need not be valid beyond the lifetime of a backup.
-      //
-      // RootDir is way of grouping a single backup including one full and many incremental backups
-      if (!image.getRootDir().equals(backupInfo.getBackupRootDir())) {
-        continue;
-      }
-
-      // add the full backup image as an ancestor until the last incremental backup
-      if (backup.getType().equals(BackupType.FULL)) {
-        // check the backup image coverage, if previous image could be covered by the newer ones,
-        // then no need to add
-        if (!BackupManifest.canCoverImage(ancestors, image)) {
-          ancestors.add(image);
-        }
-      } else {
-        // found last incremental backup, if previously added full backup ancestor images can cover
-        // it, then this incremental ancestor is not the dependent of the current incremental
-        // backup, that is to say, this is the backup scope boundary of current table set.
-        // Otherwise, this incremental backup ancestor is the dependent ancestor of the ongoing
-        // incremental backup
-        if (BackupManifest.canCoverImage(ancestors, image)) {
-          LOG.debug("Met the backup boundary of the current table set:");
-          for (BackupImage image1 : ancestors) {
-            LOG.debug("  BackupID={}, BackupDir={}", image1.getBackupId(), image1.getRootDir());
-          }
-        } else {
-          Path logBackupPath =
-            HBackupFileSystem.getBackupPath(backup.getBackupRootDir(), backup.getBackupId());
-          LOG.debug(
-            "Current backup has an incremental backup ancestor, "
-              + "touching its image manifest in {}" + " to construct the dependency.",
-            logBackupPath.toString());
-          BackupManifest lastIncrImgManifest = new BackupManifest(conf, logBackupPath);
-          BackupImage lastIncrImage = lastIncrImgManifest.getBackupImage();
-          ancestors.add(lastIncrImage);
-
-          LOG.debug("Last dependent incremental backup image: {BackupID={}" + "BackupDir={}}",
-            lastIncrImage.getBackupId(), lastIncrImage.getRootDir());
-        }
-      }
-    }
-    LOG.debug("Got {} ancestors for the current backup.", ancestors.size());
-    return ancestors;
-  }
-
-  /**
-   * Get the direct ancestors of this backup for one table involved.
-   * @param backupInfo backup info
-   * @param table      table
-   * @return backupImages on the dependency list
-   * @throws IOException exception
-   */
-  public ArrayList<BackupImage> getAncestors(BackupInfo backupInfo, TableName table)
-    throws IOException {
-    ArrayList<BackupImage> ancestors = getAncestors(backupInfo);
-    ArrayList<BackupImage> tableAncestors = new ArrayList<>();
-    for (BackupImage image : ancestors) {
-      if (image.hasTable(table)) {
-        tableAncestors.add(image);
-        if (image.getType() == BackupType.FULL) {
-          break;
-        }
-      }
-    }
-    return tableAncestors;
   }
 
   /*
@@ -425,26 +338,6 @@ public class BackupManager implements Closeable {
   }
 
   /**
-   * Read the last backup start code (timestamp) of last successful backup. Will return null if
-   * there is no startcode stored in backup system table or the value is of length 0. These two
-   * cases indicate there is no successful backup completed so far.
-   * @return the timestamp of a last successful backup
-   * @throws IOException exception
-   */
-  public String readBackupStartCode() throws IOException {
-    return systemTable.readBackupStartCode(backupInfo.getBackupRootDir());
-  }
-
-  /**
-   * Write the start code (timestamp) to backup system table. If passed in null, then write 0 byte.
-   * @param startCode start code
-   * @throws IOException exception
-   */
-  public void writeBackupStartCode(Long startCode) throws IOException {
-    systemTable.writeBackupStartCode(startCode, backupInfo.getBackupRootDir());
-  }
-
-  /**
    * Get the RS log information after the last log roll from backup system table.
    * @return RS log info
    * @throws IOException exception
@@ -453,8 +346,7 @@ public class BackupManager implements Closeable {
     return systemTable.readRegionServerLastLogRollResult(backupInfo.getBackupRootDir());
   }
 
-  public Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>, List<byte[]>>
-    readBulkloadRows(List<TableName> tableList) throws IOException {
+  public List<BulkLoad> readBulkloadRows(List<TableName> tableList) throws IOException {
     return systemTable.readBulkloadRows(tableList);
   }
 
@@ -463,16 +355,10 @@ public class BackupManager implements Closeable {
   }
 
   /**
-   * Get all completed backup information (in desc order by time)
-   * @return history info of BackupCompleteData
-   * @throws IOException exception
+   * Get all backup information, ordered by descending start time. I.e. from newest to oldest.
    */
-  public List<BackupInfo> getBackupHistory() throws IOException {
-    return systemTable.getBackupHistory();
-  }
-
-  public ArrayList<BackupInfo> getBackupHistory(boolean completed) throws IOException {
-    return systemTable.getBackupHistory(completed);
+  public List<BackupInfo> getBackupHistory(BackupInfo.Filter... filters) throws IOException {
+    return systemTable.getBackupHistory(filters);
   }
 
   /**

@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.util.Collections;
+import java.util.List;
+import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -28,11 +31,11 @@ abstract class BalanceAction {
     ASSIGN_REGION,
     MOVE_REGION,
     SWAP_REGIONS,
+    MOVE_BATCH,
     NULL,
   }
 
-  static final BalanceAction NULL_ACTION = new BalanceAction(Type.NULL) {
-  };
+  static final BalanceAction NULL_ACTION = new NullBalanceAction();
 
   private final Type type;
 
@@ -43,16 +46,39 @@ abstract class BalanceAction {
   /**
    * Returns an Action which would undo this action
    */
-  BalanceAction undoAction() {
-    return this;
-  }
+  abstract BalanceAction undoAction();
+
+  /**
+   * Returns the Action represented as RegionPlans
+   */
+  abstract List<RegionPlan> toRegionPlans(BalancerClusterState cluster);
 
   Type getType() {
     return type;
   }
 
+  long getStepCount() {
+    return 1;
+  }
+
   @Override
   public String toString() {
     return type + ":";
+  }
+
+  private static final class NullBalanceAction extends BalanceAction {
+    private NullBalanceAction() {
+      super(Type.NULL);
+    }
+
+    @Override
+    BalanceAction undoAction() {
+      return this;
+    }
+
+    @Override
+    List<RegionPlan> toRegionPlans(BalancerClusterState cluster) {
+      return Collections.emptyList();
+    }
   }
 }

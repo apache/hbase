@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -37,19 +38,23 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TimeUnit;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.QuotaScope;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Throttle;
@@ -72,6 +77,34 @@ public class QuotaUtil extends QuotaTableUtil {
   public static final String WRITE_CAPACITY_UNIT_CONF_KEY = "hbase.quota.write.capacity.unit";
   // the default one write capacity unit is 1024 bytes (1KB)
   public static final long DEFAULT_WRITE_CAPACITY_UNIT = 1024;
+
+  /*
+   * The below defaults, if configured, will be applied to otherwise unthrottled users. For example,
+   * set `hbase.quota.default.user.machine.read.size` to `1048576` in your hbase-site.xml to ensure
+   * that any given user may not query more than 1mb per second from any given machine, unless
+   * explicitly permitted by a persisted quota. All of these defaults use TimeUnit.SECONDS and
+   * QuotaScope.MACHINE.
+   */
+  public static final String QUOTA_DEFAULT_USER_MACHINE_READ_NUM =
+    "hbase.quota.default.user.machine.read.num";
+  public static final String QUOTA_DEFAULT_USER_MACHINE_READ_SIZE =
+    "hbase.quota.default.user.machine.read.size";
+  public static final String QUOTA_DEFAULT_USER_MACHINE_REQUEST_NUM =
+    "hbase.quota.default.user.machine.request.num";
+  public static final String QUOTA_DEFAULT_USER_MACHINE_REQUEST_SIZE =
+    "hbase.quota.default.user.machine.request.size";
+  public static final String QUOTA_DEFAULT_USER_MACHINE_WRITE_NUM =
+    "hbase.quota.default.user.machine.write.num";
+  public static final String QUOTA_DEFAULT_USER_MACHINE_WRITE_SIZE =
+    "hbase.quota.default.user.machine.write.size";
+  public static final String QUOTA_DEFAULT_USER_MACHINE_ATOMIC_READ_SIZE =
+    "hbase.quota.default.user.machine.atomic.read.size";
+  public static final String QUOTA_DEFAULT_USER_MACHINE_ATOMIC_REQUEST_NUM =
+    "hbase.quota.default.user.machine.atomic.request.num";
+  public static final String QUOTA_DEFAULT_USER_MACHINE_ATOMIC_WRITE_SIZE =
+    "hbase.quota.default.user.machine.atomic.write.size";
+  public static final String QUOTA_DEFAULT_USER_MACHINE_REQUEST_HANDLER_USAGE_MS =
+    "hbase.quota.default.user.machine.request.handler.usage.ms";
 
   /** Table descriptor for Quota internal table */
   public static final TableDescriptor QUOTA_TABLE_DESC =
@@ -152,6 +185,31 @@ public class QuotaUtil extends QuotaTableUtil {
   public static void deleteRegionServerQuota(final Connection connection, final String regionServer)
     throws IOException {
     deleteQuotas(connection, getRegionServerRowKey(regionServer));
+  }
+
+  public static OperationQuota.OperationType getQuotaOperationType(ClientProtos.Action action,
+    boolean hasCondition) {
+    if (action.hasMutation()) {
+      return getQuotaOperationType(action.getMutation(), hasCondition);
+    }
+    return OperationQuota.OperationType.GET;
+  }
+
+  public static OperationQuota.OperationType
+    getQuotaOperationType(ClientProtos.MutateRequest mutateRequest) {
+    return getQuotaOperationType(mutateRequest.getMutation(), mutateRequest.hasCondition());
+  }
+
+  private static OperationQuota.OperationType
+    getQuotaOperationType(ClientProtos.MutationProto mutationProto, boolean hasCondition) {
+    ClientProtos.MutationProto.MutationType mutationType = mutationProto.getMutateType();
+    if (
+      hasCondition || mutationType == ClientProtos.MutationProto.MutationType.APPEND
+        || mutationType == ClientProtos.MutationProto.MutationType.INCREMENT
+    ) {
+      return OperationQuota.OperationType.CHECK_AND_MUTATE;
+    }
+    return OperationQuota.OperationType.MUTATE;
   }
 
   protected static void switchExceedThrottleQuota(final Connection connection,
@@ -272,58 +330,103 @@ public class QuotaUtil extends QuotaTableUtil {
     doDelete(connection, delete);
   }
 
-  public static Map<String, UserQuotaState> fetchUserQuotas(final Connection connection,
-    final List<Get> gets, Map<TableName, Double> tableMachineQuotaFactors, double factor)
+  public static Map<String, UserQuotaState> fetchUserQuotas(final Configuration conf,
+    final Connection connection, Map<TableName, Double> tableMachineQuotaFactors, double factor)
     throws IOException {
-    long nowTs = EnvironmentEdgeManager.currentTime();
-    Result[] results = doGet(connection, gets);
+    Map<String, UserQuotaState> userQuotas = new HashMap<>();
+    try (Table table = connection.getTable(QUOTA_TABLE_NAME)) {
+      Scan scan = new Scan();
+      scan.addFamily(QUOTA_FAMILY_INFO);
+      scan.setStartStopRowForPrefixScan(QUOTA_USER_ROW_KEY_PREFIX);
+      try (ResultScanner resultScanner = table.getScanner(scan)) {
+        for (Result result : resultScanner) {
+          byte[] key = result.getRow();
+          assert isUserRowKey(key);
+          String user = getUserFromRowKey(key);
 
-    Map<String, UserQuotaState> userQuotas = new HashMap<>(results.length);
-    for (int i = 0; i < results.length; ++i) {
-      byte[] key = gets.get(i).getRow();
-      assert isUserRowKey(key);
-      String user = getUserFromRowKey(key);
+          final UserQuotaState quotaInfo = new UserQuotaState();
+          userQuotas.put(user, quotaInfo);
 
-      final UserQuotaState quotaInfo = new UserQuotaState(nowTs);
-      userQuotas.put(user, quotaInfo);
+          try {
+            parseUserResult(user, result, new UserQuotasVisitor() {
+              @Override
+              public void visitUserQuotas(String userName, String namespace, Quotas quotas) {
+                quotas = updateClusterQuotaToMachineQuota(quotas, factor);
+                quotaInfo.setQuotas(conf, namespace, quotas);
+              }
 
-      if (results[i].isEmpty()) continue;
-      assert Bytes.equals(key, results[i].getRow());
+              @Override
+              public void visitUserQuotas(String userName, TableName table, Quotas quotas) {
+                quotas = updateClusterQuotaToMachineQuota(quotas,
+                  tableMachineQuotaFactors.containsKey(table)
+                    ? tableMachineQuotaFactors.get(table)
+                    : 1);
+                quotaInfo.setQuotas(conf, table, quotas);
+              }
 
-      try {
-        parseUserResult(user, results[i], new UserQuotasVisitor() {
-          @Override
-          public void visitUserQuotas(String userName, String namespace, Quotas quotas) {
-            quotas = updateClusterQuotaToMachineQuota(quotas, factor);
-            quotaInfo.setQuotas(namespace, quotas);
+              @Override
+              public void visitUserQuotas(String userName, Quotas quotas) {
+                quotas = updateClusterQuotaToMachineQuota(quotas, factor);
+                quotaInfo.setQuotas(conf, quotas);
+              }
+            });
+          } catch (IOException e) {
+            LOG.error("Unable to parse user '" + user + "' quotas", e);
+            userQuotas.remove(user);
           }
-
-          @Override
-          public void visitUserQuotas(String userName, TableName table, Quotas quotas) {
-            quotas = updateClusterQuotaToMachineQuota(quotas,
-              tableMachineQuotaFactors.containsKey(table)
-                ? tableMachineQuotaFactors.get(table)
-                : 1);
-            quotaInfo.setQuotas(table, quotas);
-          }
-
-          @Override
-          public void visitUserQuotas(String userName, Quotas quotas) {
-            quotas = updateClusterQuotaToMachineQuota(quotas, factor);
-            quotaInfo.setQuotas(quotas);
-          }
-        });
-      } catch (IOException e) {
-        LOG.error("Unable to parse user '" + user + "' quotas", e);
-        userQuotas.remove(user);
+        }
       }
     }
+
     return userQuotas;
   }
 
-  public static Map<TableName, QuotaState> fetchTableQuotas(final Connection connection,
-    final List<Get> gets, Map<TableName, Double> tableMachineFactors) throws IOException {
-    return fetchGlobalQuotas("table", connection, gets, new KeyFromRow<TableName>() {
+  protected static UserQuotaState buildDefaultUserQuotaState(Configuration conf) {
+    QuotaProtos.Throttle.Builder throttleBuilder = QuotaProtos.Throttle.newBuilder();
+
+    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_READ_NUM)
+      .ifPresent(throttleBuilder::setReadNum);
+    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_READ_SIZE)
+      .ifPresent(throttleBuilder::setReadSize);
+    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_REQUEST_NUM)
+      .ifPresent(throttleBuilder::setReqNum);
+    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_REQUEST_SIZE)
+      .ifPresent(throttleBuilder::setReqSize);
+    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_WRITE_NUM)
+      .ifPresent(throttleBuilder::setWriteNum);
+    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_WRITE_SIZE)
+      .ifPresent(throttleBuilder::setWriteSize);
+    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_ATOMIC_READ_SIZE)
+      .ifPresent(throttleBuilder::setAtomicReadSize);
+    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_ATOMIC_REQUEST_NUM)
+      .ifPresent(throttleBuilder::setAtomicReqNum);
+    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_ATOMIC_WRITE_SIZE)
+      .ifPresent(throttleBuilder::setAtomicWriteSize);
+    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_REQUEST_HANDLER_USAGE_MS)
+      .ifPresent(throttleBuilder::setReqHandlerUsageMs);
+
+    UserQuotaState state = new UserQuotaState();
+    QuotaProtos.Quotas defaultQuotas =
+      QuotaProtos.Quotas.newBuilder().setThrottle(throttleBuilder.build()).build();
+    state.setQuotas(conf, defaultQuotas);
+    return state;
+  }
+
+  private static Optional<TimedQuota> buildDefaultTimedQuota(Configuration conf, String key) {
+    int defaultSoftLimit = conf.getInt(key, -1);
+    if (defaultSoftLimit == -1) {
+      return Optional.empty();
+    }
+    return Optional.of(ProtobufUtil.toTimedQuota(defaultSoftLimit,
+      java.util.concurrent.TimeUnit.SECONDS, org.apache.hadoop.hbase.quotas.QuotaScope.MACHINE));
+  }
+
+  public static Map<TableName, QuotaState> fetchTableQuotas(final Configuration conf,
+    final Connection connection, Map<TableName, Double> tableMachineFactors) throws IOException {
+    Scan scan = new Scan();
+    scan.addFamily(QUOTA_FAMILY_INFO);
+    scan.setStartStopRowForPrefixScan(QUOTA_TABLE_ROW_KEY_PREFIX);
+    return fetchGlobalQuotas(conf, "table", scan, connection, new KeyFromRow<TableName>() {
       @Override
       public TableName getKeyFromRow(final byte[] row) {
         assert isTableRowKey(row);
@@ -337,9 +440,12 @@ public class QuotaUtil extends QuotaTableUtil {
     });
   }
 
-  public static Map<String, QuotaState> fetchNamespaceQuotas(final Connection connection,
-    final List<Get> gets, double factor) throws IOException {
-    return fetchGlobalQuotas("namespace", connection, gets, new KeyFromRow<String>() {
+  public static Map<String, QuotaState> fetchNamespaceQuotas(final Configuration conf,
+    final Connection connection, double factor) throws IOException {
+    Scan scan = new Scan();
+    scan.addFamily(QUOTA_FAMILY_INFO);
+    scan.setStartStopRowForPrefixScan(QUOTA_NAMESPACE_ROW_KEY_PREFIX);
+    return fetchGlobalQuotas(conf, "namespace", scan, connection, new KeyFromRow<String>() {
       @Override
       public String getKeyFromRow(final byte[] row) {
         assert isNamespaceRowKey(row);
@@ -353,9 +459,12 @@ public class QuotaUtil extends QuotaTableUtil {
     });
   }
 
-  public static Map<String, QuotaState> fetchRegionServerQuotas(final Connection connection,
-    final List<Get> gets) throws IOException {
-    return fetchGlobalQuotas("regionServer", connection, gets, new KeyFromRow<String>() {
+  public static Map<String, QuotaState> fetchRegionServerQuotas(final Configuration conf,
+    final Connection connection) throws IOException {
+    Scan scan = new Scan();
+    scan.addFamily(QUOTA_FAMILY_INFO);
+    scan.setStartStopRowForPrefixScan(QUOTA_REGION_SERVER_ROW_KEY_PREFIX);
+    return fetchGlobalQuotas(conf, "regionServer", scan, connection, new KeyFromRow<String>() {
       @Override
       public String getKeyFromRow(final byte[] row) {
         assert isRegionServerRowKey(row);
@@ -369,32 +478,35 @@ public class QuotaUtil extends QuotaTableUtil {
     });
   }
 
-  public static <K> Map<K, QuotaState> fetchGlobalQuotas(final String type,
-    final Connection connection, final List<Get> gets, final KeyFromRow<K> kfr) throws IOException {
-    long nowTs = EnvironmentEdgeManager.currentTime();
-    Result[] results = doGet(connection, gets);
+  public static <K> Map<K, QuotaState> fetchGlobalQuotas(final Configuration conf,
+    final String type, final Scan scan, final Connection connection, final KeyFromRow<K> kfr)
+    throws IOException {
 
-    Map<K, QuotaState> globalQuotas = new HashMap<>(results.length);
-    for (int i = 0; i < results.length; ++i) {
-      byte[] row = gets.get(i).getRow();
-      K key = kfr.getKeyFromRow(row);
+    Map<K, QuotaState> globalQuotas = new HashMap<>();
+    try (Table table = connection.getTable(QUOTA_TABLE_NAME)) {
+      try (ResultScanner resultScanner = table.getScanner(scan)) {
+        for (Result result : resultScanner) {
 
-      QuotaState quotaInfo = new QuotaState(nowTs);
-      globalQuotas.put(key, quotaInfo);
+          byte[] row = result.getRow();
+          K key = kfr.getKeyFromRow(row);
 
-      if (results[i].isEmpty()) continue;
-      assert Bytes.equals(row, results[i].getRow());
+          QuotaState quotaInfo = new QuotaState();
+          globalQuotas.put(key, quotaInfo);
 
-      byte[] data = results[i].getValue(QUOTA_FAMILY_INFO, QUOTA_QUALIFIER_SETTINGS);
-      if (data == null) continue;
+          byte[] data = result.getValue(QUOTA_FAMILY_INFO, QUOTA_QUALIFIER_SETTINGS);
+          if (data == null) {
+            continue;
+          }
 
-      try {
-        Quotas quotas = quotasFromData(data);
-        quotas = updateClusterQuotaToMachineQuota(quotas, kfr.getFactor(key));
-        quotaInfo.setQuotas(quotas);
-      } catch (IOException e) {
-        LOG.error("Unable to parse " + type + " '" + key + "' quotas", e);
-        globalQuotas.remove(key);
+          try {
+            Quotas quotas = quotasFromData(data);
+            quotas = updateClusterQuotaToMachineQuota(quotas, kfr.getFactor(key));
+            quotaInfo.setQuotas(conf, quotas);
+          } catch (IOException e) {
+            LOG.error("Unable to parse {} '{}' quotas", type, key, e);
+            globalQuotas.remove(key);
+          }
+        }
       }
     }
     return globalQuotas;
@@ -502,6 +614,14 @@ public class QuotaUtil extends QuotaTableUtil {
       for (Cell cell : result.rawCells()) {
         size += cell.getSerializedSize();
       }
+    }
+    return size;
+  }
+
+  public static long calculateCellsSize(final List<Cell> cells) {
+    long size = 0;
+    for (Cell cell : cells) {
+      size += cell.getSerializedSize();
     }
     return size;
   }

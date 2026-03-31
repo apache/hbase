@@ -49,6 +49,7 @@ public class TruncateTableProcedure extends AbstractStateMachineTableProcedure<T
   private List<RegionInfo> regions;
   private TableDescriptor tableDescriptor;
   private TableName tableName;
+  private String recoverySnapshotName;
 
   public TruncateTableProcedure() {
     // Required by the Procedure framework to create the procedure on replay
@@ -97,6 +98,23 @@ public class TruncateTableProcedure extends AbstractStateMachineTableProcedure<T
           // the procedure stage and can get recovered if the procedure crashes between
           // TRUNCATE_TABLE_REMOVE_FROM_META and TRUNCATE_TABLE_CREATE_FS_LAYOUT
           tableDescriptor = env.getMasterServices().getTableDescriptors().get(tableName);
+
+          // Check if we should create a recovery snapshot
+          if (RecoverySnapshotUtils.isRecoveryEnabled(env)) {
+            setNextState(TruncateTableState.TRUNCATE_TABLE_SNAPSHOT);
+          } else {
+            setNextState(TruncateTableState.TRUNCATE_TABLE_CLEAR_FS_LAYOUT);
+          }
+          break;
+        case TRUNCATE_TABLE_SNAPSHOT:
+          // Create recovery snapshot procedure as child procedure
+          recoverySnapshotName = RecoverySnapshotUtils.generateSnapshotName(tableName);
+          SnapshotProcedure snapshotProcedure = RecoverySnapshotUtils.createSnapshotProcedure(env,
+            tableName, recoverySnapshotName, tableDescriptor);
+          // Submit snapshot procedure as child procedure
+          addChildProcedure(snapshotProcedure);
+          LOG.debug("Creating recovery snapshot {} for table {} before truncation",
+            recoverySnapshotName, tableName);
           setNextState(TruncateTableState.TRUNCATE_TABLE_CLEAR_FS_LAYOUT);
           break;
         case TRUNCATE_TABLE_CLEAR_FS_LAYOUT:
@@ -160,15 +178,26 @@ public class TruncateTableProcedure extends AbstractStateMachineTableProcedure<T
 
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final TruncateTableState state) {
-    if (state == TruncateTableState.TRUNCATE_TABLE_PRE_OPERATION) {
-      // nothing to rollback, pre-truncate is just table-state checks.
-      // We can fail if the table does not exist or is not disabled.
-      // TODO: coprocessor rollback semantic is still undefined.
-      return;
+    switch (state) {
+      case TRUNCATE_TABLE_PRE_OPERATION:
+        // nothing to rollback, pre-truncate is just table-state checks.
+        // We can fail if the table does not exist or is not disabled.
+        // TODO: coprocessor rollback semantic is still undefined.
+        break;
+      case TRUNCATE_TABLE_SNAPSHOT:
+        // Handle recovery snapshot rollback. There is no DeleteSnapshotProcedure as such to use
+        // here directly as a child procedure, so we call a utility method to delete the snapshot
+        // which uses the SnapshotManager to delete the snapshot.
+        if (recoverySnapshotName != null) {
+          RecoverySnapshotUtils.deleteRecoverySnapshot(env, recoverySnapshotName, tableName);
+          recoverySnapshotName = null;
+        }
+        break;
+      default:
+        // Truncate from other states doesn't have a rollback. The execution will succeed, at some
+        // point.
+        throw new UnsupportedOperationException("unhandled state=" + state);
     }
-
-    // The truncate doesn't have a rollback. The execution will succeed, at some point.
-    throw new UnsupportedOperationException("unhandled state=" + state);
   }
 
   @Override
@@ -180,6 +209,7 @@ public class TruncateTableProcedure extends AbstractStateMachineTableProcedure<T
   protected boolean isRollbackSupported(final TruncateTableState state) {
     switch (state) {
       case TRUNCATE_TABLE_PRE_OPERATION:
+      case TRUNCATE_TABLE_SNAPSHOT:
         return true;
       default:
         return false;
@@ -244,6 +274,9 @@ public class TruncateTableProcedure extends AbstractStateMachineTableProcedure<T
         state.addRegionInfo(ProtobufUtil.toRegionInfo(hri));
       }
     }
+    if (recoverySnapshotName != null) {
+      state.setSnapshotName(recoverySnapshotName);
+    }
     serializer.serialize(state.build());
   }
 
@@ -268,6 +301,9 @@ public class TruncateTableProcedure extends AbstractStateMachineTableProcedure<T
       for (HBaseProtos.RegionInfo hri : state.getRegionInfoList()) {
         regions.add(ProtobufUtil.toRegionInfo(hri));
       }
+    }
+    if (state.hasSnapshotName()) {
+      recoverySnapshotName = state.getSnapshotName();
     }
   }
 

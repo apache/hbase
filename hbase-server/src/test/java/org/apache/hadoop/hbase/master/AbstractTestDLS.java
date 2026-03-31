@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.junit.After;
@@ -434,7 +435,7 @@ public abstract class AbstractTestDLS {
         row = Arrays.copyOfRange(row, 3, 8); // use last 5 bytes because
         // HBaseTestingUtility.createMultiRegions use 5 bytes key
         byte[] qualifier = Bytes.toBytes("c" + Integer.toString(i));
-        e.add(
+        WALEditInternalHelper.addExtendedCell(e,
           new KeyValue(row, COLUMN_FAMILY, qualifier, EnvironmentEdgeManager.currentTime(), value));
         log.appendData(curRegionInfo, new WALKeyImpl(curRegionInfo.getEncodedNameAsBytes(),
           tableName, EnvironmentEdgeManager.currentTime(), mvcc), e);

@@ -20,12 +20,16 @@ package org.apache.hadoop.hbase.io.hfile;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasParentSpanId;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY;
+import static org.apache.hadoop.hbase.io.hfile.PrefetchExecutor.PREFETCH_DELAY;
+import static org.apache.hadoop.hbase.io.hfile.PrefetchExecutor.PREFETCH_DELAY_VARIATION;
+import static org.apache.hadoop.hbase.io.hfile.PrefetchExecutor.PREFETCH_DELAY_VARIATION_DEFAULT_VALUE;
 import static org.apache.hadoop.hbase.regionserver.CompactSplit.HBASE_REGION_SERVER_ENABLE_COMPACTION;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -35,11 +39,13 @@ import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -49,6 +55,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MatcherPredicate;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -62,9 +69,13 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.PrefetchExecutorNotifier;
+import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.TestHStoreFile;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.trace.TraceUtil;
@@ -92,7 +103,6 @@ public class TestPrefetch {
   private static final int NUM_VALID_KEY_TYPES = KeyValue.Type.values().length - 2;
   private static final int DATA_BLOCK_SIZE = 2048;
   private static final int NUM_KV = 1000;
-
   private Configuration conf;
   private CacheConfig cacheConf;
   private FileSystem fs;
@@ -102,7 +112,7 @@ public class TestPrefetch {
   public OpenTelemetryRule otelRule = OpenTelemetryRule.create();
 
   @Before
-  public void setUp() throws IOException {
+  public void setUp() throws IOException, InterruptedException {
     conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
     fs = HFileSystem.get(conf);
@@ -118,6 +128,77 @@ public class TestPrefetch {
     assertFalse(c.getBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, false));
     CacheConfig cc = new CacheConfig(c, columnFamilyDescriptor, blockCache, ByteBuffAllocator.HEAP);
     assertTrue(cc.shouldPrefetchOnOpen());
+  }
+
+  @Test
+  public void testPrefetchBlockCacheDisabled() throws Exception {
+    ScheduledThreadPoolExecutor poolExecutor =
+      (ScheduledThreadPoolExecutor) PrefetchExecutor.getExecutorPool();
+    long totalCompletedBefore = poolExecutor.getCompletedTaskCount();
+    long queueBefore = poolExecutor.getQueue().size();
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f")).setPrefetchBlocksOnOpen(true)
+        .setBlockCacheEnabled(false).build();
+    HFileContext meta = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
+    CacheConfig cacheConfig =
+      new CacheConfig(conf, columnFamilyDescriptor, blockCache, ByteBuffAllocator.HEAP);
+    Path storeFile = writeStoreFile("testPrefetchBlockCacheDisabled", meta, cacheConfig);
+    readStoreFile(storeFile, (r, o) -> {
+      HFileBlock block = null;
+      try {
+        block = r.readBlock(o, -1, false, true, false, true, null, null);
+      } catch (IOException e) {
+        fail(e.getMessage());
+      }
+      return block;
+    }, (key, block) -> {
+      boolean isCached = blockCache.getBlock(key, true, false, true) != null;
+      if (
+        block.getBlockType() == BlockType.DATA || block.getBlockType() == BlockType.ROOT_INDEX
+          || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
+      ) {
+        assertFalse(isCached);
+      }
+    }, cacheConfig);
+    assertEquals(totalCompletedBefore + queueBefore,
+      poolExecutor.getCompletedTaskCount() + poolExecutor.getQueue().size());
+  }
+
+  @Test
+  public void testPrefetchHeapUsageAboveThreshold() throws Exception {
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f")).setPrefetchBlocksOnOpen(true)
+        .setBlockCacheEnabled(true).build();
+    HFileContext meta = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
+    Configuration newConf = new Configuration(conf);
+    newConf.setDouble(CacheConfig.PREFETCH_HEAP_USAGE_THRESHOLD, 0.1);
+    CacheConfig cacheConfig =
+      new CacheConfig(newConf, columnFamilyDescriptor, blockCache, ByteBuffAllocator.HEAP);
+    Path storeFile = writeStoreFile("testPrefetchHeapUsageAboveThreshold", meta, cacheConfig);
+    MutableInt cachedCount = new MutableInt(0);
+    MutableInt unCachedCount = new MutableInt(0);
+    readStoreFile(storeFile, (r, o) -> {
+      HFileBlock block = null;
+      try {
+        block = r.readBlock(o, -1, false, true, false, true, null, null);
+      } catch (IOException e) {
+        fail(e.getMessage());
+      }
+      return block;
+    }, (key, block) -> {
+      boolean isCached = blockCache.getBlock(key, true, false, true) != null;
+      if (
+        block.getBlockType() == BlockType.DATA || block.getBlockType() == BlockType.ROOT_INDEX
+          || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
+      ) {
+        if (isCached) {
+          cachedCount.increment();
+        } else {
+          unCachedCount.increment();
+        }
+      }
+    }, cacheConfig);
+    assertTrue(unCachedCount.compareTo(cachedCount) > 0);
   }
 
   @Test
@@ -212,8 +293,15 @@ public class TestPrefetch {
   private void readStoreFile(Path storeFilePath,
     BiFunction<HFile.Reader, Long, HFileBlock> readFunction,
     BiConsumer<BlockCacheKey, HFileBlock> validationFunction) throws Exception {
+    readStoreFile(storeFilePath, readFunction, validationFunction, cacheConf);
+  }
+
+  private void readStoreFile(Path storeFilePath,
+    BiFunction<HFile.Reader, Long, HFileBlock> readFunction,
+    BiConsumer<BlockCacheKey, HFileBlock> validationFunction, CacheConfig cacheConfig)
+    throws Exception {
     // Open the file
-    HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConf, true, conf);
+    HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConfig, true, conf);
 
     while (!reader.prefetchComplete()) {
       // Sleep for a bit
@@ -237,15 +325,6 @@ public class TestPrefetch {
     Path storeFile = writeStoreFile("TestPrefetchCompressed", context);
     readStoreFileCacheOnly(storeFile);
     conf.setBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, false);
-
-  }
-
-  @Test
-  public void testPrefetchSkipsRefs() throws Exception {
-    testPrefetchWhenRefs(true, c -> {
-      boolean isCached = c != null;
-      assertFalse(isCached);
-    });
   }
 
   @Test
@@ -254,6 +333,74 @@ public class TestPrefetch {
       boolean isCached = c != null;
       assertTrue(isCached);
     });
+  }
+
+  @Test
+  public void testOnConfigurationChange() {
+    PrefetchExecutorNotifier prefetchExecutorNotifier = new PrefetchExecutorNotifier(conf);
+    conf.setInt(PREFETCH_DELAY, 40000);
+    prefetchExecutorNotifier.onConfigurationChange(conf);
+    assertEquals(prefetchExecutorNotifier.getPrefetchDelay(), 40000);
+
+    // restore
+    conf.setInt(PREFETCH_DELAY, 30000);
+    prefetchExecutorNotifier.onConfigurationChange(conf);
+    assertEquals(prefetchExecutorNotifier.getPrefetchDelay(), 30000);
+
+    conf.setInt(PREFETCH_DELAY, 1000);
+    prefetchExecutorNotifier.onConfigurationChange(conf);
+  }
+
+  @Test
+  public void testPrefetchWithDelay() throws Exception {
+    // Configure custom delay
+    PrefetchExecutorNotifier prefetchExecutorNotifier = new PrefetchExecutorNotifier(conf);
+    conf.setInt(PREFETCH_DELAY, 25000);
+    conf.setFloat(PREFETCH_DELAY_VARIATION, 0.0f);
+    prefetchExecutorNotifier.onConfigurationChange(conf);
+
+    HFileContext context = new HFileContextBuilder().withCompression(Compression.Algorithm.GZ)
+      .withBlockSize(DATA_BLOCK_SIZE).build();
+    Path storeFile = writeStoreFile("TestPrefetchWithDelay", context);
+    long startTime = System.currentTimeMillis();
+    HFile.Reader reader = HFile.createReader(fs, storeFile, cacheConf, true, conf);
+
+    // Wait for 20 seconds, no thread should start prefetch
+    Thread.sleep(20000);
+    assertFalse("Prefetch threads should not be running at this point", reader.prefetchStarted());
+    long timeout = 10000;
+    Waiter.waitFor(conf, 10000, () -> (reader.prefetchStarted() || reader.prefetchComplete()));
+
+    assertTrue(reader.prefetchStarted() || reader.prefetchComplete());
+
+    assertTrue("Prefetch should start post configured delay",
+      getElapsedTime(startTime) > PrefetchExecutor.getPrefetchDelay());
+
+    conf.setInt(PREFETCH_DELAY, 1000);
+    conf.setFloat(PREFETCH_DELAY_VARIATION, PREFETCH_DELAY_VARIATION_DEFAULT_VALUE);
+    prefetchExecutorNotifier.onConfigurationChange(conf);
+  }
+
+  @Test
+  public void testPrefetchWhenNoBlockCache() throws Exception {
+    PrefetchExecutorNotifier prefetchExecutorNotifier = new PrefetchExecutorNotifier(conf);
+    try {
+      // Set a delay to max, as we don't need to have the thread running, but rather
+      // assert that it never gets scheduled
+      conf.setInt(PREFETCH_DELAY, Integer.MAX_VALUE);
+      conf.setFloat(PREFETCH_DELAY_VARIATION, 0.0f);
+      prefetchExecutorNotifier.onConfigurationChange(conf);
+
+      HFileContext context = new HFileContextBuilder().withCompression(Compression.Algorithm.GZ)
+        .withBlockSize(DATA_BLOCK_SIZE).build();
+      Path storeFile = writeStoreFile("testPrefetchWhenNoBlockCache", context);
+      HFile.createReader(fs, storeFile, new CacheConfig(conf), true, conf);
+      assertEquals(0, PrefetchExecutor.getPrefetchFutures().size());
+    } finally {
+      conf.setInt(PREFETCH_DELAY, 1000);
+      conf.setFloat(PREFETCH_DELAY_VARIATION, PREFETCH_DELAY_VARIATION_DEFAULT_VALUE);
+      prefetchExecutorNotifier.onConfigurationChange(conf);
+    }
   }
 
   @Test
@@ -277,11 +424,14 @@ public class TestPrefetch {
     Path storeFile = fileWithSplitPoint.getFirst();
     HRegionFileSystem regionFS =
       HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, region);
-    HStoreFile file = new HStoreFile(fs, storeFile, conf, cacheConf, BloomType.NONE, true);
+    StoreFileTracker sft = StoreFileTrackerFactory.create(conf, true,
+      StoreContext.getBuilder().withFamilyStoreDirectoryPath(new Path(regionDir, "cf"))
+        .withRegionFileSystem(regionFS).build());
+    HStoreFile file = new HStoreFile(fs, storeFile, conf, cacheConf, BloomType.NONE, true, sft);
     Path ref = regionFS.splitStoreFile(region, "cf", file, fileWithSplitPoint.getSecond(), false,
-      new ConstantSizeRegionSplitPolicy());
+      new ConstantSizeRegionSplitPolicy(), sft);
     conf.setBoolean(HBASE_REGION_SERVER_ENABLE_COMPACTION, compactionEnabled);
-    HStoreFile refHsf = new HStoreFile(this.fs, ref, conf, cacheConf, BloomType.NONE, true);
+    HStoreFile refHsf = new HStoreFile(this.fs, ref, conf, cacheConf, BloomType.NONE, true, sft);
     refHsf.initReader();
     HFile.Reader reader = refHsf.getReader().getHFileReader();
     while (!reader.prefetchComplete()) {
@@ -318,13 +468,22 @@ public class TestPrefetch {
       Bytes.toBytes("testPrefetchWhenHFileLink"));
 
     Path storeFilePath = regionFs.commitStoreFile("cf", writer.getPath());
-    Path dstPath = new Path(regionFs.getTableDir(), new Path("test-region", "cf"));
-    HFileLink.create(testConf, this.fs, dstPath, hri, storeFilePath.getName());
+    final RegionInfo dstHri =
+      RegionInfoBuilder.newBuilder(TableName.valueOf("testPrefetchWhenHFileLink")).build();
+    HRegionFileSystem dstRegionFs = HRegionFileSystem.createRegionOnFileSystem(testConf, fs,
+      CommonFSUtils.getTableDir(testDir, dstHri.getTable()), dstHri);
+    Path dstPath = new Path(regionFs.getTableDir(), new Path(dstHri.getRegionNameAsString(), "cf"));
+    StoreFileTracker sft = StoreFileTrackerFactory.create(testConf, false,
+      StoreContext.getBuilder()
+        .withFamilyStoreDirectoryPath(new Path(dstRegionFs.getRegionDir(), "cf"))
+        .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of("cf"))
+        .withRegionFileSystem(dstRegionFs).build());
+    sft.createHFileLink(hri.getTable(), hri.getEncodedName(), storeFilePath.getName(), true);
     Path linkFilePath =
       new Path(dstPath, HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
 
     // Try to open store file from link
-    StoreFileInfo storeFileInfo = new StoreFileInfo(testConf, this.fs, linkFilePath, true);
+    StoreFileInfo storeFileInfo = sft.getStoreFileInfo(linkFilePath, true);
     HStoreFile hsf = new HStoreFile(storeFileInfo, BloomType.NONE, cacheConf);
     assertTrue(storeFileInfo.isLink());
 
@@ -351,8 +510,13 @@ public class TestPrefetch {
   }
 
   private Path writeStoreFile(String fname, HFileContext context) throws IOException {
+    return writeStoreFile(fname, context, cacheConf);
+  }
+
+  private Path writeStoreFile(String fname, HFileContext context, CacheConfig cacheConfig)
+    throws IOException {
     Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(), fname);
-    StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConf, fs)
+    StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConfig, fs)
       .withOutputDir(storeFileParentDir).withFileContext(context).build();
     Random rand = ThreadLocalRandom.current();
     final int rowLen = 32;
@@ -405,4 +569,7 @@ public class TestPrefetch {
     }
   }
 
+  private long getElapsedTime(long startTime) {
+    return System.currentTimeMillis() - startTime;
+  }
 }

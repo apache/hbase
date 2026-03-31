@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -30,7 +30,7 @@ public class EncodingState {
   /**
    * The previous Cell the encoder encoded.
    */
-  protected Cell prevCell = null;
+  protected ExtendedCell prevCell = null;
 
   // Size of actual data being written. Not considering the block encoding/compression. This
   // includes the header size also.

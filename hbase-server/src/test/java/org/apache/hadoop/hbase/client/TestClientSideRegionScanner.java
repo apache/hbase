@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -37,6 +39,8 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.client.metrics.ScanMetricsRegionInfo;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.IndexOnlyLruBlockCache;
@@ -46,6 +50,7 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -177,6 +182,86 @@ public class TestClientSideRegionScanner {
       assertNull(result);
       assertFalse(clientSideRegionScanner.hasMore);
     }
+  }
+
+  @Test
+  public void testScanMetricsDisabled() throws IOException {
+    Configuration copyConf = new Configuration(conf);
+    Scan scan = new Scan();
+    try (ClientSideRegionScanner clientSideRegionScanner =
+      new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null)) {
+      clientSideRegionScanner.next();
+      assertNull(clientSideRegionScanner.getScanMetrics());
+    }
+  }
+
+  private void testScanMetricsWithScanMetricsByRegionDisabled(ScanMetrics scanMetrics)
+    throws IOException {
+    Configuration copyConf = new Configuration(conf);
+    Scan scan = new Scan();
+    scan.setScanMetricsEnabled(true);
+    TEST_UTIL.getAdmin().flush(TableName.META_TABLE_NAME);
+    try (ClientSideRegionScanner clientSideRegionScanner =
+      new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, scanMetrics)) {
+      clientSideRegionScanner.next();
+      ScanMetrics scanMetricsFromScanner = clientSideRegionScanner.getScanMetrics();
+      assertNotNull(scanMetricsFromScanner);
+      if (scanMetrics != null) {
+        Assert.assertSame(scanMetrics, scanMetricsFromScanner);
+      }
+      Map<String, Long> metricsMap = scanMetricsFromScanner.getMetricsMap(false);
+      Assert.assertTrue(metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME) > 0);
+      Assert.assertTrue(scanMetricsFromScanner.collectMetricsByRegion(false).isEmpty());
+    }
+  }
+
+  @Test
+  public void testScanMetricsNotAsInputWithScanMetricsByRegionDisabled() throws IOException {
+    testScanMetricsWithScanMetricsByRegionDisabled(null);
+  }
+
+  @Test
+  public void testScanMetricsAsInputWithScanMetricsByRegionDisabled() throws IOException {
+    testScanMetricsWithScanMetricsByRegionDisabled(new ScanMetrics());
+  }
+
+  private void testScanMetricByRegion(ScanMetrics scanMetrics) throws IOException {
+    Configuration copyConf = new Configuration(conf);
+    Scan scan = new Scan();
+    scan.setEnableScanMetricsByRegion(true);
+    TEST_UTIL.getAdmin().flush(TableName.META_TABLE_NAME);
+    try (ClientSideRegionScanner clientSideRegionScanner =
+      new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, scanMetrics)) {
+      clientSideRegionScanner.next();
+      ScanMetrics scanMetricsFromScanner = clientSideRegionScanner.getScanMetrics();
+      assertNotNull(scanMetricsFromScanner);
+      if (scanMetrics != null) {
+        Assert.assertSame(scanMetrics, scanMetricsFromScanner);
+      }
+      Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
+        scanMetricsFromScanner.collectMetricsByRegion();
+      Assert.assertEquals(1, scanMetricsByRegion.size());
+      for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
+        .entrySet()) {
+        ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
+        Map<String, Long> metricsMap = entry.getValue();
+        Assert.assertEquals(hri.getEncodedName(), scanMetricsRegionInfo.getEncodedRegionName());
+        Assert.assertNull(scanMetricsRegionInfo.getServerName());
+        Assert.assertTrue(metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME) > 0);
+        Assert.assertEquals((long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME),
+          scanMetricsFromScanner.countOfRowsScanned.get());
+      }
+    }
+  }
+
+  @Test
+  public void testScanMetricsByRegionWithoutScanMetricsAsInput() throws IOException {
+    testScanMetricByRegion(null);
+  }
+
+  @Test
+  public void testScanMetricsByRegionWithScanMetricsAsInput() throws IOException {
+    testScanMetricByRegion(new ScanMetrics());
   }
 
   private static Put createPut(int rowAsInt) {

@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -43,7 +43,7 @@ class SimpleServerCall extends ServerCall<SimpleServerRpcConnection> {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH",
       justification = "Can't figure why this complaint is happening... see below")
   SimpleServerCall(int id, final BlockingService service, final MethodDescriptor md,
-    RequestHeader header, Message param, CellScanner cellScanner,
+    RequestHeader header, Message param, ExtendedCellScanner cellScanner,
     SimpleServerRpcConnection connection, long size, final InetAddress remoteAddress,
     long receiveTime, int timeout, ByteBuffAllocator bbAllocator, CellBlockBuilder cellBlockBuilder,
     CallCleanup reqCleanup, SimpleRpcServerResponder responder) {

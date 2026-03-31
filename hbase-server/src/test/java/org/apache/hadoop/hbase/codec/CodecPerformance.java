@@ -24,7 +24,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.CellOutputStream;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -38,12 +39,11 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Public
 public class CodecPerformance {
-  /** @deprecated LOG variable would be made private. since 1.2, remove in 3.0 */
-  @Deprecated
-  public static final Logger LOG = LoggerFactory.getLogger(CodecPerformance.class);
 
-  static Cell[] getCells(final int howMany) {
-    Cell[] cells = new Cell[howMany];
+  private static final Logger LOG = LoggerFactory.getLogger(CodecPerformance.class);
+
+  static ExtendedCell[] getCells(final int howMany) {
+    ExtendedCell[] cells = new ExtendedCell[howMany];
     for (int i = 0; i < howMany; i++) {
       byte[] index = Bytes.toBytes(i);
       KeyValue kv = new KeyValue(index, Bytes.toBytes("f"), index, index);
@@ -62,7 +62,7 @@ public class CodecPerformance {
   }
 
   static byte[] runEncoderTest(final int index, final int initialBufferSize,
-    final ByteArrayOutputStream baos, final CellOutputStream encoder, final Cell[] cells)
+    final ByteArrayOutputStream baos, final CellOutputStream encoder, final ExtendedCell[] cells)
     throws IOException {
     long startTime = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < cells.length; i++) {
@@ -76,9 +76,9 @@ public class CodecPerformance {
     return baos.toByteArray();
   }
 
-  static Cell[] runDecoderTest(final int index, final int count, final CellScanner decoder)
-    throws IOException {
-    Cell[] cells = new Cell[count];
+  static ExtendedCell[] runDecoderTest(final int index, final int count,
+    final ExtendedCellScanner decoder) throws IOException {
+    ExtendedCell[] cells = new ExtendedCell[count];
     long startTime = EnvironmentEdgeManager.currentTime();
     for (int i = 0; decoder.advance(); i++) {
       cells[i] = decoder.current();
@@ -94,10 +94,10 @@ public class CodecPerformance {
     assertArrayEquals(input, output);
   }
 
-  static void doCodec(final Codec codec, final Cell[] cells, final int cycles, final int count,
-    final int initialBufferSize) throws IOException {
+  static void doCodec(final Codec codec, final ExtendedCell[] cells, final int cycles,
+    final int count, final int initialBufferSize) throws IOException {
     byte[] bytes = null;
-    Cell[] cellsDecoded = null;
+    ExtendedCell[] cellsDecoded = null;
     for (int i = 0; i < cycles; i++) {
       ByteArrayOutputStream baos = new ByteArrayOutputStream(initialBufferSize);
       Codec.Encoder encoder = codec.getEncoder(baos);
@@ -117,7 +117,7 @@ public class CodecPerformance {
     // How many times to do an operation; repeat gives hotspot chance to warm up.
     final int cycles = 30;
 
-    Cell[] cells = getCells(count);
+    ExtendedCell[] cells = getCells(count);
     int size = getRoughSize(cells);
     int initialBufferSize = 2 * size; // Multiply by 2 to ensure we don't have to grow buffer
 

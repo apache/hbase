@@ -17,27 +17,26 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.RegionLocations;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.FutureUtils;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestAsyncMetaRegionLocatorFailFast {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncMetaRegionLocatorFailFast.class);
 
   private static Configuration CONF = HBaseConfiguration.create();
 
@@ -45,8 +44,8 @@ public class TestAsyncMetaRegionLocatorFailFast {
 
   private static final class FaultyConnectionRegistry extends DoNothingConnectionRegistry {
 
-    public FaultyConnectionRegistry(Configuration conf) {
-      super(conf);
+    public FaultyConnectionRegistry(Configuration conf, User user) {
+      super(conf, user);
     }
 
     @Override
@@ -55,13 +54,15 @@ public class TestAsyncMetaRegionLocatorFailFast {
     }
   }
 
-  @BeforeClass
-  public static void setUp() {
-    LOCATOR = new AsyncMetaRegionLocator(new FaultyConnectionRegistry(CONF));
+  @BeforeAll
+  public static void setUp() throws IOException {
+    LOCATOR = new AsyncMetaRegionLocator(
+      new FaultyConnectionRegistry(CONF, UserProvider.instantiate(CONF).getCurrent()));
   }
 
-  @Test(expected = DoNotRetryIOException.class)
+  @Test
   public void test() throws IOException {
-    FutureUtils.get(LOCATOR.getRegionLocations(RegionInfo.DEFAULT_REPLICA_ID, false));
+    assertThrows(DoNotRetryIOException.class,
+      () -> FutureUtils.get(LOCATOR.getRegionLocations(RegionInfo.DEFAULT_REPLICA_ID, false)));
   }
 }

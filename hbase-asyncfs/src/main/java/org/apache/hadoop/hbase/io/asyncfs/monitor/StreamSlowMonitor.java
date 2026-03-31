@@ -156,7 +156,8 @@ public class StreamSlowMonitor implements ConfigurationObserver {
             + "lastAckTimestamp={}, monitor name: {}",
           datanodeInfo, packetDataLen, processTimeMs, unfinished, lastAckTimestamp, this.name);
         if (addSlowAckData(datanodeInfo, packetDataLen, processTimeMs)) {
-          excludeDatanodeManager.tryAddExcludeDN(datanodeInfo, "slow packet ack");
+          excludeDatanodeManager.tryAddExcludeDN(datanodeInfo,
+            ExcludeDatanodeManager.ExcludeCause.SLOW_PACKET_ACK.getCause());
         }
       }
     }

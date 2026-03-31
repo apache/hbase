@@ -22,16 +22,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -87,13 +83,7 @@ public class TableScanResource extends ResourceBase {
             if ((rs == null) || (count <= 0)) {
               return null;
             }
-            byte[] rowKey = rs.getRow();
-            RowModel rModel = new RowModel(rowKey);
-            List<Cell> kvs = rs.listCells();
-            for (Cell kv : kvs) {
-              rModel.addCell(new CellModel(CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv),
-                kv.getTimestamp(), CellUtil.cloneValue(kv)));
-            }
+            RowModel rModel = RestUtil.createRowModelFromResult(rs);
             count--;
             if (count == 0) {
               results.close();

@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
@@ -39,6 +40,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerManager;
@@ -61,6 +63,7 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
@@ -77,16 +80,21 @@ public class TestReplicationLogCleaner {
 
   private ReplicationLogCleaner cleaner;
 
+  private ReplicationPeerManager rpm;
+
   @Before
   public void setUp() throws ReplicationException {
     services = mock(MasterServices.class);
     when(services.getReplicationLogCleanerBarrier()).thenReturn(new ReplicationLogCleanerBarrier());
-    ReplicationPeerManager rpm = mock(ReplicationPeerManager.class);
+    AsyncClusterConnection asyncClusterConnection = mock(AsyncClusterConnection.class);
+    when(services.getAsyncClusterConnection()).thenReturn(asyncClusterConnection);
+    when(asyncClusterConnection.isClosed()).thenReturn(false);
+    rpm = mock(ReplicationPeerManager.class);
     when(services.getReplicationPeerManager()).thenReturn(rpm);
     when(rpm.listPeers(null)).thenReturn(new ArrayList<>());
     ReplicationQueueStorage rqs = mock(ReplicationQueueStorage.class);
     when(rpm.getQueueStorage()).thenReturn(rqs);
-    when(rpm.getQueueStorage().hasData()).thenReturn(true);
+    when(rqs.hasData()).thenReturn(true);
     when(rqs.listAllQueues()).thenReturn(new ArrayList<>());
     ServerManager sm = mock(ServerManager.class);
     when(services.getServerManager()).thenReturn(sm);
@@ -382,5 +390,40 @@ public class TestReplicationLogCleaner {
     Iterator<FileStatus> iter = runCleaner(cleaner, Arrays.asList(file)).iterator();
     assertSame(file, iter.next());
     assertFalse(iter.hasNext());
+  }
+
+  @Test
+  public void testPreCleanWhenAsyncClusterConnectionClosed() throws ReplicationException {
+    assertFalse(services.getAsyncClusterConnection().isClosed());
+    verify(services.getAsyncClusterConnection(), Mockito.times(1)).isClosed();
+    cleaner.preClean();
+    verify(services.getAsyncClusterConnection(), Mockito.times(2)).isClosed();
+    verify(rpm.getQueueStorage(), Mockito.times(1)).hasData();
+
+    when(services.getAsyncClusterConnection().isClosed()).thenReturn(true);
+    assertTrue(services.getAsyncClusterConnection().isClosed());
+    verify(services.getAsyncClusterConnection(), Mockito.times(3)).isClosed();
+    cleaner.preClean();
+    verify(services.getAsyncClusterConnection(), Mockito.times(4)).isClosed();
+    // rpm.getQueueStorage().hasData() was not executed, indicating an early return.
+    verify(rpm.getQueueStorage(), Mockito.times(1)).hasData();
+  }
+
+  @Test
+  public void testGetDeletableFilesWhenAsyncClusterConnectionClosed() throws ReplicationException {
+    List<FileStatus> files = List.of(new FileStatus());
+    assertFalse(services.getAsyncClusterConnection().isClosed());
+    verify(services.getAsyncClusterConnection(), Mockito.times(1)).isClosed();
+    cleaner.getDeletableFiles(files);
+    verify(services.getAsyncClusterConnection(), Mockito.times(2)).isClosed();
+    verify(rpm.getQueueStorage(), Mockito.times(1)).hasData();
+
+    when(services.getAsyncClusterConnection().isClosed()).thenReturn(true);
+    assertTrue(services.getAsyncClusterConnection().isClosed());
+    verify(services.getAsyncClusterConnection(), Mockito.times(3)).isClosed();
+    cleaner.getDeletableFiles(files);
+    verify(services.getAsyncClusterConnection(), Mockito.times(4)).isClosed();
+    // rpm.getQueueStorage().hasData() was not executed, indicating an early return.
+    verify(rpm.getQueueStorage(), Mockito.times(1)).hasData();
   }
 }

@@ -21,8 +21,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -44,7 +44,7 @@ public class CellCodecWithTags implements Codec {
     }
 
     @Override
-    public void write(Cell cell) throws IOException {
+    public void write(ExtendedCell cell) throws IOException {
       checkFlushed();
       // Row
       write(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
@@ -82,7 +82,7 @@ public class CellCodecWithTags implements Codec {
     }
 
     @Override
-    protected Cell parseCell() throws IOException {
+    protected ExtendedCell parseCell() throws IOException {
       byte[] row = readByteArray(this.in);
       byte[] family = readByteArray(in);
       byte[] qualifier = readByteArray(in);

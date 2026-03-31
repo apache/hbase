@@ -72,6 +72,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.DefaultServlet;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.FilterHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.FilterMapping;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.ServletHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.webapp.WebAppContext;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.http.HttpVersion;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Handler;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConfiguration;
@@ -81,20 +87,13 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SecureRequestCustomi
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SslConnectionFactory;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SymlinkAllowedResourceAliasChecker;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.ErrorHandler;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.HandlerCollection;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.gzip.GzipHandler;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.DefaultServlet;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.FilterHolder;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.FilterMapping;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletContextHandler;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.util.MultiException;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ExceptionUtil;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.webapp.WebAppContext;
 import org.apache.hbase.thirdparty.org.glassfish.jersey.server.ResourceConfig;
 import org.apache.hbase.thirdparty.org.glassfish.jersey.servlet.ServletContainer;
 
@@ -114,6 +113,11 @@ public class HttpServer implements FilterContainer {
   // And in newer jetty version, they add a check when creating a server so we must follow this
   // limitation otherwise the UTs will fail
   private static final int DEFAULT_MAX_HEADER_SIZE = Character.MAX_VALUE - 1;
+
+  // Add configuration for jetty idle timeout
+  private static final String HTTP_JETTY_IDLE_TIMEOUT = "hbase.ui.connection.idleTimeout";
+  // Default jetty idle timeout
+  private static final long DEFAULT_HTTP_JETTY_IDLE_TIMEOUT = 30000;
 
   static final String FILTER_INITIALIZERS_PROPERTY = "hbase.http.filter.initializers";
   static final String HTTP_MAX_THREADS = "hbase.http.max.threads";
@@ -142,6 +146,11 @@ public class HttpServer implements FilterContainer {
     HTTP_SPNEGO_AUTHENTICATION_PREFIX + "admin.users";
   public static final String HTTP_SPNEGO_AUTHENTICATION_ADMIN_GROUPS_KEY =
     HTTP_SPNEGO_AUTHENTICATION_PREFIX + "admin.groups";
+
+  static final String HTTP_LDAP_AUTHENTICATION_PREFIX = HTTP_AUTHENTICATION_PREFIX + "ldap.";
+  public static final String HTTP_LDAP_AUTHENTICATION_ADMIN_USERS_KEY =
+    HTTP_LDAP_AUTHENTICATION_PREFIX + "admin.users";
+
   public static final String HTTP_PRIVILEGED_CONF_KEY =
     "hbase.security.authentication.ui.config.protected";
   public static final String HTTP_UI_NO_CACHE_ENABLE_KEY = "hbase.http.filter.no-store.enable";
@@ -165,7 +174,9 @@ public class HttpServer implements FilterContainer {
       .put("jmx",
         new ServletConfig("jmx", "/jmx", "org.apache.hadoop.hbase.http.jmx.JMXJsonServlet"))
       .put("metrics",
-        new ServletConfig("metrics", "/metrics", "org.apache.hadoop.metrics.MetricsServlet"))
+        // MetricsServlet is deprecated in hadoop 2.8 and removed in 3.0. We shouldn't expect it,
+        // so pass false so that we don't create a noisy warn during instantiation.
+        new ServletConfig("metrics", "/metrics", "org.apache.hadoop.metrics.MetricsServlet", false))
       .put("prometheus", new ServletConfig("prometheus", "/prometheus",
         "org.apache.hadoop.hbase.http.prometheus.PrometheusHadoopServlet"))
       .build();
@@ -215,7 +226,10 @@ public class HttpServer implements FilterContainer {
     private String usernameConfKey;
     private String keytabConfKey;
     private boolean needsClientAuth;
+    private String includeCiphers;
     private String excludeCiphers;
+    private String includeProtocols;
+    private String excludeProtocols;
 
     private String hostName;
     private String appDir = APP_DIR;
@@ -388,8 +402,30 @@ public class HttpServer implements FilterContainer {
       return this;
     }
 
+    @Deprecated
+    // Use setExcludeCiphers() which supports the fluent builder API
     public void excludeCiphers(String excludeCiphers) {
       this.excludeCiphers = excludeCiphers;
+    }
+
+    public Builder setExcludeCiphers(String excludeCiphers) {
+      this.excludeCiphers = excludeCiphers;
+      return this;
+    }
+
+    public Builder setIncludeCiphers(String includeCiphers) {
+      this.includeCiphers = includeCiphers;
+      return this;
+    }
+
+    public Builder setIncludeProtocols(String includeProtocols) {
+      this.includeProtocols = includeProtocols;
+      return this;
+    }
+
+    public Builder setExcludeProtocols(String excludeProtocols) {
+      this.excludeProtocols = excludeProtocols;
+      return this;
     }
 
     public HttpServer build() throws IOException {
@@ -453,6 +489,21 @@ public class HttpServer implements FilterContainer {
             sslCtxFactory.setTrustStorePassword(trustStorePassword);
           }
 
+          if (includeProtocols != null && !includeProtocols.trim().isEmpty()) {
+            sslCtxFactory.setIncludeProtocols(StringUtils.getTrimmedStrings(includeProtocols));
+            LOG.debug("Included TLS Protocol List:" + includeProtocols);
+          }
+
+          if (excludeProtocols != null && !excludeProtocols.trim().isEmpty()) {
+            sslCtxFactory.setExcludeProtocols(StringUtils.getTrimmedStrings(excludeProtocols));
+            LOG.debug("Excluded TLS Protocol List:" + excludeProtocols);
+          }
+
+          if (includeCiphers != null && !includeCiphers.trim().isEmpty()) {
+            sslCtxFactory.setIncludeCipherSuites(StringUtils.getTrimmedStrings(includeCiphers));
+            LOG.debug("Included SSL Cipher List:" + includeCiphers);
+          }
+
           if (excludeCiphers != null && !excludeCiphers.trim().isEmpty()) {
             sslCtxFactory.setExcludeCipherSuites(StringUtils.getTrimmedStrings(excludeCiphers));
             LOG.debug("Excluded SSL Cipher List:" + excludeCiphers);
@@ -467,6 +518,9 @@ public class HttpServer implements FilterContainer {
 
         // default settings for connector
         listener.setAcceptQueueSize(128);
+        // config idle timeout for jetty
+        listener
+          .setIdleTimeout(conf.getLong(HTTP_JETTY_IDLE_TIMEOUT, DEFAULT_HTTP_JETTY_IDLE_TIMEOUT));
         if (Shell.WINDOWS) {
           // result of setting the SO_REUSEADDR flag is different on Windows
           // http://msdn.microsoft.com/en-us/library/ms740621(v=vs.85).aspx
@@ -598,23 +652,21 @@ public class HttpServer implements FilterContainer {
 
     Preconditions.checkNotNull(webAppContext);
 
-    HandlerCollection handlerCollection = new HandlerCollection();
+    Handler.Sequence handlers = new Handler.Sequence();
 
     ContextHandlerCollection contexts = new ContextHandlerCollection();
     RequestLog requestLog = HttpRequestLog.getRequestLog(name);
 
     if (requestLog != null) {
-      RequestLogHandler requestLogHandler = new RequestLogHandler();
-      requestLogHandler.setRequestLog(requestLog);
-      handlerCollection.addHandler(requestLogHandler);
+      webServer.setRequestLog(requestLog);
     }
 
     final String appDir = getWebAppsPath(name);
 
-    handlerCollection.addHandler(contexts);
-    handlerCollection.addHandler(webAppContext);
+    handlers.addHandler(contexts);
+    handlers.addHandler(webAppContext);
 
-    webServer.setHandler(handlerCollection);
+    webServer.setHandler(handlers);
 
     webAppContext.setAttribute(ADMINS_ACL, adminsAcl);
 
@@ -659,8 +711,9 @@ public class HttpServer implements FilterContainer {
     // Check if disable stack trace property is configured
     if (!conf.getBoolean(HTTP_UI_SHOW_STACKTRACE_KEY, true)) {
       // Disable stack traces for server errors in UI
-      webServer.setErrorHandler(new ErrorHandler());
-      webServer.getErrorHandler().setShowStacks(false);
+      ErrorHandler errorHandler = new ErrorHandler();
+      errorHandler.setShowStacks(false);
+      webServer.setErrorHandler(errorHandler);
       // Disable stack traces for web app errors in UI
       webAppContext.getErrorHandler().setShowStacks(false);
     }
@@ -748,15 +801,10 @@ public class HttpServer implements FilterContainer {
       ServletContextHandler logContext = new ServletContextHandler(parent, "/logs");
       logContext.addServlet(AdminAuthorizedServlet.class, "/*");
       logContext.setResourceBase(logDir);
-
-      if (
-        conf.getBoolean(ServerConfigurationKeys.HBASE_JETTY_LOGS_SERVE_ALIASES,
-          ServerConfigurationKeys.DEFAULT_HBASE_JETTY_LOGS_SERVE_ALIASES)
-      ) {
-        Map<String, String> params = logContext.getInitParams();
-        params.put("org.mortbay.jetty.servlet.Default.aliases", "true");
-      }
       logContext.setDisplayName("logs");
+      configureAliasChecks(logContext,
+        conf.getBoolean(ServerConfigurationKeys.HBASE_JETTY_LOGS_SERVE_ALIASES,
+          ServerConfigurationKeys.DEFAULT_HBASE_JETTY_LOGS_SERVE_ALIASES));
       setContextAttributes(logContext, conf);
       addNoCacheFilter(logContext, conf);
       defaultContexts.put(logContext, true);
@@ -768,6 +816,38 @@ public class HttpServer implements FilterContainer {
     staticContext.setDisplayName("static");
     setContextAttributes(staticContext, conf);
     defaultContexts.put(staticContext, true);
+  }
+
+  /**
+   * This method configures the alias checks for the given ServletContextHandler based on the
+   * provided value of shouldServeAlias.<br>
+   * If shouldServeAlias is set to true, it checks if SymlinkAllowedResourceAliasChecker is already
+   * a part of the alias check list. If it is already a part of the list, no changes are made, else,
+   * it adds it to the list.<br>
+   * If shouldServeAlias is set to false, it clears all alias checks from the
+   * ServletContextHandler.<br>
+   * .
+   * @param context          The ServletContextHandler whose alias checks are to be configured
+   * @param shouldServeAlias Whether aliases should be allowed or not
+   */
+  private void configureAliasChecks(ServletContextHandler context, boolean shouldServeAlias) {
+    if (shouldServeAlias) {
+      Class aliasCheckerClass = SymlinkAllowedResourceAliasChecker.class;
+      // check if SymlinkAllowedResourceAliasChecker is already part of alias check list
+      // NOTE: we are doing this because this is already present in the context (by default)
+      if (context.getAliasChecks().stream().anyMatch(aliasCheckerClass::isInstance)) {
+        LOG.debug("{} is already part of alias check list", aliasCheckerClass.getName());
+      } else {
+        context
+          .addAliasCheck(new SymlinkAllowedResourceAliasChecker(context.getCoreContextHandler()));
+        LOG.debug("{} added to the alias check list", aliasCheckerClass.getName());
+      }
+      LOG.info("Serving aliases allowed for /logs context");
+    } else {
+      // if aliasing is disabled, then we should clear the alias check list
+      context.clearAliasChecks();
+      LOG.info("Serving aliases disabled for /logs context");
+    }
   }
 
   private void setContextAttributes(ServletContextHandler context, Configuration conf) {
@@ -811,16 +891,19 @@ public class HttpServer implements FilterContainer {
     /* register metrics servlets */
     String[] enabledServlets = conf.getStrings(METRIC_SERVLETS_CONF_KEY, METRICS_SERVLETS_DEFAULT);
     for (String enabledServlet : enabledServlets) {
-      try {
-        ServletConfig servletConfig = METRIC_SERVLETS.get(enabledServlet);
-        if (servletConfig != null) {
+      ServletConfig servletConfig = METRIC_SERVLETS.get(enabledServlet);
+      if (servletConfig != null) {
+        try {
           Class<?> clz = Class.forName(servletConfig.getClazz());
           addPrivilegedServlet(servletConfig.getName(), servletConfig.getPathSpec(),
             clz.asSubclass(HttpServlet.class));
+        } catch (Exception e) {
+          if (servletConfig.isExpected()) {
+            // metrics are not critical to read/write, so an exception here shouldn't be fatal
+            // if the class was expected we should warn though
+            LOG.warn("Couldn't register the servlet " + enabledServlet, e);
+          }
         }
-      } catch (Exception e) {
-        /* shouldn't be fatal, so warn the user about it */
-        LOG.warn("Couldn't register the servlet " + enabledServlet, e);
       }
     }
   }
@@ -1173,14 +1256,14 @@ public class HttpServer implements FilterContainer {
       } catch (IOException ex) {
         LOG.info("HttpServer.start() threw a non Bind IOException", ex);
         throw ex;
-      } catch (MultiException ex) {
-        LOG.info("HttpServer.start() threw a MultiException", ex);
+      } catch (Exception ex) {
+        LOG.info("HttpServer.start() threw a Exception", ex);
         throw ex;
       }
       // Make sure there is no handler failures.
-      Handler[] handlers = webServer.getHandlers();
-      for (int i = 0; i < handlers.length; i++) {
-        if (handlers[i].isFailed()) {
+      List<Handler> handlers = webServer.getHandlers();
+      for (Handler handler : handlers) {
+        if (handler.isFailed()) {
           throw new IOException("Problem in starting http server. Server handlers failed");
         }
       }
@@ -1250,7 +1333,7 @@ public class HttpServer implements FilterContainer {
    * stop the server
    */
   public void stop() throws Exception {
-    MultiException exception = null;
+    ExceptionUtil.MultiException exception = null;
     for (ListenerInfo li : listeners) {
       if (!li.isManaged) {
         continue;
@@ -1287,9 +1370,10 @@ public class HttpServer implements FilterContainer {
 
   }
 
-  private MultiException addMultiException(MultiException exception, Exception e) {
+  private ExceptionUtil.MultiException addMultiException(ExceptionUtil.MultiException exception,
+    Exception e) {
     if (exception == null) {
-      exception = new MultiException();
+      exception = new ExceptionUtil.MultiException();
     }
     exception.add(e);
     return exception;

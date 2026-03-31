@@ -23,11 +23,12 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.security.cert.X509Certificate;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.ipc.RpcCall;
@@ -183,7 +184,7 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
       }
 
       @Override
-      public CellScanner getCellScanner() {
+      public ExtendedCellScanner getCellScanner() {
         return null;
       }
 
@@ -233,12 +234,17 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
       }
 
       @Override
+      public byte[] getRequestAttribute(String key) {
+        return null;
+      }
+
+      @Override
       public int getRemotePort() {
         return 0;
       }
 
       @Override
-      public void setResponse(Message param, CellScanner cells, Throwable errorThrowable,
+      public void setResponse(Message param, ExtendedCellScanner cells, Throwable errorThrowable,
         String error) {
       }
 
@@ -267,6 +273,11 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
 
       @Override
       public Optional<User> getRequestUser() {
+        return Optional.empty();
+      }
+
+      @Override
+      public Optional<X509Certificate[]> getClientCertificateChain() {
         return Optional.empty();
       }
 

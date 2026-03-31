@@ -4,7 +4,8 @@
 .DS_Store
 .classpath
 /build
-/.idea/
+.idea/*
+!.idea/vcs.xml
 /logs
 *target/
 *.orig
@@ -25,3 +26,11 @@ linklint/
 **/*.log
 tmp
 **/.flattened-pom.xml
+.sw*
+.*.sw*
+ID
+filenametags
+tags
+.codegenie/
+.vscode/
+**/__pycache__

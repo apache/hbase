@@ -20,8 +20,8 @@ declare -i missing_env=0
 # Validate params
 for required_env in "TESTS" "PERSONALITY_FILE" "BASEDIR" "ARCHIVE_PATTERN_LIST" "OUTPUT_DIR_RELATIVE" \
                     "OUTPUT_DIR" "PROJECT" "AUTHOR_IGNORE_LIST" \
-                    "WHITESPACE_IGNORE_LIST" "BRANCH_NAME" "TESTS_FILTER" "DEBUG" \
-                    "USE_YETUS_PRERELEASE" "WORKSPACE" "YETUS_RELEASE"; do
+                    "BLANKS_EOL_IGNORE_FILE" "BLANKS_TABS_IGNORE_FILE" "BRANCH_NAME" "TESTS_FILTER" \
+                    "DEBUG" "USE_YETUS_PRERELEASE" "WORKSPACE" "YETUS_RELEASE"; do
   if [ -z "${!required_env}" ]; then
     echo "[ERROR] Required environment variable '${required_env}' is not set."
     missing_env=${missing_env}+1
@@ -59,8 +59,8 @@ YETUS_ARGS=("--patch-dir=${OUTPUT_DIR}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--project=${PROJECT}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--resetrepo" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--author-ignore-list=${AUTHOR_IGNORE_LIST}" "${YETUS_ARGS[@]}")
-YETUS_ARGS=("--whitespace-eol-ignore-list=${WHITESPACE_IGNORE_LIST}" "${YETUS_ARGS[@]}")
-YETUS_ARGS=("--whitespace-tabs-ignore-list=${WHITESPACE_IGNORE_LIST}" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--blanks-eol-ignore-file=${BLANKS_EOL_IGNORE_FILE}" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--blanks-tabs-ignore-file=${BLANKS_TABS_IGNORE_FILE}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--sentinel" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--branch=${BRANCH_NAME}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--tests-filter=${TESTS_FILTER}" "${YETUS_ARGS[@]}")
@@ -74,13 +74,23 @@ if [[ -n "${INCLUDE_TESTS_URL}" ]]; then
   YETUS_ARGS=("--include-tests-url=${INCLUDE_TESTS_URL}" "${YETUS_ARGS[@]}")
 fi
 
-# For testing with specific hadoop version. Activates corresponding profile in maven runs.
+# For testing with specific hadoop major version. Activates corresponding profile in maven runs.
 if [[ -n "${HADOOP_PROFILE}" ]]; then
   # Master has only Hadoop3 support. We don't need to activate any profile.
   # The Jenkinsfile should not attempt to run any Hadoop2 tests.
   if [[ "${BRANCH_NAME}" =~ branch-2* ]]; then
     YETUS_ARGS=("--hadoop-profile=${HADOOP_PROFILE}" "${YETUS_ARGS[@]}")
   fi
+fi
+
+# For testing with specific hadoop version. Activates corresponding profile in maven runs.
+if [[ -n "${HADOOP_THREE_VERSION}" ]]; then
+  YETUS_ARGS=("--hadoop-three-version=${HADOOP_THREE_VERSION}" "${YETUS_ARGS[@]}")
+fi
+
+if [[ -n "${TEST_PROFILE}" ]]; then
+  # i.e. runAllTests / runDevTests
+  YETUS_ARGS=("--test-profile=${TEST_PROFILE}" "${YETUS_ARGS[@]}")
 fi
 
 if [[ "${SKIP_ERRORPRONE}" = "true" ]]; then
@@ -106,11 +116,9 @@ if [[ -n "${JAVA8_HOME}" ]]; then
 fi
 
 if [[ true !=  "${USE_YETUS_PRERELEASE}" ]]; then
-  YETUS_ARGS=("--shelldocs=${WORKSPACE}/yetus-${YETUS_RELEASE}/bin/shelldocs" "${YETUS_ARGS[@]}")
   TESTPATCHBIN="${WORKSPACE}/yetus-${YETUS_RELEASE}/bin/test-patch"
 else
-  YETUS_ARGS=("--shelldocs=${WORKSPACE}/yetus-git/shelldocs/shelldocs.py" "${YETUS_ARGS[@]}")
-  TESTPATCHBIN="${WORKSPACE}/yetus-git/precommit/test-patch.sh"
+  TESTPATCHBIN="${WORKSPACE}/yetus-git/precommit/src/main/shell/test-patch.sh"
 fi
 echo "Launching yetus with command line:"
 echo "${TESTPATCHBIN} ${YETUS_ARGS[*]}"

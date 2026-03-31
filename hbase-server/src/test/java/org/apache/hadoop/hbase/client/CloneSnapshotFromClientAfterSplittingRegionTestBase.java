@@ -18,23 +18,29 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 import java.util.List;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Test;
 
 public class CloneSnapshotFromClientAfterSplittingRegionTestBase
   extends CloneSnapshotFromClientTestBase {
 
-  private void splitRegion(final RegionInfo regionInfo) throws IOException {
-    byte[][] splitPoints = Bytes.split(regionInfo.getStartKey(), regionInfo.getEndKey(), 1);
-    admin.split(regionInfo.getTable(), splitPoints[1]);
+  private void splitRegion() throws IOException {
+    try (Table k = TEST_UTIL.getConnection().getTable(tableName);
+      ResultScanner scanner = k.getScanner(new Scan())) {
+      // Split on the second row to make sure that the snapshot contains reference files.
+      // We also disable the compaction so that the reference files are not compacted away.
+      scanner.next();
+      admin.split(tableName, scanner.next().getRow());
+    }
   }
 
   @Test
@@ -46,8 +52,8 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
       List<RegionInfo> regionInfos = admin.getRegions(tableName);
       RegionReplicaUtil.removeNonDefaultRegions(regionInfos);
 
-      // Split the first region
-      splitRegion(regionInfos.get(0));
+      // Split a region
+      splitRegion();
 
       // Take a snapshot
       admin.snapshot(snapshotName2, tableName);
@@ -72,9 +78,18 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
 
       int splitRegionCountOfOriginalTable =
         regionStates.getRegionByStateOfTable(tableName).get(RegionState.State.SPLIT).size();
-      int splitRegionCountOfClonedTable =
-        regionStates.getRegionByStateOfTable(clonedTableName).get(RegionState.State.SPLIT).size();
+      List<RegionInfo> splitParents =
+        regionStates.getRegionByStateOfTable(clonedTableName).get(RegionState.State.SPLIT);
+      int splitRegionCountOfClonedTable = splitParents.size();
       assertEquals(splitRegionCountOfOriginalTable, splitRegionCountOfClonedTable);
+
+      // Make sure that the meta table was updated with the correct split information
+      for (RegionInfo splitParent : splitParents) {
+        Result result = MetaTableAccessor.getRegionResult(TEST_UTIL.getConnection(), splitParent);
+        for (RegionInfo daughter : MetaTableAccessor.getDaughterRegions(result)) {
+          assertNotNull(daughter);
+        }
+      }
 
       TEST_UTIL.deleteTable(clonedTableName);
     } finally {
@@ -98,10 +113,10 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
       admin.cloneSnapshot(snapshotName2, clonedTableName);
       SnapshotTestingUtils.waitForTableToBeOnline(TEST_UTIL, clonedTableName);
 
-      // Split the first region of the original table
+      // Split a region of the original table
       List<RegionInfo> regionInfos = admin.getRegions(tableName);
       RegionReplicaUtil.removeNonDefaultRegions(regionInfos);
-      splitRegion(regionInfos.get(0));
+      splitRegion();
 
       // Drop the original table
       admin.disableTable(tableName);

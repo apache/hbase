@@ -45,17 +45,17 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
   // wrong(but do not make it wrong intentionally). The client can handle this error.
   private ServerName assignCandidate;
 
-  private boolean evictCache;
+  private boolean isSplit;
 
   public CloseRegionProcedure() {
     super();
   }
 
   public CloseRegionProcedure(TransitRegionStateProcedure parent, RegionInfo region,
-    ServerName targetServer, ServerName assignCandidate, boolean evictCache) {
+    ServerName targetServer, ServerName assignCandidate, boolean isSplit) {
     super(parent, region, targetServer);
     this.assignCandidate = assignCandidate;
-    this.evictCache = evictCache;
+    this.isSplit = isSplit;
   }
 
   @Override
@@ -64,8 +64,9 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
   }
 
   @Override
-  public RemoteOperation newRemoteOperation() {
-    return new RegionCloseOperation(this, region, getProcId(), assignCandidate, evictCache);
+  public RemoteOperation newRemoteOperation(MasterProcedureEnv env) {
+    return new RegionCloseOperation(this, region, getProcId(), assignCandidate, isSplit,
+      env.getMasterServices().getMasterActiveTime());
   }
 
   @Override
@@ -75,7 +76,7 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
     if (assignCandidate != null) {
       builder.setAssignCandidate(ProtobufUtil.toServerName(assignCandidate));
     }
-    builder.setEvictCache(evictCache);
+    builder.setEvictCache(isSplit);
     serializer.serialize(builder.build());
   }
 
@@ -87,7 +88,7 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
     if (data.hasAssignCandidate()) {
       assignCandidate = ProtobufUtil.toServerName(data.getAssignCandidate());
     }
-    evictCache = data.getEvictCache();
+    isSplit = data.getEvictCache();
   }
 
   @Override

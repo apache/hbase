@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
@@ -109,8 +110,8 @@ public class TestReplicationHFileCleaner {
   public void setup() throws ReplicationException, IOException {
     root = TEST_UTIL.getDataTestDirOnTestFS();
     rp.getPeerStorage().addPeer(peerId,
-      ReplicationPeerConfig.newBuilder().setClusterKey(TEST_UTIL.getClusterKey()).build(), true,
-      SyncReplicationState.NONE);
+      ReplicationPeerConfig.newBuilder().setClusterKey(TEST_UTIL.getRpcConnnectionURI()).build(),
+      true, SyncReplicationState.NONE);
   }
 
   @After
@@ -222,6 +223,11 @@ public class TestReplicationHFileCleaner {
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
+    }
+
+    @Override
+    public KeyManagementService getKeyManagementService() {
+      return null;
     }
   }
 }

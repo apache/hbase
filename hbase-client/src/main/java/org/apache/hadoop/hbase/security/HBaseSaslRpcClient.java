@@ -32,6 +32,7 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
+import org.apache.hadoop.hbase.ipc.FallbackDisallowedException;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.RemoteException;
@@ -62,15 +63,15 @@ public class HBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
   private boolean initStreamForCrypto;
 
   public HBaseSaslRpcClient(Configuration conf, SaslClientAuthenticationProvider provider,
-    Token<? extends TokenIdentifier> token, InetAddress serverAddr, SecurityInfo securityInfo,
+    Token<? extends TokenIdentifier> token, InetAddress serverAddr, String servicePrincipal,
     boolean fallbackAllowed) throws IOException {
-    super(conf, provider, token, serverAddr, securityInfo, fallbackAllowed);
+    super(conf, provider, token, serverAddr, servicePrincipal, fallbackAllowed);
   }
 
   public HBaseSaslRpcClient(Configuration conf, SaslClientAuthenticationProvider provider,
-    Token<? extends TokenIdentifier> token, InetAddress serverAddr, SecurityInfo securityInfo,
+    Token<? extends TokenIdentifier> token, InetAddress serverAddr, String servicePrincipal,
     boolean fallbackAllowed, String rpcProtection, boolean initStreamForCrypto) throws IOException {
-    super(conf, provider, token, serverAddr, securityInfo, fallbackAllowed, rpcProtection);
+    super(conf, provider, token, serverAddr, servicePrincipal, fallbackAllowed, rpcProtection);
     this.initStreamForCrypto = initStreamForCrypto;
   }
 
@@ -107,12 +108,9 @@ public class HBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
         int len = inStream.readInt();
         if (len == SaslUtil.SWITCH_TO_SIMPLE_AUTH) {
           if (!fallbackAllowed) {
-            throw new IOException("Server asks us to fall back to SIMPLE auth, "
-              + "but this client is configured to only allow secure connections.");
+            throw new FallbackDisallowedException();
           }
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Server asks us to fall back to simple auth.");
-          }
+          LOG.debug("Server asks us to fall back to simple auth.");
           dispose();
           return false;
         }
@@ -149,6 +147,9 @@ public class HBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
         LOG.debug("SASL client context established. Negotiated QoP: "
           + saslClient.getNegotiatedProperty(Sasl.QOP));
       }
+
+      verifyNegotiatedQop();
+
       // initial the inputStream, outputStream for both Sasl encryption
       // and Crypto AES encryption if necessary
       // if Crypto AES encryption enabled, the saslInputStream/saslOutputStream is

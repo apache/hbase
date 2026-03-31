@@ -27,7 +27,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -192,7 +192,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
     byte[] fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
     ScannerContext scannerContext =
       ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
-    List<Cell> cells = new ArrayList<>();
+    List<ExtendedCell> cells = new ArrayList<>();
     boolean hasMore;
     String flushName = ThroughputControlUtil.getNameForThrottling(store, "flush");
     boolean control =
@@ -205,9 +205,9 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
     mobRefSet.get().clear();
     try {
       do {
-        hasMore = scanner.next(cells, scannerContext);
+        hasMore = scanner.next((List) cells, scannerContext);
         if (!cells.isEmpty()) {
-          for (Cell c : cells) {
+          for (ExtendedCell c : cells) {
             // If we know that this KV is going to be included always, then let us
             // set its memstoreTS to 0. This will help us save space when writing to
             // disk.
@@ -223,7 +223,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
               mobCount++;
               // append the tags to the KeyValue.
               // The key is same, the value is the filename of the mob file
-              Cell reference =
+              ExtendedCell reference =
                 MobUtils.createMobRefCell(c, fileName, this.mobStore.getRefCellTags());
               writer.append(reference);
             }

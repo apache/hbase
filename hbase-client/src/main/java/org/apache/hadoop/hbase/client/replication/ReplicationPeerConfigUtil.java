@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ConnectionRegistryFactory;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -629,19 +630,19 @@ public final class ReplicationPeerConfigUtil {
 
   /**
    * Returns the configuration needed to talk to the remote slave cluster.
-   * @param conf the base configuration
-   * @param peer the description of replication peer
+   * @param conf       the base configuration
+   * @param peerConfig the peer config of replication peer
    * @return the configuration for the peer cluster, null if it was unable to get the configuration
    * @throws IOException when create peer cluster configuration failed
    */
   public static Configuration getPeerClusterConfiguration(Configuration conf,
-    ReplicationPeerDescription peer) throws IOException {
-    ReplicationPeerConfig peerConfig = peer.getPeerConfig();
+    ReplicationPeerConfig peerConfig) throws IOException {
     Configuration otherConf;
-    try {
+    if (ConnectionRegistryFactory.tryParseAsConnectionURI(peerConfig.getClusterKey()) != null) {
+      otherConf = HBaseConfiguration.create(conf);
+    } else {
+      // only need to apply cluster key for old style cluster key
       otherConf = HBaseConfiguration.createClusterConf(conf, peerConfig.getClusterKey());
-    } catch (IOException e) {
-      throw new IOException("Can't get peer configuration for peerId=" + peer.getPeerId(), e);
     }
 
     if (!peerConfig.getConfiguration().isEmpty()) {

@@ -24,12 +24,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -49,6 +50,8 @@ import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.RestoreRequest;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
+import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
+import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -65,6 +68,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
 
 /**
@@ -88,30 +93,8 @@ public final class BackupUtils {
    */
   public static Map<String, Long>
     getRSLogTimestampMins(Map<TableName, Map<String, Long>> rsLogTimestampMap) {
-    if (rsLogTimestampMap == null || rsLogTimestampMap.isEmpty()) {
-      return null;
-    }
-
-    HashMap<String, Long> rsLogTimestampMins = new HashMap<>();
-    HashMap<String, HashMap<TableName, Long>> rsLogTimestampMapByRS = new HashMap<>();
-
-    for (Entry<TableName, Map<String, Long>> tableEntry : rsLogTimestampMap.entrySet()) {
-      TableName table = tableEntry.getKey();
-      Map<String, Long> rsLogTimestamp = tableEntry.getValue();
-      for (Entry<String, Long> rsEntry : rsLogTimestamp.entrySet()) {
-        String rs = rsEntry.getKey();
-        Long ts = rsEntry.getValue();
-        rsLogTimestampMapByRS.putIfAbsent(rs, new HashMap<>());
-        rsLogTimestampMapByRS.get(rs).put(table, ts);
-      }
-    }
-
-    for (Entry<String, HashMap<TableName, Long>> entry : rsLogTimestampMapByRS.entrySet()) {
-      String rs = entry.getKey();
-      rsLogTimestampMins.put(rs, BackupUtils.getMinValue(entry.getValue()));
-    }
-
-    return rsLogTimestampMins;
+    return rsLogTimestampMap.values().stream().flatMap(map -> map.entrySet().stream())
+      .collect(Collectors.toMap(Entry::getKey, Entry::getValue, Math::min));
   }
 
   /**
@@ -340,22 +323,6 @@ public final class BackupUtils {
   }
 
   /**
-   * Get the min value for all the Values a map.
-   * @param map map
-   * @return the min value
-   */
-  public static <T> Long getMinValue(Map<T, Long> map) {
-    Long minTimestamp = null;
-    if (map != null) {
-      ArrayList<Long> timestampList = new ArrayList<>(map.values());
-      Collections.sort(timestampList);
-      // The min among all the RS log timestamps will be kept in backup system table table.
-      minTimestamp = timestampList.get(0);
-    }
-    return minTimestamp;
-  }
-
-  /**
    * Parses host name:port from archived WAL path
    * @param p path
    * @return host name
@@ -366,10 +333,11 @@ public final class BackupUtils {
       return null;
     }
     try {
-      String n = p.getName();
-      int idx = n.lastIndexOf(LOGNAME_SEPARATOR);
-      String s = URLDecoder.decode(n.substring(0, idx), "UTF8");
-      return ServerName.valueOf(s).getAddress().toString();
+      String urlDecodedName = URLDecoder.decode(p.getName(), "UTF8");
+      Iterable<String> nameSplitsOnComma = Splitter.on(",").split(urlDecodedName);
+      String host = Iterables.get(nameSplitsOnComma, 0);
+      String port = Iterables.get(nameSplitsOnComma, 1);
+      return host + ":" + port;
     } catch (Exception e) {
       LOG.warn("Skip log file (can't parse): {}", p);
       return null;
@@ -490,24 +458,6 @@ public final class BackupUtils {
   }
 
   /**
-   * Sort history list by start time in descending order.
-   * @param historyList history list
-   * @return sorted list of BackupCompleteData
-   */
-  public static ArrayList<BackupInfo> sortHistoryListDesc(ArrayList<BackupInfo> historyList) {
-    ArrayList<BackupInfo> list = new ArrayList<>();
-    TreeMap<String, BackupInfo> map = new TreeMap<>();
-    for (BackupInfo h : historyList) {
-      map.put(Long.toString(h.getStartTs()), h);
-    }
-    Iterator<String> i = map.descendingKeySet().iterator();
-    while (i.hasNext()) {
-      list.add(map.get(i.next()));
-    }
-    return list;
-  }
-
-  /**
    * Calls fs.listStatus() and treats FileNotFoundException as non-fatal This accommodates
    * differences between hadoop versions, where hadoop 1 does not throw a FileNotFoundException, and
    * return an empty FileStatus[] while Hadoop 2 will throw FileNotFoundException.
@@ -560,12 +510,21 @@ public final class BackupUtils {
       + HConstants.HREGION_LOGDIR_NAME;
   }
 
+  /**
+   * Loads all backup history as stored in files on the given backup root path.
+   * @return all backup history, from newest (most recent) to oldest (least recent)
+   */
   private static List<BackupInfo> getHistory(Configuration conf, Path backupRootPath)
     throws IOException {
     // Get all (n) history from backup root destination
 
     FileSystem fs = FileSystem.get(backupRootPath.toUri(), conf);
-    RemoteIterator<LocatedFileStatus> it = fs.listLocatedStatus(backupRootPath);
+    RemoteIterator<LocatedFileStatus> it;
+    try {
+      it = fs.listLocatedStatus(backupRootPath);
+    } catch (FileNotFoundException e) {
+      return Collections.emptyList();
+    }
 
     List<BackupInfo> infos = new ArrayList<>();
     while (it.hasNext()) {
@@ -584,46 +543,23 @@ public final class BackupUtils {
       }
     }
     // Sort
-    Collections.sort(infos, new Comparator<BackupInfo>() {
-      @Override
-      public int compare(BackupInfo o1, BackupInfo o2) {
-        long ts1 = getTimestamp(o1.getBackupId());
-        long ts2 = getTimestamp(o2.getBackupId());
-
-        if (ts1 == ts2) {
-          return 0;
-        }
-
-        return ts1 < ts2 ? 1 : -1;
-      }
-
-      private long getTimestamp(String backupId) {
-        return Long.parseLong(Iterators.get(Splitter.on('_').split(backupId).iterator(), 1));
-      }
-    });
+    infos.sort(Comparator.<BackupInfo> naturalOrder().reversed());
     return infos;
   }
 
+  /**
+   * Loads all backup history as stored in files on the given backup root path, and returns the
+   * first n entries matching all given filters.
+   * @return (subset of) backup history, from newest (most recent) to oldest (least recent)
+   */
   public static List<BackupInfo> getHistory(Configuration conf, int n, Path backupRootPath,
     BackupInfo.Filter... filters) throws IOException {
     List<BackupInfo> infos = getHistory(conf, backupRootPath);
-    List<BackupInfo> ret = new ArrayList<>();
-    for (BackupInfo info : infos) {
-      if (ret.size() == n) {
-        break;
-      }
-      boolean passed = true;
-      for (int i = 0; i < filters.length; i++) {
-        if (!filters[i].apply(info)) {
-          passed = false;
-          break;
-        }
-      }
-      if (passed) {
-        ret.add(info);
-      }
-    }
-    return ret;
+
+    Predicate<BackupInfo> combinedPredicate = Stream.of(filters)
+      .map(filter -> (Predicate<BackupInfo>) filter).reduce(Predicate::and).orElse(x -> true);
+
+    return infos.stream().filter(combinedPredicate).limit(n).toList();
   }
 
   public static BackupInfo loadBackupInfo(Path backupRootPath, String backupId, FileSystem fs)
@@ -655,22 +591,28 @@ public final class BackupUtils {
    */
   public static RestoreRequest createRestoreRequest(String backupRootDir, String backupId,
     boolean check, TableName[] fromTables, TableName[] toTables, boolean isOverwrite) {
+    return createRestoreRequest(backupRootDir, backupId, check, fromTables, toTables, isOverwrite,
+      false);
+  }
+
+  public static RestoreRequest createRestoreRequest(String backupRootDir, String backupId,
+    boolean check, TableName[] fromTables, TableName[] toTables, boolean isOverwrite,
+    boolean isKeepOriginalSplits) {
     RestoreRequest.Builder builder = new RestoreRequest.Builder();
-    RestoreRequest request =
-      builder.withBackupRootDir(backupRootDir).withBackupId(backupId).withCheck(check)
-        .withFromTables(fromTables).withToTables(toTables).withOvewrite(isOverwrite).build();
+    RestoreRequest request = builder.withBackupRootDir(backupRootDir).withBackupId(backupId)
+      .withCheck(check).withFromTables(fromTables).withToTables(toTables).withOverwrite(isOverwrite)
+      .withKeepOriginalSplits(isKeepOriginalSplits).build();
     return request;
   }
 
-  public static boolean validate(HashMap<TableName, BackupManifest> backupManifestMap,
+  public static boolean validate(List<TableName> tables, BackupManifest backupManifest,
     Configuration conf) throws IOException {
     boolean isValid = true;
 
-    for (Entry<TableName, BackupManifest> manifestEntry : backupManifestMap.entrySet()) {
-      TableName table = manifestEntry.getKey();
+    for (TableName table : tables) {
       TreeSet<BackupImage> imageSet = new TreeSet<>();
 
-      ArrayList<BackupImage> depList = manifestEntry.getValue().getDependentListByTable(table);
+      ArrayList<BackupImage> depList = backupManifest.getDependentListByTable(table);
       if (depList != null && !depList.isEmpty()) {
         imageSet.addAll(depList);
       }
@@ -762,4 +704,52 @@ public final class BackupUtils {
     return BackupRestoreConstants.BACKUPID_PREFIX + recentTimestamp;
   }
 
+  /**
+   * roll WAL writer for all region servers and record the newest log roll result
+   */
+  public static void logRoll(Connection conn, String backupRootDir, Configuration conf)
+    throws IOException {
+    boolean legacy = conf.getBoolean("hbase.backup.logroll.legacy.used", false);
+    if (legacy) {
+      logRollV1(conn, backupRootDir);
+    } else {
+      logRollV2(conn, backupRootDir);
+    }
+  }
+
+  private static void logRollV1(Connection conn, String backupRootDir) throws IOException {
+    try (Admin admin = conn.getAdmin()) {
+      admin.execProcedure(LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_SIGNATURE,
+        LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_NAME,
+        ImmutableMap.of("backupRoot", backupRootDir));
+    }
+  }
+
+  private static void logRollV2(Connection conn, String backupRootDir) throws IOException {
+    BackupSystemTable backupSystemTable = new BackupSystemTable(conn);
+    HashMap<String, Long> lastLogRollResult =
+      backupSystemTable.readRegionServerLastLogRollResult(backupRootDir);
+    try (Admin admin = conn.getAdmin()) {
+      Map<ServerName, Long> newLogRollResult = admin.rollAllWALWriters();
+
+      for (Map.Entry<ServerName, Long> entry : newLogRollResult.entrySet()) {
+        ServerName serverName = entry.getKey();
+        long newHighestWALFilenum = entry.getValue();
+
+        String address = serverName.getAddress().toString();
+        Long lastHighestWALFilenum = lastLogRollResult.get(address);
+        if (lastHighestWALFilenum != null && lastHighestWALFilenum > newHighestWALFilenum) {
+          LOG.warn("Won't update last roll log result for server {}: current = {}, new = {}",
+            serverName, lastHighestWALFilenum, newHighestWALFilenum);
+        } else {
+          backupSystemTable.writeRegionServerLastLogRollResult(address, newHighestWALFilenum,
+            backupRootDir);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("updated last roll log result for {} from {} to {}", serverName,
+              lastHighestWALFilenum, newHighestWALFilenum);
+          }
+        }
+      }
+    }
+  }
 }

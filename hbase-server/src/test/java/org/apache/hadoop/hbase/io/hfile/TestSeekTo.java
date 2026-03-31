@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -171,7 +172,7 @@ public class TestSeekTo {
     assertEquals("g", toRowStr(scanner.getCell()));
     assertTrue(scanner.seekBefore(toKV("j", tagUsage)));
     assertEquals("i", toRowStr(scanner.getCell()));
-    Cell cell = scanner.getCell();
+    ExtendedCell cell = scanner.getCell();
     if (tagUsage != TagUsage.NO_TAG && cell.getTagsLength() > 0) {
       Iterator<Tag> tagsIterator = PrivateCellUtil.tagsIterator(cell);
       while (tagsIterator.hasNext()) {

@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.function.IntConsumer;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.client.Scan;
 
 public class DelegatingKeyValueScanner implements KeyValueScanner {
@@ -36,22 +36,22 @@ public class DelegatingKeyValueScanner implements KeyValueScanner {
   }
 
   @Override
-  public Cell peek() {
+  public ExtendedCell peek() {
     return delegate.peek();
   }
 
   @Override
-  public Cell next() throws IOException {
+  public ExtendedCell next() throws IOException {
     return delegate.next();
   }
 
   @Override
-  public boolean seek(Cell key) throws IOException {
+  public boolean seek(ExtendedCell key) throws IOException {
     return delegate.seek(key);
   }
 
   @Override
-  public boolean reseek(Cell key) throws IOException {
+  public boolean reseek(ExtendedCell key) throws IOException {
     return delegate.reseek(key);
   }
 
@@ -71,7 +71,8 @@ public class DelegatingKeyValueScanner implements KeyValueScanner {
   }
 
   @Override
-  public boolean requestSeek(Cell kv, boolean forward, boolean useBloom) throws IOException {
+  public boolean requestSeek(ExtendedCell kv, boolean forward, boolean useBloom)
+    throws IOException {
     return delegate.requestSeek(kv, forward, useBloom);
   }
 
@@ -96,12 +97,12 @@ public class DelegatingKeyValueScanner implements KeyValueScanner {
   }
 
   @Override
-  public boolean backwardSeek(Cell key) throws IOException {
+  public boolean backwardSeek(ExtendedCell key) throws IOException {
     return delegate.backwardSeek(key);
   }
 
   @Override
-  public boolean seekToPreviousRow(Cell key) throws IOException {
+  public boolean seekToPreviousRow(ExtendedCell key) throws IOException {
     return delegate.seekToPreviousRow(key);
   }
 
@@ -111,7 +112,7 @@ public class DelegatingKeyValueScanner implements KeyValueScanner {
   }
 
   @Override
-  public Cell getNextIndexedKey() {
+  public ExtendedCell getNextIndexedKey() {
     return delegate.getNextIndexedKey();
   }
 

@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Category({ ClientTests.class, LargeTests.class })
 public class TestSnapshotWithAcl extends SnapshotWithAclTestBase {
 
   @ClassRule
@@ -43,7 +43,8 @@ public class TestSnapshotWithAcl extends SnapshotWithAclTestBase {
   }
 
   @Override
-  protected void restoreSnapshot(String snapshotName, boolean restoreAcl) throws Exception {
-    TEST_UTIL.getAdmin().restoreSnapshot(snapshotName, false, restoreAcl);
+  protected void restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot,
+    boolean restoreAcl) throws Exception {
+    TEST_UTIL.getAdmin().restoreSnapshot(snapshotName, takeFailSafeSnapshot, restoreAcl);
   }
 }

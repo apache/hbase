@@ -25,7 +25,8 @@
   import="org.apache.hadoop.hbase.http.InfoServer"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.snapshot.SnapshotInfo"
-  import="org.apache.hadoop.util.StringUtils"
+  import="org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils"
+  import="org.apache.hadoop.hbase.util.Strings"
   import="org.apache.hadoop.hbase.TableName"
 %>
 <%
@@ -98,6 +99,7 @@
         <th>Type</th>
         <th>Format Version</th>
         <th>State</th>
+        <th>Expired</th>
     </tr>
     <tr>
 
@@ -124,19 +126,22 @@
         <% } else { %>
           <td>ok</td>
         <% } %>
+        <td>
+          <%= SnapshotDescriptionUtils.isExpiredSnapshot(snapshotTtl, snapshot.getCreationTime(), System.currentTimeMillis()) ? "Yes" : "No" %>
+        </td>
     </tr>
   </table>
   <div class="row">
     <div class="span12">
     <%= stats.getStoreFilesCount() %> HFiles (<%= stats.getArchivedStoreFilesCount() %> in archive),
-    total size <%= StringUtils.humanReadableInt(stats.getStoreFilesSize()) %>
+    total size <%= Strings.humanReadableInt(stats.getStoreFilesSize()) %>
     (<%= stats.getSharedStoreFilePercentage() %>&#37;
-    <%= StringUtils.humanReadableInt(stats.getSharedStoreFilesSize()) %> shared with the source
+    <%= Strings.humanReadableInt(stats.getSharedStoreFilesSize()) %> shared with the source
     table)
     </div>
     <div class="span12">
     <%= stats.getLogsCount() %> Logs, total size
-    <%= StringUtils.humanReadableInt(stats.getLogsSize()) %>
+    <%= Strings.humanReadableInt(stats.getLogsSize()) %>
     </div>
   </div>
   <% if (stats.isSnapshotCorrupted()) { %>

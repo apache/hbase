@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -44,7 +46,6 @@ import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.net.DNSToSwitchMapping;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -170,11 +171,11 @@ public class BalancerTestBase {
     int max = numRegions % numServers == 0 ? min : min + 1;
 
     for (ServerAndLoad server : servers) {
-      assertTrue("All servers should have a positive load. " + server, server.getLoad() >= 0);
-      assertTrue("All servers should have load no more than " + max + ". " + server,
-        server.getLoad() <= max);
-      assertTrue("All servers should have load no less than " + min + ". " + server,
-        server.getLoad() >= min);
+      assertTrue(server.getLoad() >= 0, "All servers should have a positive load. " + server);
+      assertTrue(server.getLoad() <= max,
+        "All servers should have load no more than " + max + ". " + server);
+      assertTrue(server.getLoad() >= min,
+        "All servers should have load no less than " + min + ". " + server);
     }
   }
 
@@ -236,7 +237,7 @@ public class BalancerTestBase {
       for (RegionInfo info : entry.getValue()) {
         RegionInfo primaryInfo = RegionReplicaUtil.getRegionInfoForDefaultReplica(info);
         if (!infos.add(primaryInfo)) {
-          Assert.fail("Two or more region replicas are hosted on the same host after balance");
+          fail("Two or more region replicas are hosted on the same host after balance");
         }
       }
     }
@@ -256,7 +257,7 @@ public class BalancerTestBase {
       for (RegionInfo info : entry.getValue()) {
         RegionInfo primaryInfo = RegionReplicaUtil.getRegionInfoForDefaultReplica(info);
         if (!infos.add(primaryInfo)) {
-          Assert.fail("Two or more region replicas are hosted on the same rack after balance");
+          fail("Two or more region replicas are hosted on the same rack after balance");
         }
       }
     }
@@ -284,6 +285,9 @@ public class BalancerTestBase {
   }
 
   protected String printMock(List<ServerAndLoad> balancedCluster) {
+    if (balancedCluster == null) {
+      return "null";
+    }
     NavigableSet<ServerAndLoad> sorted = new TreeSet<>(balancedCluster);
     ServerAndLoad[] arr = sorted.toArray(new ServerAndLoad[sorted.size()]);
     StringBuilder sb = new StringBuilder(sorted.size() * 4 + 4);
@@ -367,6 +371,19 @@ public class BalancerTestBase {
     int numTables) {
     int numServers = mockCluster.length;
     TreeMap<ServerName, List<RegionInfo>> servers = new TreeMap<>();
+    for (int i = 0; i < numServers; i++) {
+      int numRegions = mockCluster[i];
+      ServerAndLoad sal = randomServer(0);
+      List<RegionInfo> regions = randomRegions(numRegions, numTables);
+      servers.put(sal.getServerName(), regions);
+    }
+    return servers;
+  }
+
+  protected Map<ServerName, List<RegionInfo>> mockClusterServersUnsorted(int[] mockCluster,
+    int numTables) {
+    int numServers = mockCluster.length;
+    Map<ServerName, List<RegionInfo>> servers = new LinkedHashMap<>();
     for (int i = 0; i < numServers; i++) {
       int numRegions = mockCluster[i];
       ServerAndLoad sal = randomServer(0);

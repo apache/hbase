@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
@@ -64,8 +65,8 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
       new ScanInfo(this.conf, fam2, 10, 1, ttl, KeepDeletedCells.FALSE,
         HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false),
       get.getFamilyMap().get(fam2), now - ttl, now, null);
-    Cell kv = new KeyValue(row1, fam2, col2, 1, data);
-    Cell cell = PrivateCellUtil.createLastOnRowCol(kv);
+    ExtendedCell kv = new KeyValue(row1, fam2, col2, 1, data);
+    ExtendedCell cell = PrivateCellUtil.createLastOnRowCol(kv);
     qm.setToNewRow(kv);
     MatchCode code = qm.match(cell);
     assertFalse(code.compareTo(MatchCode.SEEK_NEXT_COL) != 0);
@@ -391,7 +392,7 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
 
     // For last cell, the query matcher will return SEEK_NEXT_COL, and the
     // ColumnTracker will skip to the next column, which is col4.
-    Cell lastCell = memstore.get(memstore.size() - 1);
+    ExtendedCell lastCell = memstore.get(memstore.size() - 1);
     Cell nextCell = qm.getKeyForNextColumn(lastCell);
     assertArrayEquals(nextCell.getQualifierArray(), col4);
   }

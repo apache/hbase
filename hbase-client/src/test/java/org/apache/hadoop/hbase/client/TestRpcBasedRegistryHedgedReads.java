@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.RpcClient;
@@ -41,12 +40,11 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.FutureUtils;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,14 +56,13 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.ConnectionRegistryService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetClusterIdResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetConnectionRegistryResponse;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestRpcBasedRegistryHedgedReads {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRpcBasedRegistryHedgedReads.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRpcBasedRegistryHedgedReads.class);
 
@@ -132,6 +129,12 @@ public class TestRpcBasedRegistryHedgedReads {
     @Override
     public void callMethod(MethodDescriptor method, RpcController controller, Message request,
       Message responsePrototype, RpcCallback<Message> done) {
+      if (method.getService().equals(ConnectionRegistryService.getDescriptor())) {
+        // this is for setting up the rpc client
+        done.run(
+          GetConnectionRegistryResponse.newBuilder().setClusterId(RESP.getClusterId()).build());
+        return;
+      }
       if (!method.getName().equals("GetClusterId")) {
         // On RPC failures, MasterRegistry internally runs getMasters() RPC to keep the master list
         // fresh. We do not want to intercept those RPCs here and double count.
@@ -155,9 +158,9 @@ public class TestRpcBasedRegistryHedgedReads {
   private AbstractRpcBasedConnectionRegistry createRegistry(int hedged) throws IOException {
     Configuration conf = UTIL.getConfiguration();
     conf.setInt(HEDGED_REQS_FANOUT_CONFIG_NAME, hedged);
-    return new AbstractRpcBasedConnectionRegistry(conf, HEDGED_REQS_FANOUT_CONFIG_NAME,
-      INITIAL_DELAY_SECS_CONFIG_NAME, REFRESH_INTERVAL_SECS_CONFIG_NAME,
-      MIN_REFRESH_INTERVAL_SECS_CONFIG_NAME) {
+    return new AbstractRpcBasedConnectionRegistry(conf, User.getCurrent(),
+      HEDGED_REQS_FANOUT_CONFIG_NAME, INITIAL_DELAY_SECS_CONFIG_NAME,
+      REFRESH_INTERVAL_SECS_CONFIG_NAME, MIN_REFRESH_INTERVAL_SECS_CONFIG_NAME) {
 
       @Override
       protected Set<ServerName> getBootstrapNodes(Configuration conf) throws IOException {
@@ -176,7 +179,7 @@ public class TestRpcBasedRegistryHedgedReads {
     };
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() {
     Configuration conf = UTIL.getConfiguration();
     conf.setClass(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, RpcClientImpl.class,
@@ -190,12 +193,12 @@ public class TestRpcBasedRegistryHedgedReads {
       .collect(Collectors.toSet());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() {
     EXECUTOR.shutdownNow();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     CALLED.set(0);
     BAD_RESP_INDEX = -1;

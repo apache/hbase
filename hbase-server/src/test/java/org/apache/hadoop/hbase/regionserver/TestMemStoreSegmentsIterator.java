@@ -25,8 +25,8 @@ import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -60,18 +59,17 @@ public class TestMemStoreSegmentsIterator {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestMemStoreSegmentsIterator.class);
 
-  protected static String TABLE = "test_mscsi";
-  protected static String FAMILY = "f";
-  protected static String COLUMN = "c";
-  protected static String ROOT_SUB_PATH = "testMemStoreSegmentsIterator";
-  protected static long LESS_THAN_INTEGER_MAX_VALUE_SEQ_ID = Long.valueOf(Integer.MAX_VALUE) - 1;
-  protected static long GREATER_THAN_INTEGER_MAX_VALUE_SEQ_ID = Long.valueOf(Integer.MAX_VALUE) + 1;
+  private static String TABLE = "test_mscsi";
+  private static String FAMILY = "f";
+  private static String COLUMN = "c";
+  private static String ROOT_SUB_PATH = "testMemStoreSegmentsIterator";
+  private static long LESS_THAN_INTEGER_MAX_VALUE_SEQ_ID = Long.valueOf(Integer.MAX_VALUE) - 1;
+  private static long GREATER_THAN_INTEGER_MAX_VALUE_SEQ_ID = Long.valueOf(Integer.MAX_VALUE) + 1;
 
-  protected CellComparator comparator;
-  protected int compactionKVMax;
-  protected WAL wal;
-  protected HRegion region;
-  protected HStore store;
+  private CellComparator comparator;
+  private int compactionKVMax;
+  private HRegion region;
+  private HStore store;
 
   @Before
   public void setup() throws IOException {
@@ -85,10 +83,9 @@ public class TestMemStoreSegmentsIterator {
 
     RegionInfo info = RegionInfoBuilder.newBuilder(TableName.valueOf(TABLE)).build();
     Path rootPath = hbaseUtility.getDataTestDir(ROOT_SUB_PATH);
-    this.wal = HBaseTestingUtil.createWal(conf, rootPath, info);
     this.region =
-      HRegion.createHRegion(info, rootPath, conf, tableDescriptorBuilder.build(), this.wal, true);
-    this.store = new HStore(this.region, columnFamilyDescriptor, conf, false);
+      HBaseTestingUtil.createRegionAndWAL(info, rootPath, conf, tableDescriptorBuilder.build());
+    this.store = region.getStore(columnFamilyDescriptor.getName());
     this.comparator = CellComparator.getInstance();
     this.compactionKVMax = HConstants.COMPACTION_KV_MAX_DEFAULT;
   }
@@ -138,33 +135,20 @@ public class TestMemStoreSegmentsIterator {
   protected void verifyNext(MemStoreSegmentsIterator iterator) {
     // check first cell
     assertTrue(iterator.hasNext());
-    Cell firstCell = iterator.next();
+    ExtendedCell firstCell = iterator.next();
     assertEquals(LESS_THAN_INTEGER_MAX_VALUE_SEQ_ID, firstCell.getSequenceId());
 
     // check second cell
     assertTrue(iterator.hasNext());
-    Cell secondCell = iterator.next();
+    ExtendedCell secondCell = iterator.next();
     assertEquals(GREATER_THAN_INTEGER_MAX_VALUE_SEQ_ID, secondCell.getSequenceId());
   }
 
   @After
   public void tearDown() throws Exception {
     EnvironmentEdgeManagerTestHelper.reset();
-    if (store != null) {
-      try {
-        store.close();
-      } catch (IOException e) {
-      }
-      store = null;
-    }
     if (region != null) {
-      region.close();
-      region = null;
-    }
-
-    if (wal != null) {
-      wal.close();
-      wal = null;
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
   }
 }

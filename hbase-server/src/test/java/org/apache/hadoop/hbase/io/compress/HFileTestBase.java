@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -88,7 +88,7 @@ public class HFileTestBase {
       scanner = reader.getScanner(conf, false, false);
       assertTrue("Initial seekTo failed", scanner.seekTo());
       do {
-        Cell kv = scanner.getCell();
+        ExtendedCell kv = scanner.getCell();
         assertTrue("Read back an unexpected or invalid KV",
           testKvs.contains(KeyValueUtil.ensureKeyValue(kv)));
         i++;

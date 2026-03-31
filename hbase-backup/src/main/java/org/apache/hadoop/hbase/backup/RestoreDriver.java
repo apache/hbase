@@ -124,8 +124,8 @@ public class RestoreDriver extends AbstractHBaseTool {
 
     if (cmd.hasOption(OPTION_YARN_QUEUE_NAME)) {
       String queueName = cmd.getOptionValue(OPTION_YARN_QUEUE_NAME);
-      // Set system property value for MR job
-      System.setProperty("mapreduce.job.queuename", queueName);
+      // Set MR job queuename to configuration
+      getConf().set("mapreduce.job.queuename", queueName);
     }
 
     // parse main restore command options

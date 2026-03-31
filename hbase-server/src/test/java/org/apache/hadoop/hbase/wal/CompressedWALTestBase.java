@@ -28,17 +28,21 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("checkstyle:innerassignment")
-public class CompressedWALTestBase {
+public abstract class CompressedWALTestBase {
+  private static final Logger LOG = LoggerFactory.getLogger(CompressedWALTestBase.class);
 
   protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -67,14 +71,36 @@ public class CompressedWALTestBase {
     Arrays.fill(VALUE, off, (off += 1597), (byte) 'Q');
   }
 
-  public void doTest(TableName tableName) throws Exception {
+  @Test
+  public void test() throws Exception {
+    testForSize(1000);
+  }
+
+  @Test
+  public void testLarge() throws Exception {
+    testForSize(1024 * 1024);
+  }
+
+  private void testForSize(int size) throws Exception {
+    TableName tableName = TableName.valueOf(getClass().getSimpleName() + "_testForSize_" + size);
+    doTest(tableName, size);
+  }
+
+  public void doTest(TableName tableName, int valueSize) throws Exception {
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     scopes.put(tableName.getName(), 0);
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
     final int total = 1000;
     final byte[] row = Bytes.toBytes("row");
     final byte[] family = Bytes.toBytes("family");
-    final byte[] value = VALUE;
+    final byte[] value = new byte[valueSize];
+
+    int offset = 0;
+    while (offset + VALUE.length < value.length) {
+      System.arraycopy(VALUE, 0, value, offset, VALUE.length);
+      offset += VALUE.length;
+    }
+
     final WALFactory wals =
       new WALFactory(TEST_UTIL.getConfiguration(), tableName.getNameAsString());
 
@@ -85,9 +111,9 @@ public class CompressedWALTestBase {
 
     for (int i = 0; i < total; i++) {
       WALEdit kvs = new WALEdit();
-      kvs.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Cell.Type.Put)
+      kvs.add(ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Cell.Type.Put)
         .setRow(row).setFamily(family).setQualifier(Bytes.toBytes(i)).setValue(value).build());
-      kvs.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+      kvs.add(ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
         .setType(Cell.Type.DeleteFamily).setRow(row).setFamily(family).build());
       wal.appendData(regionInfo, new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,
         System.currentTimeMillis(), mvcc, scopes), kvs);

@@ -23,12 +23,10 @@ import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Simple rate limiter. Usage Example: // At this point you have a unlimited resource limiter
- * RateLimiter limiter = new AverageIntervalRateLimiter(); or new FixedIntervalRateLimiter();
- * limiter.set(10, TimeUnit.SECONDS); // set 10 resources/sec while (true) { // call canExecute
- * before performing resource consuming operation bool canExecute = limiter.canExecute(); // If
- * there are no available resources, wait until one is available if (!canExecute)
- * Thread.sleep(limiter.waitInterval()); // ...execute the work and consume the resource...
- * limiter.consume(); }
+ * RateLimiter limiter = new AverageIntervalRateLimiter(); // or new FixedIntervalRateLimiter();
+ * limiter.set(10, TimeUnit.SECONDS); // set 10 resources/sec while (limiter.getWaitIntervalMs > 0)
+ * { // wait until waitInterval == 0 Thread.sleep(limiter.getWaitIntervalMs()); } // ...execute the
+ * work and consume the resource... limiter.consume();
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -37,7 +35,9 @@ import org.apache.yetus.audience.InterfaceStability;
       + "are mostly synchronized...but to me it looks like they are totally synchronized")
 public abstract class RateLimiter {
   public static final String QUOTA_RATE_LIMITER_CONF_KEY = "hbase.quota.rate.limiter";
-  private long tunit = 1000; // Timeunit factor for translating to ms.
+  public static final long DEFAULT_TIME_UNIT = 1000;
+
+  private long tunit = DEFAULT_TIME_UNIT; // Timeunit factor for translating to ms.
   private long limit = Long.MAX_VALUE; // The max value available resource units can be refilled to.
   private long avail = Long.MAX_VALUE; // Currently available resource units
 
@@ -135,10 +135,23 @@ public abstract class RateLimiter {
 
   /**
    * Is there at least one resource available to allow execution?
-   * @return true if there is at least one resource available, otherwise false
+   * @return the waitInterval to backoff, or 0 if execution is allowed
    */
-  public boolean canExecute() {
-    return canExecute(1);
+  public long getWaitIntervalMs() {
+    return getWaitIntervalMs(1);
+  }
+
+  /**
+   * Are there enough available resources to allow execution?
+   * @param amount the number of required resources, a non-negative number
+   * @return the waitInterval to backoff, or 0 if execution is allowed
+   */
+  public synchronized long getWaitIntervalMs(final long amount) {
+    assert amount >= 0;
+    if (!isAvailable(amount)) {
+      return waitInterval(amount);
+    }
+    return 0;
   }
 
   /**
@@ -146,7 +159,7 @@ public abstract class RateLimiter {
    * @param amount the number of required resources, a non-negative number
    * @return true if there are enough available resources, otherwise false
    */
-  public synchronized boolean canExecute(final long amount) {
+  protected boolean isAvailable(final long amount) {
     if (isBypass()) {
       return true;
     }

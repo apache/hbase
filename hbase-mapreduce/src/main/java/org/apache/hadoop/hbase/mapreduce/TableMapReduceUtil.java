@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.mapreduce;
 import com.codahale.metrics.MetricRegistry;
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
@@ -31,8 +33,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -41,6 +45,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.ConnectionRegistryFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Scan;
@@ -49,12 +54,13 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.TokenUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.IOExceptionRunnable;
+import org.apache.hadoop.hbase.util.IOExceptionSupplier;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -442,6 +448,13 @@ public class TableMapReduceUtil {
     }
   }
 
+  private static void addTokenForJob(IOExceptionSupplier<Connection> connSupplier, User user,
+    Job job) throws IOException, InterruptedException {
+    try (Connection conn = connSupplier.get()) {
+      TokenUtil.addTokenForJob(conn, user, job);
+    }
+  }
+
   public static void initCredentials(Job job) throws IOException {
     UserProvider userProvider = UserProvider.instantiate(job.getConfiguration());
     if (userProvider.isHadoopSecurityEnabled()) {
@@ -453,52 +466,37 @@ public class TableMapReduceUtil {
     }
 
     if (userProvider.isHBaseSecurityEnabled()) {
+      User user = userProvider.getCurrent();
       try {
         // init credentials for remote cluster
+        String outputCluster = job.getConfiguration().get(TableOutputFormat.OUTPUT_CLUSTER);
+        if (!StringUtils.isBlank(outputCluster)) {
+          addTokenForJob(() -> {
+            URI uri;
+            try {
+              uri = new URI(outputCluster);
+            } catch (URISyntaxException e) {
+              throw new IOException("malformed connection uri: " + outputCluster
+                + ", please check config " + TableOutputFormat.OUTPUT_CLUSTER, e);
+            }
+            return ConnectionFactory.createConnection(uri, job.getConfiguration());
+          }, user, job);
+        }
         String quorumAddress = job.getConfiguration().get(TableOutputFormat.QUORUM_ADDRESS);
-        User user = userProvider.getCurrent();
-        if (quorumAddress != null) {
-          Configuration peerConf = HBaseConfiguration.createClusterConf(job.getConfiguration(),
-            quorumAddress, TableOutputFormat.OUTPUT_CONF_PREFIX);
-          Connection peerConn = ConnectionFactory.createConnection(peerConf);
-          try {
-            TokenUtil.addTokenForJob(peerConn, user, job);
-          } finally {
-            peerConn.close();
-          }
+        if (!StringUtils.isBlank(quorumAddress)) {
+          addTokenForJob(() -> {
+            Configuration peerConf = HBaseConfiguration.createClusterConf(job.getConfiguration(),
+              quorumAddress, TableOutputFormat.OUTPUT_CONF_PREFIX);
+            return ConnectionFactory.createConnection(peerConf, user);
+          }, user, job);
         }
-
-        Connection conn = ConnectionFactory.createConnection(job.getConfiguration());
-        try {
-          TokenUtil.addTokenForJob(conn, user, job);
-        } finally {
-          conn.close();
-        }
+        // init credentials for source cluster
+        addTokenForJob(() -> ConnectionFactory.createConnection(job.getConfiguration()), user, job);
       } catch (InterruptedException ie) {
         LOG.info("Interrupted obtaining user authentication token");
         Thread.currentThread().interrupt();
       }
     }
-  }
-
-  /**
-   * Obtain an authentication token, for the specified cluster, on behalf of the current user and
-   * add it to the credentials for the given map reduce job. The quorumAddress is the key to the ZK
-   * ensemble, which contains: hbase.zookeeper.quorum, hbase.zookeeper.client.port and
-   * zookeeper.znode.parent
-   * @param job           The job that requires the permission.
-   * @param quorumAddress string that contains the 3 required configuratins
-   * @throws IOException When the authentication token cannot be obtained.
-   * @deprecated Since 1.2.0 and will be removed in 3.0.0. Use
-   *             {@link #initCredentialsForCluster(Job, Configuration)} instead.
-   * @see #initCredentialsForCluster(Job, Configuration)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-14886">HBASE-14886</a>
-   */
-  @Deprecated
-  public static void initCredentialsForCluster(Job job, String quorumAddress) throws IOException {
-    Configuration peerConf =
-      HBaseConfiguration.createClusterConf(job.getConfiguration(), quorumAddress);
-    initCredentialsForCluster(job, peerConf);
   }
 
   /**
@@ -509,15 +507,24 @@ public class TableMapReduceUtil {
    * @throws IOException When the authentication token cannot be obtained.
    */
   public static void initCredentialsForCluster(Job job, Configuration conf) throws IOException {
+    initCredentialsForCluster(job, conf, null);
+  }
+
+  /**
+   * Obtain an authentication token, for the specified cluster, on behalf of the current user and
+   * add it to the credentials for the given map reduce job.
+   * @param job  The job that requires the permission.
+   * @param conf The configuration to use in connecting to the peer cluster
+   * @param uri  The connection uri for the given peer cluster
+   * @throws IOException When the authentication token cannot be obtained.
+   */
+  public static void initCredentialsForCluster(Job job, Configuration conf, URI uri)
+    throws IOException {
     UserProvider userProvider = UserProvider.instantiate(conf);
     if (userProvider.isHBaseSecurityEnabled()) {
       try {
-        Connection peerConn = ConnectionFactory.createConnection(conf);
-        try {
-          TokenUtil.addTokenForJob(peerConn, userProvider.getCurrent(), job);
-        } finally {
-          peerConn.close();
-        }
+        addTokenForJob(() -> ConnectionFactory.createConnection(uri, conf),
+          userProvider.getCurrent(), job);
       } catch (InterruptedException e) {
         LOG.info("Interrupted obtaining user authentication token");
         Thread.interrupted();
@@ -569,7 +576,146 @@ public class TableMapReduceUtil {
    */
   public static void initTableReducerJob(String table, Class<? extends TableReducer> reducer,
     Job job, Class partitioner) throws IOException {
-    initTableReducerJob(table, reducer, job, partitioner, null, null, null);
+    initTableReducerJob(table, reducer, job, partitioner, (URI) null);
+  }
+
+  /**
+   * Use this before submitting a TableReduce job. It will appropriately set up the JobConf.
+   * @param table         The output table.
+   * @param reducer       The reducer class to use.
+   * @param job           The current job to adjust. Make sure the passed job is carrying all
+   *                      necessary HBase configuration.
+   * @param partitioner   Partitioner to use. Pass <code>null</code> to use default partitioner.
+   * @param quorumAddress Distant cluster to write to; default is null for output to the cluster
+   *                      that is designated in <code>hbase-site.xml</code>. Set this String to the
+   *                      zookeeper ensemble of an alternate remote cluster when you would have the
+   *                      reduce write a cluster that is other than the default; e.g. copying tables
+   *                      between clusters, the source would be designated by
+   *                      <code>hbase-site.xml</code> and this param would have the ensemble address
+   *                      of the remote cluster. The format to pass is particular. Pass
+   *                      <code> &lt;hbase.zookeeper.quorum&gt;:&lt;
+   *             hbase.zookeeper.client.port&gt;:&lt;zookeeper.znode.parent&gt;
+   * </code>           such as <code>server,server2,server3:2181:/hbase</code>.
+   * @throws IOException When determining the region count fails.
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. Use
+   *             {@link #initTableReducerJob(String, Class, Job, Class, URI)} instead, where we use
+   *             the connection uri to specify the target cluster.
+   */
+  @Deprecated
+  public static void initTableReducerJob(String table, Class<? extends TableReducer> reducer,
+    Job job, Class partitioner, String quorumAddress) throws IOException {
+    initTableReducerJob(table, reducer, job, partitioner, quorumAddress, true);
+  }
+
+  /**
+   * Use this before submitting a TableReduce job. It will appropriately set up the JobConf.
+   * @param table             The output table.
+   * @param reducer           The reducer class to use.
+   * @param job               The current job to adjust. Make sure the passed job is carrying all
+   *                          necessary HBase configuration.
+   * @param partitioner       Partitioner to use. Pass <code>null</code> to use default partitioner.
+   * @param quorumAddress     Distant cluster to write to; default is null for output to the cluster
+   *                          that is designated in <code>hbase-site.xml</code>. Set this String to
+   *                          the zookeeper ensemble of an alternate remote cluster when you would
+   *                          have the reduce write a cluster that is other than the default; e.g.
+   *                          copying tables between clusters, the source would be designated by
+   *                          <code>hbase-site.xml</code> and this param would have the ensemble
+   *                          address of the remote cluster. The format to pass is particular. Pass
+   *                          <code> &lt;hbase.zookeeper.quorum&gt;:&lt;
+   *             hbase.zookeeper.client.port&gt;:&lt;zookeeper.znode.parent&gt;
+   * </code>               such as <code>server,server2,server3:2181:/hbase</code>.
+   * @param addDependencyJars upload HBase jars and jars for any of the configured job classes via
+   *                          the distributed cache (tmpjars).
+   * @throws IOException When determining the region count fails.
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. Use
+   *             {@link #initTableReducerJob(String, Class, Job, Class, URI, boolean)} instead,
+   *             where we use the connection uri to specify the target cluster.
+   */
+  @Deprecated
+  public static void initTableReducerJob(String table, Class<? extends TableReducer> reducer,
+    Job job, Class partitioner, String quorumAddress, boolean addDependencyJars)
+    throws IOException {
+    initTableReducerJob(table, reducer, job, partitioner, () -> {
+      // If passed a quorum/ensemble address, pass it on to TableOutputFormat.
+      if (quorumAddress != null) {
+        // Calling this will validate the format
+        ZKConfig.validateClusterKey(quorumAddress);
+        job.getConfiguration().set(TableOutputFormat.QUORUM_ADDRESS, quorumAddress);
+      }
+    }, addDependencyJars);
+  }
+
+  /**
+   * Use this before submitting a TableReduce job. It will appropriately set up the JobConf.
+   * @param table         The output table.
+   * @param reducer       The reducer class to use.
+   * @param job           The current job to adjust. Make sure the passed job is carrying all
+   *                      necessary HBase configuration.
+   * @param partitioner   Partitioner to use. Pass <code>null</code> to use default partitioner.
+   * @param outputCluster The HBase cluster you want to write to. Default is null which means output
+   *                      to the same cluster you read from, i.e, the cluster when initializing by
+   *                      the job's Configuration instance.
+   * @throws IOException When determining the region count fails.
+   */
+  public static void initTableReducerJob(String table, Class<? extends TableReducer> reducer,
+    Job job, Class partitioner, URI outputCluster) throws IOException {
+    initTableReducerJob(table, reducer, job, partitioner, outputCluster, true);
+  }
+
+  /**
+   * Use this before submitting a TableReduce job. It will appropriately set up the JobConf.
+   * @param table             The output table.
+   * @param reducer           The reducer class to use.
+   * @param job               The current job to adjust. Make sure the passed job is carrying all
+   *                          necessary HBase configuration.
+   * @param partitioner       Partitioner to use. Pass <code>null</code> to use default partitioner.
+   * @param outputCluster     The HBase cluster you want to write to. Default is null which means
+   *                          output to the same cluster you read from, i.e, the cluster when
+   *                          initializing by the job's Configuration instance.
+   * @param addDependencyJars upload HBase jars and jars for any of the configured job classes via
+   *                          the distributed cache (tmpjars).
+   * @throws IOException When determining the region count fails.
+   */
+  public static void initTableReducerJob(String table, Class<? extends TableReducer> reducer,
+    Job job, Class partitioner, URI outputCluster, boolean addDependencyJars) throws IOException {
+    initTableReducerJob(table, reducer, job, partitioner, () -> {
+      if (outputCluster != null) {
+        ConnectionRegistryFactory.validate(outputCluster);
+        job.getConfiguration().set(TableOutputFormat.OUTPUT_CLUSTER, outputCluster.toString());
+      }
+    }, addDependencyJars);
+  }
+
+  private static void initTableReducerJob(String table, Class<? extends TableReducer> reducer,
+    Job job, Class partitioner, IOExceptionRunnable setOutputCluster, boolean addDependencyJars)
+    throws IOException {
+    Configuration conf = job.getConfiguration();
+    HBaseConfiguration.merge(conf, HBaseConfiguration.create(conf));
+    job.setOutputFormatClass(TableOutputFormat.class);
+    if (reducer != null) {
+      job.setReducerClass(reducer);
+    }
+    conf.set(TableOutputFormat.OUTPUT_TABLE, table);
+    conf.setStrings("io.serializations", conf.get("io.serializations"),
+      MutationSerialization.class.getName(), ResultSerialization.class.getName());
+    setOutputCluster.run();
+    job.setOutputKeyClass(ImmutableBytesWritable.class);
+    job.setOutputValueClass(Writable.class);
+    if (partitioner == HRegionPartitioner.class) {
+      job.setPartitionerClass(HRegionPartitioner.class);
+      int regions = getRegionCount(conf, TableName.valueOf(table));
+      if (job.getNumReduceTasks() > regions) {
+        job.setNumReduceTasks(regions);
+      }
+    } else if (partitioner != null) {
+      job.setPartitionerClass(partitioner);
+    }
+
+    if (addDependencyJars) {
+      addDependencyJars(job);
+    }
+
+    initCredentials(job);
   }
 
   /**
@@ -592,12 +738,16 @@ public class TableMapReduceUtil {
    * @param serverClass   redefined hbase.regionserver.class
    * @param serverImpl    redefined hbase.regionserver.impl
    * @throws IOException When determining the region count fails.
+   * @deprecated Since 2.5.9, 2.6.1, 2.7.0, will be removed in 4.0.0. The {@code serverClass} and
+   *             {@code serverImpl} do not take effect any more, just use
+   *             {@link #initTableReducerJob(String, Class, Job, Class, String)} instead.
+   * @see #initTableReducerJob(String, Class, Job, Class, String)
    */
+  @Deprecated
   public static void initTableReducerJob(String table, Class<? extends TableReducer> reducer,
     Job job, Class partitioner, String quorumAddress, String serverClass, String serverImpl)
     throws IOException {
-    initTableReducerJob(table, reducer, job, partitioner, quorumAddress, serverClass, serverImpl,
-      true);
+    initTableReducerJob(table, reducer, job, partitioner, quorumAddress);
   }
 
   /**
@@ -622,45 +772,16 @@ public class TableMapReduceUtil {
    * @param addDependencyJars upload HBase jars and jars for any of the configured job classes via
    *                          the distributed cache (tmpjars).
    * @throws IOException When determining the region count fails.
+   * @deprecated Since 2.5.9, 2.6.1, 2.7.0, will be removed in 4.0.0. The {@code serverClass} and
+   *             {@code serverImpl} do not take effect any more, just use
+   *             {@link #initTableReducerJob(String, Class, Job, Class, String, boolean)} instead.
+   * @see #initTableReducerJob(String, Class, Job, Class, String, boolean)
    */
+  @Deprecated
   public static void initTableReducerJob(String table, Class<? extends TableReducer> reducer,
     Job job, Class partitioner, String quorumAddress, String serverClass, String serverImpl,
     boolean addDependencyJars) throws IOException {
-
-    Configuration conf = job.getConfiguration();
-    HBaseConfiguration.merge(conf, HBaseConfiguration.create(conf));
-    job.setOutputFormatClass(TableOutputFormat.class);
-    if (reducer != null) job.setReducerClass(reducer);
-    conf.set(TableOutputFormat.OUTPUT_TABLE, table);
-    conf.setStrings("io.serializations", conf.get("io.serializations"),
-      MutationSerialization.class.getName(), ResultSerialization.class.getName());
-    // If passed a quorum/ensemble address, pass it on to TableOutputFormat.
-    if (quorumAddress != null) {
-      // Calling this will validate the format
-      ZKConfig.validateClusterKey(quorumAddress);
-      conf.set(TableOutputFormat.QUORUM_ADDRESS, quorumAddress);
-    }
-    if (serverClass != null && serverImpl != null) {
-      conf.set(TableOutputFormat.REGION_SERVER_CLASS, serverClass);
-      conf.set(TableOutputFormat.REGION_SERVER_IMPL, serverImpl);
-    }
-    job.setOutputKeyClass(ImmutableBytesWritable.class);
-    job.setOutputValueClass(Writable.class);
-    if (partitioner == HRegionPartitioner.class) {
-      job.setPartitionerClass(HRegionPartitioner.class);
-      int regions = getRegionCount(conf, TableName.valueOf(table));
-      if (job.getNumReduceTasks() > regions) {
-        job.setNumReduceTasks(regions);
-      }
-    } else if (partitioner != null) {
-      job.setPartitionerClass(partitioner);
-    }
-
-    if (addDependencyJars) {
-      addDependencyJars(job);
-    }
-
-    initCredentials(job);
+    initTableReducerJob(table, reducer, job, partitioner, quorumAddress, addDependencyJars);
   }
 
   /**
@@ -735,7 +856,7 @@ public class TableMapReduceUtil {
       com.codahale.metrics.MetricRegistry.class, // metrics-core
       org.apache.commons.lang3.ArrayUtils.class, // commons-lang
       io.opentelemetry.api.trace.Span.class, // opentelemetry-api
-      io.opentelemetry.semconv.trace.attributes.SemanticAttributes.class, // opentelemetry-semconv
+      io.opentelemetry.semconv.SemanticAttributes.class, // opentelemetry-semconv
       io.opentelemetry.context.Context.class); // opentelemetry-context
   }
 
@@ -783,22 +904,6 @@ public class TableMapReduceUtil {
 
   /**
    * Add the jars containing the given classes to the job's configuration such that JobClient will
-   * ship them to the cluster and add them to the DistributedCache.
-   * @deprecated since 1.3.0 and will be removed in 3.0.0. Use {@link #addDependencyJars(Job)}
-   *             instead.
-   * @see #addDependencyJars(Job)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-8386">HBASE-8386</a>
-   */
-  @Deprecated
-  public static void addDependencyJars(Configuration conf, Class<?>... classes) throws IOException {
-    LOG.warn("The addDependencyJars(Configuration, Class<?>...) method has been deprecated since it"
-      + " is easy to use incorrectly. Most users should rely on addDependencyJars(Job) "
-      + "instead. See HBASE-8386 for more details.");
-    addDependencyJarsForClasses(conf, classes);
-  }
-
-  /**
-   * Add the jars containing the given classes to the job's configuration such that JobClient will
    * ship them to the cluster and add them to the DistributedCache. N.B. that this method at most
    * adds one jar per class given. If there is more than one jar available containing a class with
    * the same name as a given class, we don't define which of those jars might be chosen.
@@ -834,9 +939,10 @@ public class TableMapReduceUtil {
       }
       jars.add(path.toString());
     }
-    if (jars.isEmpty()) return;
-
-    conf.set("tmpjars", StringUtils.arrayToString(jars.toArray(new String[jars.size()])));
+    if (jars.isEmpty()) {
+      return;
+    }
+    conf.set("tmpjars", jars.stream().collect(Collectors.joining(",")));
   }
 
   /**

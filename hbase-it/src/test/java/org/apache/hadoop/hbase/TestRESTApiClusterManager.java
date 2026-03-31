@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -26,48 +26,46 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterManager.ServiceType;
 import org.apache.hadoop.hbase.RESTApiClusterManager.Service;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestRESTApiClusterManager {
 
-  @ClassRule
-  public static final HBaseClassTestRule testRule =
-    HBaseClassTestRule.forClass(TestRESTApiClusterManager.class);
-
-  @ClassRule
   public static MockHttpApiRule mockHttpApi = new MockHttpApiRule();
-
-  @Rule
-  public final TestName testName = new TestName();
 
   private static HBaseCommonTestingUtil testingUtility;
   private ClusterManager clusterManager;
 
-  @BeforeClass
-  public static void beforeClass() {
+  @BeforeAll
+  public static void beforeClass() throws Exception {
+    mockHttpApi.start();
     testingUtility = new HBaseCommonTestingUtil();
     configureClusterManager(testingUtility.getConfiguration());
   }
 
-  @Before
-  public void before() {
+  @AfterAll
+  public static void afterClass() throws Exception {
+    mockHttpApi.close();
+  }
+
+  @BeforeEach
+  public void before(TestInfo testInfo) {
     mockHttpApi.clearRegistrations();
     final Configuration methodConf = new Configuration(testingUtility.getConfiguration());
-    methodConf.set("hbase.it.clustermanager.restapi.clustername", testName.getMethodName());
+    methodConf.set("hbase.it.clustermanager.restapi.clustername",
+      testInfo.getTestMethod().get().getName());
     clusterManager = new RESTApiClusterManager();
     clusterManager.setConf(methodConf);
   }
 
   @Test
-  public void isRunningPositive() throws IOException {
-    final String clusterName = testName.getMethodName();
+  public void isRunningPositive(TestInfo testInfo) throws IOException {
+    final String clusterName = testInfo.getTestMethod().get().getName();
     final String hostName = "somehost";
     final String serviceName = "hbase";
     final String hostId = "some-id";

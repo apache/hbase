@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -51,7 +52,6 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
@@ -407,7 +407,7 @@ public class TestNamespaceAuditor {
     try {
       ADMIN.split(tableTwo, Bytes.toBytes("6"));
       fail();
-    } catch (DoNotRetryRegionException e) {
+    } catch (DoNotRetryIOException e) {
       // Expected
     }
     Thread.sleep(2000);
@@ -475,7 +475,7 @@ public class TestNamespaceAuditor {
     volatile CountDownLatch postCompact;
 
     @Override
-    public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
+    public void postCompact(ObserverContext<? extends RegionCoprocessorEnvironment> e, Store store,
       StoreFile resultFile, CompactionLifeCycleTracker tracker, CompactionRequest request)
       throws IOException {
       postCompact.countDown();

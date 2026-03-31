@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.incMillisBetweenNextsMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.incRPCCallsMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.incRPCRetriesMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.noMoreResultsForReverseScan;
@@ -120,7 +121,9 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
   private boolean includeNextStartRowWhenError;
 
-  private long nextCallStartNs;
+  private long lastNextCallNanos;
+
+  private long nextCallStartNanos;
 
   private int tries;
 
@@ -230,7 +233,8 @@ class AsyncScanSingleRegionRpcRetryingCaller {
   // Notice that, the public methods of this class is supposed to be called by upper layer only, and
   // package private methods can only be called within the implementation of
   // AsyncScanSingleRegionRpcRetryingCaller.
-  private final class ScanResumerImpl implements AdvancedScanResultConsumer.ScanResumer {
+  @InterfaceAudience.Private
+  final class ScanResumerImpl implements AdvancedScanResultConsumer.ScanResumer {
 
     // INITIALIZED -> SUSPENDED -> RESUMED
     // INITIALIZED -> RESUMED
@@ -250,6 +254,18 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
     @Override
     public void resume() {
+      doResume(false);
+    }
+
+    /**
+     * This method is used when {@link ScanControllerImpl#suspend} had ever been called to get a
+     * {@link ScanResumerImpl}, but now user stops scan and does not need any more scan results.
+     */
+    public void terminate() {
+      doResume(true);
+    }
+
+    private void doResume(boolean stopScan) {
       // just used to fix findbugs warnings. In fact, if resume is called before prepare, then we
       // just return at the first if condition without loading the resp and numValidResuls field. If
       // resume is called after suspend, then it is also safe to just reference resp and
@@ -274,7 +290,11 @@ class AsyncScanSingleRegionRpcRetryingCaller {
         localResp = this.resp;
         localNumberOfCompleteRows = this.numberOfCompleteRows;
       }
-      completeOrNext(localResp, localNumberOfCompleteRows);
+      if (stopScan) {
+        stopScan(localResp);
+      } else {
+        completeOrNext(localResp, localNumberOfCompleteRows);
+      }
     }
 
     private void scheduleRenewLeaseTask() {
@@ -317,7 +337,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     AdvancedScanResultConsumer consumer, Interface stub, HRegionLocation loc,
     boolean isRegionServerRemote, int priority, long scannerLeaseTimeoutPeriodNs, long pauseNs,
     long pauseNsForServerOverloaded, int maxAttempts, long scanTimeoutNs, long rpcTimeoutNs,
-    int startLogErrorsCnt, Map<String, byte[]> requestAttributes) {
+    long lastNextCallNanos, int startLogErrorsCnt, Map<String, byte[]> requestAttributes) {
     this.retryTimer = retryTimer;
     this.conn = conn;
     this.scan = scan;
@@ -332,6 +352,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     this.maxAttempts = maxAttempts;
     this.scanTimeoutNs = scanTimeoutNs;
     this.rpcTimeoutNs = rpcTimeoutNs;
+    this.lastNextCallNanos = lastNextCallNanos;
     this.startLogErrorsCnt = startLogErrorsCnt;
     if (scan.isReversed()) {
       completeWhenNoMoreResultsInRegion = this::completeReversedWhenNoMoreResultsInRegion;
@@ -341,15 +362,18 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     this.future = new CompletableFuture<>();
     this.priority = priority;
     this.controller = conn.rpcControllerFactory.newController();
-    this.controller.setPriority(priority);
     this.controller.setRequestAttributes(requestAttributes);
     this.exceptions = new ArrayList<>();
     this.pauseManager =
       new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded, scanTimeoutNs);
   }
 
+  public long getLastNextCallNanos() {
+    return lastNextCallNanos;
+  }
+
   private long elapsedMs() {
-    return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - nextCallStartNs);
+    return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - nextCallStartNanos);
   }
 
   private void closeScanner() {
@@ -416,7 +440,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     }
 
     OptionalLong maybePauseNsToUse =
-      pauseManager.getPauseNsFromException(error, tries, nextCallStartNs);
+      pauseManager.getPauseNsFromException(error, tries, nextCallStartNanos);
     if (!maybePauseNsToUse.isPresent()) {
       completeExceptionally(!scannerClosed);
       return;
@@ -536,12 +560,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     }
     ScanControllerState state = scanController.destroy();
     if (state == ScanControllerState.TERMINATED) {
-      if (resp.getMoreResultsInRegion()) {
-        // we have more results in region but user request to stop the scan, so we need to close the
-        // scanner explicitly.
-        closeScanner();
-      }
-      completeNoMoreResults();
+      stopScan(resp);
       return;
     }
     int numberOfCompleteRows = resultCache.numberOfCompleteRows() - numberOfCompleteRowsBefore;
@@ -553,6 +572,15 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     completeOrNext(resp, numberOfCompleteRows);
   }
 
+  private void stopScan(ScanResponse resp) {
+    if (resp.getMoreResultsInRegion()) {
+      // we have more results in region but user request to stop the scan, so we need to close the
+      // scanner explicitly.
+      closeScanner();
+    }
+    completeNoMoreResults();
+  }
+
   private void call() {
     // As we have a call sequence for scan, it is useless to have a different rpc timeout which is
     // less than the scan timeout. If the server does not respond in time(usually this will not
@@ -561,7 +589,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     // new one.
     long callTimeoutNs;
     if (scanTimeoutNs > 0) {
-      long remainingNs = scanTimeoutNs - (System.nanoTime() - nextCallStartNs);
+      long remainingNs = scanTimeoutNs - (System.nanoTime() - nextCallStartNanos);
       if (remainingNs <= 0) {
         completeExceptionally(true);
         return;
@@ -589,7 +617,10 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     nextCallSeq++;
     tries = 1;
     exceptions.clear();
-    nextCallStartNs = System.nanoTime();
+    nextCallStartNanos = System.nanoTime();
+    incMillisBetweenNextsMetrics(scanMetrics,
+      TimeUnit.NANOSECONDS.toMillis(nextCallStartNanos - lastNextCallNanos));
+    lastNextCallNanos = nextCallStartNanos;
     call();
   }
 

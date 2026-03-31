@@ -17,11 +17,14 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BACKUP_LIST_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG_DESC;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_IGNORECHECKSUM;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_IGNORECHECKSUM_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_KEEP;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_KEEP_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_LIST;
@@ -39,6 +42,7 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKE
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKERS_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME_DESC;
+import static org.apache.hadoop.hbase.backup.impl.BackupSystemTable.Order.NEW_TO_OLD;
 
 import java.io.IOException;
 import java.net.URI;
@@ -140,12 +144,19 @@ public final class BackupCommands {
         throw new IOException(INCORRECT_USAGE);
       }
 
+      if (cmdline.hasOption(OPTION_YARN_QUEUE_NAME)) {
+        String queueName = cmdline.getOptionValue(OPTION_YARN_QUEUE_NAME);
+        // Set MR job queuename to configuration
+        getConf().set("mapreduce.job.queuename", queueName);
+      }
+
       // Create connection
       conn = ConnectionFactory.createConnection(getConf());
       if (requiresNoActiveSession()) {
         // Check active session
         try (BackupSystemTable table = new BackupSystemTable(conn)) {
-          List<BackupInfo> sessions = table.getBackupInfos(BackupState.RUNNING);
+          List<BackupInfo> sessions =
+            table.getBackupHistory(NEW_TO_OLD, 1, withState(BackupState.RUNNING));
 
           if (sessions.size() > 0) {
             System.err.println("Found backup session in a RUNNING state: ");
@@ -329,11 +340,7 @@ public final class BackupCommands {
         ? Integer.parseInt(cmdline.getOptionValue(OPTION_WORKERS))
         : -1;
 
-      if (cmdline.hasOption(OPTION_YARN_QUEUE_NAME)) {
-        String queueName = cmdline.getOptionValue(OPTION_YARN_QUEUE_NAME);
-        // Set system property value for MR job
-        System.setProperty("mapreduce.job.queuename", queueName);
-      }
+      boolean ignoreChecksum = cmdline.hasOption(OPTION_IGNORECHECKSUM);
 
       try (BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         BackupRequest.Builder builder = new BackupRequest.Builder();
@@ -341,7 +348,8 @@ public final class BackupCommands {
           .withTableList(
             tables != null ? Lists.newArrayList(BackupUtils.parseTableNames(tables)) : null)
           .withTargetRootDir(targetBackupDir).withTotalTasks(workers)
-          .withBandwidthPerTasks(bandwidth).withBackupSetName(setName).build();
+          .withBandwidthPerTasks(bandwidth).withNoChecksumVerify(ignoreChecksum)
+          .withBackupSetName(setName).build();
         String backupId = admin.backupTables(request);
         System.out.println("Backup session " + backupId + " finished. Status: SUCCESS");
       } catch (IOException e) {
@@ -394,6 +402,7 @@ public final class BackupCommands {
       options.addOption(OPTION_TABLE, true, OPTION_TABLE_LIST_DESC);
       options.addOption(OPTION_YARN_QUEUE_NAME, true, OPTION_YARN_QUEUE_NAME_DESC);
       options.addOption(OPTION_DEBUG, false, OPTION_DEBUG_DESC);
+      options.addOption(OPTION_IGNORECHECKSUM, false, OPTION_IGNORECHECKSUM_DESC);
 
       HelpFormatter helpFormatter = new HelpFormatter();
       helpFormatter.setLeftPadding(2);
@@ -522,7 +531,8 @@ public final class BackupCommands {
         if (backupId != null) {
           info = sysTable.readBackupInfo(backupId);
         } else {
-          List<BackupInfo> infos = sysTable.getBackupInfos(BackupState.RUNNING);
+          List<BackupInfo> infos =
+            sysTable.getBackupHistory(NEW_TO_OLD, 1, withState(BackupState.RUNNING));
           if (infos != null && infos.size() > 0) {
             info = infos.get(0);
             backupId = info.getBackupId();
@@ -588,18 +598,15 @@ public final class BackupCommands {
         throw new IOException(value + " is not an integer number");
       }
       final long fdays = days;
-      BackupInfo.Filter dateFilter = new BackupInfo.Filter() {
-        @Override
-        public boolean apply(BackupInfo info) {
-          long currentTime = EnvironmentEdgeManager.currentTime();
-          long maxTsToDelete = currentTime - fdays * 24 * 3600 * 1000;
-          return info.getCompleteTs() <= maxTsToDelete;
-        }
+      BackupInfo.Filter dateFilter = info -> {
+        long currentTime = EnvironmentEdgeManager.currentTime();
+        long maxTsToDelete = currentTime - fdays * 24 * 3600 * 1000;
+        return info.getCompleteTs() <= maxTsToDelete;
       };
       List<BackupInfo> history = null;
       try (final BackupSystemTable sysTable = new BackupSystemTable(conn);
         BackupAdminImpl admin = new BackupAdminImpl(conn)) {
-        history = sysTable.getBackupHistory(-1, dateFilter);
+        history = sysTable.getBackupHistory(dateFilter);
         String[] backupIds = convertToBackupIds(history);
         int deleted = admin.deleteBackups(backupIds);
         System.out.println("Deleted " + deleted + " backups. Total older than " + days + " days: "
@@ -673,7 +680,8 @@ public final class BackupCommands {
         final BackupSystemTable sysTable = new BackupSystemTable(conn)) {
         // Failed backup
         BackupInfo backupInfo;
-        List<BackupInfo> list = sysTable.getBackupInfos(BackupState.RUNNING);
+        List<BackupInfo> list =
+          sysTable.getBackupHistory(NEW_TO_OLD, 1, withState(BackupState.RUNNING));
         if (list.size() == 0) {
           // No failed sessions found
           System.out.println("REPAIR status: no failed sessions found."
@@ -854,27 +862,21 @@ public final class BackupCommands {
       int n = parseHistoryLength();
       final TableName tableName = getTableName();
       final String setName = getTableSetName();
-      BackupInfo.Filter tableNameFilter = new BackupInfo.Filter() {
-        @Override
-        public boolean apply(BackupInfo info) {
-          if (tableName == null) {
-            return true;
-          }
-
-          List<TableName> names = info.getTableNames();
-          return names.contains(tableName);
+      BackupInfo.Filter tableNameFilter = info -> {
+        if (tableName == null) {
+          return true;
         }
+
+        List<TableName> names = info.getTableNames();
+        return names.contains(tableName);
       };
-      BackupInfo.Filter tableSetFilter = new BackupInfo.Filter() {
-        @Override
-        public boolean apply(BackupInfo info) {
-          if (setName == null) {
-            return true;
-          }
-
-          String backupId = info.getBackupId();
-          return backupId.startsWith(setName);
+      BackupInfo.Filter tableSetFilter = info -> {
+        if (setName == null) {
+          return true;
         }
+
+        String backupId = info.getBackupId();
+        return backupId.startsWith(setName);
       };
       Path backupRootPath = getBackupRootPath();
       List<BackupInfo> history;
@@ -882,7 +884,8 @@ public final class BackupCommands {
         // Load from backup system table
         super.execute();
         try (final BackupSystemTable sysTable = new BackupSystemTable(conn)) {
-          history = sysTable.getBackupHistory(n, tableNameFilter, tableSetFilter);
+          history = sysTable.getBackupHistory(tableNameFilter, tableSetFilter);
+          history = history.subList(0, Math.min(n, history.size()));
         }
       } else {
         // load from backup FS

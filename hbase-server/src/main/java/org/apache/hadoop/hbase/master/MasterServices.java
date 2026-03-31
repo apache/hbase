@@ -33,7 +33,9 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerManager;
@@ -66,7 +68,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Service;
  * adding API. Changes cause ripples through the code base.
  */
 @InterfaceAudience.Private
-public interface MasterServices extends Server {
+public interface MasterServices extends Server, KeyManagementService {
   /** Returns the underlying snapshot manager */
   SnapshotManager getSnapshotManager();
 
@@ -84,6 +86,9 @@ public interface MasterServices extends Server {
 
   /** Returns Master's WALs {@link MasterWalManager} utility class. */
   MasterWalManager getMasterWalManager();
+
+  /** Rotates the system key if changed, returns true if a new key was detected and rotated */
+  boolean rotateSystemKeyIfChanged() throws IOException;
 
   /** Returns Master's {@link ServerManager} instance. */
   ServerManager getServerManager();
@@ -105,6 +110,9 @@ public interface MasterServices extends Server {
 
   /** Returns Master's instance of {@link CatalogJanitor} */
   CatalogJanitor getCatalogJanitor();
+
+  /** Returns Master's instance of {@link HbckChore} */
+  HbckChore getHbckChore();
 
   /** Returns Master's instance of {@link ProcedureExecutor} */
   ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor();
@@ -158,8 +166,19 @@ public interface MasterServices extends Server {
    * @param tableName  The table name
    * @param descriptor The updated table descriptor
    */
+  default long modifyTable(final TableName tableName, final TableDescriptor descriptor,
+    final long nonceGroup, final long nonce) throws IOException {
+    return modifyTable(tableName, descriptor, nonceGroup, nonce, true);
+  }
+
+  /**
+   * Modify the descriptor of an existing table
+   * @param tableName     The table name
+   * @param descriptor    The updated table descriptor
+   * @param reopenRegions Whether to reopen regions after modifying the table descriptor
+   */
   long modifyTable(final TableName tableName, final TableDescriptor descriptor,
-    final long nonceGroup, final long nonce) throws IOException;
+    final long nonceGroup, final long nonce, final boolean reopenRegions) throws IOException;
 
   /**
    * Modify the store file tracker of an existing table
@@ -251,6 +270,9 @@ public interface MasterServices extends Server {
 
   /** Returns true if master is the active one */
   boolean isActiveMaster();
+
+  /** Returns timestamp in millis when this master became the active one. */
+  long getMasterActiveTime();
 
   /** Returns true if master is initialized */
   boolean isInitialized();
@@ -488,4 +510,19 @@ public interface MasterServices extends Server {
    */
   long flushTable(final TableName tableName, final List<byte[]> columnFamilies,
     final long nonceGroup, final long nonce) throws IOException;
+
+  /**
+   * Truncate region
+   * @param regionInfo region to be truncated
+   * @param nonceGroup the nonce group
+   * @param nonce      the nonce
+   * @return procedure Id
+   */
+  long truncateRegion(RegionInfo regionInfo, long nonceGroup, long nonce) throws IOException;
+
+  /**
+   * Roll WAL writer for all RegionServers
+   * @return procedure id
+   */
+  long rollAllWALWriters(long nonceGroup, long nonce) throws IOException;
 }

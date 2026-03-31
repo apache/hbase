@@ -175,6 +175,23 @@ public class TestAsyncBufferMutator {
     assertArrayEquals(VALUE, table.get(new Get(Bytes.toBytes(0))).get().getValue(CF, CQ));
   }
 
+  @Test
+  public void testMaxMutationsFlush() throws InterruptedException, ExecutionException {
+    AsyncBufferedMutator mutator =
+      CONN.getBufferedMutatorBuilder(TABLE_NAME).setMaxMutations(3).build();
+    CompletableFuture<?> future1 =
+      mutator.mutate(new Put(Bytes.toBytes(0)).addColumn(CF, CQ, VALUE));
+    CompletableFuture<?> future2 =
+      mutator.mutate(new Put(Bytes.toBytes(1)).addColumn(CF, CQ, VALUE));
+    CompletableFuture<?> future3 =
+      mutator.mutate(new Put(Bytes.toBytes(2)).addColumn(CF, CQ, VALUE));
+    CompletableFuture.allOf(future1, future2, future3).join();
+    AsyncTable<?> table = CONN.getTable(TABLE_NAME);
+    assertArrayEquals(VALUE, table.get(new Get(Bytes.toBytes(0))).get().getValue(CF, CQ));
+    assertArrayEquals(VALUE, table.get(new Get(Bytes.toBytes(1))).get().getValue(CF, CQ));
+    assertArrayEquals(VALUE, table.get(new Get(Bytes.toBytes(2))).get().getValue(CF, CQ));
+  }
+
   // a bit deep into the implementation
   @Test
   public void testCancelPeriodicFlush() throws InterruptedException, ExecutionException {
@@ -241,17 +258,18 @@ public class TestAsyncBufferMutator {
 
   private static final class AsyncBufferMutatorForTest extends AsyncBufferedMutatorImpl {
 
-    private int flushCount;
+    private int drainCount;
 
     AsyncBufferMutatorForTest(HashedWheelTimer periodicalFlushTimer, AsyncTable<?> table,
-      long writeBufferSize, long periodicFlushTimeoutNs, int maxKeyValueSize) {
-      super(periodicalFlushTimer, table, writeBufferSize, periodicFlushTimeoutNs, maxKeyValueSize);
+      long writeBufferSize, long periodicFlushTimeoutNs, int maxKeyValueSize, int maxMutation) {
+      super(periodicalFlushTimer, table, writeBufferSize, periodicFlushTimeoutNs, maxKeyValueSize,
+        maxMutation);
     }
 
     @Override
-    protected void internalFlush() {
-      flushCount++;
-      super.internalFlush();
+    protected Batch drainBatch() {
+      drainCount++;
+      return super.drainBatch();
     }
   }
 
@@ -261,21 +279,24 @@ public class TestAsyncBufferMutator {
     Put put = new Put(Bytes.toBytes(0)).addColumn(CF, CQ, VALUE);
     try (AsyncBufferMutatorForTest mutator =
       new AsyncBufferMutatorForTest(AsyncConnectionImpl.RETRY_TIMER, CONN.getTable(TABLE_NAME),
-        10 * put.heapSize(), TimeUnit.MILLISECONDS.toNanos(200), 1024 * 1024)) {
+        10 * put.heapSize(), TimeUnit.MILLISECONDS.toNanos(200), 1024 * 1024, 100)) {
       CompletableFuture<?> future = mutator.mutate(put);
       Timeout task = mutator.periodicFlushTask;
       // we should have scheduled a periodic flush task
       assertNotNull(task);
-      synchronized (mutator) {
-        // synchronized on mutator to prevent periodic flush to be executed
+      // get the lock toprevent periodic flush to be executed
+      mutator.lock.lock();
+      try {
         Thread.sleep(500);
         // the timeout should be issued
         assertTrue(task.isExpired());
-        // but no flush is issued as we hold the lock
-        assertEquals(0, mutator.flushCount);
+        // but no drain is issued as we hold the lock
+        assertEquals(0, mutator.drainCount);
         assertFalse(future.isDone());
-        // manually flush, then release the lock
+        // manually flush and drain, then release the lock
         mutator.flush();
+      } finally {
+        mutator.lock.unlock();
       }
       // this is a bit deep into the implementation in netty but anyway let's add a check here to
       // confirm that an issued timeout can not be canceled by netty framework.
@@ -285,7 +306,7 @@ public class TestAsyncBufferMutator {
       AsyncTable<?> table = CONN.getTable(TABLE_NAME);
       assertArrayEquals(VALUE, table.get(new Get(Bytes.toBytes(0))).get().getValue(CF, CQ));
       // only the manual flush, the periodic flush should have been canceled by us
-      assertEquals(1, mutator.flushCount);
+      assertEquals(1, mutator.drainCount);
     }
   }
 }

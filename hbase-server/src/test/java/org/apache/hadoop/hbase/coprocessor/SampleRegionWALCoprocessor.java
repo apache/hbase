@@ -57,6 +57,8 @@ public class SampleRegionWALCoprocessor
   private boolean postWALRestoreCalled = false;
   private boolean preWALRollCalled = false;
   private boolean postWALRollCalled = false;
+  private boolean preReplayWALsCalled = false;
+  private boolean postReplayWALsCalled = false;
 
   /**
    * Set values: with a table name, a column name which will be ignored, and a column name which
@@ -162,6 +164,18 @@ public class SampleRegionWALCoprocessor
     postWALRestoreCalled = true;
   }
 
+  @Override
+  public void preReplayWALs(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
+    RegionInfo info, Path edits) throws IOException {
+    preReplayWALsCalled = true;
+  }
+
+  @Override
+  public void postReplayWALs(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
+    RegionInfo info, Path edits) throws IOException {
+    postReplayWALsCalled = true;
+  }
+
   public boolean isPreWALWriteCalled() {
     return preWALWriteCalled;
   }
@@ -186,5 +200,13 @@ public class SampleRegionWALCoprocessor
 
   public boolean isPostWALRollCalled() {
     return postWALRollCalled;
+  }
+
+  public boolean isPreReplayWALsCalled() {
+    return preReplayWALsCalled;
+  }
+
+  public boolean isPostReplayWALsCalled() {
+    return postReplayWALsCalled;
   }
 }

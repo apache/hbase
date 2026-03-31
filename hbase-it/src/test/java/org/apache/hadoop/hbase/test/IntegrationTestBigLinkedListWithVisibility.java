@@ -66,8 +66,8 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,7 +91,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
  * 20000 /tmp 1 10000 or ./hbase org.apache.hadoop.hbase.IntegrationTestsDriver -r
  * .*IntegrationTestBigLinkedListWithVisibility.*
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestBigLinkedList {
 
   private static final String CONFIDENTIAL = "confidential";
@@ -275,9 +275,10 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       }
       job.getConfiguration().setBoolean("mapreduce.map.speculative", false);
       job.getConfiguration().setBoolean("mapreduce.reduce.speculative", false);
-      TableMapReduceUtil.initTableReducerJob(COMMON_TABLE_NAME, null, job, null, null, null, null);
+      TableMapReduceUtil.initTableReducerJob(COMMON_TABLE_NAME, null, job);
       TableMapReduceUtil.addDependencyJars(job);
-      TableMapReduceUtil.addDependencyJars(job.getConfiguration(), AbstractHBaseTool.class);
+      TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
+        AbstractHBaseTool.class);
       TableMapReduceUtil.initCredentials(job);
       job.setNumReduceTasks(0);
       boolean success = job.waitForCompletion(true);
@@ -430,7 +431,8 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
 
       TableMapReduceUtil.initTableMapperJob(tableName.getName(), scan, VerifyMapper.class,
         BytesWritable.class, BytesWritable.class, job);
-      TableMapReduceUtil.addDependencyJars(job.getConfiguration(), AbstractHBaseTool.class);
+      TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
+        AbstractHBaseTool.class);
 
       job.getConfiguration().setBoolean("mapreduce.map.speculative", false);
 
@@ -633,7 +635,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       new String[] { "1", "1", "20000",
         util.getDataTestDirOnTestFS("IntegrationTestBigLinkedListWithVisibility").toString(), "1",
         "10000" });
-    org.junit.Assert.assertEquals(0, ret);
+    org.junit.jupiter.api.Assertions.assertEquals(0, ret);
   }
 
   public static void main(String[] args) throws Exception {

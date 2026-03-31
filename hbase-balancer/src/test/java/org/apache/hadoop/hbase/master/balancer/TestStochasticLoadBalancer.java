@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -36,7 +36,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RegionMetrics;
@@ -49,20 +48,16 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStochasticLoadBalancer.class);
 
   private static final String REGION_KEY = "testRegion";
 
@@ -70,12 +65,12 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
   private float[] expectedLocalities = { 1.0f, 0.0f, 0.50f, 0.25f, 1.0f };
   private static Configuration storedConfiguration;
 
-  @BeforeClass
+  @BeforeAll
   public static void saveInitialConfiguration() {
     storedConfiguration = new Configuration(conf);
   }
 
-  @Before
+  @BeforeEach
   public void beforeEachTest() {
     conf = new Configuration(storedConfiguration);
     loadBalancer.onConfigurationChange(conf);
@@ -139,6 +134,8 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
       when(rl.getWriteRequestCount()).thenReturn(0L);
       when(rl.getMemStoreSize()).thenReturn(Size.ZERO);
       when(rl.getStoreFileSize()).thenReturn(Size.ZERO);
+      when(rl.getRegionSizeMB()).thenReturn(Size.ZERO);
+      when(rl.getCurrentRegionCachedRatio()).thenReturn(0.0f);
       regionLoadMap.put(info.getRegionName(), rl);
     }
     when(serverMetrics.getRegionMetrics()).thenReturn(regionLoadMap);
@@ -213,6 +210,8 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
       when(rl.getWriteRequestCount()).thenReturn(0L);
       when(rl.getMemStoreSize()).thenReturn(Size.ZERO);
       when(rl.getStoreFileSize()).thenReturn(new Size(i, Size.Unit.MEGABYTE));
+      when(rl.getRegionSizeMB()).thenReturn(Size.ZERO);
+      when(rl.getCurrentRegionCachedRatio()).thenReturn(0.0f);
 
       Map<byte[], RegionMetrics> regionLoadMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       regionLoadMap.put(Bytes.toBytes(REGION_KEY), rl);
@@ -252,9 +251,10 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
       loadBalancer.onConfigurationChange(conf);
       dummyMetricsStochasticBalancer.clearDummyMetrics();
       loadBalancer.updateBalancerLoadInfo(LoadOfAllTable);
-      assertTrue("Metrics should be recorded!",
+      assertTrue(
         dummyMetricsStochasticBalancer.getDummyCostsMap() != null
-          && !dummyMetricsStochasticBalancer.getDummyCostsMap().isEmpty());
+          && !dummyMetricsStochasticBalancer.getDummyCostsMap().isEmpty(),
+        "Metrics should be recorded!");
 
       String metricRecordKey;
       if (isByTable) {
@@ -282,9 +282,9 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
     List<RegionPlan> plans =
       loadBalancer.balanceCluster((Map) mockClusterServersWithTables(servers));
 
-    assertTrue("Balance plan should not be empty!", plans != null && !plans.isEmpty());
-    assertTrue("There should be metrics record in MetricsStochasticBalancer",
-      !dummyMetricsStochasticBalancer.getDummyCostsMap().isEmpty());
+    assertTrue(plans != null && !plans.isEmpty(), "Balance plan should not be empty!");
+    assertTrue(!dummyMetricsStochasticBalancer.getDummyCostsMap().isEmpty(),
+      "There should be metrics record in MetricsStochasticBalancer");
 
     double overallCostOfCluster = loadBalancer.computeCost(clusterState, Double.MAX_VALUE);
     double overallCostInMetrics = dummyMetricsStochasticBalancer.getDummyCostsMap().get(
@@ -304,9 +304,9 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
     List<RegionPlan> plans =
       loadBalancer.balanceCluster((Map) mockClusterServersWithTables(servers));
 
-    assertTrue("Balance plan should be empty!", plans == null || plans.isEmpty());
-    assertTrue("There should be metrics record in MetricsStochasticBalancer!",
-      !dummyMetricsStochasticBalancer.getDummyCostsMap().isEmpty());
+    assertTrue(plans == null || plans.isEmpty(), "Balance plan should be empty!");
+    assertFalse(dummyMetricsStochasticBalancer.getDummyCostsMap().isEmpty(),
+      "There should be metrics record in MetricsStochasticBalancer!");
 
     double overallCostOfCluster = loadBalancer.computeCost(clusterState, Double.MAX_VALUE);
     double overallCostInMetrics = dummyMetricsStochasticBalancer.getDummyCostsMap().get(
@@ -484,7 +484,7 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
       loadBalancer.initCosts(cluster);
       for (int i = 0; i != runs; ++i) {
         final double expectedCost = loadBalancer.computeCost(cluster, Double.MAX_VALUE);
-        BalanceAction action = loadBalancer.nextAction(cluster);
+        BalanceAction action = loadBalancer.nextAction(cluster).getSecond();
         cluster.doAction(action);
         loadBalancer.updateCostsAndWeightsWithAction(cluster, action);
         BalanceAction undoAction = action.undoAction();
@@ -607,6 +607,7 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
       PrimaryRegionCountSkewCostFunction.class.getSimpleName(),
       MoveCostFunction.class.getSimpleName(), RackLocalityCostFunction.class.getSimpleName(),
       TableSkewCostFunction.class.getSimpleName(),
+      StoreFileTableSkewCostFunction.class.getSimpleName(),
       RegionReplicaHostCostFunction.class.getSimpleName(),
       RegionReplicaRackCostFunction.class.getSimpleName(),
       ReadRequestCostFunction.class.getSimpleName(), CPRequestCostFunction.class.getSimpleName(),
@@ -614,8 +615,8 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
       MemStoreSizeCostFunction.class.getSimpleName(), StoreFileCostFunction.class.getSimpleName());
 
     List<String> actual = Arrays.asList(loadBalancer.getCostFunctionNames());
-    assertTrue("ExpectedCostFunctions: " + expected + " ActualCostFunctions: " + actual,
-      CollectionUtils.isEqualCollection(expected, actual));
+    assertTrue(CollectionUtils.isEqualCollection(expected, actual),
+      "ExpectedCostFunctions: " + expected + " ActualCostFunctions: " + actual);
   }
 
   private boolean needsBalanceIdleRegion(int[] cluster) {

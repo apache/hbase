@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import org.apache.commons.lang3.NotImplementedException;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -30,13 +30,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 public abstract class NonReversedNonLazyKeyValueScanner extends NonLazyKeyValueScanner {
 
   @Override
-  public boolean backwardSeek(Cell key) throws IOException {
+  public boolean backwardSeek(ExtendedCell key) throws IOException {
     throw new NotImplementedException(
       "backwardSeek must not be called on a " + "non-reversed scanner");
   }
 
   @Override
-  public boolean seekToPreviousRow(Cell key) throws IOException {
+  public boolean seekToPreviousRow(ExtendedCell key) throws IOException {
     throw new NotImplementedException(
       "seekToPreviousRow must not be called on a " + "non-reversed scanner");
   }

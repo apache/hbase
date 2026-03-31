@@ -64,7 +64,7 @@ public class TestMigrateRepliationPeerStorageOnline {
   public void testMigrate() throws Exception {
     Admin admin = UTIL.getAdmin();
     ReplicationPeerConfig rpc =
-      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL.getClusterKey() + "-test")
+      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL.getRpcConnnectionURI() + "-test")
         .setReplicationEndpointImpl(DummyReplicationEndpoint.class.getName()).build();
     admin.addReplicationPeer("1", rpc);
 

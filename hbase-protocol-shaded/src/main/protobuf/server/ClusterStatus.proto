@@ -177,6 +177,12 @@ message RegionLoad {
     MAJOR = 2;
     MAJOR_AND_MINOR = 3;
   }
+
+  /** Total region size in MB */
+  optional uint32 region_size_MB = 28;
+
+  /** Current region cache ratio on this server */
+  optional float current_region_cached_ratio = 29;
 }
 
 message UserLoad {
@@ -315,6 +321,11 @@ message ServerLoad {
    * The active monitored tasks
    */
   repeated ServerTask tasks = 15;
+
+  /**
+   * The metrics for region cached on this region server
+   */
+  map<string, uint32> regionCachedInfo = 16;
 }
 
 message LiveServerInfo {

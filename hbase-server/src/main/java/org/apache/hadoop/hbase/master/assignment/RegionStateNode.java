@@ -18,9 +18,7 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.util.Arrays;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -30,7 +28,9 @@ import org.apache.hadoop.hbase.client.RegionOfflineException;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
+import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -68,6 +68,9 @@ import org.slf4j.LoggerFactory;
 public class RegionStateNode implements Comparable<RegionStateNode> {
 
   private static final Logger LOG = LoggerFactory.getLogger(RegionStateNode.class);
+  // It stores count of all active TRSP in the master. Had to pass it from regionStates to
+  // maintain the count
+  private final AtomicInteger activeTransitProcedureCount;
 
   private static final class AssignmentProcedureEvent extends ProcedureEvent<RegionInfo> {
     public AssignmentProcedureEvent(final RegionInfo regionInfo) {
@@ -75,10 +78,9 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     }
   }
 
-  final Lock lock = new ReentrantLock();
+  private final RegionStateNodeLock lock;
   private final RegionInfo regionInfo;
   private final ProcedureEvent<?> event;
-  private final ConcurrentMap<RegionInfo, RegionStateNode> ritMap;
 
   // volatile only for getLastUpdate and test usage, the upper layer should sync on the
   // RegionStateNode before accessing usually.
@@ -96,16 +98,17 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
 
   /**
    * Updated whenever a call to {@link #setRegionLocation(ServerName)} or
-   * {@link #setState(RegionState.State, RegionState.State...)}.
+   * {@link #setState(RegionState.State, RegionState.State...)} or {@link #crashed(long)}.
    */
   private volatile long lastUpdate = 0;
 
   private volatile long openSeqNum = HConstants.NO_SEQNUM;
 
-  RegionStateNode(RegionInfo regionInfo, ConcurrentMap<RegionInfo, RegionStateNode> ritMap) {
+  RegionStateNode(RegionInfo regionInfo, AtomicInteger activeTransitProcedureCount) {
     this.regionInfo = regionInfo;
     this.event = new AssignmentProcedureEvent(regionInfo);
-    this.ritMap = ritMap;
+    this.lock = new RegionStateNodeLock(regionInfo);
+    this.activeTransitProcedureCount = activeTransitProcedureCount;
   }
 
   /**
@@ -160,7 +163,7 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     return isInState(State.FAILED_OPEN) && getProcedure() != null;
   }
 
-  public boolean isInTransition() {
+  public boolean isTransitionScheduled() {
     return getProcedure() != null;
   }
 
@@ -189,6 +192,10 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     this.lastHost = serverName;
   }
 
+  public void crashed(long crashTime) {
+    this.lastUpdate = crashTime;
+  }
+
   public void setOpenSeqNum(final long seqId) {
     this.openSeqNum = seqId;
   }
@@ -206,14 +213,14 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
   public TransitRegionStateProcedure setProcedure(TransitRegionStateProcedure proc) {
     assert this.procedure == null;
     this.procedure = proc;
-    ritMap.put(regionInfo, this);
+    activeTransitProcedureCount.incrementAndGet();
     return proc;
   }
 
   public void unsetProcedure(TransitRegionStateProcedure proc) {
     assert this.procedure == proc;
+    activeTransitProcedureCount.decrementAndGet();
     this.procedure = null;
-    ritMap.remove(regionInfo, this);
   }
 
   public TransitRegionStateProcedure getProcedure() {
@@ -242,6 +249,14 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
 
   public ServerName getRegionLocation() {
     return regionLocation;
+  }
+
+  public String getRegionServerName() {
+    ServerName sn = getRegionLocation();
+    if (sn != null) {
+      return sn.getServerName();
+    }
+    return null;
   }
 
   public State getState() {
@@ -319,11 +334,70 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     }
   }
 
+  // The below 3 methods are for normal locking operation, where the thread owner is the current
+  // thread. Typically you just need to use these 3 methods, and use try..finally to release the
+  // lock in the finally block
+  /**
+   * @see RegionStateNodeLock#lock()
+   */
   public void lock() {
     lock.lock();
   }
 
+  /**
+   * @see RegionStateNodeLock#tryLock()
+   */
+  public boolean tryLock() {
+    return lock.tryLock();
+  }
+
+  /**
+   * @see RegionStateNodeLock#unlock()
+   */
   public void unlock() {
     lock.unlock();
+  }
+
+  // The below 3 methods are for locking region state node when executing procedures, where we may
+  // do some time consuming work under the lock, for example, updating meta. As we may suspend the
+  // procedure while holding the lock and then release it when the procedure is back, in another
+  // thread, so we need to use the procedure itself as owner, instead of the current thread. You can
+  // see the usage in TRSP, SCP, and RegionRemoteProcedureBase for more details.
+  // Notice that, this does not mean you must use these 3 methods when locking region state node in
+  // procedure, you are free to use the above 3 methods if you do not want to hold the lock when
+  // suspending the procedure.
+  /**
+   * @see RegionStateNodeLock#lock(Procedure, Runnable)
+   */
+  public void lock(Procedure<?> proc, Runnable wakeUp) throws ProcedureSuspendedException {
+    lock.lock(proc, wakeUp);
+  }
+
+  /**
+   * @see RegionStateNodeLock#tryLock(Procedure)
+   */
+  public boolean tryLock(Procedure<?> proc) {
+    return lock.tryLock(proc);
+  }
+
+  /**
+   * @see RegionStateNodeLock#unlock(Procedure)
+   */
+  public void unlock(Procedure<?> proc) {
+    lock.unlock(proc);
+  }
+
+  /**
+   * @see RegionStateNodeLock#isLocked()
+   */
+  boolean isLocked() {
+    return lock.isLocked();
+  }
+
+  /**
+   * @see RegionStateNodeLock#isLockedBy(Object)
+   */
+  public boolean isLockedBy(Procedure<?> proc) {
+    return lock.isLockedBy(proc);
   }
 }

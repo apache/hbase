@@ -28,6 +28,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -125,8 +126,8 @@ public class TestRpcSkipInitialSaslHandshake {
   @Test
   public void test() throws Exception {
     SecurityInfo securityInfoMock = Mockito.mock(SecurityInfo.class);
-    Mockito.when(securityInfoMock.getServerPrincipal())
-      .thenReturn(HBaseKerberosUtils.KRB_PRINCIPAL);
+    Mockito.when(securityInfoMock.getServerPrincipals())
+      .thenReturn(Collections.singletonList(HBaseKerberosUtils.KRB_PRINCIPAL));
     SecurityInfo.addInfo("TestProtobufRpcProto", securityInfoMock);
 
     final AtomicReference<NettyServerRpcConnection> conn = new AtomicReference<>(null);
@@ -152,7 +153,6 @@ public class TestRpcSkipInitialSaslHandshake {
           .getMessage();
       assertTrue("test".equals(response));
       assertFalse(conn.get().useSasl);
-
     } finally {
       rpcServer.stop();
     }

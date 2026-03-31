@@ -27,11 +27,8 @@ include Java
 java_import org.apache.hadoop.conf.Configuration
 java_import org.apache.hadoop.hbase.HBaseConfiguration
 java_import org.apache.hadoop.hbase.HConstants
-java_import org.apache.hadoop.hbase.HTableDescriptor
 java_import org.apache.hadoop.hbase.TableName
 java_import org.apache.hadoop.hbase.client.ConnectionFactory
-java_import org.apache.hadoop.hbase.client.HBaseAdmin
-java_import org.slf4j.LoggerFactory
 
 # Name of this script
 NAME = 'copy_tables_desc'.freeze
@@ -42,14 +39,29 @@ def usage
   exit!
 end
 
+def create_namespace_if_not_exists(src, dst, namespace)
+  begin
+    dst.getNamespaceDescriptor(namespace)
+    puts format('Namespace "%s" already exists.', namespace)
+  rescue org.apache.hadoop.hbase.NamespaceNotFoundException
+    n = src.getNamespaceDescriptor(namespace)
+    dst.createNamespace(n)
+    puts format('Namespace "%s" was successfully created.', namespace)
+  end
+end
+
 def copy(src, dst, table)
   # verify if table exists in source cluster
   begin
-    t = src.getTableDescriptor(TableName.valueOf(table))
+    t = src.getDescriptor(TableName.valueOf(table))
   rescue org.apache.hadoop.hbase.TableNotFoundException
     puts format("Source table \"%s\" doesn't exist, skipping.", table)
     return
   end
+
+  # verify if namespace *doesn't* exists in the target cluster
+  namespace = TableName.valueOf(table).getNamespaceAsString
+  create_namespace_if_not_exists(src, dst, namespace)
 
   # verify if table *doesn't* exists in the target cluster
   begin
@@ -59,12 +71,16 @@ def copy(src, dst, table)
     return
   end
 
-  puts format('Schema for table "%s" was succesfully copied to remote cluster.', table)
+  puts format('Schema for table "%s" was successfully copied to remote cluster.', table)
 end
 
-usage if ARGV.size < 2 || ARGV.size > 3
+# disable debug/info logging on this script for clarity
+log_level = 'ERROR'
+org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop.hbase', log_level)
+org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.zookeeper', log_level)
+org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop', log_level)
 
-LOG = LoggerFactory.getLogger(NAME)
+usage if ARGV.size < 2 || ARGV.size > 3
 
 parts1 = ARGV[0].split(':')
 

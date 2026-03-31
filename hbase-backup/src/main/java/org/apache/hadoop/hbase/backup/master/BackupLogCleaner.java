@@ -18,27 +18,32 @@
 package org.apache.hadoop.hbase.backup.master;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
+import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
-import org.apache.hadoop.hbase.backup.util.BackupUtils;
+import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
+import org.apache.hadoop.hbase.backup.util.BackupBoundaries;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
-import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +58,8 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class BackupLogCleaner extends BaseLogCleanerDelegate {
   private static final Logger LOG = LoggerFactory.getLogger(BackupLogCleaner.class);
+  private static final long TS_BUFFER_DEFAULT = Duration.ofHours(1).toMillis();
+  static final String TS_BUFFER_KEY = "hbase.backup.log.cleaner.timestamp.buffer.ms";
 
   private boolean stopped = false;
   private Connection conn;
@@ -78,25 +85,53 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     }
   }
 
-  private Map<Address, Long> getServersToOldestBackupMapping(List<BackupInfo> backups)
-    throws IOException {
-    Map<Address, Long> serverAddressToLastBackupMap = new HashMap<>();
+  /**
+   * Calculates the timestamp boundary up to which all backup roots have already included the WAL.
+   * I.e. WALs with a lower (= older) or equal timestamp are no longer needed for future incremental
+   * backups.
+   * @param backups  all completed or running backups to use for the calculation of the boundary
+   * @param tsBuffer a buffer (in ms) to lower the boundary for the default bound
+   */
+  protected static BackupBoundaries calculatePreservationBoundary(List<BackupInfo> backups,
+    long tsBuffer) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+        "Cleaning WALs if they are older than the WAL cleanup time-boundary. "
+          + "Checking WALs against {} backups: {}",
+        backups.size(),
+        backups.stream().map(BackupInfo::getBackupId).sorted().collect(Collectors.joining(", ")));
+    }
 
-    Map<TableName, Long> tableNameBackupInfoMap = new HashMap<>();
-    for (BackupInfo backupInfo : backups) {
-      for (TableName table : backupInfo.getTables()) {
-        tableNameBackupInfoMap.putIfAbsent(table, backupInfo.getStartTs());
-        if (tableNameBackupInfoMap.get(table) <= backupInfo.getStartTs()) {
-          tableNameBackupInfoMap.put(table, backupInfo.getStartTs());
-          for (Map.Entry<String, Long> entry : backupInfo.getTableSetTimestampMap().get(table)
-            .entrySet()) {
-            serverAddressToLastBackupMap.put(Address.fromString(entry.getKey()), entry.getValue());
-          }
-        }
+    // This map tracks, for every backup root, the most recent (= highest timestamp) completed
+    // backup, or if there is no such one, the currently running backup (if any)
+    Map<String, BackupInfo> newestBackupPerRootDir = new HashMap<>();
+    for (BackupInfo backup : backups) {
+      BackupInfo existingEntry = newestBackupPerRootDir.get(backup.getBackupRootDir());
+      if (existingEntry == null || existingEntry.getState() == BackupState.RUNNING) {
+        newestBackupPerRootDir.put(backup.getBackupRootDir(), backup);
       }
     }
 
-    return serverAddressToLastBackupMap;
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("WAL cleanup time-boundary using info from: {}. ",
+        newestBackupPerRootDir.entrySet().stream()
+          .map(e -> "Backup root " + e.getKey() + ": " + e.getValue().getBackupId()).sorted()
+          .collect(Collectors.joining(", ")));
+    }
+
+    BackupBoundaries.BackupBoundariesBuilder builder = BackupBoundaries.builder(tsBuffer);
+    newestBackupPerRootDir.values().forEach(builder::update);
+    BackupBoundaries boundaries = builder.build();
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Boundaries defaultBoundary: {}", boundaries.getDefaultBoundary());
+      for (Map.Entry<Address, Long> entry : boundaries.getBoundaries().entrySet()) {
+        LOG.debug("Server: {}, WAL cleanup boundary: {}", entry.getKey().getHostName(),
+          entry.getValue());
+      }
+    }
+
+    return boundaries;
   }
 
   @Override
@@ -111,39 +146,20 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
       return files;
     }
 
-    Map<Address, Long> addressToLastBackupMap;
-    try {
-      try (BackupManager backupManager = new BackupManager(conn, getConf())) {
-        addressToLastBackupMap =
-          getServersToOldestBackupMapping(backupManager.getBackupHistory(true));
-      }
+    BackupBoundaries boundaries;
+    try (BackupSystemTable sysTable = new BackupSystemTable(conn)) {
+      long tsBuffer = getConf().getLong(TS_BUFFER_KEY, TS_BUFFER_DEFAULT);
+      List<BackupInfo> backupHistory = sysTable.getBackupHistory(
+        i -> EnumSet.of(BackupState.COMPLETE, BackupState.RUNNING).contains(i.getState()));
+      boundaries = calculatePreservationBoundary(backupHistory, tsBuffer);
     } catch (IOException ex) {
       LOG.error("Failed to analyse backup history with exception: {}. Retaining all logs",
         ex.getMessage(), ex);
       return Collections.emptyList();
     }
     for (FileStatus file : files) {
-      String fn = file.getPath().getName();
-      if (fn.startsWith(WALProcedureStore.LOG_PREFIX)) {
+      if (canDeleteFile(boundaries, file.getPath())) {
         filteredFiles.add(file);
-        continue;
-      }
-
-      try {
-        Address walServerAddress =
-          Address.fromString(BackupUtils.parseHostNameFromLogFile(file.getPath()));
-        long walTimestamp = AbstractFSWALProvider.getTimestamp(file.getPath().getName());
-
-        if (
-          !addressToLastBackupMap.containsKey(walServerAddress)
-            || addressToLastBackupMap.get(walServerAddress) >= walTimestamp
-        ) {
-          filteredFiles.add(file);
-        }
-      } catch (Exception ex) {
-        LOG.warn(
-          "Error occurred while filtering file: {} with error: {}. Ignoring cleanup of this log",
-          file.getPath(), ex.getMessage());
       }
     }
 
@@ -175,5 +191,19 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
   @Override
   public boolean isStopped() {
     return this.stopped;
+  }
+
+  protected static boolean canDeleteFile(BackupBoundaries boundaries, Path path) {
+    if (isHMasterWAL(path)) {
+      return true;
+    }
+    return boundaries.isDeletable(path);
+  }
+
+  private static boolean isHMasterWAL(Path path) {
+    String fn = path.getName();
+    return fn.startsWith(WALProcedureStore.LOG_PREFIX)
+      || fn.endsWith(MasterRegionFactory.ARCHIVED_WAL_SUFFIX)
+      || path.toString().contains("/%s/".formatted(MasterRegionFactory.MASTER_STORE_DIR));
   }
 }

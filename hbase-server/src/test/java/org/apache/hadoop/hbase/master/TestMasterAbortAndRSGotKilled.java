@@ -112,8 +112,8 @@ public class TestMasterAbortAndRSGotKilled {
   public static class DelayCloseCP implements RegionCoprocessor, RegionObserver {
 
     @Override
-    public void preClose(ObserverContext<RegionCoprocessorEnvironment> c, boolean abortRequested)
-      throws IOException {
+    public void preClose(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      boolean abortRequested) throws IOException {
       if (!c.getEnvironment().getRegion().getRegionInfo().getTable().isSystemTable()) {
         LOG.info("begin to sleep");
         countDownLatch.countDown();

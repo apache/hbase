@@ -198,6 +198,10 @@ public class CanaryTool implements Tool, Canary {
     long getWriteSuccessCount();
 
     long incWriteSuccessCount();
+
+    void stop();
+
+    boolean isStopped();
   }
 
   /**
@@ -208,6 +212,7 @@ public class CanaryTool implements Tool, Canary {
         readSuccessCount = new AtomicLong(0), writeSuccessCount = new AtomicLong(0);
     private Map<String, String> readFailures = new ConcurrentHashMap<>();
     private Map<String, String> writeFailures = new ConcurrentHashMap<>();
+    private volatile boolean stopped = false;
 
     @Override
     public long getReadFailureCount() {
@@ -268,6 +273,15 @@ public class CanaryTool implements Tool, Canary {
     public long incWriteSuccessCount() {
       return writeSuccessCount.incrementAndGet();
     }
+
+    public void stop() {
+      stopped = true;
+    }
+
+    @Override
+    public boolean isStopped() {
+      return stopped;
+    }
   }
 
   /**
@@ -323,13 +337,15 @@ public class CanaryTool implements Tool, Canary {
     }
 
     private void incFailuresCountDetails(ServerName serverName, RegionInfo region) {
-      perServerFailuresCount.compute(serverName, (server, count) -> {
-        if (count == null) {
-          count = new LongAdder();
-        }
-        count.increment();
-        return count;
-      });
+      if (serverName != null) {
+        perServerFailuresCount.compute(serverName, (server, count) -> {
+          if (count == null) {
+            count = new LongAdder();
+          }
+          count.increment();
+          return count;
+        });
+      }
       perTableFailuresCount.compute(region.getTable().getNameAsString(), (tableName, count) -> {
         if (count == null) {
           count = new LongAdder();
@@ -340,18 +356,18 @@ public class CanaryTool implements Tool, Canary {
     }
 
     public void publishReadFailure(ServerName serverName, RegionInfo region, Exception e) {
-      incReadFailureCount();
-      incFailuresCountDetails(serverName, region);
       LOG.error("Read from {} on serverName={} failed", region.getRegionNameAsString(), serverName,
         e);
+      incReadFailureCount();
+      incFailuresCountDetails(serverName, region);
     }
 
     public void publishReadFailure(ServerName serverName, RegionInfo region,
       ColumnFamilyDescriptor column, Exception e) {
-      incReadFailureCount();
-      incFailuresCountDetails(serverName, region);
       LOG.error("Read from {} on serverName={}, columnFamily={} failed",
         region.getRegionNameAsString(), serverName, column.getNameAsString(), e);
+      incReadFailureCount();
+      incFailuresCountDetails(serverName, region);
     }
 
     public void publishReadTiming(ServerName serverName, RegionInfo region,
@@ -368,17 +384,17 @@ public class CanaryTool implements Tool, Canary {
     }
 
     public void publishWriteFailure(ServerName serverName, RegionInfo region, Exception e) {
+      LOG.error("Write to {} on {} failed", region.getRegionNameAsString(), serverName, e);
       incWriteFailureCount();
       incFailuresCountDetails(serverName, region);
-      LOG.error("Write to {} on {} failed", region.getRegionNameAsString(), serverName, e);
     }
 
     public void publishWriteFailure(ServerName serverName, RegionInfo region,
       ColumnFamilyDescriptor column, Exception e) {
-      incWriteFailureCount();
-      incFailuresCountDetails(serverName, region);
       LOG.error("Write to {} on {} {} failed", region.getRegionNameAsString(), serverName,
         column.getNameAsString(), e);
+      incWriteFailureCount();
+      incFailuresCountDetails(serverName, region);
     }
 
     public void publishWriteTiming(ServerName serverName, RegionInfo region,
@@ -442,6 +458,9 @@ public class CanaryTool implements Tool, Canary {
 
     @Override
     public Void call() throws Exception {
+      if (this.sink.isStopped()) {
+        return null;
+      }
       ZooKeeper zooKeeper = null;
       try {
         zooKeeper = new ZooKeeper(host, timeout, EmptyWatcher.instance);
@@ -496,6 +515,9 @@ public class CanaryTool implements Tool, Canary {
 
     @Override
     public Void call() {
+      if (this.sink.isStopped()) {
+        return null;
+      }
       switch (taskType) {
         case READ:
           return read();
@@ -508,19 +530,44 @@ public class CanaryTool implements Tool, Canary {
 
     private Void readColumnFamily(Table table, ColumnFamilyDescriptor column) {
       byte[] startKey = null;
-      Get get = null;
       Scan scan = null;
       ResultScanner rs = null;
       StopWatch stopWatch = new StopWatch();
       startKey = region.getStartKey();
       // Can't do a get on empty start row so do a Scan of first element if any instead.
       if (startKey.length > 0) {
-        get = new Get(startKey);
+        Get get = new Get(startKey);
         get.setCacheBlocks(false);
         get.setFilter(new FirstKeyOnlyFilter());
         get.addFamily(column.getName());
+        // Converting get object to scan to enable RAW SCAN.
+        // This will work for all the regions of the HBase tables except first region of the table.
+        scan = new Scan(get);
+        scan.setRaw(rawScanEnabled);
       } else {
         scan = new Scan();
+        // In case of first region of the HBase Table, we do not have start-key for the region.
+        // For Region Canary, we only need to scan a single row/cell in the region to make sure that
+        // region is accessible.
+        //
+        // When HBase table has more than 1 empty regions at start of the row-key space, Canary will
+        // create multiple scan object to find first available row in the table by scanning all the
+        // regions in sequence until it can find first available row.
+        //
+        // This could result in multiple millions of scans based on the size of table and number of
+        // empty regions in sequence. In test environment, A table with no data and 1100 empty
+        // regions, Single canary run was creating close to half million to 1 million scans to
+        // successfully do canary run for the table.
+        //
+        // Since First region of the table doesn't have any start key, We should set End Key as
+        // stop row and set inclusive=false to limit scan to single region only.
+        //
+        // TODO : In future, we can streamline Canary behaviour for all the regions by doing scan
+        // with startRow inclusive and stopRow exclusive instead of different behaviour for First
+        // Region of the table and rest of the region of the table. This way implementation is
+        // simplified. As of now this change has been kept minimal to avoid any unnecessary
+        // perf impact.
+        scan.withStopRow(region.getEndKey(), false);
         LOG.debug("rawScan {} for {}", rawScanEnabled, region.getTable());
         scan.setRaw(rawScanEnabled);
         scan.setCaching(1);
@@ -534,12 +581,8 @@ public class CanaryTool implements Tool, Canary {
         column.getNameAsString(), Bytes.toStringBinary(startKey));
       try {
         stopWatch.start();
-        if (startKey.length > 0) {
-          table.get(get);
-        } else {
-          rs = table.getScanner(scan);
-          rs.next();
-        }
+        rs = table.getScanner(scan);
+        rs.next();
         stopWatch.stop();
         this.readWriteLatency.add(stopWatch.getTime());
         sink.publishReadTiming(serverName, region, column, stopWatch.getTime());
@@ -647,19 +690,24 @@ public class CanaryTool implements Tool, Canary {
     private String serverName;
     private RegionInfo region;
     private RegionServerStdOutSink sink;
+    private Boolean rawScanEnabled;
     private AtomicLong successes;
 
     RegionServerTask(Connection connection, String serverName, RegionInfo region,
-      RegionServerStdOutSink sink, AtomicLong successes) {
+      RegionServerStdOutSink sink, Boolean rawScanEnabled, AtomicLong successes) {
       this.connection = connection;
       this.serverName = serverName;
       this.region = region;
       this.sink = sink;
+      this.rawScanEnabled = rawScanEnabled;
       this.successes = successes;
     }
 
     @Override
     public Void call() {
+      if (this.sink.isStopped()) {
+        return null;
+      }
       TableName tableName = null;
       Table table = null;
       Get get = null;
@@ -679,22 +727,35 @@ public class CanaryTool implements Tool, Canary {
           get = new Get(startKey);
           get.setCacheBlocks(false);
           get.setFilter(new FirstKeyOnlyFilter());
-          stopWatch.start();
-          table.get(get);
-          stopWatch.stop();
+          // Converting get object to scan to enable RAW SCAN.
+          // This will work for all the regions of the HBase tables except first region.
+          scan = new Scan(get);
+
         } else {
           scan = new Scan();
+          // In case of first region of the HBase Table, we do not have start-key for the region.
+          // For Region Canary, we only need scan a single row/cell in the region to make sure that
+          // region is accessible.
+          //
+          // When HBase table has more than 1 empty regions at start of the row-key space, Canary
+          // will create multiple scan object to find first available row in the table by scanning
+          // all the regions in sequence until it can find first available row.
+          //
+          // Since First region of the table doesn't have any start key, We should set End Key as
+          // stop row and set inclusive=false to limit scan to first region only.
+          scan.withStopRow(region.getEndKey(), false);
           scan.setCacheBlocks(false);
           scan.setFilter(new FirstKeyOnlyFilter());
           scan.setCaching(1);
           scan.setMaxResultSize(1L);
           scan.setOneRowLimit();
-          stopWatch.start();
-          ResultScanner s = table.getScanner(scan);
-          s.next();
-          s.close();
-          stopWatch.stop();
         }
+        scan.setRaw(rawScanEnabled);
+        stopWatch.start();
+        ResultScanner s = table.getScanner(scan);
+        s.next();
+        s.close();
+        stopWatch.stop();
         successes.incrementAndGet();
         sink.publishReadTiming(tableName.getNameAsString(), serverName, stopWatch.getTime());
       } catch (TableNotFoundException tnfe) {
@@ -1037,6 +1098,7 @@ public class CanaryTool implements Tool, Canary {
             if (currentTimeLength > timeout) {
               LOG.error("The monitor is running too long (" + currentTimeLength
                 + ") after timeout limit:" + timeout + " will be killed itself !!");
+              monitorThread.interrupt();
               if (monitor.initialized) {
                 return TIMEOUT_ERROR_EXIT_CODE;
               } else {
@@ -1073,6 +1135,15 @@ public class CanaryTool implements Tool, Canary {
   @Override
   public Map<String, String> getWriteFailures() {
     return sink.getWriteFailures();
+  }
+
+  /**
+   * Return a CanaryTool.Sink object containing the detailed results of the canary run. The Sink may
+   * not have been created if a Monitor thread is not yet running.
+   * @return the active Sink if one exists, null otherwise.
+   */
+  public Sink getActiveSink() {
+    return sink;
   }
 
   private void printUsageAndExit() {
@@ -1121,10 +1192,11 @@ public class CanaryTool implements Tool, Canary {
 
   Sink getSink(Configuration configuration, Class clazz) {
     // In test context, this.sink might be set. Use it if non-null. For testing.
-    return this.sink != null
-      ? this.sink
-      : (Sink) ReflectionUtils
+    if (this.sink == null) {
+      this.sink = (Sink) ReflectionUtils
         .newInstance(configuration.getClass("hbase.canary.sink.class", clazz, Sink.class));
+    }
+    return this.sink;
   }
 
   /**
@@ -1328,6 +1400,7 @@ public class CanaryTool implements Tool, Canary {
 
     @Override
     public void close() throws IOException {
+      this.sink.stop();
       if (this.admin != null) {
         this.admin.close();
       }
@@ -1661,26 +1734,22 @@ public class CanaryTool implements Tool, Canary {
     TableDescriptor tableDesc, ExecutorService executor, TaskType taskType, boolean rawScanEnabled,
     LongAdder rwLatency, boolean readAllCF) throws Exception {
     LOG.debug("Reading list of regions for table {}", tableDesc.getTableName());
-    try (Table table = admin.getConnection().getTable(tableDesc.getTableName())) {
-      List<RegionTask> tasks = new ArrayList<>();
-      try (RegionLocator regionLocator =
-        admin.getConnection().getRegionLocator(tableDesc.getTableName())) {
-        for (HRegionLocation location : regionLocator.getAllRegionLocations()) {
-          if (location == null) {
-            LOG.warn("Null location");
-            continue;
-          }
-          ServerName rs = location.getServerName();
-          RegionInfo region = location.getRegion();
-          tasks.add(new RegionTask(admin.getConnection(), region, rs, (RegionStdOutSink) sink,
-            taskType, rawScanEnabled, rwLatency, readAllCF));
-          Map<String, List<RegionTaskResult>> regionMap = ((RegionStdOutSink) sink).getRegionMap();
-          regionMap.put(region.getRegionNameAsString(), new ArrayList<RegionTaskResult>());
+    List<RegionTask> tasks = new ArrayList<>();
+    try (RegionLocator regionLocator =
+      admin.getConnection().getRegionLocator(tableDesc.getTableName())) {
+      for (HRegionLocation location : regionLocator.getAllRegionLocations()) {
+        if (location == null) {
+          LOG.warn("Null location for table {}", tableDesc.getTableName());
+          continue;
         }
-        return executor.invokeAll(tasks);
+        ServerName rs = location.getServerName();
+        RegionInfo region = location.getRegion();
+        tasks.add(new RegionTask(admin.getConnection(), region, rs, (RegionStdOutSink) sink,
+          taskType, rawScanEnabled, rwLatency, readAllCF));
+        Map<String, List<RegionTaskResult>> regionMap = ((RegionStdOutSink) sink).getRegionMap();
+        regionMap.put(region.getRegionNameAsString(), new ArrayList<RegionTaskResult>());
       }
-    } catch (TableNotFoundException e) {
-      return Collections.EMPTY_LIST;
+      return executor.invokeAll(tasks);
     }
   }
 
@@ -1755,6 +1824,7 @@ public class CanaryTool implements Tool, Canary {
    * A monitor for regionserver mode
    */
   private static class RegionServerMonitor extends Monitor {
+    private boolean rawScanEnabled;
     private boolean allRegions;
 
     public RegionServerMonitor(Connection connection, String[] monitorTargets, boolean useRegExp,
@@ -1762,6 +1832,8 @@ public class CanaryTool implements Tool, Canary {
       long allowedFailures) {
       super(connection, monitorTargets, useRegExp, sink, executor, treatFailureAsError,
         allowedFailures);
+      Configuration conf = connection.getConfiguration();
+      this.rawScanEnabled = conf.getBoolean(HConstants.HBASE_CANARY_READ_RAW_SCAN_KEY, false);
       this.allRegions = allRegions;
     }
 
@@ -1834,14 +1906,14 @@ public class CanaryTool implements Tool, Canary {
         } else if (this.allRegions) {
           for (RegionInfo region : entry.getValue()) {
             tasks.add(new RegionServerTask(this.connection, serverName, region, regionServerSink,
-              successes));
+              this.rawScanEnabled, successes));
           }
         } else {
           // random select a region if flag not set
           RegionInfo region =
             entry.getValue().get(ThreadLocalRandom.current().nextInt(entry.getValue().size()));
-          tasks.add(
-            new RegionServerTask(this.connection, serverName, region, regionServerSink, successes));
+          tasks.add(new RegionServerTask(this.connection, serverName, region, regionServerSink,
+            this.rawScanEnabled, successes));
         }
       }
       try {
@@ -1883,7 +1955,7 @@ public class CanaryTool implements Tool, Canary {
             this.admin.getConnection().getRegionLocator(tableDesc.getTableName())) {
             for (HRegionLocation location : regionLocator.getAllRegionLocations()) {
               if (location == null) {
-                LOG.warn("Null location");
+                LOG.warn("Null location for table {}", tableDesc.getTableName());
                 continue;
               }
               ServerName rs = location.getServerName();

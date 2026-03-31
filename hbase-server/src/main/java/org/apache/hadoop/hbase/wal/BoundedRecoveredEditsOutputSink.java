@@ -70,7 +70,7 @@ class BoundedRecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
       regionEditsWrittenMap.compute(Bytes.toString(buffer.encodedRegionName),
         (k, v) -> v == null ? writer.editsWritten : v + writer.editsWritten);
       List<IOException> thrown = new ArrayList<>();
-      Path dst = closeRecoveredEditsWriter(writer, thrown);
+      Path dst = closeRecoveredEditsWriterAndFinalizeEdits(writer, thrown);
       splits.add(dst);
       openingWritersNum.decrementAndGet();
       if (!thrown.isEmpty()) {

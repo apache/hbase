@@ -491,8 +491,35 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public void truncateRegion(byte[] regionName) throws IOException {
+    get(admin.truncateRegion(regionName));
+  }
+
+  @Override
+  public Future<Void> truncateRegionAsync(byte[] regionName) {
+    return admin.truncateRegion(regionName);
+  }
+
+  @Override
   public Future<Void> modifyTableAsync(TableDescriptor td) throws IOException {
-    return admin.modifyTable(td);
+    return modifyTableAsync(td, true);
+  }
+
+  @Override
+  public Future<Void> modifyTableAsync(TableDescriptor td, boolean reopenRegions)
+    throws IOException {
+    return admin.modifyTable(td, reopenRegions);
+  }
+
+  @Override
+  public Future<Void> reopenTableRegionsAsync(TableName tableName) throws IOException {
+    return admin.reopenTableRegions(tableName).toCompletableFuture();
+  }
+
+  @Override
+  public Future<Void> reopenTableRegionsAsync(TableName tableName, List<RegionInfo> regions)
+    throws IOException {
+    return admin.reopenTableRegions(tableName, regions).toCompletableFuture();
   }
 
   @Override
@@ -617,6 +644,11 @@ class AdminOverAsyncAdmin implements Admin {
   @Override
   public void rollWALWriter(ServerName serverName) throws IOException, FailedLogCloseException {
     get(admin.rollWALWriter(serverName));
+  }
+
+  @Override
+  public Map<ServerName, Long> rollAllWALWriters() throws IOException {
+    return get(admin.rollAllWALWriters());
   }
 
   @Override
@@ -1114,5 +1146,15 @@ class AdminOverAsyncAdmin implements Admin {
   @Override
   public void flushMasterStore() throws IOException {
     get(admin.flushMasterStore());
+  }
+
+  @Override
+  public List<String> getCachedFilesList(ServerName serverName) throws IOException {
+    return get(admin.getCachedFilesList(serverName));
+  }
+
+  @Override
+  public void restoreBackupSystemTable(String snapshotName) throws IOException {
+    get(admin.restoreBackupSystemTable(snapshotName));
   }
 }

@@ -25,12 +25,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -277,26 +279,42 @@ public class TestReplicationBase {
   }
 
   private boolean peerExist(String peerId) throws IOException {
-    return hbaseAdmin.listReplicationPeers().stream().anyMatch(p -> peerId.equals(p.getPeerId()));
+    return peerExist(peerId, UTIL1);
+  }
+
+  private boolean peerExist(String peerId, HBaseTestingUtil util) throws IOException {
+    return util.getAdmin().listReplicationPeers().stream()
+      .anyMatch(p -> peerId.equals(p.getPeerId()));
+  }
+
+  // can be override in tests, in case you need to use zk based uri, or the old style uri
+  protected String getClusterKey(HBaseTestingUtil util) throws Exception {
+    return util.getRpcConnnectionURI();
   }
 
   protected final void addPeer(String peerId, TableName tableName) throws Exception {
-    if (!peerExist(peerId)) {
-      ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder()
-        .setClusterKey(UTIL2.getClusterKey()).setSerial(isSerialPeer())
-        .setReplicationEndpointImpl(ReplicationEndpointTest.class.getName());
-      if (isSyncPeer()) {
-        FileSystem fs2 = UTIL2.getTestFileSystem();
-        // The remote wal dir is not important as we do not use it in DA state, here we only need to
-        // confirm that a sync peer in DA state can still replicate data to remote cluster
-        // asynchronously.
-        builder.setReplicateAllUserTables(false)
-          .setTableCFsMap(ImmutableMap.of(tableName, ImmutableList.of()))
-          .setRemoteWALDir(new Path("/RemoteWAL")
-            .makeQualified(fs2.getUri(), fs2.getWorkingDirectory()).toUri().toString());
-      }
-      hbaseAdmin.addReplicationPeer(peerId, builder.build());
+    addPeer(peerId, tableName, UTIL1, UTIL2);
+  }
+
+  protected final void addPeer(String peerId, TableName tableName, HBaseTestingUtil source,
+    HBaseTestingUtil target) throws Exception {
+    if (peerExist(peerId, source)) {
+      return;
     }
+    ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(getClusterKey(target)).setSerial(isSerialPeer())
+      .setReplicationEndpointImpl(ReplicationEndpointTest.class.getName());
+    if (isSyncPeer()) {
+      FileSystem fs2 = target.getTestFileSystem();
+      // The remote wal dir is not important as we do not use it in DA state, here we only need to
+      // confirm that a sync peer in DA state can still replicate data to remote cluster
+      // asynchronously.
+      builder.setReplicateAllUserTables(false)
+        .setTableCFsMap(ImmutableMap.of(tableName, ImmutableList.of()))
+        .setRemoteWALDir(new Path("/RemoteWAL")
+          .makeQualified(fs2.getUri(), fs2.getWorkingDirectory()).toUri().toString());
+    }
+    source.getAdmin().addReplicationPeer(peerId, builder.build());
   }
 
   @Before
@@ -305,8 +323,12 @@ public class TestReplicationBase {
   }
 
   protected final void removePeer(String peerId) throws Exception {
-    if (peerExist(peerId)) {
-      hbaseAdmin.removeReplicationPeer(peerId);
+    removePeer(peerId, UTIL1);
+  }
+
+  protected final void removePeer(String peerId, HBaseTestingUtil util) throws Exception {
+    if (peerExist(peerId, util)) {
+      util.getAdmin().removeReplicationPeer(peerId);
     }
   }
 
@@ -367,6 +389,14 @@ public class TestReplicationBase {
     assertEquals(NB_ROWS_IN_BATCH, res1.length);
 
     waitForReplication(NB_ROWS_IN_BATCH, NB_RETRIES);
+  }
+
+  protected static void stopAllRegionServers(HBaseTestingUtil util) throws IOException {
+    List<ServerName> rses = util.getMiniHBaseCluster().getRegionServerThreads().stream()
+      .map(t -> t.getRegionServer().getServerName()).collect(Collectors.toList());
+    for (ServerName rs : rses) {
+      util.getMiniHBaseCluster().stopRegionServer(rs);
+    }
   }
 
   @AfterClass

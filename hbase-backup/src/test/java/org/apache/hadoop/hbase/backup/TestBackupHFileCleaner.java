@@ -17,73 +17,66 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, SmallTests.class })
-public class TestBackupHFileCleaner {
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupHFileCleaner.class);
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
+public class TestBackupHFileCleaner {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupHFileCleaner.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private static Configuration conf = TEST_UTIL.getConfiguration();
-  private static TableName tableName = TableName.valueOf("backup.hfile.cleaner");
-  private static String famName = "fam";
-  static FileSystem fs = null;
-  Path root;
+  private final static Configuration conf = TEST_UTIL.getConfiguration();
+  private final static TableName tableNameWithBackup = TableName.valueOf("backup.hfile.cleaner");
+  private final static TableName tableNameWithoutBackup =
+    TableName.valueOf("backup.hfile.cleaner2");
 
-  @BeforeClass
+  private static FileSystem fs = null;
+
+  private Path root;
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf.setBoolean(BackupRestoreConstants.BACKUP_ENABLE_KEY, true);
-    TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.startMiniCluster(1);
     fs = FileSystem.get(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
-    if (fs != null) {
-      fs.close();
-    }
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     root = TEST_UTIL.getDataTestDirOnTestFS();
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     try {
       fs.delete(root, true);
@@ -94,55 +87,54 @@ public class TestBackupHFileCleaner {
 
   @Test
   public void testGetDeletableFiles() throws IOException {
-    // 1. Create a file
-    Path file = new Path(root, "testIsFileDeletableWithNoHFileRefs");
-    fs.createNewFile(file);
-    // 2. Assert file is successfully created
-    assertTrue("Test file not created!", fs.exists(file));
-    BackupHFileCleaner cleaner = new BackupHFileCleaner();
+    FileStatus file1 = createFile("file1");
+    FileStatus file1Archived = createFile("archived/file1");
+    FileStatus file2 = createFile("file2");
+    FileStatus file3 = createFile("file3");
+
+    BackupHFileCleaner cleaner = new BackupHFileCleaner() {
+      @Override
+      protected Set<TableName> fetchFullyBackedUpTables(BackupSystemTable tbl) {
+        return Set.of(tableNameWithBackup);
+      }
+    };
     cleaner.setConf(conf);
-    cleaner.setCheckForFullyBackedUpTables(false);
-    List<FileStatus> stats = new ArrayList<>();
-    // Prime the cleaner
-    cleaner.getDeletableFiles(stats);
-    // 3. Assert that file as is should be deletable
-    FileStatus stat = fs.getFileStatus(file);
-    stats.add(stat);
-    Iterable<FileStatus> deletable = cleaner.getDeletableFiles(stats);
-    boolean found = false;
-    for (FileStatus stat1 : deletable) {
-      if (stat.equals(stat1)) {
-        found = true;
-      }
-    }
-    assertTrue(
-      "Cleaner should allow to delete this file as there is no hfile reference " + "for it.",
-      found);
 
-    // 4. Add the file as bulk load
-    List<Path> list = new ArrayList<>(1);
-    list.add(file);
-    try (Connection conn = ConnectionFactory.createConnection(conf);
-      BackupSystemTable sysTbl = new BackupSystemTable(conn)) {
-      List<TableName> sTableList = new ArrayList<>();
-      sTableList.add(tableName);
-      @SuppressWarnings("unchecked")
-      IdentityHashMap<byte[], List<Path>>[] maps = new IdentityHashMap[1];
-      maps[0] = new IdentityHashMap<>();
-      maps[0].put(Bytes.toBytes(famName), list);
-      sysTbl.writeBulkLoadedFiles(sTableList, maps, "1");
+    Iterable<FileStatus> deletable;
+
+    // The first call will not allow any deletions because of the timestamp mechanism.
+    deletable = callCleaner(cleaner, List.of(file1, file1Archived, file2, file3));
+    assertEquals(Set.of(), Sets.newHashSet(deletable));
+
+    // No bulk loads registered, so all files can be deleted.
+    deletable = callCleaner(cleaner, List.of(file1, file1Archived, file2, file3));
+    assertEquals(Set.of(file1, file1Archived, file2, file3), Sets.newHashSet(deletable));
+
+    // Register some bulk loads.
+    try (BackupSystemTable backupSystem = new BackupSystemTable(TEST_UTIL.getConnection())) {
+      byte[] unused = new byte[] { 0 };
+      backupSystem.registerBulkLoad(tableNameWithBackup, unused,
+        Map.of(unused, List.of(file1.getPath())));
+      backupSystem.registerBulkLoad(tableNameWithoutBackup, unused,
+        Map.of(unused, List.of(file2.getPath())));
     }
 
-    // 5. Assert file should not be deletable
-    deletable = cleaner.getDeletableFiles(stats);
-    found = false;
-    for (FileStatus stat1 : deletable) {
-      if (stat.equals(stat1)) {
-        found = true;
-      }
-    }
-    assertFalse(
-      "Cleaner should not allow to delete this file as there is a hfile reference " + "for it.",
-      found);
+    // File 1 can no longer be deleted, because it is registered as a bulk load.
+    deletable = callCleaner(cleaner, List.of(file1, file1Archived, file2, file3));
+    assertEquals(Set.of(file2, file3), Sets.newHashSet(deletable));
+  }
+
+  private Iterable<FileStatus> callCleaner(BackupHFileCleaner cleaner, Iterable<FileStatus> files) {
+    cleaner.preClean();
+    Iterable<FileStatus> deletable = cleaner.getDeletableFiles(files);
+    cleaner.postClean();
+    return deletable;
+  }
+
+  private FileStatus createFile(String fileName) throws IOException {
+    Path file = new Path(root, fileName);
+    fs.createNewFile(file);
+    assertTrue(fs.exists(file), "Test file not created!");
+    return fs.getFileStatus(file);
   }
 }

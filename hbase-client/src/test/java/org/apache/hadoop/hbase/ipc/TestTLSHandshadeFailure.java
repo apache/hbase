@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -34,7 +34,6 @@ import java.util.Collections;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.MetricsConnection.CallStats;
@@ -43,11 +42,10 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -56,18 +54,17 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.NotSslRecordException;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.ClientMetaService;
+
 /**
  * A simple UT to make sure that we do not leak the SslExceptions to netty's TailContext, where it
  * will generate a confusing WARN message.
  * <p>
  * See HBASE-27782 for more details.
  */
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestTLSHandshadeFailure {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTLSHandshadeFailure.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTLSHandshadeFailure.class);
 
@@ -105,7 +102,7 @@ public class TestTLSHandshadeFailure {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     server = new ServerSocket(0);
     serverThread = new Thread(this::serve);
@@ -122,7 +119,7 @@ public class TestTLSHandshadeFailure {
       .getLogger(BufferCallBeforeInitHandler.class)).addAppender(mockAppender);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
       .getLogger(BufferCallBeforeInitHandler.class)).removeAppender(mockAppender);
@@ -149,11 +146,12 @@ public class TestTLSHandshadeFailure {
       Address.fromParts("127.0.0.1", server.getLocalPort()));
     NettyRpcConnection conn = client.createConnection(id);
     BlockingRpcCallback<Call> done = new BlockingRpcCallback<>();
-    Call call =
-      new Call(1, null, null, null, null, 0, 0, Collections.emptyMap(), done, new CallStats());
+    Call call = new Call(1, ClientMetaService.getDescriptor().getMethods().get(0), null, null, null,
+      0, 0, Collections.emptyMap(), done, new CallStats());
     HBaseRpcController hrc = new HBaseRpcControllerImpl();
     conn.sendRequest(call, hrc);
     done.get();
+    call.error.printStackTrace();
     assertThat(call.error, instanceOf(NotSslRecordException.class));
     Waiter.waitFor(conf, 5000, () -> msg.get() != null);
     verify(mockAppender).append(any());

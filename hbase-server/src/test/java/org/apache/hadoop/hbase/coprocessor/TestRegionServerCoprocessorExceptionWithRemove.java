@@ -55,8 +55,8 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
   public static class BuggyRegionObserver extends SimpleRegionObserver {
     @SuppressWarnings("null")
     @Override
-    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, final Put put,
-      final WALEdit edit, final Durability durability) {
+    public void prePut(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      final Put put, final WALEdit edit, final Durability durability) {
       String tableName =
         c.getEnvironment().getRegion().getRegionInfo().getTable().getNameAsString();
       if (tableName.equals("observed_table")) {

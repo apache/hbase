@@ -279,6 +279,15 @@ possible configurations would overwhelm and obscure the important.
     to ride over transient HDFS errors.</description>
   </property>
   <property>
+    <name>hbase.regionserver.free.heap.min.memory.size</name>
+    <value></value>
+    <description>Defines the minimum amount of heap memory that must remain free for the RegionServer to start,
+      specified in bytes or human-readable formats like '512m' for megabytes or '4g' for gigabytes.
+      If not set, the default is 20% of the total heap size. To disable the check entirely,
+      set this value to 0. If the combined memory usage of memstore and block cache
+      exceeds (total heap - this value), the RegionServer will fail to start.</description>
+  </property>
+  <property>
     <name>hbase.regionserver.global.memstore.size</name>
     <value></value>
     <description>Maximum size of all memstores in a region server before new
@@ -287,6 +296,16 @@ possible configurations would overwhelm and obscure the important.
       in a region server hits hbase.regionserver.global.memstore.size.lower.limit.
       The default value in this configuration has been intentionally left empty in order to
       honor the old hbase.regionserver.global.memstore.upperLimit property if present.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.global.memstore.memory.size</name>
+    <value></value>
+    <description>Maximum size of all memstores in a region server before new
+      updates are blocked and flushes are forced, specified in bytes or human-readable formats
+      like '10m' for megabytes or '10g' for gigabytes. This configuration allows setting
+      an absolute memory size instead of a percentage of the maximum heap. Takes precedence
+      over hbase.regionserver.global.memstore.size if both are specified.
     </description>
   </property>
   <property>
@@ -607,6 +626,12 @@ possible configurations would overwhelm and obscure the important.
       milliseconds.</description>
   </property>
   <property>
+    <name>hbase.master.oldwals.dir.updater.period</name>
+    <value>300000</value>
+    <description>Period at which the oldWALs directory size calculator/updater will run in the
+      Master, in milliseconds.</description>
+  </property>
+  <property>
     <name>hbase.regions.slop</name>
     <value>0.2</value>
     <description>The load balancer can trigger for several reasons. This value controls one of
@@ -658,7 +683,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.normalizer.merge.merge_request_max_number_of_regions</name>
-    <value>50</value>
+    <value>100</value>
     <description>The maximum number of region count in a merge request for merge
       normalization.</description>
   </property>
@@ -1005,6 +1030,14 @@ possible configurations would overwhelm and obscure the important.
         enough cache to hold the storefile indices.</description>
   </property>
   <property>
+    <name>hfile.block.cache.memory.size</name>
+    <value></value>
+    <description>Defines the maximum heap memory allocated for the HFile block cache,
+      specified in bytes or human-readable formats like '10m' for megabytes or '10g' for gigabytes.
+      This configuration allows setting an absolute memory size instead of a percentage of the maximum heap.
+      Takes precedence over hfile.block.cache.size if both are specified.</description>
+  </property>
+  <property>
       <name>hfile.block.index.cacheonwrite</name>
       <value>false</value>
       <description>This allows to put non-root multi-level index blocks into the block
@@ -1107,6 +1140,13 @@ possible configurations would overwhelm and obscure the important.
       before retries exhausted, it will break early and throw SocketTimeoutException.</description>
   </property>
   <property>
+    <name>hbase.client.connection.metacache.invalidate-interval.ms</name>
+    <value>0</value>
+    <description>Interval in milliseconds of checking and invalidating meta cache when table
+      disabled or dropped, when set to zero means disable checking, suggest set it to 24h
+      or a higher value, because disable/delete table usually not very frequently.</description>
+  </property>
+  <property>
     <name>hbase.cells.scanned.per.heartbeat.check</name>
     <value>10000</value>
     <description>The number of cells scanned in between heartbeat checks. Heartbeat
@@ -1195,7 +1235,8 @@ possible configurations would overwhelm and obscure the important.
     <value></value>
     <description>List of users or groups (comma-separated), who are allowed
     full privileges, regardless of stored ACLs, across the cluster.
-    Only used when HBase security is enabled.</description>
+    Only used when HBase security is enabled.
+    Group names should be prefixed with "@".</description>
   </property>
   <property>
     <name>hbase.auth.key.update.interval</name>
@@ -1902,6 +1943,8 @@ possible configurations would overwhelm and obscure the important.
     <value>5000</value>
     <description>
       Number of rows in a batch operation above which a warning will be logged.
+      If hbase.client.write.buffer.maxmutations is not set, this will be used as
+      fallback for that setting.
     </description>
   </property>
   <property>

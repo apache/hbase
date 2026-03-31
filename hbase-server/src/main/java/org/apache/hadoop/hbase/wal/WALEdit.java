@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -45,10 +46,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDe
  * Used in HBase's transaction log (WAL) to represent a collection of edits (Cell/KeyValue objects)
  * that came in as a single transaction. All the edits for a given transaction are written out as a
  * single record, in PB format, followed (optionally) by Cells written via the WALCellEncoder.
- * <p>
- * This class is LimitedPrivate for CPs to read-only. The {@link #add} methods are classified as
- * private methods, not for use by CPs.
- * </p>
  * <p>
  * A particular WALEdit 'type' is the 'meta' type used to mark key operational events in the WAL
  * such as compaction, flush, or region open. These meta types do not traverse hbase memstores. They
@@ -73,7 +70,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDe
  * file. See the hand-off in FSWALEntry Constructor.
  * @see WALKey
  */
-// TODO: Do not expose this class to Coprocessors. It has set methods. A CP might meddle.
 @InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.REPLICATION,
   HBaseInterfaceAudience.COPROC })
 public class WALEdit implements HeapSize {
@@ -150,7 +146,7 @@ public class WALEdit implements HeapSize {
 
   private final transient boolean replay;
 
-  private ArrayList<Cell> cells;
+  private ArrayList<ExtendedCell> cells;
 
   /**
    * All the Cell families in <code>cells</code>. Updated by {@link #add(Cell)} and
@@ -253,25 +249,30 @@ public class WALEdit implements HeapSize {
     return this.replay;
   }
 
-  @InterfaceAudience.Private
   public WALEdit add(Cell cell, byte[] family) {
+    return add(PrivateCellUtil.ensureExtendedCell(cell), family);
+  }
+
+  WALEdit add(ExtendedCell cell, byte[] family) {
     getOrCreateFamilies().add(family);
     return addCell(cell);
   }
 
-  @InterfaceAudience.Private
   public WALEdit add(Cell cell) {
+    return add(PrivateCellUtil.ensureExtendedCell(cell));
+  }
+
+  WALEdit add(ExtendedCell cell) {
     // We clone Family each time we add a Cell. Expensive but safe. For CPU savings, use
     // add(Map) or add(Cell, family).
     return add(cell, CellUtil.cloneFamily(cell));
   }
 
-  @InterfaceAudience.Private
-  public WALEdit add(List<Cell> cells) {
+  WALEdit add(List<ExtendedCell> cells) {
     if (cells == null || cells.isEmpty()) {
       return this;
     }
-    for (Cell cell : cells) {
+    for (ExtendedCell cell : cells) {
       add(cell);
     }
     return this;
@@ -286,7 +287,20 @@ public class WALEdit implements HeapSize {
   }
 
   public ArrayList<Cell> getCells() {
+    return (ArrayList) cells;
+  }
+
+  List<ExtendedCell> getExtendedCells() {
     return cells;
+  }
+
+  /**
+   * This is just for keeping compatibility for CPs, in HBase you should call the below
+   * {@link #setExtendedCells(ArrayList)} directly to avoid casting.
+   */
+  void setCells(ArrayList<Cell> cells) {
+    this.cells = new ArrayList<>((ArrayList) cells);
+    this.families = null;
   }
 
   /**
@@ -294,9 +308,8 @@ public class WALEdit implements HeapSize {
    * that nothing else depends on the contents being immutable.
    * @param cells the list of cells that this WALEdit now contains.
    */
-  @InterfaceAudience.Private
   // Used by replay.
-  public void setCells(ArrayList<Cell> cells) {
+  void setExtendedCells(ArrayList<ExtendedCell> cells) {
     this.cells = cells;
     this.families = null;
   }
@@ -467,14 +480,31 @@ public class WALEdit implements HeapSize {
   }
 
   /**
-   * Append the given map of family->edits to a WALEdit data structure. This does not write to the
-   * WAL itself. Note that as an optimization, we will stamp the Set of column families into the
-   * WALEdit to save on our having to calculate column families subsequently down in the actual WAL
-   * writing.
-   * @param familyMap map of family->edits
+   * This is just for keeping compatibility for CPs, in HBase you should call the below
+   * {@link #addMap(Map)} directly to avoid casting.
    */
   public void add(Map<byte[], List<Cell>> familyMap) {
     for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
+      // 'foreach' loop NOT used. See HBASE-12023 "...creates too many iterator objects."
+      int listSize = e.getValue().size();
+      // Add all Cells first and then at end, add the family rather than call {@link #add(Cell)}
+      // and have it clone family each time. Optimization!
+      for (int i = 0; i < listSize; i++) {
+        addCell(PrivateCellUtil.ensureExtendedCell(e.getValue().get(i)));
+      }
+      addFamily(e.getKey());
+    }
+  }
+
+  /**
+   * Append the given map of family-&gt; edits to a WALEdit data structure. This does not write to
+   * the WAL itself. Note that as an optimization, we will stamp the Set of column families into the
+   * WALEdit to save on our having to calculate column families subsequently down in the actual WAL
+   * writing.
+   * @param familyMap map of family -&gt; edits
+   */
+  void addMap(Map<byte[], List<ExtendedCell>> familyMap) {
+    for (Map.Entry<byte[], List<ExtendedCell>> e : familyMap.entrySet()) {
       // 'foreach' loop NOT used. See HBASE-12023 "...creates too many iterator objects."
       int listSize = e.getValue().size();
       // Add all Cells first and then at end, add the family rather than call {@link #add(Cell)}
@@ -490,7 +520,7 @@ public class WALEdit implements HeapSize {
     getOrCreateFamilies().add(family);
   }
 
-  private WALEdit addCell(Cell cell) {
+  private WALEdit addCell(ExtendedCell cell) {
     this.cells.add(cell);
     return this;
   }

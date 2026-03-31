@@ -19,10 +19,15 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -30,11 +35,12 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.io.IOUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -46,6 +52,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestFlushFromClient {
@@ -76,7 +84,7 @@ public class TestFlushFromClient {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    IOUtils.cleanup(null, asyncConn);
+    Closeables.close(asyncConn, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -182,6 +190,30 @@ public class TestFlushFromClient {
       TimeUnit.SECONDS.sleep(1);
       assertEquals(sizeBeforeFlush / 2, r.getMemStoreDataSize());
     }
+  }
+
+  @Test
+  public void testAsyncFlushTableWithNonExistingFamilies() throws IOException {
+    AsyncAdmin admin = asyncConn.getAdmin();
+    List<byte[]> families = new ArrayList<>();
+    families.add(FAMILY_1);
+    families.add(FAMILY_2);
+    families.add(Bytes.toBytes("non_family01"));
+    families.add(Bytes.toBytes("non_family02"));
+    CompletableFuture<Void> future = CompletableFuture.allOf(admin.flush(tableName, families));
+    assertThrows(NoSuchColumnFamilyException.class, () -> FutureUtils.get(future));
+  }
+
+  @Test
+  public void testAsyncFlushRegionWithNonExistingFamily() throws IOException {
+    AsyncAdmin admin = asyncConn.getAdmin();
+    List<HRegion> regions = getRegionInfo();
+    assertNotNull(regions);
+    assertTrue(regions.size() > 0);
+    HRegion region = regions.get(0);
+    CompletableFuture<Void> future = CompletableFuture.allOf(admin
+      .flushRegion(region.getRegionInfo().getEncodedNameAsBytes(), Bytes.toBytes("non_family")));
+    assertThrows(NoSuchColumnFamilyException.class, () -> FutureUtils.get(future));
   }
 
   @Test

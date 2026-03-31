@@ -17,14 +17,17 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotState.SNAPSHOT_SNAPSHOT_ONLINE_REGIONS;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
@@ -51,6 +54,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
@@ -69,6 +73,28 @@ public class TestSnapshotProcedure {
   protected String SNAPSHOT_NAME;
   protected SnapshotDescription snapshot;
   protected SnapshotProtos.SnapshotDescription snapshotProto;
+  protected Admin admin;
+
+  public static final class DelaySnapshotProcedure extends SnapshotProcedure {
+    public DelaySnapshotProcedure() {
+    }
+
+    public DelaySnapshotProcedure(final MasterProcedureEnv env,
+      final SnapshotProtos.SnapshotDescription snapshot) {
+      super(env, snapshot);
+    }
+
+    @Override
+    protected Flow executeFromState(MasterProcedureEnv env,
+      MasterProcedureProtos.SnapshotState state)
+      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+      Flow flow = super.executeFromState(env, state);
+      if (state == SNAPSHOT_SNAPSHOT_ONLINE_REGIONS) {
+        TimeUnit.SECONDS.sleep(20);
+      }
+      return flow;
+    }
+  }
 
   @Before
   public void setup() throws Exception {
@@ -85,6 +111,7 @@ public class TestSnapshotProcedure {
     config.setInt(RemoteProcedureDispatcher.DISPATCH_MAX_QUEUE_SIZE_CONF_KEY, 128);
     TEST_UTIL.startMiniCluster(3);
     master = TEST_UTIL.getHBaseCluster().getMaster();
+    admin = TEST_UTIL.getAdmin();
     TABLE_NAME = TableName.valueOf(Bytes.toBytes("SPTestTable"));
     CF = Bytes.toBytes("cf");
     SNAPSHOT_NAME = "SnapshotProcedureTest";

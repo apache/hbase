@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Iterator;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -30,8 +30,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class SnapshotSegmentScanner extends NonReversedNonLazyKeyValueScanner {
   private final ImmutableSegment segment;
-  private Iterator<Cell> iter;
-  private Cell current;
+  private Iterator<ExtendedCell> iter;
+  private ExtendedCell current;
 
   public SnapshotSegmentScanner(ImmutableSegment segment) {
     this.segment = segment;
@@ -42,18 +42,18 @@ public class SnapshotSegmentScanner extends NonReversedNonLazyKeyValueScanner {
     }
   }
 
-  private static Iterator<Cell> createIterator(Segment segment) {
+  private static Iterator<ExtendedCell> createIterator(Segment segment) {
     return segment.getCellSet().iterator();
   }
 
   @Override
-  public Cell peek() {
+  public ExtendedCell peek() {
     return current;
   }
 
   @Override
-  public Cell next() {
-    Cell oldCurrent = current;
+  public ExtendedCell next() {
+    ExtendedCell oldCurrent = current;
     if (iter.hasNext()) {
       current = iter.next();
     } else {
@@ -63,16 +63,16 @@ public class SnapshotSegmentScanner extends NonReversedNonLazyKeyValueScanner {
   }
 
   @Override
-  public boolean seek(Cell seekCell) {
+  public boolean seek(ExtendedCell seekCell) {
     // restart iterator
     this.iter = createIterator(this.segment);
     return reseek(seekCell);
   }
 
   @Override
-  public boolean reseek(Cell seekCell) {
+  public boolean reseek(ExtendedCell seekCell) {
     while (this.iter.hasNext()) {
-      Cell next = this.iter.next();
+      ExtendedCell next = this.iter.next();
       int ret = this.segment.getComparator().compare(next, seekCell);
       if (ret >= 0) {
         this.current = next;

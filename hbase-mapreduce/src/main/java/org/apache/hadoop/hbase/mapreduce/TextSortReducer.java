@@ -26,8 +26,8 @@ import java.util.Set;
 import java.util.TreeSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
@@ -35,10 +35,10 @@ import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.security.visibility.InvalidLabelException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -168,10 +168,10 @@ public class TextSortReducer
             }
             // Creating the KV which needs to be directly written to HFiles. Using the Facade
             // KVCreator for creation of kvs.
-            Cell cell = this.kvCreator.create(lineBytes, parsed.getRowKeyOffset(),
-              parsed.getRowKeyLength(), parser.getFamily(i), 0, parser.getFamily(i).length,
-              parser.getQualifier(i), 0, parser.getQualifier(i).length, ts, lineBytes,
-              parsed.getColumnOffset(i), parsed.getColumnLength(i), tags);
+            ExtendedCell cell = (ExtendedCell) this.kvCreator.create(lineBytes,
+              parsed.getRowKeyOffset(), parsed.getRowKeyLength(), parser.getFamily(i), 0,
+              parser.getFamily(i).length, parser.getQualifier(i), 0, parser.getQualifier(i).length,
+              ts, lineBytes, parsed.getColumnOffset(i), parsed.getColumnLength(i), tags);
             KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
             kvs.add(kv);
             curSize += kv.heapSize();
@@ -187,7 +187,7 @@ public class TextSortReducer
         }
       }
       context.setStatus("Read " + kvs.size() + " entries of " + kvs.getClass() + "("
-        + StringUtils.humanReadableInt(curSize) + ")");
+        + Strings.humanReadableInt(curSize) + ")");
       int index = 0;
       for (KeyValue kv : kvs) {
         context.write(rowKey, kv);

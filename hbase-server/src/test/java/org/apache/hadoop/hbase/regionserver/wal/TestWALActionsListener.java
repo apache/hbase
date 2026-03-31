@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.After;
@@ -107,7 +108,7 @@ public class TestWALActionsListener {
       byte[] b = Bytes.toBytes(i + "");
       KeyValue kv = new KeyValue(b, b, b);
       WALEdit edit = new WALEdit();
-      edit.add(kv);
+      WALEditInternalHelper.addExtendedCell(edit, kv);
       NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       scopes.put(b, 0);
       long txid = wal.appendData(hri,

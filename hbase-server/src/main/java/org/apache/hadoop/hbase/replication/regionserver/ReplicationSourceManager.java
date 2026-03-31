@@ -47,6 +47,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -66,7 +67,7 @@ import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
+import org.apache.hadoop.hbase.wal.AbstractWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -318,7 +319,18 @@ public class ReplicationSourceManager {
     WALFileLengthProvider walFileLengthProvider = this.walFactory.getWALProvider() != null
       ? this.walFactory.getWALProvider().getWALFileLengthProvider()
       : p -> OptionalLong.empty();
-    src.init(conf, fs, this, queueStorage, replicationPeer, server, queueData, clusterId,
+
+    // Create merged configuration with peer overrides as higher priority and
+    // global config as lower priority
+    Configuration mergedConf = conf;
+    if (!replicationPeer.getPeerConfig().getConfiguration().isEmpty()) {
+      CompoundConfiguration compound = new CompoundConfiguration();
+      compound.add(conf);
+      compound.addStringMap(replicationPeer.getPeerConfig().getConfiguration());
+      mergedConf = compound;
+    }
+
+    src.init(mergedConf, fs, this, queueStorage, replicationPeer, server, queueData, clusterId,
       walFileLengthProvider, new MetricsSource(queueData.getId().toString()));
     return src;
   }
@@ -729,7 +741,7 @@ public class ReplicationSourceManager {
       // special format, and also, the peer id in its name should match the peer id for the
       // replication source.
       List<String> remoteWals =
-        wals.stream().filter(w -> SyncReplicationWALProvider.getSyncReplicationPeerIdFromWALName(w)
+        wals.stream().filter(w -> AbstractWALProvider.getSyncReplicationPeerIdFromWALName(w)
           .map(peerId::equals).orElse(false)).collect(Collectors.toList());
       LOG.debug("Removing {} logs from remote dir {} in the list: {}", remoteWals.size(),
         remoteWALDir, remoteWals);

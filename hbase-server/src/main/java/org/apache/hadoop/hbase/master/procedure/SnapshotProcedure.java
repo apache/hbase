@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
-import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.assignment.MergeTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.assignment.SplitTableRegionProcedure;
@@ -51,7 +50,9 @@ import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.snapshot.SnapshotTTLExpiredException;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -63,6 +64,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.S
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type;
 
 /**
  * A procedure used to take snapshot on tables.
@@ -105,30 +107,6 @@ public class SnapshotProcedure extends AbstractStateMachineTableProcedure<Snapsh
   }
 
   @Override
-  protected LockState acquireLock(MasterProcedureEnv env) {
-    // AbstractStateMachineTableProcedure acquires exclusive table lock by default,
-    // but we may need to downgrade it to shared lock for some reasons:
-    // a. exclusive lock has a negative effect on assigning region. See HBASE-21480 for details.
-    // b. we want to support taking multiple different snapshots on same table on the same time.
-    if (env.getProcedureScheduler().waitTableSharedLock(this, getTableName())) {
-      return LockState.LOCK_EVENT_WAIT;
-    }
-    return LockState.LOCK_ACQUIRED;
-  }
-
-  @Override
-  protected void releaseLock(MasterProcedureEnv env) {
-    env.getProcedureScheduler().wakeTableSharedLock(this, getTableName());
-  }
-
-  @Override
-  protected boolean holdLock(MasterProcedureEnv env) {
-    // In order to avoid enabling/disabling/modifying/deleting table during snapshot,
-    // we don't release lock during suspend
-    return true;
-  }
-
-  @Override
   protected Flow executeFromState(MasterProcedureEnv env, SnapshotState state)
     throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     LOG.info("{} execute state={}", this, state);
@@ -144,14 +122,16 @@ public class SnapshotProcedure extends AbstractStateMachineTableProcedure<Snapsh
           setNextState(SnapshotState.SNAPSHOT_WRITE_SNAPSHOT_INFO);
           return Flow.HAS_MORE_STATE;
         case SNAPSHOT_WRITE_SNAPSHOT_INFO:
-          SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, workingDirFS);
           TableState tableState =
             env.getMasterServices().getTableStateManager().getTableState(snapshotTable);
           if (tableState.isEnabled()) {
             setNextState(SnapshotState.SNAPSHOT_SNAPSHOT_ONLINE_REGIONS);
           } else if (tableState.isDisabled()) {
+            // Set the snapshot type to DISABLED as the table is in DISABLED state
+            snapshot = snapshot.toBuilder().setType(Type.DISABLED).build();
             setNextState(SnapshotState.SNAPSHOT_SNAPSHOT_CLOSED_REGIONS);
           }
+          SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, workingDirFS);
           return Flow.HAS_MORE_STATE;
         case SNAPSHOT_SNAPSHOT_ONLINE_REGIONS:
           addChildProcedure(createRemoteSnapshotProcedures(env));
@@ -183,6 +163,12 @@ public class SnapshotProcedure extends AbstractStateMachineTableProcedure<Snapsh
         case SNAPSHOT_COMPLETE_SNAPSHOT:
           if (isSnapshotCorrupted()) {
             throw new CorruptedSnapshotException(snapshot.getName());
+          }
+          if (
+            SnapshotDescriptionUtils.isExpiredSnapshot(snapshot.getTtl(),
+              snapshot.getCreationTime(), EnvironmentEdgeManager.currentTime())
+          ) {
+            throw new SnapshotTTLExpiredException(ProtobufUtil.createSnapshotDesc(snapshot));
           }
           completeSnapshot(env);
           setNextState(SnapshotState.SNAPSHOT_POST_OPERATION);
@@ -300,22 +286,12 @@ public class SnapshotProcedure extends AbstractStateMachineTableProcedure<Snapsh
 
   private void preSnapshot(MasterProcedureEnv env) throws IOException {
     env.getMasterServices().getSnapshotManager().prepareWorkingDirectory(snapshot);
-
-    MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
-    if (cpHost != null) {
-      cpHost.preSnapshot(ProtobufUtil.createSnapshotDesc(snapshot), htd, getUser());
-    }
   }
 
   private void postSnapshot(MasterProcedureEnv env) throws IOException {
     SnapshotManager sm = env.getMasterServices().getSnapshotManager();
     if (sm != null) {
       sm.unregisterSnapshotProcedure(snapshot, getProcId());
-    }
-
-    MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
-    if (cpHost != null) {
-      cpHost.postSnapshot(ProtobufUtil.createSnapshotDesc(snapshot), htd, getUser());
     }
   }
 

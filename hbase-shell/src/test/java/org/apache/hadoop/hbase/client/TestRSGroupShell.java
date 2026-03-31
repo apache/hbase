@@ -17,35 +17,33 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 
-@Category({ ClientTests.class, LargeTests.class })
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRSGroupShell extends AbstractTestShell {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupShell.class);
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    setUpConfig();
-
+  @Override
+  @BeforeEach
+  public void setUp() throws Exception {
+    RubyShellTest.setUpConfig(this);
     // enable rs group
     RSGroupUtil.enableRSGroup(TEST_UTIL.getConfiguration());
 
+    // Start mini cluster, need 3 nodes
     TEST_UTIL.startMiniCluster(3);
 
-    setUpJRubyRuntime();
+    RubyShellTest.setUpJRubyRuntime(this);
+
+    RubyShellTest.doTestSetup(this);
   }
 
   @Override
-  protected String getIncludeList() {
+  public String getIncludeList() {
     return "rsgroup_shell_test.rb";
   }
 }

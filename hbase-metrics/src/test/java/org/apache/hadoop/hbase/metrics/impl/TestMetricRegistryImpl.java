@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hbase.metrics.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
 import java.util.Optional;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.Gauge;
 import org.apache.hadoop.hbase.metrics.Meter;
@@ -31,22 +31,17 @@ import org.apache.hadoop.hbase.metrics.Metric;
 import org.apache.hadoop.hbase.metrics.MetricRegistryInfo;
 import org.apache.hadoop.hbase.metrics.Timer;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestMetricRegistryImpl {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricRegistryImpl.class);
 
   private MetricRegistryInfo info;
   private MetricRegistryImpl registry;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     info = new MetricRegistryInfo("foo", "bar", "baz", "foobar", false);
     registry = new MetricRegistryImpl(info);
@@ -111,8 +106,8 @@ public class TestMetricRegistryImpl {
 
   @Test
   public void testDoubleRegister() {
-    Gauge g1 = registry.register("mygauge", () -> 42L);
-    Gauge g2 = registry.register("mygauge", () -> 52L);
+    Gauge<Long> g1 = registry.register("mygauge", () -> 42L);
+    Gauge<Long> g2 = registry.register("mygauge", () -> 52L);
 
     // second gauge is ignored if it exists
     assertEquals(g1, g2);
@@ -131,7 +126,7 @@ public class TestMetricRegistryImpl {
   public void testGetMetrics() {
     CounterImpl counter = new CounterImpl();
     registry.register("mycounter", counter);
-    Gauge gauge = registry.register("mygauge", () -> 42L);
+    Gauge<Long> gauge = registry.register("mygauge", () -> 42L);
     Timer timer = registry.timer("mytimer");
 
     Map<String, Metric> metrics = registry.getMetrics();
@@ -140,5 +135,23 @@ public class TestMetricRegistryImpl {
     assertEquals(counter, metrics.get("mycounter"));
     assertEquals(gauge, metrics.get("mygauge"));
     assertEquals(timer, metrics.get("mytimer"));
+  }
+
+  @Test
+  public void testRemove() {
+    CounterImpl counter1 = new CounterImpl();
+    CounterImpl counter2 = new CounterImpl();
+    registry.register("mycounter", counter1);
+
+    boolean removed = registry.remove("mycounter", counter2);
+    Optional<Metric> metric = registry.get("mycounter");
+    assertFalse(removed);
+    assertTrue(metric.isPresent());
+    assertEquals(metric.get(), counter1);
+
+    removed = registry.remove("mycounter");
+    metric = registry.get("mycounter");
+    assertTrue(removed);
+    assertFalse(metric.isPresent());
   }
 }

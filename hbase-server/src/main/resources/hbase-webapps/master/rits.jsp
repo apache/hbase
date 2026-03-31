@@ -32,7 +32,7 @@
          import="org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure"
          import="org.apache.hadoop.hbase.util.GsonUtil"
          import="org.apache.hbase.thirdparty.com.google.gson.Gson"
-%>
+         import="org.apache.hadoop.hbase.master.http.MasterStatusConstants" %>
 <%
     HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
     List<RegionStateNode> rit = master.getAssignmentManager().getRegionsInTransition();
@@ -44,11 +44,11 @@
                 .collect(Collectors.toList());
     }
 
-    String format = request.getParameter("format");
+    String format = request.getParameter(MasterStatusConstants.FORMAT);
     if(format == null || format.isEmpty()){
         format = "html";
     }
-    String filter = request.getParameter("filter");
+    String filter = request.getParameter(MasterStatusConstants.FILTER);
     Collections.sort(rit, new Comparator<RegionStateNode>() {
         @Override
         public int compare(RegionStateNode o1, RegionStateNode o2) {
@@ -97,7 +97,7 @@
                 <td><%= regionStateNode.getRegionInfo().getEncodedName() %></td>
                 <td><%= regionStateNode.getRegionInfo().getTable() %></td>
                 <td><%= regionStateNode.getState() %></td>
-                <td><%= regionStateNode.getRegionLocation().getServerName() %></td>
+                <td><%= regionStateNode.getRegionServerName() %></td>
                 <%
                     TransitRegionStateProcedure procedure = regionStateNode.getProcedure();
 
@@ -134,7 +134,7 @@
             r.put("region", regionStateNode.getRegionInfo().getEncodedName());
             r.put("table", regionStateNode.getRegionInfo().getTable().getNameAsString());
             r.put("state", regionStateNode.getState());
-            r.put("server", regionStateNode.getRegionLocation().getServerName());
+            r.put("server", regionStateNode.getRegionServerName());
 
             TransitRegionStateProcedure procedure = regionStateNode.getProcedure();
             if (procedure != null) {

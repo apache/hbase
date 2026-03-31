@@ -31,12 +31,14 @@ import java.util.SortedSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.BloomFilterMetrics;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -67,7 +69,7 @@ public class StoreFileReader {
   protected BloomFilter deleteFamilyBloomFilter = null;
   private BloomFilterMetrics bloomFilterMetrics = null;
   protected BloomType bloomFilterType;
-  private final HFile.Reader reader;
+  protected final HFile.Reader reader;
   protected long sequenceID = -1;
   protected TimeRange timeRange = null;
   private byte[] lastBloomKey;
@@ -146,7 +148,8 @@ public class StoreFileReader {
   public StoreFileScanner getStoreFileScanner(boolean cacheBlocks, boolean pread,
     boolean isCompaction, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn) {
     return new StoreFileScanner(this, getScanner(cacheBlocks, pread, isCompaction), !isCompaction,
-      reader.hasMVCCInfo(), readPt, scannerOrder, canOptimizeForNonNullColumn);
+      reader.hasMVCCInfo(), readPt, scannerOrder, canOptimizeForNonNullColumn,
+      reader.getDataBlockEncoding() == DataBlockEncoding.ROW_INDEX_V1);
   }
 
   /**
@@ -181,31 +184,9 @@ public class StoreFileReader {
   }
 
   /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Do not write further code which depends
-   *             on this call. Instead use getStoreFileScanner() which uses the StoreFileScanner
-   *             class/interface which is the preferred way to scan a store with higher level
-   *             concepts.
-   * @param cacheBlocks should we cache the blocks?
-   * @param pread       use pread (for concurrent small readers)
-   * @return the underlying HFileScanner
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15296">HBASE-15296</a>
+   * Will be overridden in HalfStoreFileReader
    */
-  @Deprecated
-  public HFileScanner getScanner(boolean cacheBlocks, boolean pread) {
-    return getScanner(cacheBlocks, pread, false);
-  }
-
-  /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Do not write further code which depends
-   *             on this call. Instead use getStoreFileScanner() which uses the StoreFileScanner
-   *             class/interface which is the preferred way to scan a store with higher level
-   *             concepts. should we cache the blocks? use pread (for concurrent small readers) is
-   *             scanner being used for compaction?
-   * @return the underlying HFileScanner
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15296">HBASE-15296</a>
-   */
-  @Deprecated
-  public HFileScanner getScanner(boolean cacheBlocks, boolean pread, boolean isCompaction) {
+  protected HFileScanner getScanner(boolean cacheBlocks, boolean pread, boolean isCompaction) {
     return reader.getScanner(conf, cacheBlocks, pread, isCompaction);
   }
 
@@ -256,7 +237,8 @@ public class StoreFileReader {
         if (columns != null && columns.size() == 1) {
           byte[] column = columns.first();
           // create the required fake key
-          Cell kvKey = PrivateCellUtil.createFirstOnRow(row, HConstants.EMPTY_BYTE_ARRAY, column);
+          ExtendedCell kvKey =
+            PrivateCellUtil.createFirstOnRow(row, HConstants.EMPTY_BYTE_ARRAY, column);
           return passesGeneralRowColBloomFilter(kvKey);
         }
 
@@ -326,14 +308,14 @@ public class StoreFileReader {
    * multi-column query. the cell to check if present in BloomFilter
    * @return True if passes
    */
-  public boolean passesGeneralRowColBloomFilter(Cell cell) {
+  public boolean passesGeneralRowColBloomFilter(ExtendedCell cell) {
     BloomFilter bloomFilter = this.generalBloomFilter;
     if (bloomFilter == null) {
       bloomFilterMetrics.incrementEligible();
       return true;
     }
     // Used in ROW_COL bloom
-    Cell kvKey = null;
+    ExtendedCell kvKey = null;
     // Already if the incoming key is a fake rowcol key then use it as it is
     if (cell.getTypeByte() == KeyValue.Type.Maximum.getCode() && cell.getFamilyLength() == 0) {
       kvKey = cell;
@@ -450,8 +432,8 @@ public class StoreFileReader {
    * @return true if there is overlap, false otherwise
    */
   public boolean passesKeyRangeFilter(Scan scan) {
-    Optional<Cell> firstKeyKV = this.getFirstKey();
-    Optional<Cell> lastKeyKV = this.getLastKey();
+    Optional<ExtendedCell> firstKeyKV = this.getFirstKey();
+    Optional<ExtendedCell> lastKeyKV = this.getLastKey();
     if (!firstKeyKV.isPresent() || !lastKeyKV.isPresent()) {
       // the file is empty
       return false;
@@ -577,7 +559,7 @@ public class StoreFileReader {
     this.deleteFamilyBloomFilter = null;
   }
 
-  public Optional<Cell> getLastKey() {
+  public Optional<ExtendedCell> getLastKey() {
     return reader.getLastKey();
   }
 
@@ -585,7 +567,7 @@ public class StoreFileReader {
     return reader.getLastRowKey();
   }
 
-  public Optional<Cell> midKey() throws IOException {
+  public Optional<ExtendedCell> midKey() throws IOException {
     return reader.midKey();
   }
 
@@ -605,7 +587,7 @@ public class StoreFileReader {
     return deleteFamilyCnt;
   }
 
-  public Optional<Cell> getFirstKey() {
+  public Optional<ExtendedCell> getFirstKey() {
     return reader.getFirstKey();
   }
 
@@ -633,7 +615,8 @@ public class StoreFileReader {
     return this.bulkLoadResult;
   }
 
-  BloomFilter getGeneralBloomFilter() {
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  public BloomFilter getGeneralBloomFilter() {
     return generalBloomFilter;
   }
 

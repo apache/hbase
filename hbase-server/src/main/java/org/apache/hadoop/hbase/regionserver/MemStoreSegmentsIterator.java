@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Iterator;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * not thread-safe and must have only one instance per MemStore in each period of time
  */
 @InterfaceAudience.Private
-public abstract class MemStoreSegmentsIterator implements Iterator<Cell> {
+public abstract class MemStoreSegmentsIterator implements Iterator<ExtendedCell> {
 
   protected final ScannerContext scannerContext;
 

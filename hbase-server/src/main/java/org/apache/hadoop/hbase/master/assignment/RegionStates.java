@@ -20,13 +20,10 @@ package org.apache.hadoop.hbase.master.assignment;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -54,21 +51,9 @@ import org.slf4j.LoggerFactory;
 public class RegionStates {
   private static final Logger LOG = LoggerFactory.getLogger(RegionStates.class);
 
-  // This comparator sorts the RegionStates by time stamp then Region name.
-  // Comparing by timestamp alone can lead us to discard different RegionStates that happen
-  // to share a timestamp.
-  private static class RegionStateStampComparator implements Comparator<RegionState> {
-    @Override
-    public int compare(final RegionState l, final RegionState r) {
-      int stampCmp = Long.compare(l.getStamp(), r.getStamp());
-      return stampCmp != 0 ? stampCmp : RegionInfo.COMPARATOR.compare(l.getRegion(), r.getRegion());
-    }
-  }
-
-  public final static RegionStateStampComparator REGION_STATE_STAMP_COMPARATOR =
-    new RegionStateStampComparator();
-
   private final Object regionsMapLock = new Object();
+
+  private final AtomicInteger activeTransitProcedureCount = new AtomicInteger(0);
 
   // TODO: Replace the ConcurrentSkipListMaps
   /**
@@ -83,9 +68,6 @@ public class RegionStates {
    */
   private final ConcurrentSkipListMap<String, RegionStateNode> encodedRegionsMap =
     new ConcurrentSkipListMap<>();
-
-  private final ConcurrentSkipListMap<RegionInfo, RegionStateNode> regionInTransition =
-    new ConcurrentSkipListMap<>(RegionInfo.COMPARATOR);
 
   /**
    * Regions marked as offline on a read of hbase:meta. Unused or at least, once offlined, regions
@@ -109,14 +91,8 @@ public class RegionStates {
   public void clear() {
     regionsMap.clear();
     encodedRegionsMap.clear();
-    regionInTransition.clear();
     regionOffline.clear();
     serverMap.clear();
-  }
-
-  public boolean isRegionInRegionStates(final RegionInfo hri) {
-    return (regionsMap.containsKey(hri.getRegionName()) || regionInTransition.containsKey(hri)
-      || regionOffline.containsKey(hri));
   }
 
   // ==========================================================================
@@ -125,7 +101,7 @@ public class RegionStates {
   RegionStateNode createRegionStateNode(RegionInfo regionInfo) {
     synchronized (regionsMapLock) {
       RegionStateNode node = regionsMap.computeIfAbsent(regionInfo.getRegionName(),
-        key -> new RegionStateNode(regionInfo, regionInTransition));
+        key -> new RegionStateNode(regionInfo, activeTransitProcedureCount));
 
       if (encodedRegionsMap.get(regionInfo.getEncodedName()) != node) {
         encodedRegionsMap.put(regionInfo.getEncodedName(), node);
@@ -156,12 +132,6 @@ public class RegionStates {
     synchronized (regionsMapLock) {
       regionsMap.remove(regionInfo.getRegionName());
       encodedRegionsMap.remove(regionInfo.getEncodedName());
-    }
-    // See HBASE-20860
-    // After master restarts, merged regions' RIT state may not be cleaned,
-    // making sure they are cleaned here
-    if (regionInTransition.containsKey(regionInfo)) {
-      regionInTransition.remove(regionInfo);
     }
     // Remove from the offline regions map too if there.
     if (this.regionOffline.containsKey(regionInfo)) {
@@ -405,7 +375,7 @@ public class RegionStates {
   // ============================================================================================
 
   private void setServerState(ServerName serverName, ServerState state) {
-    ServerStateNode serverNode = getOrCreateServer(serverName);
+    ServerStateNode serverNode = getServerNode(serverName);
     synchronized (serverNode) {
       serverNode.setState(state);
     }
@@ -459,7 +429,7 @@ public class RegionStates {
   public List<RegionInfo> getAssignedRegions() {
     final List<RegionInfo> result = new ArrayList<RegionInfo>();
     for (RegionStateNode node : regionsMap.values()) {
-      if (!node.isInTransition()) {
+      if (!node.isTransitionScheduled()) {
         result.add(node.getRegionInfo());
       }
     }
@@ -619,65 +589,16 @@ public class RegionStates {
   }
 
   // ==========================================================================
-  // Region in transition helpers
-  // ==========================================================================
-  public boolean hasRegionsInTransition() {
-    return !regionInTransition.isEmpty();
-  }
-
-  public boolean isRegionInTransition(final RegionInfo regionInfo) {
-    final RegionStateNode node = regionInTransition.get(regionInfo);
-    return node != null ? node.isInTransition() : false;
-  }
-
-  public RegionState getRegionTransitionState(RegionInfo hri) {
-    RegionStateNode node = regionInTransition.get(hri);
-    if (node == null) {
-      return null;
-    }
-
-    node.lock();
-    try {
-      return node.isInTransition() ? node.toRegionState() : null;
-    } finally {
-      node.unlock();
-    }
-  }
-
-  public List<RegionStateNode> getRegionsInTransition() {
-    return new ArrayList<RegionStateNode>(regionInTransition.values());
-  }
-
-  /**
-   * Get the number of regions in transition.
-   */
-  public int getRegionsInTransitionCount() {
-    return regionInTransition.size();
-  }
-
-  public List<RegionState> getRegionsStateInTransition() {
-    final List<RegionState> rit = new ArrayList<RegionState>(regionInTransition.size());
-    for (RegionStateNode node : regionInTransition.values()) {
-      rit.add(node.toRegionState());
-    }
-    return rit;
-  }
-
-  public SortedSet<RegionState> getRegionsInTransitionOrderedByTimestamp() {
-    final SortedSet<RegionState> rit = new TreeSet<RegionState>(REGION_STATE_STAMP_COMPARATOR);
-    for (RegionStateNode node : regionInTransition.values()) {
-      rit.add(node.toRegionState());
-    }
-    return rit;
-  }
-
-  // ==========================================================================
   // Region offline helpers
   // ==========================================================================
   // TODO: Populated when we read meta but regions never make it out of here.
   public void addToOfflineRegions(final RegionStateNode regionNode) {
     LOG.info("Added to offline, CURRENTLY NEVER CLEARED!!! " + regionNode);
     regionOffline.put(regionNode.getRegionInfo(), regionNode);
+  }
+
+  public int getRegionTransitScheduledCount() {
+    return activeTransitProcedureCount.get();
   }
 
   // ==========================================================================
@@ -746,18 +667,16 @@ public class RegionStates {
   // ==========================================================================
 
   /**
-   * Be judicious calling this method. Do it on server register ONLY otherwise you could mess up
-   * online server accounting. TOOD: Review usage and convert to {@link #getServerNode(ServerName)}
-   * where we can.
+   * Create the ServerStateNode when registering a new region server
    */
-  public ServerStateNode getOrCreateServer(final ServerName serverName) {
-    return serverMap.computeIfAbsent(serverName, key -> new ServerStateNode(key));
+  public void createServer(ServerName serverName) {
+    serverMap.computeIfAbsent(serverName, key -> new ServerStateNode(key));
   }
 
   /**
    * Called by SCP at end of successful processing.
    */
-  public void removeServer(final ServerName serverName) {
+  public void removeServer(ServerName serverName) {
     serverMap.remove(serverName);
   }
 
@@ -776,17 +695,24 @@ public class RegionStates {
     return numServers == 0 ? 0.0 : (double) totalLoad / (double) numServers;
   }
 
-  public ServerStateNode addRegionToServer(final RegionStateNode regionNode) {
-    ServerStateNode serverNode = getOrCreateServer(regionNode.getRegionLocation());
+  public void addRegionToServer(final RegionStateNode regionNode) {
+    ServerStateNode serverNode = getServerNode(regionNode.getRegionLocation());
     serverNode.addRegion(regionNode);
-    return serverNode;
   }
 
-  public ServerStateNode removeRegionFromServer(final ServerName serverName,
+  public void removeRegionFromServer(final ServerName serverName,
     final RegionStateNode regionNode) {
-    ServerStateNode serverNode = getOrCreateServer(serverName);
-    serverNode.removeRegion(regionNode);
-    return serverNode;
+    ServerStateNode serverNode = getServerNode(serverName);
+    // here the server node could be null. For example, if there is already a TRSP for a region and
+    // at the same time, the target server is crashed and there is a SCP. The SCP will interrupt the
+    // TRSP and the TRSP will first set the region as abnormally closed and remove it from the
+    // server node. But here, this TRSP is not a child procedure of the SCP, so it is possible that
+    // the SCP finishes, thus removes the server node for this region server, before the TRSP wakes
+    // up and enter here to remove the region node from the server node, then we will get a null
+    // server node here.
+    if (serverNode != null) {
+      serverNode.removeRegion(regionNode);
+    }
   }
 
   // ==========================================================================

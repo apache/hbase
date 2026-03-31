@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -116,9 +116,9 @@ public class TestScannerFromBucketCache {
     String method = this.getName();
     this.region = initHRegion(tableName, method, conf, test_util, fam1);
     try {
-      List<Cell> expected = insertData(row1, qf1, qf2, fam1, ts1, ts2, ts3, false);
+      List<ExtendedCell> expected = insertData(row1, qf1, qf2, fam1, ts1, ts2, ts3, false);
 
-      List<Cell> actual = performScan(row1, fam1);
+      List<ExtendedCell> actual = performScan(row1, fam1);
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
         assertFalse(actual.get(i) instanceof ByteBufferKeyValue);
@@ -154,9 +154,9 @@ public class TestScannerFromBucketCache {
     String method = this.getName();
     this.region = initHRegion(tableName, method, conf, test_util, fam1);
     try {
-      List<Cell> expected = insertData(row1, qf1, qf2, fam1, ts1, ts2, ts3, false);
+      List<ExtendedCell> expected = insertData(row1, qf1, qf2, fam1, ts1, ts2, ts3, false);
 
-      List<Cell> actual = performScan(row1, fam1);
+      List<ExtendedCell> actual = performScan(row1, fam1);
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
         assertFalse(actual.get(i) instanceof ByteBufferKeyValue);
@@ -195,9 +195,9 @@ public class TestScannerFromBucketCache {
     String method = this.getName();
     this.region = initHRegion(tableName, method, conf, test_util, fam1);
     try {
-      List<Cell> expected = insertData(row1, qf1, qf2, fam1, ts1, ts2, ts3, true);
+      List<ExtendedCell> expected = insertData(row1, qf1, qf2, fam1, ts1, ts2, ts3, true);
 
-      List<Cell> actual = performScan(row1, fam1);
+      List<ExtendedCell> actual = performScan(row1, fam1);
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
         assertFalse(actual.get(i) instanceof ByteBufferKeyValue);
@@ -229,7 +229,7 @@ public class TestScannerFromBucketCache {
     }
   }
 
-  private List<Cell> insertData(byte[] row1, byte[] qf1, byte[] qf2, byte[] fam1, long ts1,
+  private List<ExtendedCell> insertData(byte[] row1, byte[] qf1, byte[] qf2, byte[] fam1, long ts1,
     long ts2, long ts3, boolean withVal) throws IOException {
     // Putting data in Region
     Put put = null;
@@ -276,7 +276,7 @@ public class TestScannerFromBucketCache {
     }
 
     // Expected
-    List<Cell> expected = new ArrayList<>();
+    List<ExtendedCell> expected = new ArrayList<>();
     expected.add(kv13);
     expected.add(kv12);
     expected.add(kv23);
@@ -284,9 +284,9 @@ public class TestScannerFromBucketCache {
     return expected;
   }
 
-  private List<Cell> performScan(byte[] row1, byte[] fam1) throws IOException {
+  private List<ExtendedCell> performScan(byte[] row1, byte[] fam1) throws IOException {
     Scan scan = new Scan().withStartRow(row1).addFamily(fam1).readVersions(MAX_VERSIONS);
-    List<Cell> actual = new ArrayList<>();
+    List<ExtendedCell> actual = new ArrayList<>();
     InternalScanner scanner = region.getScanner(scan);
 
     boolean hasNext = scanner.next(actual);

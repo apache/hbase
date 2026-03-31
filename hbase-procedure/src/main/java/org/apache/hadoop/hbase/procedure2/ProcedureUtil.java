@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  */
 @InterfaceAudience.Private
 public final class ProcedureUtil {
+
   private ProcedureUtil() {
   }
 
@@ -174,6 +175,10 @@ public final class ProcedureUtil {
       builder.setParentId(proc.getParentProcId());
     }
 
+    if (proc.isCriticalSystemTable()) {
+      builder.setIsCryticalSystemTable(true);
+    }
+
     if (proc.hasTimeout()) {
       builder.setTimeout(proc.getTimeout());
     }
@@ -188,6 +193,7 @@ public final class ProcedureUtil {
         builder.addStackId(stackIds[i]);
       }
     }
+    builder.setExecuted(proc.wasExecuted());
 
     if (proc.hasException()) {
       RemoteProcedureException exception = proc.getException();
@@ -242,6 +248,10 @@ public final class ProcedureUtil {
       proc.setParentProcId(proto.getParentId());
     }
 
+    if (proto.hasIsCryticalSystemTable()) {
+      proc.setCriticalSystemTable(proto.getIsCryticalSystemTable());
+    }
+
     if (proto.hasOwner()) {
       proc.setOwner(proto.getOwner());
     }
@@ -252,6 +262,9 @@ public final class ProcedureUtil {
 
     if (proto.getStackIdCount() > 0) {
       proc.setStackIndexes(proto.getStackIdList());
+    }
+    if (proto.getExecuted()) {
+      proc.setExecuted();
     }
 
     if (proto.hasException()) {

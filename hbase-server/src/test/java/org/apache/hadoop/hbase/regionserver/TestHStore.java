@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.CACHE_DATA_ON_READ_KEY;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.DEFAULT_CACHE_DATA_ON_READ;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.DEFAULT_CACHE_DATA_ON_WRITE;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.DEFAULT_EVICT_ON_CLOSE;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.EVICT_BLOCKS_ON_CLOSE_KEY;
 import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -61,6 +67,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.IntBinaryOperator;
+import java.util.function.IntConsumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -70,18 +77,19 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -112,6 +120,8 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.compactions.EverythingPolicy;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
@@ -779,8 +789,8 @@ public class TestHStore {
 
         LOG.info("Before flush, we should have no files");
 
-        Collection<StoreFileInfo> files =
-          store.getRegionFileSystem().getStoreFiles(store.getColumnFamilyName());
+        StoreFileTracker sft = StoreFileTrackerFactory.create(conf, false, store.getStoreContext());
+        Collection<StoreFileInfo> files = sft.load();
         assertEquals(0, files != null ? files.size() : 0);
 
         // flush
@@ -793,7 +803,7 @@ public class TestHStore {
         }
 
         LOG.info("After failed flush, we should still have no files!");
-        files = store.getRegionFileSystem().getStoreFiles(store.getColumnFamilyName());
+        files = sft.load();
         assertEquals(0, files != null ? files.size() : 0);
         store.getHRegion().getWAL().close();
         return null;
@@ -875,9 +885,9 @@ public class TestHStore {
    * Generate a list of KeyValues for testing based on given parameters
    * @return the rows key-value list
    */
-  private List<Cell> getKeyValueSet(long[] timestamps, int numRows, byte[] qualifier,
+  private List<ExtendedCell> getKeyValueSet(long[] timestamps, int numRows, byte[] qualifier,
     byte[] family) {
-    List<Cell> kvList = new ArrayList<>();
+    List<ExtendedCell> kvList = new ArrayList<>();
     for (int i = 1; i <= numRows; i++) {
       byte[] b = Bytes.toBytes(i);
       for (long timestamp : timestamps) {
@@ -898,15 +908,15 @@ public class TestHStore {
 
     init(this.name.getMethodName());
 
-    List<Cell> kvList1 = getKeyValueSet(timestamps1, numRows, qf1, family);
-    for (Cell kv : kvList1) {
+    List<ExtendedCell> kvList1 = getKeyValueSet(timestamps1, numRows, qf1, family);
+    for (ExtendedCell kv : kvList1) {
       this.store.add(kv, null);
     }
 
     flushStore(store, id++);
 
-    List<Cell> kvList2 = getKeyValueSet(timestamps2, numRows, qf1, family);
-    for (Cell kv : kvList2) {
+    List<ExtendedCell> kvList2 = getKeyValueSet(timestamps2, numRows, qf1, family);
+    for (ExtendedCell kv : kvList2) {
       this.store.add(kv, null);
     }
 
@@ -1023,8 +1033,10 @@ public class TestHStore {
     for (int i = 0; i <= index; i++) {
       sf = it.next();
     }
-    store.getRegionFileSystem().removeStoreFiles(store.getColumnFamilyName(),
-      Lists.newArrayList(sf));
+    StoreFileTracker sft =
+      StoreFileTrackerFactory.create(store.getRegionFileSystem().getFileSystem().getConf(),
+        store.isPrimaryReplicaStore(), store.getStoreContext());
+    sft.removeStoreFiles(Lists.newArrayList(sf));
   }
 
   private void closeCompactedFile(int index) throws IOException {
@@ -1193,34 +1205,37 @@ public class TestHStore {
   public void testNumberOfMemStoreScannersAfterFlush() throws IOException {
     long seqId = 100;
     long timestamp = EnvironmentEdgeManager.currentTime();
-    Cell cell0 = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
-      .setQualifier(qf1).setTimestamp(timestamp).setType(Cell.Type.Put).setValue(qf1).build();
+    ExtendedCell cell0 =
+      ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
+        .setQualifier(qf1).setTimestamp(timestamp).setType(Cell.Type.Put).setValue(qf1).build();
     PrivateCellUtil.setSequenceId(cell0, seqId);
     testNumberOfMemStoreScannersAfterFlush(Arrays.asList(cell0), Collections.emptyList());
 
-    Cell cell1 = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
-      .setQualifier(qf2).setTimestamp(timestamp).setType(Cell.Type.Put).setValue(qf1).build();
+    ExtendedCell cell1 =
+      ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
+        .setQualifier(qf2).setTimestamp(timestamp).setType(Cell.Type.Put).setValue(qf1).build();
     PrivateCellUtil.setSequenceId(cell1, seqId);
     testNumberOfMemStoreScannersAfterFlush(Arrays.asList(cell0), Arrays.asList(cell1));
 
     seqId = 101;
     timestamp = EnvironmentEdgeManager.currentTime();
-    Cell cell2 = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row2).setFamily(family)
-      .setQualifier(qf2).setTimestamp(timestamp).setType(Cell.Type.Put).setValue(qf1).build();
+    ExtendedCell cell2 =
+      ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row2).setFamily(family)
+        .setQualifier(qf2).setTimestamp(timestamp).setType(Cell.Type.Put).setValue(qf1).build();
     PrivateCellUtil.setSequenceId(cell2, seqId);
     testNumberOfMemStoreScannersAfterFlush(Arrays.asList(cell0), Arrays.asList(cell1, cell2));
   }
 
-  private void testNumberOfMemStoreScannersAfterFlush(List<Cell> inputCellsBeforeSnapshot,
-    List<Cell> inputCellsAfterSnapshot) throws IOException {
+  private void testNumberOfMemStoreScannersAfterFlush(List<ExtendedCell> inputCellsBeforeSnapshot,
+    List<ExtendedCell> inputCellsAfterSnapshot) throws IOException {
     init(this.name.getMethodName() + "-" + inputCellsBeforeSnapshot.size());
     TreeSet<byte[]> quals = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     long seqId = Long.MIN_VALUE;
-    for (Cell c : inputCellsBeforeSnapshot) {
+    for (ExtendedCell c : inputCellsBeforeSnapshot) {
       quals.add(CellUtil.cloneQualifier(c));
       seqId = Math.max(seqId, c.getSequenceId());
     }
-    for (Cell c : inputCellsAfterSnapshot) {
+    for (ExtendedCell c : inputCellsAfterSnapshot) {
       quals.add(CellUtil.cloneQualifier(c));
       seqId = Math.max(seqId, c.getSequenceId());
     }
@@ -1253,17 +1268,22 @@ public class TestHStore {
     }
   }
 
-  private Cell createCell(byte[] qualifier, long ts, long sequenceId, byte[] value)
+  private ExtendedCell createCell(byte[] qualifier, long ts, long sequenceId, byte[] value)
     throws IOException {
     return createCell(row, qualifier, ts, sequenceId, value);
   }
 
-  private Cell createCell(byte[] row, byte[] qualifier, long ts, long sequenceId, byte[] value)
-    throws IOException {
-    Cell c = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
-      .setQualifier(qualifier).setTimestamp(ts).setType(Cell.Type.Put).setValue(value).build();
-    PrivateCellUtil.setSequenceId(c, sequenceId);
-    return c;
+  private ExtendedCell createCell(byte[] row, byte[] qualifier, long ts, long sequenceId,
+    byte[] value) throws IOException {
+    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row)
+      .setFamily(family).setQualifier(qualifier).setTimestamp(ts).setType(Cell.Type.Put)
+      .setValue(value).setSequenceId(sequenceId).build();
+  }
+
+  private ExtendedCell createDeleteCell(byte[] row, byte[] qualifier, long ts, long sequenceId) {
+    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row)
+      .setFamily(family).setQualifier(qualifier).setTimestamp(ts).setType(Cell.Type.DeleteColumn)
+      .setSequenceId(sequenceId).build();
   }
 
   @Test
@@ -1406,6 +1426,74 @@ public class TestHStore {
         byte[] actualValue = CellUtil.cloneValue(c);
         assertTrue("expected:" + Bytes.toStringBinary(value2) + ", actual:"
           + Bytes.toStringBinary(actualValue), Bytes.equals(actualValue, value2));
+      }
+    }
+  }
+
+  @Test
+  public void testFlushBeforeCompletingScanWithDeleteCell() throws IOException {
+    final Configuration conf = HBaseConfiguration.create();
+
+    byte[] r1 = Bytes.toBytes("row1");
+    byte[] r2 = Bytes.toBytes("row2");
+
+    byte[] value1 = Bytes.toBytes("value1");
+    byte[] value2 = Bytes.toBytes("value2");
+
+    final MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
+    final long ts = EnvironmentEdgeManager.currentTime();
+    final long seqId = 100;
+
+    init(name.getMethodName(), conf, TableDescriptorBuilder.newBuilder(TableName.valueOf(table)),
+      ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(1).build(),
+      new MyStoreHook() {
+        @Override
+        long getSmallestReadPoint(HStore store) {
+          return seqId + 3;
+        }
+      });
+
+    store.add(createCell(r1, qf1, ts + 1, seqId + 1, value2), memStoreSizing);
+    store.add(createCell(r1, qf2, ts + 1, seqId + 1, value2), memStoreSizing);
+    store.add(createCell(r1, qf3, ts + 1, seqId + 1, value2), memStoreSizing);
+
+    store.add(createDeleteCell(r1, qf1, ts + 2, seqId + 2), memStoreSizing);
+    store.add(createDeleteCell(r1, qf2, ts + 2, seqId + 2), memStoreSizing);
+    store.add(createDeleteCell(r1, qf3, ts + 2, seqId + 2), memStoreSizing);
+
+    store.add(createCell(r2, qf1, ts + 3, seqId + 3, value1), memStoreSizing);
+    store.add(createCell(r2, qf2, ts + 3, seqId + 3, value1), memStoreSizing);
+    store.add(createCell(r2, qf3, ts + 3, seqId + 3, value1), memStoreSizing);
+
+    Scan scan = new Scan().withStartRow(r1);
+
+    try (final InternalScanner scanner =
+      new StoreScanner(store, store.getScanInfo(), scan, null, seqId + 3) {
+        @Override
+        protected KeyValueHeap newKVHeap(List<? extends KeyValueScanner> scanners,
+          CellComparator comparator) throws IOException {
+          return new MyKeyValueHeap(scanners, comparator, recordBlockSizeCallCount -> {
+            if (recordBlockSizeCallCount == 6) {
+              try {
+                flushStore(store, id++);
+              } catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+            }
+          });
+        }
+      }) {
+      List<Cell> cellResult = new ArrayList<>();
+
+      scanner.next(cellResult);
+      assertEquals(0, cellResult.size());
+
+      cellResult.clear();
+
+      scanner.next(cellResult);
+      assertEquals(3, cellResult.size());
+      for (Cell cell : cellResult) {
+        assertArrayEquals(r2, CellUtil.cloneRow(cell));
       }
     }
   }
@@ -1758,7 +1846,7 @@ public class TestHStore {
           Arrays.asList(mockStoreFile(currentTime - 10), mockStoreFile(currentTime - 100),
             mockStoreFile(currentTime - 1000), mockStoreFile(currentTime - 10000));
         StoreFileManager sfm = mock(StoreFileManager.class);
-        when(sfm.getStorefiles()).thenReturn(storefiles);
+        when(sfm.getStoreFiles()).thenReturn(storefiles);
         StoreEngine<?, ?, ?, ?> storeEngine = mock(StoreEngine.class);
         when(storeEngine.getStoreFileManager()).thenReturn(sfm);
         return storeEngine;
@@ -1799,10 +1887,10 @@ public class TestHStore {
     public List<KeyValueScanner> getScanners(List<HStoreFile> files, boolean cacheBlocks,
       boolean usePread, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
       boolean includeStartRow, byte[] stopRow, boolean includeStopRow, long readPt,
-      boolean includeMemstoreScanner) throws IOException {
+      boolean includeMemstoreScanner, boolean onlyLatestVersion) throws IOException {
       hook.getScanners(this);
       return super.getScanners(files, cacheBlocks, usePread, isCompaction, matcher, startRow, true,
-        stopRow, false, readPt, includeMemstoreScanner);
+        stopRow, false, readPt, includeMemstoreScanner, onlyLatestVersion);
     }
 
     @Override
@@ -1905,6 +1993,19 @@ public class TestHStore {
   }
 
   @Test
+  public void testInMemoryCompactionTypeWithLowerCase() throws IOException, InterruptedException {
+    Configuration conf = HBaseConfiguration.create();
+    conf.set("hbase.systemtables.compacting.memstore.type", "eager");
+    init(name.getMethodName(), conf,
+      TableDescriptorBuilder.newBuilder(
+        TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME, "meta".getBytes())),
+      ColumnFamilyDescriptorBuilder.newBuilder(family)
+        .setInMemoryCompaction(MemoryCompactionPolicy.NONE).build());
+    assertTrue(((MemStoreCompactor) ((CompactingMemStore) store.memstore).compactor).toString()
+      .startsWith("eager".toUpperCase()));
+  }
+
+  @Test
   public void testSpaceQuotaChangeAfterReplacement() throws IOException {
     final TableName tn = TableName.valueOf(name.getMethodName());
     init(name.getMethodName());
@@ -1952,7 +2053,7 @@ public class TestHStore {
       .createWriter(CreateStoreFileWriterParams.create().maxKeyCount(10000L)
         .compression(Compression.Algorithm.NONE).isCompaction(true).includeMVCCReadpoint(true)
         .includesTag(false).shouldDropBehind(true));
-    HFileContext hFileContext = writer.getHFileWriter().getFileContext();
+    HFileContext hFileContext = writer.getLiveFileWriter().getFileContext();
     assertArrayEquals(family, hFileContext.getColumnFamily());
     assertArrayEquals(table, hFileContext.getTableName());
   }
@@ -1968,8 +2069,8 @@ public class TestHStore {
     byte[] largeValue = new byte[9];
     final long timestamp = EnvironmentEdgeManager.currentTime();
     final long seqId = 100;
-    final Cell smallCell = createCell(qf1, timestamp, seqId, smallValue);
-    final Cell largeCell = createCell(qf2, timestamp, seqId, largeValue);
+    final ExtendedCell smallCell = createCell(qf1, timestamp, seqId, smallValue);
+    final ExtendedCell largeCell = createCell(qf2, timestamp, seqId, largeValue);
     int smallCellByteSize = MutableSegment.getCellLength(smallCell);
     int largeCellByteSize = MutableSegment.getCellLength(largeCell);
     int flushByteSize = smallCellByteSize + largeCellByteSize - 2;
@@ -2015,7 +2116,7 @@ public class TestHStore {
 
       for (int i = 0; i < 100; i++) {
         long currentTimestamp = timestamp + 100 + i;
-        Cell cell = createCell(qf2, currentTimestamp, seqId, largeValue);
+        ExtendedCell cell = createCell(qf2, currentTimestamp, seqId, largeValue);
         store.add(cell, new NonThreadSafeMemStoreSizing());
       }
     } finally {
@@ -2044,7 +2145,7 @@ public class TestHStore {
     MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
     long timestamp = EnvironmentEdgeManager.currentTime();
     long seqId = 100;
-    Cell cell = createCell(qf1, timestamp, seqId, value);
+    ExtendedCell cell = createCell(qf1, timestamp, seqId, value);
     int cellByteSize = MutableSegment.getCellLength(cell);
     store.add(cell, memStoreSizing);
     assertTrue(memStoreSizing.getCellsCount() == 1);
@@ -2069,9 +2170,9 @@ public class TestHStore {
     final long timestamp = EnvironmentEdgeManager.currentTime();
     final long seqId = 100;
     final byte[] rowKey1 = Bytes.toBytes("rowKey1");
-    final Cell originalCell1 = createCell(rowKey1, qf1, timestamp, seqId, cellValue);
+    final ExtendedCell originalCell1 = createCell(rowKey1, qf1, timestamp, seqId, cellValue);
     final byte[] rowKey2 = Bytes.toBytes("rowKey2");
-    final Cell originalCell2 = createCell(rowKey2, qf1, timestamp, seqId, cellValue);
+    final ExtendedCell originalCell2 = createCell(rowKey2, qf1, timestamp, seqId, cellValue);
     TreeSet<byte[]> quals = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     quals.add(qf1);
 
@@ -2104,9 +2205,9 @@ public class TestHStore {
     StoreScanner storeScanner =
       (StoreScanner) store.getScanner(new Scan(new Get(rowKey1)), quals, seqId + 1);
     SegmentScanner segmentScanner = getTypeKeyValueScanner(storeScanner, SegmentScanner.class);
-    Cell resultCell1 = segmentScanner.next();
-    assertTrue(CellUtil.equals(resultCell1, originalCell1));
-    int cell1ChunkId = ((ExtendedCell) resultCell1).getChunkId();
+    ExtendedCell resultCell1 = segmentScanner.next();
+    assertTrue(PrivateCellUtil.equals(resultCell1, originalCell1));
+    int cell1ChunkId = resultCell1.getChunkId();
     assertTrue(cell1ChunkId != ExtendedCell.CELL_NOT_BASED_ON_CHUNK);
     assertNull(segmentScanner.next());
     segmentScanner.close();
@@ -2132,12 +2233,12 @@ public class TestHStore {
     // {@link CellChunkMap#getCell} we could not get the data chunk by chunkId.
     storeScanner = (StoreScanner) store.getScanner(new Scan(new Get(rowKey1)), quals, seqId + 1);
     segmentScanner = getTypeKeyValueScanner(storeScanner, SegmentScanner.class);
-    Cell newResultCell1 = segmentScanner.next();
+    ExtendedCell newResultCell1 = segmentScanner.next();
     assertTrue(newResultCell1 != resultCell1);
-    assertTrue(CellUtil.equals(newResultCell1, originalCell1));
+    assertTrue(PrivateCellUtil.equals(newResultCell1, originalCell1));
 
-    Cell resultCell2 = segmentScanner.next();
-    assertTrue(CellUtil.equals(resultCell2, originalCell2));
+    ExtendedCell resultCell2 = segmentScanner.next();
+    assertTrue(PrivateCellUtil.equals(resultCell2, originalCell2));
     assertNull(segmentScanner.next());
     segmentScanner.close();
     storeScanner.close();
@@ -2210,7 +2311,7 @@ public class TestHStore {
       try {
         for (int i = 1; i <= MyCompactingMemStore3.CELL_COUNT; i++) {
           long currentTimestamp = timestamp + i;
-          Cell cell = createCell(qf1, currentTimestamp, seqId, smallValue);
+          ExtendedCell cell = createCell(qf1, currentTimestamp, seqId, smallValue);
           totalCellByteSize.addAndGet(MutableSegment.getCellLength(cell));
           store.add(cell, memStoreSizing);
         }
@@ -2241,7 +2342,7 @@ public class TestHStore {
       Thread.currentThread().setName(MyCompactingMemStore3.LARGE_CELL_THREAD_NAME);
       for (int i = 1; i <= MyCompactingMemStore3.CELL_COUNT; i++) {
         long currentTimestamp = timestamp + i;
-        Cell cell = createCell(qf2, currentTimestamp, seqId, largeValue);
+        ExtendedCell cell = createCell(qf2, currentTimestamp, seqId, largeValue);
         totalCellByteSize.addAndGet(MutableSegment.getCellLength(cell));
         store.add(cell, memStoreSizing);
       }
@@ -2308,8 +2409,8 @@ public class TestHStore {
     byte[] largeValue = new byte[9];
     final long timestamp = EnvironmentEdgeManager.currentTime();
     final long seqId = 100;
-    final Cell smallCell = createCell(qf1, timestamp, seqId, smallValue);
-    final Cell largeCell = createCell(qf2, timestamp, seqId, largeValue);
+    final ExtendedCell smallCell = createCell(qf1, timestamp, seqId, smallValue);
+    final ExtendedCell largeCell = createCell(qf2, timestamp, seqId, largeValue);
     int smallCellByteSize = MutableSegment.getCellLength(smallCell);
     int largeCellByteSize = MutableSegment.getCellLength(largeCell);
     int totalCellByteSize = (smallCellByteSize + largeCellByteSize);
@@ -2411,8 +2512,8 @@ public class TestHStore {
     byte[] largeValue = new byte[9];
     final long timestamp = EnvironmentEdgeManager.currentTime();
     final long seqId = 100;
-    final Cell smallCell = createCell(qf1, timestamp, seqId, smallValue);
-    final Cell largeCell = createCell(qf2, timestamp, seqId, largeValue);
+    final ExtendedCell smallCell = createCell(qf1, timestamp, seqId, smallValue);
+    final ExtendedCell largeCell = createCell(qf2, timestamp, seqId, largeValue);
     int smallCellByteSize = MutableSegment.getCellLength(smallCell);
     int largeCellByteSize = MutableSegment.getCellLength(largeCell);
     int firstWriteCellByteSize = (smallCellByteSize + largeCellByteSize);
@@ -2433,8 +2534,8 @@ public class TestHStore {
     store.add(largeCell, new NonThreadSafeMemStoreSizing());
 
     final AtomicReference<Throwable> exceptionRef = new AtomicReference<Throwable>();
-    final Cell writeAgainCell1 = createCell(qf3, timestamp, seqId + 1, largeValue);
-    final Cell writeAgainCell2 = createCell(qf4, timestamp, seqId + 1, largeValue);
+    final ExtendedCell writeAgainCell1 = createCell(qf3, timestamp, seqId + 1, largeValue);
+    final ExtendedCell writeAgainCell2 = createCell(qf4, timestamp, seqId + 1, largeValue);
     final int writeAgainCellByteSize =
       MutableSegment.getCellLength(writeAgainCell1) + MutableSegment.getCellLength(writeAgainCell2);
     final Thread writeAgainThread = new Thread(() -> {
@@ -2513,8 +2614,8 @@ public class TestHStore {
     byte[] largeValue = new byte[9];
     final long timestamp = EnvironmentEdgeManager.currentTime();
     final long seqId = 100;
-    final Cell smallCell = createCell(qf1, timestamp, seqId, smallValue);
-    final Cell largeCell = createCell(qf2, timestamp, seqId, largeValue);
+    final ExtendedCell smallCell = createCell(qf1, timestamp, seqId, smallValue);
+    final ExtendedCell largeCell = createCell(qf2, timestamp, seqId, largeValue);
     TreeSet<byte[]> quals = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     quals.add(qf1);
     quals.add(qf2);
@@ -2561,17 +2662,17 @@ public class TestHStore {
         assertTrue(!memStoreLAB.chunks.isEmpty());
         assertTrue(!memStoreLAB.isReclaimed());
 
-        Cell cell1 = segmentScanner.next();
-        CellUtil.equals(smallCell, cell1);
-        Cell cell2 = segmentScanner.next();
-        CellUtil.equals(largeCell, cell2);
+        ExtendedCell cell1 = segmentScanner.next();
+        PrivateCellUtil.equals(smallCell, cell1);
+        ExtendedCell cell2 = segmentScanner.next();
+        PrivateCellUtil.equals(largeCell, cell2);
         assertNull(segmentScanner.next());
       } else {
-        List<Cell> results = new ArrayList<>();
+        List<ExtendedCell> results = new ArrayList<>();
         storeScanner.next(results);
         assertEquals(2, results.size());
-        CellUtil.equals(smallCell, results.get(0));
-        CellUtil.equals(largeCell, results.get(1));
+        PrivateCellUtil.equals(smallCell, results.get(0));
+        PrivateCellUtil.equals(largeCell, results.get(1));
       }
       assertTrue(exceptionRef.get() == null);
     } finally {
@@ -2604,6 +2705,9 @@ public class TestHStore {
     Configuration conf = HBaseConfiguration.create();
     conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY,
       COMMON_MAX_FILES_TO_COMPACT);
+    conf.setBoolean(CACHE_DATA_ON_READ_KEY, false);
+    conf.setBoolean(CACHE_BLOCKS_ON_WRITE_KEY, true);
+    conf.setBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, true);
     ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.newBuilder(family)
       .setConfiguration(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY,
         String.valueOf(STORE_MAX_FILES_TO_COMPACT))
@@ -2614,8 +2718,19 @@ public class TestHStore {
     conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY,
       NEW_COMMON_MAX_FILES_TO_COMPACT);
     this.store.onConfigurationChange(conf);
+
     assertEquals(STORE_MAX_FILES_TO_COMPACT,
       store.getStoreEngine().getCompactionPolicy().getConf().getMaxFilesToCompact());
+
+    assertEquals(conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ), false);
+    assertEquals(conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE), true);
+    assertEquals(conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE), true);
+
+    // reset to default values
+    conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ);
+    conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE);
+    conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE);
+    this.store.onConfigurationChange(conf);
   }
 
   /**
@@ -2649,15 +2764,14 @@ public class TestHStore {
    */
   @Test
   public void testMemoryLeakWhenFlushMemStoreRetrying() throws Exception {
-
     Configuration conf = HBaseConfiguration.create();
 
     byte[] smallValue = new byte[3];
     byte[] largeValue = new byte[9];
     final long timestamp = EnvironmentEdgeManager.currentTime();
     final long seqId = 100;
-    final Cell smallCell = createCell(qf1, timestamp, seqId, smallValue);
-    final Cell largeCell = createCell(qf2, timestamp, seqId, largeValue);
+    final ExtendedCell smallCell = createCell(qf1, timestamp, seqId, smallValue);
+    final ExtendedCell largeCell = createCell(qf2, timestamp, seqId, largeValue);
     TreeSet<byte[]> quals = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     quals.add(qf1);
     quals.add(qf2);
@@ -2691,11 +2805,11 @@ public class TestHStore {
       assertTrue(storeScanner.currentScanners.size() == 1);
       assertTrue(storeScanner.currentScanners.get(0) instanceof StoreFileScanner);
 
-      List<Cell> results = new ArrayList<>();
+      List<ExtendedCell> results = new ArrayList<>();
       storeScanner.next(results);
       assertEquals(2, results.size());
-      CellUtil.equals(smallCell, results.get(0));
-      CellUtil.equals(largeCell, results.get(1));
+      PrivateCellUtil.equals(smallCell, results.get(0));
+      PrivateCellUtil.equals(largeCell, results.get(1));
     } finally {
       if (storeScanner != null) {
         storeScanner.close();
@@ -2764,12 +2878,12 @@ public class TestHStore {
     byte[] largeValue = new byte[9];
     final long timestamp = EnvironmentEdgeManager.currentTime();
     final long seqId = 100;
-    final Cell smallCell1 = createCell(qf1, timestamp, seqId, smallValue);
-    final Cell largeCell1 = createCell(qf2, timestamp, seqId, largeValue);
-    final Cell smallCell2 = createCell(qf3, timestamp, seqId + 1, smallValue);
-    final Cell largeCell2 = createCell(qf4, timestamp, seqId + 1, largeValue);
-    final Cell smallCell3 = createCell(qf5, timestamp, seqId + 2, smallValue);
-    final Cell largeCell3 = createCell(qf6, timestamp, seqId + 2, largeValue);
+    final ExtendedCell smallCell1 = createCell(qf1, timestamp, seqId, smallValue);
+    final ExtendedCell largeCell1 = createCell(qf2, timestamp, seqId, largeValue);
+    final ExtendedCell smallCell2 = createCell(qf3, timestamp, seqId + 1, smallValue);
+    final ExtendedCell largeCell2 = createCell(qf4, timestamp, seqId + 1, largeValue);
+    final ExtendedCell smallCell3 = createCell(qf5, timestamp, seqId + 2, smallValue);
+    final ExtendedCell largeCell3 = createCell(qf6, timestamp, seqId + 2, largeValue);
 
     int smallCellByteSize = MutableSegment.getCellLength(smallCell1);
     int largeCellByteSize = MutableSegment.getCellLength(largeCell1);
@@ -3100,6 +3214,28 @@ public class TestHStore {
     }
   }
 
+  private interface MyKeyValueHeapHook {
+    void onRecordBlockSize(int recordBlockSizeCallCount);
+  }
+
+  private static class MyKeyValueHeap extends KeyValueHeap {
+    private final MyKeyValueHeapHook hook;
+    private int recordBlockSizeCallCount;
+
+    public MyKeyValueHeap(List<? extends KeyValueScanner> scanners, CellComparator comparator,
+      MyKeyValueHeapHook hook) throws IOException {
+      super(scanners, comparator);
+      this.hook = hook;
+    }
+
+    @Override
+    public void recordBlockSize(IntConsumer blockSizeConsumer) {
+      recordBlockSizeCallCount++;
+      hook.onRecordBlockSize(recordBlockSizeCallCount);
+      super.recordBlockSize(blockSizeConsumer);
+    }
+  }
+
   public static class MyCompactingMemStore2 extends CompactingMemStore {
     private static final String LARGE_CELL_THREAD_NAME = "largeCellThread";
     private static final String SMALL_CELL_THREAD_NAME = "smallCellThread";
@@ -3145,7 +3281,8 @@ public class TestHStore {
     }
 
     @Override
-    protected void doAdd(MutableSegment currentActive, Cell cell, MemStoreSizing memstoreSizing) {
+    protected void doAdd(MutableSegment currentActive, ExtendedCell cell,
+      MemStoreSizing memstoreSizing) {
       if (Thread.currentThread().getName().equals(SMALL_CELL_THREAD_NAME)) {
         try {
           /**

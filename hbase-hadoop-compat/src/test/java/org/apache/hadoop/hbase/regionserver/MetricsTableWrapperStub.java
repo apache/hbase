@@ -54,6 +54,16 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
   }
 
   @Override
+  public long getMemStoreHeapSize(String table) {
+    return 1001;
+  }
+
+  @Override
+  public long getMemStoreOffHeapSize(String table) {
+    return 1002;
+  }
+
+  @Override
   public long getStoreFileSize(String table) {
     return 2000;
   }
@@ -117,6 +127,7 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
     return 99;
   }
 
+  @Override
   public long getStaticIndexSize(String table) {
     return 101;
   }

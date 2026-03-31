@@ -38,6 +38,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
  * can be used for row-based indexing, where references to other tables are stored across many
  * columns, in order to efficient lookups and paginated results for end users. Only most recent
  * versions are considered for pagination.
+ * @apiNote This filter is in awkward place, as even though it can return SEEK_NEXT_USING_HINT, it
+ *          also maintains an internal row state, so it is not marked as HintingFilter. Hinted seek
+ *          information may be lost when used in a MUST_PASS_ALL FilterList, which can result in
+ *          suboptimal performance.
  */
 @InterfaceAudience.Public
 public class ColumnPaginationFilter extends FilterBase {

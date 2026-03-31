@@ -24,12 +24,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.stream.StreamSupport;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -40,9 +42,12 @@ import org.apache.hadoop.hbase.procedure.Procedure;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinator;
+import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -152,7 +157,21 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
         families = nsp;
       }
     }
-    byte[] procArgs = families != null ? families.toByteArray() : new byte[0];
+
+    byte[] procArgs;
+    if (families != null) {
+      TableDescriptor tableDescriptor = master.getTableDescriptors().get(tableName);
+      List<String> noSuchFamilies =
+        StreamSupport.stream(Strings.SPLITTER.split(families.getValue()).spliterator(), false)
+          .filter(cf -> !tableDescriptor.hasColumnFamily(Bytes.toBytes(cf))).toList();
+      if (!noSuchFamilies.isEmpty()) {
+        throw new NoSuchColumnFamilyException("Column families " + noSuchFamilies
+          + " don't exist in table " + tableName.getNameAsString());
+      }
+      procArgs = families.toByteArray();
+    } else {
+      procArgs = new byte[0];
+    }
 
     // Kick of the global procedure from the master coordinator to the region servers.
     // We rely on the existing Distributed Procedure framework to prevent any concurrent

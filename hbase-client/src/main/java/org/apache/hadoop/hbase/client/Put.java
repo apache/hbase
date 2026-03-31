@@ -26,6 +26,7 @@ import java.util.UUID;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -93,11 +94,9 @@ public class Put extends Mutation implements HeapSize {
    */
   public Put(byte[] rowArray, int rowOffset, int rowLength, long ts) {
     checkRow(rowArray, rowOffset, rowLength);
+    checkTimestamp(ts);
     this.row = Bytes.copy(rowArray, rowOffset, rowLength);
     this.ts = ts;
-    if (ts < 0) {
-      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
-    }
   }
 
   /**
@@ -119,9 +118,7 @@ public class Put extends Mutation implements HeapSize {
    */
   public Put(byte[] row, long ts, boolean rowIsImmutable) {
     // Check and set timestamp
-    if (ts < 0) {
-      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
-    }
+    checkTimestamp(ts);
     this.ts = ts;
 
     // Deal with row according to rowIsImmutable
@@ -171,10 +168,8 @@ public class Put extends Mutation implements HeapSize {
    * @param value     column value
    */
   public Put addColumn(byte[] family, byte[] qualifier, long ts, byte[] value) {
-    if (ts < 0) {
-      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
-    }
-    List<Cell> list = getCellList(family);
+    checkTimestamp(ts);
+    List<ExtendedCell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value);
     list.add(kv);
     return this;
@@ -189,10 +184,8 @@ public class Put extends Mutation implements HeapSize {
    * @param value     column value
    */
   public Put addColumn(byte[] family, ByteBuffer qualifier, long ts, ByteBuffer value) {
-    if (ts < 0) {
-      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
-    }
-    List<Cell> list = getCellList(family);
+    checkTimestamp(ts);
+    List<ExtendedCell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value, null);
     list.add(kv);
     return this;

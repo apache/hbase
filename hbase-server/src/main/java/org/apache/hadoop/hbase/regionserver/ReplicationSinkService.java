@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.List;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
@@ -40,6 +40,7 @@ public interface ReplicationSinkService extends ReplicationService {
    *                                   directory required for replicating hfiles
    * @param sourceHFileArchiveDirPath  Path that point to the source cluster hfile archive directory
    */
-  void replicateLogEntries(List<WALEntry> entries, CellScanner cells, String replicationClusterId,
-    String sourceBaseNamespaceDirPath, String sourceHFileArchiveDirPath) throws IOException;
+  void replicateLogEntries(List<WALEntry> entries, ExtendedCellScanner cells,
+    String replicationClusterId, String sourceBaseNamespaceDirPath,
+    String sourceHFileArchiveDirPath) throws IOException;
 }

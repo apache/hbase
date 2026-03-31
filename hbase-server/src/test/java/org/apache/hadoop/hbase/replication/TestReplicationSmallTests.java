@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -266,7 +267,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
       }
     }
     ReplicationPeerConfig rpc =
-      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey()).build();
+      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getRpcConnnectionURI()).build();
     hbaseAdmin.addReplicationPeer(PEER_ID, rpc);
     Thread.sleep(SLEEP_TIME);
     rowKey = Bytes.toBytes("do rep");
@@ -423,7 +424,8 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     final byte[] value = Bytes.toBytes("v");
     WALEdit edit = new WALEdit(true);
     long now = EnvironmentEdgeManager.currentTime();
-    edit.add(new KeyValue(rowName, famName, qualifier, now, value));
+    WALEditInternalHelper.addExtendedCell(edit,
+      new KeyValue(rowName, famName, qualifier, now, value));
     WALKeyImpl walKey = new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes);
     wal.appendData(hri, walKey, edit);
     wal.sync();

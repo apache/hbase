@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -38,8 +38,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * collection occurs.
  * <p>
  * This manages the large sized chunks. When Cells are to be added to Memstore, MemStoreLAB's
- * {@link #copyCellInto(Cell)} gets called. This allocates enough size in the chunk to hold this
- * cell's data and copies into this area and then recreate a Cell over this copied data.
+ * {@link #copyCellInto(ExtendedCell)} gets called. This allocates enough size in the chunk to hold
+ * this cell's data and copies into this area and then recreate a Cell over this copied data.
  * <p>
  * @see ChunkCreator
  */
@@ -68,7 +68,7 @@ public interface MemStoreLAB {
    * Allocates slice in this LAB and copy the passed Cell into this area. Returns new Cell instance
    * over the copied the data. When this MemStoreLAB can not copy this Cell, it returns null.
    */
-  Cell copyCellInto(Cell cell);
+  ExtendedCell copyCellInto(ExtendedCell cell);
 
   /**
    * Allocates slice in this LAB and copy the passed Cell into this area. Returns new Cell instance
@@ -78,7 +78,7 @@ public interface MemStoreLAB {
    * called while the process of flattening to CellChunkMap is running, for forcing the allocation
    * of big cells on this MSLAB.
    */
-  Cell forceCopyOfBigCellInto(Cell cell);
+  ExtendedCell forceCopyOfBigCellInto(ExtendedCell cell);
 
   /**
    * Close instance since it won't be used any more, try to put the chunks back to pool

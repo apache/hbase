@@ -68,14 +68,14 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     int bulkLoadHandlerCount = conf.getInt(HConstants.REGION_SERVER_BULKLOAD_HANDLER_COUNT,
       HConstants.DEFAULT_REGION_SERVER_BULKLOAD_HANDLER_COUNT);
     int maxQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH,
-      handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
+      RpcExecutor.UNDEFINED_MAX_CALLQUEUE_LENGTH);
     int maxPriorityQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH,
-      priorityHandlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
+      RpcExecutor.UNDEFINED_MAX_CALLQUEUE_LENGTH);
     int maxReplicationQueueLength =
       conf.getInt(RpcScheduler.IPC_SERVER_REPLICATION_MAX_CALLQUEUE_LENGTH,
-        replicationHandlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
+        RpcExecutor.UNDEFINED_MAX_CALLQUEUE_LENGTH);
     int maxBulkLoadQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_BULKLOAD_MAX_CALLQUEUE_LENGTH,
-      bulkLoadHandlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
+      RpcExecutor.UNDEFINED_MAX_CALLQUEUE_LENGTH);
 
     this.priority = priority;
     this.highPriorityLevel = highPriorityLevel;

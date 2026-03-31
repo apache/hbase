@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -221,5 +222,38 @@ public class TestStoreFileListFile {
     StoreFileEntry entry = fileList.getStoreFile(0);
     assertEquals("hehe", entry.getName());
     assertEquals(10, entry.getSize());
+  }
+
+  @Test
+  public void testLoadHigherVersion() throws IOException {
+    // write a fake StoreFileList file with higher version
+    StoreFileList storeFileList =
+      StoreFileList.newBuilder().setVersion(StoreFileListFile.VERSION + 1)
+        .setTimestamp(EnvironmentEdgeManager.currentTime()).build();
+    Path trackFileDir = new Path(testDir, StoreFileListFile.TRACK_FILE_DIR);
+    StoreFileListFile.write(FileSystem.get(UTIL.getConfiguration()),
+      new Path(trackFileDir, StoreFileListFile.TRACK_FILE_PREFIX
+        + StoreFileListFile.TRACK_FILE_SEPARATOR + EnvironmentEdgeManager.currentTime()),
+      storeFileList);
+    IOException error = assertThrows(IOException.class, () -> create().load(false));
+    assertEquals("Higher store file list version detected, expected " + StoreFileListFile.VERSION
+      + ", got " + (StoreFileListFile.VERSION + 1), error.getMessage());
+  }
+
+  @Test
+  public void testLoadOldPatternTrackFiles() throws IOException {
+    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
+    StoreFileList storeFileList =
+      StoreFileList.newBuilder().setTimestamp(EnvironmentEdgeManager.currentTime())
+        .addStoreFile(StoreFileEntry.newBuilder().setName("hehe").setSize(10).build()).build();
+    Path trackFileDir = new Path(testDir, StoreFileListFile.TRACK_FILE_DIR);
+    StoreFileListFile.write(fs, new Path(trackFileDir, StoreFileListFile.TRACK_FILE_PREFIX),
+      storeFileList);
+
+    FileStatus trackerFileStatus = getOnlyTrackerFile(fs);
+    assertEquals(StoreFileListFile.TRACK_FILE_PREFIX, trackerFileStatus.getPath().getName());
+
+    StoreFileList list = storeFileListFile.load(true);
+    assertEquals(1, list.getStoreFileCount());
   }
 }

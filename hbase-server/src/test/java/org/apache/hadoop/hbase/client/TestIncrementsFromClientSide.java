@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -566,8 +567,8 @@ public class TestIncrementsFromClientSide {
         int count = 0;
         Result result;
         while ((result = scanner.next()) != null) {
-          Cell[] cells = result.rawCells();
-          for (Cell cell : cells) {
+          ExtendedCell[] cells = result.rawExtendedCells();
+          for (ExtendedCell cell : cells) {
             List<Tag> tags = PrivateCellUtil.getTags(cell);
             // Make sure there is only 1 tag.
             assertEquals(1, tags.size());

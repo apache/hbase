@@ -88,7 +88,7 @@ public class TestServerRemoteProcedure {
     master.start(2, rsDispatcher);
     am = master.getAssignmentManager();
     master.getServerManager().getOnlineServersList().stream()
-      .forEach(serverName -> am.getRegionStates().getOrCreateServer(serverName));
+      .forEach(serverName -> am.getRegionStates().createServer(serverName));
   }
 
   @After
@@ -183,12 +183,13 @@ public class TestServerRemoteProcedure {
     @Override
     public Optional<RemoteProcedureDispatcher.RemoteOperation>
       remoteCallBuild(MasterProcedureEnv env, ServerName serverName) {
-      return Optional
-        .of(new RSProcedureDispatcher.ServerOperation(null, 0L, this.getClass(), new byte[0]));
+      return Optional.of(new RSProcedureDispatcher.ServerOperation(null, 0L, this.getClass(),
+        new byte[0], env.getMasterServices().getMasterActiveTime()));
     }
 
     @Override
-    public synchronized void remoteOperationCompleted(MasterProcedureEnv env) {
+    public synchronized void remoteOperationCompleted(MasterProcedureEnv env,
+      byte[] remoteResultData) {
       complete(env, null);
     }
 
@@ -199,9 +200,8 @@ public class TestServerRemoteProcedure {
     }
 
     @Override
-    public void complete(MasterProcedureEnv env, Throwable error) {
-      this.succ = true;
-      return;
+    public boolean complete(MasterProcedureEnv env, Throwable error) {
+      return true;
     }
 
     @Override

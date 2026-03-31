@@ -17,35 +17,31 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.List;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestBackupDelete extends TestBackupBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupDelete.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupDelete.class);
 
@@ -136,7 +132,7 @@ public class TestBackupDelete extends TestBackupBase {
       assertTrue(ret == 0);
     } catch (Exception e) {
       LOG.error("failed", e);
-      Assert.fail(e.getMessage());
+      fail(e.getMessage());
     }
     String output = baos.toString();
     LOG.info(baos.toString());
@@ -152,10 +148,33 @@ public class TestBackupDelete extends TestBackupBase {
       assertTrue(ret == 0);
     } catch (Exception e) {
       LOG.error("failed", e);
-      Assert.fail(e.getMessage());
+      fail(e.getMessage());
     }
     output = baos.toString();
     LOG.info(baos.toString());
     assertTrue(output.indexOf("Deleted 1 backups") >= 0);
+  }
+
+  /**
+   * Verify that backup deletion updates the incremental-backup-set.
+   */
+  @Test
+  public void testBackupDeleteUpdatesIncrementalBackupSet() throws Exception {
+    LOG.info("Test backup delete updates the incremental backup set");
+    BackupSystemTable backupSystemTable = new BackupSystemTable(TEST_UTIL.getConnection());
+
+    String backupId1 = fullTableBackup(Lists.newArrayList(table1, table2));
+    assertTrue(checkSucceeded(backupId1));
+    assertEquals(Sets.newHashSet(table1, table2),
+      backupSystemTable.getIncrementalBackupTableSet(BACKUP_ROOT_DIR));
+
+    String backupId2 = fullTableBackup(Lists.newArrayList(table3));
+    assertTrue(checkSucceeded(backupId2));
+    assertEquals(Sets.newHashSet(table1, table2, table3),
+      backupSystemTable.getIncrementalBackupTableSet(BACKUP_ROOT_DIR));
+
+    getBackupAdmin().deleteBackups(new String[] { backupId1 });
+    assertEquals(Sets.newHashSet(table3),
+      backupSystemTable.getIncrementalBackupTableSet(BACKUP_ROOT_DIR));
   }
 }

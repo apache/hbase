@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
@@ -225,7 +226,8 @@ public class TestLogRollAbort {
       int total = 20;
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
-        kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
+        WALEditInternalHelper.addExtendedCell(kvs,
+          new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
         NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         scopes.put(Bytes.toBytes("column"), 0);
         log.appendData(regionInfo, new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,

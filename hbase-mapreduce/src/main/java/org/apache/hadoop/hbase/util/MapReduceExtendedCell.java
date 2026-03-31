@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -33,9 +32,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MapReduceExtendedCell extends ByteBufferExtendedCell {
 
-  private final Cell cell;
+  private final ExtendedCell cell;
 
-  public MapReduceExtendedCell(Cell cell) {
+  public MapReduceExtendedCell(ExtendedCell cell) {
     this.cell = cell;
   }
 
@@ -226,17 +225,17 @@ public class MapReduceExtendedCell extends ByteBufferExtendedCell {
 
   @Override
   public void setSequenceId(long seqId) throws IOException {
-    PrivateCellUtil.setSequenceId(cell, seqId);
+    cell.setSequenceId(seqId);
   }
 
   @Override
   public void setTimestamp(long ts) throws IOException {
-    PrivateCellUtil.setTimestamp(cell, ts);
+    cell.setTimestamp(ts);
   }
 
   @Override
   public void setTimestamp(byte[] ts) throws IOException {
-    PrivateCellUtil.setTimestamp(cell, ts);
+    cell.setTimestamp(ts);
   }
 
   @Override
@@ -246,7 +245,7 @@ public class MapReduceExtendedCell extends ByteBufferExtendedCell {
 
   @Override
   public int write(OutputStream out, boolean withTags) throws IOException {
-    return PrivateCellUtil.writeCell(cell, out, withTags);
+    return cell.write(out, withTags);
   }
 
   @Override
@@ -256,15 +255,11 @@ public class MapReduceExtendedCell extends ByteBufferExtendedCell {
 
   @Override
   public void write(ByteBuffer buf, int offset) {
-    PrivateCellUtil.writeCellToBuffer(cell, buf, offset);
+    cell.write(buf, offset);
   }
 
   @Override
   public ExtendedCell deepClone() {
-    try {
-      return (ExtendedCell) PrivateCellUtil.deepClone(cell);
-    } catch (CloneNotSupportedException e) {
-      throw new RuntimeException(e);
-    }
+    return cell.deepClone();
   }
 }

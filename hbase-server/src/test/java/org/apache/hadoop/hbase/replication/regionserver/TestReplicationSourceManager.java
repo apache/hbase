@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
@@ -36,9 +37,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -66,6 +67,7 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.hamcrest.Matchers;
@@ -182,7 +184,7 @@ public class TestReplicationSourceManager {
 
     replication = new Replication();
     replication.initialize(server, FS, new Path(logDir, sn.toString()), oldLogDir,
-      new WALFactory(CONF, server.getServerName(), null, false));
+      new WALFactory(CONF, server.getServerName(), null));
     manager = replication.getReplicationManager();
   }
 
@@ -238,10 +240,12 @@ public class TestReplicationSourceManager {
       WALKeyImpl key = new WALKeyImpl(RI.getEncodedNameAsBytes(), TABLE_NAME,
         EnvironmentEdgeManager.currentTime(), SCOPES);
       WALEdit edit = new WALEdit();
-      edit.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(F1).setFamily(F1)
-        .setQualifier(F1).setType(Cell.Type.Put).setValue(F1).build());
-      edit.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(F2).setFamily(F2)
-        .setQualifier(F2).setType(Cell.Type.Put).setValue(F2).build());
+      WALEditInternalHelper.addExtendedCell(edit,
+        ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(F1).setFamily(F1)
+          .setQualifier(F1).setType(Cell.Type.Put).setValue(F1).build());
+      WALEditInternalHelper.addExtendedCell(edit,
+        ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(F2).setFamily(F2)
+          .setQualifier(F2).setType(Cell.Type.Put).setValue(F2).build());
       writer.append(new WAL.Entry(key, edit));
       writer.sync(false);
     } finally {
@@ -369,5 +373,104 @@ public class TestReplicationSourceManager {
     ReplicationSourceInterface source = manager.getSource(peerId);
     manager.cleanOldLogs(walName, true, source);
     assertFalse(FS.exists(remoteWAL));
+  }
+
+  @Test
+  public void testPeerConfigurationOverridesPropagate() throws Exception {
+    Configuration globalConf = UTIL.getConfiguration();
+    long globalSleepValue = 1000L;
+    globalConf.setLong("replication.source.sleepforretries", globalSleepValue);
+
+    long peerSleepOverride = 5000L;
+    String peerId = "testConfigOverridePeer";
+    String clusterKey = "testPeerConfigOverride";
+
+    ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(UTIL.getZkCluster().getAddress().toString() + ":/" + clusterKey)
+      .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName())
+      .putConfiguration("replication.source.sleepforretries", String.valueOf(peerSleepOverride))
+      .build();
+
+    manager.getReplicationPeers().getPeerStorage().addPeer(peerId, peerConfig, true,
+      SyncReplicationState.NONE);
+    manager.addPeer(peerId);
+    UTIL.waitFor(20000, () -> {
+      ReplicationSourceInterface rs = manager.getSource(peerId);
+      return rs != null && rs.isSourceActive();
+    });
+
+    ReplicationSource source = (ReplicationSource) manager.getSources().stream()
+      .filter(s -> s.getPeerId().equals(peerId)).findFirst().orElse(null);
+    assertNotNull("Source should be created for peer", source);
+
+    assertEquals("ReplicationSource should use peer config override for sleepForRetries",
+      peerSleepOverride, source.getSleepForRetries());
+
+    Map<String, ReplicationSourceShipper> workers = source.workerThreads;
+    if (!workers.isEmpty()) {
+      ReplicationSourceShipper shipper = workers.values().iterator().next();
+      assertEquals("ReplicationSourceShipper should use peer config override for sleepForRetries",
+        peerSleepOverride, shipper.getSleepForRetries());
+
+      ReplicationSourceWALReader reader = shipper.entryReader;
+      if (reader != null) {
+        assertEquals(
+          "ReplicationSourceWALReader should use peer config override for sleepForRetries",
+          peerSleepOverride, reader.getSleepForRetries());
+      }
+    }
+
+    removePeerAndWait(peerId);
+  }
+
+  @Test
+  public void testPeerConfigurationIsolation() throws Exception {
+    Configuration globalConf = UTIL.getConfiguration();
+    long globalSleepValue = 1000L;
+    globalConf.setLong("replication.source.sleepforretries", globalSleepValue);
+
+    // Create first peer WITH config override
+    long peerSleepOverride = 5000L;
+    String peerIdWithOverride = "peerWithOverride";
+    String clusterKeyWithOverride = "testPeerWithOverride";
+
+    ReplicationPeerConfig configWithOverride = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(UTIL.getZkCluster().getAddress().toString() + ":/" + clusterKeyWithOverride)
+      .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName())
+      .putConfiguration("replication.source.sleepforretries", String.valueOf(peerSleepOverride))
+      .build();
+
+    manager.getReplicationPeers().getPeerStorage().addPeer(peerIdWithOverride, configWithOverride,
+      true, SyncReplicationState.NONE);
+    manager.addPeer(peerIdWithOverride);
+
+    // Create second peer WITHOUT config override
+    String peerIdWithoutOverride = "peerWithoutOverride";
+    String clusterKeyWithoutOverride = "testPeerWithoutOverride";
+    addPeerAndWait(peerIdWithoutOverride, clusterKeyWithoutOverride, false);
+
+    // Wait for both peers to be active
+    UTIL.waitFor(20000, () -> {
+      ReplicationSourceInterface rs1 = manager.getSource(peerIdWithOverride);
+      ReplicationSourceInterface rs2 = manager.getSource(peerIdWithoutOverride);
+      return rs1 != null && rs1.isSourceActive() && rs2 != null && rs2.isSourceActive();
+    });
+
+    // Verify peer with override uses the override value
+    ReplicationSource sourceWithOverride = (ReplicationSource) manager.getSources().stream()
+      .filter(s -> s.getPeerId().equals(peerIdWithOverride)).findFirst().orElse(null);
+    assertNotNull("Source with override should be created", sourceWithOverride);
+    assertEquals("Peer with override should use override value", peerSleepOverride,
+      sourceWithOverride.getSleepForRetries());
+
+    // Verify peer without override uses global config
+    ReplicationSource sourceWithoutOverride = (ReplicationSource) manager.getSources().stream()
+      .filter(s -> s.getPeerId().equals(peerIdWithoutOverride)).findFirst().orElse(null);
+    assertNotNull("Source without override should be created", sourceWithoutOverride);
+    assertEquals("Peer without override should use global config", globalSleepValue,
+      sourceWithoutOverride.getSleepForRetries());
+
+    removePeerAndWait(peerIdWithOverride);
+    removePeerAndWait(peerIdWithoutOverride);
   }
 }

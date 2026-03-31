@@ -192,7 +192,7 @@ public class TestTimestampsFilter {
     ht.put(p);
 
     ArrayList<Long> timestamps = new ArrayList<>();
-    timestamps.add(new Long(3));
+    timestamps.add(3L);
     TimestampsFilter filter = new TimestampsFilter(timestamps);
 
     Get g = new Get(Bytes.toBytes("row"));

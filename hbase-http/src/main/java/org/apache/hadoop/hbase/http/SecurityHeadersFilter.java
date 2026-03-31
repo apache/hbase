@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SecurityHeadersFilter implements Filter {
+
   private static final Logger LOG = LoggerFactory.getLogger(SecurityHeadersFilter.class);
   private static final String DEFAULT_HSTS = "max-age=63072000;includeSubDomains;preload";
   private static final String DEFAULT_CSP =

@@ -144,8 +144,8 @@ public class TestFailedAppendAndSync {
     }
 
     @Override
-    protected Writer createWriterInstance(Path path) throws IOException {
-      final Writer w = super.createWriterInstance(path);
+    protected Writer createWriterInstance(FileSystem fs, Path path) throws IOException {
+      final Writer w = super.createWriterInstance(fs, path);
       return new Writer() {
         @Override
         public void close() throws IOException {
@@ -197,6 +197,7 @@ public class TestFailedAppendAndSync {
     // the test.
     FileSystem fs = FileSystem.get(CONF);
     Path rootDir = new Path(dir + getName());
+    fs.mkdirs(new Path(rootDir, getName()));
     DodgyFSLog dodgyWAL = new DodgyFSLog(fs, (Server) services, rootDir, getName(), CONF);
     dodgyWAL.init();
     LogRoller logRoller = new LogRoller(services);

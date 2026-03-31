@@ -118,6 +118,6 @@ public class TestTooLargeLog {
       record.getBlockBytesScanned() >= 100);
     assertTrue("expected " + record.getResponseSize() + " to be < 100",
       record.getResponseSize() < 100);
-
+    assertTrue("expected " + record.getFsReadTime() + " to be > 0", record.getFsReadTime() > 0);
   }
 }

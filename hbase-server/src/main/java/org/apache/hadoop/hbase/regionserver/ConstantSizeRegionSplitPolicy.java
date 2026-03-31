@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -41,6 +42,9 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
   private long desiredMaxFileSize;
   private double jitterRate;
   protected boolean overallHRegionFiles;
+
+  public static final String MAX_FILESIZE_JITTER_KEY =
+    ConfigKey.DOUBLE("hbase.hregion.max.filesize.jitter");
 
   @Override
   public String toString() {
@@ -62,7 +66,7 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
     }
     this.overallHRegionFiles =
       conf.getBoolean(HConstants.OVERALL_HREGION_FILES, HConstants.DEFAULT_OVERALL_HREGION_FILES);
-    double jitter = conf.getDouble("hbase.hregion.max.filesize.jitter", 0.25D);
+    double jitter = conf.getDouble(MAX_FILESIZE_JITTER_KEY, 0.25D);
     this.jitterRate = (ThreadLocalRandom.current().nextFloat() - 0.5D) * jitter;
     long jitterValue = (long) (this.desiredMaxFileSize * this.jitterRate);
     // Default jitter is ~12% +/-. Make sure the long value won't overflow with jitter

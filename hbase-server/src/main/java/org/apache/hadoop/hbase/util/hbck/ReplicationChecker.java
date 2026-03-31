@@ -130,4 +130,8 @@ public class ReplicationChecker {
       queueStorage.removePeerFromHFileRefs(peerId);
     }
   }
+
+  public boolean checkHasDataInQueues() throws ReplicationException {
+    return queueStorage.hasData();
+  }
 }

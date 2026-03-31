@@ -259,8 +259,8 @@ public class TestRegionObserverBypass {
     }
 
     @Override
-    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
-      final WALEdit edit, final Durability durability) throws IOException {
+    public void prePut(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Put put, final WALEdit edit, final Durability durability) throws IOException {
       PREPUT_INVOCATIONS.incrementAndGet();
       Map<byte[], List<Cell>> familyMap = put.getFamilyCellMap();
       if (familyMap.containsKey(test)) {

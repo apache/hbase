@@ -49,11 +49,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilder;
-import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
+import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -199,6 +200,90 @@ public class TestHFile {
     Assert.assertEquals(bufCount, alloc.getFreeBufferCount());
     alloc.clean();
     lru.shutdown();
+  }
+
+  private void assertBytesReadFromCache(boolean isScanMetricsEnabled) throws Exception {
+    assertBytesReadFromCache(isScanMetricsEnabled, DataBlockEncoding.NONE);
+  }
+
+  private void assertBytesReadFromCache(boolean isScanMetricsEnabled, DataBlockEncoding encoding)
+    throws Exception {
+    // Write a store file
+    Path storeFilePath = writeStoreFile();
+
+    // Initialize the block cache and HFile reader
+    BlockCache lru = BlockCacheFactory.createBlockCache(conf);
+    Assert.assertTrue(lru instanceof LruBlockCache);
+    CacheConfig cacheConfig = new CacheConfig(conf, null, lru, ByteBuffAllocator.HEAP);
+    HFileReaderImpl reader =
+      (HFileReaderImpl) HFile.createReader(fs, storeFilePath, cacheConfig, true, conf);
+
+    // Read the first block in HFile from the block cache.
+    final int offset = 0;
+    BlockCacheKey cacheKey = new BlockCacheKey(storeFilePath.getName(), offset);
+    HFileBlock block = (HFileBlock) lru.getBlock(cacheKey, false, false, true);
+    Assert.assertNull(block);
+
+    // Assert that first block has not been cached in the block cache and no disk I/O happened to
+    // check that.
+    ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset();
+    ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset();
+    block = reader.getCachedBlock(cacheKey, false, false, true, BlockType.DATA, null);
+    Assert.assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
+    Assert.assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
+
+    // Read the first block from the HFile.
+    block = reader.readBlock(offset, -1, true, true, false, true, BlockType.DATA, null);
+    Assert.assertNotNull(block);
+    int bytesReadFromFs = block.getOnDiskSizeWithHeader();
+    if (block.getNextBlockOnDiskSize() > 0) {
+      bytesReadFromFs += block.headerSize();
+    }
+    block.release();
+    // Assert that disk I/O happened to read the first block.
+    Assert.assertEquals(isScanMetricsEnabled ? bytesReadFromFs : 0,
+      ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
+    Assert.assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
+
+    // Read the first block again and assert that it has been cached in the block cache.
+    block = reader.getCachedBlock(cacheKey, false, false, true, BlockType.DATA, encoding);
+    long bytesReadFromCache = 0;
+    if (encoding == DataBlockEncoding.NONE) {
+      Assert.assertNotNull(block);
+      bytesReadFromCache = block.getOnDiskSizeWithHeader();
+      if (block.getNextBlockOnDiskSize() > 0) {
+        bytesReadFromCache += block.headerSize();
+      }
+      block.release();
+      // Assert that bytes read from block cache account for same number of bytes that would have
+      // been read from FS if block cache wasn't there.
+      Assert.assertEquals(bytesReadFromFs, bytesReadFromCache);
+    } else {
+      Assert.assertNull(block);
+    }
+    Assert.assertEquals(isScanMetricsEnabled ? bytesReadFromCache : 0,
+      ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
+    Assert.assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
+
+    reader.close();
+  }
+
+  @Test
+  public void testBytesReadFromCache() throws Exception {
+    ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(true);
+    assertBytesReadFromCache(true);
+  }
+
+  @Test
+  public void testBytesReadFromCacheWithScanMetricsDisabled() throws Exception {
+    ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(false);
+    assertBytesReadFromCache(false);
+  }
+
+  @Test
+  public void testBytesReadFromCacheWithInvalidDataEncoding() throws Exception {
+    ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(true);
+    assertBytesReadFromCache(true, DataBlockEncoding.FAST_DIFF);
   }
 
   private BlockCache initCombinedBlockCache(final String l1CachePolicy) {
@@ -494,16 +579,17 @@ public class TestHFile {
         .withCompression(Compression.Algorithm.NONE).withCompressTags(false).build();
     HFileWriterImpl writer =
       new HFileWriterImpl(conf, cacheConf, path, mockedOutputStream, fileContext);
-    CellBuilder cellBuilder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
+    ExtendedCellBuilder cellBuilder =
+      ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
     byte[] row = Bytes.toBytes("foo");
     byte[] qualifier = Bytes.toBytes("qualifier");
     byte[] cf = Bytes.toBytes(columnFamily);
     byte[] val = Bytes.toBytes("fooVal");
     long firstTS = 100L;
     long secondTS = 101L;
-    Cell firstCell = cellBuilder.setRow(row).setValue(val).setTimestamp(firstTS)
+    ExtendedCell firstCell = cellBuilder.setRow(row).setValue(val).setTimestamp(firstTS)
       .setQualifier(qualifier).setFamily(cf).setType(Cell.Type.Put).build();
-    Cell secondCell = cellBuilder.setRow(row).setValue(val).setTimestamp(secondTS)
+    ExtendedCell secondCell = cellBuilder.setRow(row).setValue(val).setTimestamp(secondTS)
       .setQualifier(qualifier).setFamily(cf).setType(Cell.Type.Put).build();
     // second Cell will sort "higher" than the first because later timestamps should come first
     writer.append(firstCell);
@@ -784,22 +870,22 @@ public class TestHFile {
 
   @Test
   public void testShortMidpointSameQual() {
-    Cell left =
+    ExtendedCell left =
       ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(Bytes.toBytes("a"))
         .setFamily(Bytes.toBytes("a")).setQualifier(Bytes.toBytes("a")).setTimestamp(11)
         .setType(Type.Maximum.getCode()).setValue(HConstants.EMPTY_BYTE_ARRAY).build();
-    Cell right =
+    ExtendedCell right =
       ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(Bytes.toBytes("a"))
         .setFamily(Bytes.toBytes("a")).setQualifier(Bytes.toBytes("a")).setTimestamp(9)
         .setType(Type.Maximum.getCode()).setValue(HConstants.EMPTY_BYTE_ARRAY).build();
-    Cell mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
+    ExtendedCell mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
     assertTrue(
       PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) <= 0);
     assertTrue(
       PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) == 0);
   }
 
-  private Cell getCell(byte[] row, byte[] family, byte[] qualifier) {
+  private ExtendedCell getCell(byte[] row, byte[] family, byte[] qualifier) {
     return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row)
       .setFamily(family).setQualifier(qualifier).setTimestamp(HConstants.LATEST_TIMESTAMP)
       .setType(KeyValue.Type.Maximum.getCode()).setValue(HConstants.EMPTY_BYTE_ARRAY).build();
@@ -807,9 +893,9 @@ public class TestHFile {
 
   @Test
   public void testGetShortMidpoint() {
-    Cell left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
-    Cell right = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
-    Cell mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
+    ExtendedCell left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    ExtendedCell right = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    ExtendedCell mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
     assertTrue(
       PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) <= 0);
     assertTrue(
@@ -891,7 +977,7 @@ public class TestHFile {
     long ts = 5;
     KeyValue kv1 = new KeyValue(Bytes.toBytes("the quick brown fox"), family, qualA, ts, Type.Put);
     KeyValue kv2 = new KeyValue(Bytes.toBytes("the who test text"), family, qualA, ts, Type.Put);
-    Cell newKey = HFileWriterImpl.getMidpoint(keyComparator, kv1, kv2);
+    ExtendedCell newKey = HFileWriterImpl.getMidpoint(keyComparator, kv1, kv2);
     assertTrue(keyComparator.compare(kv1, newKey) < 0);
     assertTrue((keyComparator.compare(kv2, newKey)) > 0);
     byte[] expectedArray = Bytes.toBytes("the r");

@@ -193,7 +193,7 @@ public class CreateRandomStoreFile {
     int numMetaBlocks = ThreadLocalRandom.current().nextInt(10) + 1;
     LOG.info("Writing " + numMetaBlocks + " meta blocks");
     for (int metaI = 0; metaI < numMetaBlocks; ++metaI) {
-      sfw.getHFileWriter().appendMetaBlock(generateString(), new BytesWritable(generateValue()));
+      sfw.getLiveFileWriter().appendMetaBlock(generateString(), new BytesWritable(generateValue()));
     }
     sfw.close();
 

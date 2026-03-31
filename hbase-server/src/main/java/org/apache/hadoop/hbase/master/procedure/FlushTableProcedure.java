@@ -24,10 +24,13 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
+import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -109,6 +112,29 @@ public class FlushTableProcedure extends AbstractStateMachineTableProcedure<Flus
       }
     }
     return Flow.HAS_MORE_STATE;
+  }
+
+  @Override
+  protected void preflightChecks(MasterProcedureEnv env, Boolean enabled) throws HBaseIOException {
+    super.preflightChecks(env, enabled);
+    if (columnFamilies == null) {
+      return;
+    }
+    MasterServices master = env.getMasterServices();
+    try {
+      TableDescriptor tableDescriptor = master.getTableDescriptors().get(tableName);
+      List<String> noSuchFamilies = columnFamilies.stream()
+        .filter(cf -> !tableDescriptor.hasColumnFamily(cf)).map(Bytes::toString).toList();
+      if (!noSuchFamilies.isEmpty()) {
+        throw new NoSuchColumnFamilyException("Column families " + noSuchFamilies
+          + " don't exist in table " + tableName.getNameAsString());
+      }
+    } catch (IOException ioe) {
+      if (ioe instanceof HBaseIOException) {
+        throw (HBaseIOException) ioe;
+      }
+      throw new HBaseIOException(ioe);
+    }
   }
 
   @Override

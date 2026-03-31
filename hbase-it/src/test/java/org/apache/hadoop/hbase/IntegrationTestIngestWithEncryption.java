@@ -24,17 +24,17 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
+import org.apache.hadoop.hbase.io.crypto.MockAesKeyProvider;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Before;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestIngestWithEncryption extends IntegrationTestIngest {
   private final static Logger LOG =
     LoggerFactory.getLogger(IntegrationTestIngestWithEncryption.class);
@@ -48,7 +48,7 @@ public class IntegrationTestIngestWithEncryption extends IntegrationTestIngest {
     if (!util.isDistributedCluster()) {
       // Inject required configuration if we are not running in distributed mode
       conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
-      conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+      conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockAesKeyProvider.class.getName());
       conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
       conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
     }
@@ -63,7 +63,7 @@ public class IntegrationTestIngestWithEncryption extends IntegrationTestIngest {
     initialized = true;
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     // Initialize the cluster. This invokes LoadTestTool -init_only, which

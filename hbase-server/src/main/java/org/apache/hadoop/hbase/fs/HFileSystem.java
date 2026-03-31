@@ -23,6 +23,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InaccessibleObjectException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -338,10 +339,7 @@ public class HFileSystem extends FilterFileSystem {
       nf.set(dfsc, cp1);
       LOG.info("Added intercepting call to namenode#getBlockLocations so can do block reordering"
         + " using class " + lrb.getClass().getName());
-    } catch (NoSuchFieldException e) {
-      LOG.warn("Can't modify the DFSClient#namenode field to add the location reorder.", e);
-      return false;
-    } catch (IllegalAccessException e) {
+    } catch (NoSuchFieldException | IllegalAccessException | InaccessibleObjectException e) {
       LOG.warn("Can't modify the DFSClient#namenode field to add the location reorder.", e);
       return false;
     }

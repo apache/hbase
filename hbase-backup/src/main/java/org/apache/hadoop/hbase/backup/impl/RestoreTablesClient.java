@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CON
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.TreeSet;
 import org.apache.commons.lang3.StringUtils;
@@ -60,6 +59,8 @@ public class RestoreTablesClient {
   private Path restoreRootDir;
   private boolean isOverwrite;
 
+  private boolean isKeepOriginalSplits;
+
   public RestoreTablesClient(Connection conn, RestoreRequest request) throws IOException {
     this.backupRootDir = request.getBackupRootDir();
     this.backupId = request.getBackupId();
@@ -69,6 +70,7 @@ public class RestoreTablesClient {
       this.tTableArray = sTableArray;
     }
     this.isOverwrite = request.isOverwrite();
+    this.isKeepOriginalSplits = request.isKeepOriginalSplits();
     this.conn = conn;
     this.conf = conn.getConfiguration();
     if (request.getRestoreRootDir() != null) {
@@ -133,7 +135,7 @@ public class RestoreTablesClient {
    */
 
   private void restoreImages(BackupImage[] images, TableName sTable, TableName tTable,
-    boolean truncateIfExists) throws IOException {
+    boolean truncateIfExists, boolean isKeepOriginalSplits) throws IOException {
     // First image MUST be image of a FULL backup
     BackupImage image = images[0];
     String rootDir = image.getRootDir();
@@ -149,7 +151,7 @@ public class RestoreTablesClient {
         + tableBackupPath.toString());
       conf.set(JOB_NAME_CONF_KEY, "Full_Restore-" + backupId + "-" + tTable);
       restoreTool.fullRestoreTable(conn, tableBackupPath, sTable, tTable, truncateIfExists,
-        lastIncrBackupId);
+        isKeepOriginalSplits, lastIncrBackupId);
       conf.unset(JOB_NAME_CONF_KEY);
     } else { // incremental Backup
       throw new IOException("Unexpected backup type " + image.getType());
@@ -173,7 +175,8 @@ public class RestoreTablesClient {
     }
 
     if (dirList.isEmpty()) {
-      LOG.warn("Nothing has changed, so there is no need to restore '" + sTable + "'");
+      LOG.info("No incremental changes since full backup for '" + sTable
+        + "', skipping incremental restore step.");
       return;
     }
 
@@ -183,7 +186,7 @@ public class RestoreTablesClient {
     dirList.toArray(paths);
     conf.set(JOB_NAME_CONF_KEY, "Incremental_Restore-" + backupId + "-" + tTable);
     restoreTool.incrementalRestoreTable(conn, tableBackupPath, paths, new TableName[] { sTable },
-      new TableName[] { tTable }, lastIncrBackupId);
+      new TableName[] { tTable }, lastIncrBackupId, isKeepOriginalSplits);
     LOG.info(sTable + " has been successfully restored to " + tTable);
   }
 
@@ -203,19 +206,17 @@ public class RestoreTablesClient {
 
   /**
    * Restore operation. Stage 2: resolved Backup Image dependency
-   * @param backupManifestMap : tableName, Manifest
-   * @param sTableArray       The array of tables to be restored
-   * @param tTableArray       The array of mapping tables to restore to
+   * @param sTableArray The array of tables to be restored
+   * @param tTableArray The array of mapping tables to restore to
    * @throws IOException exception
    */
-  private void restore(HashMap<TableName, BackupManifest> backupManifestMap,
-    TableName[] sTableArray, TableName[] tTableArray, boolean isOverwrite) throws IOException {
+  private void restore(BackupManifest manifest, TableName[] sTableArray, TableName[] tTableArray,
+    boolean isOverwrite, boolean isKeepOriginalSplits) throws IOException {
     TreeSet<BackupImage> restoreImageSet = new TreeSet<>();
 
     for (int i = 0; i < sTableArray.length; i++) {
       TableName table = sTableArray[i];
 
-      BackupManifest manifest = backupManifestMap.get(table);
       // Get the image list of this backup for restore in time order from old
       // to new.
       List<BackupImage> list = new ArrayList<>();
@@ -225,7 +226,7 @@ public class RestoreTablesClient {
       set.addAll(depList);
       BackupImage[] arr = new BackupImage[set.size()];
       set.toArray(arr);
-      restoreImages(arr, table, tTableArray[i], isOverwrite);
+      restoreImages(arr, table, tTableArray[i], isOverwrite, isKeepOriginalSplits);
       restoreImageSet.addAll(list);
       if (restoreImageSet != null && !restoreImageSet.isEmpty()) {
         LOG.info("Restore includes the following image(s):");
@@ -255,12 +256,10 @@ public class RestoreTablesClient {
     checkTargetTables(tTableArray, isOverwrite);
 
     // case RESTORE_IMAGES:
-    HashMap<TableName, BackupManifest> backupManifestMap = new HashMap<>();
     // check and load backup image manifest for the tables
     Path rootPath = new Path(backupRootDir);
-    HBackupFileSystem.checkImageManifestExist(backupManifestMap, sTableArray, conf, rootPath,
-      backupId);
+    BackupManifest manifest = HBackupFileSystem.getManifest(conf, rootPath, backupId);
 
-    restore(backupManifestMap, sTableArray, tTableArray, isOverwrite);
+    restore(manifest, sTableArray, tTableArray, isOverwrite, isKeepOriginalSplits);
   }
 }

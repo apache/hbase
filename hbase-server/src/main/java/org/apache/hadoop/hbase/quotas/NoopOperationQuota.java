@@ -18,10 +18,13 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.util.List;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 /**
  * Noop operation quota returned when no quota is associated to the user/table
@@ -40,7 +43,14 @@ class NoopOperationQuota implements OperationQuota {
   }
 
   @Override
-  public void checkQuota(int numWrites, int numReads, int numScans) throws RpcThrottlingException {
+  public void checkBatchQuota(int numWrites, int numReads, boolean isAtomic)
+    throws RpcThrottlingException {
+    // no-op
+  }
+
+  @Override
+  public void checkScanQuota(ClientProtos.ScanRequest scanRequest, long maxScannerResultSize,
+    long maxBlockBytesScanned, long prevBlockBytesScannedDifference) throws RpcThrottlingException {
     // no-op
   }
 
@@ -67,5 +77,15 @@ class NoopOperationQuota implements OperationQuota {
   @Override
   public long getReadAvailable() {
     return Long.MAX_VALUE;
+  }
+
+  @Override
+  public long getReadConsumed() {
+    return 0L;
+  }
+
+  @Override
+  public void addScanResultCells(List<Cell> cells) {
+    // no-op
   }
 }

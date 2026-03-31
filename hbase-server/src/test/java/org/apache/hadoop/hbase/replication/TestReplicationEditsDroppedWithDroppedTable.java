@@ -125,7 +125,7 @@ public class TestReplicationEditsDroppedWithDroppedTable {
     }
     // add peer
     ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
-      .setClusterKey(utility2.getClusterKey()).setReplicateAllUserTables(true).build();
+      .setClusterKey(utility2.getRpcConnnectionURI()).setReplicateAllUserTables(true).build();
     admin1.addReplicationPeer(PEER_ID, rpc);
     // create table
     createTable(NORMAL_TABLE);

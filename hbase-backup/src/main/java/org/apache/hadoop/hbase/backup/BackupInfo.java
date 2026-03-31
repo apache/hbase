@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Predicate;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
@@ -44,14 +45,24 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 @InterfaceAudience.Private
 public class BackupInfo implements Comparable<BackupInfo> {
   private static final Logger LOG = LoggerFactory.getLogger(BackupInfo.class);
+  private static final int MAX_FAILED_MESSAGE_LENGTH = 1024;
 
-  public interface Filter {
-    /**
-     * Filter interface
-     * @param info backup info
-     * @return true if info passes filter, false otherwise
-     */
-    boolean apply(BackupInfo info);
+  public interface Filter extends Predicate<BackupInfo> {
+    /** Returns true if the BackupInfo passes the filter, false otherwise */
+    @Override
+    boolean test(BackupInfo backupInfo);
+  }
+
+  public static Filter withRoot(String backupRoot) {
+    return info -> info.getBackupRootDir().equals(backupRoot);
+  }
+
+  public static Filter withType(BackupType type) {
+    return info -> info.getType() == type;
+  }
+
+  public static Filter withState(BackupState state) {
+    return info -> info.getState() == state;
   }
 
   /**
@@ -60,8 +71,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
   public enum BackupState {
     RUNNING,
     COMPLETE,
-    FAILED,
-    ANY
+    FAILED
   }
 
   /**
@@ -138,8 +148,11 @@ public class BackupInfo implements Comparable<BackupInfo> {
   private List<String> incrBackupFileList;
 
   /**
-   * New region server log timestamps for table set after distributed log roll key - table name,
-   * value - map of RegionServer hostname -> last log rolled timestamp
+   * New region server log timestamps for table set after distributed log roll. The keys consist of
+   * all tables that are part of the backup chain of the backup root (not just the tables that were
+   * specified when creating the backup, which could be a subset). The value is a map of
+   * RegionServer hostname to the last log-roll timestamp, i.e. the point up to which logs are
+   * included in the backup.
    */
   private Map<TableName, Map<String, Long>> tableSetTimestampMap;
 
@@ -163,6 +176,11 @@ public class BackupInfo implements Comparable<BackupInfo> {
    * Bandwidth per worker in MB per sec. -1 - unlimited
    */
   private long bandwidth = -1;
+
+  /**
+   * Do not verify checksum between source snapshot and exported snapshot
+   */
+  private boolean noChecksumVerify;
 
   public BackupInfo() {
     backupTableInfoMap = new HashMap<>();
@@ -195,6 +213,14 @@ public class BackupInfo implements Comparable<BackupInfo> {
 
   public void setBandwidth(long bandwidth) {
     this.bandwidth = bandwidth;
+  }
+
+  public void setNoChecksumVerify(boolean noChecksumVerify) {
+    this.noChecksumVerify = noChecksumVerify;
+  }
+
+  public boolean getNoChecksumVerify() {
+    return noChecksumVerify;
   }
 
   public void setBackupTableInfoMap(Map<TableName, BackupTableInfo> backupTableInfoMap) {
@@ -253,6 +279,9 @@ public class BackupInfo implements Comparable<BackupInfo> {
   }
 
   public void setFailedMsg(String failedMsg) {
+    if (failedMsg != null && failedMsg.length() > MAX_FAILED_MESSAGE_LENGTH) {
+      failedMsg = failedMsg.substring(0, MAX_FAILED_MESSAGE_LENGTH);
+    }
     this.failedMsg = failedMsg;
   }
 

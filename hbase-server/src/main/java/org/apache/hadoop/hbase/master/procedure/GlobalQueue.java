@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.hadoop.hbase.procedure2.LockStatus;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -31,5 +33,11 @@ public class GlobalQueue extends Queue<String> {
   @Override
   boolean requireExclusiveLock(Procedure<?> proc) {
     return true;
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).appendSuper(super.toString())
+      .build();
   }
 }

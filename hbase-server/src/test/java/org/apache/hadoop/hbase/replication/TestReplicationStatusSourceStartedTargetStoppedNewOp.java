@@ -45,7 +45,10 @@ public class TestReplicationStatusSourceStartedTargetStoppedNewOp extends TestRe
 
   @Test
   public void testReplicationStatusSourceStartedTargetStoppedNewOp() throws Exception {
-    UTIL2.shutdownMiniHBaseCluster();
+    // stop all region servers, we need to keep the master up as the below assertions need to get
+    // cluster id from remote cluster, if master is also down, we can not get any information from
+    // the remote cluster after source cluster restarts
+    stopAllRegionServers(UTIL2);
     restartSourceCluster(1);
     Admin hbaseAdmin = UTIL1.getAdmin();
     // add some values to source cluster

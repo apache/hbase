@@ -118,6 +118,14 @@ public final class StoreContext implements HeapSize {
     return regionFileSystem.getRegionInfo();
   }
 
+  public int getMaxVersions() {
+    return family.getMaxVersions();
+  }
+
+  public boolean getNewVersionBehavior() {
+    return family.isNewVersionBehavior();
+  }
+
   public boolean isPrimaryReplicaStore() {
     return getRegionInfo().getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID;
   }

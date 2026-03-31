@@ -23,7 +23,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
+import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
@@ -41,11 +44,11 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
   DefaultCompactor, DefaultStoreFileManager> {
 
   public static final String DEFAULT_STORE_FLUSHER_CLASS_KEY =
-    "hbase.hstore.defaultengine.storeflusher.class";
+    ConfigKey.CLASS("hbase.hstore.defaultengine.storeflusher.class", StoreFlusher.class);
   public static final String DEFAULT_COMPACTOR_CLASS_KEY =
-    "hbase.hstore.defaultengine.compactor.class";
+    ConfigKey.CLASS("hbase.hstore.defaultengine.compactor.class", Compactor.class);
   public static final String DEFAULT_COMPACTION_POLICY_CLASS_KEY =
-    "hbase.hstore.defaultengine.compactionpolicy.class";
+    ConfigKey.CLASS("hbase.hstore.defaultengine.compactionpolicy.class", CompactionPolicy.class);
 
   private static final Class<? extends DefaultStoreFlusher> DEFAULT_STORE_FLUSHER_CLASS =
     DefaultStoreFlusher.class;
@@ -56,7 +59,7 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
 
   @Override
   public boolean needsCompaction(List<HStoreFile> filesCompacting) {
-    return compactionPolicy.needsCompaction(this.storeFileManager.getStorefiles(), filesCompacting);
+    return compactionPolicy.needsCompaction(this.storeFileManager.getStoreFiles(), filesCompacting);
   }
 
   @Override
@@ -111,7 +114,7 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
     @Override
     public boolean select(List<HStoreFile> filesCompacting, boolean isUserCompaction,
       boolean mayUseOffPeak, boolean forceMajor) throws IOException {
-      request = compactionPolicy.selectCompaction(storeFileManager.getStorefiles(), filesCompacting,
+      request = compactionPolicy.selectCompaction(storeFileManager.getStoreFiles(), filesCompacting,
         isUserCompaction, mayUseOffPeak, forceMajor);
       return request != null;
     }
@@ -124,7 +127,7 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
 
     @Override
     public List<HStoreFile> preSelect(List<HStoreFile> filesCompacting) {
-      return compactionPolicy.preSelectCompactionForCoprocessor(storeFileManager.getStorefiles(),
+      return compactionPolicy.preSelectCompactionForCoprocessor(storeFileManager.getStoreFiles(),
         filesCompacting);
     }
   }

@@ -30,7 +30,7 @@ import java.util.Locale;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -251,7 +251,7 @@ public class DataBlockEncodingTool {
     KeyValue currentKv;
 
     scanner.seek(KeyValue.LOWESTKEY);
-    List<Iterator<Cell>> codecIterators = new ArrayList<>();
+    List<Iterator<ExtendedCell>> codecIterators = new ArrayList<>();
     for (EncodedDataBlock codec : codecs) {
       codecIterators.add(codec.getIterator(HFileBlock.headerSize(useHBaseChecksum)));
     }
@@ -260,8 +260,8 @@ public class DataBlockEncodingTool {
     while ((currentKv = KeyValueUtil.ensureKeyValue(scanner.next())) != null && j < kvLimit) {
       // Iterates through key/value pairs
       ++j;
-      for (Iterator<Cell> it : codecIterators) {
-        Cell c = it.next();
+      for (Iterator<ExtendedCell> it : codecIterators) {
+        ExtendedCell c = it.next();
         KeyValue codecKv = KeyValueUtil.ensureKeyValue(c);
         if (
           codecKv == null
@@ -337,7 +337,7 @@ public class DataBlockEncodingTool {
     for (int itTime = 0; itTime < benchmarkNTimes; ++itTime) {
       totalSize = 0;
 
-      Iterator<Cell> it;
+      Iterator<ExtendedCell> it;
 
       it = codec.getIterator(HFileBlock.headerSize(useHBaseChecksum));
 
@@ -582,7 +582,8 @@ public class DataBlockEncodingTool {
     Path path = new Path(hfilePath);
     CacheConfig cacheConf = new CacheConfig(conf);
     FileSystem fs = FileSystem.get(conf);
-    HStoreFile hsf = new HStoreFile(fs, path, conf, cacheConf, BloomType.NONE, true);
+    StoreFileInfo storeFileInfo = StoreFileInfo.createStoreFileInfoForHFile(conf, fs, path, true);
+    HStoreFile hsf = new HStoreFile(storeFileInfo, BloomType.NONE, cacheConf);
     hsf.initReader();
     StoreFileReader reader = hsf.getReader();
     reader.loadFileInfo();

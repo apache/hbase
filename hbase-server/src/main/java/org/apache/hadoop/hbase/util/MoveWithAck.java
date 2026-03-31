@@ -110,8 +110,9 @@ class MoveWithAck implements Callable<Boolean> {
    * Tries to scan a row from passed region
    */
   private void isSuccessfulScan(RegionInfo region) throws IOException {
-    Scan scan = new Scan().withStartRow(region.getStartKey()).setRaw(true).setOneRowLimit()
-      .setMaxResultSize(1L).setCaching(1).setFilter(new FirstKeyOnlyFilter()).setCacheBlocks(false);
+    Scan scan = new Scan().withStartRow(region.getStartKey()).withStopRow(region.getEndKey(), false)
+      .setRaw(true).setOneRowLimit().setMaxResultSize(1L).setCaching(1)
+      .setFilter(new FirstKeyOnlyFilter()).setCacheBlocks(false);
     try (Table table = conn.getTable(region.getTable());
       ResultScanner scanner = table.getScanner(scan)) {
       scanner.next();
@@ -137,7 +138,7 @@ class MoveWithAck implements Callable<Boolean> {
    */
   static ServerName getServerNameForRegion(RegionInfo region, Admin admin, Connection conn)
     throws IOException {
-    if (!admin.isTableEnabled(region.getTable())) {
+    if (!admin.tableExists(region.getTable()) || !admin.isTableEnabled(region.getTable())) {
       return null;
     }
     HRegionLocation loc = conn.getRegionLocator(region.getTable())

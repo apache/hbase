@@ -96,8 +96,12 @@ public class CellComparatorImpl implements CellComparator {
         return diff;
       }
     }
+
+    if (ignoreSequenceid) {
+      return diff;
+    }
     // Negate following comparisons so later edits show up first mvccVersion: later sorts first
-    return ignoreSequenceid ? diff : Long.compare(r.getSequenceId(), l.getSequenceId());
+    return Long.compare(PrivateCellUtil.getSequenceId(r), PrivateCellUtil.getSequenceId(l));
   }
 
   private int compareKeyValues(final KeyValue left, final KeyValue right) {
@@ -720,11 +724,13 @@ public class CellComparatorImpl implements CellComparator {
     int rFamLength = right.getFamilyLength();
     int lQualLength = left.getQualifierLength();
     int rQualLength = right.getQualifierLength();
-    if (lFamLength + lQualLength == 0 && left.getTypeByte() == KeyValue.Type.Minimum.getCode()) {
+    byte leftType = PrivateCellUtil.getTypeByte(left);
+    byte rightType = PrivateCellUtil.getTypeByte(right);
+    if (lFamLength + lQualLength == 0 && leftType == KeyValue.Type.Minimum.getCode()) {
       // left is "bigger", i.e. it appears later in the sorted order
       return 1;
     }
-    if (rFamLength + rQualLength == 0 && right.getTypeByte() == KeyValue.Type.Minimum.getCode()) {
+    if (rFamLength + rQualLength == 0 && rightType == KeyValue.Type.Minimum.getCode()) {
       return -1;
     }
     if (lFamLength != rFamLength) {
@@ -746,7 +752,7 @@ public class CellComparatorImpl implements CellComparator {
     // of higher numbers sort before those of lesser numbers. Maximum (255)
     // appears ahead of everything, and minimum (0) appears after
     // everything.
-    return (0xff & right.getTypeByte()) - (0xff & left.getTypeByte());
+    return (0xff & rightType) - (0xff & leftType);
   }
 
   @Override
@@ -761,7 +767,7 @@ public class CellComparatorImpl implements CellComparator {
   }
 
   @Override
-  public Comparator getSimpleComparator() {
+  public Comparator<Cell> getSimpleComparator() {
     return this;
   }
 

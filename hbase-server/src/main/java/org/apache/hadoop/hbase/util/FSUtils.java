@@ -113,6 +113,23 @@ public final class FSUtils {
   // currently only used in testing. TODO refactor into a test class
   public static final boolean WINDOWS = System.getProperty("os.name").startsWith("Windows");
 
+  private static Class<?> safeModeClazz = null;
+  private static Class<?> safeModeActionClazz = null;
+  private static Object safeModeGet = null;
+  {
+    try {
+      safeModeClazz = Class.forName("org.apache.hadoop.fs.SafeMode");
+      safeModeActionClazz = Class.forName("org.apache.hadoop.fs.SafeModeAction");
+      safeModeGet = safeModeClazz.getField("SAFEMODE_GET").get(null);
+    } catch (ClassNotFoundException | NoSuchFieldException e) {
+      LOG.debug("SafeMode interface not in the classpath, this means Hadoop 3.3.5 or below.");
+    } catch (IllegalAccessException e) {
+      LOG.error("SafeModeAction.SAFEMODE_GET is not accessible. "
+        + "Unexpected Hadoop version or messy classpath?", e);
+      throw new RuntimeException(e);
+    }
+  }
+
   private FSUtils() {
   }
 
@@ -195,6 +212,32 @@ public final class FSUtils {
    */
   public static FSDataOutputStream create(Configuration conf, FileSystem fs, Path path,
     FsPermission perm, InetSocketAddress[] favoredNodes) throws IOException {
+    return create(conf, fs, path, perm, favoredNodes, true);
+  }
+
+  /**
+   * Create the specified file on the filesystem. By default, this will:
+   * <ol>
+   * <li>overwrite the file if it exists</li>
+   * <li>apply the umask in the configuration (if it is enabled)</li>
+   * <li>use the fs configured buffer size (or 4096 if not set)</li>
+   * <li>use the configured column family replication or default replication if
+   * {@link ColumnFamilyDescriptorBuilder#DEFAULT_DFS_REPLICATION}</li>
+   * <li>use the default block size</li>
+   * <li>not track progress</li>
+   * </ol>
+   * @param conf              configurations
+   * @param fs                {@link FileSystem} on which to write the file
+   * @param path              {@link Path} to the file to write
+   * @param perm              permissions
+   * @param favoredNodes      favored data nodes
+   * @param isRecursiveCreate recursively create parent directories
+   * @return output stream to the created file
+   * @throws IOException if the file cannot be created
+   */
+  public static FSDataOutputStream create(Configuration conf, FileSystem fs, Path path,
+    FsPermission perm, InetSocketAddress[] favoredNodes, boolean isRecursiveCreate)
+    throws IOException {
     if (fs instanceof HFileSystem) {
       FileSystem backingFs = ((HFileSystem) fs).getBackingFs();
       if (backingFs instanceof DistributedFileSystem) {
@@ -213,7 +256,7 @@ public final class FSUtils {
       }
 
     }
-    return CommonFSUtils.create(fs, path, perm, true);
+    return CommonFSUtils.create(fs, path, perm, true, isRecursiveCreate);
   }
 
   /**
@@ -247,8 +290,20 @@ public final class FSUtils {
    * @param dfs A DistributedFileSystem object representing the underlying HDFS.
    * @return whether we're in safe mode
    */
-  private static boolean isInSafeMode(DistributedFileSystem dfs) throws IOException {
-    return dfs.setSafeMode(SAFEMODE_GET, true);
+  private static boolean isInSafeMode(FileSystem dfs) throws IOException {
+    if (isDistributedFileSystem(dfs)) {
+      return ((DistributedFileSystem) dfs).setSafeMode(SAFEMODE_GET, true);
+    } else {
+      try {
+        Object ret = dfs.getClass()
+          .getMethod("setSafeMode", new Class[] { safeModeActionClazz, Boolean.class })
+          .invoke(dfs, safeModeGet, true);
+        return (Boolean) ret;
+      } catch (InvocationTargetException | IllegalAccessException | NoSuchMethodException e) {
+        LOG.error("The file system does not support setSafeMode(). Abort.", e);
+        throw new RuntimeException(e);
+      }
+    }
   }
 
   /**
@@ -257,9 +312,8 @@ public final class FSUtils {
   public static void checkDfsSafeMode(final Configuration conf) throws IOException {
     boolean isInSafeMode = false;
     FileSystem fs = FileSystem.get(conf);
-    if (fs instanceof DistributedFileSystem) {
-      DistributedFileSystem dfs = (DistributedFileSystem) fs;
-      isInSafeMode = isInSafeMode(dfs);
+    if (supportSafeMode(fs)) {
+      isInSafeMode = isInSafeMode(fs);
     }
     if (isInSafeMode) {
       throw new IOException("File system is in safemode, it can't be written now");
@@ -644,10 +698,11 @@ public final class FSUtils {
    */
   public static void waitOnSafeMode(final Configuration conf, final long wait) throws IOException {
     FileSystem fs = FileSystem.get(conf);
-    if (!(fs instanceof DistributedFileSystem)) return;
-    DistributedFileSystem dfs = (DistributedFileSystem) fs;
+    if (!supportSafeMode(fs)) {
+      return;
+    }
     // Make sure dfs is not in safe mode
-    while (isInSafeMode(dfs)) {
+    while (isInSafeMode(fs)) {
       LOG.info("Waiting for dfs to exit safe mode...");
       try {
         Thread.sleep(wait);
@@ -656,6 +711,19 @@ public final class FSUtils {
         throw (InterruptedIOException) new InterruptedIOException().initCause(e);
       }
     }
+  }
+
+  public static boolean supportSafeMode(FileSystem fs) {
+    // return true if HDFS.
+    if (fs instanceof DistributedFileSystem) {
+      return true;
+    }
+    // return true if the file system implements SafeMode interface.
+    if (safeModeClazz != null) {
+      return (safeModeClazz.isAssignableFrom(fs.getClass()));
+    }
+    // return false if the file system is not HDFS and does not implement SafeMode interface.
+    return false;
   }
 
   /**

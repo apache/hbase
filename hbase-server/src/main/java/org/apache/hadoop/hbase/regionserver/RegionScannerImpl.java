@@ -29,14 +29,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.client.ClientInternalHelper;
 import org.apache.hadoop.hbase.client.IsolationLevel;
-import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
 import org.apache.hadoop.hbase.filter.FilterWrapper;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.ipc.CallerDisconnectedException;
@@ -58,7 +60,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  * RegionScannerImpl is used to combine scanners from multiple Stores (aka column families).
  */
 @InterfaceAudience.Private
-class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
+public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
 
   private static final Logger LOG = LoggerFactory.getLogger(RegionScannerImpl.class);
 
@@ -75,7 +77,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
    * If the joined heap data gathering is interrupted due to scan limits, this will contain the row
    * for which we are populating the values.
    */
-  protected Cell joinedContinuationRow = null;
+  protected ExtendedCell joinedContinuationRow = null;
   private boolean filterClosed = false;
 
   protected final byte[] stopRow;
@@ -127,7 +129,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     // synchronize on scannerReadPoints so that nobody calculates
     // getSmallestReadPoint, before scannerReadPoints is updated.
     IsolationLevel isolationLevel = scan.getIsolationLevel();
-    long mvccReadPoint = PackagePrivateFieldAccessor.getMvccReadPoint(scan);
+    long mvccReadPoint = ClientInternalHelper.getMvccReadPoint(scan);
     this.scannerReadPoints = region.scannerReadPoints;
     this.rsServices = region.getRegionServerServices();
     region.smallestReadPointCalcLock.lock(ReadPointCalculationLock.LockType.RECORDING_LOCK);
@@ -144,6 +146,10 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       region.smallestReadPointCalcLock.unlock(ReadPointCalculationLock.LockType.RECORDING_LOCK);
     }
     initializeScanners(scan, additionalScanners);
+  }
+
+  public ScannerContext getContext() {
+    return defaultScannerContext;
   }
 
   private void initializeScanners(Scan scan, List<KeyValueScanner> additionalScanners)
@@ -238,14 +244,14 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   }
 
   @Override
-  public boolean next(List<Cell> outResults) throws IOException {
+  public boolean next(List<? super ExtendedCell> outResults) throws IOException {
     // apply the batching limit by default
     return next(outResults, defaultScannerContext);
   }
 
   @Override
-  public synchronized boolean next(List<Cell> outResults, ScannerContext scannerContext)
-    throws IOException {
+  public synchronized boolean next(List<? super ExtendedCell> outResults,
+    ScannerContext scannerContext) throws IOException {
     if (this.filterClosed) {
       throw new UnknownScannerException("Scanner was closed (timed out?) "
         + "after we renewed it. Could be caused by a very slow scanner "
@@ -260,13 +266,14 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   }
 
   @Override
-  public boolean nextRaw(List<Cell> outResults) throws IOException {
+  public boolean nextRaw(List<? super ExtendedCell> outResults) throws IOException {
     // Use the RegionScanner's context by default
     return nextRaw(outResults, defaultScannerContext);
   }
 
   @Override
-  public boolean nextRaw(List<Cell> outResults, ScannerContext scannerContext) throws IOException {
+  public boolean nextRaw(List<? super ExtendedCell> outResults, ScannerContext scannerContext)
+    throws IOException {
     if (storeHeap == null) {
       // scanner is closed
       throw new UnknownScannerException("Scanner was closed");
@@ -277,11 +284,10 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       // to handle scan or get operation.
       moreValues = nextInternal(outResults, scannerContext);
     } else {
-      List<Cell> tmpList = new ArrayList<>();
+      List<ExtendedCell> tmpList = new ArrayList<>();
       moreValues = nextInternal(tmpList, scannerContext);
       outResults.addAll(tmpList);
     }
-
     region.addReadRequestsCount(1);
     if (region.getMetrics() != null) {
       region.getMetrics().updateReadRequestCount();
@@ -301,8 +307,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   }
 
   /** Returns true if more cells exist after this batch, false if scanner is done */
-  private boolean populateFromJoinedHeap(List<Cell> results, ScannerContext scannerContext)
-    throws IOException {
+  private boolean populateFromJoinedHeap(List<? super ExtendedCell> results,
+    ScannerContext scannerContext) throws IOException {
     assert joinedContinuationRow != null;
     boolean moreValues =
       populateResult(results, this.joinedHeap, scannerContext, joinedContinuationRow);
@@ -313,7 +319,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     }
     // As the data is obtained from two independent heaps, we need to
     // ensure that result list is sorted, because Result relies on that.
-    results.sort(comparator);
+    ((List<Cell>) results).sort(comparator);
     return moreValues;
   }
 
@@ -323,8 +329,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
    * @param heap KeyValueHeap to fetch data from.It must be positioned on correct row before call.
    * @return state of last call to {@link KeyValueHeap#next()}
    */
-  private boolean populateResult(List<Cell> results, KeyValueHeap heap,
-    ScannerContext scannerContext, Cell currentRowCell) throws IOException {
+  private boolean populateResult(List<? super ExtendedCell> results, KeyValueHeap heap,
+    ScannerContext scannerContext, ExtendedCell currentRowCell) throws IOException {
     Cell nextKv;
     boolean moreCellsInRow = false;
     boolean tmpKeepProgress = scannerContext.getKeepProgress();
@@ -410,7 +416,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     }
   }
 
-  private boolean nextInternal(List<Cell> results, ScannerContext scannerContext)
+  private boolean nextInternal(List<? super ExtendedCell> results, ScannerContext scannerContext)
     throws IOException {
     Preconditions.checkArgument(results.isEmpty(), "First parameter should be an empty list");
     Preconditions.checkArgument(scannerContext != null, "Scanner context cannot be null");
@@ -441,7 +447,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       region.checkInterrupt();
 
       // Let's see what we have in the storeHeap.
-      Cell current = this.storeHeap.peek();
+      ExtendedCell current = this.storeHeap.peek();
 
       boolean shouldStop = shouldStop(current);
       // When has filter row is true it means that the all the cells for a particular row must be
@@ -479,7 +485,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
         // First, check if we are at a stop row. If so, there are no more results.
         if (shouldStop) {
           if (hasFilterRow) {
-            filter.filterRowCells(results);
+            filter.filterRowCells((List<Cell>) results);
           }
           return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
         }
@@ -534,7 +540,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
         // First filter with the filterRow(List).
         FilterWrapper.FilterRowRetCode ret = FilterWrapper.FilterRowRetCode.NOT_CALLED;
         if (hasFilterRow) {
-          ret = filter.filterRowCellsWithRet(results);
+          ret = filter.filterRowCellsWithRet((List<Cell>) results);
 
           // We don't know how the results have changed after being filtered. Must set progress
           // according to contents of results now.
@@ -545,7 +551,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
             scannerContext.clearProgress();
           }
           scannerContext.incrementBatchProgress(results.size());
-          for (Cell cell : results) {
+          for (ExtendedCell cell : (List<ExtendedCell>) results) {
             scannerContext.incrementSizeProgress(PrivateCellUtil.estimatedSerializedSizeOf(cell),
               cell.heapSize());
           }
@@ -639,7 +645,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       return;
     }
 
-    scannerContext.getMetrics().countOfRowsFiltered.incrementAndGet();
+    scannerContext.getMetrics()
+      .addToCounter(ServerSideScanMetrics.COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME, 1);
   }
 
   private void incrementCountOfRowsScannedMetric(ScannerContext scannerContext) {
@@ -647,11 +654,12 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       return;
     }
 
-    scannerContext.getMetrics().countOfRowsScanned.incrementAndGet();
+    scannerContext.getMetrics()
+      .addToCounter(ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, 1);
   }
 
   /** Returns true when the joined heap may have data for the current row */
-  private boolean joinedHeapMayHaveData(Cell currentRowCell) throws IOException {
+  private boolean joinedHeapMayHaveData(ExtendedCell currentRowCell) throws IOException {
     Cell nextJoinedKv = joinedHeap.peek();
     boolean matchCurrentRow =
       nextJoinedKv != null && CellUtil.matchingRows(nextJoinedKv, currentRowCell);
@@ -660,7 +668,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     // If the next value in the joined heap does not match the current row, try to seek to the
     // correct row
     if (!matchCurrentRow) {
-      Cell firstOnCurrentRow = PrivateCellUtil.createFirstOnRow(currentRowCell);
+      ExtendedCell firstOnCurrentRow = PrivateCellUtil.createFirstOnRow(currentRowCell);
       boolean seekSuccessful = this.joinedHeap.requestSeek(firstOnCurrentRow, true, true);
       matchAfterSeek = seekSuccessful && joinedHeap.peek() != null
         && CellUtil.matchingRows(joinedHeap.peek(), currentRowCell);
@@ -776,7 +784,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       }
       boolean result = false;
       region.startRegionOperation();
-      Cell kv = PrivateCellUtil.createFirstOnRow(row, 0, (short) row.length);
+      ExtendedCell kv = PrivateCellUtil.createFirstOnRow(row, 0, (short) row.length);
       try {
         // use request seek to make use of the lazy seek option. See HBASE-5520
         result = this.storeHeap.requestSeek(kv, true, true);

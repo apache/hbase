@@ -33,11 +33,13 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterId;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ReadOnlyZKClient;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -50,19 +52,44 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 
 /**
  * Zookeeper based registry implementation.
+ * @deprecated As of 2.6.0, replaced by {@link RpcConnectionRegistry}, which is the default
+ *             connection mechanism as of 3.0.0. Expected to be removed in 4.0.0.
+ * @see <a href="https://issues.apache.org/jira/browse/HBASE-23324">HBASE-23324</a> and its parent
+ *      ticket for details.
  */
-@InterfaceAudience.Private
+@Deprecated
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 class ZKConnectionRegistry implements ConnectionRegistry {
 
   private static final Logger LOG = LoggerFactory.getLogger(ZKConnectionRegistry.class);
 
+  private static final Object WARN_LOCK = new Object();
+  private static volatile boolean NEEDS_LOG_WARN = true;
+
   private final ReadOnlyZKClient zk;
 
   private final ZNodePaths znodePaths;
+  private final Configuration conf;
+  private final int zkRegistryAsyncTimeout;
+  public static final String ZK_REGISTRY_ASYNC_GET_TIMEOUT = "zookeeper.registry.async.get.timeout";
+  public static final int DEFAULT_ZK_REGISTRY_ASYNC_GET_TIMEOUT = 10000; // 10 sec
+  // User not used, but for rpc based registry we need it
 
-  ZKConnectionRegistry(Configuration conf) {
+  ZKConnectionRegistry(Configuration conf, User ignored) {
     this.znodePaths = new ZNodePaths(conf);
-    this.zk = new ReadOnlyZKClient(conf);
+    this.zk = new ReadOnlyZKClient(conf, AsyncConnectionImpl.RETRY_TIMER);
+    this.conf = conf;
+    this.zkRegistryAsyncTimeout =
+      conf.getInt(ZK_REGISTRY_ASYNC_GET_TIMEOUT, DEFAULT_ZK_REGISTRY_ASYNC_GET_TIMEOUT);
+    if (NEEDS_LOG_WARN) {
+      synchronized (WARN_LOCK) {
+        if (NEEDS_LOG_WARN) {
+          LOG.warn(
+            "ZKConnectionRegistry is deprecated. See https://hbase.apache.org/book.html#client.rpcconnectionregistry");
+          NEEDS_LOG_WARN = false;
+        }
+      }
+    }
   }
 
   private interface Converter<T> {
@@ -71,7 +98,7 @@ class ZKConnectionRegistry implements ConnectionRegistry {
 
   private <T> CompletableFuture<T> getAndConvert(String path, Converter<T> converter) {
     CompletableFuture<T> future = new CompletableFuture<>();
-    addListener(zk.get(path), (data, error) -> {
+    addListener(zk.get(path, this.zkRegistryAsyncTimeout), (data, error) -> {
       if (error != null) {
         future.completeExceptionally(error);
         return;
@@ -198,8 +225,8 @@ class ZKConnectionRegistry implements ConnectionRegistry {
     return tracedFuture(() -> {
       CompletableFuture<RegionLocations> future = new CompletableFuture<>();
       addListener(
-        zk.list(znodePaths.baseZNode).thenApply(children -> children.stream()
-          .filter(c -> this.znodePaths.isMetaZNodePrefix(c)).collect(Collectors.toList())),
+        zk.list(znodePaths.baseZNode, this.zkRegistryAsyncTimeout).thenApply(children -> children
+          .stream().filter(c -> this.znodePaths.isMetaZNodePrefix(c)).collect(Collectors.toList())),
         (metaReplicaZNodes, error) -> {
           if (error != null) {
             future.completeExceptionally(error);

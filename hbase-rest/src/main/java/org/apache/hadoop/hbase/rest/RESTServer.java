@@ -17,11 +17,16 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import static org.apache.hadoop.hbase.http.HttpServerUtil.PATH_SPEC_ANY;
+
 import java.lang.management.ManagementFactory;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import javax.servlet.DispatcherType;
 import org.apache.commons.lang3.ArrayUtils;
@@ -29,10 +34,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.http.ClickjackingPreventionFilter;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.http.HttpServerUtil;
 import org.apache.hadoop.hbase.http.InfoServer;
-import org.apache.hadoop.hbase.http.SecurityHeadersFilter;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.rest.filter.AuthFilter;
 import org.apache.hadoop.hbase.rest.filter.GzipFilter;
@@ -51,11 +55,15 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.DefaultParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.PosixParser;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.FilterHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.ServletHolder;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.http.HttpVersion;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.http.UriCompliance;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.jmx.MBeanContainer;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConfiguration;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConnectionFactory;
@@ -63,9 +71,6 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SecureRequestCustomi
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SslConnectionFactory;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.FilterHolder;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletContextHandler;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.apache.hbase.thirdparty.org.glassfish.jersey.server.ResourceConfig;
@@ -83,6 +88,7 @@ import org.apache.hbase.thirdparty.org.glassfish.jersey.servlet.ServletContainer
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class RESTServer implements Constants {
   static Logger LOG = LoggerFactory.getLogger("RESTServer");
+  public static final String REST_SERVER = "rest";
 
   static final String REST_CSRF_ENABLED_KEY = "hbase.rest.csrf.enabled";
   static final boolean REST_CSRF_ENABLED_DEFAULT = false;
@@ -95,8 +101,6 @@ public class RESTServer implements Constants {
   static final int DEFAULT_HTTP_MAX_HEADER_SIZE = 64 * 1024; // 64k
   static final String HTTP_HEADER_CACHE_SIZE = "hbase.rest.http.header.cache.size";
   static final int DEFAULT_HTTP_HEADER_CACHE_SIZE = Character.MAX_VALUE - 1;
-
-  private static final String PATH_SPEC_ANY = "/*";
 
   static final String REST_HTTP_ALLOW_OPTIONS_METHOD = "hbase.rest.http.allow.options.method";
   // HTTP OPTIONS method is commonly used in REST APIs for negotiation. So it is enabled by default.
@@ -112,6 +116,7 @@ public class RESTServer implements Constants {
   private final UserProvider userProvider;
   private Server server;
   private InfoServer infoServer;
+  private ServerName serverName;
 
   public RESTServer(Configuration conf) {
     RESTServer.conf = conf;
@@ -127,7 +132,7 @@ public class RESTServer implements Constants {
     System.exit(exitCode);
   }
 
-  void addCSRFFilter(ServletContextHandler ctxHandler, Configuration conf) {
+  private void addCSRFFilter(ServletContextHandler ctxHandler, Configuration conf) {
     restCSRFEnabled = conf.getBoolean(REST_CSRF_ENABLED_KEY, REST_CSRF_ENABLED_DEFAULT);
     if (restCSRFEnabled) {
       Map<String, String> restCsrfParams =
@@ -140,31 +145,12 @@ public class RESTServer implements Constants {
     }
   }
 
-  private void addClickjackingPreventionFilter(ServletContextHandler ctxHandler,
-    Configuration conf) {
-    FilterHolder holder = new FilterHolder();
-    holder.setName("clickjackingprevention");
-    holder.setClassName(ClickjackingPreventionFilter.class.getName());
-    holder.setInitParameters(ClickjackingPreventionFilter.getDefaultParameters(conf));
-    ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
-  }
-
-  private void addSecurityHeadersFilter(ServletContextHandler ctxHandler, Configuration conf,
-    boolean isSecure) {
-    FilterHolder holder = new FilterHolder();
-    holder.setName("securityheaders");
-    holder.setClassName(SecurityHeadersFilter.class.getName());
-    holder.setInitParameters(SecurityHeadersFilter.getDefaultParameters(conf, isSecure));
-    ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
-  }
-
   // login the server principal (if using secure Hadoop)
   private static Pair<FilterHolder, Class<? extends ServletContainer>>
     loginServerPrincipal(UserProvider userProvider, Configuration conf) throws Exception {
     Class<? extends ServletContainer> containerClass = ServletContainer.class;
     if (userProvider.isHadoopSecurityEnabled() && userProvider.isHBaseSecurityEnabled()) {
-      String machineName = Strings.domainNamePointerToHostName(DNS.getDefaultHost(
-        conf.get(REST_DNS_INTERFACE, "default"), conf.get(REST_DNS_NAMESERVER, "default")));
+      String machineName = getHostName(conf);
       String keytabFilename = conf.get(REST_KEYTAB_FILE);
       Preconditions.checkArgument(keytabFilename != null && !keytabFilename.isEmpty(),
         REST_KEYTAB_FILE + " should be set if security is enabled");
@@ -195,7 +181,7 @@ public class RESTServer implements Constants {
 
     CommandLine commandLine = null;
     try {
-      commandLine = new PosixParser().parse(options, args);
+      commandLine = new DefaultParser().parse(options, args);
     } catch (ParseException e) {
       LOG.error("Could not parse: ", e);
       printUsageAndExit(options, -1);
@@ -304,6 +290,13 @@ public class RESTServer implements Constants {
     httpConfig.setSendServerVersion(false);
     httpConfig.setSendDateHeader(false);
 
+    // In Jetty 12, ambiguous path separators, suspicious path characters, and ambiguous empty
+    // segments are considered violations of the URI specification and hence are not allowed.
+    // Refer to https://github.com/jetty/jetty.project/issues/11890#issuecomment-2156449534
+    // We must set a URI compliance to allow for this violation so that client requests are not
+    // automatically rejected. Our rest endpoints rely on this behavior to handle encoded uri paths.
+    setUriComplianceRules(httpConfig);
+
     ServerConnector serverConnector;
     boolean isSecure = false;
     if (conf.getBoolean(REST_SSL_ENABLED, false)) {
@@ -394,22 +387,40 @@ public class RESTServer implements Constants {
       ctxHandler.addFilter(filter, PATH_SPEC_ANY, EnumSet.of(DispatcherType.REQUEST));
     }
     addCSRFFilter(ctxHandler, conf);
-    addClickjackingPreventionFilter(ctxHandler, conf);
-    addSecurityHeadersFilter(ctxHandler, conf, isSecure);
+    HttpServerUtil.addClickjackingPreventionFilter(ctxHandler, conf, PATH_SPEC_ANY);
+    HttpServerUtil.addSecurityHeadersFilter(ctxHandler, conf, isSecure, PATH_SPEC_ANY);
     HttpServerUtil.constrainHttpMethods(ctxHandler, servlet.getConfiguration()
       .getBoolean(REST_HTTP_ALLOW_OPTIONS_METHOD, REST_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT));
 
     // Put up info server.
     int port = conf.getInt("hbase.rest.info.port", 8085);
     if (port >= 0) {
-      conf.setLong("startcode", EnvironmentEdgeManager.currentTime());
-      String a = conf.get("hbase.rest.info.bindAddress", "0.0.0.0");
-      this.infoServer = new InfoServer("rest", a, port, false, conf);
+      final long startCode = EnvironmentEdgeManager.currentTime();
+      conf.setLong("startcode", startCode);
+      this.serverName = ServerName.valueOf(getHostName(conf), servicePort, startCode);
+
+      String addr = conf.get("hbase.rest.info.bindAddress", "0.0.0.0");
+      this.infoServer = new InfoServer(REST_SERVER, addr, port, false, conf);
+      this.infoServer.addPrivilegedServlet("dump", "/dump", RESTDumpServlet.class);
+      this.infoServer.setAttribute(REST_SERVER, this);
       this.infoServer.setAttribute("hbase.conf", conf);
       this.infoServer.start();
     }
     // start server
     server.start();
+  }
+
+  private static void setUriComplianceRules(HttpConfiguration httpConfig) {
+    Set<UriCompliance.Violation> complianceViolationSet = new HashSet<>();
+    complianceViolationSet.add(UriCompliance.Violation.AMBIGUOUS_PATH_SEPARATOR);
+    complianceViolationSet.add(UriCompliance.Violation.SUSPICIOUS_PATH_CHARACTERS);
+    complianceViolationSet.add(UriCompliance.Violation.AMBIGUOUS_EMPTY_SEGMENT);
+    httpConfig.setUriCompliance(UriCompliance.from(complianceViolationSet));
+  }
+
+  private static String getHostName(Configuration conf) throws UnknownHostException {
+    return Strings.domainNamePointerToHostName(DNS.getDefaultHost(
+      conf.get(REST_DNS_INTERFACE, "default"), conf.get(REST_DNS_NAMESERVER, "default")));
   }
 
   public synchronized void join() throws Exception {
@@ -419,7 +430,19 @@ public class RESTServer implements Constants {
     server.join();
   }
 
+  private void stopInfoServer() {
+    if (this.infoServer != null) {
+      LOG.info("Stop info server");
+      try {
+        this.infoServer.stop();
+      } catch (Exception e) {
+        LOG.error("Failed to stop infoServer", e);
+      }
+    }
+  }
+
   public synchronized void stop() throws Exception {
+    stopInfoServer();
     if (server == null) {
       throw new IllegalStateException("Server is not running");
     }
@@ -441,6 +464,10 @@ public class RESTServer implements Constants {
       throw new IllegalStateException("InfoServer is not running");
     }
     return infoServer.getPort();
+  }
+
+  public ServerName getServerName() {
+    return serverName;
   }
 
   public Configuration getConf() {

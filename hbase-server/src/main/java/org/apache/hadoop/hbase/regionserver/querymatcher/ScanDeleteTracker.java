@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.regionserver.querymatcher;
 import java.io.IOException;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -48,7 +48,7 @@ public class ScanDeleteTracker implements DeleteTracker {
   protected boolean hasFamilyStamp = false;
   protected long familyStamp = 0L;
   protected SortedSet<Long> familyVersionStamps = new TreeSet<Long>();
-  protected Cell deleteCell = null;
+  protected ExtendedCell deleteCell = null;
   protected byte[] deleteBuffer = null;
   protected int deleteOffset = 0;
   protected int deleteLength = 0;
@@ -67,7 +67,7 @@ public class ScanDeleteTracker implements DeleteTracker {
    * @param cell - the delete cell
    */
   @Override
-  public void add(Cell cell) {
+  public void add(ExtendedCell cell) {
     long timestamp = cell.getTimestamp();
     byte type = cell.getTypeByte();
     if (!hasFamilyStamp || timestamp > familyStamp) {
@@ -99,7 +99,7 @@ public class ScanDeleteTracker implements DeleteTracker {
    * @param cell - current cell to check if deleted by a previously seen delete
    */
   @Override
-  public DeleteResult isDeleted(Cell cell) {
+  public DeleteResult isDeleted(ExtendedCell cell) {
     long timestamp = cell.getTimestamp();
     if (hasFamilyStamp && timestamp <= familyStamp) {
       return DeleteResult.FAMILY_DELETED;

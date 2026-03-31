@@ -25,12 +25,14 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
 import org.apache.hadoop.hbase.regionserver.SplitWALCallable;
+import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 
 /**
@@ -70,7 +72,12 @@ public class SplitWALRemoteProcedure extends ServerRemoteProcedure
     MasterProcedureProtos.SplitWALRemoteData.Builder builder =
       MasterProcedureProtos.SplitWALRemoteData.newBuilder();
     builder.setWalPath(walPath).setWorker(ProtobufUtil.toServerName(targetServer))
-      .setCrashedServer(ProtobufUtil.toServerName(crashedServer));
+      .setCrashedServer(ProtobufUtil.toServerName(crashedServer)).setState(state);
+    if (this.remoteError != null) {
+      ErrorHandlingProtos.ForeignExceptionMessage fem =
+        ForeignExceptionUtil.toProtoForeignException(remoteError);
+      builder.setError(fem);
+    }
     serializer.serialize(builder.build());
   }
 
@@ -81,32 +88,37 @@ public class SplitWALRemoteProcedure extends ServerRemoteProcedure
     walPath = data.getWalPath();
     targetServer = ProtobufUtil.toServerName(data.getWorker());
     crashedServer = ProtobufUtil.toServerName(data.getCrashedServer());
+    state = data.getState();
+    if (data.hasError()) {
+      this.remoteError = ForeignExceptionUtil.toException(data.getError());
+    }
   }
 
   @Override
   public Optional<RemoteProcedureDispatcher.RemoteOperation> remoteCallBuild(MasterProcedureEnv env,
     ServerName serverName) {
-    return Optional.of(new RSProcedureDispatcher.ServerOperation(this, getProcId(),
-      SplitWALCallable.class, MasterProcedureProtos.SplitWALParameter.newBuilder()
-        .setWalPath(walPath).build().toByteArray()));
+    return Optional.of(new RSProcedureDispatcher.ServerOperation(
+      this, getProcId(), SplitWALCallable.class, MasterProcedureProtos.SplitWALParameter
+        .newBuilder().setWalPath(walPath).build().toByteArray(),
+      env.getMasterServices().getMasterActiveTime()));
   }
 
   @Override
-  protected void complete(MasterProcedureEnv env, Throwable error) {
+  protected boolean complete(MasterProcedureEnv env, Throwable error) {
     if (error == null) {
       try {
         env.getMasterServices().getSplitWALManager().archive(walPath);
       } catch (IOException e) {
         LOG.warn("Failed split of {}; ignore...", walPath, e);
       }
-      succ = true;
+      return true;
     } else {
       if (error instanceof DoNotRetryIOException) {
         LOG.warn("Sent {} to wrong server {}, try another", walPath, targetServer, error);
-        succ = true;
+        return true;
       } else {
         LOG.warn("Failed split of {}, retry...", walPath, error);
-        succ = false;
+        return false;
       }
     }
   }

@@ -88,7 +88,9 @@ import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -103,6 +105,7 @@ import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.CheckAndMutateResult;
+import org.apache.hadoop.hbase.client.ClientInternalHelper;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Delete;
@@ -112,6 +115,7 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.QueryMetrics;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
@@ -120,6 +124,7 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -142,6 +147,9 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerCall;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -152,6 +160,8 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTrack
 import org.apache.hadoop.hbase.regionserver.compactions.ForbidMajorCompactionChecker;
 import org.apache.hadoop.hbase.regionserver.metrics.MetricsTableRequests;
 import org.apache.hadoop.hbase.regionserver.regionreplication.RegionReplicationSink;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.regionserver.throttle.StoreHotnessProtector;
@@ -179,6 +189,7 @@ import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
@@ -242,11 +253,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final String LOAD_CFS_ON_DEMAND_CONFIG_KEY =
     "hbase.hregion.scan.loadColumnFamiliesOnDemand";
 
-  public static final String HBASE_MAX_CELL_SIZE_KEY = "hbase.server.keyvalue.maxsize";
+  public static final String HBASE_MAX_CELL_SIZE_KEY =
+    ConfigKey.LONG("hbase.server.keyvalue.maxsize");
   public static final int DEFAULT_MAX_CELL_SIZE = 10485760;
 
   public static final String HBASE_REGIONSERVER_MINIBATCH_SIZE =
-    "hbase.regionserver.minibatch.size";
+    ConfigKey.INT("hbase.regionserver.minibatch.size");
   public static final int DEFAULT_HBASE_REGIONSERVER_MINIBATCH_SIZE = 20000;
 
   public static final String WAL_HSYNC_CONF_KEY = "hbase.wal.hsync";
@@ -457,6 +469,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private volatile Long timeoutForWriteLock = null;
 
   private final CellComparator cellComparator;
+
+  private final int minBlockSizeBytes;
 
   /**
    * @return The smallest mvcc readPoint across all the scanners in this region. Writes older than
@@ -759,8 +773,36 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public HRegion(final Path tableDir, final WAL wal, final FileSystem fs,
     final Configuration confParam, final RegionInfo regionInfo, final TableDescriptor htd,
     final RegionServerServices rsServices) {
+    this(tableDir, wal, fs, confParam, regionInfo, htd, rsServices, null);
+  }
+
+  /**
+   * HRegion constructor. This constructor should only be used for testing and extensions. Instances
+   * of HRegion should be instantiated with the {@link HRegion#createHRegion} or
+   * {@link HRegion#openHRegion} method.
+   * @param tableDir             qualified path of directory where region should be located, usually
+   *                             the table directory.
+   * @param wal                  The WAL is the outbound log for any updates to the HRegion The wal
+   *                             file is a logfile from the previous execution that's
+   *                             custom-computed for this HRegion. The HRegionServer computes and
+   *                             sorts the appropriate wal info for this HRegion. If there is a
+   *                             previous wal file (implying that the HRegion has been written-to
+   *                             before), then read it from the supplied path.
+   * @param fs                   is the filesystem.
+   * @param confParam            is global configuration settings.
+   * @param regionInfo           - RegionInfo that describes the region is new), then read them from
+   *                             the supplied path.
+   * @param htd                  the table descriptor
+   * @param rsServices           reference to {@link RegionServerServices} or null
+   * @param keyManagementService reference to {@link KeyManagementService} or null
+   * @deprecated Use other constructors.
+   */
+  @Deprecated
+  public HRegion(final Path tableDir, final WAL wal, final FileSystem fs,
+    final Configuration confParam, final RegionInfo regionInfo, final TableDescriptor htd,
+    final RegionServerServices rsServices, final KeyManagementService keyManagementService) {
     this(new HRegionFileSystem(confParam, fs, tableDir, regionInfo), wal, confParam, htd,
-      rsServices);
+      rsServices, keyManagementService);
   }
 
   /**
@@ -779,6 +821,28 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public HRegion(final HRegionFileSystem fs, final WAL wal, final Configuration confParam,
     final TableDescriptor htd, final RegionServerServices rsServices) {
+    this(fs, wal, confParam, htd, rsServices, null);
+  }
+
+  /**
+   * HRegion constructor. This constructor should only be used for testing and extensions. Instances
+   * of HRegion should be instantiated with the {@link HRegion#createHRegion} or
+   * {@link HRegion#openHRegion} method.
+   * @param fs                   is the filesystem.
+   * @param wal                  The WAL is the outbound log for any updates to the HRegion The wal
+   *                             file is a logfile from the previous execution that's
+   *                             custom-computed for this HRegion. The HRegionServer computes and
+   *                             sorts the appropriate wal info for this HRegion. If there is a
+   *                             previous wal file (implying that the HRegion has been written-to
+   *                             before), then read it from the supplied path.
+   * @param confParam            is global configuration settings.
+   * @param htd                  the table descriptor
+   * @param rsServices           reference to {@link RegionServerServices} or null
+   * @param keyManagementService reference to {@link KeyManagementService} or null
+   */
+  public HRegion(final HRegionFileSystem fs, final WAL wal, final Configuration confParam,
+    final TableDescriptor htd, final RegionServerServices rsServices,
+    KeyManagementService keyManagementService) {
     if (htd == null) {
       throw new IllegalArgumentException("Need table descriptor");
     }
@@ -916,6 +980,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           .remove(getRegionInfo().getEncodedName());
       }
     }
+
+    minBlockSizeBytes = Arrays.stream(this.htableDescriptor.getColumnFamilies())
+      .mapToInt(ColumnFamilyDescriptor::getBlocksize).min().orElse(HConstants.DEFAULT_BLOCKSIZE);
   }
 
   private void setHTableSpecificConf() {
@@ -1340,7 +1407,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (StoreFileInfo.isReference(p) || HFileLink.isHFileLink(p)) {
           // Only construct StoreFileInfo object if its not a hfile, save obj
           // creation
-          StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, status);
+          StoreFileTracker sft =
+            StoreFileTrackerFactory.create(conf, tableDescriptor, family, regionFs);
+          StoreFileInfo storeFileInfo = sft.getStoreFileInfo(status, status.getPath(), false);
           hdfsBlocksDistribution.add(storeFileInfo.computeHDFSBlocksDistribution(fs));
         } else if (StoreFileInfo.isHFile(p)) {
           // If its a HFile, then lets just add to the block distribution
@@ -1572,7 +1641,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final boolean DEFAULT_FAIR_REENTRANT_CLOSE_LOCK = true;
   /** Conf key for the periodic flush interval */
   public static final String MEMSTORE_PERIODIC_FLUSH_INTERVAL =
-    "hbase.regionserver.optionalcacheflushinterval";
+    ConfigKey.INT("hbase.regionserver.optionalcacheflushinterval");
   /** Default interval for the memstore flush */
   public static final int DEFAULT_CACHE_FLUSH_INTERVAL = 3600000;
   /** Default interval for System tables memstore flush */
@@ -1635,9 +1704,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     boolean isGracefulStop) throws IOException {
     // Only allow one thread to close at a time. Serialize them so dual
     // threads attempting to close will run up against each other.
-    MonitoredTask status = TaskMonitor.get().createStatus(
-      "Closing region " + this.getRegionInfo().getEncodedName() + (abort ? " due to abort" : ""),
-      ignoreStatus, true);
+    MonitoredTask status =
+      TaskMonitor.get().createStatus("Closing region " + this.getRegionInfo().getEncodedName()
+        + (abort ? " due to abort" : " as it is being closed"), ignoreStatus, true);
     status.setStatus("Waiting for close lock");
     try {
       synchronized (closeLock) {
@@ -2047,6 +2116,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return new ReadOnlyConfiguration(this.conf);
   }
 
+  @Override
+  public int getMinBlockSizeBytes() {
+    return minBlockSizeBytes;
+  }
+
   private ThreadPoolExecutor getStoreOpenAndCloseThreadPool(final String threadNamePrefix) {
     int numStores = Math.max(1, this.htableDescriptor.getColumnFamilyCount());
     int maxThreads = Math.min(numStores, conf.getInt(HConstants.HSTORE_OPEN_AND_CLOSE_THREADS_MAX,
@@ -2100,6 +2174,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   public BlockCache getBlockCache() {
     return this.blockCache;
+  }
+
+  public ManagedKeyDataCache getManagedKeyDataCache() {
+    return null;
+  }
+
+  public SystemKeyCache getSystemKeyCache() {
+    return null;
   }
 
   /**
@@ -2228,6 +2310,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   // These methods are meant to be called periodically by the HRegionServer for
   // upkeep.
   //////////////////////////////////////////////////////////////////////////////
+
   /**
    * Do preparation for pending compaction.
    */
@@ -2315,37 +2398,100 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
+   * <p>
    * We are trying to remove / relax the region read lock for compaction. Let's see what are the
    * potential race conditions among the operations (user scan, region split, region close and
-   * region bulk load). user scan ---> region read lock region split --> region close first -->
-   * region write lock region close --> region write lock region bulk load --> region write lock
+   * region bulk load).
+   * </p>
+   *
+   * <pre>
+   *   user scan ---> region read lock
+   *   region split --> region close first --> region write lock
+   *   region close --> region write lock
+   *   region bulk load --> region write lock
+   * </pre>
+   * <p>
    * read lock is compatible with read lock. ---> no problem with user scan/read region bulk load
    * does not cause problem for compaction (no consistency problem, store lock will help the store
-   * file accounting). They can run almost concurrently at the region level. The only remaining race
-   * condition is between the region close and compaction. So we will evaluate, below, how region
-   * close intervenes with compaction if compaction does not acquire region read lock. Here are the
-   * steps for compaction: 1. obtain list of StoreFile's 2. create StoreFileScanner's based on list
-   * from #1 3. perform compaction and save resulting files under tmp dir 4. swap in compacted files
+   * file accounting). They can run almost concurrently at the region level.
+   * </p>
+   * <p>
+   * The only remaining race condition is between the region close and compaction. So we will
+   * evaluate, below, how region close intervenes with compaction if compaction does not acquire
+   * region read lock.
+   * </p>
+   * <p>
+   * Here are the steps for compaction:
+   * <ol>
+   * <li>obtain list of StoreFile's</li>
+   * <li>create StoreFileScanner's based on list from #1</li>
+   * <li>perform compaction and save resulting files under tmp dir</li>
+   * <li>swap in compacted files</li>
+   * </ol>
+   * </p>
+   * <p>
    * #1 is guarded by store lock. This patch does not change this --> no worse or better For #2, we
    * obtain smallest read point (for region) across all the Scanners (for both default compactor and
    * stripe compactor). The read points are for user scans. Region keeps the read points for all
    * currently open user scanners. Compaction needs to know the smallest read point so that during
    * re-write of the hfiles, it can remove the mvcc points for the cells if their mvccs are older
    * than the smallest since they are not needed anymore. This will not conflict with compaction.
-   * For #3, it can be performed in parallel to other operations. For #4 bulk load and compaction
-   * don't conflict with each other on the region level (for multi-family atomicy). Region close and
-   * compaction are guarded pretty well by the 'writestate'. In HRegion#doClose(), we have :
-   * synchronized (writestate) { // Disable compacting and flushing by background threads for this
-   * // region. canFlush = !writestate.readOnly; writestate.writesEnabled = false;
-   * LOG.debug("Closing " + this + ": disabling compactions & flushes");
-   * waitForFlushesAndCompactions(); } waitForFlushesAndCompactions() would wait for
-   * writestate.compacting to come down to 0. and in HRegion.compact() try { synchronized
-   * (writestate) { if (writestate.writesEnabled) { wasStateSet = true; ++writestate.compacting; }
-   * else { String msg = "NOT compacting region " + this + ". Writes disabled."; LOG.info(msg);
-   * status.abort(msg); return false; } } Also in compactor.performCompaction(): check periodically
-   * to see if a system stop is requested if (closeChecker != null &&
-   * closeChecker.isTimeLimit(store, now)) { progress.cancel(); return false; } if (closeChecker !=
-   * null && closeChecker.isSizeLimit(store, len)) { progress.cancel(); return false; }
+   * </p>
+   * <p>
+   * For #3, it can be performed in parallel to other operations.
+   * </p>
+   * <p>
+   * For #4 bulk load and compaction don't conflict with each other on the region level (for
+   * multi-family atomicy).
+   * </p>
+   * <p>
+   * Region close and compaction are guarded pretty well by the 'writestate'. In HRegion#doClose(),
+   * we have :
+   *
+   * <pre>
+   * synchronized (writestate) {
+   *   // Disable compacting and flushing by background threads for this
+   *   // region.
+   *   canFlush = !writestate.readOnly;
+   *   writestate.writesEnabled = false;
+   *   LOG.debug("Closing " + this + ": disabling compactions & flushes");
+   *   waitForFlushesAndCompactions();
+   * }
+   * </pre>
+   *
+   * {@code waitForFlushesAndCompactions()} would wait for {@code writestate.compacting} to come
+   * down to 0. and in {@code HRegion.compact()}
+   *
+   * <pre>
+   *   try {
+   *     synchronized (writestate) {
+   *       if (writestate.writesEnabled) {
+   *         wasStateSet = true;
+   *         ++writestate.compacting;
+   *       } else {
+   *         String msg = "NOT compacting region " + this + ". Writes disabled.";
+   *         LOG.info(msg);
+   *         status.abort(msg);
+   *         return false;
+   *       }
+   *     }
+   *   }
+   * </pre>
+   *
+   * Also in {@code compactor.performCompaction()}: check periodically to see if a system stop is
+   * requested
+   *
+   * <pre>
+   * if (closeChecker != null && closeChecker.isTimeLimit(store, now)) {
+   *   progress.cancel();
+   *   return false;
+   * }
+   * if (closeChecker != null && closeChecker.isSizeLimit(store, len)) {
+   *   progress.cancel();
+   *   return false;
+   * }
+   * </pre>
+   * </p>
    */
   public boolean compact(CompactionContext compaction, HStore store,
     ThroughputController throughputController, User user) throws IOException {
@@ -3233,18 +3379,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * <p/>
    * Caller should have the row and region locks.
    */
-  private void prepareDeleteTimestamps(Mutation mutation, Map<byte[], List<Cell>> familyMap,
+  private void prepareDeleteTimestamps(Mutation mutation, Map<byte[], List<ExtendedCell>> familyMap,
     byte[] byteNow) throws IOException {
-    for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
+    for (Map.Entry<byte[], List<ExtendedCell>> e : familyMap.entrySet()) {
 
       byte[] family = e.getKey();
-      List<Cell> cells = e.getValue();
+      List<ExtendedCell> cells = e.getValue();
       assert cells instanceof RandomAccess;
 
       Map<byte[], Integer> kvCount = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       int listSize = cells.size();
       for (int i = 0; i < listSize; i++) {
-        Cell cell = cells.get(i);
+        ExtendedCell cell = cells.get(i);
         // Check if time is LATEST, change to time of most recent addition if so
         // This is expensive.
         if (
@@ -3284,7 +3430,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     try (RegionScanner scanner = getScanner(new Scan(get))) {
       // NOTE: Please don't use HRegion.get() instead,
       // because it will copy cells to heap. See HBASE-26036
-      List<Cell> result = new ArrayList<>();
+      List<ExtendedCell> result = new ArrayList<>();
       scanner.next(result);
 
       if (result.size() < count) {
@@ -3330,7 +3476,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     protected final OperationStatus[] retCodeDetails;
     protected final WALEdit[] walEditsFromCoprocessors;
     // reference family cell maps directly so coprocessors can mutate them if desired
-    protected final Map<byte[], List<Cell>>[] familyCellMaps;
+    protected final Map<byte[], List<ExtendedCell>>[] familyCellMaps;
     // For Increment/Append operations
     protected final Result[] results;
 
@@ -3499,7 +3645,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
         if (mutation instanceof Put || mutation instanceof Delete) {
           // store the family map reference to allow for mutations
-          familyCellMaps[index] = mutation.getFamilyCellMap();
+          // we know that in mutation, only ExtendedCells are allow so here we do a fake cast, to
+          // simplify later logic
+          familyCellMaps[index] = ClientInternalHelper.getExtendedFamilyCellMap(mutation);
         }
 
         // store durability for the batch (highest durability of all operations in the batch)
@@ -3695,7 +3843,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
           // Add WAL edits from CPs.
           WALEdit fromCP = walEditsFromCoprocessors[index];
-          List<Cell> cellsFromCP = fromCP == null ? Collections.emptyList() : fromCP.getCells();
+          List<ExtendedCell> cellsFromCP = fromCP == null
+            ? Collections.emptyList()
+            : WALEditInternalHelper.getExtendedCells(fromCP);
           addNonSkipWALMutationsToWALEdit(miniBatchOp, walEdit, cellsFromCP, familyCellMaps[index]);
           return true;
         }
@@ -3705,19 +3855,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     protected void addNonSkipWALMutationsToWALEdit(
       final MiniBatchOperationInProgress<Mutation> miniBatchOp, WALEdit walEdit,
-      List<Cell> cellsFromCP, Map<byte[], List<Cell>> familyCellMap) {
+      List<ExtendedCell> cellsFromCP, Map<byte[], List<ExtendedCell>> familyCellMap) {
       doAddCellsToWALEdit(walEdit, cellsFromCP, familyCellMap);
     }
 
-    protected static void doAddCellsToWALEdit(WALEdit walEdit, List<Cell> cellsFromCP,
-      Map<byte[], List<Cell>> familyCellMap) {
-      walEdit.add(cellsFromCP);
-      walEdit.add(familyCellMap);
+    protected static void doAddCellsToWALEdit(WALEdit walEdit, List<ExtendedCell> cellsFromCP,
+      Map<byte[], List<ExtendedCell>> familyCellMap) {
+      WALEditInternalHelper.addExtendedCell(walEdit, cellsFromCP);
+      WALEditInternalHelper.addMap(walEdit, familyCellMap);
     }
 
     protected abstract void cacheSkipWALMutationForRegionReplication(
       final MiniBatchOperationInProgress<Mutation> miniBatchOp,
-      List<Pair<NonceKey, WALEdit>> walEdits, Map<byte[], List<Cell>> familyCellMap);
+      List<Pair<NonceKey, WALEdit>> walEdits, Map<byte[], List<ExtendedCell>> familyCellMap);
 
     /**
      * This method completes mini-batch operations by calling postBatchMutate() CP hook (if
@@ -3772,11 +3922,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * also does <b>not</b> check the families for validity.
      * @param familyMap Map of Cells by family
      */
-    protected void applyFamilyMapToMemStore(Map<byte[], List<Cell>> familyMap,
+    protected void applyFamilyMapToMemStore(Map<byte[], List<ExtendedCell>> familyMap,
       MemStoreSizing memstoreAccounting) {
-      for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
+      for (Map.Entry<byte[], List<ExtendedCell>> e : familyMap.entrySet()) {
         byte[] family = e.getKey();
-        List<Cell> cells = e.getValue();
+        List<ExtendedCell> cells = e.getValue();
         assert cells instanceof RandomAccess;
         region.applyToMemStore(region.getStore(family), cells, false, memstoreAccounting);
       }
@@ -3955,7 +4105,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             return true;
           }
 
-          List<Cell> results = returnResults ? new ArrayList<>(mutation.size()) : null;
+          List<ExtendedCell> results = returnResults ? new ArrayList<>(mutation.size()) : null;
           familyCellMaps[index] = reckonDeltas(mutation, results, timestamp);
           this.results[index] = results != null ? Result.create(results) : Result.EMPTY_RESULT;
 
@@ -4026,7 +4176,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       assert mutation instanceof Increment || mutation instanceof Append;
       Get get = new Get(mutation.getRow());
       CellScanner cellScanner = mutation.cellScanner();
-      while (!cellScanner.advance()) {
+      while (cellScanner.advance()) {
         Cell cell = cellScanner.current();
         get.addColumn(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell));
       }
@@ -4045,19 +4195,20 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return get;
     }
 
-    private Map<byte[], List<Cell>> reckonDeltas(Mutation mutation, List<Cell> results, long now)
-      throws IOException {
+    private Map<byte[], List<ExtendedCell>> reckonDeltas(Mutation mutation,
+      List<ExtendedCell> results, long now) throws IOException {
       assert mutation instanceof Increment || mutation instanceof Append;
-      Map<byte[], List<Cell>> ret = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      Map<byte[], List<ExtendedCell>> ret = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       // Process a Store/family at a time.
-      for (Map.Entry<byte[], List<Cell>> entry : mutation.getFamilyCellMap().entrySet()) {
+      for (Map.Entry<byte[], List<ExtendedCell>> entry : ClientInternalHelper
+        .getExtendedFamilyCellMap(mutation).entrySet()) {
         final byte[] columnFamilyName = entry.getKey();
-        List<Cell> deltas = entry.getValue();
+        List<ExtendedCell> deltas = entry.getValue();
         // Reckon for the Store what to apply to WAL and MemStore.
-        List<Cell> toApply =
+        List<ExtendedCell> toApply =
           reckonDeltasByStore(region.stores.get(columnFamilyName), mutation, now, deltas, results);
         if (!toApply.isEmpty()) {
-          for (Cell cell : toApply) {
+          for (ExtendedCell cell : toApply) {
             HStore store = region.getStore(cell);
             if (store == null) {
               region.checkFamily(CellUtil.cloneFamily(cell));
@@ -4082,11 +4233,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * @return Resulting Cells after <code>deltas</code> have been applied to current values. Side
      *         effect is our filling out of the <code>results</code> List.
      */
-    private List<Cell> reckonDeltasByStore(HStore store, Mutation mutation, long now,
-      List<Cell> deltas, List<Cell> results) throws IOException {
+    private List<ExtendedCell> reckonDeltasByStore(HStore store, Mutation mutation, long now,
+      List<ExtendedCell> deltas, List<ExtendedCell> results) throws IOException {
       assert mutation instanceof Increment || mutation instanceof Append;
       byte[] columnFamily = store.getColumnFamilyDescriptor().getName();
-      List<Pair<Cell, Cell>> cellPairs = new ArrayList<>(deltas.size());
+      List<Pair<ExtendedCell, ExtendedCell>> cellPairs = new ArrayList<>(deltas.size());
 
       // Sort the cells so that they match the order that they appear in the Get results.
       // Otherwise, we won't be able to find the existing values if the cells are not specified
@@ -4095,7 +4246,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       // Get previous values for all columns in this family.
       Get get = new Get(mutation.getRow());
-      for (Cell cell : deltas) {
+      for (ExtendedCell cell : deltas) {
         get.addColumn(columnFamily, CellUtil.cloneQualifier(cell));
       }
       TimeRange tr;
@@ -4112,14 +4263,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       try (RegionScanner scanner = region.getScanner(new Scan(get))) {
         // NOTE: Please don't use HRegion.get() instead,
         // because it will copy cells to heap. See HBASE-26036
-        List<Cell> currentValues = new ArrayList<>();
+        List<ExtendedCell> currentValues = new ArrayList<>();
         scanner.next(currentValues);
         // Iterate the input columns and update existing values if they were found, otherwise
         // add new column initialized to the delta amount
         int currentValuesIndex = 0;
         for (int i = 0; i < deltas.size(); i++) {
-          Cell delta = deltas.get(i);
-          Cell currentValue = null;
+          ExtendedCell delta = deltas.get(i);
+          ExtendedCell currentValue = null;
           if (
             currentValuesIndex < currentValues.size()
               && CellUtil.matchingQualifier(currentValues.get(currentValuesIndex), delta)
@@ -4130,7 +4281,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             }
           }
           // Switch on whether this an increment or an append building the new Cell to apply.
-          Cell newCell;
+          ExtendedCell newCell;
           if (mutation instanceof Increment) {
             long deltaAmount = getLongValue(delta);
             final long newValue =
@@ -4164,16 +4315,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (region.coprocessorHost != null) {
           // Here the operation must be increment or append.
           cellPairs = mutation instanceof Increment
-            ? region.coprocessorHost.postIncrementBeforeWAL(mutation, cellPairs)
-            : region.coprocessorHost.postAppendBeforeWAL(mutation, cellPairs);
+            ? region.coprocessorHost.postIncrementBeforeWAL(mutation, (List) cellPairs)
+            : region.coprocessorHost.postAppendBeforeWAL(mutation, (List) cellPairs);
         }
       }
       return cellPairs.stream().map(Pair::getSecond).collect(Collectors.toList());
     }
 
-    private static Cell reckonDelta(final Cell delta, final Cell currentCell,
-      final byte[] columnFamily, final long now, Mutation mutation, Function<Cell, byte[]> supplier)
-      throws IOException {
+    private static ExtendedCell reckonDelta(final ExtendedCell delta,
+      final ExtendedCell currentCell, final byte[] columnFamily, final long now, Mutation mutation,
+      Function<ExtendedCell, byte[]> supplier) throws IOException {
       // Forward any tags found on the delta.
       List<Tag> tags = TagUtil.carryForwardTags(delta);
       if (currentCell != null) {
@@ -4191,7 +4342,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       } else {
         tags = TagUtil.carryForwardTTLTag(tags, mutation.getTTL());
         PrivateCellUtil.updateLatestStamp(delta, now);
-        return CollectionUtils.isEmpty(tags) ? delta : PrivateCellUtil.createCell(delta, tags);
+        ExtendedCell deltaCell = (ExtendedCell) delta;
+        return CollectionUtils.isEmpty(tags)
+          ? deltaCell
+          : PrivateCellUtil.createCell(deltaCell, tags);
       }
     }
 
@@ -4224,7 +4378,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     @Override
     protected void cacheSkipWALMutationForRegionReplication(
       MiniBatchOperationInProgress<Mutation> miniBatchOp,
-      List<Pair<NonceKey, WALEdit>> nonceKeyAndWALEdits, Map<byte[], List<Cell>> familyCellMap) {
+      List<Pair<NonceKey, WALEdit>> nonceKeyAndWALEdits,
+      Map<byte[], List<ExtendedCell>> familyCellMap) {
       if (!this.regionReplicateEnable) {
         return;
       }
@@ -4241,7 +4396,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           this.createWALEditForReplicateSkipWAL(miniBatchOp, nonceKeyAndWALEdits);
         miniBatchOp.setWalEditForReplicateIfExistsSkipWAL(walEditForReplicateIfExistsSkipWAL);
       }
-      walEditForReplicateIfExistsSkipWAL.add(familyCellMap);
+      WALEditInternalHelper.addMap(walEditForReplicateIfExistsSkipWAL, familyCellMap);
 
     }
 
@@ -4260,8 +4415,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     @Override
     protected void addNonSkipWALMutationsToWALEdit(
       final MiniBatchOperationInProgress<Mutation> miniBatchOp, WALEdit walEdit,
-      List<Cell> cellsFromCP, Map<byte[], List<Cell>> familyCellMap) {
-
+      List<ExtendedCell> cellsFromCP, Map<byte[], List<ExtendedCell>> familyCellMap) {
       super.addNonSkipWALMutationsToWALEdit(miniBatchOp, walEdit, cellsFromCP, familyCellMap);
       WALEdit walEditForReplicateIfExistsSkipWAL =
         miniBatchOp.getWalEditForReplicateIfExistsSkipWAL();
@@ -4504,7 +4658,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
           // Returned mutations from coprocessor correspond to the Mutation at index i. We can
           // directly add the cells from those mutations to the familyMaps of this mutation.
-          Map<byte[], List<Cell>> cpFamilyMap = cpMutation.getFamilyCellMap();
+          Map<byte[], List<ExtendedCell>> cpFamilyMap =
+            ClientInternalHelper.getExtendedFamilyCellMap(cpMutation);
           region.rewriteCellTags(cpFamilyMap, mutation);
           // will get added to the memStore later
           mergeFamilyMaps(familyCellMaps[i], cpFamilyMap);
@@ -4513,7 +4668,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // If the corresponding mutation contains the SKIP_WAL, we shouldn't count the
           // cells of returned mutation.
           if (region.getEffectiveDurability(mutation.getDurability()) != Durability.SKIP_WAL) {
-            for (List<Cell> cells : cpFamilyMap.values()) {
+            for (List<ExtendedCell> cells : cpFamilyMap.values()) {
               miniBatchOp.addCellCount(cells.size());
             }
           }
@@ -4522,10 +4677,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       });
     }
 
-    private void mergeFamilyMaps(Map<byte[], List<Cell>> familyMap,
-      Map<byte[], List<Cell>> toBeMerged) {
-      for (Map.Entry<byte[], List<Cell>> entry : toBeMerged.entrySet()) {
-        List<Cell> cells = familyMap.get(entry.getKey());
+    private void mergeFamilyMaps(Map<byte[], List<ExtendedCell>> familyMap,
+      Map<byte[], List<ExtendedCell>> toBeMerged) {
+      for (Map.Entry<byte[], List<ExtendedCell>> entry : toBeMerged.entrySet()) {
+        List<ExtendedCell> cells = familyMap.get(entry.getKey());
         if (cells == null) {
           familyMap.put(entry.getKey(), entry.getValue());
         } else {
@@ -4657,7 +4812,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     @Override
     protected void cacheSkipWALMutationForRegionReplication(
       MiniBatchOperationInProgress<Mutation> miniBatchOp, List<Pair<NonceKey, WALEdit>> walEdits,
-      Map<byte[], List<Cell>> familyCellMap) {
+      Map<byte[], List<ExtendedCell>> familyCellMap) {
       // There is no action to do if current region is secondary replica
     }
 
@@ -5038,10 +5193,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // we'll get the latest on this row.
         boolean matches = false;
         long cellTs = 0;
-        try (RegionScanner scanner = getScanner(new Scan(get))) {
+        QueryMetrics metrics = null;
+        try (RegionScannerImpl scanner = getScanner(new Scan(get))) {
           // NOTE: Please don't use HRegion.get() instead,
           // because it will copy cells to heap. See HBASE-26036
-          List<Cell> result = new ArrayList<>(1);
+          List<ExtendedCell> result = new ArrayList<>(1);
           scanner.next(result);
           if (filter != null) {
             if (!result.isEmpty()) {
@@ -5057,11 +5213,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               matches = (result.get(0).getValueLength() == 0) == (op != CompareOperator.NOT_EQUAL);
               cellTs = result.get(0).getTimestamp();
             } else if (result.size() == 1) {
-              Cell kv = result.get(0);
+              ExtendedCell kv = result.get(0);
               cellTs = kv.getTimestamp();
               int compareResult = PrivateCellUtil.compareValue(kv, comparator);
               matches = matches(op, compareResult);
             }
+          }
+          if (checkAndMutate.isQueryMetricsEnabled()) {
+            metrics = new QueryMetrics(scanner.getContext().getBlockSizeProgress());
           }
         }
 
@@ -5076,14 +5235,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           byte[] byteTs = Bytes.toBytes(ts);
           if (mutation != null) {
             if (mutation instanceof Put) {
-              updateCellTimestamps(mutation.getFamilyCellMap().values(), byteTs);
+              updateCellTimestamps(ClientInternalHelper.getExtendedFamilyCellMap(mutation).values(),
+                byteTs);
             }
             // And else 'delete' is not needed since it already does a second get, and sets the
             // timestamp from get (see prepareDeleteTimestamps).
           } else {
             for (Mutation m : rowMutations.getMutations()) {
               if (m instanceof Put) {
-                updateCellTimestamps(m.getFamilyCellMap().values(), byteTs);
+                updateCellTimestamps(ClientInternalHelper.getExtendedFamilyCellMap(m).values(),
+                  byteTs);
               }
             }
             // And else 'delete' is not needed since it already does a second get, and sets the
@@ -5097,10 +5258,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             r = mutateRow(rowMutations, nonceGroup, nonce);
           }
           this.checkAndMutateChecksPassed.increment();
-          return new CheckAndMutateResult(true, r);
+          return new CheckAndMutateResult(true, r).setMetrics(metrics);
         }
         this.checkAndMutateChecksFailed.increment();
-        return new CheckAndMutateResult(false, null);
+        return new CheckAndMutateResult(false, null).setMetrics(metrics);
       } finally {
         rowLock.release();
       }
@@ -5194,12 +5355,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     manifest.addRegion(this);
   }
 
-  private void updateSequenceId(final Iterable<List<Cell>> cellItr, final long sequenceId)
+  private void updateSequenceId(final Iterable<List<ExtendedCell>> cellItr, final long sequenceId)
     throws IOException {
-    for (List<Cell> cells : cellItr) {
-      if (cells == null) return;
-      for (Cell cell : cells) {
-        PrivateCellUtil.setSequenceId(cell, sequenceId);
+    for (List<ExtendedCell> cells : cellItr) {
+      if (cells == null) {
+        return;
+      }
+      for (ExtendedCell cell : cells) {
+        cell.setSequenceId(sequenceId);
       }
     }
   }
@@ -5208,10 +5371,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Replace any cell timestamps set to {@link org.apache.hadoop.hbase.HConstants#LATEST_TIMESTAMP}
    * provided current timestamp.
    */
-  private static void updateCellTimestamps(final Iterable<List<Cell>> cellItr, final byte[] now)
-    throws IOException {
-    for (List<Cell> cells : cellItr) {
-      if (cells == null) continue;
+  private static void updateCellTimestamps(final Iterable<List<ExtendedCell>> cellItr,
+    final byte[] now) throws IOException {
+    for (List<ExtendedCell> cells : cellItr) {
+      if (cells == null) {
+        continue;
+      }
       // Optimization: 'foreach' loop is not used. See:
       // HBASE-12023 HRegion.applyFamilyMapToMemstore creates too many iterator objects
       assert cells instanceof RandomAccess;
@@ -5225,7 +5390,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Possibly rewrite incoming cell tags.
    */
-  private void rewriteCellTags(Map<byte[], List<Cell>> familyMap, final Mutation m) {
+  private void rewriteCellTags(Map<byte[], List<ExtendedCell>> familyMap, final Mutation m) {
     // Check if we have any work to do and early out otherwise
     // Update these checks as more logic is added here
     if (m.getTTL() == Long.MAX_VALUE) {
@@ -5233,12 +5398,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     // From this point we know we have some work to do
-    for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
-      List<Cell> cells = e.getValue();
+    for (Map.Entry<byte[], List<ExtendedCell>> e : familyMap.entrySet()) {
+      List<ExtendedCell> cells = e.getValue();
       assert cells instanceof RandomAccess;
       int listSize = cells.size();
       for (int i = 0; i < listSize; i++) {
-        Cell cell = cells.get(i);
+        ExtendedCell cell = cells.get(i);
         List<Tag> newTags = TagUtil.carryForwardTags(null, cell);
         newTags = TagUtil.carryForwardTTLTag(newTags, m.getTTL());
         // Rewrite the cell with the updated set of tags
@@ -5308,7 +5473,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *              set; when set we will run operations that make sense in the increment/append
    *              scenario but that do not make sense otherwise.
    */
-  private void applyToMemStore(HStore store, List<Cell> cells, boolean delta,
+  private void applyToMemStore(HStore store, List<ExtendedCell> cells, boolean delta,
     MemStoreSizing memstoreAccounting) {
     // Any change in how we update Store/MemStore needs to also be done in other applyToMemStore!!!!
     boolean upsert = delta && store.getColumnFamilyDescriptor().getMaxVersions() == 1;
@@ -5465,9 +5630,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // column family. Have to fake out file type too by casting our recovered.edits as
         // storefiles
         String fakeFamilyName = WALSplitUtil.getRegionDirRecoveredEditsDir(regionWALDir).getName();
+        StoreContext storeContext =
+          StoreContext.getBuilder().withRegionFileSystem(getRegionFileSystem()).build();
+        StoreFileTracker sft = StoreFileTrackerFactory.create(this.conf, true, storeContext);
         Set<HStoreFile> fakeStoreFiles = new HashSet<>(files.size());
         for (Path file : files) {
-          fakeStoreFiles.add(new HStoreFile(walFS, file, this.conf, null, null, true));
+          fakeStoreFiles.add(new HStoreFile(walFS, file, this.conf, null, null, true, sft));
         }
         getRegionWALFileSystem().archiveRecoveredEdits(fakeFamilyName, fakeStoreFiles);
       } else {
@@ -5665,7 +5833,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
           boolean flush = false;
           MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
-          for (Cell cell : val.getCells()) {
+          for (Cell c : val.getCells()) {
+            assert c instanceof ExtendedCell;
+            ExtendedCell cell = (ExtendedCell) c;
             // Check this edit is for me. Also, guard against writing the special
             // METACOLUMN info such as HBASE::CACHEFLUSH entries
             if (WALEdit.isMetaEditFamily(cell)) {
@@ -5734,7 +5904,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       } catch (EOFException eof) {
         if (!conf.getBoolean(RECOVERED_EDITS_IGNORE_EOF, false)) {
-          Path p = WALSplitUtil.moveAsideBadEditsFile(walFS, edits);
+          Path p = WALSplitUtil.moveAsideBadEditsFile(fs, edits);
           msg = "EnLongAddered EOF. Most likely due to Master failure during "
             + "wal splitting, so we have this data in another edit. Continuing, but renaming "
             + edits + " as " + p + " for region " + this;
@@ -5748,7 +5918,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // If the IOE resulted from bad file format,
         // then this problem is idempotent and retrying won't help
         if (ioe.getCause() instanceof ParseException) {
-          Path p = WALSplitUtil.moveAsideBadEditsFile(walFS, edits);
+          Path p = WALSplitUtil.moveAsideBadEditsFile(fs, edits);
           msg =
             "File corruption enLongAddered!  " + "Continuing, but renaming " + edits + " as " + p;
           LOG.warn(msg, ioe);
@@ -6484,17 +6654,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             continue;
           }
 
-          List<String> storeFiles = storeDescriptor.getStoreFileList();
-          for (String storeFile : storeFiles) {
-            StoreFileInfo storeFileInfo = null;
+          StoreContext storeContext = store.getStoreContext();
+          StoreFileTracker sft = StoreFileTrackerFactory.create(conf, false, storeContext);
+
+          List<StoreFileInfo> storeFiles = sft.load();
+          for (StoreFileInfo storeFileInfo : storeFiles) {
             try {
-              storeFileInfo = fs.getStoreFileInfo(Bytes.toString(family), storeFile);
               store.bulkLoadHFile(storeFileInfo);
             } catch (FileNotFoundException ex) {
-              LOG.warn(getRegionInfo().getEncodedName() + " : "
-                + ((storeFileInfo != null)
-                  ? storeFileInfo.toString()
-                  : (new Path(Bytes.toString(family), storeFile)).toString())
+              LOG.warn(getRegionInfo().getEncodedName() + " : " + storeFileInfo.toString()
                 + " doesn't exist any more. Skip loading the file");
             }
           }
@@ -6521,10 +6689,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * <li>We will advance MVCC in the caller directly.</li>
    * </ol>
    */
-  private void replayWALBatchMutate(Map<byte[], List<Cell>> family2Cells) throws IOException {
+  private void replayWALBatchMutate(Map<byte[], List<ExtendedCell>> family2Cells)
+    throws IOException {
     startRegionOperation(Operation.REPLAY_BATCH_MUTATE);
     try {
-      for (Map.Entry<byte[], List<Cell>> entry : family2Cells.entrySet()) {
+      for (Map.Entry<byte[], List<ExtendedCell>> entry : family2Cells.entrySet()) {
         applyToMemStore(getStore(entry.getKey()), entry.getValue(), false, memStoreSizing);
       }
     } finally {
@@ -6670,13 +6839,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
         return;
       }
-      Map<byte[], List<Cell>> family2Cells = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      Map<byte[], List<ExtendedCell>> family2Cells = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (int i = 0; i < count; i++) {
         // Throw index out of bounds if our cell count is off
         if (!cells.advance()) {
           throw new ArrayIndexOutOfBoundsException("Expected=" + count + ", index=" + i);
         }
-        Cell cell = cells.current();
+        Cell c = cells.current();
+        assert c instanceof ExtendedCell;
+        ExtendedCell cell = (ExtendedCell) c;
         if (WALEdit.isMetaEditFamily(cell)) {
           // If there is meta edit, i.e, we have done flush/compaction/open, then we need to apply
           // the previous cells first, and then replay the special meta edit. The meta edit is like
@@ -6871,7 +7042,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param s    Store to add edit too.
    * @param cell Cell to add.
    */
-  protected void restoreEdit(HStore s, Cell cell, MemStoreSizing memstoreAccounting) {
+  protected void restoreEdit(HStore s, ExtendedCell cell, MemStoreSizing memstoreAccounting) {
     s.add(cell, memstoreAccounting);
   }
 
@@ -7483,37 +7654,60 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   // Utility methods
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  public static HRegion newHRegion(Path tableDir, WAL wal, FileSystem fs, Configuration conf,
+    RegionInfo regionInfo, final TableDescriptor htd, RegionServerServices rsServices) {
+    return newHRegion(tableDir, wal, fs, conf, regionInfo, htd, rsServices, null);
+  }
+
   /**
    * A utility method to create new instances of HRegion based on the {@link HConstants#REGION_IMPL}
    * configuration property.
-   * @param tableDir   qualified path of directory where region should be located, usually the table
-   *                   directory.
-   * @param wal        The WAL is the outbound log for any updates to the HRegion The wal file is a
-   *                   logfile from the previous execution that's custom-computed for this HRegion.
-   *                   The HRegionServer computes and sorts the appropriate wal info for this
-   *                   HRegion. If there is a previous file (implying that the HRegion has been
-   *                   written-to before), then read it from the supplied path.
-   * @param fs         is the filesystem.
-   * @param conf       is global configuration settings.
-   * @param regionInfo - RegionInfo that describes the region is new), then read them from the
-   *                   supplied path.
-   * @param htd        the table descriptor
+   * @param tableDir             qualified path of directory where region should be located, usually
+   *                             the table directory.
+   * @param wal                  The WAL is the outbound log for any updates to the HRegion The wal
+   *                             file is a logfile from the previous execution that's
+   *                             custom-computed for this HRegion. The HRegionServer computes and
+   *                             sorts the appropriate wal info for this HRegion. If there is a
+   *                             previous file (implying that the HRegion has been written-to
+   *                             before), then read it from the supplied path.
+   * @param fs                   is the filesystem.
+   * @param conf                 is global configuration settings.
+   * @param regionInfo           - RegionInfo that describes the region is new), then read them from
+   *                             the supplied path.
+   * @param htd                  the table descriptor
+   * @param keyManagementService reference to {@link KeyManagementService} or null
    * @return the new instance
    */
   public static HRegion newHRegion(Path tableDir, WAL wal, FileSystem fs, Configuration conf,
-    RegionInfo regionInfo, final TableDescriptor htd, RegionServerServices rsServices) {
+    RegionInfo regionInfo, final TableDescriptor htd, RegionServerServices rsServices,
+    final KeyManagementService keyManagementService) {
+    List<Class<?>> ctorArgTypes =
+      Arrays.asList(Path.class, WAL.class, FileSystem.class, Configuration.class, RegionInfo.class,
+        TableDescriptor.class, RegionServerServices.class, KeyManagementService.class);
+    List<Object> ctorArgs =
+      Arrays.asList(tableDir, wal, fs, conf, regionInfo, htd, rsServices, keyManagementService);
+
+    try {
+      return createInstance(conf, ctorArgTypes, ctorArgs);
+    } catch (IllegalStateException e) {
+      // Try the old signature for the sake of test code.
+      return createInstance(conf, ctorArgTypes.subList(0, ctorArgTypes.size() - 1),
+        ctorArgs.subList(0, ctorArgs.size() - 1));
+    }
+  }
+
+  private static HRegion createInstance(Configuration conf, List<Class<?>> ctorArgTypes,
+    List<Object> ctorArgs) {
     try {
       @SuppressWarnings("unchecked")
       Class<? extends HRegion> regionClass =
         (Class<? extends HRegion>) conf.getClass(HConstants.REGION_IMPL, HRegion.class);
 
       Constructor<? extends HRegion> c =
-        regionClass.getConstructor(Path.class, WAL.class, FileSystem.class, Configuration.class,
-          RegionInfo.class, TableDescriptor.class, RegionServerServices.class);
-
-      return c.newInstance(tableDir, wal, fs, conf, regionInfo, htd, rsServices);
+        regionClass.getConstructor(ctorArgTypes.toArray(new Class<?>[ctorArgTypes.size()]));
+      return c.newInstance(ctorArgs.toArray(new Object[ctorArgs.size()]));
     } catch (Throwable e) {
-      // todo: what should I throw here?
       throw new IllegalStateException("Could not instantiate a region instance.", e);
     }
   }
@@ -7526,6 +7720,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param initialize - true to initialize the region
    * @return new HRegion
    */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public static HRegion createHRegion(final RegionInfo info, final Path rootDir,
     final Configuration conf, final TableDescriptor hTableDescriptor, final WAL wal,
     final boolean initialize) throws IOException {
@@ -7541,16 +7736,35 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param rsRpcServices An interface we can request flushes against.
    * @return new HRegion
    */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public static HRegion createHRegion(final RegionInfo info, final Path rootDir,
     final Configuration conf, final TableDescriptor hTableDescriptor, final WAL wal,
     final boolean initialize, RegionServerServices rsRpcServices) throws IOException {
+    return createHRegion(info, rootDir, conf, hTableDescriptor, wal, initialize, rsRpcServices,
+      null);
+  }
+
+  /**
+   * Convenience method creating new HRegions. Used by createTable.
+   * @param info                 Info for region to create.
+   * @param rootDir              Root directory for HBase instance
+   * @param wal                  shared WAL
+   * @param initialize           - true to initialize the region
+   * @param rsRpcServices        An interface we can request flushes against.
+   * @param keyManagementService reference to {@link KeyManagementService} or null
+   * @return new HRegion
+   */
+  public static HRegion createHRegion(final RegionInfo info, final Path rootDir,
+    final Configuration conf, final TableDescriptor hTableDescriptor, final WAL wal,
+    final boolean initialize, RegionServerServices rsRpcServices,
+    final KeyManagementService keyManagementService) throws IOException {
     LOG.info("creating " + info + ", tableDescriptor="
       + (hTableDescriptor == null ? "null" : hTableDescriptor) + ", regionDir=" + rootDir);
     createRegionDir(conf, info, rootDir);
     FileSystem fs = rootDir.getFileSystem(conf);
     Path tableDir = CommonFSUtils.getTableDir(rootDir, info.getTable());
-    HRegion region =
-      HRegion.newHRegion(tableDir, wal, fs, conf, info, hTableDescriptor, rsRpcServices);
+    HRegion region = HRegion.newHRegion(tableDir, wal, fs, conf, info, hTableDescriptor,
+      rsRpcServices, keyManagementService);
     if (initialize) {
       region.initialize(null);
     }
@@ -7561,11 +7775,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Create a region under the given table directory.
    */
   public static HRegion createHRegion(Configuration conf, RegionInfo regionInfo, FileSystem fs,
-    Path tableDir, TableDescriptor tableDesc) throws IOException {
+    Path tableDir, TableDescriptor tableDesc, KeyManagementService keyManagementService)
+    throws IOException {
     LOG.info("Creating {}, tableDescriptor={}, under table dir {}", regionInfo, tableDesc,
       tableDir);
     HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, regionInfo);
-    HRegion region = HRegion.newHRegion(tableDir, null, fs, conf, regionInfo, tableDesc, null);
+    HRegion region = HRegion.newHRegion(tableDir, null, fs, conf, regionInfo, tableDesc, null,
+      keyManagementService);
     return region;
   }
 
@@ -7584,7 +7800,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static HRegion createHRegion(final RegionInfo info, final Path rootDir,
     final Configuration conf, final TableDescriptor hTableDescriptor, final WAL wal)
     throws IOException {
-    return createHRegion(info, rootDir, conf, hTableDescriptor, wal, true);
+    return createHRegion(info, rootDir, conf, hTableDescriptor, wal, null);
+  }
+
+  public static HRegion createHRegion(final RegionInfo info, final Path rootDir,
+    final Configuration conf, final TableDescriptor hTableDescriptor, final WAL wal,
+    final KeyManagementService keyManagementService) throws IOException {
+    return createHRegion(info, rootDir, conf, hTableDescriptor, wal, true, null,
+      keyManagementService);
   }
 
   /**
@@ -7595,6 +7818,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *             properly kept up. HRegionStore does this every time it opens a new region.
    * @return new HRegion
    */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public static HRegion openHRegion(final RegionInfo info, final TableDescriptor htd, final WAL wal,
     final Configuration conf) throws IOException {
     return openHRegion(info, htd, wal, conf, null, null);
@@ -7616,7 +7840,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static HRegion openHRegion(final RegionInfo info, final TableDescriptor htd, final WAL wal,
     final Configuration conf, final RegionServerServices rsServices,
     final CancelableProgressable reporter) throws IOException {
-    return openHRegion(CommonFSUtils.getRootDir(conf), info, htd, wal, conf, rsServices, reporter);
+    return openHRegion(CommonFSUtils.getRootDir(conf), info, htd, wal, conf, rsServices, reporter,
+      rsServices);
   }
 
   /**
@@ -7630,9 +7855,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param conf    The Configuration object to use.
    * @return new HRegion
    */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public static HRegion openHRegion(Path rootDir, final RegionInfo info, final TableDescriptor htd,
     final WAL wal, final Configuration conf) throws IOException {
-    return openHRegion(rootDir, info, htd, wal, conf, null, null);
+    return openHRegion(rootDir, info, htd, wal, conf, null, null, null);
   }
 
   /**
@@ -7649,10 +7875,33 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param reporter   An interface we can report progress against.
    * @return new HRegion
    */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public static HRegion openHRegion(final Path rootDir, final RegionInfo info,
     final TableDescriptor htd, final WAL wal, final Configuration conf,
     final RegionServerServices rsServices, final CancelableProgressable reporter)
     throws IOException {
+    return openHRegion(rootDir, info, htd, wal, conf, rsServices, reporter, null);
+  }
+
+  /**
+   * Open a Region.
+   * @param rootDir              Root directory for HBase instance
+   * @param info                 Info for region to be opened.
+   * @param htd                  the table descriptor
+   * @param wal                  WAL for region to use. This method will call
+   *                             WAL#setSequenceNumber(long) passing the result of the call to
+   *                             HRegion#getMinSequenceId() to ensure the wal id is properly kept
+   *                             up. HRegionStore does this every time it opens a new region.
+   * @param conf                 The Configuration object to use.
+   * @param rsServices           An interface we can request flushes against.
+   * @param reporter             An interface we can report progress against.
+   * @param keyManagementService reference to {@link KeyManagementService} or null
+   * @return new HRegion
+   */
+  public static HRegion openHRegion(final Path rootDir, final RegionInfo info,
+    final TableDescriptor htd, final WAL wal, final Configuration conf,
+    final RegionServerServices rsServices, final CancelableProgressable reporter,
+    final KeyManagementService keyManagementService) throws IOException {
     FileSystem fs = null;
     if (rsServices != null) {
       fs = rsServices.getFileSystem();
@@ -7660,7 +7909,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (fs == null) {
       fs = rootDir.getFileSystem(conf);
     }
-    return openHRegion(conf, fs, rootDir, info, htd, wal, rsServices, reporter);
+    return openHRegion(conf, fs, rootDir, info, htd, wal, rsServices, reporter,
+      keyManagementService);
   }
 
   /**
@@ -7675,57 +7925,70 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *                properly kept up. HRegionStore does this every time it opens a new region.
    * @return new HRegion
    */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
     final Path rootDir, final RegionInfo info, final TableDescriptor htd, final WAL wal)
     throws IOException {
-    return openHRegion(conf, fs, rootDir, info, htd, wal, null, null);
+    return openHRegion(conf, fs, rootDir, info, htd, wal, null, null, null);
   }
 
-  /**
-   * Open a Region.
-   * @param conf       The Configuration object to use.
-   * @param fs         Filesystem to use
-   * @param rootDir    Root directory for HBase instance
-   * @param info       Info for region to be opened.
-   * @param htd        the table descriptor
-   * @param wal        WAL for region to use. This method will call WAL#setSequenceNumber(long)
-   *                   passing the result of the call to HRegion#getMinSequenceId() to ensure the
-   *                   wal id is properly kept up. HRegionStore does this every time it opens a new
-   *                   region.
-   * @param rsServices An interface we can request flushes against.
-   * @param reporter   An interface we can report progress against.
-   * @return new HRegion
-   */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
     final Path rootDir, final RegionInfo info, final TableDescriptor htd, final WAL wal,
     final RegionServerServices rsServices, final CancelableProgressable reporter)
     throws IOException {
-    Path tableDir = CommonFSUtils.getTableDir(rootDir, info.getTable());
-    return openHRegionFromTableDir(conf, fs, tableDir, info, htd, wal, rsServices, reporter);
+    return openHRegion(conf, fs, rootDir, info, htd, wal, rsServices, reporter, null);
   }
 
   /**
    * Open a Region.
-   * @param conf       The Configuration object to use.
-   * @param fs         Filesystem to use
-   * @param info       Info for region to be opened.
-   * @param htd        the table descriptor
-   * @param wal        WAL for region to use. This method will call WAL#setSequenceNumber(long)
-   *                   passing the result of the call to HRegion#getMinSequenceId() to ensure the
-   *                   wal id is properly kept up. HRegionStore does this every time it opens a new
-   *                   region.
-   * @param rsServices An interface we can request flushes against.
-   * @param reporter   An interface we can report progress against.
+   * @param conf                 The Configuration object to use.
+   * @param fs                   Filesystem to use
+   * @param rootDir              Root directory for HBase instance
+   * @param info                 Info for region to be opened.
+   * @param htd                  the table descriptor
+   * @param wal                  WAL for region to use. This method will call
+   *                             WAL#setSequenceNumber(long) passing the result of the call to
+   *                             HRegion#getMinSequenceId() to ensure the wal id is properly kept
+   *                             up. HRegionStore does this every time it opens a new region.
+   * @param rsServices           An interface we can request flushes against.
+   * @param reporter             An interface we can report progress against.
+   * @param keyManagementService reference to {@link KeyManagementService} or null
+   * @return new HRegion
+   */
+  public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
+    final Path rootDir, final RegionInfo info, final TableDescriptor htd, final WAL wal,
+    final RegionServerServices rsServices, final CancelableProgressable reporter,
+    final KeyManagementService keyManagementService) throws IOException {
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, info.getTable());
+    return openHRegionFromTableDir(conf, fs, tableDir, info, htd, wal, rsServices, reporter,
+      keyManagementService);
+  }
+
+  /**
+   * Open a Region.
+   * @param conf                 The Configuration object to use.
+   * @param fs                   Filesystem to use
+   * @param info                 Info for region to be opened.
+   * @param htd                  the table descriptor
+   * @param wal                  WAL for region to use. This method will call
+   *                             WAL#setSequenceNumber(long) passing the result of the call to
+   *                             HRegion#getMinSequenceId() to ensure the wal id is properly kept
+   *                             up. HRegionStore does this every time it opens a new region.
+   * @param rsServices           An interface we can request flushes against.
+   * @param reporter             An interface we can report progress against.
+   * @param keyManagementService reference to {@link KeyManagementService} or null
    * @return new HRegion
    * @throws NullPointerException if {@code info} is {@code null}
    */
   public static HRegion openHRegionFromTableDir(final Configuration conf, final FileSystem fs,
     final Path tableDir, final RegionInfo info, final TableDescriptor htd, final WAL wal,
-    final RegionServerServices rsServices, final CancelableProgressable reporter)
-    throws IOException {
+    final RegionServerServices rsServices, final CancelableProgressable reporter,
+    final KeyManagementService keyManagementService) throws IOException {
     Objects.requireNonNull(info, "RegionInfo cannot be null");
     LOG.debug("Opening region: {}", info);
-    HRegion r = HRegion.newHRegion(tableDir, wal, fs, conf, info, htd, rsServices);
+    HRegion r =
+      HRegion.newHRegion(tableDir, wal, fs, conf, info, htd, rsServices, keyManagementService);
     return r.openHRegion(reporter);
   }
 
@@ -7739,11 +8002,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param reporter An interface we can report progress against.
    * @return new HRegion
    */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public static HRegion openHRegion(final HRegion other, final CancelableProgressable reporter)
     throws IOException {
     HRegionFileSystem regionFs = other.getRegionFileSystem();
     HRegion r = newHRegion(regionFs.getTableDir(), other.getWAL(), regionFs.getFileSystem(),
-      other.baseConf, other.getRegionInfo(), other.getTableDescriptor(), null);
+      other.baseConf, other.getRegionInfo(), other.getTableDescriptor(), null, null);
     return r.openHRegion(reporter);
   }
 
@@ -7817,7 +8081,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (info.getReplicaId() <= 0) {
       info = RegionReplicaUtil.getRegionInfoForReplica(info, 1);
     }
-    HRegion r = HRegion.newHRegion(tableDir, null, fs, conf, info, htd, null);
+    HRegion r = HRegion.newHRegion(tableDir, null, fs, conf, info, htd, null, null);
     r.writestate.setReadOnly(true);
     return r.openHRegion(null);
   }
@@ -7837,7 +8101,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (fs == null) {
       fs = rootDir.getFileSystem(conf);
     }
-    HRegion r = HRegion.newHRegion(tableDir, wal, fs, conf, info, htd, null);
+    HRegion r = HRegion.newHRegion(tableDir, wal, fs, conf, info, htd, null, null);
     r.initializeWarmup(reporter);
     r.close();
     return r;
@@ -8720,7 +8984,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.storeHotnessProtector.update(conf);
     // update coprocessorHost if the configuration has changed.
     if (
-      CoprocessorConfigurationUtil.checkConfigurationChange(getReadOnlyConfiguration(), conf,
+      CoprocessorConfigurationUtil.checkConfigurationChange(this.coprocessorHost, conf,
         CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY)
     ) {

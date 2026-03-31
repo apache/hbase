@@ -17,33 +17,31 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellScannable;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHBaseRpcControllerImpl {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseRpcControllerImpl.class);
 
   @Test
   public void testListOfCellScannerables() throws IOException {
     final int count = 10;
-    List<CellScannable> cells = new ArrayList<>(count);
+    List<ExtendedCellScannable> cells = new ArrayList<>(count);
 
     for (int i = 0; i < count; i++) {
       cells.add(createCell(i));
@@ -54,8 +52,8 @@ public class TestHBaseRpcControllerImpl {
     for (; cellScanner.advance(); index++) {
       Cell cell = cellScanner.current();
       byte[] indexBytes = Bytes.toBytes(index);
-      assertTrue("" + index, Bytes.equals(indexBytes, 0, indexBytes.length, cell.getValueArray(),
-        cell.getValueOffset(), cell.getValueLength()));
+      assertTrue(Bytes.equals(indexBytes, 0, indexBytes.length, cell.getValueArray(),
+        cell.getValueOffset(), cell.getValueLength()), "" + index);
     }
     assertEquals(count, index);
   }
@@ -64,16 +62,16 @@ public class TestHBaseRpcControllerImpl {
    * @param index the index of the cell to use as its value
    * @return A faked out 'Cell' that does nothing but return index as its value
    */
-  static CellScannable createCell(final int index) {
-    return new CellScannable() {
+  static ExtendedCellScannable createCell(final int index) {
+    return new ExtendedCellScannable() {
       @Override
-      public CellScanner cellScanner() {
-        return new CellScanner() {
+      public ExtendedCellScanner cellScanner() {
+        return new ExtendedCellScanner() {
           @Override
-          public Cell current() {
+          public ExtendedCell current() {
             // Fake out a Cell. All this Cell has is a value that is an int in size and equal
             // to the above 'index' param serialized as an int.
-            return new Cell() {
+            return new ExtendedCell() {
               @Override
               public long heapSize() {
                 return 0;
@@ -179,6 +177,18 @@ public class TestHBaseRpcControllerImpl {
               @Override
               public Type getType() {
                 return null;
+              }
+
+              @Override
+              public void setSequenceId(long seqId) throws IOException {
+              }
+
+              @Override
+              public void setTimestamp(long ts) throws IOException {
+              }
+
+              @Override
+              public void setTimestamp(byte[] ts) throws IOException {
               }
             };
           }

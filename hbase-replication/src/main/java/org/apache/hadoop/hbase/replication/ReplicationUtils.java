@@ -25,8 +25,6 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CompoundConfiguration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -59,25 +57,6 @@ public final class ReplicationUtils {
     "org.apache.hadoop.hbase.replication.regionserver.RegionReplicaReplicationEndpoint";
 
   private ReplicationUtils() {
-  }
-
-  public static Configuration getPeerClusterConfiguration(ReplicationPeerConfig peerConfig,
-    Configuration baseConf) throws ReplicationException {
-    Configuration otherConf;
-    try {
-      otherConf = HBaseConfiguration.createClusterConf(baseConf, peerConfig.getClusterKey());
-    } catch (IOException e) {
-      throw new ReplicationException("Can't get peer configuration for peer " + peerConfig, e);
-    }
-
-    if (!peerConfig.getConfiguration().isEmpty()) {
-      CompoundConfiguration compound = new CompoundConfiguration();
-      compound.add(otherConf);
-      compound.addStringMap(peerConfig.getConfiguration());
-      return compound;
-    }
-
-    return otherConf;
   }
 
   private static boolean isCollectionEqual(Collection<String> c1, Collection<String> c2) {

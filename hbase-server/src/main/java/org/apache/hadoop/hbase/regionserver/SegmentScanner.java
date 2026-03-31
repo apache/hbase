@@ -24,8 +24,10 @@ import java.util.function.IntConsumer;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -40,20 +42,21 @@ public class SegmentScanner implements KeyValueScanner {
   private long readPoint;
   // the current iterator that can be reinitialized by
   // seek(), backwardSeek(), or reseek()
-  protected Iterator<Cell> iter;
+  protected Iterator<ExtendedCell> iter;
   // the pre-calculated cell to be returned by peek()
-  protected Cell current = null;
+  protected ExtendedCell current = null;
   // or next()
   // A flag represents whether could stop skipping KeyValues for MVCC
   // if have encountered the next row. Only used for reversed scan
   private boolean stopSkippingKVsIfNextRow = false;
   // Stop skipping KeyValues for MVCC if finish this row. Only used for reversed scan
-  private Cell stopSkippingKVsRow;
+  private ExtendedCell stopSkippingKVsRow;
   // last iterated KVs by seek (to restore the iterator state after reseek)
-  private Cell last = null;
+  private ExtendedCell last = null;
 
   // flag to indicate if this scanner is closed
   protected boolean closed = false;
+  private boolean isScanMetricsEnabled = false;
 
   /**
    * Scanners are ordered from 0 (oldest) to newest in increasing order.
@@ -66,6 +69,8 @@ public class SegmentScanner implements KeyValueScanner {
     iter = segment.iterator();
     // the initialization of the current is required for working with heap of SegmentScanners
     updateCurrent();
+    // Enable scan metrics for tracking bytes read after initialization of current
+    this.isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
     if (current == null) {
       // nothing to fetch from this scanner
       close();
@@ -77,7 +82,7 @@ public class SegmentScanner implements KeyValueScanner {
    * @return the currently observed Cell
    */
   @Override
-  public Cell peek() { // sanity check, the current should be always valid
+  public ExtendedCell peek() { // sanity check, the current should be always valid
     if (closed) {
       return null;
     }
@@ -93,11 +98,11 @@ public class SegmentScanner implements KeyValueScanner {
    * @return the next Cell or null if end of scanner
    */
   @Override
-  public Cell next() throws IOException {
+  public ExtendedCell next() throws IOException {
     if (closed) {
       return null;
     }
-    Cell oldCurrent = current;
+    ExtendedCell oldCurrent = current;
     updateCurrent(); // update the currently observed Cell
     return oldCurrent;
   }
@@ -108,7 +113,7 @@ public class SegmentScanner implements KeyValueScanner {
    * @return true if scanner has values left, false if end of scanner
    */
   @Override
-  public boolean seek(Cell cell) throws IOException {
+  public boolean seek(ExtendedCell cell) throws IOException {
     if (closed) {
       return false;
     }
@@ -124,7 +129,7 @@ public class SegmentScanner implements KeyValueScanner {
     return (current != null);
   }
 
-  protected Iterator<Cell> getIterator(Cell cell) {
+  protected Iterator<ExtendedCell> getIterator(ExtendedCell cell) {
     return segment.tailSet(cell).iterator();
   }
 
@@ -136,7 +141,7 @@ public class SegmentScanner implements KeyValueScanner {
    * @return true if scanner has values left, false if end of scanner
    */
   @Override
-  public boolean reseek(Cell cell) throws IOException {
+  public boolean reseek(ExtendedCell cell) throws IOException {
     if (closed) {
       return false;
     }
@@ -161,7 +166,7 @@ public class SegmentScanner implements KeyValueScanner {
    * @return true if the scanner is at the valid KeyValue, false if such Cell does not exist
    */
   @Override
-  public boolean backwardSeek(Cell key) throws IOException {
+  public boolean backwardSeek(ExtendedCell key) throws IOException {
     if (closed) {
       return false;
     }
@@ -179,21 +184,21 @@ public class SegmentScanner implements KeyValueScanner {
    *         Cell
    */
   @Override
-  public boolean seekToPreviousRow(Cell cell) throws IOException {
+  public boolean seekToPreviousRow(ExtendedCell cell) throws IOException {
     if (closed) {
       return false;
     }
     boolean keepSeeking;
     Cell key = cell;
     do {
-      Cell firstKeyOnRow = PrivateCellUtil.createFirstOnRow(key);
-      SortedSet<Cell> cellHead = segment.headSet(firstKeyOnRow);
+      ExtendedCell firstKeyOnRow = PrivateCellUtil.createFirstOnRow(key);
+      SortedSet<ExtendedCell> cellHead = segment.headSet(firstKeyOnRow);
       Cell lastCellBeforeRow = cellHead.isEmpty() ? null : cellHead.last();
       if (lastCellBeforeRow == null) {
         current = null;
         return false;
       }
-      Cell firstKeyOnPreviousRow = PrivateCellUtil.createFirstOnRow(lastCellBeforeRow);
+      ExtendedCell firstKeyOnPreviousRow = PrivateCellUtil.createFirstOnRow(lastCellBeforeRow);
       this.stopSkippingKVsIfNextRow = true;
       this.stopSkippingKVsRow = firstKeyOnPreviousRow;
       seek(firstKeyOnPreviousRow);
@@ -220,12 +225,12 @@ public class SegmentScanner implements KeyValueScanner {
     if (closed) {
       return false;
     }
-    Cell higherCell = segment.isEmpty() ? null : segment.last();
+    ExtendedCell higherCell = segment.isEmpty() ? null : segment.last();
     if (higherCell == null) {
       return false;
     }
 
-    Cell firstCellOnLastRow = PrivateCellUtil.createFirstOnRow(higherCell);
+    ExtendedCell firstCellOnLastRow = PrivateCellUtil.createFirstOnRow(higherCell);
 
     if (seek(firstCellOnLastRow)) {
       return true;
@@ -258,7 +263,7 @@ public class SegmentScanner implements KeyValueScanner {
   }
 
   @Override
-  public boolean requestSeek(Cell c, boolean forward, boolean useBloom) throws IOException {
+  public boolean requestSeek(ExtendedCell c, boolean forward, boolean useBloom) throws IOException {
     return NonLazyKeyValueScanner.doRealSeek(this, c, forward);
   }
 
@@ -302,7 +307,7 @@ public class SegmentScanner implements KeyValueScanner {
    *         otherwise Not relevant for in-memory scanner
    */
   @Override
-  public Cell getNextIndexedKey() {
+  public ExtendedCell getNextIndexedKey() {
     return null;
   }
 
@@ -334,11 +339,16 @@ public class SegmentScanner implements KeyValueScanner {
    * Private internal method for iterating over the segment, skipping the cells with irrelevant MVCC
    */
   protected void updateCurrent() {
-    Cell next = null;
+    ExtendedCell next = null;
+    long totalBytesRead = 0;
 
     try {
       while (iter.hasNext()) {
         next = iter.next();
+        if (isScanMetricsEnabled) {
+          // Batch collect bytes to reduce method call overhead
+          totalBytesRead += Segment.getCellLength(next);
+        }
         if (next.getSequenceId() <= this.readPoint) {
           current = next;
           return;// skip irrelevant versions
@@ -352,6 +362,10 @@ public class SegmentScanner implements KeyValueScanner {
 
       current = null; // nothing found
     } finally {
+      // Add accumulated bytes before returning
+      if (totalBytesRead > 0) {
+        ThreadLocalServerSideScanMetrics.addBytesReadFromMemstore(totalBytesRead);
+      }
       if (next != null) {
         // in all cases, remember the last KV we iterated to, needed for reseek()
         last = next;
@@ -363,7 +377,7 @@ public class SegmentScanner implements KeyValueScanner {
    * Private internal method that returns the higher of the two key values, or null if they are both
    * null
    */
-  private Cell getHighest(Cell first, Cell second) {
+  private ExtendedCell getHighest(ExtendedCell first, ExtendedCell second) {
     if (first == null && second == null) {
       return null;
     }

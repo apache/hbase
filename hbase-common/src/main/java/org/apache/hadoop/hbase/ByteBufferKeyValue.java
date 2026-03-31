@@ -328,10 +328,10 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
    */
   @Override
   public boolean equals(Object other) {
-    if (!(other instanceof Cell)) {
+    if (!(other instanceof ExtendedCell)) {
       return false;
     }
-    return CellUtil.equals(this, (Cell) other);
+    return PrivateCellUtil.equals(this, (ExtendedCell) other);
   }
 
   /**

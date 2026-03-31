@@ -20,15 +20,18 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.OptionalLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -77,6 +80,7 @@ public class HFileInputFormat extends FileInputFormat<NullWritable, Cell> {
     private Cell value = null;
     private long count;
     private boolean seeked = false;
+    private OptionalLong bulkloadSeqId;
 
     @Override
     public void initialize(InputSplit split, TaskAttemptContext context)
@@ -87,6 +91,7 @@ public class HFileInputFormat extends FileInputFormat<NullWritable, Cell> {
       FileSystem fs = path.getFileSystem(conf);
       LOG.info("Initialize HFileRecordReader for {}", path);
       this.in = HFile.createReader(fs, path, conf);
+      this.bulkloadSeqId = StoreFileInfo.getBulkloadSeqId(path);
 
       // The file info must be loaded before the scanner can be used.
       // This seems like a bug in HBase, but it's easily worked around.
@@ -108,6 +113,9 @@ public class HFileInputFormat extends FileInputFormat<NullWritable, Cell> {
         return false;
       }
       value = scanner.getCell();
+      if (value != null && bulkloadSeqId.isPresent()) {
+        PrivateCellUtil.setSequenceId(value, bulkloadSeqId.getAsLong());
+      }
       count++;
       return true;
     }
@@ -143,19 +151,25 @@ public class HFileInputFormat extends FileInputFormat<NullWritable, Cell> {
     List<FileStatus> result = new ArrayList<FileStatus>();
 
     // Explode out directories that match the original FileInputFormat filters
-    // since HFiles are written to directories where the
-    // directory name is the column name
+    // Typically these are <regionname>-level dirs, only requiring 1 level of recursion to
+    // get the <columnname>-level dirs where the HFile are written, but in some cases
+    // <tablename>-level dirs are provided requiring 2 levels of recursion.
     for (FileStatus status : super.listStatus(job)) {
-      if (status.isDirectory()) {
-        FileSystem fs = status.getPath().getFileSystem(job.getConfiguration());
-        for (FileStatus match : fs.listStatus(status.getPath(), HIDDEN_FILE_FILTER)) {
-          result.add(match);
-        }
-      } else {
-        result.add(status);
-      }
+      addFilesRecursively(job, status, result);
     }
     return result;
+  }
+
+  private static void addFilesRecursively(JobContext job, FileStatus status,
+    List<FileStatus> result) throws IOException {
+    if (status.isDirectory()) {
+      FileSystem fs = status.getPath().getFileSystem(job.getConfiguration());
+      for (FileStatus fileStatus : fs.listStatus(status.getPath(), HIDDEN_FILE_FILTER)) {
+        addFilesRecursively(job, fileStatus, result);
+      }
+    } else {
+      result.add(status);
+    }
   }
 
   @Override

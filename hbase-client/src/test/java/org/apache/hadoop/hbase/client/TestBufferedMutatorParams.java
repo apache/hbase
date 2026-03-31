@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -29,25 +30,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestBufferedMutatorParams {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBufferedMutatorParams.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   /**
    * Just to create in instance, this doesn't actually function.
@@ -133,14 +125,16 @@ public class TestBufferedMutatorParams {
   }
 
   @Test
-  public void testClone() {
+  public void testClone(TestInfo testInfo) {
     ExecutorService pool = new MockExecutorService();
-    final String tableName = name.getMethodName();
+    final String tableName = testInfo.getTestMethod().get().getName();
+    ;
     BufferedMutatorParams bmp = new BufferedMutatorParams(TableName.valueOf(tableName));
 
     BufferedMutator.ExceptionListener listener = new MockExceptionListener();
     bmp.writeBufferSize(17).setWriteBufferPeriodicFlushTimeoutMs(123)
-      .setWriteBufferPeriodicFlushTimerTickMs(456).maxKeyValueSize(13).pool(pool)
+      .setWriteBufferPeriodicFlushTimerTickMs(456).maxKeyValueSize(13).setMaxMutations(3737)
+      .setRequestAttribute("foo", "bar".getBytes(StandardCharsets.UTF_8)).pool(pool)
       .listener(listener);
     bmp.implementationClassName("someClassName");
     BufferedMutatorParams clone = bmp.clone();
@@ -151,6 +145,7 @@ public class TestBufferedMutatorParams {
     assertEquals(123, clone.getWriteBufferPeriodicFlushTimeoutMs());
     assertEquals(456, clone.getWriteBufferPeriodicFlushTimerTickMs());
     assertEquals(13, clone.getMaxKeyValueSize());
+    assertEquals(3737, clone.getMaxMutations());
     assertEquals("someClassName", clone.getImplementationClassName());
 
     cloneTest(bmp, clone);
@@ -178,6 +173,8 @@ public class TestBufferedMutatorParams {
     assertEquals(some.getWriteBufferPeriodicFlushTimerTickMs(),
       clone.getWriteBufferPeriodicFlushTimerTickMs());
     assertEquals(some.getMaxKeyValueSize(), clone.getMaxKeyValueSize());
+    assertTrue(some.getMaxMutations() == clone.getMaxMutations());
+    assertEquals(some.requestAttributes, clone.requestAttributes);
     assertTrue(some.getListener() == clone.getListener());
     assertTrue(some.getPool() == clone.getPool());
     assertEquals(some.getImplementationClassName(), clone.getImplementationClassName());

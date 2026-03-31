@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,7 +34,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
@@ -43,25 +42,20 @@ import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test cases for backup system table API
  */
-@Category(MediumTests.class)
+@Tag(LargeTests.TAG)
 public class TestBackupSystemTable {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupSystemTable.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   protected static Configuration conf = UTIL.getConfiguration();
@@ -69,7 +63,7 @@ public class TestBackupSystemTable {
   protected static Connection conn;
   protected BackupSystemTable table;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     conf.setBoolean(BackupRestoreConstants.BACKUP_ENABLE_KEY, true);
     BackupManager.decorateMasterConfiguration(conf);
@@ -78,12 +72,12 @@ public class TestBackupSystemTable {
     conn = UTIL.getConnection();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws IOException {
     table = new BackupSystemTable(conn);
   }
 
-  @After
+  @AfterEach
   public void after() {
     if (table != null) {
       table.close();
@@ -104,15 +98,6 @@ public class TestBackupSystemTable {
     table.deleteBackupInfo(ctx.getBackupId());
     readCtx = table.readBackupInfo(ctx.getBackupId());
     assertNull(readCtx);
-    cleanBackupTable();
-  }
-
-  @Test
-  public void testWriteReadBackupStartCode() throws IOException {
-    long code = 100L;
-    table.writeBackupStartCode(code, "root");
-    String readCode = table.readBackupStartCode("root");
-    assertEquals(code, Long.parseLong(readCode));
     cleanBackupTable();
   }
 
@@ -190,8 +175,11 @@ public class TestBackupSystemTable {
     String[] servers = new String[] { "server1", "server2", "server3" };
     Long[] timestamps = new Long[] { 100L, 102L, 107L };
 
+    // validate the prefix scan in readRegionServerlastLogRollResult will get the right timestamps
+    // when a backup root with the same prefix is present
     for (int i = 0; i < servers.length; i++) {
       table.writeRegionServerLastLogRollResult(servers[i], timestamps[i], "root");
+      table.writeRegionServerLastLogRollResult(servers[i], timestamps[i], "root/backup");
     }
 
     HashMap<String, Long> result = table.readRegionServerLastLogRollResult("root");
@@ -265,7 +253,10 @@ public class TestBackupSystemTable {
     rsTimestampMap.put("rs2:100", 101L);
     rsTimestampMap.put("rs3:100", 103L);
 
+    // validate the prefix scan in readLogTimestampMap will get the right timestamps
+    // when a backup root with the same prefix is present
     table.writeRegionServerLogTimestamp(tables, rsTimestampMap, "root");
+    table.writeRegionServerLogTimestamp(tables, rsTimestampMap, "root/backup");
 
     Map<TableName, Map<String, Long>> result = table.readLogTimestampMap("root");
 
@@ -291,7 +282,10 @@ public class TestBackupSystemTable {
     rsTimestampMap1.put("rs2:100", 201L);
     rsTimestampMap1.put("rs3:100", 203L);
 
+    // validate the prefix scan in readLogTimestampMap will get the right timestamps
+    // when a backup root with the same prefix is present
     table.writeRegionServerLogTimestamp(tables1, rsTimestampMap1, "root");
+    table.writeRegionServerLogTimestamp(tables1, rsTimestampMap, "root/backup");
 
     result = table.readLogTimestampMap("root");
 
@@ -495,7 +489,7 @@ public class TestBackupSystemTable {
     return list;
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();

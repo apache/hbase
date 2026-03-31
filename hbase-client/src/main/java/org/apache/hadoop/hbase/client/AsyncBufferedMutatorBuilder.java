@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -37,6 +38,16 @@ public interface AsyncBufferedMutatorBuilder {
    * Set timeout for each rpc request when doing background flush.
    */
   AsyncBufferedMutatorBuilder setRpcTimeout(long timeout, TimeUnit unit);
+
+  /**
+   * Set a rpc request attribute.
+   */
+  AsyncBufferedMutatorBuilder setRequestAttribute(String key, byte[] value);
+
+  /**
+   * Set multiple rpc request attributes.
+   */
+  AsyncBufferedMutatorBuilder setRequestAttributes(Map<String, byte[]> requestAttributes);
 
   /**
    * Set the base pause time for retrying. We use an exponential policy to generate sleep time when
@@ -102,6 +113,13 @@ public interface AsyncBufferedMutatorBuilder {
    * {@code hbase.client.keyvalue.maxsize}.
    */
   AsyncBufferedMutatorBuilder setMaxKeyValueSize(int maxKeyValueSize);
+
+  /**
+   * Set the maximum number of mutations that this buffered mutator will buffer before flushing
+   * them. If you are talking to a cluster that uses hbase.rpc.rows.size.threshold.reject to reject
+   * large Multi requests, you may need this setting to avoid rejections. Default is no limit.
+   */
+  AsyncBufferedMutatorBuilder setMaxMutations(int maxMutations);
 
   /**
    * Create the {@link AsyncBufferedMutator} instance.

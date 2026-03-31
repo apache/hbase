@@ -37,6 +37,8 @@
     <integrationtest.include>**/IntegrationTest*.java</integrationtest.include>
     <!-- To Run Tests with a particular Xmx Value use -Dfailsafe.Xmx=XXXg -->
     <failsafe.Xmx>4g</failsafe.Xmx>
+    <failsafe.jdk8.flags>-XX:+CMSClassUnloadingEnabled</failsafe.jdk8.flags>
+    <failsafe.profile.overrides>${failsafe.jdk8.flags}</failsafe.profile.overrides>
     <!-- To run a single integration test, use -Dit.test=IntegrationTestXXX -->
   </properties>
 
@@ -106,6 +108,18 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-diagnostics</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Required by tests using MiniMRCluster -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk18on</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-backup</artifactId>
     </dependency>
     <dependency>
@@ -131,13 +145,6 @@
     <dependency>
       <groupId>io.opentelemetry</groupId>
       <artifactId>opentelemetry-api</artifactId>
-    </dependency>
-    <!-- Hadoop needs Netty 3.x at test scope for the minicluster -->
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty</artifactId>
-      <version>${netty.hadoop.version}</version>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -175,8 +182,18 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -212,11 +229,6 @@
     </testResources>
     <pluginManagement>
       <plugins>
-        <!-- Make a jar and put the sources in the jar -->
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-source-plugin</artifactId>
-        </plugin>
         <plugin>
           <!--Make it so assembly:single does nothing in here-->
           <artifactId>maven-assembly-plugin</artifactId>
@@ -279,12 +291,12 @@
         <artifactId>maven-failsafe-plugin</artifactId>
         <configuration>
           <skip>false</skip>
-          <forkMode>always</forkMode>
+          <reuseForks>false</reuseForks>
           <!-- TODO: failsafe does timeout, but verify does not fail the build because of the timeout.
                  I believe it is a failsafe bug, we may consider using surefire -->
           <forkedProcessTimeoutInSeconds>1800</forkedProcessTimeoutInSeconds>
           <argLine>-enableassertions -Xmx${failsafe.Xmx}
-                -Djava.security.egd=file:/dev/./urandom -XX:+CMSClassUnloadingEnabled
+	         -Djava.security.egd=file:/dev/./urandom ${failsafe.profile.overrides}
                 -verbose:gc -XX:+PrintCommandLineFlags  -XX:+PrintFlagsFinal @{jacocoArgLine}</argLine>
         </configuration>
       </plugin>
@@ -333,15 +345,18 @@
       </properties>
     </profile>
     <profile>
-      <id>build-with-jdk11</id>
+      <id>build-with-jdk17</id>
       <activation>
-        <jdk>[1.11,)</jdk>
+        <jdk>[17,)</jdk>
       </activation>
+      <properties>
+        <failsafe.profile.overrides>${hbase-surefire.jdk17.flags}</failsafe.profile.overrides>
+      </properties>
+
       <dependencies>
         <dependency>
           <groupId>com.sun.xml.ws</groupId>
-          <artifactId>jaxws-ri</artifactId>
-          <type>pom</type>
+          <artifactId>jaxws-rt</artifactId>
         </dependency>
       </dependencies>
     </profile>
@@ -364,6 +379,7 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-minicluster</artifactId>
+          <scope>test</scope>
           <exclusions>
             <exclusion>
               <groupId>javax.xml.bind</groupId>
@@ -378,6 +394,7 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-minikdc</artifactId>
+          <scope>test</scope>
         </dependency>
       </dependencies>
       <build>

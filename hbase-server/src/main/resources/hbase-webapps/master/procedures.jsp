@@ -21,34 +21,42 @@
   import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
   import="java.util.Collections"
   import="java.util.Comparator"
-  import="java.util.ArrayList"
   import="java.util.Date"
   import="java.util.List"
-  import="java.util.Set"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv"
   import="org.apache.hadoop.hbase.procedure2.LockedResource"
   import="org.apache.hadoop.hbase.procedure2.Procedure"
   import="org.apache.hadoop.hbase.procedure2.ProcedureExecutor"
-  import="org.apache.hadoop.hbase.procedure2.util.StringUtils"
-  import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"
 %>
-<%@ page import="org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure" %>
-<%@ page import="org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure" %>
-<%@ page import="org.apache.hadoop.hbase.master.assignment.OpenRegionProcedure" %>
-<%@ page import="org.apache.hadoop.hbase.master.assignment.CloseRegionProcedure" %>
-<%@ page import="org.apache.hadoop.hbase.metrics.OperationMetrics" %>
 <%@ page import="java.util.Map" %>
-<%@ page import="java.util.HashMap" %>
-<%@ page import="org.apache.hadoop.hbase.master.MetricsAssignmentManagerSource" %>
 <%@ page import="org.apache.hadoop.hbase.master.MetricsAssignmentManager" %>
 <%@ page import="org.apache.hadoop.hbase.procedure2.ProcedureMetrics" %>
-<%@ page import="org.apache.hadoop.hbase.metrics.Snapshot" %>
 <%@ page import="org.apache.hadoop.hbase.metrics.Histogram" %>
 <%@ page import="java.util.TreeMap" %>
 <%@ page import="org.apache.hadoop.hbase.metrics.impl.HistogramImpl" %>
+
+<jsp:include page="header.jsp">
+    <jsp:param name="pageTitle" value="${pageTitle}"/>
+</jsp:include>
+
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
+  if (!master.isInitialized()) {
+%>
+    <div class="container-fluid content">
+      <div class="row inner_header">
+        <div class="page-header">
+          <h1>Master is initializing</h1>
+        </div>
+      </div>
+      <p><hr><p>
+      <jsp:include page="redirect.jsp" />
+    </div>
+<%  return;
+  } %>
+
+<%
   ProcedureExecutor<MasterProcedureEnv> procExecutor = master.getMasterProcedureExecutor();
   List<Procedure<MasterProcedureEnv>> procedures = procExecutor.getProcedures();
   Collections.sort(procedures, new Comparator<Procedure>() {
@@ -63,9 +71,6 @@
   List<LockedResource> lockedResources = master.getLocks();
   pageContext.setAttribute("pageTitle", "HBase Master Procedures: " + master.getServerName());
 %>
-<jsp:include page="header.jsp">
-    <jsp:param name="pageTitle" value="${pageTitle}"/>
-</jsp:include>
 
 <div class="container-fluid content">
   <div class="row top_header">
@@ -73,7 +78,7 @@
       <h1>Procedure Time Statistics</h1>
     </div>
   </div>
-  <p>We list proceduces completed successfully of the following types only: ServerCrashProcedure, TransitRegionStateProcedure,
+  <p>We list procedures completed successfully of the following types only: ServerCrashProcedure, TransitRegionStateProcedure,
     OpenRegionProcedure, CloseRegionProcedure.</p>
   <table class="table table-striped" width="90%" >
     <tr>

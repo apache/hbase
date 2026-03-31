@@ -46,16 +46,23 @@ import org.apache.hadoop.hbase.client.ConnectionRegistryEndpoint;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
+import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ShutdownHook;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
@@ -83,7 +90,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends Thread
-  implements Server, ConfigurationObserver, ConnectionRegistryEndpoint {
+  implements Server, ConfigurationObserver, ConnectionRegistryEndpoint, KeyManagementService {
 
   private static final Logger LOG = LoggerFactory.getLogger(HBaseServerBase.class);
 
@@ -184,14 +191,14 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
   protected final NettyEventLoopGroupConfig eventLoopGroupConfig;
 
-  /**
-   * If running on Windows, do windows-specific setup.
-   */
-  private static void setupWindows(final Configuration conf, ConfigurationManager cm) {
+  private void setupSignalHandlers() {
     if (!SystemUtils.IS_OS_WINDOWS) {
       HBasePlatformDependent.handle("HUP", (number, name) -> {
-        conf.reloadConfiguration();
-        cm.notifyAllObservers(conf);
+        try {
+          updateConfiguration();
+        } catch (IOException e) {
+          LOG.error("Problem while reloading configuration", e);
+        }
       });
     }
   }
@@ -276,7 +283,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
         new ZKWatcher(conf, getProcessName() + ":" + addr.getPort(), this, canCreateBaseZNode());
 
       this.configurationManager = new ConfigurationManager();
-      setupWindows(conf, configurationManager);
+      setupSignalHandlers();
 
       initializeFileSystem();
 
@@ -319,9 +326,11 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
       this.conf.getInt(HConstants.REGIONSERVER_INFO_PORT, HConstants.DEFAULT_REGIONSERVER_INFOPORT);
     String addr = this.conf.get("hbase.regionserver.info.bindAddress", "0.0.0.0");
 
+    boolean isMaster = false;
     if (this instanceof HMaster) {
       port = conf.getInt(HConstants.MASTER_INFO_PORT, HConstants.DEFAULT_MASTER_INFOPORT);
       addr = this.conf.get("hbase.master.info.bindAddress", "0.0.0.0");
+      isMaster = true;
     }
     // -1 is for disabling info server
     if (port < 0) {
@@ -331,7 +340,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     if (!Addressing.isLocalAddress(InetAddress.getByName(addr))) {
       String msg = "Failed to start http info server. Address " + addr
         + " does not belong to this host. Correct configuration parameter: "
-        + "hbase.regionserver.info.bindAddress";
+        + (isMaster ? "hbase.master.info.bindAddress" : "hbase.regionserver.info.bindAddress");
       LOG.error(msg);
       throw new IOException(msg);
     }
@@ -396,6 +405,21 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   @Override
   public ZKWatcher getZooKeeper() {
     return zooKeeper;
+  }
+
+  @Override
+  public KeymetaAdmin getKeymetaAdmin() {
+    return null;
+  }
+
+  @Override
+  public ManagedKeyDataCache getManagedKeyDataCache() {
+    return null;
+  }
+
+  @Override
+  public SystemKeyCache getSystemKeyCache() {
+    return null;
   }
 
   protected final void shutdownChore(ScheduledChore chore) {
@@ -614,17 +638,44 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   /**
    * Reload the configuration from disk.
    */
-  public void updateConfiguration() {
+  public void updateConfiguration() throws IOException {
     LOG.info("Reloading the configuration from disk.");
     // Reload the configuration from disk.
+    preUpdateConfiguration();
     conf.reloadConfiguration();
     configurationManager.notifyAllObservers(conf);
+    postUpdateConfiguration();
+  }
+
+  @Override
+  public KeyManagementService getKeyManagementService() {
+    return this;
+  }
+
+  private void preUpdateConfiguration() throws IOException {
+    CoprocessorHost<?, ?> coprocessorHost = getCoprocessorHost();
+    if (coprocessorHost instanceof RegionServerCoprocessorHost) {
+      ((RegionServerCoprocessorHost) coprocessorHost).preUpdateConfiguration(conf);
+    } else if (coprocessorHost instanceof MasterCoprocessorHost) {
+      ((MasterCoprocessorHost) coprocessorHost).preUpdateConfiguration(conf);
+    }
+  }
+
+  private void postUpdateConfiguration() throws IOException {
+    CoprocessorHost<?, ?> coprocessorHost = getCoprocessorHost();
+    if (coprocessorHost instanceof RegionServerCoprocessorHost) {
+      ((RegionServerCoprocessorHost) coprocessorHost).postUpdateConfiguration(conf);
+    } else if (coprocessorHost instanceof MasterCoprocessorHost) {
+      ((MasterCoprocessorHost) coprocessorHost).postUpdateConfiguration(conf);
+    }
   }
 
   @Override
   public String toString() {
     return getServerName().toString();
   }
+
+  protected abstract CoprocessorHost<?, ?> getCoprocessorHost();
 
   protected abstract boolean canCreateBaseZNode();
 

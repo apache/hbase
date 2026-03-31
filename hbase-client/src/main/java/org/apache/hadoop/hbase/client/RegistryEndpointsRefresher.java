@@ -154,7 +154,7 @@ final class RegistryEndpointsRefresher {
       TimeUnit.SECONDS.toMillis(conf.getLong(initialDelaySecsConfigName, periodicRefreshMs / 10)));
     long minTimeBetweenRefreshesMs = TimeUnit.SECONDS
       .toMillis(conf.getLong(minIntervalSecsConfigName, MIN_SECS_BETWEEN_REFRESHES_DEFAULT));
-    Preconditions.checkArgument(minTimeBetweenRefreshesMs < periodicRefreshMs);
+    Preconditions.checkArgument(minTimeBetweenRefreshesMs <= periodicRefreshMs);
     return new RegistryEndpointsRefresher(initialDelayMs, periodicRefreshMs,
       minTimeBetweenRefreshesMs, refresher);
   }

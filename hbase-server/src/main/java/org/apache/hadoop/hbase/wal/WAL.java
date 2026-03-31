@@ -43,6 +43,12 @@ import org.apache.yetus.audience.InterfaceStability;
 public interface WAL extends Closeable, WALFileLengthProvider {
 
   /**
+   * Used to initialize the WAL. Usually this is for creating the first writer.
+   */
+  default void init() throws IOException {
+  }
+
+  /**
    * Registers WALActionsListener
    */
   void registerWALActionsListener(final WALActionsListener listener);
@@ -207,22 +213,20 @@ public interface WAL extends Closeable, WALFileLengthProvider {
   WALCoprocessorHost getCoprocessorHost();
 
   /**
-   * Gets the earliest unflushed sequence id in the memstore for the region.
-   * @param encodedRegionName The region to get the number for.
-   * @return The earliest/lowest/oldest sequence id if present, HConstants.NO_SEQNUM if absent.
-   * @deprecated Since version 1.2.0. Removing because not used and exposes subtle internal
-   *             workings. Use {@link #getEarliestMemStoreSeqNum(byte[], byte[])}
-   */
-  @Deprecated
-  long getEarliestMemStoreSeqNum(byte[] encodedRegionName);
-
-  /**
    * Gets the earliest unflushed sequence id in the memstore for the store.
    * @param encodedRegionName The region to get the number for.
    * @param familyName        The family to get the number for.
    * @return The earliest/lowest/oldest sequence id if present, HConstants.NO_SEQNUM if absent.
    */
   long getEarliestMemStoreSeqNum(byte[] encodedRegionName, byte[] familyName);
+
+  /**
+   * Tell the WAL that when creating new writer you can skip creating the remote writer.
+   * <p>
+   * Used by sync replication for switching states from ACTIVE, where the remote cluster is broken.
+   */
+  default void skipRemoteWAL(boolean markerEditOnly) {
+  }
 
   /**
    * Human readable identifying information about the state of this WAL. Implementors are encouraged

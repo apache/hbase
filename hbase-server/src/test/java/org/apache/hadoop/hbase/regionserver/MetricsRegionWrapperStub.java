@@ -78,8 +78,23 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   }
 
   @Override
+  public long getMemStoreHeapSize() {
+    return 104;
+  }
+
+  @Override
+  public long getMemStoreOffHeapSize() {
+    return 105;
+  }
+
+  @Override
   public long getStoreFileSize() {
     return 104;
+  }
+
+  @Override
+  public float getCurrentRegionCacheRatio() {
+    return 0;
   }
 
   @Override
@@ -197,5 +212,10 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
     Map<String, Long> map = new HashMap<>();
     map.put("info", 0L);
     return map;
+  }
+
+  @Override
+  public String getTableDescriptorHash() {
+    return "testhash123abc";
   }
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.Closeable;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
@@ -88,9 +89,21 @@ public interface AsyncBufferedMutator extends Closeable {
   long getWriteBufferSize();
 
   /**
+   * The maximum number of mutations that this buffered mutator will buffer before flushing them
+   */
+  int getMaxMutations();
+
+  /**
    * Returns the periodical flush interval, 0 means disabled.
    */
   default long getPeriodicalFlushTimeout(TimeUnit unit) {
     throw new UnsupportedOperationException("Not implemented");
+  }
+
+  /**
+   * Returns the rpc request attributes.
+   */
+  default Map<String, byte[]> getRequestAttributes() {
+    return Collections.emptyMap();
   }
 }

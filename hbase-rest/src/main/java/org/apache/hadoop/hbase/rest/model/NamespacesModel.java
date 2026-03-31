@@ -29,9 +29,12 @@ import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.rest.RestUtil;
+import org.apache.hadoop.hbase.rest.protobuf.generated.NamespacesMessage.Namespaces;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.NamespacesMessage.Namespaces;
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 /**
  * A list of HBase namespaces.
@@ -95,16 +98,16 @@ public class NamespacesModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     Namespaces.Builder builder = Namespaces.newBuilder();
     builder.addAllNamespace(namespaces);
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     Namespaces.Builder builder = Namespaces.newBuilder();
-    builder.mergeFrom(message);
+    RestUtil.mergeFrom(builder, cis);
     namespaces = builder.getNamespaceList();
     return this;
   }

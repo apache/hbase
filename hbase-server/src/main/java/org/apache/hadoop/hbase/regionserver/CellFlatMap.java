@@ -26,8 +26,6 @@ import java.util.NavigableSet;
 import java.util.Set;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * CellFlatMap stores a constant number of elements and is immutable after creation stage. Being
@@ -38,15 +36,15 @@ import org.slf4j.LoggerFactory;
  * sequential array and thus requires less memory than ConcurrentSkipListMap.
  */
 @InterfaceAudience.Private
-public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
-  private static final Logger LOG = LoggerFactory.getLogger(CellFlatMap.class);
-  private final Comparator<? super Cell> comparator;
+public abstract class CellFlatMap<T extends Cell> implements NavigableMap<T, T> {
+
+  private final Comparator<? super T> comparator;
   protected int minCellIdx = 0; // the index of the minimal cell (for sub-sets)
   protected int maxCellIdx = 0; // the index of the cell after the maximal cell (for sub-sets)
   private boolean descending = false;
 
   /* C-tor */
-  public CellFlatMap(Comparator<? super Cell> comparator, int min, int max, boolean d) {
+  public CellFlatMap(Comparator<? super T> comparator, int min, int max, boolean d) {
     this.comparator = comparator;
     this.minCellIdx = min;
     this.maxCellIdx = max;
@@ -54,10 +52,10 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
   }
 
   /* Used for abstract CellFlatMap creation, implemented by derived class */
-  protected abstract CellFlatMap createSubCellFlatMap(int min, int max, boolean descending);
+  protected abstract CellFlatMap<T> createSubCellFlatMap(int min, int max, boolean descending);
 
   /* Returns the i-th cell in the cell block */
-  protected abstract Cell getCell(int i);
+  protected abstract T getCell(int i);
 
   /**
    * Binary search for a given key in between given boundaries of the array. Positive returned
@@ -67,13 +65,13 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
    * @param needle The key to look for in all of the entries
    * @return Same return value as Arrays.binarySearch.
    */
-  private int find(Cell needle) {
+  private int find(T needle) {
     int begin = minCellIdx;
     int end = maxCellIdx - 1;
 
     while (begin <= end) {
       int mid = begin + ((end - begin) >> 1);
-      Cell midCell = getCell(mid);
+      T midCell = getCell(mid);
       int compareRes = comparator.compare(midCell, needle);
 
       if (compareRes == 0) {
@@ -98,7 +96,7 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
    * the given key exists in the set or not. taking into consideration whether the key should be
    * inclusive or exclusive.
    */
-  private int getValidIndex(Cell key, boolean inclusive, boolean tail) {
+  private int getValidIndex(T key, boolean inclusive, boolean tail) {
     final int index = find(key);
     // get the valid (positive) insertion point from the output of the find() method
     int insertionPoint = index < 0 ? ~index : index;
@@ -125,7 +123,7 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
   }
 
   @Override
-  public Comparator<? super Cell> comparator() {
+  public Comparator<? super T> comparator() {
     return comparator;
   }
 
@@ -141,8 +139,7 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
 
   // ---------------- Sub-Maps ----------------
   @Override
-  public NavigableMap<Cell, Cell> subMap(Cell fromKey, boolean fromInclusive, Cell toKey,
-    boolean toInclusive) {
+  public NavigableMap<T, T> subMap(T fromKey, boolean fromInclusive, T toKey, boolean toInclusive) {
     final int lessCellIndex = getValidIndex(fromKey, fromInclusive, true);
     final int greaterCellIndex = getValidIndex(toKey, toInclusive, false);
     if (descending) {
@@ -153,7 +150,7 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
   }
 
   @Override
-  public NavigableMap<Cell, Cell> headMap(Cell toKey, boolean inclusive) {
+  public NavigableMap<T, T> headMap(T toKey, boolean inclusive) {
     if (descending) {
       return createSubCellFlatMap(getValidIndex(toKey, inclusive, false), maxCellIdx, descending);
     } else {
@@ -162,7 +159,7 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
   }
 
   @Override
-  public NavigableMap<Cell, Cell> tailMap(Cell fromKey, boolean inclusive) {
+  public NavigableMap<T, T> tailMap(T fromKey, boolean inclusive) {
     if (descending) {
       return createSubCellFlatMap(minCellIdx, getValidIndex(fromKey, inclusive, true), descending);
     } else {
@@ -171,28 +168,28 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
   }
 
   @Override
-  public NavigableMap<Cell, Cell> descendingMap() {
+  public NavigableMap<T, T> descendingMap() {
     return createSubCellFlatMap(minCellIdx, maxCellIdx, true);
   }
 
   @Override
-  public NavigableMap<Cell, Cell> subMap(Cell k1, Cell k2) {
+  public NavigableMap<T, T> subMap(T k1, T k2) {
     return this.subMap(k1, true, k2, true);
   }
 
   @Override
-  public NavigableMap<Cell, Cell> headMap(Cell k) {
+  public NavigableMap<T, T> headMap(T k) {
     return this.headMap(k, true);
   }
 
   @Override
-  public NavigableMap<Cell, Cell> tailMap(Cell k) {
+  public NavigableMap<T, T> tailMap(T k) {
     return this.tailMap(k, true);
   }
 
   // -------------------------------- Key's getters --------------------------------
   @Override
-  public Cell firstKey() {
+  public T firstKey() {
     if (isEmpty()) {
       return null;
     }
@@ -200,7 +197,7 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
   }
 
   @Override
-  public Cell lastKey() {
+  public T lastKey() {
     if (isEmpty()) {
       return null;
     }
@@ -208,7 +205,7 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
   }
 
   @Override
-  public Cell lowerKey(Cell k) {
+  public T lowerKey(T k) {
     if (isEmpty()) {
       return null;
     }
@@ -219,7 +216,7 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
   }
 
   @Override
-  public Cell floorKey(Cell k) {
+  public T floorKey(T k) {
     if (isEmpty()) {
       return null;
     }
@@ -229,7 +226,7 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
   }
 
   @Override
-  public Cell ceilingKey(Cell k) {
+  public T ceilingKey(T k) {
     if (isEmpty()) {
       return null;
     }
@@ -239,7 +236,7 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
   }
 
   @Override
-  public Cell higherKey(Cell k) {
+  public T higherKey(T k) {
     if (isEmpty()) {
       return null;
     }
@@ -250,7 +247,7 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
 
   @Override
   public boolean containsKey(Object o) {
-    int index = find((Cell) o);
+    int index = find((T) o);
     return (index >= 0);
   }
 
@@ -260,99 +257,99 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
   }
 
   @Override
-  public Cell get(Object o) {
-    int index = find((Cell) o);
+  public T get(Object o) {
+    int index = find((T) o);
     return (index >= 0) ? getCell(index) : null;
   }
 
   // -------------------------------- Entry's getters --------------------------------
 
-  private static class CellFlatMapEntry implements Entry<Cell, Cell> {
-    private final Cell cell;
+  private static class CellFlatMapEntry<T> implements Entry<T, T> {
+    private final T cell;
 
-    public CellFlatMapEntry(Cell cell) {
+    public CellFlatMapEntry(T cell) {
       this.cell = cell;
     }
 
     @Override
-    public Cell getKey() {
+    public T getKey() {
       return cell;
     }
 
     @Override
-    public Cell getValue() {
+    public T getValue() {
       return cell;
     }
 
     @Override
-    public Cell setValue(Cell value) {
+    public T setValue(T value) {
       throw new UnsupportedOperationException();
     }
   }
 
   @Override
-  public Entry<Cell, Cell> lowerEntry(Cell k) {
-    Cell cell = lowerKey(k);
+  public Entry<T, T> lowerEntry(T k) {
+    T cell = lowerKey(k);
     if (cell == null) {
       return null;
     }
-    return new CellFlatMapEntry(cell);
+    return new CellFlatMapEntry<>(cell);
   }
 
   @Override
-  public Entry<Cell, Cell> higherEntry(Cell k) {
-    Cell cell = higherKey(k);
+  public Entry<T, T> higherEntry(T k) {
+    T cell = higherKey(k);
     if (cell == null) {
       return null;
     }
-    return new CellFlatMapEntry(cell);
+    return new CellFlatMapEntry<>(cell);
   }
 
   @Override
-  public Entry<Cell, Cell> ceilingEntry(Cell k) {
-    Cell cell = ceilingKey(k);
+  public Entry<T, T> ceilingEntry(T k) {
+    T cell = ceilingKey(k);
     if (cell == null) {
       return null;
     }
-    return new CellFlatMapEntry(cell);
+    return new CellFlatMapEntry<>(cell);
   }
 
   @Override
-  public Entry<Cell, Cell> floorEntry(Cell k) {
-    Cell cell = floorKey(k);
+  public Entry<T, T> floorEntry(T k) {
+    T cell = floorKey(k);
     if (cell == null) {
       return null;
     }
-    return new CellFlatMapEntry(cell);
+    return new CellFlatMapEntry<>(cell);
   }
 
   @Override
-  public Entry<Cell, Cell> firstEntry() {
-    Cell cell = firstKey();
+  public Entry<T, T> firstEntry() {
+    T cell = firstKey();
     if (cell == null) {
       return null;
     }
-    return new CellFlatMapEntry(cell);
+    return new CellFlatMapEntry<>(cell);
   }
 
   @Override
-  public Entry<Cell, Cell> lastEntry() {
-    Cell cell = lastKey();
+  public Entry<T, T> lastEntry() {
+    T cell = lastKey();
     if (cell == null) {
       return null;
     }
-    return new CellFlatMapEntry(cell);
+    return new CellFlatMapEntry<>(cell);
   }
 
   // The following 2 methods (pollFirstEntry, pollLastEntry) are unsupported because these are
   // updating methods.
   @Override
-  public Entry<Cell, Cell> pollFirstEntry() {
+  public Entry<T, T> pollFirstEntry() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Entry<Cell, Cell> pollLastEntry() {
+  public Entry<T, T> pollLastEntry() {
     throw new UnsupportedOperationException();
   }
 
@@ -362,7 +359,7 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
   // fill up with Cells and provided in construction time.
   // Later the structure is immutable.
   @Override
-  public Cell put(Cell k, Cell v) {
+  public T put(T k, T v) {
     throw new UnsupportedOperationException();
   }
 
@@ -372,43 +369,43 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
   }
 
   @Override
-  public Cell remove(Object o) {
+  public T remove(Object o) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public void putAll(Map<? extends Cell, ? extends Cell> map) {
+  public void putAll(Map<? extends T, ? extends T> map) {
     throw new UnsupportedOperationException();
   }
 
   // -------------------------------- Sub-Sets --------------------------------
   @Override
-  public NavigableSet<Cell> navigableKeySet() {
+  public NavigableSet<T> navigableKeySet() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public NavigableSet<Cell> descendingKeySet() {
+  public NavigableSet<T> descendingKeySet() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public NavigableSet<Cell> keySet() {
+  public NavigableSet<T> keySet() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Collection<Cell> values() {
+  public Collection<T> values() {
     return new CellFlatMapCollection();
   }
 
   @Override
-  public Set<Entry<Cell, Cell>> entrySet() {
+  public Set<Entry<T, T>> entrySet() {
     throw new UnsupportedOperationException();
   }
 
   // -------------------------------- Iterator K --------------------------------
-  private final class CellFlatMapIterator implements Iterator<Cell> {
+  private final class CellFlatMapIterator implements Iterator<T> {
     int index;
 
     private CellFlatMapIterator() {
@@ -421,8 +418,8 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
     }
 
     @Override
-    public Cell next() {
-      Cell result = getCell(index);
+    public T next() {
+      T result = getCell(index);
       if (descending) {
         index--;
       } else {
@@ -438,7 +435,7 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
   }
 
   // -------------------------------- Collection --------------------------------
-  private final class CellFlatMapCollection implements Collection<Cell> {
+  private final class CellFlatMapCollection implements Collection<T> {
 
     @Override
     public int size() {
@@ -461,7 +458,7 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
     }
 
     @Override
-    public Iterator<Cell> iterator() {
+    public Iterator<T> iterator() {
       return new CellFlatMapIterator();
     }
 
@@ -476,7 +473,7 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
     }
 
     @Override
-    public boolean add(Cell k) {
+    public boolean add(T k) {
       throw new UnsupportedOperationException();
     }
 
@@ -491,7 +488,7 @@ public abstract class CellFlatMap implements NavigableMap<Cell, Cell> {
     }
 
     @Override
-    public boolean addAll(Collection<? extends Cell> collection) {
+    public boolean addAll(Collection<? extends T> collection) {
       throw new UnsupportedOperationException();
     }
 

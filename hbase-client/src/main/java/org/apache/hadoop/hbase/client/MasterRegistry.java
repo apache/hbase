@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.DNS.ServerType;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -105,9 +106,10 @@ public class MasterRegistry extends AbstractRpcBasedConnectionRegistry {
 
   private final String connectionString;
 
-  MasterRegistry(Configuration conf) throws IOException {
-    super(conf, MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, MASTER_REGISTRY_INITIAL_REFRESH_DELAY_SECS,
-      MASTER_REGISTRY_PERIODIC_REFRESH_INTERVAL_SECS, MASTER_REGISTRY_MIN_SECS_BETWEEN_REFRESHES);
+  MasterRegistry(Configuration conf, User user) throws IOException {
+    super(conf, user, MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY,
+      MASTER_REGISTRY_INITIAL_REFRESH_DELAY_SECS, MASTER_REGISTRY_PERIODIC_REFRESH_INTERVAL_SECS,
+      MASTER_REGISTRY_MIN_SECS_BETWEEN_REFRESHES);
     connectionString = getConnectionString(conf);
   }
 

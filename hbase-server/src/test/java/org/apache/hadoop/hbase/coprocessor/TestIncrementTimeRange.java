@@ -133,7 +133,7 @@ public class TestIncrementTimeRange {
     static TimeRange tr10 = null, tr2 = null;
 
     @Override
-    public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public Result preIncrement(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final Increment increment) throws IOException {
       NavigableMap<byte[], List<Cell>> map = increment.getFamilyCellMap();
       for (Map.Entry<byte[], List<Cell>> entry : map.entrySet()) {

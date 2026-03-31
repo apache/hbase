@@ -101,6 +101,8 @@ fi
 
 init_locale
 init_java
+#set java 17 for spotless
+set_java17_home
 init_mvn
 init_python
 # Print out subset of perl version (used in git hooks and japi-compliance-checker)
@@ -146,7 +148,8 @@ if [[ "$1" == "tag" ]]; then
 
   # Create release version
   maven_set_version "$RELEASE_VERSION"
-  find . -name pom.xml -exec git add {} \;
+  maven_spotless_apply
+  git_add_poms
   # Always put CHANGES.md and RELEASENOTES.md to parent directory, so later we do not need to
   # check their position when generating release data. We can not put them under the source code
   # directory because for 3.x+, CHANGES.md and RELEASENOTES.md are not tracked so later when
@@ -168,7 +171,8 @@ if [[ "$1" == "tag" ]]; then
 
   # Create next version
   maven_set_version "$NEXT_VERSION"
-  find . -name pom.xml -exec git add {} \;
+  maven_spotless_apply
+  git_add_poms
   git commit -s -m "Preparing development version $NEXT_VERSION"
 
   if ! is_dry_run; then
@@ -212,6 +216,14 @@ log "Checked out ${PROJECT} at ${GIT_REF} commit $git_hash"
 
 if [ -z "${RELEASE_VERSION}" ]; then
   RELEASE_VERSION="$(maven_get_version)"
+fi
+init_java17
+
+# We need to do following as hbase-thirdparty requires toolchains setup
+if [[ "${PROJECT}" == "hbase-thirdparty" ]]; then
+  log "Setting up toolchains and JDK for hbase-thirdparty"
+  set_java17_as_default_java
+  init_toolchains
 fi
 
 # This is a band-aid fix to avoid the failure of Maven nightly snapshot in some Jenkins

@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -152,6 +153,13 @@ public final class HConstants {
 
   /** Default value for the balancer period */
   public static final int DEFAULT_HBASE_BALANCER_PERIOD = 300000;
+
+  /** Config for the oldWALs directory size updater period */
+  public static final String HBASE_OLDWAL_DIR_SIZE_UPDATER_PERIOD =
+    "hbase.master.oldwals.dir.updater.period";
+
+  /** Default value for the oldWALs directory size updater period */
+  public static final int DEFAULT_HBASE_OLDWAL_DIR_SIZE_UPDATER_PERIOD = 300000;
 
   /**
    * Config key for enable/disable automatically separate child regions to different region servers
@@ -310,7 +318,8 @@ public final class HConstants {
   public static final int DEFAULT_VERSION_FILE_WRITE_ATTEMPTS = 3;
 
   /** Parameter name and default value for how often a region should perform a major compaction */
-  public static final String MAJOR_COMPACTION_PERIOD = "hbase.hregion.majorcompaction";
+  public static final String MAJOR_COMPACTION_PERIOD =
+    ConfigKey.LONG("hbase.hregion.majorcompaction");
   public static final long DEFAULT_MAJOR_COMPACTION_PERIOD = 1000 * 60 * 60 * 24 * 7; // 7 days
 
   /**
@@ -319,16 +328,17 @@ public final class HConstants {
    * either side of {@link HConstants#MAJOR_COMPACTION_PERIOD}. Default to 0.5 so jitter has us fall
    * evenly either side of when the compaction should run.
    */
-  public static final String MAJOR_COMPACTION_JITTER = "hbase.hregion.majorcompaction.jitter";
+  public static final String MAJOR_COMPACTION_JITTER =
+    ConfigKey.FLOAT("hbase.hregion.majorcompaction.jitter");
   public static final float DEFAULT_MAJOR_COMPACTION_JITTER = 0.50F;
 
   /** Parameter name for the maximum batch of KVs to be used in flushes and compactions */
-  public static final String COMPACTION_KV_MAX = "hbase.hstore.compaction.kv.max";
+  public static final String COMPACTION_KV_MAX = ConfigKey.INT("hbase.hstore.compaction.kv.max");
   public static final int COMPACTION_KV_MAX_DEFAULT = 10;
 
   /** Parameter name for the scanner size limit to be used in compactions */
   public static final String COMPACTION_SCANNER_SIZE_MAX =
-    "hbase.hstore.compaction.scanner.size.limit";
+    ConfigKey.LONG("hbase.hstore.compaction.scanner.size.limit");
   public static final long COMPACTION_SCANNER_SIZE_MAX_DEFAULT = 10 * 1024 * 1024L; // 10MB
 
   /** Parameter name for HBase instance root directory */
@@ -381,7 +391,7 @@ public final class HConstants {
   public static final String HREGION_COMPACTIONDIR_NAME = "compaction.dir";
 
   /** Conf key for the max file size after which we split the region */
-  public static final String HREGION_MAX_FILESIZE = "hbase.hregion.max.filesize";
+  public static final String HREGION_MAX_FILESIZE = ConfigKey.LONG("hbase.hregion.max.filesize");
 
   /** Default maximum file size */
   public static final long DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024L;
@@ -406,7 +416,7 @@ public final class HConstants {
    * The max number of threads used for opening and closing stores or store files in parallel
    */
   public static final String HSTORE_OPEN_AND_CLOSE_THREADS_MAX =
-    "hbase.hstore.open.and.close.threads.max";
+    ConfigKey.INT("hbase.hstore.open.and.close.threads.max");
 
   /**
    * The default number for the max number of threads used for opening and closing stores or store
@@ -420,7 +430,7 @@ public final class HConstants {
    * update traffic.
    */
   public static final String HREGION_MEMSTORE_BLOCK_MULTIPLIER =
-    "hbase.hregion.memstore.block.multiplier";
+    ConfigKey.INT("hbase.hregion.memstore.block.multiplier", v -> v > 0);
 
   /**
    * Default value for hbase.hregion.memstore.block.multiplier
@@ -428,7 +438,8 @@ public final class HConstants {
   public static final int DEFAULT_HREGION_MEMSTORE_BLOCK_MULTIPLIER = 4;
 
   /** Conf key for the memstore size at which we flush the memstore */
-  public static final String HREGION_MEMSTORE_FLUSH_SIZE = "hbase.hregion.memstore.flush.size";
+  public static final String HREGION_MEMSTORE_FLUSH_SIZE =
+    ConfigKey.LONG("hbase.hregion.memstore.flush.size", v -> v > 0);
 
   public static final String HREGION_EDITS_REPLAY_SKIP_ERRORS =
     "hbase.hregion.edits.replay.skip.errors";
@@ -445,7 +456,8 @@ public final class HConstants {
   public static final String CLUSTER_ID_DEFAULT = "default-cluster";
 
   /** Parameter name for # days to keep MVCC values during a major compaction */
-  public static final String KEEP_SEQID_PERIOD = "hbase.hstore.compaction.keep.seqId.period";
+  public static final String KEEP_SEQID_PERIOD =
+    ConfigKey.INT("hbase.hstore.compaction.keep.seqId.period");
   /** At least to keep MVCC values in hfiles for 5 days */
   public static final int MIN_KEEP_SEQID_PERIOD = 5;
 
@@ -1006,6 +1018,11 @@ public final class HConstants {
   public static final float HFILE_BLOCK_CACHE_SIZE_DEFAULT = 0.4f;
 
   /**
+   * Configuration key for the memory size of the block cache
+   */
+  public static final String HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY = "hfile.block.cache.memory.size";
+
+  /**
    * Configuration key for setting the fix size of the block size, default do nothing and it should
    * be explicitly set by user or only used within ClientSideRegionScanner. if it's set less than
    * current max on heap size, it overrides the max size of block cache
@@ -1024,7 +1041,8 @@ public final class HConstants {
   public static final boolean HFILE_PREAD_ALL_BYTES_ENABLED_DEFAULT = false;
 
   /*
-   * Minimum percentage of free heap necessary for a successful cluster startup.
+   * Default minimum fraction (20%) of free heap required for RegionServer startup, used only when
+   * 'hbase.regionserver.free.heap.min.memory.size' is not explicitly set.
    */
   public static final float HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD = 0.2f;
 
@@ -1336,6 +1354,18 @@ public final class HConstants {
   public static final String BUCKET_CACHE_SIZE_KEY = "hbase.bucketcache.size";
 
   /**
+   * If the chosen ioengine can persist its state across restarts, the path to the file to persist
+   * to. This file is NOT the data file. It is a file into which we will serialize the map of what
+   * is in the data file. For example, if you pass the following argument as
+   * BUCKET_CACHE_IOENGINE_KEY ("hbase.bucketcache.ioengine"),
+   * <code>file:/tmp/bucketcache.data </code>, then we will write the bucketcache data to the file
+   * <code>/tmp/bucketcache.data</code> but the metadata on where the data is in the supplied file
+   * is an in-memory map that needs to be persisted across restarts. Where to store this in-memory
+   * state is what you supply here: e.g. <code>/tmp/bucketcache.map</code>.
+   */
+  public static final String BUCKET_CACHE_PERSISTENT_PATH_KEY = "hbase.bucketcache.persistent.path";
+
+  /**
    * HConstants for fast fail on the client side follow
    */
   /**
@@ -1473,6 +1503,12 @@ public final class HConstants {
   public static final String ZK_SERVER_KERBEROS_PRINCIPAL =
     "hbase.zookeeper.server.kerberos.principal";
 
+  /**
+   * Configuration entries with this prefix are passed to the RPC ConnectionHeader and become
+   * accessible on the server side.
+   */
+  public static final String CLIENT_HEADER_PREFIX = "hbase.client.header.";
+
   /** Config key for hbase temporary directory in hdfs */
   public static final String TEMPORARY_FS_DIRECTORY_KEY = "hbase.fs.tmp.dir";
 
@@ -1502,6 +1538,18 @@ public final class HConstants {
 
   // User defined Default TTL config key
   public static final String DEFAULT_SNAPSHOT_TTL_CONFIG_KEY = "hbase.master.snapshot.ttl";
+
+  // Soft drop for destructive table actions configuration
+  public static final String SNAPSHOT_BEFORE_DESTRUCTIVE_ACTION_ENABLED_KEY =
+    "hbase.snapshot.before.destructive.action.enabled";
+  public static final boolean DEFAULT_SNAPSHOT_BEFORE_DESTRUCTIVE_ACTION_ENABLED = false;
+
+  public static final String SNAPSHOT_BEFORE_DESTRUCTIVE_ACTION_TTL_KEY =
+    "hbase.snapshot.before.destructive.action.ttl";
+  public static final long DEFAULT_SNAPSHOT_BEFORE_DESTRUCTIVE_ACTION_TTL = 86400; // 1 day
+
+  // Table-level attribute name for recovery snapshot TTL override
+  public static final String TABLE_RECOVERY_SNAPSHOT_TTL_KEY = "RECOVERY_SNAPSHOT_TTL";
 
   // Regions Recovery based on high storeFileRefCount threshold value
   public static final String STORE_FILE_REF_COUNT_THRESHOLD =
@@ -1602,6 +1650,20 @@ public final class HConstants {
    * Default value of {@link #HBASE_SERVER_USEIP_ENABLED_KEY}
    */
   public final static boolean HBASE_SERVER_USEIP_ENABLED_DEFAULT = false;
+
+  /**
+   * Should the HMaster reject hosts of decommissioned RegionServers, bypass matching their port and
+   * startcode parts of their ServerName or not? When True, the HMaster will reject a RegionServer's
+   * request to `reportForDuty` if it's hostname exists in the list of decommissioned RegionServers
+   * it maintains internally. Added in HBASE-28342.
+   */
+  public final static String REJECT_DECOMMISSIONED_HOSTS_KEY =
+    "hbase.master.reject.decommissioned.hosts";
+
+  /**
+   * Default value of {@link #REJECT_DECOMMISSIONED_HOSTS_KEY}
+   */
+  public final static boolean REJECT_DECOMMISSIONED_HOSTS_DEFAULT = false;
 
   private HConstants() {
     // Can't be instantiated with this ctor.

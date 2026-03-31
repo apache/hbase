@@ -153,7 +153,22 @@ class AsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> modifyTable(TableDescriptor desc) {
-    return wrap(rawAdmin.modifyTable(desc));
+    return modifyTable(desc, true);
+  }
+
+  @Override
+  public CompletableFuture<Void> modifyTable(TableDescriptor desc, boolean reopenRegions) {
+    return wrap(rawAdmin.modifyTable(desc, reopenRegions));
+  }
+
+  @Override
+  public CompletableFuture<Void> reopenTableRegions(TableName tableName) {
+    return wrap(rawAdmin.reopenTableRegions(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Void> reopenTableRegions(TableName tableName, List<RegionInfo> regions) {
+    return wrap(rawAdmin.reopenTableRegions(tableName, regions));
   }
 
   @Override
@@ -384,6 +399,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Void> splitRegion(byte[] regionName, byte[] splitPoint) {
     return wrap(rawAdmin.splitRegion(regionName, splitPoint));
+  }
+
+  @Override
+  public CompletableFuture<Void> truncateRegion(byte[] regionName) {
+    return wrap(rawAdmin.truncateRegion(regionName));
   }
 
   @Override
@@ -679,6 +699,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Void> rollWALWriter(ServerName serverName) {
     return wrap(rawAdmin.rollWALWriter(serverName));
+  }
+
+  @Override
+  public CompletableFuture<Map<ServerName, Long>> rollAllWALWriters() {
+    return wrap(rawAdmin.rollAllWALWriters());
   }
 
   @Override
@@ -989,5 +1014,15 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Void> flushMasterStore() {
     return wrap(rawAdmin.flushMasterStore());
+  }
+
+  @Override
+  public CompletableFuture<List<String>> getCachedFilesList(ServerName serverName) {
+    return wrap(rawAdmin.getCachedFilesList(serverName));
+  }
+
+  @Override
+  public CompletableFuture<Void> restoreBackupSystemTable(String snapshotName) {
+    return wrap(rawAdmin.restoreBackupSystemTable(snapshotName));
   }
 }

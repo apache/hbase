@@ -158,7 +158,7 @@ public final class TestNamespaceReplicationWithBulkLoadedData extends TestBulkLo
     Set<String> namespaces = new HashSet<>();
     namespaces.add(NS1);
     ReplicationPeerConfig rpc4_ns =
-      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL4.getClusterKey())
+      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL4.getRpcConnnectionURI())
         .setReplicateAllUserTables(false).setNamespaces(namespaces).build();
     admin1.addReplicationPeer(PEER4_NS, rpc4_ns);
 
@@ -169,7 +169,7 @@ public final class TestNamespaceReplicationWithBulkLoadedData extends TestBulkLo
     Map<TableName, List<String>> tableCFsMap = new HashMap<>();
     tableCFsMap.put(NS2_TABLE, null);
     ReplicationPeerConfig rpc4_ns_table =
-      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL4.getClusterKey())
+      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL4.getRpcConnnectionURI())
         .setReplicateAllUserTables(false).setTableCFsMap(tableCFsMap).build();
     admin1.addReplicationPeer(PEER4_NS_TABLE, rpc4_ns_table);
   }

@@ -22,8 +22,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.PrivateConstants;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -41,9 +41,9 @@ public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator 
   private static final Logger LOG =
     LoggerFactory.getLogger(MemStoreCompactorSegmentsIterator.class);
 
-  private final List<Cell> kvs = new ArrayList<>();
+  private final List<ExtendedCell> kvs = new ArrayList<>();
   private boolean hasMore = true;
-  private Iterator<Cell> kvsIterator;
+  private Iterator<ExtendedCell> kvsIterator;
 
   // scanner on top of pipeline scanner that uses ScanQueryMatcher
   private InternalScanner compactingScanner;
@@ -71,7 +71,7 @@ public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator 
   }
 
   @Override
-  public Cell next() {
+  public ExtendedCell next() {
     if (!hasNext()) {
       throw new NoSuchElementException();
     }
@@ -132,7 +132,7 @@ public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator 
     }
   }
 
-  /*
+  /**
    * Refill kev-value set (should be invoked only when KVS is empty) Returns true if KVS is
    * non-empty
    */
@@ -145,6 +145,9 @@ public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator 
     kvs.clear();
     for (;;) {
       try {
+        // InternalScanner is for CPs so we do not want to leak ExtendedCell to the interface, but
+        // all the server side implementation should only add ExtendedCell to the List, otherwise it
+        // will cause serious assertions in our code
         hasMore = compactingScanner.next(kvs, scannerContext);
       } catch (IOException e) {
         // should not happen as all data are in memory

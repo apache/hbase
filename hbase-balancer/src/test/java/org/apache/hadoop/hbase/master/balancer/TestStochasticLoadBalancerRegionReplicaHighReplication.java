@@ -17,31 +17,28 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.time.Duration;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestStochasticLoadBalancerRegionReplicaHighReplication
   extends StochasticBalancerTestBase2 {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStochasticLoadBalancerRegionReplicaHighReplication.class);
 
   @Test
   public void testRegionReplicasOnMidClusterHighReplication() {
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 4000000L);
-    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 120 * 1000); // 120 sec
+    setMaxRunTime(Duration.ofSeconds(5));
     loadBalancer.onConfigurationChange(conf);
     int numNodes = 40;
     int numRegions = 6 * numNodes;
     int replication = 40; // 40 replicas per region, one for each server
     int numRegionsPerServer = 5;
     int numTables = 10;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, false, true);
+    testWithClusterWithIteration(numNodes, numRegions, numRegionsPerServer, replication, numTables,
+      false, true);
   }
 }

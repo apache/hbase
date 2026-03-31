@@ -32,6 +32,7 @@
   <description>Module that does project assembly and that is all that it does.</description>
   <properties>
     <license.bundles.dependencies>true</license.bundles.dependencies>
+    <final.name>hbase-${project.version}</final.name>
   </properties>
   <dependencies>
     <!-- client artifacts for downstream use -->
@@ -50,16 +51,7 @@
     <!-- Intra-project dependencies -->
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-it</artifactId>
-      <type>test-jar</type>
-    </dependency>
-    <!-- Hamcrest is required by hbase-it (via junit), but as long as we're grabbing the hbase-it test-jar,
-         maven dependency resolution won't pick it up for us. -->
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-core</artifactId>
-      <!-- Overriding the scope in depMgmt -->
-      <scope>compile</scope>
+      <artifactId>hbase-openssl</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -67,23 +59,11 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-mapreduce</artifactId>
+      <artifactId>hbase-endpoint</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-mapreduce</artifactId>
-      <type>test-jar</type>
-    </dependency>
-    <!-- To dump tools in hbase-procedure into cached_classpath.txt. -->
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-procedure</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-procedure</artifactId>
-      <type>test-jar</type>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -113,10 +93,6 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-testing-util</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-metrics-api</artifactId>
     </dependency>
     <dependency>
@@ -142,6 +118,10 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-asyncfs</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-backup</artifactId>
     </dependency>
     <dependency>
@@ -155,10 +135,6 @@
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-http</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-examples</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -186,20 +162,15 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-compression-xz</artifactId>
+      <artifactId>hbase-compression-zstd</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-compression-zstd</artifactId>
+      <artifactId>hbase-diagnostics</artifactId>
     </dependency>
     <dependency>
       <groupId>jline</groupId>
       <artifactId>jline</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.sun.xml.ws</groupId>
-      <artifactId>jaxws-ri</artifactId>
-      <type>pom</type>
     </dependency>
     <!--
       Include the log framework here.
@@ -235,16 +206,30 @@
       <groupId>io.opentelemetry.javaagent</groupId>
       <artifactId>opentelemetry-javaagent</artifactId>
     </dependency>
+    <!-- The tomcat JSP Compiler dependencies are not needed for runtime -->
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
+      <groupId>org.apache.tomcat</groupId>
+      <artifactId>tomcat-juli</artifactId>
+      <version>${tomcat.version.for.exclusion}</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
-      <!-- Making it compile here so that it can be downloaded during packaging. -->
-      <!-- All other modules scope it as test or inherit test scope from parent pom.  -->
-      <scope>compile</scope>
+      <groupId>org.apache.tomcat</groupId>
+      <artifactId>tomcat-api</artifactId>
+      <version>${tomcat.version.for.exclusion}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.tomcat</groupId>
+      <artifactId>tomcat-util-scan</artifactId>
+      <version>${tomcat.version.for.exclusion}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.tomcat</groupId>
+      <artifactId>tomcat-util</artifactId>
+      <version>${tomcat.version.for.exclusion}</version>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
   <build>
@@ -261,13 +246,13 @@
             </goals>
             <configuration>
               <properties>
-                <copyright-end-year>${build.year}</copyright-end-year>
-                <debug-print-included-work-info>${license.debug.print.included}</debug-print-included-work-info>
-                <bundled-dependencies>${license.bundles.dependencies}</bundled-dependencies>
-                <bundled-jquery>${license.bundles.jquery}</bundled-jquery>
-                <bundled-vega>${license.bundles.vega}</bundled-vega>
-                <bundled-logo>${license.bundles.logo}</bundled-logo>
-                <bundled-bootstrap>${license.bundles.bootstrap}</bundled-bootstrap>
+                <copyright_end_year>${build.year}</copyright_end_year>
+                <debug_print_included_work_info>${license.debug.print.included}</debug_print_included_work_info>
+                <bundled_dependencies>${license.bundles.dependencies}</bundled_dependencies>
+                <bundled_jquery>${license.bundles.jquery}</bundled_jquery>
+                <bundled_vega>${license.bundles.vega}</bundled_vega>
+                <bundled_logo>${license.bundles.logo}</bundled_logo>
+                <bundled_bootstrap>${license.bundles.bootstrap}</bundled_bootstrap>
               </properties>
               <resourceBundles>
                 <resourceBundle>${project.groupId}:hbase-resource-bundle:${project.version}</resourceBundle>
@@ -286,7 +271,7 @@
         <artifactId>maven-assembly-plugin</artifactId>
         <configuration>
           <!--Else will use hbase-assembly as final name.-->
-          <finalName>hbase-${project.version}</finalName>
+          <finalName>${final.name}</finalName>
           <skipAssembly>false</skipAssembly>
           <appendAssemblyId>true</appendAssemblyId>
           <tarLongFileMode>posix</tarLongFileMode>
@@ -299,45 +284,6 @@
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
-          <execution>
-            <!-- generates the file that will be used by the bin/hbase script in the dev env -->
-            <id>create-hbase-generated-classpath</id>
-            <goals>
-              <goal>build-classpath</goal>
-            </goals>
-            <phase>test</phase>
-            <configuration>
-              <outputFile>${project.parent.basedir}/target/cached_classpath.txt</outputFile>
-              <excludeArtifactIds>jline,jruby-complete,hbase-shaded-client,hbase-shaded-client-byo-hadoop,hbase-shaded-mapreduce</excludeArtifactIds>
-            </configuration>
-          </execution>
-
-          <execution>
-            <!-- generates the file that will be used by the bin/hbase zkcli script in the dev env -->
-            <id>create-hbase-generated-classpath-jline</id>
-            <goals>
-              <goal>build-classpath</goal>
-            </goals>
-            <phase>test</phase>
-            <configuration>
-              <outputFile>${project.parent.basedir}/target/cached_classpath_jline.txt</outputFile>
-              <includeArtifactIds>jline</includeArtifactIds>
-            </configuration>
-          </execution>
-
-          <execution>
-            <!-- generates the file that will be used by the bin/hbase shell script in the dev env -->
-            <id>create-hbase-generated-classpath-jruby</id>
-            <goals>
-              <goal>build-classpath</goal>
-            </goals>
-            <phase>test</phase>
-            <configuration>
-              <outputFile>${project.parent.basedir}/target/cached_classpath_jruby.txt</outputFile>
-              <includeArtifactIds>jruby-complete</includeArtifactIds>
-            </configuration>
-          </execution>
-
           <!--
            Build an aggregation of our templated NOTICE file and the NOTICE files in our dependencies.
            If MASSEMBLY-382 is fixed we could do this in the assembly
@@ -386,4 +332,99 @@
       <!-- /end building aggregation of NOTICE files -->
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>assemblyForTesting</id>
+      <activation>
+        <property>
+          <name>assemblyForTesting</name>
+        </property>
+      </activation>
+      <properties>
+        <final.name>hbase-for-testing-${project.version}</final.name>
+      </properties>
+      <dependencies>
+        <!-- Dependencies for running hbase-it -->
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-it</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-testing-util</artifactId>
+          <scope>compile</scope>
+        </dependency>
+        <!-- Change the scope of test-jar dependencies -->
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-annotations</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-procedure</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-common</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-zookeeper</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-server</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-hadoop-compat</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.junit.jupiter</groupId>
+          <artifactId>junit-jupiter-api</artifactId>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.junit.jupiter</groupId>
+          <artifactId>junit-jupiter-engine</artifactId>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.junit.jupiter</groupId>
+          <artifactId>junit-jupiter-params</artifactId>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.junit.vintage</groupId>
+          <artifactId>junit-vintage-engine</artifactId>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.hamcrest</groupId>
+          <artifactId>hamcrest-core</artifactId>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.mockito</groupId>
+          <artifactId>mockito-core</artifactId>
+          <scope>compile</scope>
+        </dependency>
+        <!-- End of dependencies for running hbase-it -->
+      </dependencies>
+    </profile>
+  </profiles>
 </project>

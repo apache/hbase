@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.OptionalLong;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -34,10 +35,14 @@ import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
+import org.apache.hadoop.hbase.io.hfile.InvalidHFileException;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -53,7 +58,7 @@ public class StoreFileInfo implements Configurable {
 
   /**
    * A non-capture group, for hfiles, so that this can be embedded. HFiles are uuid ([0-9a-z]+).
-   * Bulk loaded hfiles has (_SeqId_[0-9]+_) has suffix. The mob del file has (_del) as suffix.
+   * Bulk loaded hfiles have (_SeqId_[0-9]+_) as a suffix. The mob del file has (_del) as a suffix.
    */
   public static final String HFILE_NAME_REGEX = "[0-9a-f]+(?:(?:_SeqId_[0-9]+_)|(?:_del))?";
 
@@ -65,7 +70,7 @@ public class StoreFileInfo implements Configurable {
    * hfilelink reference names ({@code
    *
   <table>
-   * =<region>-<hfile>.<parentEncRegion>}) If reference, then the regex has more than just one
+   * =<region>-<hfile>.<parentEncRegion>}). If reference, then the regex has more than just one
    * group. Group 1, hfile/hfilelink pattern, is this file's id. Group 2 '(.+)' is the reference's
    * parent region name.
    */
@@ -110,20 +115,9 @@ public class StoreFileInfo implements Configurable {
   // done.
   private final AtomicInteger refCount = new AtomicInteger(0);
 
-  /**
-   * Create a Store File Info
-   * @param conf           the {@link Configuration} to use
-   * @param fs             The current file system to use.
-   * @param initialPath    The {@link Path} of the file
-   * @param primaryReplica true if this is a store file for primary replica, otherwise false.
-   */
-  public StoreFileInfo(final Configuration conf, final FileSystem fs, final Path initialPath,
-    final boolean primaryReplica) throws IOException {
-    this(conf, fs, null, initialPath, primaryReplica);
-  }
-
   private StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
-    final Path initialPath, final boolean primaryReplica) throws IOException {
+    final Path initialPath, final boolean primaryReplica, final StoreFileTracker sft)
+    throws IOException {
     assert fs != null;
     assert initialPath != null;
     assert conf != null;
@@ -141,7 +135,7 @@ public class StoreFileInfo implements Configurable {
       this.link = HFileLink.buildFromHFileLinkPattern(conf, p);
       LOG.trace("{} is a link", p);
     } else if (isReference(p)) {
-      this.reference = Reference.read(fs, p);
+      this.reference = sft.readReference(p);
       Path referencePath = getReferredToFile(p);
       if (HFileLink.isHFileLink(referencePath)) {
         // HFileLink Reference
@@ -166,17 +160,6 @@ public class StoreFileInfo implements Configurable {
     } else {
       throw new IOException("path=" + p + " doesn't look like a valid StoreFile");
     }
-  }
-
-  /**
-   * Create a Store File Info
-   * @param conf       the {@link Configuration} to use
-   * @param fs         The current file system to use.
-   * @param fileStatus The {@link FileStatus} of the file
-   */
-  public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus)
-    throws IOException {
-    this(conf, fs, fileStatus, fileStatus.getPath(), true);
   }
 
   /**
@@ -221,6 +204,33 @@ public class StoreFileInfo implements Configurable {
     this.link = link;
     this.noReadahead =
       this.conf.getBoolean(STORE_FILE_READER_NO_READAHEAD, DEFAULT_STORE_FILE_READER_NO_READAHEAD);
+  }
+
+  /**
+   * Create a Store File Info from an HFileLink and a Reference
+   * @param conf       The {@link Configuration} to use
+   * @param fs         The current file system to use
+   * @param fileStatus The {@link FileStatus} of the file
+   * @param reference  The reference instance
+   * @param link       The link instance
+   */
+  public StoreFileInfo(final Configuration conf, final FileSystem fs, final long createdTimestamp,
+    final Path initialPath, final long size, final Reference reference, final HFileLink link,
+    final boolean primaryReplica) {
+    this.fs = fs;
+    this.conf = conf;
+    this.primaryReplica = primaryReplica;
+    this.initialPath = initialPath;
+    this.createdTimestamp = createdTimestamp;
+    this.size = size;
+    this.reference = reference;
+    this.link = link;
+    this.noReadahead =
+      this.conf.getBoolean(STORE_FILE_READER_NO_READAHEAD, DEFAULT_STORE_FILE_READER_NO_READAHEAD);
+  }
+
+  public HFileLink getLink() {
+    return link;
   }
 
   @Override
@@ -286,7 +296,8 @@ public class StoreFileInfo implements Configurable {
     return reader;
   }
 
-  ReaderContext createReaderContext(boolean doDropBehind, long readahead, ReaderType type)
+  ReaderContext createReaderContext(boolean doDropBehind, long readahead, ReaderType type,
+    String keyNamespace, SystemKeyCache systemKeyCache, ManagedKeyDataCache managedKeyDataCache)
     throws IOException {
     FSDataInputStreamWrapper in;
     FileStatus status;
@@ -315,7 +326,8 @@ public class StoreFileInfo implements Configurable {
     long length = status.getLen();
     ReaderContextBuilder contextBuilder =
       new ReaderContextBuilder().withInputStreamWrapper(in).withFileSize(length)
-        .withPrimaryReplicaReader(this.primaryReplica).withReaderType(type).withFileSystem(fs);
+        .withPrimaryReplicaReader(this.primaryReplica).withReaderType(type).withFileSystem(fs)
+        .withSystemKeyCache(systemKeyCache).withManagedKeyDataCache(managedKeyDataCache);
     if (this.reference != null) {
       contextBuilder.withFilePath(this.getPath());
     } else {
@@ -424,6 +436,54 @@ public class StoreFileInfo implements Configurable {
   }
 
   /**
+   * Cells in a bulkloaded file don't have a sequenceId since they don't go through memstore. When a
+   * bulkload file is committed, the current memstore ts is stamped onto the file name as the
+   * sequenceId of the file. At read time, the sequenceId is copied onto all of the cells returned
+   * so that they can be properly sorted relative to other cells in other files. Further, when
+   * opening multiple files for scan, the sequence id is used to ensusre that the bulkload file's
+   * scanner is porperly sorted amongst the other scanners. Non-bulkloaded files get their
+   * sequenceId from the MAX_MEMSTORE_TS_KEY since those go through the memstore and have true
+   * sequenceIds.
+   */
+  private static final String SEQ_ID_MARKER = "_SeqId_";
+  private static final int SEQ_ID_MARKER_LENGTH = SEQ_ID_MARKER.length();
+
+  /**
+   * @see #SEQ_ID_MARKER
+   * @return True if the file name looks like a bulkloaded file, based on the presence of the SeqId
+   *         marker added to those files.
+   */
+  public static boolean hasBulkloadSeqId(final Path path) {
+    String fileName = path.getName();
+    return fileName.contains(SEQ_ID_MARKER);
+  }
+
+  /**
+   * @see #SEQ_ID_MARKER
+   * @return If the path is a properly named bulkloaded file, returns the sequence id stamped at the
+   *         end of the file name.
+   */
+  public static OptionalLong getBulkloadSeqId(final Path path) {
+    String fileName = path.getName();
+    int startPos = fileName.indexOf(SEQ_ID_MARKER);
+    if (startPos != -1) {
+      String strVal = fileName.substring(startPos + SEQ_ID_MARKER_LENGTH,
+        fileName.indexOf('_', startPos + SEQ_ID_MARKER_LENGTH));
+      return OptionalLong.of(Long.parseLong(strVal));
+    }
+    return OptionalLong.empty();
+  }
+
+  /**
+   * @see #SEQ_ID_MARKER
+   * @return A string value for appending to the end of a bulkloaded file name, containing the
+   *         properly formatted SeqId marker.
+   */
+  public static String formatBulkloadSeqId(long seqId) {
+    return SEQ_ID_MARKER + seqId + "_";
+  }
+
+  /**
    * @param path Path to check.
    * @return True if the path has format of a HFile.
    */
@@ -484,6 +544,13 @@ public class StoreFileInfo implements Configurable {
    * @return True if the path has format of a HStoreFile reference.
    */
   public static boolean isReference(final String name) {
+    // The REF_NAME_PATTERN regex is not computationally trivial, so see if we can fast-fail
+    // on a simple heuristic first. The regex contains a literal ".", so if that character
+    // isn't in the name, then the regex cannot match.
+    if (!name.contains(".")) {
+      return false;
+    }
+
     Matcher m = REF_NAME_PATTERN.matcher(name);
     return m.matches() && m.groupCount() > 1;
   }
@@ -674,7 +741,7 @@ public class StoreFileInfo implements Configurable {
     }
   }
 
-  FileSystem getFileSystem() {
+  public FileSystem getFileSystem() {
     return this.fs;
   }
 
@@ -724,6 +791,16 @@ public class StoreFileInfo implements Configurable {
 
   int decreaseRefCount() {
     return this.refCount.decrementAndGet();
+  }
+
+  public static StoreFileInfo createStoreFileInfoForHFile(final Configuration conf,
+    final FileSystem fs, final Path initialPath, final boolean primaryReplica) throws IOException {
+    if (HFileLink.isHFileLink(initialPath) || isReference(initialPath)) {
+      throw new InvalidHFileException("Path " + initialPath + " is a Hfile link or a Regerence");
+    }
+    StoreFileInfo storeFileInfo =
+      new StoreFileInfo(conf, fs, null, initialPath, primaryReplica, null);
+    return storeFileInfo;
   }
 
 }

@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -33,7 +33,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class ScanWildcardColumnTracker implements ColumnTracker {
-  private Cell columnCell = null;
+  private ExtendedCell columnCell = null;
   private int currentCount = 0;
   private final int maxVersions;
   private final int minVersions;
@@ -68,7 +68,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
    * {@inheritDoc} This receives puts *and* deletes.
    */
   @Override
-  public MatchCode checkColumn(Cell cell, byte type) throws IOException {
+  public MatchCode checkColumn(ExtendedCell cell, byte type) throws IOException {
     return MatchCode.INCLUDE;
   }
 
@@ -77,7 +77,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
    * take the version of the previous put (so eventually all but the last can be reclaimed).
    */
   @Override
-  public ScanQueryMatcher.MatchCode checkVersions(Cell cell, long timestamp, byte type,
+  public ScanQueryMatcher.MatchCode checkVersions(ExtendedCell cell, long timestamp, byte type,
     boolean ignoreCount) throws IOException {
     if (columnCell == null) {
       // first iteration.
@@ -121,7 +121,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
       + "smaller than the previous column: " + Bytes.toStringBinary(CellUtil.cloneQualifier(cell)));
   }
 
-  private void resetCell(Cell columnCell) {
+  private void resetCell(ExtendedCell columnCell) {
     this.columnCell = columnCell;
     currentCount = 0;
   }
@@ -192,7 +192,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   }
 
   @Override
-  public MatchCode getNextRowOrNextColumn(Cell cell) {
+  public MatchCode getNextRowOrNextColumn(ExtendedCell cell) {
     return MatchCode.SEEK_NEXT_COL;
   }
 

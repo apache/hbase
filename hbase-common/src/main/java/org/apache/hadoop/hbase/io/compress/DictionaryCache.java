@@ -59,11 +59,11 @@ public final class DictionaryCache {
    * @param path the hadoop Path where the dictionary is located, as a String
    * @return the dictionary bytes if successful, null otherwise
    */
-  public static byte[] getDictionary(final Configuration conf, final String path)
-    throws IOException {
+  public static byte[] getDictionary(final Configuration conf, final String path) {
     if (path == null || path.isEmpty()) {
       return null;
     }
+
     // Create the dictionary loading cache if we haven't already
     if (CACHE == null) {
       synchronized (DictionaryCache.class) {
@@ -91,7 +91,7 @@ public final class DictionaryCache {
     try {
       return CACHE.get(path);
     } catch (ExecutionException e) {
-      throw new IOException(e);
+      throw new RuntimeException("Unable to load dictionary at " + path, e);
     }
   }
 

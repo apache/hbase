@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -1488,22 +1489,24 @@ public class TestBlockEvictionFromClient {
     }
 
     @Override
-    public boolean next(List<Cell> results) throws IOException {
+    public boolean next(List<? super ExtendedCell> results) throws IOException {
       return delegate.next(results);
     }
 
     @Override
-    public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
+    public boolean next(List<? super ExtendedCell> result, ScannerContext scannerContext)
+      throws IOException {
       return delegate.next(result, scannerContext);
     }
 
     @Override
-    public boolean nextRaw(List<Cell> result) throws IOException {
+    public boolean nextRaw(List<? super ExtendedCell> result) throws IOException {
       return delegate.nextRaw(result);
     }
 
     @Override
-    public boolean nextRaw(List<Cell> result, ScannerContext context) throws IOException {
+    public boolean nextRaw(List<? super ExtendedCell> result, ScannerContext context)
+      throws IOException {
       boolean nextRaw = delegate.nextRaw(result, context);
       if (compactionLatch != null && compactionLatch.getCount() > 0) {
         try {
@@ -1562,8 +1565,8 @@ public class TestBlockEvictionFromClient {
 
   public static class CustomInnerRegionObserverWrapper extends CustomInnerRegionObserver {
     @Override
-    public RegionScanner postScannerOpen(ObserverContext<RegionCoprocessorEnvironment> e, Scan scan,
-      RegionScanner s) throws IOException {
+    public RegionScanner postScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      Scan scan, RegionScanner s) throws IOException {
       return new CustomScanner(s);
     }
   }
@@ -1582,7 +1585,7 @@ public class TestBlockEvictionFromClient {
     }
 
     @Override
-    public boolean postScannerNext(ObserverContext<RegionCoprocessorEnvironment> e,
+    public boolean postScannerNext(ObserverContext<? extends RegionCoprocessorEnvironment> e,
       InternalScanner s, List<Result> results, int limit, boolean hasMore) throws IOException {
       slowdownCode(e, false);
       if (getLatch != null && getLatch.getCount() > 0) {
@@ -1595,7 +1598,7 @@ public class TestBlockEvictionFromClient {
     }
 
     @Override
-    public void postGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
+    public void postGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> e, Get get,
       List<Cell> results) throws IOException {
       slowdownCode(e, true);
     }
@@ -1604,7 +1607,7 @@ public class TestBlockEvictionFromClient {
       return cdl;
     }
 
-    private void slowdownCode(final ObserverContext<RegionCoprocessorEnvironment> e,
+    private void slowdownCode(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       boolean isGet) {
       CountDownLatch latch = getCdl().get();
       try {

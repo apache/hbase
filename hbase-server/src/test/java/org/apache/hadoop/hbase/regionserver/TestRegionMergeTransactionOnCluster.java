@@ -58,8 +58,9 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -163,15 +164,17 @@ public class TestRegionMergeTransactionOnCluster {
         : mergedRegions.getSecond();
       SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       AssignmentManager am = cluster.getMaster().getAssignmentManager();
-      RegionStates regionStates = am.getRegionStates();
 
-      // We should not be able to assign it again
+      // We should not be able to assign it again, but we are able to do it here. Assertions are
+      // poor here and missing that assign is possible here. Created HBASE-29692 for resolving this.
       am.assign(hri);
-      assertFalse("Merged region can't be assigned", regionStates.isRegionInTransition(hri));
+      assertFalse("Merged region can't be assigned",
+        am.getRegionStates().getRegionStateNode(hri).isTransitionScheduled());
 
       // We should not be able to unassign it either
       am.unassign(hri);
-      assertFalse("Merged region can't be unassigned", regionStates.isRegionInTransition(hri));
+      assertFalse("Merged region can't be unassigned",
+        am.getRegionStates().getRegionStateNode(hri).isTransitionScheduled());
 
       table.close();
     } finally {
@@ -247,7 +250,9 @@ public class TestRegionMergeTransactionOnCluster {
         new HRegionFileSystem(TEST_UTIL.getConfiguration(), fs, tabledir, mergedRegionInfo);
       int count = 0;
       for (ColumnFamilyDescriptor colFamily : columnFamilies) {
-        count += hrfs.getStoreFiles(colFamily.getNameAsString()).size();
+        StoreFileTracker sft = StoreFileTrackerFactory.create(TEST_UTIL.getConfiguration(),
+          tableDescriptor, colFamily, hrfs, false);
+        count += sft.load().size();
       }
       ADMIN.compactRegion(mergedRegionInfo.getRegionName());
       // clean up the merged region store files
@@ -256,7 +261,9 @@ public class TestRegionMergeTransactionOnCluster {
       int newcount = 0;
       while (EnvironmentEdgeManager.currentTime() < timeout) {
         for (ColumnFamilyDescriptor colFamily : columnFamilies) {
-          newcount += hrfs.getStoreFiles(colFamily.getNameAsString()).size();
+          StoreFileTracker sft = StoreFileTrackerFactory.create(TEST_UTIL.getConfiguration(),
+            tableDescriptor, colFamily, hrfs, false);
+          newcount += sft.load().size();
         }
         if (newcount > count) {
           break;
@@ -275,7 +282,9 @@ public class TestRegionMergeTransactionOnCluster {
       while (EnvironmentEdgeManager.currentTime() < timeout) {
         int newcount1 = 0;
         for (ColumnFamilyDescriptor colFamily : columnFamilies) {
-          newcount1 += hrfs.getStoreFiles(colFamily.getNameAsString()).size();
+          StoreFileTracker sft = StoreFileTrackerFactory.create(TEST_UTIL.getConfiguration(),
+            tableDescriptor, colFamily, hrfs, false);
+          newcount1 += sft.load().size();
         }
         if (newcount1 <= 1) {
           break;
@@ -561,11 +570,11 @@ public class TestRegionMergeTransactionOnCluster {
         enabled.get() && req.getTransition(0).getTransitionCode() == TransitionCode.READY_TO_MERGE
           && !resp.hasErrorMessage()
       ) {
-        RegionStates regionStates = myMaster.getAssignmentManager().getRegionStates();
-        for (RegionState regionState : regionStates.getRegionsStateInTransition()) {
+        AssignmentManager am = myMaster.getAssignmentManager();
+        for (RegionState regionState : am.getRegionsStateInTransition()) {
           // Find the merging_new region and remove it
           if (regionState.isMergingNew()) {
-            regionStates.deleteRegion(regionState.getRegion());
+            am.getRegionStates().deleteRegion(regionState.getRegion());
           }
         }
       }

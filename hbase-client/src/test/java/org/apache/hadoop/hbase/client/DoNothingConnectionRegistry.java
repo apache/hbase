@@ -21,15 +21,16 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Registry that does nothing. Otherwise, default Registry wants zookeeper up and running.
  */
 @InterfaceAudience.Private
-class DoNothingConnectionRegistry implements ConnectionRegistry {
+public class DoNothingConnectionRegistry implements ConnectionRegistry {
 
-  public DoNothingConnectionRegistry(Configuration conf) {
+  public DoNothingConnectionRegistry(Configuration conf, User user) {
   }
 
   @Override

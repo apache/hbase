@@ -24,8 +24,8 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -44,7 +44,7 @@ public class BatchScanResultCache implements ScanResultCache {
 
   // used to filter out the cells that already returned to user as we always start from the
   // beginning of a row when retry.
-  private Cell lastCell;
+  private ExtendedCell lastCell;
 
   private boolean lastResultPartial;
 
@@ -59,7 +59,7 @@ public class BatchScanResultCache implements ScanResultCache {
   }
 
   private void recordLastResult(Result result) {
-    lastCell = result.rawCells()[result.rawCells().length - 1];
+    lastCell = result.rawExtendedCells()[result.rawExtendedCells().length - 1];
     lastResultPartial = result.mayHaveMoreCellsInRow();
   }
 
@@ -80,7 +80,7 @@ public class BatchScanResultCache implements ScanResultCache {
     if (numCellsOfPartialResults < batch) {
       return null;
     }
-    Cell[] cells = new Cell[batch];
+    ExtendedCell[] cells = new ExtendedCell[batch];
     int cellCount = 0;
     boolean stale = false;
     for (;;) {
@@ -91,8 +91,8 @@ public class BatchScanResultCache implements ScanResultCache {
         // We have more cells than expected, so split the current result
         int len = batch - cellCount;
         System.arraycopy(r.rawCells(), 0, cells, cellCount, len);
-        Cell[] remainingCells = new Cell[r.size() - len];
-        System.arraycopy(r.rawCells(), len, remainingCells, 0, r.size() - len);
+        ExtendedCell[] remainingCells = new ExtendedCell[r.size() - len];
+        System.arraycopy(r.rawExtendedCells(), len, remainingCells, 0, r.size() - len);
         partialResults.addFirst(
           Result.create(remainingCells, r.getExists(), r.isStale(), r.mayHaveMoreCellsInRow()));
         break;

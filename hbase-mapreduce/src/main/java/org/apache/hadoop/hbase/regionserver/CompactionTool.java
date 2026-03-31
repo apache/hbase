@@ -211,6 +211,8 @@ public class CompactionTool extends Configured implements Tool {
       } catch (IOException e) {
         throw new RuntimeException("Could not get the input FileSystem", e);
       }
+      // Disable the MemStoreLAB as MemStore is not used by flow during compaction
+      conf.setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
     }
 
     @Override
@@ -369,6 +371,8 @@ public class CompactionTool extends Configured implements Tool {
    */
   private int doClient(final FileSystem fs, final Set<Path> toCompactDirs,
     final boolean compactOnce, final boolean major) throws IOException {
+    // Disable the MemStoreLAB as MemStore is not used by flow during compaction
+    getConf().setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
     CompactionWorker worker = new CompactionWorker(fs, getConf());
     for (Path path : toCompactDirs) {
       worker.compact(path, compactOnce, major);

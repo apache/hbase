@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -50,7 +51,7 @@ import org.slf4j.LoggerFactory;
  * </p>
  */
 @InterfaceAudience.Private
-class SequenceIdAccounting {
+public class SequenceIdAccounting {
   private static final Logger LOG = LoggerFactory.getLogger(SequenceIdAccounting.class);
 
   /**
@@ -112,7 +113,9 @@ class SequenceIdAccounting {
    * @return Lowest outstanding unflushed sequenceid for <code>encodedRegionName</code>. Will return
    *         {@link HConstants#NO_SEQNUM} when none.
    */
-  long getLowestSequenceId(final byte[] encodedRegionName) {
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public long getLowestSequenceId(final byte[] encodedRegionName) {
     synchronized (this.tieLock) {
       Map<?, Long> m = this.flushingSequenceIds.get(encodedRegionName);
       long flushingLowest = m != null ? getLowestSequenceId(m) : Long.MAX_VALUE;
@@ -477,6 +480,11 @@ class SequenceIdAccounting {
           continue;
         }
         for (Map.Entry<ImmutableByteArray, Long> me : m.entrySet()) {
+          // FLUSH events produce an entry in the wal with a "fake" METAFAMILY CF. We need to ignore
+          // these entries here, as there is actual no such store.
+          if (me.getKey().toString().equals("METAFAMILY")) {
+            continue;
+          }
           if (me.getValue() <= e.getValue()) {
             if (toFlush == null) {
               toFlush = new TreeMap(Bytes.BYTES_COMPARATOR);

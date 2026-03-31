@@ -135,7 +135,7 @@ EOF
     # Put a cell 'value' at specified table/row/column
     def _put_internal(row, column, value, timestamp = nil, args = {})
       p = org.apache.hadoop.hbase.client.Put.new(row.to_s.to_java_bytes)
-      family, qualifier = parse_column_name(column)
+      family, qualifier = split_column_name(column)
       if args.any?
         attributes = args[ATTRIBUTES]
         set_attributes(p, attributes) if attributes
@@ -188,14 +188,14 @@ EOF
       end
       if column != ""
         if column && all_version
-          family, qualifier = parse_column_name(column)
+          family, qualifier = split_column_name(column)
           if qualifier
             d.addColumns(family, qualifier, timestamp)
           else
             d.addFamily(family, timestamp)
           end
         elsif column && !all_version
-          family, qualifier = parse_column_name(column)
+          family, qualifier = split_column_name(column)
           if qualifier
             d.addColumn(family, qualifier, timestamp)
           else
@@ -273,7 +273,7 @@ EOF
       value = 1 if value.is_a?(Hash)
       value ||= 1
       incr = org.apache.hadoop.hbase.client.Increment.new(row.to_s.to_java_bytes)
-      family, qualifier = parse_column_name(column)
+      family, qualifier = split_column_name(column)
       if args.any?
         attributes = args[ATTRIBUTES]
         visibility = args[VISIBILITY]
@@ -296,7 +296,7 @@ EOF
     # appends the value atomically
     def _append_internal(row, column, value, args = {})
       append = org.apache.hadoop.hbase.client.Append.new(row.to_s.to_java_bytes)
-      family, qualifier = parse_column_name(column)
+      family, qualifier = split_column_name(column)
       if args.any?
         attributes = args[ATTRIBUTES]
         visibility = args[VISIBILITY]
@@ -321,24 +321,21 @@ EOF
     def _count_internal(interval = 1000, scan = nil, cacheBlocks=false)
       raise(ArgumentError, 'Scan argument should be org.apache.hadoop.hbase.client.Scan') \
         unless scan.nil? || scan.is_a?(org.apache.hadoop.hbase.client.Scan)
-      # We can safely set scanner caching with the first key only filter
 
-      if scan.nil?
-        scan = org.apache.hadoop.hbase.client.Scan.new
-        scan.setCacheBlocks(cacheBlocks)
-        scan.setCaching(10)
-        scan.setFilter(org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter.new)
-      else
-        scan.setCacheBlocks(cacheBlocks)
-        filter = scan.getFilter
-        firstKeyOnlyFilter = org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter.new
-        if filter.nil?
-          scan.setFilter(firstKeyOnlyFilter)
-        else
-          firstKeyOnlyFilter.setReversed(filter.isReversed)
-          scan.setFilter(org.apache.hadoop.hbase.filter.FilterList.new(filter, firstKeyOnlyFilter))
-        end
+      scan ||= org.apache.hadoop.hbase.client.Scan.new
+      scan.setCacheBlocks(cacheBlocks)
+
+      # Optimize counting by using FirstKeyOnlyFilter and KeyOnlyFilter
+      filters = [
+        org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter.new,
+        org.apache.hadoop.hbase.filter.KeyOnlyFilter.new
+      ]
+      filter = scan.getFilter
+      if filter
+        filters.each { |f| f.setReversed(filter.isReversed) }
+        filters = [filter, *filters]
       end
+      scan.setFilter(org.apache.hadoop.hbase.filter.FilterList.new(filters))
 
       # Run the scanner
       scanner = @table.getScanner(scan)
@@ -491,7 +488,7 @@ EOF
     #----------------------------------------------------------------------------------------------
     # Fetches and decodes a counter value from hbase
     def _get_counter_internal(row, column)
-      family, qualifier = parse_column_name(column.to_s)
+      family, qualifier = split_column_name(column.to_s)
       # Format get request
       get = org.apache.hadoop.hbase.client.Get.new(row.to_s.to_java_bytes)
       get.addColumn(family, qualifier)
@@ -833,15 +830,15 @@ EOF
       eval(converter_class).method(converter_method).call(bytes)
     end
 
-    def convert_bytes_with_position(bytes, offset, len, converter_class, converter_method)
-      # Avoid nil
-      converter_class ||= 'org.apache.hadoop.hbase.util.Bytes'
-      converter_method ||= 'toStringBinary'
-      eval(converter_class).method(converter_method).call(bytes, offset, len)
-    end
-
     # store the information designating what part of a column should be printed, and how
     ColumnFormatSpec = Struct.new(:family, :qualifier, :converter)
+
+    # Use this instead of parse_column_name if the name cannot contain a converter
+    private def split_column_name(column)
+      # NOTE: We use 'take(2)' instead of 'to_a' to avoid type coercion of the nested byte arrays.
+      # https://github.com/jruby/jruby/blob/9.3.13.0/core/src/main/java/org/jruby/java/proxies/ArrayJavaProxy.java#L484-L488
+      org.apache.hadoop.hbase.CellUtil.parseColumn(column.to_java_bytes).take(2)
+    end
 
     ##
     # Parse the column specification for formatting used by shell commands like :scan
@@ -856,19 +853,27 @@ EOF
     # @param [String] column
     # @return [ColumnFormatSpec] family, qualifier, and converter as Java bytes
     private def parse_column_format_spec(column)
-      split = org.apache.hadoop.hbase.CellUtil.parseColumn(column.to_java_bytes)
-      family = split[0]
-      qualifier = nil
       converter = nil
-      if split.length > 1
-        parts = org.apache.hadoop.hbase.CellUtil.parseColumn(split[1])
-        qualifier = parts[0]
-        if parts.length > 1
-          converter = parts[1]
+      family, qualifier = split_column_name(column)
+      if qualifier
+        delim = org.apache.hadoop.hbase.KeyValue.getDelimiterInReverse(
+          qualifier, 0, qualifier.length, org.apache.hadoop.hbase.KeyValue::COLUMN_FAMILY_DELIMITER
+        )
+        if delim >= 0
+          prefix, suffix = qualifier[0...delim], qualifier[delim+1..-1]
+          if converter?(suffix.to_s)
+            qualifier = prefix
+            converter = suffix
+          end
         end
       end
 
       ColumnFormatSpec.new(family, qualifier, converter)
+    end
+
+    # Check if the expression can be a converter
+    private def converter?(expr)
+      expr =~ /^c\(.+\)\..+/ || Bytes.respond_to?(expr)
     end
 
     private def set_column_converter(family, qualifier, converter)

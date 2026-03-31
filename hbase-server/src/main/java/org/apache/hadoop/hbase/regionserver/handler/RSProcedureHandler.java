@@ -35,25 +35,32 @@ public class RSProcedureHandler extends EventHandler {
 
   private final long procId;
 
+  // active time of the master that sent procedure request, used for fencing
+  private final long initiatingMasterActiveTime;
+
   private final RSProcedureCallable callable;
 
-  public RSProcedureHandler(HRegionServer rs, long procId, RSProcedureCallable callable) {
+  public RSProcedureHandler(HRegionServer rs, long procId, long initiatingMasterActiveTime,
+    RSProcedureCallable callable) {
     super(rs, callable.getEventType());
     this.procId = procId;
     this.callable = callable;
+    this.initiatingMasterActiveTime = initiatingMasterActiveTime;
   }
 
   @Override
   public void process() {
     Throwable error = null;
+    byte[] procResultData = null;
     try {
       MDC.put("pid", Long.toString(procId));
-      callable.call();
+      procResultData = callable.call();
     } catch (Throwable t) {
-      LOG.error("pid=" + this.procId, t);
+      LOG.error("pid={}", this.procId, t);
       error = t;
     } finally {
-      ((HRegionServer) server).remoteProcedureComplete(procId, error);
+      ((HRegionServer) server).remoteProcedureComplete(procId, initiatingMasterActiveTime, error,
+        procResultData);
     }
   }
 }

@@ -35,6 +35,7 @@
     <license.bundles.bootstrap>true</license.bundles.bootstrap>
     <license.bundles.jquery>true</license.bundles.jquery>
     <license.bundles.vega>true</license.bundles.vega>
+    <hbase.webapps.dir>hbase-webapps</hbase.webapps.dir>
   </properties>
   <dependencies>
     <dependency>
@@ -178,8 +179,8 @@
       <!-- For JspC used in ant task, then needed at compile /runtime
            because the source code made from the JSP refers to its runtime
         -->
-      <groupId>org.glassfish.web</groupId>
-      <artifactId>javax.servlet.jsp</artifactId>
+      <groupId>org.apache.tomcat</groupId>
+      <artifactId>tomcat-jasper</artifactId>
     </dependency>
     <!-- Also used by generated sources from our JSP -->
     <dependency>
@@ -190,6 +191,12 @@
     <dependency>
       <groupId>com.github.stephenc.findbugs</groupId>
       <artifactId>findbugs-annotations</artifactId>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.github.stephenc.jcip</groupId>
+      <artifactId>jcip-annotations</artifactId>
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
@@ -220,10 +227,6 @@
     <dependency>
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.jamon</groupId>
-      <artifactId>jamon-runtime</artifactId>
     </dependency>
     <dependency>
       <groupId>javax.servlet</groupId>
@@ -260,16 +263,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.kerby</groupId>
-      <artifactId>kerb-client</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.kerby</groupId>
-      <artifactId>kerb-simplekdc</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
       <scope>test</scope>
@@ -290,13 +283,38 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.vintage</groupId>
+      <artifactId>junit-vintage-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.awaitility</groupId>
+      <artifactId>awaitility</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-inline</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -406,13 +424,13 @@
             <configuration>
               <attachToTest>false</attachToTest>
               <properties>
-                <copyright-end-year>${build.year}</copyright-end-year>
-                <debug-print-included-work-info>${license.debug.print.included}</debug-print-included-work-info>
-                <bundled-dependencies>${license.bundles.dependencies}</bundled-dependencies>
-                <bundled-jquery>${license.bundles.jquery}</bundled-jquery>
-                <bundled-vega>${license.bundles.vega}</bundled-vega>
-                <bundled-logo>${license.bundles.logo}</bundled-logo>
-                <bundled-bootstrap>${license.bundles.bootstrap}</bundled-bootstrap>
+                <copyright_end_year>${build.year}</copyright_end_year>
+                <debug_print_included_work_info>${license.debug.print.included}</debug_print_included_work_info>
+                <bundled_dependencies>${license.bundles.dependencies}</bundled_dependencies>
+                <bundled_jquery>${license.bundles.jquery}</bundled_jquery>
+                <bundled_vega>${license.bundles.vega}</bundled_vega>
+                <bundled_logo>${license.bundles.logo}</bundled_logo>
+                <bundled_bootstrap>${license.bundles.bootstrap}</bundled_bootstrap>
               </properties>
               <resourceBundles>
                 <resourceBundle>${project.groupId}:hbase-resource-bundle:${project.version}</resourceBundle>
@@ -438,23 +456,95 @@
         </configuration>
       </plugin>
       <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>add-test-source</id>
+            <goals>
+              <goal>add-test-resource</goal>
+            </goals>
+            <phase>generate-test-sources</phase>
+            <configuration>
+              <!-- Add the hbase-webapps directory to the test resources -->
+              <resources>
+                <resource>
+                  <!-- Directory containing hbase-webapps -->
+                  <directory>target/${hbase.webapps.dir}</directory>
+                  <!-- Target directory under test-classes -->
+                  <targetPath>${hbase.webapps.dir}</targetPath>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+          <execution>
+            <!-- Add the generated sources -->
+            <id>jspcSource-packageInfo-source</id>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}/generated-sources/java</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <!-- Exclude these 2 packages, because their dependency _binary_ files
-            include the sources, and Maven 2.2 appears to add them to the sources to compile,
-            weird -->
-          <excludes>
-            <exclude>org/apache/jute/**</exclude>
-            <exclude>org/apache/zookeeper/**</exclude>
-            <exclude>**/*.jsp</exclude>
-            <exclude>hbase-site.xml</exclude>
-            <exclude>hdfs-site.xml</exclude>
-            <exclude>log4j.properties</exclude>
-            <exclude>mapred-queues.xml</exclude>
-            <exclude>mapred-site.xml</exclude>
-          </excludes>
-        </configuration>
+        <executions>
+          <!-- Exclude specified file(s) from the default JAR -->
+          <execution>
+            <id>default-jar</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <phase>package</phase>
+            <configuration>
+              <excludes>
+                <!-- Exclude these 2 packages, because their dependency _binary_ files
+                include the sources, and Maven 2.2 appears to add them to the sources to compile,
+                weird -->
+                <exclude>org/apache/jute/**</exclude>
+                <exclude>org/apache/zookeeper/**</exclude>
+                <exclude>**/*.jsp</exclude>
+                <exclude>hbase-site.xml</exclude>
+                <exclude>hdfs-site.xml</exclude>
+                <exclude>log4j.properties</exclude>
+                <exclude>mapred-queues.xml</exclude>
+                <exclude>mapred-site.xml</exclude>
+                <!-- NOTE: We have the below exclude only for the default JAR -->
+                <exclude>**/hbase-webapps/**</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+          <!-- Copy of default jar exclusions, minus not removing hbase-webapps-->
+          <execution>
+            <id>test-jar</id>
+            <goals>
+              <goal>test-jar</goal>
+            </goals>
+            <phase>package</phase>
+            <configuration>
+              <classifier>tests</classifier>
+              <excludes>
+                <exclude>org/apache/jute/**</exclude>
+                <exclude>org/apache/zookeeper/**</exclude>
+                <exclude>**/*.jsp</exclude>
+                <exclude>hbase-site.xml</exclude>
+                <exclude>hdfs-site.xml</exclude>
+                <exclude>log4j.properties</exclude>
+                <exclude>mapred-queues.xml</exclude>
+                <exclude>mapred-site.xml</exclude>
+                <!-- We do not want to exclude hbase-webapps from tests. We actually intentionally
+                add this directory to out test resources. See HBASE-28921 for details! -->
+              </excludes>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <!-- General ant tasks, bound to different build phases -->
       <plugin>
@@ -480,49 +570,29 @@
                     <exclude name="**/*~"/>
                   </fileset>
                 </copy>
+                <!-- Create a "staging" JSP directory where we copy the common JSP files into master and rs directories.
+                     Compilation is done using this "staging" JSP directory. -->
+                <mkdir dir="${project.build.directory}/jsp"/>
+                <copy todir="${project.build.directory}/jsp">
+                  <fileset dir="${src.webapps}">
+                    <include name="**/*.jsp"/>
+                  </fileset>
+                </copy>
+                <copy todir="${project.build.directory}/jsp/master">
+                  <fileset dir="${project.build.directory}/jsp/common"/>
+                </copy>
+                <copy todir="${project.build.directory}/jsp/regionserver">
+                  <fileset dir="${project.build.directory}/jsp/common"/>
+                </copy>
                 <!--The compile.classpath is passed in by maven -->
                 <taskdef classname="org.apache.jasper.JspC" classpathref="maven.compile.classpath" name="jspcompiler"/>
                 <mkdir dir="${build.webapps}/master/WEB-INF"/>
-                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.master" uriroot="${src.webapps}/master" webxml="${build.webapps}/master/WEB-INF/web.xml"/>
+                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.master" uriroot="${project.build.directory}/jsp/master" webxml="${build.webapps}/master/WEB-INF/web.xml"/>
                 <mkdir dir="${build.webapps}/regionserver/WEB-INF"/>
-                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.regionserver" uriroot="${src.webapps}/regionserver" webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
+                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.regionserver" uriroot="${project.build.directory}/jsp/regionserver" webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
+                <mkdir dir="${build.webapps}/canary/WEB-INF"/>
+                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.canary" uriroot="${project.build.directory}/jsp/canary" webxml="${build.webapps}/canary/WEB-INF/web.xml"/>
               </target>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <executions>
-          <!-- Add the generated sources -->
-          <execution>
-            <id>jspcSource-packageInfo-source</id>
-            <goals>
-              <goal>add-source</goal>
-            </goals>
-            <phase>generate-sources</phase>
-            <configuration>
-              <sources>
-                <source>${project.build.directory}/generated-jamon</source>
-                <source>${project.build.directory}/generated-sources/java</source>
-              </sources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.jamon</groupId>
-        <artifactId>jamon-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>translate</goal>
-            </goals>
-            <phase>generate-sources</phase>
-            <configuration>
-              <templateSourceDir>src/main/jamon</templateSourceDir>
-              <templateOutputDir>target/generated-jamon</templateOutputDir>
             </configuration>
           </execution>
         </executions>
@@ -539,6 +609,115 @@
       <plugin>
         <groupId>net.revelc.code</groupId>
         <artifactId>warbucks-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>${maven.dependency.version}</version>
+        <executions>
+          <execution>
+            <id>unpack-ui-resources-js</id>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <phase>process-resources</phase>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>bootstrap</artifactId>
+                  <version>${bootstrap.version}</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/js/bootstrap.bundle.min.js</includes>
+                  <fileMappers>
+                    <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.FlattenFileMapper"/>
+                  </fileMappers>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>jquery</artifactId>
+                  <version>${jquery.version}</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/jquery.min.js</includes>
+                  <fileMappers>
+                    <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.FlattenFileMapper"/>
+                  </fileMappers>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>tablesorter</artifactId>
+                  <version>${tablesorter.version}</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/jquery.tablesorter.min.js,
+                    **/parsers/parser-date-iso8601.min.js</includes>
+                  <fileMappers>
+                    <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.FlattenFileMapper"/>
+                  </fileMappers>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>vega</artifactId>
+                  <version>${vega.version}</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/vega.min.js</includes>
+                  <fileMappers>
+                    <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.FlattenFileMapper"/>
+                  </fileMappers>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>vega-embed</artifactId>
+                  <version>${vega-embed.version}</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/vega-embed.min.js</includes>
+                  <fileMappers>
+                    <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.FlattenFileMapper"/>
+                  </fileMappers>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>vega-lite</artifactId>
+                  <version>${vega-lite.version}</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/vega-lite.min.js</includes>
+                  <fileMappers>
+                    <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.FlattenFileMapper"/>
+                  </fileMappers>
+                </artifactItem>
+              </artifactItems>
+              <outputDirectory>${project.build.directory}/hbase-webapps/static/js</outputDirectory>
+            </configuration>
+          </execution>
+          <execution>
+            <id>unpack-ui-resources-css</id>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <phase>process-resources</phase>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>bootstrap</artifactId>
+                  <version>${bootstrap.version}</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/css/bootstrap.min.css</includes>
+                  <fileMappers>
+                    <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.FlattenFileMapper"/>
+                  </fileMappers>
+                </artifactItem>
+              </artifactItems>
+              <outputDirectory>${project.build.directory}/hbase-webapps/static/css</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
@@ -699,13 +878,6 @@
             </exclusion>
           </exclusions>
         </dependency>
-        <!-- Hadoop needs Netty 3.x at test scope for the minicluster>
-        <dependency>
-          <groupId>io.netty</groupId>
-          <artifactId>netty</artifactId>
-          <version>${netty.hadoop.version}</version>
-          <scope>test</scope>
-        </dependency-->
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-minikdc</artifactId>
@@ -715,7 +887,9 @@
       <build>
         <plugins>
           <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-dependency-plugin</artifactId>
+            <version>${maven.dependency.version}</version>
             <executions>
               <execution>
                 <id>create-mrapp-generated-classpath</id>
@@ -757,22 +931,6 @@
                   <pluginExecutions>
                     <pluginExecution>
                       <pluginExecutionFilter>
-                        <groupId>org.jamon</groupId>
-                        <artifactId>jamon-maven-plugin</artifactId>
-                        <versionRange>[2.3.4,)</versionRange>
-                        <goals>
-                          <goal>translate</goal>
-                        </goals>
-                      </pluginExecutionFilter>
-                      <action>
-                        <execute>
-                          <runOnIncremental>false</runOnIncremental>
-                          <runOnConfiguration>true</runOnConfiguration>
-                        </execute>
-                      </action>
-                    </pluginExecution>
-                    <pluginExecution>
-                      <pluginExecutionFilter>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-antrun-plugin</artifactId>
                         <versionRange>[1.6,)</versionRange>
@@ -806,31 +964,6 @@
             </plugin>
           </plugins>
         </pluginManagement>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-eclipse-plugin</artifactId>
-            <configuration>
-              <additionalProjectnatures>
-                <projectnature>org.jamon.project.jamonnature</projectnature>
-              </additionalProjectnatures>
-              <buildcommands>
-                <buildcommand>org.jamon.project.templateBuilder</buildcommand>
-                <buildcommand>org.eclipse.jdt.core.javabuilder</buildcommand>
-                <buildcommand>org.jamon.project.markerUpdater</buildcommand>
-              </buildcommands>
-              <additionalConfig>
-                <file>
-                  <name>.settings/org.jamon.prefs</name>
-                  <content># now
-                    eclipse.preferences.version=1
-                    templateSourceDir=src/main/jamon
-                    templateOutputDir=target/generated-jamon</content>
-                </file>
-              </additionalConfig>
-            </configuration>
-          </plugin>
-        </plugins>
       </build>
     </profile>
   </profiles>

@@ -66,7 +66,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     // We sincerely hope nobody is messing with us with their coprocessors.
     // If they do, they are very likely to shoot themselves in the foot.
     // We'll just exclude all the filesCompacting from the list.
-    ArrayList<HStoreFile> candidateFiles = new ArrayList<>(si.getStorefiles());
+    ArrayList<HStoreFile> candidateFiles = new ArrayList<>(si.getStoreFiles());
     candidateFiles.removeAll(filesCompacting);
     return candidateFiles;
   }
@@ -114,7 +114,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
 
     // This can happen due to region split. We can skip it later; for now preserve
     // compact-all-things behavior.
-    Collection<HStoreFile> allFiles = si.getStorefiles();
+    Collection<HStoreFile> allFiles = si.getStoreFiles();
     if (StoreUtils.hasReferences(allFiles)) {
       LOG.debug("There are references in the store; compacting all files");
       long targetKvs = estimateTargetKvs(allFiles, config.getInitialCount()).getFirst();
@@ -165,7 +165,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
 
   public boolean needsCompactions(StripeInformationProvider si, List<HStoreFile> filesCompacting) {
     // Approximation on whether we need compaction.
-    return filesCompacting.isEmpty() && (StoreUtils.hasReferences(si.getStorefiles())
+    return filesCompacting.isEmpty() && (StoreUtils.hasReferences(si.getStoreFiles())
       || (si.getLevel0Files().size() >= this.config.getLevel0MinFiles())
       || needsSingleStripeCompaction(si) || hasExpiredStripes(si) || allL0FilesExpired(si));
   }
@@ -577,7 +577,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
 
   /** The information about stripes that the policy needs to do its stuff */
   public static interface StripeInformationProvider {
-    public Collection<HStoreFile> getStorefiles();
+    public Collection<HStoreFile> getStoreFiles();
 
     /**
      * Gets the start row for a given stripe.

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -201,5 +202,21 @@ public final class ClassLoaderTestHelper {
 
   public static String localDirPath(Configuration conf) {
     return conf.get(ClassLoaderBase.LOCAL_DIR_KEY) + File.separator + "jars" + File.separator;
+  }
+
+  public static void deleteClass(String className, String testDir, Configuration conf)
+    throws Exception {
+    String jarFileName = className + ".jar";
+    File file = new File(testDir, jarFileName);
+    file.delete();
+    assertFalse("Should be deleted: " + file.getPath(), file.exists());
+
+    file = new File(conf.get("hbase.dynamic.jars.dir"), jarFileName);
+    file.delete();
+    assertFalse("Should be deleted: " + file.getPath(), file.exists());
+
+    file = new File(ClassLoaderTestHelper.localDirPath(conf), jarFileName);
+    file.delete();
+    assertFalse("Should be deleted: " + file.getPath(), file.exists());
   }
 }

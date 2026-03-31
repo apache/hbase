@@ -20,10 +20,17 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
@@ -35,6 +42,9 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.io.netty.channel.Channel;
+import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 
 @Category({ VerySlowRegionServerTests.class, LargeTests.class })
 public class TestAsyncLogRolling extends AbstractTestLogRolling {
@@ -49,6 +59,61 @@ public class TestAsyncLogRolling extends AbstractTestLogRolling {
     conf.setInt(FanOutOneBlockAsyncDFSOutputHelper.ASYNC_DFS_OUTPUT_CREATE_MAX_RETRIES, 100);
     conf.set(WALFactory.WAL_PROVIDER, "asyncfs");
     AbstractTestLogRolling.setUpBeforeClass();
+  }
+
+  public static class SlowSyncLogWriter extends AsyncProtobufLogWriter {
+
+    public SlowSyncLogWriter(EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass) {
+      super(eventLoopGroup, channelClass);
+    }
+
+    @Override
+    public CompletableFuture<Long> sync(boolean forceSync) {
+      CompletableFuture<Long> future = new CompletableFuture<>();
+      super.sync(forceSync).whenCompleteAsync((lengthAfterFlush, error) -> {
+        EXECUTOR.schedule(() -> {
+          if (error != null) {
+            future.completeExceptionally(error);
+          } else {
+            future.complete(lengthAfterFlush);
+          }
+        }, syncLatencyMillis, TimeUnit.MILLISECONDS);
+      });
+      return future;
+    }
+  }
+
+  @Override
+  protected void setSlowLogWriter(Configuration conf) {
+    conf.set(AsyncFSWALProvider.WRITER_IMPL, SlowSyncLogWriter.class.getName());
+  }
+
+  @Override
+  protected void setDefaultLogWriter(Configuration conf) {
+    conf.set(AsyncFSWALProvider.WRITER_IMPL, AsyncProtobufLogWriter.class.getName());
+  }
+
+  @Test
+  public void testSlowSyncLogRolling() throws Exception {
+    // Create the test table
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(getName()))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+    admin.createTable(desc);
+    try (Table table = TEST_UTIL.getConnection().getTable(desc.getTableName())) {
+      server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
+      RegionInfo region = server.getRegions(desc.getTableName()).get(0).getRegionInfo();
+      final AbstractFSWAL<?> log = getWALAndRegisterSlowSyncHook(region);
+
+      // Set default log writer, no additional latency to any sync on the hlog.
+      checkSlowSync(log, table, -1, 10, false);
+
+      // Adds 5000 ms of latency to any sync on the hlog. This will trip the other threshold.
+      // Write some data. Should only take one sync.
+      checkSlowSync(log, table, 5000, 1, true);
+
+      // Set default log writer, no additional latency to any sync on the hlog.
+      checkSlowSync(log, table, -1, 10, false);
+    }
   }
 
   @Test

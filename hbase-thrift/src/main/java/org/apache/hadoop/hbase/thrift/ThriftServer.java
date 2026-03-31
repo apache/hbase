@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
+import static org.apache.hadoop.hbase.http.HttpServerUtil.PATH_SPEC_ANY;
 import static org.apache.hadoop.hbase.thrift.Constants.BACKLOG_CONF_DEAFULT;
 import static org.apache.hadoop.hbase.thrift.Constants.BACKLOG_CONF_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.BIND_CONF_KEY;
@@ -143,6 +144,8 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLineParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.DefaultParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.ServletHolder;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.http.HttpVersion;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConfiguration;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConnectionFactory;
@@ -150,8 +153,6 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SecureRequestCustomi
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SslConnectionFactory;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletContextHandler;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.thread.QueuedThreadPool;
 
@@ -352,7 +353,7 @@ public class ThriftServer extends Configured implements Tool {
         + "To shutdown the thrift server run 'hbase-daemon.sh stop "
         + "thrift' or send a kill signal to the thrift server pid",
       true);
-    throw new ExitCodeException(exitCode, "");
+    System.exit(exitCode);
   }
 
   /**
@@ -387,9 +388,12 @@ public class ThriftServer extends Configured implements Tool {
     httpServer = new Server(threadPool);
 
     // Context handler
+    boolean isSecure = conf.getBoolean(THRIFT_SSL_ENABLED_KEY, false);
     ServletContextHandler ctxHandler =
       new ServletContextHandler(httpServer, "/", ServletContextHandler.SESSIONS);
-    ctxHandler.addServlet(new ServletHolder(thriftHttpServlet), "/*");
+    HttpServerUtil.addClickjackingPreventionFilter(ctxHandler, conf, PATH_SPEC_ANY);
+    HttpServerUtil.addSecurityHeadersFilter(ctxHandler, conf, isSecure, PATH_SPEC_ANY);
+    ctxHandler.addServlet(new ServletHolder(thriftHttpServlet), PATH_SPEC_ANY);
     HttpServerUtil.constrainHttpMethods(ctxHandler,
       conf.getBoolean(THRIFT_HTTP_ALLOW_OPTIONS_METHOD, THRIFT_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT));
 
@@ -404,7 +408,7 @@ public class ThriftServer extends Configured implements Tool {
     httpConfig.setSendDateHeader(false);
 
     ServerConnector serverConnector;
-    if (conf.getBoolean(THRIFT_SSL_ENABLED_KEY, false)) {
+    if (isSecure) {
       HttpConfiguration httpsConfig = new HttpConfiguration(httpConfig);
       httpsConfig.addCustomizer(new SecureRequestCustomizer());
 
@@ -774,7 +778,7 @@ public class ThriftServer extends Configured implements Tool {
     CommandLine cmd = parser.parse(options, args);
 
     if (cmd.hasOption("help")) {
-      printUsageAndExit(options, 1);
+      printUsageAndExit(options, 0);
     }
     parseCommandLine(cmd, options);
   }

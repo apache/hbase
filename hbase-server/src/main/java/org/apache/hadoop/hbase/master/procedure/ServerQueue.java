@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.procedure2.LockStatus;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -41,10 +43,18 @@ class ServerQueue extends Queue<ServerName> {
       case CLAIM_REPLICATION_QUEUES:
       case CLAIM_REPLICATION_QUEUE_REMOTE:
       case VERIFY_SNAPSHOT:
+      case RELOAD_QUOTAS:
+      case LOG_ROLL:
         return false;
       default:
         break;
     }
     throw new UnsupportedOperationException("unexpected type " + spi.getServerOperationType());
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).appendSuper(super.toString())
+      .build();
   }
 }

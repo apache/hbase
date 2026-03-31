@@ -30,8 +30,8 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
@@ -137,12 +137,21 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
       return count;
     }
     preambleBuffer.flip();
-    if (!processPreamble(preambleBuffer)) {
-      return -1;
+    PreambleResponse resp = processPreamble(preambleBuffer);
+    switch (resp) {
+      case SUCCEED:
+        preambleBuffer = null; // do not need it anymore
+        connectionPreambleRead = true;
+        return count;
+      case CONTINUE:
+        // wait for the next preamble header
+        preambleBuffer.clear();
+        return count;
+      case CLOSE:
+        return -1;
+      default:
+        throw new IllegalArgumentException("Unknown preamble response: " + resp);
     }
-    preambleBuffer = null; // do not need it anymore
-    connectionPreambleRead = true;
-    return count;
   }
 
   private int read4Bytes() throws IOException {
@@ -243,15 +252,9 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
         doRawSaslReply(SaslStatus.SUCCESS, new BytesWritable(replyToken), null, null);
       }
       if (saslServer.isComplete()) {
+        finishSaslNegotiation();
         String qop = saslServer.getNegotiatedQop();
         useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
-        ugi =
-          provider.getAuthorizedUgi(saslServer.getAuthorizationID(), this.rpcServer.secretManager);
-        RpcServer.LOG.debug(
-          "SASL server context established. Authenticated client: {}. Negotiated QoP is {}", ugi,
-          qop);
-        this.rpcServer.metrics.authenticationSuccess();
-        RpcServer.AUDITLOG.info(RpcServer.AUTH_SUCCESSFUL_FOR + ugi);
         saslContextEstablished = true;
       }
     }
@@ -447,7 +450,7 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
 
   @Override
   public SimpleServerCall createCall(int id, BlockingService service, MethodDescriptor md,
-    RequestHeader header, Message param, CellScanner cellScanner, long size,
+    RequestHeader header, Message param, ExtendedCellScanner cellScanner, long size,
     InetAddress remoteAddress, int timeout, CallCleanup reqCleanup) {
     return new SimpleServerCall(id, service, md, header, param, cellScanner, this, size,
       remoteAddress, EnvironmentEdgeManager.currentTime(), timeout, this.rpcServer.bbAllocator,

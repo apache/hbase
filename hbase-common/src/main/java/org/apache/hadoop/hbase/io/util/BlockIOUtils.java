@@ -86,14 +86,12 @@ public final class BlockIOUtils {
    */
   public static void readFully(ByteBuff buf, FSDataInputStream dis, int length) throws IOException {
     final Span span = Span.current();
-    final AttributesBuilder attributesBuilder = builderFromContext(Context.current());
     if (!isByteBufferReadable(dis)) {
       // If InputStream does not support the ByteBuffer read, just read to heap and copy bytes to
       // the destination ByteBuff.
       byte[] heapBuf = new byte[length];
       IOUtils.readFully(dis, heapBuf, 0, length);
-      annotateHeapBytesRead(attributesBuilder, length);
-      span.addEvent("BlockIOUtils.readFully", attributesBuilder.build());
+      span.addEvent("BlockIOUtils.readFully", getHeapBytesReadAttributes(span, length));
       copyToByteBuff(heapBuf, 0, length, buf);
       return;
     }
@@ -125,8 +123,8 @@ public final class BlockIOUtils {
         }
       }
     } finally {
-      annotateBytesRead(attributesBuilder, directBytesRead, heapBytesRead);
-      span.addEvent("BlockIOUtils.readFully", attributesBuilder.build());
+      span.addEvent("BlockIOUtils.readFully",
+        getDirectAndHeapBytesReadAttributes(span, directBytesRead, heapBytesRead));
     }
   }
 
@@ -159,9 +157,8 @@ public final class BlockIOUtils {
       }
     } finally {
       final Span span = Span.current();
-      final AttributesBuilder attributesBuilder = builderFromContext(Context.current());
-      annotateHeapBytesRead(attributesBuilder, heapBytesRead);
-      span.addEvent("BlockIOUtils.readFullyWithHeapBuffer", attributesBuilder.build());
+      span.addEvent("BlockIOUtils.readFullyWithHeapBuffer",
+        getHeapBytesReadAttributes(span, heapBytesRead));
     }
   }
 
@@ -200,9 +197,7 @@ public final class BlockIOUtils {
       }
     } finally {
       final Span span = Span.current();
-      final AttributesBuilder attributesBuilder = builderFromContext(Context.current());
-      annotateHeapBytesRead(attributesBuilder, heapBytesRead);
-      span.addEvent("BlockIOUtils.readWithExtra", attributesBuilder.build());
+      span.addEvent("BlockIOUtils.readWithExtra", getHeapBytesReadAttributes(span, heapBytesRead));
     }
     return bytesRemaining <= 0;
   }
@@ -260,9 +255,8 @@ public final class BlockIOUtils {
       }
     } finally {
       final Span span = Span.current();
-      final AttributesBuilder attributesBuilder = builderFromContext(Context.current());
-      annotateBytesRead(attributesBuilder, directBytesRead, heapBytesRead);
-      span.addEvent("BlockIOUtils.readWithExtra", attributesBuilder.build());
+      span.addEvent("BlockIOUtils.readWithExtra",
+        getDirectAndHeapBytesReadAttributes(span, directBytesRead, heapBytesRead));
     }
     return (extraLen > 0) && (bytesRead == necessaryLen + extraLen);
   }
@@ -333,9 +327,7 @@ public final class BlockIOUtils {
       }
     } finally {
       final Span span = Span.current();
-      final AttributesBuilder attributesBuilder = builderFromContext(Context.current());
-      annotateHeapBytesRead(attributesBuilder, bytesRead);
-      span.addEvent("BlockIOUtils.preadWithExtra", attributesBuilder.build());
+      span.addEvent("BlockIOUtils.preadWithExtra", getHeapBytesReadAttributes(span, bytesRead));
     }
     copyToByteBuff(buf, 0, bytesRead, buff);
     return (extraLen > 0) && (bytesRead == necessaryLen + extraLen);
@@ -383,9 +375,8 @@ public final class BlockIOUtils {
       }
     } finally {
       final Span span = Span.current();
-      final AttributesBuilder attributesBuilder = builderFromContext(Context.current());
-      annotateBytesRead(attributesBuilder, directBytesRead, heapBytesRead);
-      span.addEvent("BlockIOUtils.preadWithExtra", attributesBuilder.build());
+      span.addEvent("BlockIOUtils.preadWithExtra",
+        getDirectAndHeapBytesReadAttributes(span, directBytesRead, heapBytesRead));
     }
 
     return (extraLen > 0) && (bytesRead == necessaryLen + extraLen);
@@ -415,6 +406,41 @@ public final class BlockIOUtils {
   }
 
   /**
+   * Builds OpenTelemetry attributes to be recorded on a span for an event which reads direct and
+   * heap bytes. This will short-circuit and record nothing if OpenTelemetry isn't enabled.
+   */
+  private static Attributes getDirectAndHeapBytesReadAttributes(Span span, int directBytesRead,
+    int heapBytesRead) {
+    // It's expensive to record these attributes, so we avoid the cost of doing this if the span
+    // isn't going to be persisted
+    if (!span.isRecording()) {
+      return Attributes.empty();
+    }
+
+    final AttributesBuilder attributesBuilder = builderFromContext(Context.current());
+    annotateBytesRead(attributesBuilder, directBytesRead, heapBytesRead);
+
+    return attributesBuilder.build();
+  }
+
+  /**
+   * Builds OpenTelemtry attributes to be recorded on a span for an event which reads just heap
+   * bytes. This will short-circuit and record nothing if OpenTelemetry isn't enabled.
+   */
+  private static Attributes getHeapBytesReadAttributes(Span span, int heapBytesRead) {
+    // It's expensive to record these attributes, so we avoid the cost of doing this if the span
+    // isn't going to be persisted
+    if (!span.isRecording()) {
+      return Attributes.empty();
+    }
+
+    final AttributesBuilder attributesBuilder = builderFromContext(Context.current());
+    annotateHeapBytesRead(attributesBuilder, heapBytesRead);
+
+    return attributesBuilder.build();
+  }
+
+  /**
    * Construct a fresh {@link AttributesBuilder} from the provided {@link Context}, populated with
    * relevant attributes populated by {@link HFileContextAttributesBuilderConsumer#CONTEXT_KEY}.
    */
@@ -438,8 +464,8 @@ public final class BlockIOUtils {
    * Conditionally annotate {@code attributesBuilder} with appropriate attributes when values are
    * non-zero.
    */
-  private static void annotateBytesRead(AttributesBuilder attributesBuilder, long directBytesRead,
-    long heapBytesRead) {
+  private static void annotateBytesRead(AttributesBuilder attributesBuilder, int directBytesRead,
+    int heapBytesRead) {
     if (directBytesRead > 0) {
       attributesBuilder.put(DIRECT_BYTES_READ_KEY, directBytesRead);
     }

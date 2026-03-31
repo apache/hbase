@@ -35,4 +35,5 @@ package org.apache.hadoop.hbase.testclassification;
  * @see org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests
  */
 public interface CoprocessorTests {
+  public static final String TAG = "org.apache.hadoop.hbase.testclassification.CoprocessorTests";
 }

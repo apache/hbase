@@ -28,6 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RemoteProcedureResult;
@@ -51,8 +52,10 @@ class RemoteProcedureResultReporter extends Thread {
     this.server = server;
   }
 
-  public void complete(long procId, Throwable error) {
-    RemoteProcedureResult.Builder builder = RemoteProcedureResult.newBuilder().setProcId(procId);
+  public void complete(long procId, long initiatingMasterActiveTime, Throwable error,
+    byte[] procReturnValue) {
+    RemoteProcedureResult.Builder builder = RemoteProcedureResult.newBuilder().setProcId(procId)
+      .setInitiatingMasterActiveTime(initiatingMasterActiveTime);
     if (error != null) {
       LOG.debug("Failed to complete execution of pid={}", procId, error);
       builder.setStatus(RemoteProcedureResult.Status.ERROR).setError(
@@ -60,6 +63,9 @@ class RemoteProcedureResultReporter extends Thread {
     } else {
       LOG.debug("Successfully complete execution of pid={}", procId);
       builder.setStatus(RemoteProcedureResult.Status.SUCCESS);
+    }
+    if (procReturnValue != null) {
+      builder.setProcResultData(ByteString.copyFrom(procReturnValue));
     }
     results.add(builder.build());
   }

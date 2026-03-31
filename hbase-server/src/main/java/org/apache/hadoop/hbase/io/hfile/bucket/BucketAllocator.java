@@ -126,7 +126,7 @@ public final class BucketAllocator {
       return offset;
     }
 
-    public void addAllocation(long offset) throws BucketAllocatorException {
+    public boolean addAllocation(long offset) throws BucketAllocatorException {
       offset -= baseOffset;
       if (offset < 0 || offset % itemAllocationSize != 0)
         throw new BucketAllocatorException("Attempt to add allocation for bad offset: " + offset
@@ -137,10 +137,14 @@ public final class BucketAllocator {
         if (matchFound) freeList[i - 1] = freeList[i];
         else if (freeList[i] == idx) matchFound = true;
       }
-      if (!matchFound) throw new BucketAllocatorException(
-        "Couldn't find match for index " + idx + " in free list");
+      if (!matchFound) {
+        LOG.warn("We found more entries for bucket starting at offset {} for blocks of {} size. "
+          + "Skipping entry at cache offset {}", baseOffset, itemAllocationSize, offset);
+        return false;
+      }
       ++usedCount;
       --freeCount;
+      return true;
     }
 
     private void free(long offset) {
@@ -402,10 +406,11 @@ public final class BucketAllocator {
         bsi.instantiateBucket(b);
         reconfigured[bucketNo] = true;
       }
-      realCacheSize.add(foundLen);
-      buckets[bucketNo].addAllocation(foundOffset);
-      usedSize += buckets[bucketNo].getItemAllocationSize();
-      bucketSizeInfos[bucketSizeIndex].blockAllocated(b);
+      if (buckets[bucketNo].addAllocation(foundOffset)) {
+        realCacheSize.add(foundLen);
+        usedSize += buckets[bucketNo].getItemAllocationSize();
+        bucketSizeInfos[bucketSizeIndex].blockAllocated(b);
+      }
     }
 
     if (sizeNotMatchedCount > 0) {

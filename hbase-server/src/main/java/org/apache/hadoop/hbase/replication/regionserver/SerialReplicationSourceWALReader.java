@@ -96,18 +96,20 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
             break;
           }
           sleepMultiplier = sleep(sleepMultiplier);
+          // Always make sure to continue/break from the loop after handling the exception.
+          // Otherwise we will drop down below into logic to push the entry,
+          // but since we don't know if the entry can be pushed we may push
+          // the entry out of order, breaking serial replication guarantees.
+          continue;
         }
-        // arrive here means we can push the entry, record the last sequence id
-        batch.setLastSeqId(Bytes.toString(entry.getKey().getEncodedRegionName()),
-          entry.getKey().getSequenceId());
         // actually remove the entry.
-        removeEntryFromStream(entryStream, batch);
+        removeEntryFromStream(entry, entryStream, batch);
         if (addEntryToBatch(batch, entry)) {
           break;
         }
       } else {
         // actually remove the entry.
-        removeEntryFromStream(entryStream, batch);
+        removeEntryFromStream(null, entryStream, batch);
       }
       WALEntryStream.HasNext hasNext = entryStream.hasNext();
       // always return if we have switched to a new file.
@@ -125,9 +127,14 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
     }
   }
 
-  private void removeEntryFromStream(WALEntryStream entryStream, WALEntryBatch batch) {
+  private void removeEntryFromStream(Entry entry, WALEntryStream entryStream, WALEntryBatch batch) {
     entryStream.next();
-    firstCellInEntryBeforeFiltering = null;
     batch.setLastWalPosition(entryStream.getPosition());
+    // record last pushed sequence id if needed
+    if (entry != null) {
+      batch.setLastSeqId(Bytes.toString(entry.getKey().getEncodedRegionName()),
+        entry.getKey().getSequenceId());
+    }
+    firstCellInEntryBeforeFiltering = null;
   }
 }

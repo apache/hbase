@@ -59,6 +59,16 @@ public interface MetricsTableWrapperAggregate {
   long getMemStoreSize(String table);
 
   /**
+   * Get the size of the on heap memstore of this table
+   */
+  long getMemStoreHeapSize(String table);
+
+  /**
+   * Get the size of the off heap memstore of this table
+   */
+  long getMemStoreOffHeapSize(String table);
+
+  /**
    * Get the store file size against this table
    */
   long getStoreFileSize(String table);

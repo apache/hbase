@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -177,8 +178,9 @@ public abstract class WALEntryStreamTestBase {
   protected WALEdit getWALEdits(int count) {
     WALEdit edit = new WALEdit();
     for (int i = 0; i < count; i++) {
-      edit.add(new KeyValue(Bytes.toBytes(EnvironmentEdgeManager.currentTime()), family, qualifier,
-        EnvironmentEdgeManager.currentTime(), qualifier));
+      WALEditInternalHelper.addExtendedCell(edit,
+        new KeyValue(Bytes.toBytes(EnvironmentEdgeManager.currentTime()), family, qualifier,
+          EnvironmentEdgeManager.currentTime(), qualifier));
     }
     return edit;
   }
