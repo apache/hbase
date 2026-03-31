@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -36,23 +37,18 @@ import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the invocation logic of the filters. A filter must be invoked only for the columns that are
  * requested for.
  */
-@Category({ FilterTests.class, SmallTests.class })
+@Tag(FilterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestInvocationRecordFilter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestInvocationRecordFilter.class);
 
   private static final byte[] TABLE_NAME_BYTES = Bytes.toBytes("invocationrecord");
   private static final byte[] FAMILY_NAME_BYTES = Bytes.toBytes("mycf");
@@ -64,7 +60,7 @@ public class TestInvocationRecordFilter {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private HRegion region;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE_NAME_BYTES));
     htd.addFamily(new HColumnDescriptor(FAMILY_NAME_BYTES));
@@ -142,12 +138,11 @@ public class TestInvocationRecordFilter {
       temp.clear();
     }
     actualValues.addAll(temp);
-    Assert.assertTrue(
-      "Actual values " + actualValues + " differ from the expected values:" + expectedValues,
-      expectedValues.equals(actualValues));
+    assertTrue(expectedValues.equals(actualValues),
+      "Actual values " + actualValues + " differ from the expected values:" + expectedValues);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     WAL wal = ((HRegion) region).getWAL();
     ((HRegion) region).close();

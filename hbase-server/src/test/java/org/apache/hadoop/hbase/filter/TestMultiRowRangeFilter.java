@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -37,23 +38,16 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.MultiRowRangeFilter.RowRange;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestMultiRowRangeFilter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultiRowRangeFilter.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Logger LOG = LoggerFactory.getLogger(TestMultiRowRangeFilter.class);
@@ -63,19 +57,12 @@ public class TestMultiRowRangeFilter {
   private TableName tableName;
   private int numRows = 100;
 
-  @Rule
-  public TestName name = new TestName();
-
-  /**
-   *   */
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
   }
 
-  /**
-   *   */
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -206,20 +193,24 @@ public class TestMultiRowRangeFilter {
     assertRangesEqual(expectedRanges, actualRanges);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testMultiRowRangeWithoutRange() throws IOException {
     List<RowRange> ranges = new ArrayList<>();
-    new MultiRowRangeFilter(ranges);
+    assertThrows(IllegalArgumentException.class, () -> {
+      new MultiRowRangeFilter(ranges);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testMultiRowRangeWithInvalidRange() throws IOException {
     List<RowRange> ranges = new ArrayList<>();
     ranges.add(new RowRange(Bytes.toBytes(10), true, Bytes.toBytes(20), false));
     // the start row larger than the stop row
     ranges.add(new RowRange(Bytes.toBytes(80), true, Bytes.toBytes(20), false));
     ranges.add(new RowRange(Bytes.toBytes(30), true, Bytes.toBytes(70), false));
-    new MultiRowRangeFilter(ranges);
+    assertThrows(IllegalArgumentException.class, () -> {
+      new MultiRowRangeFilter(ranges);
+    });
   }
 
   @Test
@@ -290,17 +281,16 @@ public class TestMultiRowRangeFilter {
   public void assertRangesEqual(List<RowRange> expected, List<RowRange> actual) {
     assertEquals(expected.size(), actual.size());
     for (int i = 0; i < expected.size(); i++) {
-      Assert.assertTrue(Bytes.equals(expected.get(i).getStartRow(), actual.get(i).getStartRow()));
-      Assert
-        .assertTrue(expected.get(i).isStartRowInclusive() == actual.get(i).isStartRowInclusive());
-      Assert.assertTrue(Bytes.equals(expected.get(i).getStopRow(), actual.get(i).getStopRow()));
-      Assert.assertTrue(expected.get(i).isStopRowInclusive() == actual.get(i).isStopRowInclusive());
+      assertTrue(Bytes.equals(expected.get(i).getStartRow(), actual.get(i).getStartRow()));
+      assertTrue(expected.get(i).isStartRowInclusive() == actual.get(i).isStartRowInclusive());
+      assertTrue(Bytes.equals(expected.get(i).getStopRow(), actual.get(i).getStopRow()));
+      assertTrue(expected.get(i).isStopRowInclusive() == actual.get(i).isStopRowInclusive());
     }
   }
 
   @Test
-  public void testMultiRowRangeFilterWithRangeOverlap() throws IOException {
-    tableName = TableName.valueOf(name.getMethodName());
+  public void testMultiRowRangeFilterWithRangeOverlap(TestInfo testInfo) throws IOException {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(numRows, ht, family, qf, value);
 
@@ -327,8 +317,8 @@ public class TestMultiRowRangeFilter {
   }
 
   @Test
-  public void testMultiRowRangeFilterWithoutRangeOverlap() throws IOException {
-    tableName = TableName.valueOf(name.getMethodName());
+  public void testMultiRowRangeFilterWithoutRangeOverlap(TestInfo testInfo) throws IOException {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(numRows, ht, family, qf, value);
 
@@ -354,8 +344,8 @@ public class TestMultiRowRangeFilter {
   }
 
   @Test
-  public void testMultiRowRangeFilterWithEmptyStartRow() throws IOException {
-    tableName = TableName.valueOf(name.getMethodName());
+  public void testMultiRowRangeFilterWithEmptyStartRow(TestInfo testInfo) throws IOException {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(numRows, ht, family, qf, value);
     Scan scan = new Scan();
@@ -376,8 +366,8 @@ public class TestMultiRowRangeFilter {
   }
 
   @Test
-  public void testMultiRowRangeFilterWithEmptyStopRow() throws IOException {
-    tableName = TableName.valueOf(name.getMethodName());
+  public void testMultiRowRangeFilterWithEmptyStopRow(TestInfo testInfo) throws IOException {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(numRows, ht, family, qf, value);
     Scan scan = new Scan();
@@ -397,8 +387,8 @@ public class TestMultiRowRangeFilter {
   }
 
   @Test
-  public void testMultiRowRangeFilterWithInclusive() throws IOException {
-    tableName = TableName.valueOf(name.getMethodName());
+  public void testMultiRowRangeFilterWithInclusive(TestInfo testInfo) throws IOException {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(numRows, ht, family, qf, value);
 
@@ -425,8 +415,8 @@ public class TestMultiRowRangeFilter {
   }
 
   @Test
-  public void testMultiRowRangeFilterWithExclusive() throws IOException {
-    tableName = TableName.valueOf(name.getMethodName());
+  public void testMultiRowRangeFilterWithExclusive(TestInfo testInfo) throws IOException {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 6000000);
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     ht.setReadRpcTimeout(600000);
@@ -454,8 +444,8 @@ public class TestMultiRowRangeFilter {
   }
 
   @Test
-  public void testMultiRowRangeWithFilterListAndOperator() throws IOException {
-    tableName = TableName.valueOf(name.getMethodName());
+  public void testMultiRowRangeWithFilterListAndOperator(TestInfo testInfo) throws IOException {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(numRows, ht, family, qf, value);
 
@@ -489,8 +479,8 @@ public class TestMultiRowRangeFilter {
   }
 
   @Test
-  public void testMultiRowRangeWithFilterListOrOperator() throws IOException {
-    tableName = TableName.valueOf(name.getMethodName());
+  public void testMultiRowRangeWithFilterListOrOperator(TestInfo testInfo) throws IOException {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(numRows, ht, family, qf, value);
 
@@ -526,8 +516,8 @@ public class TestMultiRowRangeFilter {
   }
 
   @Test
-  public void testOneRowRange() throws IOException {
-    tableName = TableName.valueOf(name.getMethodName());
+  public void testOneRowRange(TestInfo testInfo) throws IOException {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(numRows, ht, family, qf, value);
     ArrayList<MultiRowRangeFilter.RowRange> rowRangesList = new ArrayList<>();
@@ -555,8 +545,8 @@ public class TestMultiRowRangeFilter {
   }
 
   @Test
-  public void testReverseMultiRowRangeFilterWithinTable() throws IOException {
-    tableName = TableName.valueOf(name.getMethodName());
+  public void testReverseMultiRowRangeFilterWithinTable(TestInfo testInfo) throws IOException {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table ht = TEST_UTIL.createTable(tableName, family);
     generateRows(numRows, ht, family, qf, value);
 
@@ -588,12 +578,12 @@ public class TestMultiRowRangeFilter {
       }
       sb.append(observedValue);
     }
-    assertEquals("Saw results: " + sb.toString(), 22, results.size());
+    assertEquals(22, results.size(), "Saw results: " + sb);
   }
 
   @Test
-  public void testReverseMultiRowRangeFilterIncludingMaxRow() throws IOException {
-    tableName = TableName.valueOf(name.getMethodName());
+  public void testReverseMultiRowRangeFilterIncludingMaxRow(TestInfo testInfo) throws IOException {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table ht = TEST_UTIL.createTable(tableName, family);
     for (String rowkey : Arrays.asList("a", "b", "c", "d", "e", "f", "g", "h")) {
       byte[] row = Bytes.toBytes(rowkey);
@@ -621,8 +611,8 @@ public class TestMultiRowRangeFilter {
   }
 
   @Test
-  public void testReverseMultiRowRangeFilterIncludingMinRow() throws IOException {
-    tableName = TableName.valueOf(name.getMethodName());
+  public void testReverseMultiRowRangeFilterIncludingMinRow(TestInfo testInfo) throws IOException {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table ht = TEST_UTIL.createTable(tableName, family);
     for (String rowkey : Arrays.asList("a", "b", "c", "d", "e", "f", "g", "h")) {
       byte[] row = Bytes.toBytes(rowkey);
@@ -650,8 +640,9 @@ public class TestMultiRowRangeFilter {
   }
 
   @Test
-  public void testReverseMultiRowRangeFilterIncludingMinAndMaxRow() throws IOException {
-    tableName = TableName.valueOf(name.getMethodName());
+  public void testReverseMultiRowRangeFilterIncludingMinAndMaxRow(TestInfo testInfo)
+    throws IOException {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table ht = TEST_UTIL.createTable(tableName, family);
     for (String rowkey : Arrays.asList("a", "b", "c", "d", "e", "f", "g", "h")) {
       byte[] row = Bytes.toBytes(rowkey);

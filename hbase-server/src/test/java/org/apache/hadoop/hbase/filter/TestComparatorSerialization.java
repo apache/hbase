@@ -17,64 +17,61 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassLoaderTestHelper;
-import org.junit.AfterClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
 
-@RunWith(Parameterized.class)
-@Category({ FilterTests.class, SmallTests.class })
+@Tag(FilterTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: allowFastReflectionFallthrough={0}")
 public class TestComparatorSerialization {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestComparatorSerialization.class);
-
-  @Parameterized.Parameter(0)
   public boolean allowFastReflectionFallthrough;
 
-  @Parameterized.Parameters(name = "{index}: allowFastReflectionFallthrough={0}")
-  public static Iterable<Object[]> data() {
-    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
+  public TestComparatorSerialization(boolean allowFastReflectionFallthrough) {
+    this.allowFastReflectionFallthrough = allowFastReflectionFallthrough;
   }
 
-  @AfterClass
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(true), Arguments.of(false));
+  }
+
+  @AfterAll
   public static void afterClass() throws Exception {
     // set back to true so that it doesn't affect any other tests
     ProtobufUtil.setAllowFastReflectionFallthrough(true);
   }
 
-  @Test
+  @TestTemplate
   public void testBinaryComparator() throws Exception {
     BinaryComparator binaryComparator = new BinaryComparator(Bytes.toBytes("binaryComparator"));
     assertTrue(binaryComparator.areSerializedFieldsEqual(
       ProtobufUtil.toComparator(ProtobufUtil.toComparator(binaryComparator))));
   }
 
-  @Test
+  @TestTemplate
   public void testBinaryPrefixComparator() throws Exception {
     BinaryPrefixComparator binaryPrefixComparator =
       new BinaryPrefixComparator(Bytes.toBytes("binaryPrefixComparator"));
@@ -82,7 +79,7 @@ public class TestComparatorSerialization {
       ProtobufUtil.toComparator(ProtobufUtil.toComparator(binaryPrefixComparator))));
   }
 
-  @Test
+  @TestTemplate
   public void testBitComparator() throws Exception {
     BitComparator bitComparator =
       new BitComparator(Bytes.toBytes("bitComparator"), BitComparator.BitwiseOp.XOR);
@@ -90,14 +87,14 @@ public class TestComparatorSerialization {
       ProtobufUtil.toComparator(ProtobufUtil.toComparator(bitComparator))));
   }
 
-  @Test
+  @TestTemplate
   public void testNullComparator() throws Exception {
     NullComparator nullComparator = new NullComparator();
     assertTrue(nullComparator.areSerializedFieldsEqual(
       ProtobufUtil.toComparator(ProtobufUtil.toComparator(nullComparator))));
   }
 
-  @Test
+  @TestTemplate
   public void testRegexStringComparator() throws Exception {
     // test without specifying flags
     RegexStringComparator regexStringComparator = new RegexStringComparator(".+-2");
@@ -108,18 +105,18 @@ public class TestComparatorSerialization {
     try {
       new RegexStringComparator("regex", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
     } catch (Throwable t) {
-      assertNull("Exception occurred while created the RegexStringComparator object", t);
+      assertNull(t, "Exception occurred while created the RegexStringComparator object");
     }
   }
 
-  @Test
+  @TestTemplate
   public void testSubstringComparator() throws Exception {
     SubstringComparator substringComparator = new SubstringComparator("substr");
     assertTrue(substringComparator.areSerializedFieldsEqual(
       ProtobufUtil.toComparator(ProtobufUtil.toComparator(substringComparator))));
   }
 
-  @Test
+  @TestTemplate
   public void testBigDecimalComparator() throws Exception {
     BigDecimal bigDecimal = new BigDecimal(Double.MIN_VALUE);
     BigDecimalComparator bigDecimalComparator = new BigDecimalComparator(bigDecimal);
@@ -132,7 +129,7 @@ public class TestComparatorSerialization {
    * proves that this still works after HBASE-27276 despite not going through our fast function
    * caches.
    */
-  @Test
+  @TestTemplate
   public void testCustomComparator() throws Exception {
     ByteArrayComparable baseFilter = new BinaryComparator("foo".getBytes());
     ComparatorProtos.Comparator proto = ProtobufUtil.toComparator(baseFilter);
