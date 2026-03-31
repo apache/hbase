@@ -23,6 +23,10 @@ module IRB
 
   # Subclass of IRB so can intercept methods
   class HIRB < Irb
+    def self.command_names
+      @command_names ||= ::Shell.commands.keys.map(&:to_sym).freeze
+    end
+
     def initialize(workspace = nil, interactive = true, input_method = nil)
       # This is ugly.  Our 'help' method above provokes the following message
       # on irb construction: 'irb: warn: can't alias help from irb_help.'
@@ -51,6 +55,14 @@ module IRB
     ensure
       f.close
       $stdout = STDOUT
+    end
+
+    def set_context_workspace(workspace)
+      if @context.respond_to?(:workspace=)
+        @context.workspace = workspace
+      else
+        @context.instance_variable_set(:@workspace, workspace)
+      end
     end
 
     def output_value
@@ -128,6 +140,26 @@ module IRB
             # This modifies this copied method from JRuby so that the HBase shell can
             # manage the exception and set a proper exit code on the process.
             raise exc
+          else
+            exc = nil
+            next
+          ensure
+            # HBASE-28660: Prevent command shadowing by incorrectly parsed local variables
+            cmd_names = self.class.command_names
+            workspace_binding = @context.workspace.binding
+            shadowing_vars = workspace_binding.local_variables & cmd_names
+
+            if shadowing_vars.any?
+              shadowing_vars.each do |var|
+                warn "WARN: '#{var}' is a reserved HBase command. Local variable assignment ignored."
+              end
+
+              new_binding = @context.workspace.main.get_binding
+              (workspace_binding.local_variables - shadowing_vars).each do |var|
+                new_binding.local_variable_set(var, workspace_binding.local_variable_get(var))
+              end
+              set_context_workspace(::IRB::WorkSpace.new(new_binding))
+            end
           end
           if exc
             if exc.backtrace && exc.backtrace[0] =~ /irb(2)?(\/.*|-.*|\.rb)?:/ && exc.class.to_s !~ /^IRB/ &&
