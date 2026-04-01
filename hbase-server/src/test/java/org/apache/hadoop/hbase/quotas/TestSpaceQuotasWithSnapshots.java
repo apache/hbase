@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Map;
@@ -28,7 +28,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -42,14 +41,12 @@ import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaHelperForTests.SpaceQuotaSnapshotPredicate;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,12 +58,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 /**
  * Test class to exercise the inclusion of snapshots in space quotas
  */
-@Category({ LargeTests.class })
+@Tag(LargeTests.TAG)
 public class TestSpaceQuotasWithSnapshots {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSpaceQuotasWithSnapshots.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSpaceQuotasWithSnapshots.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -74,13 +67,11 @@ public class TestSpaceQuotasWithSnapshots {
   private static final AtomicLong COUNTER = new AtomicLong(0);
   private static final long FUDGE_FOR_TABLE_SIZE = 500L * SpaceQuotaHelperForTests.ONE_KILOBYTE;
 
-  @Rule
-  public TestName testName = new TestName();
   private SpaceQuotaHelperForTests helper;
   private Connection conn;
   private Admin admin;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     SpaceQuotaHelperForTests.updateConfigForQuotas(conf);
@@ -94,14 +85,15 @@ public class TestSpaceQuotasWithSnapshots {
     });
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void removeAllQuotas() throws Exception {
-    helper = new SpaceQuotaHelperForTests(TEST_UTIL, testName, COUNTER);
+  @BeforeEach
+  public void removeAllQuotas(TestInfo testInfo) throws Exception {
+    helper =
+      new SpaceQuotaHelperForTests(TEST_UTIL, testInfo.getTestMethod().get().getName(), COUNTER);
     conn = TEST_UTIL.getConnection();
     admin = TEST_UTIL.getAdmin();
   }
@@ -164,7 +156,7 @@ public class TestSpaceQuotasWithSnapshots {
     // Make sure we see the "final" new size for the table, not some intermediate
     waitForStableRegionSizeReport(conn, tn);
     final long finalSize = getRegionSizeReportForTable(conn, tn);
-    assertTrue("Table data size must be greater than zero", finalSize > 0);
+    assertTrue(finalSize > 0, "Table data size must be greater than zero");
     LOG.info("Last seen size: " + finalSize);
 
     // Make sure the QuotaObserverChore has time to reflect the new region size reports
@@ -193,9 +185,9 @@ public class TestSpaceQuotasWithSnapshots {
 
     Map<String, Long> snapshotSizes = QuotaTableUtil.getObservedSnapshotSizes(conn);
     Long size = snapshotSizes.get(snapshot1);
-    assertNotNull("Did not observe the size of the snapshot", size);
-    assertEquals("The recorded size of the HBase snapshot was not the size we expected",
-      actualInitialSize, size.longValue());
+    assertNotNull(size, "Did not observe the size of the snapshot");
+    assertEquals(actualInitialSize, size.longValue(),
+      "The recorded size of the HBase snapshot was not the size we expected");
   }
 
   @Test
@@ -263,7 +255,7 @@ public class TestSpaceQuotasWithSnapshots {
     // Make sure we see the "final" new size for the table, not some intermediate
     waitForStableRegionSizeReport(conn, tn);
     final long finalSize = getRegionSizeReportForTable(conn, tn);
-    assertTrue("Table data size must be greater than zero", finalSize > 0);
+    assertTrue(finalSize > 0, "Table data size must be greater than zero");
     LOG.info("Final observed size of table: " + finalSize);
 
     // Make sure the QuotaObserverChore has time to reflect the new region size reports
@@ -292,9 +284,9 @@ public class TestSpaceQuotasWithSnapshots {
 
     Map<String, Long> snapshotSizes = QuotaTableUtil.getObservedSnapshotSizes(conn);
     Long size = snapshotSizes.get(snapshot1);
-    assertNotNull("Did not observe the size of the snapshot", size);
-    assertEquals("The recorded size of the HBase snapshot was not the size we expected",
-      actualInitialSize, size.longValue());
+    assertNotNull(size, "Did not observe the size of the snapshot");
+    assertEquals(actualInitialSize, size.longValue(),
+      "The recorded size of the HBase snapshot was not the size we expected");
   }
 
   @Test

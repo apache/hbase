@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -64,7 +64,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,11 +82,11 @@ public class SpaceQuotaHelperForTests {
   public static final long ONE_GIGABYTE = ONE_MEGABYTE * ONE_KILOBYTE;
 
   private final HBaseTestingUtility testUtil;
-  private final TestName testName;
+  private final String testName;
   private final AtomicLong counter;
   private static final int NUM_RETRIES = 10;
 
-  public SpaceQuotaHelperForTests(HBaseTestingUtility testUtil, TestName testName,
+  public SpaceQuotaHelperForTests(HBaseTestingUtility testUtil, String testName,
     AtomicLong counter) {
     this.testUtil = Objects.requireNonNull(testUtil);
     this.testName = Objects.requireNonNull(testName);
@@ -231,12 +230,13 @@ public class SpaceQuotaHelperForTests {
         assertTrue(
           msg.contains("TableNotEnabledException") || msg.contains(policyToViolate.name()));
       } else {
-        assertTrue("Expected exception message to contain the word '" + policyToViolate.name()
-          + "', but was " + msg, msg.contains(policyToViolate.name()));
+        assertTrue(msg.contains(policyToViolate.name()),
+          "Expected exception message to contain the word '" + policyToViolate.name()
+            + "', but was " + msg);
       }
     }
-    assertTrue("Expected to see an exception writing data to a table exceeding its quota",
-      sawError);
+    assertTrue(sawError,
+      "Expected to see an exception writing data to a table exceeding its quota");
   }
 
   /**
@@ -276,7 +276,7 @@ public class SpaceQuotaHelperForTests {
         scanner.close();
       }
     }
-    assertTrue("Expected to succeed in writing data to a table not having quota ", sawSuccess);
+    assertTrue(sawSuccess, "Expected to succeed in writing data to a table not having quota ");
   }
 
   /**
@@ -289,8 +289,8 @@ public class SpaceQuotaHelperForTests {
       ResultScanner rs = quotaTable.getScanner(s);
       sawUsageSnapshot = (rs.next() != null);
     }
-    assertTrue("Expected to succeed in getting table usage snapshots for space quota",
-      sawUsageSnapshot);
+    assertTrue(sawUsageSnapshot,
+      "Expected to succeed in getting table usage snapshots for space quota");
   }
 
   /**
@@ -335,7 +335,7 @@ public class SpaceQuotaHelperForTests {
     Connection conn = testUtil.getConnection();
     FileSystem fs = testUtil.getTestFileSystem();
     Configuration conf = testUtil.getConfiguration();
-    Path baseDir = new Path(fs.getHomeDirectory(), testName.getMethodName() + "_files");
+    Path baseDir = new Path(fs.getHomeDirectory(), testName + "_files");
     fs.mkdirs(baseDir);
     final List<Pair<byte[], String>> famPaths = new ArrayList<Pair<byte[], String>>();
     for (int i = 1; i <= numFiles; i++) {
@@ -362,44 +362,6 @@ public class SpaceQuotaHelperForTests {
       }
     };
   }
-
-  /**
-   * Bulk-loads a number of files with a number of rows to the given table.
-   */
-  // ClientServiceCallable<Boolean> generateFileToLoad(
-  // TableName tn, int numFiles, int numRowsPerFile) throws Exception {
-  // Connection conn = testUtil.getConnection();
-  // FileSystem fs = testUtil.getTestFileSystem();
-  // Configuration conf = testUtil.getConfiguration();
-  // Path baseDir = new Path(fs.getHomeDirectory(), testName.getMethodName() + "_files");
-  // fs.mkdirs(baseDir);
-  // final List<Pair<byte[], String>> famPaths = new ArrayList<>();
-  // for (int i = 1; i <= numFiles; i++) {
-  // Path hfile = new Path(baseDir, "file" + i);
-  // TestHRegionServerBulkLoad.createHFile(
-  // fs, hfile, Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("my"),
-  // Bytes.toBytes("file"), numRowsPerFile);
-  // famPaths.add(new Pair<>(Bytes.toBytes(SpaceQuotaHelperForTests.F1), hfile.toString()));
-  // }
-  //
-  // // bulk load HFiles
-  // Table table = conn.getTable(tn);
-  // final String bulkToken = new SecureBulkLoadClient(conf, table).prepareBulkLoad(conn);
-  // return new ClientServiceCallable<Boolean>(
-  // conn, tn, Bytes.toBytes("row"), new RpcControllerFactory(conf).newController(),
-  // HConstants.PRIORITY_UNSET) {
-  // @Override
-  // public Boolean rpcCall() throws Exception {
-  // SecureBulkLoadClient secureClient = null;
-  // byte[] regionName = getLocation().getRegion().getRegionName();
-  // try (Table table = conn.getTable(getTableName())) {
-  // secureClient = new SecureBulkLoadClient(conf, table);
-  // return secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName,
-  // true, null, bulkToken);
-  // }
-  // }
-  // };
-  // }
 
   /**
    * Removes the space quota from the given namespace
@@ -596,7 +558,7 @@ public class SpaceQuotaHelperForTests {
   }
 
   TableName getNextTableName(String namespace) {
-    return TableName.valueOf(namespace, testName.getMethodName() + counter.getAndIncrement());
+    return TableName.valueOf(namespace, testName + counter.getAndIncrement());
   }
 
   TableName createTable() throws Exception {
@@ -645,8 +607,7 @@ public class SpaceQuotaHelperForTests {
 
   TableName createTableInNamespace(NamespaceDescriptor nd) throws Exception {
     final Admin admin = testUtil.getAdmin();
-    final TableName tn =
-      TableName.valueOf(nd.getName(), testName.getMethodName() + counter.getAndIncrement());
+    final TableName tn = TableName.valueOf(nd.getName(), testName + counter.getAndIncrement());
 
     // Delete the old table
     if (admin.tableExists(tn)) {

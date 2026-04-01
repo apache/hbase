@@ -17,17 +17,16 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.quotas.policies.DefaultViolationPolicyEnforcement;
@@ -35,24 +34,19 @@ import org.apache.hadoop.hbase.quotas.policies.MissingSnapshotViolationPolicyEnf
 import org.apache.hadoop.hbase.quotas.policies.NoWritesViolationPolicyEnforcement;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test class for {@link ActivePolicyEnforcement}.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestActivePolicyEnforcement {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestActivePolicyEnforcement.class);
 
   private RegionServerServices rss;
 
-  @Before
+  @BeforeEach
   public void setup() {
     rss = mock(RegionServerServices.class);
   }
@@ -73,8 +67,9 @@ public class TestActivePolicyEnforcement {
     SpaceViolationPolicyEnforcement enforcement =
       ape.getPolicyEnforcement(TableName.valueOf("nonexistent"));
     assertNotNull(enforcement);
-    assertTrue("Expected an instance of MissingSnapshotViolationPolicyEnforcement, but got "
-      + enforcement.getClass(), enforcement instanceof MissingSnapshotViolationPolicyEnforcement);
+    assertTrue(enforcement instanceof MissingSnapshotViolationPolicyEnforcement,
+      "Expected an instance of MissingSnapshotViolationPolicyEnforcement, but got "
+        + enforcement.getClass());
   }
 
   @Test
@@ -84,7 +79,7 @@ public class TestActivePolicyEnforcement {
         Collections.<TableName, SpaceQuotaSnapshot> emptyMap(), mock(RegionServerServices.class));
     SpaceViolationPolicyEnforcement enforcement =
       ape.getPolicyEnforcement(TableName.valueOf("nonexistent"));
-    assertFalse("Should not check bulkloads", enforcement.shouldCheckBulkLoads());
+    assertFalse(enforcement.shouldCheckBulkLoads(), "Should not check bulkloads");
   }
 
   @Test
@@ -109,10 +104,10 @@ public class TestActivePolicyEnforcement {
     final ActivePolicyEnforcement ape =
       new ActivePolicyEnforcement(Collections.emptyMap(), snapshots, rss);
     SpaceViolationPolicyEnforcement policyEnforcement = ape.getPolicyEnforcement(tableName);
-    assertTrue("Found the wrong class: " + policyEnforcement.getClass(),
-      policyEnforcement instanceof DefaultViolationPolicyEnforcement);
+    assertTrue(policyEnforcement instanceof DefaultViolationPolicyEnforcement,
+      "Found the wrong class: " + policyEnforcement.getClass());
     SpaceViolationPolicyEnforcement copy = ape.getPolicyEnforcement(tableName);
-    assertTrue("Expected the instance to be cached", policyEnforcement == copy);
+    assertTrue(policyEnforcement == copy, "Expected the instance to be cached");
     Entry<TableName, SpaceViolationPolicyEnforcement> entry =
       ape.getLocallyCachedPolicies().entrySet().iterator().next();
     assertTrue(policyEnforcement == entry.getValue());
