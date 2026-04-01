@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -58,26 +57,20 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * End-to-end test class for filesystem space quotas.
  */
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestSpaceQuotas {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSpaceQuotas.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSpaceQuotas.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -85,28 +78,25 @@ public class TestSpaceQuotas {
   private static final AtomicLong COUNTER = new AtomicLong(0);
   private static final int NUM_RETRIES = 10;
 
-  @Rule
-  public TestName testName = new TestName();
   private SpaceQuotaHelperForTests helper;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     SpaceQuotaHelperForTests.updateConfigForQuotas(conf);
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void removeAllQuotas() throws Exception {
+  @BeforeEach
+  public void removeAllQuotas(TestInfo testInfo) throws Exception {
     final Connection conn = TEST_UTIL.getConnection();
-    if (helper == null) {
-      helper = new SpaceQuotaHelperForTests(TEST_UTIL, testName, COUNTER);
-    }
+    helper =
+      new SpaceQuotaHelperForTests(TEST_UTIL, testInfo.getTestMethod().get().getName(), COUNTER);
     // Wait for the quota table to be created
     if (!conn.getAdmin().tableExists(QuotaUtil.QUOTA_TABLE_NAME)) {
       helper.waitForQuotaTable(conn);
@@ -222,15 +212,14 @@ public class TestSpaceQuotas {
         Thread.sleep(2000);
       }
     }
-    assertFalse(tn + " is still enabled but it should be disabled", admin.isTableEnabled(tn));
+    assertFalse(admin.isTableEnabled(tn), tn + " is still enabled but it should be disabled");
     try {
       admin.enableTable(tn);
     } catch (AccessDeniedException e) {
       String exceptionContents = StringUtils.stringifyException(e);
       final String expectedText = "violated space quota";
-      assertTrue(
-        "Expected the exception to contain " + expectedText + ", but was: " + exceptionContents,
-        exceptionContents.contains(expectedText));
+      assertTrue(exceptionContents.contains(expectedText),
+        "Expected the exception to contain " + expectedText + ", but was: " + exceptionContents);
     }
   }
 
@@ -257,7 +246,7 @@ public class TestSpaceQuotas {
   }
 
   @Test
-  public void testAtomicBulkLoadUnderQuota() throws Exception {
+  public void testAtomicBulkLoadUnderQuota(TestInfo testInfo) throws Exception {
     // Need to verify that if the batch of hfiles cannot be loaded, none are loaded.
     TableName tn = helper.createTableWithRegions(10);
 
@@ -289,25 +278,24 @@ public class TestSpaceQuotas {
     // We would also not have a "real" policy in violation
     ActivePolicyEnforcement activePolicies = spaceQuotaManager.getActiveEnforcements();
     SpaceViolationPolicyEnforcement enforcement = activePolicies.getPolicyEnforcement(tn);
-    assertTrue("Expected to find Noop policy, but got " + enforcement.getClass().getSimpleName(),
-      enforcement instanceof DefaultViolationPolicyEnforcement);
+    assertTrue(enforcement instanceof DefaultViolationPolicyEnforcement,
+      "Expected to find Noop policy, but got " + enforcement.getClass().getSimpleName());
 
     // Should generate two files, each of which is over 25KB each
     ClientServiceCallable<Void> callable = helper.generateFileToLoad(tn, 2, 525);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    FileStatus[] files =
-      fs.listStatus(new Path(fs.getHomeDirectory(), testName.getMethodName() + "_files"));
+    FileStatus[] files = fs.listStatus(
+      new Path(fs.getHomeDirectory(), testInfo.getTestMethod().get().getName() + "_files"));
     for (FileStatus file : files) {
-      assertTrue("Expected the file, " + file.getPath()
-        + ",  length to be larger than 25KB, but was " + file.getLen(),
-        file.getLen() > 25 * SpaceQuotaHelperForTests.ONE_KILOBYTE);
+      assertTrue(file.getLen() > 25 * SpaceQuotaHelperForTests.ONE_KILOBYTE, "Expected the file, "
+        + file.getPath() + ",  length to be larger than 25KB, but was " + file.getLen());
       LOG.debug(file.getPath() + " -> " + file.getLen() + "B");
     }
-
     ClusterConnection conn = (ClusterConnection) TEST_UTIL.getConnection();
     RpcRetryingCallerFactory factory =
       new RpcRetryingCallerFactory(TEST_UTIL.getConfiguration(), conn.getConnectionConfiguration());
     RpcRetryingCaller<Void> caller = factory.newCaller();
+
     try {
       caller.callWithRetries(callable, Integer.MAX_VALUE);
       fail("Expected the bulk load call to fail!");
@@ -320,7 +308,7 @@ public class TestSpaceQuotas {
     Table table = TEST_UTIL.getConnection().getTable(tn);
     ResultScanner scanner = table.getScanner(new Scan());
     try {
-      assertNull("Expected no results", scanner.next());
+      assertNull(scanner.next(), "Expected no results");
     } finally {
       scanner.close();
     }
@@ -408,8 +396,9 @@ public class TestSpaceQuotas {
         Thread.sleep(2000);
       } catch (Exception e) {
         String msg = StringUtils.stringifyException(e);
-        assertTrue("Expected exception message to contain the word '" + policyToViolate.name()
-          + "', but was " + msg, msg.contains(policyToViolate.name()));
+        assertTrue(msg.contains(policyToViolate.name()),
+          "Expected exception message to contain the word '" + policyToViolate.name()
+            + "', but was " + msg);
         sawError = true;
       }
     }
@@ -424,7 +413,7 @@ public class TestSpaceQuotas {
         scanner.close();
       }
     }
-    assertTrue("Expected to see an exception writing data to a table exceeding its quota",
-      sawError);
+    assertTrue(sawError,
+      "Expected to see an exception writing data to a table exceeding its quota");
   }
 }

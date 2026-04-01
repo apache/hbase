@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -36,48 +35,38 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Test class for {@link MasterQuotasObserver}.
  */
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestMasterQuotasObserver {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterQuotasObserver.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static SpaceQuotaHelperForTests helper;
 
-  @Rule
-  public TestName testName = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void removeAllQuotas() throws Exception {
-    if (helper == null) {
-      helper = new SpaceQuotaHelperForTests(TEST_UTIL, testName, new AtomicLong());
-    }
+  @BeforeEach
+  public void removeAllQuotas(TestInfo testInfo) throws Exception {
+    helper = new SpaceQuotaHelperForTests(TEST_UTIL, testInfo.getTestMethod().get().getName(),
+      new AtomicLong());
     final Connection conn = TEST_UTIL.getConnection();
     // Wait for the quota table to be created
     if (!conn.getAdmin().tableExists(QuotaUtil.QUOTA_TABLE_NAME)) {
@@ -90,10 +79,10 @@ public class TestMasterQuotasObserver {
   }
 
   @Test
-  public void testTableSpaceQuotaRemoved() throws Exception {
+  public void testTableSpaceQuotaRemoved(TestInfo testInfo) throws Exception {
     final Connection conn = TEST_UTIL.getConnection();
     final Admin admin = conn.getAdmin();
-    final TableName tn = TableName.valueOf(testName.getMethodName());
+    final TableName tn = TableName.valueOf(testInfo.getTestMethod().get().getName());
     // Drop the table if it somehow exists
     if (admin.tableExists(tn)) {
       dropTable(admin, tn);
@@ -113,10 +102,10 @@ public class TestMasterQuotasObserver {
   }
 
   @Test
-  public void testTableRPCQuotaRemoved() throws Exception {
+  public void testTableRPCQuotaRemoved(TestInfo testInfo) throws Exception {
     final Connection conn = TEST_UTIL.getConnection();
     final Admin admin = conn.getAdmin();
-    final TableName tn = TableName.valueOf(testName.getMethodName());
+    final TableName tn = TableName.valueOf(testInfo.getTestMethod().get().getName());
     // Drop the table if it somehow exists
     if (admin.tableExists(tn)) {
       dropTable(admin, tn);
@@ -138,10 +127,10 @@ public class TestMasterQuotasObserver {
   }
 
   @Test
-  public void testTableSpaceAndRPCQuotaRemoved() throws Exception {
+  public void testTableSpaceAndRPCQuotaRemoved(TestInfo testInfo) throws Exception {
     final Connection conn = TEST_UTIL.getConnection();
     final Admin admin = conn.getAdmin();
-    final TableName tn = TableName.valueOf(testName.getMethodName());
+    final TableName tn = TableName.valueOf(testInfo.getTestMethod().get().getName());
     // Drop the table if it somehow exists
     if (admin.tableExists(tn)) {
       dropTable(admin, tn);
@@ -193,10 +182,10 @@ public class TestMasterQuotasObserver {
   }
 
   @Test
-  public void testNamespaceSpaceQuotaRemoved() throws Exception {
+  public void testNamespaceSpaceQuotaRemoved(TestInfo testInfo) throws Exception {
     final Connection conn = TEST_UTIL.getConnection();
     final Admin admin = conn.getAdmin();
-    final String ns = testName.getMethodName();
+    final String ns = testInfo.getTestMethod().get().getName();
     // Drop the ns if it somehow exists
     if (namespaceExists(ns)) {
       admin.deleteNamespace(ns);
@@ -219,10 +208,10 @@ public class TestMasterQuotasObserver {
   }
 
   @Test
-  public void testNamespaceRPCQuotaRemoved() throws Exception {
+  public void testNamespaceRPCQuotaRemoved(TestInfo testInfo) throws Exception {
     final Connection conn = TEST_UTIL.getConnection();
     final Admin admin = conn.getAdmin();
-    final String ns = testName.getMethodName();
+    final String ns = testInfo.getTestMethod().get().getName();
     // Drop the ns if it somehow exists
     if (namespaceExists(ns)) {
       admin.deleteNamespace(ns);
@@ -245,10 +234,10 @@ public class TestMasterQuotasObserver {
   }
 
   @Test
-  public void testNamespaceSpaceAndRPCQuotaRemoved() throws Exception {
+  public void testNamespaceSpaceAndRPCQuotaRemoved(TestInfo testInfo) throws Exception {
     final Connection conn = TEST_UTIL.getConnection();
     final Admin admin = conn.getAdmin();
-    final String ns = testName.getMethodName();
+    final String ns = testInfo.getTestMethod().get().getName();
     // Drop the ns if it somehow exists
     if (namespaceExists(ns)) {
       admin.deleteNamespace(ns);
@@ -310,8 +299,8 @@ public class TestMasterQuotasObserver {
     final HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     final MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
     Set<String> coprocessorNames = cpHost.getCoprocessors();
-    assertTrue("Did not find MasterQuotasObserver in list of CPs: " + coprocessorNames,
-      coprocessorNames.contains(MasterQuotasObserver.class.getSimpleName()));
+    assertTrue(coprocessorNames.contains(MasterQuotasObserver.class.getSimpleName()),
+      "Did not find MasterQuotasObserver in list of CPs: " + coprocessorNames);
   }
 
   public boolean namespaceExists(String ns) throws IOException {
