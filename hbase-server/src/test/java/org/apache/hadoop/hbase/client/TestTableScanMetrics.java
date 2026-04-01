@@ -18,10 +18,17 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.EMPTY_BYTE_ARRAY;
+import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.META_LOOKUP_TIME_MS_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.MILLIS_BETWEEN_NEXTS_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.NOT_SERVING_REGION_EXCEPTION_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.REGIONS_SCANNED_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.RPC_RETRIES_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.RPC_ROUND_TRIP_TIME_MS_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.SCANNER_CLOSE_TIME_MS_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.SCAN_EXECUTION_TIME_MS_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.THREAD_POOL_WAIT_TIME_MS_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.RPC_SCAN_PROCESSING_TIME_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.RPC_SCAN_QUEUE_WAIT_TIME_METRIC_NAME;
@@ -85,6 +92,13 @@ public class TestTableScanMetrics extends FromClientSideBase {
   private static int NUM_REGIONS;
 
   private static Connection CONN;
+
+  private static final List<String> NON_DETERMINISTIC_METRICS =
+    Arrays.asList(MILLIS_BETWEEN_NEXTS_METRIC_NAME, RPC_SCAN_PROCESSING_TIME_METRIC_NAME,
+      RPC_SCAN_QUEUE_WAIT_TIME_METRIC_NAME, RPC_ROUND_TRIP_TIME_MS_METRIC_NAME,
+      SCAN_EXECUTION_TIME_MS_METRIC_NAME, CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME,
+      META_LOOKUP_TIME_MS_METRIC_NAME, SCANNER_CLOSE_TIME_MS_METRIC_NAME,
+      THREAD_POOL_WAIT_TIME_MS_METRIC_NAME, THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME);
 
   @Parameters(name = "{index}: scanner={0}")
   public static List<Object[]> params() {
@@ -338,10 +352,10 @@ public class TestTableScanMetrics extends FromClientSideBase {
           .entrySet()) {
           ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
           Map<String, Long> metricsMap = entry.getValue();
-          // Remove millis between nexts metric as it is not deterministic
-          metricsMap.remove(MILLIS_BETWEEN_NEXTS_METRIC_NAME);
-          metricsMap.remove(RPC_SCAN_PROCESSING_TIME_METRIC_NAME);
-          metricsMap.remove(RPC_SCAN_QUEUE_WAIT_TIME_METRIC_NAME);
+          // Remove time taken metrics as they are not deterministic
+          for (String metric : NON_DETERMINISTIC_METRICS) {
+            Assert.assertNotNull(metricsMap.remove(metric));
+          }
           Assert.assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
           Assert.assertNotNull(scanMetricsRegionInfo.getServerName());
           Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
@@ -650,10 +664,10 @@ public class TestTableScanMetrics extends FromClientSideBase {
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : srcMap.entrySet()) {
       ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
       Map<String, Long> metricsMap = entry.getValue();
-      // Remove millis between nexts metric as it is not deterministic
-      metricsMap.remove(MILLIS_BETWEEN_NEXTS_METRIC_NAME);
-      metricsMap.remove(RPC_SCAN_PROCESSING_TIME_METRIC_NAME);
-      metricsMap.remove(RPC_SCAN_QUEUE_WAIT_TIME_METRIC_NAME);
+      // Remove time taken metrics as they are not deterministic
+      for (String metric : NON_DETERMINISTIC_METRICS) {
+        Assert.assertNotNull(metricsMap.remove(metric));
+      }
       if (dstMap.containsKey(scanMetricsRegionInfo)) {
         Map<String, Long> dstMetricsMap = dstMap.get(scanMetricsRegionInfo);
         for (Map.Entry<String, Long> metricEntry : metricsMap.entrySet()) {
