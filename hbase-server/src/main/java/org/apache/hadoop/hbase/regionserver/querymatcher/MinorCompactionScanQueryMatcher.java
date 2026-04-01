@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -52,6 +53,12 @@ public class MinorCompactionScanQueryMatcher extends CompactionScanQueryMatcher 
       // that overwrites tracker state. Seek past remaining cells for this column/row since
       // they are all covered by the previously tracked delete.
       if (deletes.isRedundantDelete(cell)) {
+        // Skip seeking for deletes with empty qualifier, not to skip a subsequent
+        // DeleteFamily marker that covers other qualifiers. DeleteFamily itself can seek
+        // safely because all remaining empty-qualifier cells are redundant under it.
+        if (cell.getQualifierLength() == 0 && typeByte != KeyValue.Type.DeleteFamily.getCode()) {
+          return MatchCode.SKIP;
+        }
         return columns.getNextRowOrNextColumn(cell);
       }
       trackDelete(cell);

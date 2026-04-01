@@ -94,9 +94,10 @@ public class TestCompactionScanQueryMatcher extends AbstractTestScanQueryMatcher
     assertRetainDeletes(new Type[] { Type.DeleteFamily, Type.DeleteFamily, Type.DeleteFamily },
       INCLUDE, SEEK_NEXT_COL, SEEK_NEXT_COL);
 
-    // DF + DFV interleaved. DF included, DFV at same ts redundant, older DF redundant.
+    // DF + DFV interleaved. DF included, DFV redundant (SKIP because empty qualifier),
+    // older DF redundant (SEEK_NEXT_COL), older DFV redundant (SKIP).
     assertRetainDeletes(new Type[] { Type.DeleteFamily, Type.DeleteFamilyVersion, Type.DeleteFamily,
-      Type.DeleteFamilyVersion }, INCLUDE, SEEK_NEXT_COL, SEEK_NEXT_COL, SEEK_NEXT_COL);
+      Type.DeleteFamilyVersion }, INCLUDE, SKIP, SEEK_NEXT_COL, SKIP);
 
     // Delete (version) covered by DeleteColumn.
     assertRetainDeletes(new Type[] { Type.DeleteColumn, Type.Delete, Type.Delete, Type.Delete },
@@ -108,8 +109,32 @@ public class TestCompactionScanQueryMatcher extends AbstractTestScanQueryMatcher
       INCLUDE);
   }
 
+  /**
+   * Redundant column-level deletes with empty qualifier must not seek past a subsequent
+   * DeleteFamily. getKeyForNextColumn treats empty qualifier as "no column" and returns
+   * SEEK_NEXT_ROW, which would skip the DF and all remaining cells in the row.
+   */
+  @Test
+  public void testEmptyQualifierDeleteDoesNotSkipDeleteFamily() throws IOException {
+    byte[] emptyQualifier = HConstants.EMPTY_BYTE_ARRAY;
+
+    // DC(empty) + DC(empty) redundant + DF must still be reachable.
+    assertRetainDeletes(emptyQualifier,
+      new Type[] { Type.DeleteColumn, Type.DeleteColumn, Type.DeleteFamily }, INCLUDE, SKIP,
+      INCLUDE);
+
+    // DC(empty) + Delete(empty) redundant + DF must still be reachable.
+    assertRetainDeletes(emptyQualifier,
+      new Type[] { Type.DeleteColumn, Type.Delete, Type.DeleteFamily }, INCLUDE, SKIP, INCLUDE);
+  }
+
   private void assertRetainDeletes(Type[] types, MatchCode... expected) throws IOException {
     assertRetainDeletes(KeepDeletedCells.FALSE, types, expected);
+  }
+
+  private void assertRetainDeletes(byte[] qualifier, Type[] types, MatchCode... expected)
+    throws IOException {
+    assertRetainDeletes(KeepDeletedCells.FALSE, qualifier, types, expected);
   }
 
   /**
@@ -119,6 +144,16 @@ public class TestCompactionScanQueryMatcher extends AbstractTestScanQueryMatcher
    */
   private void assertRetainDeletes(KeepDeletedCells keepDeletedCells, Type[] types,
     MatchCode... expected) throws IOException {
+    assertRetainDeletes(keepDeletedCells, null, types, expected);
+  }
+
+  /**
+   * Build cells from the given types with decrementing timestamps. If qualifier is null,
+   * family-level types use empty qualifier and others use col1. If qualifier is specified, all
+   * types use that qualifier.
+   */
+  private void assertRetainDeletes(KeepDeletedCells keepDeletedCells, byte[] qualifier,
+    Type[] types, MatchCode... expected) throws IOException {
     long now = EnvironmentEdgeManager.currentTime();
     ScanInfo scanInfo = new ScanInfo(this.conf, fam1, 0, 1, ttl, keepDeletedCells,
       HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false);
@@ -130,8 +165,13 @@ public class TestCompactionScanQueryMatcher extends AbstractTestScanQueryMatcher
     long ts = now;
     List<MatchCode> actual = new ArrayList<>(expected.length);
     for (int i = 0; i < types.length; i++) {
-      boolean familyLevel = types[i] == Type.DeleteFamily || types[i] == Type.DeleteFamilyVersion;
-      byte[] qual = familyLevel ? HConstants.EMPTY_BYTE_ARRAY : col1;
+      byte[] qual;
+      if (qualifier != null) {
+        qual = qualifier;
+      } else {
+        boolean familyLevel = types[i] == Type.DeleteFamily || types[i] == Type.DeleteFamilyVersion;
+        qual = familyLevel ? HConstants.EMPTY_BYTE_ARRAY : col1;
+      }
       KeyValue kv = types[i] == Type.Put
         ? new KeyValue(row1, fam1, qual, ts, types[i], data)
         : new KeyValue(row1, fam1, qual, ts, types[i]);
