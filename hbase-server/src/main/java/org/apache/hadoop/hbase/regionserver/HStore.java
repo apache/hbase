@@ -270,9 +270,10 @@ public class HStore
     region.getRegionFileSystem().createStoreDir(family.getNameAsString());
 
     // set block storage policy for store directory
-    this.policyName = Optional.ofNullable(family.getStoragePolicy())
-        .orElseGet(() -> conf.get(BLOCK_STORAGE_POLICY_KEY, DEFAULT_BLOCK_STORAGE_POLICY))
-        .trim();
+    String pName = family.getStoragePolicy() != null ?
+        family.getStoragePolicy() :
+        conf.get(BLOCK_STORAGE_POLICY_KEY, DEFAULT_BLOCK_STORAGE_POLICY);
+    this.policyName = pName.trim();
     region.getRegionFileSystem().setStoragePolicy(family.getNameAsString(), policyName);
 
     this.dataBlockEncoder = new HFileDataBlockEncoderImpl(family.getDataBlockEncoding());
