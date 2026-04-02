@@ -47,9 +47,9 @@ import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2;
 import org.apache.hadoop.hbase.mapreduce.WALPlayer;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.snapshot.SnapshotRegionLocator;
@@ -466,7 +466,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
         List<String> files = new ArrayList<>();
         while (locatedFiles.hasNext()) {
           LocatedFileStatus file = locatedFiles.next();
-          if (file.isFile() && HFile.isHFileFormat(tgtFs, file.getPath())) {
+          if (file.isFile() && StoreFileInfo.isHFile(file.getPath())) {
             files.add(file.getPath().toString());
           }
         }

@@ -70,10 +70,8 @@ public class BackupHFileCleaner extends BaseHFileCleanerDelegate implements Abor
       LOG.debug("Cached {} unique HFile filenames registered as bulk loads.",
         hfileFilenames.size());
     } catch (IOException ioe) {
-      LOG.error(
-        "Failed to read registered bulk load references from backup system table, "
-          + "marking all files as non-deletable.",
-        ioe);
+      LOG.error("Failed to read registered bulk load references from backup system table, "
+        + "marking all files as non-deletable.", ioe);
       bulkLoadedHFilesNeedingBackup = null;
     }
   }
