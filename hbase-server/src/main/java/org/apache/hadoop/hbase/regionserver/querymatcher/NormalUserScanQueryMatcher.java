@@ -18,9 +18,11 @@
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import java.io.IOException;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
@@ -52,8 +54,11 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
   /** Whether seek optimization for range delete markers is applicable */
   private final boolean canSeekOnDeleteMarker;
 
-  /** Count of consecutive range delete markers seen */
+  /** Count of consecutive range delete markers seen for the same column */
   private int rangeDeleteCount;
+
+  /** Last range delete cell, for qualifier comparison across consecutive markers */
+  private ExtendedCell lastDelete;
 
   protected NormalUserScanQueryMatcher(Scan scan, ScanInfo scanInfo, ColumnTracker columns,
     boolean hasNullColumn, DeleteTracker deletes, long oldestUnexpiredTS, long now) {
@@ -69,6 +74,9 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
   public void beforeShipped() throws IOException {
     super.beforeShipped();
     deletes.beforeShipped();
+    if (lastDelete != null) {
+      lastDelete = KeyValueUtil.toNewKeyCell(lastDelete);
+    }
   }
 
   @Override
@@ -89,7 +97,7 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
         this.deletes.add(cell);
         // A DeleteColumn or DeleteFamily masks all remaining cells for this column/family.
         // Seek past them instead of skipping one cell at a time, but only after seeing
-        // enough consecutive markers to justify the seek overhead.
+        // enough consecutive markers for the same column to justify the seek overhead.
         // Only safe with plain ScanDeleteTracker. Not safe with newVersionBehavior (sequence
         // IDs determine visibility), visibility labels (delete/put label mismatch), or
         // seePastDeleteMarkers (KEEP_DELETED_CELLS).
@@ -97,6 +105,10 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
           canSeekOnDeleteMarker && (typeByte == KeyValue.Type.DeleteFamily.getCode()
             || (typeByte == KeyValue.Type.DeleteColumn.getCode() && cell.getQualifierLength() > 0))
         ) {
+          if (lastDelete != null && !CellUtil.matchingQualifier(cell, lastDelete)) {
+            rangeDeleteCount = 0;
+          }
+          lastDelete = cell;
           if (++rangeDeleteCount >= SEEK_ON_DELETE_MARKER_THRESHOLD) {
             rangeDeleteCount = 0;
             return columns.getNextRowOrNextColumn(cell);
@@ -119,6 +131,7 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
   protected void reset() {
     deletes.reset();
     rangeDeleteCount = 0;
+    lastDelete = null;
   }
 
   @Override

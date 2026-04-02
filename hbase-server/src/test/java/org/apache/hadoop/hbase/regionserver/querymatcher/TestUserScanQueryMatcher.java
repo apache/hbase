@@ -454,6 +454,30 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     assertEquals(MatchCode.SEEK_NEXT_COL, putCode);
   }
 
+  /**
+   * DeleteColumn markers for different qualifiers should not accumulate the seek counter. Only
+   * consecutive markers for the same qualifier should trigger seeking.
+   */
+  @Test
+  public void testDeleteColumnDifferentQualifiersDoNotSeek() throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(scan, new ScanInfo(this.conf, fam1, 0, 1,
+      ttl, KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false), null,
+      now - ttl, now, null);
+
+    // DCs for different qualifiers: counter resets on qualifier change, never seeks
+    qm.setToNewRow(new KeyValue(row1, fam1, col1, now, Type.DeleteColumn));
+    assertEquals(MatchCode.SKIP, qm.match(new KeyValue(row1, fam1, col1, now, Type.DeleteColumn)));
+    assertEquals(MatchCode.SKIP,
+      qm.match(new KeyValue(row1, fam1, col2, now - 1, Type.DeleteColumn)));
+    assertEquals(MatchCode.SKIP,
+      qm.match(new KeyValue(row1, fam1, col3, now - 2, Type.DeleteColumn)));
+    assertEquals(MatchCode.SKIP,
+      qm.match(new KeyValue(row1, fam1, col4, now - 3, Type.DeleteColumn)));
+    assertEquals(MatchCode.SKIP,
+      qm.match(new KeyValue(row1, fam1, col5, now - 4, Type.DeleteColumn)));
+  }
+
   private void assertDeleteMatchCodes(KeepDeletedCells keepDeletedCells, Type type,
     MatchCode... expected) throws IOException {
     long now = EnvironmentEdgeManager.currentTime();
