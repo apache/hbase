@@ -298,4 +298,9 @@ public class TestMetricsRegionServer {
     HELPER.assertGauge("activeScanners", 0, serverSource);
   }
 
+  @Test
+  public void testSplitRequest() {
+    rsm.incrSplitRequest(null);
+    HELPER.assertCounter("splitRequestCount", 1, serverSource);
+  }
 }
