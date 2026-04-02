@@ -2270,7 +2270,10 @@ public class TestAccessController extends SecureTestUtil {
         public Object run() throws Exception {
           try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
             Admin admin = conn.getAdmin()) {
-            return admin.getDescriptor(TEST_TABLE);
+            ACCESS_CONTROLLER.requirePermission(ObserverContextImpl.createAndPrepare(CP_ENV),
+              "getTableDescriptors", admin.getDescriptor(TEST_TABLE).getTableName(), null, null,
+              Action.ADMIN, Action.CREATE);
+            return null;
           }
         }
       };
