@@ -306,6 +306,13 @@ public class BackupAdminImpl implements BackupAdmin {
   private List<BackupInfo> getAffectedBackupSessions(BackupInfo backupInfo, TableName tn,
     BackupSystemTable table) throws IOException {
     LOG.debug("GetAffectedBackupInfos for: " + backupInfo.getBackupId() + " table=" + tn);
+    // A FAILED backup was never part of the backup chain — its state was rolled back
+    // via snapshot restore. No subsequent backup depends on it, so there are no
+    // affected sessions.
+    if (backupInfo.getState() == BackupState.FAILED) {
+      LOG.debug("Backup {} is in FAILED state, skipping cascade", backupInfo.getBackupId());
+      return new ArrayList<>();
+    }
     long ts = backupInfo.getStartTs();
     List<BackupInfo> list = new ArrayList<>();
     List<BackupInfo> history = table.getBackupHistory(withRoot(backupInfo.getBackupRootDir()));
