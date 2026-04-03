@@ -103,8 +103,8 @@ public class TestTableInputFormatBase {
     }
     System.out.println("Should retrun the hostname for this host " + localhost + " addr : " + addr);
     String actualHostName = inputFormat.reverseDNS(addr);
-    assertEquals("Should retrun the hostname for this host. Expected : " + localhost + " Actual : "
-      + actualHostName, localhost, actualHostName);
+    assertEquals(localhost, actualHostName, "Should retrun the hostname for this host. Expected : "
+      + localhost + " Actual : " + actualHostName);
   }
 
   @Test
