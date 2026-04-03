@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
@@ -39,6 +38,7 @@ import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -60,8 +60,9 @@ public class TestSystemKeyCache {
   @Mock
   private SystemKeyAccessor mockAccessor;
 
-  private static final byte[] TEST_CUSTODIAN = "test-custodian".getBytes();
+  private static final Bytes TEST_CUSTODIAN = new Bytes("test-custodian".getBytes());
   private static final String TEST_NAMESPACE = "test-namespace";
+  private static final Bytes TEST_NAMESPACE_BYTES = new Bytes(TEST_NAMESPACE.getBytes());
   private static final String TEST_METADATA_1 = "metadata-1";
   private static final String TEST_METADATA_2 = "metadata-2";
   private static final String TEST_METADATA_3 = "metadata-3";
@@ -86,12 +87,15 @@ public class TestSystemKeyCache {
     testKey3 = new SecretKeySpec("test-key-3-bytes".getBytes(), "AES");
 
     // Create test key data with different checksums
-    keyData1 = new ManagedKeyData(TEST_CUSTODIAN, TEST_NAMESPACE, testKey1, ManagedKeyState.ACTIVE,
-      TEST_METADATA_1, 1000L);
-    keyData2 = new ManagedKeyData(TEST_CUSTODIAN, TEST_NAMESPACE, testKey2, ManagedKeyState.ACTIVE,
-      TEST_METADATA_2, 2000L);
-    keyData3 = new ManagedKeyData(TEST_CUSTODIAN, TEST_NAMESPACE, testKey3, ManagedKeyState.ACTIVE,
-      TEST_METADATA_3, 3000L);
+    keyData1 = new ManagedKeyData(ManagedKeyIdentityUtils
+      .fullKeyIdentityFromMetadata(TEST_CUSTODIAN, TEST_NAMESPACE_BYTES, TEST_METADATA_1), testKey1,
+      ManagedKeyState.ACTIVE, TEST_METADATA_1, 1000L);
+    keyData2 = new ManagedKeyData(ManagedKeyIdentityUtils
+      .fullKeyIdentityFromMetadata(TEST_CUSTODIAN, TEST_NAMESPACE_BYTES, TEST_METADATA_2), testKey2,
+      ManagedKeyState.ACTIVE, TEST_METADATA_2, 2000L);
+    keyData3 = new ManagedKeyData(ManagedKeyIdentityUtils
+      .fullKeyIdentityFromMetadata(TEST_CUSTODIAN, TEST_NAMESPACE_BYTES, TEST_METADATA_3), testKey3,
+      ManagedKeyState.ACTIVE, TEST_METADATA_3, 3000L);
 
     // Create test paths
     keyPath1 = new Path("/system/keys/key1");
@@ -112,8 +116,11 @@ public class TestSystemKeyCache {
     // Verify
     assertNotNull(cache);
     assertSame(keyData1, cache.getLatestSystemKey());
-    assertSame(keyData1, cache.getSystemKeyByChecksum(keyData1.getKeyChecksum()));
-    assertNull(cache.getSystemKeyByChecksum(999L)); // Non-existent checksum
+    assertSame(keyData1,
+      cache.getSystemKeyByIdentity(
+        ManagedKeyIdentityUtils.constructRowKeyForIdentity(keyData1.getKeyCustodian(),
+          keyData1.getKeyNamespaceBytes(), keyData1.getPartialIdentity())));
+    assertNull(cache.getSystemKeyByIdentity(new byte[] { 1, 2, 3 })); // Non-existent identity
 
     verify(mockAccessor).getAllSystemKeyFiles();
     verify(mockAccessor).loadSystemKey(keyPath1);
@@ -135,13 +142,22 @@ public class TestSystemKeyCache {
     assertNotNull(cache);
     assertSame(keyData1, cache.getLatestSystemKey()); // First key becomes latest
 
-    // All keys should be accessible by checksum
-    assertSame(keyData1, cache.getSystemKeyByChecksum(keyData1.getKeyChecksum()));
-    assertSame(keyData2, cache.getSystemKeyByChecksum(keyData2.getKeyChecksum()));
-    assertSame(keyData3, cache.getSystemKeyByChecksum(keyData3.getKeyChecksum()));
+    // All keys should be accessible by full identity
+    assertSame(keyData1,
+      cache.getSystemKeyByIdentity(
+        ManagedKeyIdentityUtils.constructRowKeyForIdentity(keyData1.getKeyCustodian(),
+          keyData1.getKeyNamespaceBytes(), keyData1.getPartialIdentity())));
+    assertSame(keyData2,
+      cache.getSystemKeyByIdentity(
+        ManagedKeyIdentityUtils.constructRowKeyForIdentity(keyData2.getKeyCustodian(),
+          keyData2.getKeyNamespaceBytes(), keyData2.getPartialIdentity())));
+    assertSame(keyData3,
+      cache.getSystemKeyByIdentity(
+        ManagedKeyIdentityUtils.constructRowKeyForIdentity(keyData3.getKeyCustodian(),
+          keyData3.getKeyNamespaceBytes(), keyData3.getPartialIdentity())));
 
-    // Non-existent checksum should return null
-    assertNull(cache.getSystemKeyByChecksum(999L));
+    // Non-existent identity should return null
+    assertNull(cache.getSystemKeyByIdentity(new byte[] { 1, 2, 3 }));
 
     verify(mockAccessor).getAllSystemKeyFiles();
     verify(mockAccessor).loadSystemKey(keyPath1);
@@ -196,7 +212,7 @@ public class TestSystemKeyCache {
   }
 
   @Test
-  public void testGetSystemKeyByChecksumWithDifferentKeys() throws Exception {
+  public void testGetSystemKeyByIdentityWithDifferentKeys() throws Exception {
     // Setup
     List<Path> keyPaths = Arrays.asList(keyPath1, keyPath2, keyPath3);
     when(mockAccessor.getAllSystemKeyFiles()).thenReturn(keyPaths);
@@ -207,24 +223,27 @@ public class TestSystemKeyCache {
     // Execute
     SystemKeyCache cache = SystemKeyCache.createCache(mockAccessor);
 
-    // Verify each key can be retrieved by its unique checksum
-    long checksum1 = keyData1.getKeyChecksum();
-    long checksum2 = keyData2.getKeyChecksum();
-    long checksum3 = keyData3.getKeyChecksum();
+    // Verify each key can be retrieved by its unique full identity
+    byte[] identity1 = ManagedKeyIdentityUtils.constructRowKeyForIdentity(
+      keyData1.getKeyCustodian(), keyData1.getKeyNamespaceBytes(), keyData1.getPartialIdentity());
+    byte[] identity2 = ManagedKeyIdentityUtils.constructRowKeyForIdentity(
+      keyData2.getKeyCustodian(), keyData2.getKeyNamespaceBytes(), keyData2.getPartialIdentity());
+    byte[] identity3 = ManagedKeyIdentityUtils.constructRowKeyForIdentity(
+      keyData3.getKeyCustodian(), keyData3.getKeyNamespaceBytes(), keyData3.getPartialIdentity());
 
-    // Checksums should be different
-    assert checksum1 != checksum2;
-    assert checksum2 != checksum3;
-    assert checksum1 != checksum3;
+    // Identities should be different
+    assert !java.util.Arrays.equals(identity1, identity2);
+    assert !java.util.Arrays.equals(identity2, identity3);
+    assert !java.util.Arrays.equals(identity1, identity3);
 
-    // Each key should be retrievable by its checksum
-    assertSame(keyData1, cache.getSystemKeyByChecksum(checksum1));
-    assertSame(keyData2, cache.getSystemKeyByChecksum(checksum2));
-    assertSame(keyData3, cache.getSystemKeyByChecksum(checksum3));
+    // Each key should be retrievable by its full identity
+    assertSame(keyData1, cache.getSystemKeyByIdentity(identity1));
+    assertSame(keyData2, cache.getSystemKeyByIdentity(identity2));
+    assertSame(keyData3, cache.getSystemKeyByIdentity(identity3));
   }
 
   @Test
-  public void testGetSystemKeyByChecksumWithNonExistentChecksum() throws Exception {
+  public void testGetSystemKeyByIdentityWithNonExistentIdentity() throws Exception {
     // Setup
     List<Path> keyPaths = Collections.singletonList(keyPath1);
     when(mockAccessor.getAllSystemKeyFiles()).thenReturn(keyPaths);
@@ -236,14 +255,16 @@ public class TestSystemKeyCache {
     // Verify
     assertNotNull(cache);
 
-    // Test various non-existent checksums
-    assertNull(cache.getSystemKeyByChecksum(0L));
-    assertNull(cache.getSystemKeyByChecksum(-1L));
-    assertNull(cache.getSystemKeyByChecksum(Long.MAX_VALUE));
-    assertNull(cache.getSystemKeyByChecksum(Long.MIN_VALUE));
+    // Test various non-existent identities
+    assertNull(cache.getSystemKeyByIdentity(null));
+    assertNull(cache.getSystemKeyByIdentity(new byte[0]));
+    assertNull(cache.getSystemKeyByIdentity(new byte[] { 1, 2, 3 }));
 
-    // But the actual checksum should work
-    assertSame(keyData1, cache.getSystemKeyByChecksum(keyData1.getKeyChecksum()));
+    // But the actual full identity should work
+    assertSame(keyData1,
+      cache.getSystemKeyByIdentity(
+        ManagedKeyIdentityUtils.constructRowKeyForIdentity(keyData1.getKeyCustodian(),
+          keyData1.getKeyNamespaceBytes(), keyData1.getPartialIdentity())));
   }
 
   @Test(expected = IOException.class)
@@ -267,18 +288,25 @@ public class TestSystemKeyCache {
   }
 
   @Test
-  public void testCacheWithKeysHavingSameChecksum() throws Exception {
-    // Setup - create two keys that will have the same checksum (same content)
+  public void testCacheWithKeysHavingSameFullIdentity() throws Exception {
+    // Setup - two keys with same custodian/namespace/metadata so same full identity
     Key sameKey1 = new SecretKeySpec("identical-bytes".getBytes(), "AES");
     Key sameKey2 = new SecretKeySpec("identical-bytes".getBytes(), "AES");
+    String sameMetadata = "same-metadata";
 
-    ManagedKeyData sameManagedKey1 = new ManagedKeyData(TEST_CUSTODIAN, TEST_NAMESPACE, sameKey1,
-      ManagedKeyState.ACTIVE, "metadata-A", 1000L);
-    ManagedKeyData sameManagedKey2 = new ManagedKeyData(TEST_CUSTODIAN, TEST_NAMESPACE, sameKey2,
-      ManagedKeyState.ACTIVE, "metadata-B", 2000L);
+    ManagedKeyData sameManagedKey1 =
+      new ManagedKeyData(ManagedKeyIdentityUtils.fullKeyIdentityFromMetadata(TEST_CUSTODIAN,
+        TEST_NAMESPACE_BYTES, sameMetadata), sameKey1, ManagedKeyState.ACTIVE, sameMetadata, 1000L);
+    ManagedKeyData sameManagedKey2 =
+      new ManagedKeyData(ManagedKeyIdentityUtils.fullKeyIdentityFromMetadata(TEST_CUSTODIAN,
+        TEST_NAMESPACE_BYTES, sameMetadata), sameKey2, ManagedKeyState.ACTIVE, sameMetadata, 2000L);
 
-    // Verify they have the same checksum
-    assertEquals(sameManagedKey1.getKeyChecksum(), sameManagedKey2.getKeyChecksum());
+    // Same custodian/namespace/metadata -> same partial identity -> same full identity
+    assertTrue(java.util.Arrays.equals(
+      ManagedKeyIdentityUtils.constructRowKeyForIdentity(sameManagedKey1.getKeyCustodian(),
+        sameManagedKey1.getKeyNamespaceBytes(), sameManagedKey1.getPartialIdentity()),
+      ManagedKeyIdentityUtils.constructRowKeyForIdentity(sameManagedKey2.getKeyCustodian(),
+        sameManagedKey2.getKeyNamespaceBytes(), sameManagedKey2.getPartialIdentity())));
 
     List<Path> keyPaths = Arrays.asList(keyPath1, keyPath2);
     when(mockAccessor.getAllSystemKeyFiles()).thenReturn(keyPaths);
@@ -288,13 +316,14 @@ public class TestSystemKeyCache {
     // Execute
     SystemKeyCache cache = SystemKeyCache.createCache(mockAccessor);
 
-    // Verify - second key should overwrite first in the map due to same checksum
+    // Verify - second key should overwrite first in the map due to same full identity
     assertNotNull(cache);
     assertSame(sameManagedKey1, cache.getLatestSystemKey()); // First is still latest
 
-    // The map should contain the second key for the shared checksum
-    ManagedKeyData retrievedKey = cache.getSystemKeyByChecksum(sameManagedKey1.getKeyChecksum());
-    assertSame(sameManagedKey2, retrievedKey); // Last one wins in TreeMap
+    ManagedKeyData retrievedKey = cache.getSystemKeyByIdentity(
+      ManagedKeyIdentityUtils.constructRowKeyForIdentity(sameManagedKey1.getKeyCustodian(),
+        sameManagedKey1.getKeyNamespaceBytes(), sameManagedKey1.getPartialIdentity()));
+    assertSame(sameManagedKey2, retrievedKey); // Last one wins
   }
 
   @Test

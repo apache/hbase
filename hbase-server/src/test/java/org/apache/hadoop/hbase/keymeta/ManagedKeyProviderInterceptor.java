@@ -40,8 +40,8 @@ public class ManagedKeyProviderInterceptor extends MockManagedKeyProvider {
   }
 
   @Override
-  public ManagedKeyData getManagedKey(byte[] custodian, String namespace) throws IOException {
-    return spy.getManagedKey(custodian, namespace);
+  public ManagedKeyData getManagedKey(ManagedKeyIdentity keyIdentity) throws IOException {
+    return spy.getManagedKey(keyIdentity);
   }
 
   @Override
@@ -50,8 +50,9 @@ public class ManagedKeyProviderInterceptor extends MockManagedKeyProvider {
   }
 
   @Override
-  public ManagedKeyData unwrapKey(String keyMetadata, byte[] wrappedKey) throws IOException {
-    return spy.unwrapKey(keyMetadata, wrappedKey);
+  public ManagedKeyData unwrapKey(ManagedKeyIdentity keyIdentity, String keyMetadata,
+    byte[] wrappedKey) throws IOException {
+    return spy.unwrapKey(keyIdentity, keyMetadata, wrappedKey);
   }
 
   @Override

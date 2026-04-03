@@ -44,6 +44,7 @@ java_import org.apache.hadoop.hbase.io.hfile.CacheConfig
 java_import org.apache.hadoop.hbase.util.Bytes
 java_import org.apache.hadoop.hbase.keymeta.KeymetaServiceEndpoint
 java_import org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor
+java_import org.apache.hadoop.hbase.keymeta.KeyIdentitySingleArrayBacked
 java_import org.apache.hadoop.hbase.security.EncryptionUtil
 java_import java.security.KeyStore
 java_import java.security.MessageDigest
@@ -263,6 +264,9 @@ module Hbase
         HConstants::CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY,
         'system_key'
       )
+      $TEST_CLUSTER.getConfiguration.set(
+        HConstants::CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY, 'true'
+      )
 
       # Setup key configurations for ManagedKeyStoreKeyProvider
       # Shared key configuration
@@ -275,7 +279,7 @@ module Hbase
         true
       )
 
-      # Table-level key configuration - let system determine namespace automatically
+      # Table-level key configuration (namespace set on CF at migration via ENCRYPTION_KEY_NAMESPACE)
       $TEST_CLUSTER.getConfiguration.set(
         "hbase.crypto.managed_key_store.cust.#{$GLOB_CUST_ENCODED}.#{@table_table_key}.alias",
         "#{@table_table_key}_key"
@@ -285,7 +289,7 @@ module Hbase
         true
       )
 
-      # CF-level key configurations - let system determine namespace automatically
+      # CF-level key configurations (namespace set on each CF at migration via ENCRYPTION_KEY_NAMESPACE)
       $TEST_CLUSTER.getConfiguration.set(
         "hbase.crypto.managed_key_store.cust.#{$GLOB_CUST_ENCODED}.#{@table_cf_keys}/cf1.alias",
         "#{@table_cf_keys}_cf1_key"
@@ -379,8 +383,9 @@ module Hbase
              "Expected ACTIVE status for table key, got: #{output}")
       puts '  >> Enabled key management for table-level key'
 
-      # Migrate the table - no namespace attribute, let system auto-determine
-      migrate_table_to_managed_key(@table_table_key, 'f', @table_table_key)
+      # Migrate the table: set ENCRYPTION_KEY_NAMESPACE on CF so server resolves via CF attribute
+      migrate_table_to_managed_key(@table_table_key, 'f', @table_table_key,
+                                   use_namespace_attribute: true)
     end
 
     def migrate_cf_level_keys
@@ -402,11 +407,13 @@ module Hbase
              "Expected ACTIVE status for CF2 key, got: #{output}")
       puts '  >> Enabled key management for CF2'
 
-      # Migrate CF1
-      migrate_table_to_managed_key(@table_cf_keys, 'cf1', cf1_namespace)
+      # Migrate CF1: set ENCRYPTION_KEY_NAMESPACE on CF so server resolves via CF attribute
+      migrate_table_to_managed_key(@table_cf_keys, 'cf1', cf1_namespace,
+                                   use_namespace_attribute: true)
 
-      # Migrate CF2
-      migrate_table_to_managed_key(@table_cf_keys, 'cf2', cf2_namespace)
+      # Migrate CF2: set ENCRYPTION_KEY_NAMESPACE on CF so server resolves via CF attribute
+      migrate_table_to_managed_key(@table_cf_keys, 'cf2', cf2_namespace,
+                                   use_namespace_attribute: true)
     end
 
     def migrate_table_to_managed_key(table_name, cf_name, namespace,
@@ -416,13 +423,13 @@ module Hbase
       # Use atomic alter operation to remove ENCRYPTION_KEY and optionally add
       # ENCRYPTION_KEY_NAMESPACE
       if use_namespace_attribute
-        # For shared key tables: remove ENCRYPTION_KEY and add ENCRYPTION_KEY_NAMESPACE atomically
+        # Remove ENCRYPTION_KEY and set ENCRYPTION_KEY_NAMESPACE so server resolves key via CF attribute
         command(:alter, table_name,
                 { 'NAME' => cf_name,
                   'CONFIGURATION' => { 'ENCRYPTION_KEY' => '',
                                        'ENCRYPTION_KEY_NAMESPACE' => namespace } })
       else
-        # For table/CF level keys: just remove ENCRYPTION_KEY, let system auto-determine namespace
+        # Remove ENCRYPTION_KEY only (server would resolve via global namespace only)
         command(:alter, table_name,
                 { 'NAME' => cf_name, 'CONFIGURATION' => { 'ENCRYPTION_KEY' => '' } })
       end
@@ -507,17 +514,19 @@ module Hbase
 
             if is_key_management_enabled
               assert_not_nil(trailer.getKEKMetadata)
-              assert_not_equal(0, trailer.getKEKChecksum)
+              assert_not_nil(trailer.getKekIdentity)
+              assert_true(trailer.getKekIdentity.length > 0)
             else
               assert_nil(trailer.getKEKMetadata)
-              assert_equal(0, trailer.getKEKChecksum)
+              assert_true(trailer.getKekIdentity.nil? || trailer.getKekIdentity.length == 0)
             end
 
             if is_post_migration
-              assert_equal(expected_namespace, trailer.getKeyNamespace)
-              puts "        >> Trailer validation passed - namespace: #{trailer.getKeyNamespace}"
+              parsed = KeyIdentitySingleArrayBacked.new(trailer.getKekIdentity)
+              parsed_namespace = parsed.getNamespaceView().copyBytes()
+              assert_equal(expected_namespace.bytes, parsed_namespace) if expected_namespace
+              puts "        >> Trailer validation passed - namespace: #{parsed_namespace}"
             else
-              assert_nil(trailer.getKeyNamespace)
               puts '        >> Trailer validation passed - using legacy key format'
             end
           end

@@ -104,6 +104,7 @@ import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.keymeta.KeyIdentityBytesBacked;
 import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
@@ -4104,19 +4105,20 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     requestCount.increment();
     byte[] keyCustodian = request.getKeyCustNs().getKeyCust().toByteArray();
     String keyNamespace = request.getKeyCustNs().getKeyNamespace();
-    byte[] keyMetadataHash = request.getKeyMetadataHash().toByteArray();
+    byte[] partialIdentity = request.getKeyMetadataHash().toByteArray();
 
     if (LOG.isInfoEnabled()) {
       String keyCustodianEncoded = ManagedKeyProvider.encodeToStr(keyCustodian);
-      String keyMetadataHashEncoded = ManagedKeyProvider.encodeToStr(keyMetadataHash);
+      String partialIdentityEncoded = ManagedKeyProvider.encodeToStr(partialIdentity);
       LOG.info(
         "Received EjectManagedKeyDataCacheEntry request for key custodian: {}, namespace: {}, "
-          + "metadata hash: {}",
-        keyCustodianEncoded, keyNamespace, keyMetadataHashEncoded);
+          + "partial identity: {}",
+        keyCustodianEncoded, keyNamespace, partialIdentityEncoded);
     }
 
     boolean ejected = server.getKeyManagementService().getManagedKeyDataCache()
-      .ejectKey(keyCustodian, keyNamespace, keyMetadataHash);
+      .ejectKey(new KeyIdentityBytesBacked(new Bytes(keyCustodian),
+        new Bytes(Bytes.toBytes(keyNamespace)), new Bytes(partialIdentity)));
     return BooleanMsg.newBuilder().setBoolMsg(ejected).build();
   }
 

@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.InnerStoreCellComparator;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -131,14 +132,9 @@ public class FixedFileTrailer {
   private byte[] encryptionKey;
 
   /**
-   * The key namespace
+   * The KEK identity (full identity bytes for system/managed key lookup).
    */
-  private String keyNamespace;
-
-  /**
-   * The KEK checksum
-   */
-  private long kekChecksum;
+  private byte[] kekIdentity;
 
   /**
    * The KEK metadata
@@ -226,14 +222,11 @@ public class FixedFileTrailer {
     if (encryptionKey != null) {
       builder.setEncryptionKey(UnsafeByteOperations.unsafeWrap(encryptionKey));
     }
-    if (keyNamespace != null) {
-      builder.setKeyNamespace(keyNamespace);
-    }
     if (kekMetadata != null) {
       builder.setKekMetadata(kekMetadata);
     }
-    if (kekChecksum != 0) {
-      builder.setKekChecksum(kekChecksum);
+    if (kekIdentity != null && kekIdentity.length > 0) {
+      builder.setKekIdentity(UnsafeByteOperations.unsafeWrap(kekIdentity));
     }
     return builder.build();
   }
@@ -337,14 +330,11 @@ public class FixedFileTrailer {
     if (trailerProto.hasEncryptionKey()) {
       encryptionKey = trailerProto.getEncryptionKey().toByteArray();
     }
-    if (trailerProto.hasKeyNamespace()) {
-      keyNamespace = trailerProto.getKeyNamespace();
-    }
     if (trailerProto.hasKekMetadata()) {
       kekMetadata = trailerProto.getKekMetadata();
     }
-    if (trailerProto.hasKekChecksum()) {
-      kekChecksum = trailerProto.getKekChecksum();
+    if (trailerProto.hasKekIdentity()) {
+      kekIdentity = trailerProto.getKekIdentity().toByteArray();
     }
   }
 
@@ -394,9 +384,11 @@ public class FixedFileTrailer {
     append(sb, "comparatorClassName=" + comparatorClassName);
     if (majorVersion >= 3) {
       append(sb, "encryptionKey=" + (encryptionKey != null ? "PRESENT" : "NONE"));
-    }
-    if (keyNamespace != null) {
-      append(sb, "keyNamespace=" + keyNamespace);
+      append(sb,
+        "kekIdentity=" + (kekIdentity != null
+          ? ManagedKeyProvider.encodeToStr(kekIdentity, 0, kekIdentity.length)
+          : "NONE"));
+      append(sb, "kekMetadata=" + (kekMetadata != null ? "PRESENT" : "NONE"));
     }
     append(sb, "majorVersion=" + majorVersion);
     append(sb, "minorVersion=" + minorVersion);
@@ -677,22 +669,6 @@ public class FixedFileTrailer {
     return encryptionKey;
   }
 
-  public String getKeyNamespace() {
-    return keyNamespace;
-  }
-
-  public void setKeyNamespace(String keyNamespace) {
-    this.keyNamespace = keyNamespace;
-  }
-
-  public void setKEKChecksum(long kekChecksum) {
-    this.kekChecksum = kekChecksum;
-  }
-
-  public long getKEKChecksum() {
-    return kekChecksum;
-  }
-
   public void setEncryptionKey(byte[] keyBytes) {
     this.encryptionKey = keyBytes;
   }
@@ -703,6 +679,14 @@ public class FixedFileTrailer {
 
   public void setKEKMetadata(String kekMetadata) {
     this.kekMetadata = kekMetadata;
+  }
+
+  public byte[] getKekIdentity() {
+    return kekIdentity;
+  }
+
+  public void setKekIdentity(byte[] kekIdentity) {
+    this.kekIdentity = kekIdentity;
   }
 
   /**

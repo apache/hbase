@@ -343,7 +343,7 @@ public final class HConstants {
 
   /** Parameter name for HBase instance root directory */
   public static final String HBASE_DIR = "hbase.rootdir";
-  public static final String HBASE_ORIGINAL_DIR = "hbase.originalRootdir";
+  public static final String HBASE_ORIGINAL_ROOT_DIR = "hbase.originalRootdir";
 
   /** Parameter name for HBase client IPC pool type */
   public static final String HBASE_CLIENT_IPC_POOL_TYPE = "hbase.client.ipc.pool.type";
@@ -1355,6 +1355,14 @@ public final class HConstants {
   public static final String CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY =
     "hbase.crypto.managed_keys.local_key_gen_per_file.enabled";
   public static final boolean CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_DEFAULT_ENABLED = false;
+
+  /**
+   * Comma-separated list of digest algorithm names for key metadata digest (partial identity). Up
+   * to 2 algorithms from DigestAlgo (XXH3, XXHASH64, MD5). Default is xxh3.
+   */
+  public static final String CRYPTO_MANAGED_KEY_METADATA_DIGEST_ALGORITHMS_CONF_KEY =
+    "hbase.crypto.managed_key.metadata.digest.algorithms";
+  public static final String CRYPTO_MANAGED_KEY_METADATA_DIGEST_ALGORITHMS_DEFAULT = "xxh3";
 
   /** Configuration key for setting RPC codec class name */
   public static final String RPC_CODEC_CONF_KEY = "hbase.client.rpc.codec";

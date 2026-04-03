@@ -106,15 +106,16 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     // should get the same key even after ejecting it.
     HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(0);
     ManagedKeyDataCache managedKeyDataCache = regionServer.getManagedKeyDataCache();
-    ManagedKeyData activeEntry =
-      managedKeyDataCache.getActiveEntry(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
+    ManagedKeyData activeEntry = managedKeyDataCache.getActiveEntry(new Bytes(custBytes),
+      ManagedKeyData.KEY_SPACE_GLOBAL_BYTES);
     assertNotNull(activeEntry);
-    assertTrue(Bytes.equals(managedKey.getKeyMetadataHash(), activeEntry.getKeyMetadataHash()));
-    assertTrue(managedKeyDataCache.ejectKey(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL,
-      managedKey.getKeyMetadataHash()));
-    activeEntry = managedKeyDataCache.getActiveEntry(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
+    assertTrue(Bytes.equals(managedKey.getPartialIdentity(), activeEntry.getPartialIdentity()));
+    assertTrue(managedKeyDataCache.ejectKey(new KeyIdentityBytesBacked(new Bytes(custBytes),
+      ManagedKeyData.KEY_SPACE_GLOBAL_BYTES, new Bytes(managedKey.getPartialIdentity()))));
+    activeEntry = managedKeyDataCache.getActiveEntry(new Bytes(custBytes),
+      ManagedKeyData.KEY_SPACE_GLOBAL_BYTES);
     assertNotNull(activeEntry);
-    assertTrue(Bytes.equals(managedKey.getKeyMetadataHash(), activeEntry.getKeyMetadataHash()));
+    assertTrue(Bytes.equals(managedKey.getPartialIdentity(), activeEntry.getPartialIdentity()));
 
     List<ManagedKeyData> managedKeys =
       adminClient.getManagedKeys(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
@@ -252,16 +253,16 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
   public void testDisableKeyManagementLocal() throws Exception {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     KeymetaAdmin keymetaAdmin = master.getKeymetaAdmin();
-    doTestDisableKeyManagement(keymetaAdmin);
+    doTestDisableKeyManagement(keymetaAdmin, false);
   }
 
   @Test
   public void testDisableKeyManagementOverRPC() throws Exception {
     KeymetaAdmin adminClient = new KeymetaAdminClient(TEST_UTIL.getConnection());
-    doTestDisableKeyManagement(adminClient);
+    doTestDisableKeyManagement(adminClient, true);
   }
 
-  private void doTestDisableKeyManagement(KeymetaAdmin adminClient)
+  private void doTestDisableKeyManagement(KeymetaAdmin adminClient, boolean overRPC)
     throws IOException, KeyException {
     String cust = "cust2";
     byte[] custBytes = cust.getBytes();
@@ -277,6 +278,12 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
       adminClient.disableKeyManagement(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
     assertNotNull(disabledKey);
     assertEquals(ManagedKeyState.DISABLED, disabledKey.getKeyState().getExternalState());
+
+    List<ManagedKeyData> managedKeys =
+      adminClient.getManagedKeys(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
+    assertNotNull(managedKeys);
+    assertEquals(1, managedKeys.size());
+    assertEquals(ManagedKeyState.INACTIVE, managedKeys.get(0).getKeyState());
   }
 
   @Test
@@ -309,11 +316,11 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
       adminClient.enableKeyManagement(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
     assertNotNull(managedKey);
     assertKeyDataSingleKey(managedKey, ManagedKeyState.ACTIVE);
-    byte[] keyMetadataHash = managedKey.getKeyMetadataHash();
+    byte[] partialIdentity = managedKey.getPartialIdentity();
 
     // Now disable the specific key
     ManagedKeyData disabledKey =
-      adminClient.disableManagedKey(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL, keyMetadataHash);
+      adminClient.disableManagedKey(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL, partialIdentity);
     assertNotNull(disabledKey);
     assertEquals(ManagedKeyState.DISABLED, disabledKey.getKeyState().getExternalState());
   }
@@ -338,6 +345,52 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     doTestWithClientSideServiceException((mockStub,
       networkError) -> when(mockStub.refreshManagedKeys(any(), any())).thenThrow(networkError),
       (client) -> client.refreshManagedKeys(new byte[0], "namespace"));
+  }
+
+  @Test
+  public void testSetManagedKeyLocal() throws Exception {
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    KeymetaAdmin keymetaAdmin = master.getKeymetaAdmin();
+    doTestSetManagedKey(keymetaAdmin);
+  }
+
+  @Test
+  public void testSetManagedKeyOverRPC() throws Exception {
+    KeymetaAdmin adminClient = new KeymetaAdminClient(TEST_UTIL.getConnection());
+    doTestSetManagedKey(adminClient);
+  }
+
+  private void doTestSetManagedKey(KeymetaAdmin adminClient) throws IOException, KeyException {
+    String cust = "custSetMk";
+    byte[] custBytes = cust.getBytes();
+    ManagedKeyData enabled =
+      adminClient.enableKeyManagement(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
+    assertNotNull(enabled);
+    assertEquals(ManagedKeyState.ACTIVE, enabled.getKeyState());
+    // RPC client rebuilds ManagedKeyData without full metadata string; resolve from test provider.
+    String keyMetadata = enabled.getKeyMetadata();
+    if (keyMetadata == null) {
+      HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+      MockManagedKeyProvider managedKeyProvider =
+        (MockManagedKeyProvider) Encryption.getManagedKeyProvider(master.getConfiguration());
+      ManagedKeyData fromProvider =
+        managedKeyProvider.getLastGeneratedKeyData(cust, ManagedKeyData.KEY_SPACE_GLOBAL);
+      assertNotNull(fromProvider);
+      keyMetadata = fromProvider.getKeyMetadata();
+    }
+    assertNotNull(keyMetadata);
+    ManagedKeyData setAgain =
+      adminClient.setManagedKey(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL, keyMetadata);
+    assertEquals(ManagedKeyState.ACTIVE, setAgain.getKeyState());
+    assertTrue(Bytes.equals(enabled.getPartialIdentity(), setAgain.getPartialIdentity()));
+  }
+
+  @Test
+  public void testSetManagedKeyWithClientSideServiceException() throws Exception {
+    doTestWithClientSideServiceException(
+      (mockStub, networkError) -> when(mockStub.setManagedKey(any(), any()))
+        .thenThrow(networkError),
+      (client) -> client.setManagedKey(new byte[0], "namespace", "meta"));
   }
 
   @Test

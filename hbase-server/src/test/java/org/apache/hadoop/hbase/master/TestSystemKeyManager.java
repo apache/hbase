@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyIdentityUtils;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyTestBase;
 import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
@@ -78,7 +79,9 @@ public class TestSystemKeyManager extends ManagedKeyTestBase {
     assertEquals(initialSystemKey,
       systemKeyAccessor.loadSystemKey(systemKeyAccessor.getAllSystemKeyFiles().get(1)));
     assertEquals(initialSystemKey,
-      systemKeyCache.getSystemKeyByChecksum(initialSystemKey.getKeyChecksum()));
+      systemKeyCache.getSystemKeyByIdentity(
+        ManagedKeyIdentityUtils.constructRowKeyForIdentity(initialSystemKey.getKeyCustodian(),
+          initialSystemKey.getKeyNamespaceBytes(), initialSystemKey.getPartialIdentity())));
   }
 
   @Test
@@ -102,7 +105,10 @@ public class TestSystemKeyManager extends ManagedKeyTestBase {
     assertNotNull(systemKeyCache);
     ManagedKeyData clusterKey = systemKeyCache.getLatestSystemKey();
     assertEquals(pbeKeyProvider.getSystemKey(master.getClusterId().getBytes()), clusterKey);
-    assertEquals(clusterKey, systemKeyCache.getSystemKeyByChecksum(clusterKey.getKeyChecksum()));
+    assertEquals(clusterKey,
+      systemKeyCache.getSystemKeyByIdentity(
+        ManagedKeyIdentityUtils.constructRowKeyForIdentity(clusterKey.getKeyCustodian(),
+          clusterKey.getKeyNamespaceBytes(), clusterKey.getPartialIdentity())));
     return clusterKey;
   }
 

@@ -41,4 +41,6 @@ service ManagedKeysService {
     returns (ManagedKeyResponse);
   rpc RefreshManagedKeys(ManagedKeyRequest)
     returns (EmptyMsg);
+  rpc SetManagedKey(SetManagedKeyRequest)
+    returns (ManagedKeyResponse);
 }

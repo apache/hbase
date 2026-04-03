@@ -95,7 +95,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
 
   public ManagedKeyData loadSystemKey(Path keyPath) throws IOException {
     ManagedKeyProvider provider = getKeyProvider();
-    ManagedKeyData keyData = provider.unwrapKey(loadKeyMetadata(keyPath), null);
+    ManagedKeyData keyData = provider.unwrapKey(null, loadKeyMetadata(keyPath), null);
     if (keyData == null) {
       throw new RuntimeException("Failed to load system key from: " + keyPath);
     }

@@ -117,6 +117,9 @@ public interface ColumnFamilyDescriptor {
   /** Returns the encryption key namespace for this family */
   String getEncryptionKeyNamespace();
 
+  /** Returns the encryption key namespace for this family as a {@link Bytes} object */
+  Bytes getEncryptionKeyNamespaceBytes();
+
   /** Returns Return the encryption algorithm in use by this family */
   String getEncryptionType();
 

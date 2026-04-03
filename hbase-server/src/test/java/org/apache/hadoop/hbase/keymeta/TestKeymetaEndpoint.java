@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyE
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SetManagedKeyRequest;
 
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeymetaEndpoint {
@@ -76,6 +77,7 @@ public class TestKeymetaEndpoint {
 
   private static final String KEY_CUST = "keyCust";
   private static final String KEY_NAMESPACE = "keyNamespace";
+  private static final byte[] KEY_NAMESPACE_BYTES = Bytes.toBytes(KEY_NAMESPACE);
   private static final String KEY_METADATA1 = "keyMetadata1";
   private static final String KEY_METADATA2 = "keyMetadata2";
 
@@ -93,6 +95,8 @@ public class TestKeymetaEndpoint {
   private RpcCallback<ManagedKeyResponse> disableManagedKeyDone;
   @Mock
   private RpcCallback<ManagedKeyResponse> rotateManagedKeyDone;
+  @Mock
+  private RpcCallback<ManagedKeyResponse> setManagedKeyDone;
   @Mock
   private RpcCallback<EmptyMsg> refreshManagedKeysDone;
 
@@ -119,9 +123,9 @@ public class TestKeymetaEndpoint {
     responseBuilder = ManagedKeyResponse.newBuilder().setKeyState(ManagedKeyState.KEY_ACTIVE);
     requestBuilder =
       ManagedKeyRequest.newBuilder().setKeyNamespace(ManagedKeyData.KEY_SPACE_GLOBAL);
-    keyData1 = new ManagedKeyData(KEY_CUST.getBytes(), KEY_NAMESPACE,
+    keyData1 = new ManagedKeyData(KEY_CUST.getBytes(), KEY_NAMESPACE_BYTES,
       new SecretKeySpec("key1".getBytes(), "AES"), ACTIVE, KEY_METADATA1);
-    keyData2 = new ManagedKeyData(KEY_CUST.getBytes(), KEY_NAMESPACE,
+    keyData2 = new ManagedKeyData(KEY_CUST.getBytes(), KEY_NAMESPACE_BYTES,
       new SecretKeySpec("key2".getBytes(), "AES"), ACTIVE, KEY_METADATA2);
     when(master.getKeymetaAdmin()).thenReturn(keymetaAdmin);
   }
@@ -299,7 +303,8 @@ public class TestKeymetaEndpoint {
     // Arrange
     ManagedKeyRequest request =
       requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes())).build();
-    ManagedKeyData disabledKey = new ManagedKeyData(KEY_CUST.getBytes(), KEY_NAMESPACE, DISABLED);
+    ManagedKeyData disabledKey = new ManagedKeyData(
+      new KeyIdentityPrefixBytesBacked(KEY_CUST.getBytes(), KEY_NAMESPACE_BYTES), DISABLED);
     when(keymetaAdmin.disableKeyManagement(any(), any())).thenReturn(disabledKey);
     // Act
     keyMetaAdminService.disableKeyManagement(controller, request, disableKeyManagementDone);
@@ -368,7 +373,7 @@ public class TestKeymetaEndpoint {
     // Arrange
     ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
       .setKeyCustNs(requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes())).build())
-      .setKeyMetadataHash(ByteString.copyFrom(keyData1.getKeyMetadataHash())).build();
+      .setKeyMetadataHash(ByteString.copyFrom(keyData1.getPartialIdentity())).build();
     when(keymetaAdmin.disableManagedKey(any(), any(), any())).thenReturn(keyData1);
 
     // Act
@@ -394,7 +399,7 @@ public class TestKeymetaEndpoint {
     when(keymetaAdmin.disableManagedKey(any(), any(), any())).thenThrow(exType);
     ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
       .setKeyCustNs(requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes())).build())
-      .setKeyMetadataHash(ByteString.copyFrom(keyData1.getKeyMetadataHash())).build();
+      .setKeyMetadataHash(ByteString.copyFrom(keyData1.getPartialIdentity())).build();
 
     // Act
     keyMetaAdminService.disableManagedKey(controller, request, disableManagedKeyDone);
@@ -412,7 +417,7 @@ public class TestKeymetaEndpoint {
     ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
       .setKeyCustNs(
         requestBuilder.setKeyCust(ByteString.EMPTY).setKeyNamespace(KEY_NAMESPACE).build())
-      .setKeyMetadataHash(ByteString.copyFrom(keyData1.getKeyMetadataHash())).build();
+      .setKeyMetadataHash(ByteString.copyFrom(keyData1.getPartialIdentity())).build();
 
     keyMetaAdminService.disableManagedKey(controller, request, disableManagedKeyDone);
 
@@ -428,7 +433,7 @@ public class TestKeymetaEndpoint {
     ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
       .setKeyCustNs(requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes()))
         .setKeyNamespace("").build())
-      .setKeyMetadataHash(ByteString.copyFrom(keyData1.getKeyMetadataHash())).build();
+      .setKeyMetadataHash(ByteString.copyFrom(keyData1.getPartialIdentity())).build();
 
     keyMetaAdminService.disableManagedKey(controller, request, disableManagedKeyDone);
 
@@ -557,5 +562,51 @@ public class TestKeymetaEndpoint {
     verify(controller).setFailed(contains("key_namespace must not be empty"));
     verify(keymetaAdmin, never()).refreshManagedKeys(any(), any());
     verify(refreshManagedKeysDone).run(EmptyMsg.getDefaultInstance());
+  }
+
+  @Test
+  public void testSetManagedKey_Success() throws Exception {
+    ManagedKeyRequest custNs = requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes()))
+      .setKeyNamespace(KEY_NAMESPACE).build();
+    SetManagedKeyRequest request =
+      SetManagedKeyRequest.newBuilder().setKeyCustNs(custNs).setKeyMetadata(KEY_METADATA1).build();
+    when(keymetaAdmin.setManagedKey(any(), anyString(), anyString())).thenReturn(keyData1);
+
+    keyMetaAdminService.setManagedKey(controller, request, setManagedKeyDone);
+
+    verify(setManagedKeyDone).run(any());
+    verify(controller, never()).setFailed(anyString());
+    verify(keymetaAdmin).setManagedKey(KEY_CUST.getBytes(), KEY_NAMESPACE, KEY_METADATA1);
+  }
+
+  @Test
+  public void testSetManagedKey_InvalidMetadata() throws Exception {
+    ManagedKeyRequest custNs = requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes()))
+      .setKeyNamespace(KEY_NAMESPACE).build();
+    SetManagedKeyRequest request =
+      SetManagedKeyRequest.newBuilder().setKeyCustNs(custNs).setKeyMetadata("").build();
+
+    keyMetaAdminService.setManagedKey(controller, request, setManagedKeyDone);
+
+    verify(controller).setFailed(contains("key_metadata must not be empty"));
+    verify(keymetaAdmin, never()).setManagedKey(any(), any(), any());
+    verify(setManagedKeyDone)
+      .run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
+  }
+
+  @Test
+  public void testSetManagedKey_KeyException() throws Exception {
+    when(keymetaAdmin.setManagedKey(any(), anyString(), anyString()))
+      .thenThrow(new KeyException("bad key"));
+    ManagedKeyRequest custNs = requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes()))
+      .setKeyNamespace(KEY_NAMESPACE).build();
+    SetManagedKeyRequest request =
+      SetManagedKeyRequest.newBuilder().setKeyCustNs(custNs).setKeyMetadata(KEY_METADATA1).build();
+
+    keyMetaAdminService.setManagedKey(controller, request, setManagedKeyDone);
+
+    verify(controller).setFailed(contains("KeyException"));
+    verify(setManagedKeyDone)
+      .run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
   }
 }

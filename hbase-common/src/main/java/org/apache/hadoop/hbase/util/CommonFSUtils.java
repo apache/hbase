@@ -328,9 +328,9 @@ public final class CommonFSUtils {
    */
   public static Path getOriginalRootDir(final Configuration c) throws IOException {
     return getRootDir(c,
-      c.get(HConstants.HBASE_ORIGINAL_DIR) == null
+      c.get(HConstants.HBASE_ORIGINAL_ROOT_DIR) == null
         ? HConstants.HBASE_DIR
-        : HConstants.HBASE_ORIGINAL_DIR);
+        : HConstants.HBASE_ORIGINAL_ROOT_DIR);
   }
 
   /**
@@ -349,8 +349,8 @@ public final class CommonFSUtils {
 
   public static void setRootDir(final Configuration c, final Path root) {
     // Keep track of the original root dir.
-    if (c.get(HConstants.HBASE_ORIGINAL_DIR) == null && c.get(HConstants.HBASE_DIR) != null) {
-      c.set(HConstants.HBASE_ORIGINAL_DIR, c.get(HConstants.HBASE_DIR));
+    if (c.get(HConstants.HBASE_ORIGINAL_ROOT_DIR) == null && c.get(HConstants.HBASE_DIR) != null) {
+      c.set(HConstants.HBASE_ORIGINAL_ROOT_DIR, c.get(HConstants.HBASE_DIR));
     }
     c.set(HConstants.HBASE_DIR, root.toString());
   }

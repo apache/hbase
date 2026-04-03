@@ -36,11 +36,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyIdentity;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyIdentityUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -232,7 +233,7 @@ public class TestRSRpcServices {
     when(mockServer.getKeyManagementService()).thenReturn(mockKeyService);
     when(mockKeyService.getManagedKeyDataCache()).thenReturn(mockCache);
     // Mock the ejectKey to return true
-    when(mockCache.ejectKey(any(), any(), any())).thenReturn(true);
+    when(mockCache.ejectKey(any(ManagedKeyIdentity.class))).thenReturn(true);
 
     // Create RSRpcServices
     RSRpcServices rpcServices = new RSRpcServices(mockServer);
@@ -241,7 +242,7 @@ public class TestRSRpcServices {
     byte[] keyCustodian = Bytes.toBytes("testCustodian");
     String keyNamespace = "testNamespace";
     String keyMetadata = "testMetadata";
-    byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(keyMetadata);
+    byte[] keyMetadataHash = ManagedKeyIdentityUtils.constructMetadataHash(keyMetadata);
 
     ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
       .setKeyCustNs(ManagedKeyRequest.newBuilder().setKeyCust(ByteString.copyFrom(keyCustodian))
@@ -258,7 +259,8 @@ public class TestRSRpcServices {
     assertTrue("Response should indicate key was ejected", response.getBoolMsg());
 
     // Verify that ejectKey was called on the cache
-    verify(mockCache).ejectKey(keyCustodian, keyNamespace, keyMetadataHash);
+    verify(mockCache).ejectKey(ManagedKeyIdentityUtils.fullKeyIdentityFromMetadata(
+      new Bytes(keyCustodian), new Bytes(keyNamespace.getBytes()), keyMetadata));
 
     LOG.info("ejectManagedKeyDataCacheEntry test completed successfully");
   }
@@ -287,7 +289,7 @@ public class TestRSRpcServices {
     byte[] keyCustodian = Bytes.toBytes("testCustodian");
     String keyNamespace = "testNamespace";
     String keyMetadata = "testMetadata";
-    byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(keyMetadata);
+    byte[] keyMetadataHash = ManagedKeyIdentityUtils.constructMetadataHash(keyMetadata);
 
     ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
       .setKeyCustNs(ManagedKeyRequest.newBuilder().setKeyCust(ByteString.copyFrom(keyCustodian))

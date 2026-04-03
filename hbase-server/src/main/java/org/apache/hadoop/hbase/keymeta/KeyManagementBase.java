@@ -59,6 +59,7 @@ public abstract class KeyManagementBase {
       throw new IllegalArgumentException("Configuration must be non-null");
     }
     this.configuration = configuration;
+    ManagedKeyIdentityUtils.initDigestAlgos(configuration);
   }
 
   protected KeyManagementService getKeyManagementService() {

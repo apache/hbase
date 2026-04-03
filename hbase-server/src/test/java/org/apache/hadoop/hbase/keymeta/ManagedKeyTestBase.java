@@ -43,6 +43,7 @@ public class ManagedKeyTestBase {
       TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "true");
       TEST_UTIL.getConfiguration().set("hbase.coprocessor.master.classes",
         KeymetaServiceEndpoint.class.getName());
+      configureKeyProvider();
     }
 
     // Start the minicluster if needed
@@ -116,6 +117,9 @@ public class ManagedKeyTestBase {
 
   protected TableName getSystemTableNameToWaitFor() {
     return KeymetaTableAccessor.KEY_META_TABLE_NAME;
+  }
+
+  protected void configureKeyProvider() {
   }
 
   /**

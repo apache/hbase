@@ -24,6 +24,9 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyIdentity;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyIdentityUtils;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -62,16 +65,15 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
     // Encode clusterId too for consistency with that of key custodian.
     String keyMetadata = generateKeyMetadata(systemKeyAlias,
       ManagedKeyProvider.encodeToStr(clusterId), ManagedKeyData.KEY_SPACE_GLOBAL);
-    return new ManagedKeyData(clusterId, ManagedKeyData.KEY_SPACE_GLOBAL, key,
+    return new ManagedKeyData(clusterId, ManagedKeyData.KEY_SPACE_GLOBAL_BYTES.copyBytes(), key,
       ManagedKeyState.ACTIVE, keyMetadata);
   }
 
   @Override
-  public ManagedKeyData getManagedKey(byte[] key_cust, String key_namespace) throws IOException {
+  public ManagedKeyData getManagedKey(ManagedKeyIdentity keyIdentity) throws IOException {
     checkConfig();
-    String encodedCust = ManagedKeyProvider.encodeToStr(key_cust);
-
-    // Handle null key_namespace by defaulting to global namespace
+    String encodedCust = keyIdentity.getCustodianEncoded();
+    String key_namespace = keyIdentity.getNamespaceString();
     if (key_namespace == null) {
       key_namespace = ManagedKeyData.KEY_SPACE_GLOBAL;
     }
@@ -85,15 +87,17 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
 
     // If no alias is configured for this custodian+namespace combination, treat as key not found
     if (alias == null) {
-      return new ManagedKeyData(key_cust, key_namespace, null, ManagedKeyState.FAILED, keyMetadata);
+      return new ManagedKeyData(keyIdentity.getCustodianView(), keyIdentity.getNamespaceView(),
+        null, ManagedKeyState.FAILED, keyMetadata);
     }
 
     // Namespaces match, proceed to get the key
-    return unwrapKey(keyMetadata, null);
+    return unwrapKey(keyIdentity, keyMetadata, null);
   }
 
   @Override
-  public ManagedKeyData unwrapKey(String keyMetadataStr, byte[] wrappedKey) throws IOException {
+  public ManagedKeyData unwrapKey(ManagedKeyIdentity keyIdentity, String keyMetadataStr,
+    byte[] wrappedKey) throws IOException {
     Map<String, String> keyMetadata =
       GsonUtil.getDefaultInstance().fromJson(keyMetadataStr, KEY_METADATA_TYPE);
     String encodedCust = keyMetadata.get(KEY_METADATA_CUST);
@@ -104,14 +108,23 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
     }
     String activeStatusConfKey = buildActiveStatusConfKey(encodedCust, namespace);
     boolean isActive = conf.getBoolean(activeStatusConfKey, true);
-    byte[] key_cust = ManagedKeyProvider.decodeToBytes(encodedCust);
     String alias = keyMetadata.get(KEY_METADATA_ALIAS);
     Key key = alias != null ? getKey(alias) : null;
+    ManagedKeyIdentity fullKeyIdentity;
+    if (keyIdentity == null) {
+      fullKeyIdentity = ManagedKeyIdentityUtils.buildIdentityFromMetadata(
+        ManagedKeyProvider.decodeToBytes(encodedCust), Bytes.toBytes(namespace), keyMetadataStr);
+    } else {
+      fullKeyIdentity = keyIdentity.getPartialIdentityLength() > 0
+        ? keyIdentity
+        : ManagedKeyIdentityUtils.buildIdentityFromMetadata(keyIdentity.getCustodianView(),
+          keyIdentity.getNamespaceView(), keyMetadataStr);
+    }
     if (key != null) {
-      return new ManagedKeyData(key_cust, namespace, key,
+      return new ManagedKeyData(fullKeyIdentity, key,
         isActive ? ManagedKeyState.ACTIVE : ManagedKeyState.INACTIVE, keyMetadataStr);
     }
-    return new ManagedKeyData(key_cust, namespace, null,
+    return new ManagedKeyData(fullKeyIdentity, null,
       isActive ? ManagedKeyState.FAILED : ManagedKeyState.DISABLED, keyMetadataStr);
   }
 

@@ -123,6 +123,8 @@ import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdminImpl;
 import org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.MasterRpcServices.BalanceSwitchMode;
@@ -361,6 +363,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private MasterFileSystem fileSystemManager;
   private MasterWalManager walManager;
   private SystemKeyManager systemKeyManager;
+  private KeymetaAdmin keymetaAdmin;
 
   // manager to manage procedure-based WAL splitting, can be null if current
   // is zk-based WAL splitting. SplitWALManager will replace SplitLogManager
@@ -528,6 +531,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     super(conf, "Master");
     final Span span = TraceUtil.createSpan("HMaster.cxtor");
     try (Scope ignored = span.makeCurrent()) {
+      this.keymetaAdmin = new KeymetaAdminImpl(this, keymetaAccessor);
       if (conf.getBoolean(MAINTENANCE_MODE, false)) {
         LOG.info("Detected {}=true via configuration.", MAINTENANCE_MODE);
         maintenanceMode = true;
@@ -803,6 +807,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return metricsMaster;
   }
 
+  @Override
+  public KeymetaAdmin getKeymetaAdmin() {
+    return keymetaAdmin;
+  }
+
   /**
    * Initialize all ZK based system trackers. But do not include {@link RegionServerTracker}, it
    * should have already been initialized along with {@link ServerManager}.
@@ -1000,7 +1009,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
     systemKeyManager = new SystemKeyManager(this);
     systemKeyManager.ensureSystemKeyInitialized();
-    buildSystemKeyCache();
+    systemKeyCache = buildSystemKeyCache();
 
     // Precaution. Put in place the old hbck1 lock file to fence out old hbase1s running their
     // hbck1s against an hbase2 cluster; it could do damage. To skip this behavior, set
@@ -1731,8 +1740,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   public boolean rotateSystemKeyIfChanged() throws IOException {
     ManagedKeyData newKey = this.systemKeyManager.rotateSystemKeyIfChanged();
     if (newKey != null) {
-      this.systemKeyCache = null;
-      buildSystemKeyCache();
+      systemKeyCache = buildSystemKeyCache();
       return true;
     }
     return false;

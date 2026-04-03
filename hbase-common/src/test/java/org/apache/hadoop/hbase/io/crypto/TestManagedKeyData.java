@@ -25,11 +25,17 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import java.lang.reflect.Field;
 import java.security.Key;
-import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.List;
 import javax.crypto.KeyGenerator;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.keymeta.KeyIdentityPrefixBytesBacked;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyIdentity;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyIdentityUtils;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -46,21 +52,24 @@ public class TestManagedKeyData {
 
   private byte[] keyCust;
   private String keyNamespace;
+  private byte[] keyNamespaceBytes;
   private Key theKey;
   private ManagedKeyState keyState;
   private String keyMetadata;
   private ManagedKeyData managedKeyData;
 
   @Before
-  public void setUp() throws NoSuchAlgorithmException {
+  public void setUp() throws Exception {
+    resetDigestAlgosCache();
     keyCust = "testCustodian".getBytes();
     keyNamespace = "testNamespace";
+    keyNamespaceBytes = Bytes.toBytes(keyNamespace);
     KeyGenerator keyGen = KeyGenerator.getInstance("AES");
     keyGen.init(256);
     theKey = keyGen.generateKey();
     keyState = ManagedKeyState.ACTIVE;
     keyMetadata = "testMetadata";
-    managedKeyData = new ManagedKeyData(keyCust, keyNamespace, theKey, keyState, keyMetadata);
+    managedKeyData = new ManagedKeyData(keyCust, keyNamespaceBytes, theKey, keyState, keyMetadata);
   }
 
   @Test
@@ -76,30 +85,33 @@ public class TestManagedKeyData {
   @Test
   public void testConstructorNullChecks() {
     assertThrows(NullPointerException.class,
-      () -> new ManagedKeyData(null, keyNamespace, theKey, keyState, keyMetadata));
+      () -> new ManagedKeyData(null, keyNamespaceBytes, theKey, keyState, keyMetadata));
     assertThrows(NullPointerException.class,
       () -> new ManagedKeyData(keyCust, null, theKey, keyState, keyMetadata));
     assertThrows(NullPointerException.class,
-      () -> new ManagedKeyData(keyCust, keyNamespace, theKey, null, keyMetadata));
+      () -> new ManagedKeyData(keyCust, keyNamespaceBytes, theKey, null, keyMetadata));
     assertThrows(NullPointerException.class,
-      () -> new ManagedKeyData(keyCust, keyNamespace, theKey, ManagedKeyState.ACTIVE, null));
+      () -> new ManagedKeyData(keyCust, keyNamespaceBytes, theKey, ManagedKeyState.ACTIVE, null));
   }
 
   @Test
   public void testConstructorWithFailedEncryptionStateAndNullMetadata() {
-    ManagedKeyData keyData = new ManagedKeyData(keyCust, keyNamespace, ManagedKeyState.FAILED);
+    ManagedKeyData keyData = new ManagedKeyData(
+      new KeyIdentityPrefixBytesBacked(keyCust, keyNamespaceBytes), ManagedKeyState.FAILED);
     assertNotNull(keyData);
     assertEquals(ManagedKeyState.FAILED, keyData.getKeyState());
     assertNull(keyData.getKeyMetadata());
-    assertNull(keyData.getKeyMetadataHash());
+    assertNull(keyData.getPartialIdentity());
     assertNull(keyData.getTheKey());
   }
 
   @Test
   public void testConstructorWithRefreshTimestamp() {
     long refreshTimestamp = System.currentTimeMillis();
+    ManagedKeyIdentity fullIdentity = ManagedKeyIdentityUtils
+      .fullKeyIdentityFromMetadata(new Bytes(keyCust), new Bytes(keyNamespaceBytes), keyMetadata);
     ManagedKeyData keyDataWithTimestamp =
-      new ManagedKeyData(keyCust, keyNamespace, theKey, keyState, keyMetadata, refreshTimestamp);
+      new ManagedKeyData(fullIdentity, theKey, keyState, keyMetadata, refreshTimestamp);
     assertEquals(refreshTimestamp, keyDataWithTimestamp.getRefreshTimestamp());
   }
 
@@ -108,10 +120,10 @@ public class TestManagedKeyData {
     ManagedKeyData cloned = managedKeyData.createClientFacingInstance();
     assertNull(cloned.getTheKey());
     assertNull(cloned.getKeyMetadata());
-    assertEquals(managedKeyData.getKeyCustodian(), cloned.getKeyCustodian());
+    assertTrue(Bytes.equals(managedKeyData.getKeyCustodian(), cloned.getKeyCustodian()));
     assertEquals(managedKeyData.getKeyNamespace(), cloned.getKeyNamespace());
     assertEquals(managedKeyData.getKeyState(), cloned.getKeyState());
-    assertTrue(Bytes.equals(managedKeyData.getKeyMetadataHash(), cloned.getKeyMetadataHash()));
+    assertTrue(Bytes.equals(managedKeyData.getPartialIdentity(), cloned.getPartialIdentity()));
   }
 
   @Test
@@ -128,7 +140,7 @@ public class TestManagedKeyData {
 
     // Test with null key
     ManagedKeyData nullKeyData =
-      new ManagedKeyData(keyCust, keyNamespace, null, keyState, keyMetadata);
+      new ManagedKeyData(keyCust, keyNamespaceBytes, null, keyState, keyMetadata);
     assertEquals(0, nullKeyData.getKeyChecksum());
   }
 
@@ -140,24 +152,24 @@ public class TestManagedKeyData {
   }
 
   @Test
-  public void testGetKeyMetadataHash() {
-    byte[] hash = managedKeyData.getKeyMetadataHash();
-    assertNotNull(hash);
-    assertEquals(16, hash.length); // MD5 hash is 16 bytes long
+  public void testGetPartialIdentity() {
+    byte[] partialIdentity = managedKeyData.getPartialIdentity();
+    assertNotNull(partialIdentity);
+    assertEquals(9, partialIdentity.length); // algo selector (1) + XXH3 (8 bytes), default digest
   }
 
   @Test
-  public void testGetKeyMetadataHashEncoded() {
-    String encodedHash = managedKeyData.getKeyMetadataHashEncoded();
-    assertNotNull(encodedHash);
-    assertEquals(24, encodedHash.length()); // Base64 encoded MD5 hash is 24 characters long
+  public void testGetPartialIdentityEncoded() {
+    String encoded = managedKeyData.getPartialIdentityEncoded();
+    assertNotNull(encoded);
+    assertEquals(12, encoded.length()); // Base64 of algo selector + XXH3 (9 bytes) = 12 chars
   }
 
   @Test
   public void testConstructMetadataHash() {
-    byte[] hash = ManagedKeyData.constructMetadataHash(keyMetadata);
-    assertNotNull(hash);
-    assertEquals(16, hash.length); // MD5 hash is 16 bytes long
+    byte[] partialIdentity = ManagedKeyIdentityUtils.constructMetadataHash(keyMetadata);
+    assertNotNull(partialIdentity);
+    assertEquals(9, partialIdentity.length); // default xxh3: algo selector (1) + 8 bytes
   }
 
   @Test
@@ -173,11 +185,12 @@ public class TestManagedKeyData {
 
   @Test
   public void testEquals() {
-    ManagedKeyData same = new ManagedKeyData(keyCust, keyNamespace, theKey, keyState, keyMetadata);
+    ManagedKeyData same =
+      new ManagedKeyData(keyCust, keyNamespaceBytes, theKey, keyState, keyMetadata);
     assertEquals(managedKeyData, same);
 
-    ManagedKeyData different =
-      new ManagedKeyData("differentCust".getBytes(), keyNamespace, theKey, keyState, keyMetadata);
+    ManagedKeyData different = new ManagedKeyData("differentCust".getBytes(), keyNamespaceBytes,
+      theKey, keyState, keyMetadata);
     assertNotEquals(managedKeyData, different);
   }
 
@@ -193,18 +206,126 @@ public class TestManagedKeyData {
 
   @Test
   public void testHashCode() {
-    ManagedKeyData same = new ManagedKeyData(keyCust, keyNamespace, theKey, keyState, keyMetadata);
+    ManagedKeyData same =
+      new ManagedKeyData(keyCust, keyNamespaceBytes, theKey, keyState, keyMetadata);
     assertEquals(managedKeyData.hashCode(), same.hashCode());
 
-    ManagedKeyData different =
-      new ManagedKeyData("differentCust".getBytes(), keyNamespace, theKey, keyState, keyMetadata);
+    ManagedKeyData different = new ManagedKeyData("differentCust".getBytes(), keyNamespaceBytes,
+      theKey, keyState, keyMetadata);
     assertNotEquals(managedKeyData.hashCode(), different.hashCode());
   }
 
   @Test
   public void testConstants() {
     assertEquals("*", ManagedKeyData.KEY_SPACE_GLOBAL);
-    assertEquals(ManagedKeyProvider.encodeToStr(ManagedKeyData.KEY_SPACE_GLOBAL.getBytes()),
-      ManagedKeyData.KEY_GLOBAL_CUSTODIAN);
+    assertEquals(ManagedKeyProvider.encodeToStr(ManagedKeyData.KEY_SPACE_GLOBAL_BYTES.copyBytes()),
+      ManagedKeyData.GLOBAL_CUST_ENCODED);
+  }
+
+  /**
+   * Resets the cached digest algorithms so initDigestAlgos() can be tested with different configs.
+   */
+  private static void resetDigestAlgosCache() throws Exception {
+    Field field = ManagedKeyIdentityUtils.class.getDeclaredField("DIGEST_ALGOS");
+    field.setAccessible(true);
+    field.set(null, null);
+  }
+
+  @Test
+  public void testInitDigestAlgosWithNullConf() throws Exception {
+    resetDigestAlgosCache();
+    ManagedKeyIdentityUtils.initDigestAlgos(null);
+    List<DigestAlgorithms> algos = ManagedKeyIdentityUtils.getDigestAlgos();
+    assertNotNull(algos);
+    assertEquals(1, algos.size());
+    assertEquals(DigestAlgorithms.XXH3, algos.get(0));
+  }
+
+  @Test
+  public void testInitDigestAlgosWithDefaultConfig() throws Exception {
+    resetDigestAlgosCache();
+    Configuration conf = new Configuration();
+    ManagedKeyIdentityUtils.initDigestAlgos(conf);
+    List<DigestAlgorithms> algos = ManagedKeyIdentityUtils.getDigestAlgos();
+    assertNotNull(algos);
+    assertEquals(1, algos.size());
+    assertEquals(DigestAlgorithms.XXH3, algos.get(0));
+  }
+
+  @Test
+  public void testInitDigestAlgosWithSingleAlgoConfig() throws Exception {
+    resetDigestAlgosCache();
+    Configuration conf = new Configuration();
+    conf.set(HConstants.CRYPTO_MANAGED_KEY_METADATA_DIGEST_ALGORITHMS_CONF_KEY, "md5");
+    ManagedKeyIdentityUtils.initDigestAlgos(conf);
+    List<DigestAlgorithms> algos = ManagedKeyIdentityUtils.getDigestAlgos();
+    assertNotNull(algos);
+    assertEquals(1, algos.size());
+    assertEquals(DigestAlgorithms.MD5, algos.get(0));
+  }
+
+  @Test
+  public void testInitDigestAlgosWithTwoAlgosSortedByBitPosition() throws Exception {
+    resetDigestAlgosCache();
+    Configuration conf = new Configuration();
+    conf.set(HConstants.CRYPTO_MANAGED_KEY_METADATA_DIGEST_ALGORITHMS_CONF_KEY, "md5,xxh3");
+    ManagedKeyIdentityUtils.initDigestAlgos(conf);
+    List<DigestAlgorithms> algos = ManagedKeyIdentityUtils.getDigestAlgos();
+    assertNotNull(algos);
+    assertEquals(2, algos.size());
+    assertEquals(DigestAlgorithms.XXH3, algos.get(0));
+    assertEquals(DigestAlgorithms.MD5, algos.get(1));
+  }
+
+  @Test
+  public void testInitDigestAlgosWithThreeAlgosUsesFirstTwo() throws Exception {
+    resetDigestAlgosCache();
+    Configuration conf = new Configuration();
+    conf.set(HConstants.CRYPTO_MANAGED_KEY_METADATA_DIGEST_ALGORITHMS_CONF_KEY,
+      "xxh3,xxhash64,md5");
+    ManagedKeyIdentityUtils.initDigestAlgos(conf);
+    List<DigestAlgorithms> algos = ManagedKeyIdentityUtils.getDigestAlgos();
+    assertNotNull(algos);
+    assertEquals(2, algos.size());
+    assertEquals(DigestAlgorithms.XXH3, algos.get(0));
+    assertEquals(DigestAlgorithms.XXHASH64, algos.get(1));
+  }
+
+  @Test
+  public void testInitDigestAlgosDedupesAndIgnoresUnknown() throws Exception {
+    resetDigestAlgosCache();
+    Configuration conf = new Configuration();
+    conf.set(HConstants.CRYPTO_MANAGED_KEY_METADATA_DIGEST_ALGORITHMS_CONF_KEY,
+      "xxh3,unknown,xxh3");
+    ManagedKeyIdentityUtils.initDigestAlgos(conf);
+    List<DigestAlgorithms> algos = ManagedKeyIdentityUtils.getDigestAlgos();
+    assertNotNull(algos);
+    assertEquals(1, algos.size());
+    assertEquals(DigestAlgorithms.XXH3, algos.get(0));
+  }
+
+  @Test
+  public void testInitDigestAlgosEmptyConfigFallsBackToXxh3() throws Exception {
+    resetDigestAlgosCache();
+    Configuration conf = new Configuration();
+    conf.set(HConstants.CRYPTO_MANAGED_KEY_METADATA_DIGEST_ALGORITHMS_CONF_KEY, "");
+    ManagedKeyIdentityUtils.initDigestAlgos(conf);
+    List<DigestAlgorithms> algos = ManagedKeyIdentityUtils.getDigestAlgos();
+    assertNotNull(algos);
+    assertEquals(1, algos.size());
+    assertEquals(DigestAlgorithms.XXH3, algos.get(0));
+  }
+
+  @Test
+  public void testInitDigestAlgosIdempotentAfterFirstCall() throws Exception {
+    resetDigestAlgosCache();
+    Configuration conf = new Configuration();
+    conf.set(HConstants.CRYPTO_MANAGED_KEY_METADATA_DIGEST_ALGORITHMS_CONF_KEY, "md5");
+    ManagedKeyIdentityUtils.initDigestAlgos(conf);
+    assertEquals(DigestAlgorithms.MD5, ManagedKeyIdentityUtils.getDigestAlgos().get(0));
+    // Second call with different config should not change cached value
+    conf.set(HConstants.CRYPTO_MANAGED_KEY_METADATA_DIGEST_ALGORITHMS_CONF_KEY, "xxh3");
+    ManagedKeyIdentityUtils.initDigestAlgos(conf);
+    assertEquals(DigestAlgorithms.MD5, ManagedKeyIdentityUtils.getDigestAlgos().get(0));
   }
 }

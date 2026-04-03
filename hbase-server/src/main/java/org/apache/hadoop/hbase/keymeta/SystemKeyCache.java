@@ -18,13 +18,14 @@
 package org.apache.hadoop.hbase.keymeta;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +36,7 @@ public class SystemKeyCache {
   private static final Logger LOG = LoggerFactory.getLogger(SystemKeyCache.class);
 
   private final ManagedKeyData latestSystemKey;
-  private final Map<Long, ManagedKeyData> systemKeys;
+  private final Map<Bytes, ManagedKeyData> systemKeys;
 
   /**
    * Create a SystemKeyCache from the specified configuration and file system.
@@ -63,23 +64,23 @@ public class SystemKeyCache {
       return null;
     }
     ManagedKeyData latestSystemKey = null;
-    Map<Long, ManagedKeyData> systemKeys = new TreeMap<>();
+    Map<Bytes, ManagedKeyData> systemKeys = new HashMap<>();
     for (Path keyPath : allSystemKeyFiles) {
       ManagedKeyData keyData = accessor.loadSystemKey(keyPath);
       LOG.info(
-        "Loaded system key with (custodian: {}, namespace: {}), checksum: {} and metadata hash: {} "
+        "Loaded system key with (custodian: {}, namespace: {}), full identity and partial: {} "
           + " from file: {}",
-        keyData.getKeyCustodianEncoded(), keyData.getKeyNamespace(), keyData.getKeyChecksum(),
-        keyData.getKeyMetadataHashEncoded(), keyPath);
+        keyData.getKeyCustodianEncoded(), keyData.getKeyNamespace(),
+        keyData.getPartialIdentityEncoded(), keyPath);
       if (latestSystemKey == null) {
         latestSystemKey = keyData;
       }
-      systemKeys.put(keyData.getKeyChecksum(), keyData);
+      systemKeys.put(keyData.getKeyIdentity().getFullIdentityView(), keyData);
     }
     return new SystemKeyCache(systemKeys, latestSystemKey);
   }
 
-  private SystemKeyCache(Map<Long, ManagedKeyData> systemKeys, ManagedKeyData latestSystemKey) {
+  private SystemKeyCache(Map<Bytes, ManagedKeyData> systemKeys, ManagedKeyData latestSystemKey) {
     this.systemKeys = systemKeys;
     this.latestSystemKey = latestSystemKey;
   }
@@ -88,7 +89,17 @@ public class SystemKeyCache {
     return latestSystemKey;
   }
 
-  public ManagedKeyData getSystemKeyByChecksum(long checksum) {
-    return systemKeys.get(checksum);
+  /**
+   * Look up a system key by its full identity (row key bytes).
+   * @param fullIdentity full identity bytes such as from
+   *                     {@link ManagedKeyIdentity#getFullIdentityView()} or
+   *                     {@link ManagedKeyIdentityUtils#constructRowKeyForIdentity(byte[], byte[], byte[])}
+   * @return the cached system key, or null if not found
+   */
+  public ManagedKeyData getSystemKeyByIdentity(byte[] fullIdentity) {
+    if (fullIdentity == null || fullIdentity.length == 0) {
+      return null;
+    }
+    return systemKeys.get(new Bytes(fullIdentity));
   }
 }

@@ -33,10 +33,14 @@ java_import org.apache.hadoop.hbase.client.Get
 java_import org.apache.hadoop.hbase.io.crypto.Encryption
 java_import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider
 java_import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider
+java_import org.apache.hadoop.hbase.keymeta.KeyIdentityPrefixBytesBacked
 java_import org.apache.hadoop.hbase.io.hfile.CorruptHFileException
 java_import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer
 java_import org.apache.hadoop.hbase.io.hfile.HFile
 java_import org.apache.hadoop.hbase.io.hfile.CacheConfig
+java_import org.apache.hadoop.hbase.keymeta.KeyIdentitySingleArrayBacked
+java_import org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor
+
 java_import org.apache.hadoop.hbase.util.Bytes
 
 module Hbase
@@ -50,27 +54,55 @@ module Hbase
       @connection = $TEST_CLUSTER.connection
     end
 
-    define_test 'Test table put/get with encryption' do
+    define_test 'Test table put/get with encryption (scenario 2a)' do
       # Custodian is currently not supported, so this will end up falling back to local key
       # generation.
-      test_table_put_get_with_encryption($CUST1_ENCODED, '*',
+      run_table_put_get_with_encryption(
                                          { 'NAME' => 'f', 'ENCRYPTION' => 'AES' },
-                                         true)
+                                         false)
     end
 
     define_test 'Test table with custom namespace attribute in Column Family' do
       custom_namespace = 'test_global_namespace'
-      test_table_put_get_with_encryption(
-        $GLOB_CUST_ENCODED, custom_namespace,
+      run_table_put_get_with_encryption(
         { 'NAME' => 'f', 'ENCRYPTION' => 'AES', 'ENCRYPTION_KEY_NAMESPACE' => custom_namespace },
         false
       )
     end
 
-    def test_table_put_get_with_encryption(cust, namespace, table_attrs, fallback_scenario)
-      cust_and_namespace = "#{cust}:#{namespace}"
-      output = capture_stdout { @shell.command('enable_key_management', cust_and_namespace) }
-      assert(output.include?("#{cust} #{namespace} ACTIVE"))
+    define_test 'Test table put/get with encryption and local key gen per file (scenario 2b)' do
+      # Enable local key gen per file so SecurityUtil uses scenario 2b: active key (DEK) as KEK,
+      # locally generated key as CEK per file.
+      conf_key = HConstants::CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY
+      $TEST_CLUSTER.getConfiguration.setBoolean(conf_key, true)
+      $TEST.restartMiniCluster(KeymetaTableAccessor::KEY_META_TABLE_NAME)
+      setup_hbase
+      begin
+        custom_namespace = 'test_global_namespace'
+        run_table_put_get_with_encryption(
+          { 'NAME' => 'f', 'ENCRYPTION' => 'AES', 'ENCRYPTION_KEY_NAMESPACE' => custom_namespace },
+          true
+        )
+      ensure
+        # Restore default so other tests or future runs are not affected
+        $TEST_CLUSTER.getConfiguration.setBoolean(conf_key, false)
+        $TEST.restartMiniCluster(KeymetaTableAccessor::KEY_META_TABLE_NAME)
+        setup_hbase
+      end
+    end
+
+    def run_table_put_get_with_encryption(table_attrs, local_key_gen_scenario)
+      cust = $GLOB_CUST_ENCODED
+      has_namespace = table_attrs.has_key?('ENCRYPTION_KEY_NAMESPACE')
+      if has_namespace
+        expected_ns = table_attrs['ENCRYPTION_KEY_NAMESPACE']
+        cust_and_namespace = "#{cust}:#{expected_ns}"
+
+        output = capture_stdout { @shell.command('enable_key_management', cust_and_namespace) }
+        assert(output.include?("#{cust} #{expected_ns} ACTIVE"), "Expected cust #{cust} and namespace #{expected_ns} to be ACTIVE, got: #{output}")
+      else
+        expected_ns = '*'
+      end
       @shell.command(:create, @test_table, table_attrs)
       test_table = table(@test_table)
       test_table.put('1', 'f:a', '2')
@@ -91,19 +123,33 @@ module Hbase
       assert_not_nil(hfile_info)
       live_trailer = hfile_info.getTrailer
       assert_trailer(live_trailer)
-      assert_equal(namespace, live_trailer.getKeyNamespace)
+      # When we have an active key (2a or 2b), KEK identity in trailer should reflect our namespace
 
-      # When active key is supposed to be used, we can valiate the key bytes in the context against
-      # the actual key from provider.
-      unless fallback_scenario
-        encryption_context = hfile_info.getHFileContext.getEncryptionContext
-        assert_not_nil(encryption_context)
-        assert_not_nil(encryption_context.getKeyBytes)
-        key_provider = Encryption.getManagedKeyProvider($TEST_CLUSTER.getConfiguration)
-        key_data = key_provider.getManagedKey(ManagedKeyProvider.decodeToBytes(cust), namespace)
-        assert_not_nil(key_data)
-        assert_equal(namespace, key_data.getKeyNamespace)
-        assert_equal(key_data.getTheKey.getEncoded, encryption_context.getKeyBytes)
+      encryption_context = hfile_info.getHFileContext.getEncryptionContext
+      assert_not_nil(encryption_context)
+      assert_not_nil(encryption_context.getKeyBytes)
+      key_provider = Encryption.getManagedKeyProvider($TEST_CLUSTER.getConfiguration)
+      cluster_id = $TEST_CLUSTER.getMiniHBaseCluster().getMaster().getClusterId();
+      system_key = key_provider.getSystemKey(cluster_id.bytes)
+      dek_data = key_provider.getManagedKey(KeyIdentityPrefixBytesBacked.new(
+        Bytes.new(ManagedKeyProvider.decodeToBytes($GLOB_CUST_ENCODED)),
+        Bytes.new(Bytes.toBytes(expected_ns))))
+      assert_not_nil(dek_data)
+      parsed_namespace = parse_namespace_from_kek_identity(live_trailer.getKekIdentity)
+      # When active key is the CEK (scenario 2a), validate key bytes in context match
+      # provider. For scenario 2b (local key gen), CEK is generated per file so key bytes differ.
+      if local_key_gen_scenario
+        # Scenario 2b: CEK is locally generated per file, so it must not equal the provider key
+        # (which is used as KEK).
+        assert_not_equal(dek_data.getTheKey.getEncoded, encryption_context.getKeyBytes)
+        assert_not_equal(system_key.getTheKey.getEncoded, encryption_context.getKeyBytes)
+        assert_equal(encryption_context.getKEKData().getKeyNamespaceBytes(), parsed_namespace)
+        assert_equal(has_namespace ? dek_data : system_key, encryption_context.getKEKData())
+      else
+        # Scenario 2a: active key is used as CEK directly
+        assert_equal(dek_data.getTheKey.getEncoded, encryption_context.getKeyBytes)
+        assert_equal(system_key, encryption_context.getKEKData())
+        assert_equal(system_key.getKeyNamespaceBytes(), parsed_namespace)
       end
 
       ## Disable table to ensure that the stores are not cached.
@@ -163,15 +209,25 @@ module Hbase
       assert_not_nil(offline_trailer)
       assert_not_nil(offline_trailer.getEncryptionKey)
       assert_not_nil(offline_trailer.getKEKMetadata)
-      assert_not_nil(offline_trailer.getKEKChecksum)
-      assert_not_nil(offline_trailer.getKeyNamespace)
+      assert_not_nil(offline_trailer.getKekIdentity)
+      assert_true(offline_trailer.getKekIdentity.length > 0)
+      parsed_namespace = parse_namespace_from_kek_identity(offline_trailer.getKekIdentity)
+      assert_not_nil(parsed_namespace)
 
       return unless live_trailer
 
       assert_equal(live_trailer.getEncryptionKey, offline_trailer.getEncryptionKey)
       assert_equal(live_trailer.getKEKMetadata, offline_trailer.getKEKMetadata)
-      assert_equal(live_trailer.getKEKChecksum, offline_trailer.getKEKChecksum)
-      assert_equal(live_trailer.getKeyNamespace, offline_trailer.getKeyNamespace)
+      assert_equal(live_trailer.getKekIdentity.to_a, offline_trailer.getKekIdentity.to_a)
+      assert_equal(parse_namespace_from_kek_identity(live_trailer.getKekIdentity),
+                  parse_namespace_from_kek_identity(offline_trailer.getKekIdentity))
+    end
+
+    # Returns the key namespace string parsed from KEK identity bytes, or nil if not present.
+    def parse_namespace_from_kek_identity(kek_identity)
+      return nil if kek_identity.nil? || kek_identity.length == 0
+
+      KeyIdentitySingleArrayBacked.new(kek_identity).getNamespaceView().copyBytes()
     end
   end
 end

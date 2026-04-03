@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyE
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SetManagedKeyRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos.ManagedKeysService;
 
@@ -114,8 +116,9 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
         ManagedKeyData managedKeyState = master.getKeymetaAdmin()
           .enableKeyManagement(request.getKeyCust().toByteArray(), request.getKeyNamespace());
         response = generateKeyStateResponse(managedKeyState, builder);
-      } catch (IOException | KeyException e) {
-        CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
+      } catch (IOException | KeyException | RuntimeException e) {
+        CoprocessorRpcUtils.setControllerException(controller,
+          toControllerException("enableKeyManagement", e));
         builder.setKeyState(ManagedKeyState.KEY_FAILED);
       }
       if (response == null) {
@@ -134,8 +137,9 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
         List<ManagedKeyData> managedKeyStates = master.getKeymetaAdmin()
           .getManagedKeys(request.getKeyCust().toByteArray(), request.getKeyNamespace());
         keyStateResponse = generateKeyStateResponse(managedKeyStates, builder);
-      } catch (IOException | KeyException e) {
-        CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
+      } catch (IOException | KeyException | RuntimeException e) {
+        CoprocessorRpcUtils.setControllerException(controller,
+          toControllerException("getManagedKeys", e));
       }
       if (keyStateResponse == null) {
         keyStateResponse = GetManagedKeysResponse.getDefaultInstance();
@@ -156,8 +160,9 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
       boolean rotated;
       try {
         rotated = master.getKeymetaAdmin().rotateSTK();
-      } catch (IOException e) {
-        CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
+      } catch (IOException | RuntimeException e) {
+        CoprocessorRpcUtils.setControllerException(controller,
+          toControllerException("rotateSTK", e));
         rotated = false;
       }
       done.run(BooleanMsg.newBuilder().setBoolMsg(rotated).build());
@@ -179,8 +184,9 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
         ManagedKeyData managedKeyState = master.getKeymetaAdmin()
           .disableKeyManagement(request.getKeyCust().toByteArray(), request.getKeyNamespace());
         response = generateKeyStateResponse(managedKeyState, builder);
-      } catch (IOException | KeyException e) {
-        CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
+      } catch (IOException | KeyException | RuntimeException e) {
+        CoprocessorRpcUtils.setControllerException(controller,
+          toControllerException("disableKeyManagement", e));
         builder.setKeyState(ManagedKeyState.KEY_FAILED);
       }
       if (response == null) {
@@ -203,16 +209,17 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
       ManagedKeyResponse.Builder builder = ManagedKeyResponse.newBuilder();
       try {
         initManagedKeyResponseBuilder(controller, request.getKeyCustNs(), builder);
-        // Convert hash to metadata by looking up the key first
-        byte[] keyMetadataHash = request.getKeyMetadataHash().toByteArray();
+        // Convert partial identity to key lookup
+        byte[] partialIdentity = request.getKeyMetadataHash().toByteArray();
         byte[] keyCust = request.getKeyCustNs().getKeyCust().toByteArray();
         String keyNamespace = request.getKeyCustNs().getKeyNamespace();
 
         ManagedKeyData managedKeyState =
-          master.getKeymetaAdmin().disableManagedKey(keyCust, keyNamespace, keyMetadataHash);
+          master.getKeymetaAdmin().disableManagedKey(keyCust, keyNamespace, partialIdentity);
         response = generateKeyStateResponse(managedKeyState, builder);
-      } catch (IOException | KeyException e) {
-        CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
+      } catch (IOException | KeyException | RuntimeException e) {
+        CoprocessorRpcUtils.setControllerException(controller,
+          toControllerException("disableManagedKey", e));
         builder.setKeyState(ManagedKeyState.KEY_FAILED);
       }
       if (response == null) {
@@ -236,9 +243,15 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
         initManagedKeyResponseBuilder(controller, request, builder);
         ManagedKeyData managedKeyState = master.getKeymetaAdmin()
           .rotateManagedKey(request.getKeyCust().toByteArray(), request.getKeyNamespace());
+        if (managedKeyState == null) {
+          throw new IOException("Failed to rotate managed key for (custodian: "
+            + ManagedKeyProvider.encodeToStr(request.getKeyCust().toByteArray()) + ", namespace: "
+            + request.getKeyNamespace() + ")");
+        }
         response = generateKeyStateResponse(managedKeyState, builder);
-      } catch (IOException | KeyException e) {
-        CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
+      } catch (IOException | KeyException | RuntimeException e) {
+        CoprocessorRpcUtils.setControllerException(controller,
+          toControllerException("rotateManagedKey", e));
         builder.setKeyState(ManagedKeyState.KEY_FAILED);
       }
       if (response == null) {
@@ -261,10 +274,39 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
         initManagedKeyResponseBuilder(controller, request, ManagedKeyResponse.newBuilder());
         master.getKeymetaAdmin().refreshManagedKeys(request.getKeyCust().toByteArray(),
           request.getKeyNamespace());
-      } catch (IOException | KeyException e) {
-        CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
+      } catch (IOException | KeyException | RuntimeException e) {
+        CoprocessorRpcUtils.setControllerException(controller,
+          toControllerException("refreshManagedKeys", e));
       }
       done.run(EmptyMsg.getDefaultInstance());
+    }
+
+    /**
+     * Unwraps key metadata from the provider and persists it for the given custodian and namespace.
+     */
+    @Override
+    public void setManagedKey(RpcController controller, SetManagedKeyRequest request,
+      RpcCallback<ManagedKeyResponse> done) {
+      ManagedKeyResponse response = null;
+      ManagedKeyResponse.Builder builder = ManagedKeyResponse.newBuilder();
+      try {
+        initManagedKeyResponseBuilder(controller, request.getKeyCustNs(), builder);
+        if (request.getKeyMetadata().isEmpty()) {
+          throw new IOException("key_metadata must not be empty");
+        }
+        ManagedKeyData managedKeyState =
+          master.getKeymetaAdmin().setManagedKey(request.getKeyCustNs().getKeyCust().toByteArray(),
+            request.getKeyCustNs().getKeyNamespace(), request.getKeyMetadata());
+        response = generateKeyStateResponse(managedKeyState, builder);
+      } catch (IOException | KeyException | RuntimeException e) {
+        CoprocessorRpcUtils.setControllerException(controller,
+          toControllerException("setManagedKey", e));
+        builder.setKeyState(ManagedKeyState.KEY_FAILED);
+      }
+      if (response == null) {
+        response = builder.build();
+      }
+      done.run(response);
     }
   }
 
@@ -301,12 +343,19 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
       .setRefreshTimestamp(keyData.getRefreshTimestamp())
       .setKeyNamespace(keyData.getKeyNamespace());
 
-    // Set metadata hash if available
-    byte[] metadataHash = keyData.getKeyMetadataHash();
-    if (metadataHash != null) {
-      builder.setKeyMetadataHash(ByteString.copyFrom(metadataHash));
+    // Set partial identity (key_metadata_hash in proto) if available
+    if (keyData.getKeyIdentity().getPartialIdentityLength() > 0) {
+      builder.setKeyMetadataHash(ByteString.copyFrom(keyData.getPartialIdentity()));
     }
 
     return builder.build();
+  }
+
+  private static DoNotRetryIOException toControllerException(String operation, Exception e) {
+    if (e instanceof RuntimeException) {
+      return new DoNotRetryIOException(
+        operation + " failed with unexpected runtime exception in KeymetaServiceEndpoint", e);
+    }
+    return new DoNotRetryIOException(e);
   }
 }

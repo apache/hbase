@@ -59,7 +59,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
     value = "EQ_CHECK_FOR_OPERAND_NOT_COMPATIBLE_WITH_THIS",
     justification = "It has been like this forever")
 @SuppressWarnings("MixedMutabilityReturnType")
-public class Bytes implements Comparable<Bytes> {
+public class Bytes implements Comparable<Bytes>, Cloneable {
 
   // Using the charset canonical name for String/byte[] conversions is much
   // more efficient due to use of cached encoders/decoders.
@@ -236,7 +236,18 @@ public class Bytes implements Comparable<Bytes> {
    *         smaller than right.
    */
   public int compareTo(final byte[] that) {
-    return BYTES_RAWCOMPARATOR.compare(this.bytes, this.offset, this.length, that, 0, that.length);
+    return compareTo(that, 0, that.length);
+  }
+
+  /**
+   * Compares the bytes in this object to the specified byte array with the specified offset and
+   * length
+   * @return Positive if left is bigger than right, 0 if they are equal, and negative if left is
+   *         smaller than right.
+   */
+  public int compareTo(final byte[] that, int thatOffset, int thatLength) {
+    return BYTES_RAWCOMPARATOR.compare(this.bytes, this.offset, this.length, that, thatOffset,
+      thatLength);
   }
 
   @Override
@@ -269,9 +280,25 @@ public class Bytes implements Comparable<Bytes> {
     return results;
   }
 
+  @Override
+  public Bytes clone() {
+    return new Bytes(copyBytes(), 0, length);
+  }
+
   /** Returns a copy of the bytes referred to by this writable */
   public byte[] copyBytes() {
     return Arrays.copyOfRange(bytes, offset, offset + length);
+  }
+
+  /**
+   * Returns the internal bytes array if fully representative, otherwisea copy. Preferable over
+   * {@link #copyBytes()} when getting access to the byte[] is hhe goal instead of copying.
+   */
+  public byte[] copyBytesIfNecessary() {
+    if (bytes != null && offset == 0 && length == bytes.length) {
+      return bytes;
+    }
+    return copyBytes();
   }
 
   /** Byte array comparator class. */

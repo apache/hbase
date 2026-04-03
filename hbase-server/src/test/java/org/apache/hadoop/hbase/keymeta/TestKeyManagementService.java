@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -68,7 +69,7 @@ public class TestKeyManagementService {
     conf.set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "true");
     conf.set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY,
       MockManagedKeyProvider.class.getName());
-    conf.set(HConstants.HBASE_ORIGINAL_DIR, "/tmp/hbase");
+    conf.set(HConstants.HBASE_ORIGINAL_ROOT_DIR, "/tmp/hbase");
   }
 
   @Test
@@ -78,7 +79,8 @@ public class TestKeyManagementService {
     MockManagedKeyProvider provider =
       (MockManagedKeyProvider) Encryption.getManagedKeyProvider(conf);
     ManagedKeyData keyData =
-      provider.getManagedKey("system".getBytes(), ManagedKeyData.KEY_SPACE_GLOBAL);
+      provider.getManagedKey(new KeyIdentityPrefixBytesBacked(new Bytes("system".getBytes()),
+        ManagedKeyData.KEY_SPACE_GLOBAL_BYTES));
     String fileName = SYSTEM_KEY_FILE_PREFIX + "1";
     Path systemKeyDir = CommonFSUtils.getSystemKeyDir(conf);
     FileStatus mockFileStatus = KeymetaTestUtils.createMockFile(fileName);

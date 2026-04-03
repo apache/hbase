@@ -54,7 +54,7 @@ import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
-import org.apache.hadoop.hbase.keymeta.KeymetaAdminImpl;
+import org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
@@ -195,7 +195,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   protected final NettyEventLoopGroupConfig eventLoopGroupConfig;
 
   protected SystemKeyCache systemKeyCache;
-  protected KeymetaAdminImpl keymetaAdmin;
+  protected KeymetaTableAccessor keymetaAccessor;
   protected ManagedKeyDataCache managedKeyDataCache;
 
   private void setupSignalHandlers() {
@@ -294,7 +294,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
       initializeFileSystem();
 
-      keymetaAdmin = new KeymetaAdminImpl(this);
+      keymetaAccessor = new KeymetaTableAccessor(this);
 
       int choreServiceInitialSize =
         conf.getInt(CHORE_SERVICE_INITIAL_POOL_SIZE, DEFAULT_CHORE_SERVICE_INITIAL_POOL_SIZE);
@@ -418,7 +418,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
   @Override
   public KeymetaAdmin getKeymetaAdmin() {
-    return keymetaAdmin;
+    throw new UnsupportedOperationException("KeymetaAdmin is not supported on region server");
   }
 
   @Override
@@ -431,10 +431,11 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     return systemKeyCache;
   }
 
-  protected void buildSystemKeyCache() throws IOException {
-    if (systemKeyCache == null && SecurityUtil.isKeyManagementEnabled(conf)) {
-      systemKeyCache = SystemKeyCache.createCache(new SystemKeyAccessor(this));
+  protected SystemKeyCache buildSystemKeyCache() throws IOException {
+    if (SecurityUtil.isKeyManagementEnabled(conf)) {
+      return SystemKeyCache.createCache(new SystemKeyAccessor(this));
     }
+    return null;
   }
 
   /**
@@ -443,9 +444,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
    * @throws IOException if there is an error rebuilding the cache
    */
   public void rebuildSystemKeyCache() throws IOException {
-    if (SecurityUtil.isKeyManagementEnabled(conf)) {
-      systemKeyCache = SystemKeyCache.createCache(new SystemKeyAccessor(this));
-    }
+    systemKeyCache = buildSystemKeyCache();
   }
 
   protected final void shutdownChore(ScheduledChore chore) {

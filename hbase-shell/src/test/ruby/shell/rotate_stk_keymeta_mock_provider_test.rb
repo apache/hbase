@@ -39,13 +39,15 @@ module Hbase
     define_test 'Test rotate_stk command' do
       puts 'Testing rotate_stk command'
 
+      key_provider = Encryption.getManagedKeyProvider($TEST_CLUSTER.getConfiguration)
+      key_provider.setMultikeyGenMode(false)
+
       # this should return false (no rotation performed)
       output = capture_stdout { @shell.command(:rotate_stk) }
       puts "rotate_stk output: #{output}"
       assert(output.include?('No System Key change was detected'),
              "Expected output to contain rotation status message, but got: #{output}")
 
-      key_provider = Encryption.getManagedKeyProvider($TEST_CLUSTER.getConfiguration)
       # Once we enable multikeyGenMode on MockManagedKeyProvider, every call should return a new key
       # which should trigger a rotation.
       key_provider.setMultikeyGenMode(true)

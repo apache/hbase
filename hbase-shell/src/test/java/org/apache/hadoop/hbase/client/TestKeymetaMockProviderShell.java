@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
+import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyTestBase;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
@@ -40,7 +42,7 @@ public class TestKeymetaMockProviderShell extends ManagedKeyTestBase implements 
   @Override
   public void setUp() throws Exception {
     // Enable to be able to debug without timing out.
-    // final Configuration conf = TEST_UTIL.getConfiguration();
+    // final org.apache.hadoop.conf.Configuration conf = TEST_UTIL.getConfiguration();
     // conf.set("zookeeper.session.timeout", "6000000");
     // conf.set("hbase.rpc.timeout", "6000000");
     // conf.set("hbase.rpc.read.timeout", "6000000");
@@ -73,11 +75,18 @@ public class TestKeymetaMockProviderShell extends ManagedKeyTestBase implements 
 
   @Override
   public String getSuitePattern() {
-    return "**/*_keymeta_mock_provider_test.rb";
+    return "**/*_mock_provider_test.rb";
   }
 
   @Test
   public void testRunShellTests() throws Exception {
     RubyShellTest.testRunShellTests(this);
+  }
+
+  @Override
+  protected void configureKeyProvider() {
+    MockManagedKeyProvider key_provider =
+      (MockManagedKeyProvider) Encryption.getManagedKeyProvider(TEST_UTIL.getConfiguration());
+    key_provider.setMultikeyGenMode(false);
   }
 }

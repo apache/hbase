@@ -49,9 +49,12 @@ import org.apache.hadoop.hbase.io.crypto.KeymetaTestUtils;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyIdentity;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyIdentityUtils;
 import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
@@ -362,12 +365,14 @@ public class TestSystemKeyAccessorAndManager {
 
       // Create test key data
       Key testKey = new SecretKeySpec("test-key-bytes".getBytes(), "AES");
-      ManagedKeyData testKeyData = new ManagedKeyData("custodian".getBytes(), "namespace", testKey,
-        ManagedKeyState.ACTIVE, testMetadata, 1000L);
+      ManagedKeyIdentity fullKeyIdentity = ManagedKeyIdentityUtils.fullKeyIdentityFromMetadata(
+        new Bytes("custodian".getBytes()), new Bytes("namespace".getBytes()), testMetadata);
+      ManagedKeyData testKeyData =
+        new ManagedKeyData(fullKeyIdentity, testKey, ManagedKeyState.ACTIVE, testMetadata, 1000L);
 
       // Mock key provider
       ManagedKeyProvider realProvider = mock(ManagedKeyProvider.class);
-      when(realProvider.unwrapKey(testMetadata, null)).thenReturn(testKeyData);
+      when(realProvider.unwrapKey(null, testMetadata, null)).thenReturn(testKeyData);
 
       // Create testable SystemKeyAccessor that overrides both loadKeyMetadata and getKeyProvider
       SystemKeyAccessor testAccessor = new SystemKeyAccessor(mockMaster) {
@@ -387,7 +392,7 @@ public class TestSystemKeyAccessorAndManager {
       assertEquals(testKeyData, result);
 
       // Verify the key provider was called correctly
-      verify(realProvider).unwrapKey(testMetadata, null);
+      verify(realProvider).unwrapKey(null, testMetadata, null);
     }
 
     @Test(expected = RuntimeException.class)
@@ -397,7 +402,7 @@ public class TestSystemKeyAccessorAndManager {
 
       // Mock key provider to return null
       ManagedKeyProvider realProvider = mock(ManagedKeyProvider.class);
-      when(realProvider.unwrapKey(testMetadata, null)).thenReturn(null);
+      when(realProvider.unwrapKey(null, testMetadata, null)).thenReturn(null);
 
       SystemKeyAccessor testAccessor = new SystemKeyAccessor(mockMaster) {
         @Override

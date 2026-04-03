@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.io.hfile.BloomFilterMetrics;
-import org.apache.hadoop.hbase.keymeta.KeyNamespaceUtil;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
@@ -237,8 +236,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   public HStoreFile createStoreFileAndReader(StoreFileInfo info) throws IOException {
     info.setRegionCoprocessorHost(coprocessorHost);
     HStoreFile storeFile = new HStoreFile(info, ctx.getFamily().getBloomFilterType(),
-      ctx.getCacheConf(), bloomFilterMetrics, KeyNamespaceUtil.constructKeyNamespace(ctx),
-      systemKeyCache, managedKeyDataCache);
+      ctx.getCacheConf(), bloomFilterMetrics, systemKeyCache, managedKeyDataCache);
     storeFile.initReader();
     return storeFile;
   }

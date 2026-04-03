@@ -25,6 +25,7 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
@@ -37,10 +38,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.GetManagedK
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SetManagedKeyRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos;
 
 @InterfaceAudience.Public
-@InterfaceAudience.Private
 public class KeymetaAdminClient implements KeymetaAdmin {
   private ManagedKeysProtos.ManagedKeysService.BlockingInterface stub;
 
@@ -147,6 +148,21 @@ public class KeymetaAdminClient implements KeymetaAdmin {
     }
   }
 
+  @Override
+  public ManagedKeyData setManagedKey(byte[] keyCust, String keyNamespace, String keyMetadata)
+    throws IOException, KeyException {
+    try {
+      ManagedKeyResponse response = stub.setManagedKey(null,
+        SetManagedKeyRequest
+          .newBuilder().setKeyCustNs(ManagedKeyRequest.newBuilder()
+            .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build())
+          .setKeyMetadata(keyMetadata).build());
+      return generateKeyData(response);
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
+  }
+
   private static List<ManagedKeyData> generateKeyDataList(GetManagedKeysResponse stateResponse) {
     List<ManagedKeyData> keyStates = new ArrayList<>();
     for (ManagedKeyResponse state : stateResponse.getStateList()) {
@@ -156,15 +172,22 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   }
 
   private static ManagedKeyData generateKeyData(ManagedKeyResponse response) {
-    // Use hash-only constructor for client-side ManagedKeyData
+    // Convert namespace String from RPC response to byte[] once at this boundary.
+    byte[] keyCust = response.getKeyCust().toByteArray();
+    byte[] keyNamespace = Bytes.toBytes(response.getKeyNamespace());
     byte[] keyMetadataHash =
       response.hasKeyMetadataHash() ? response.getKeyMetadataHash().toByteArray() : null;
+    ManagedKeyIdentity fullKeyIdentity =
+      new KeyIdentityBytesBacked(new Bytes(keyCust), new Bytes(keyNamespace),
+        keyMetadataHash != null
+          ? new Bytes(keyMetadataHash)
+          : ManagedKeyIdentity.KEY_NULL_IDENTITY_BYTES);
     if (keyMetadataHash == null) {
-      return new ManagedKeyData(response.getKeyCust().toByteArray(), response.getKeyNamespace(),
+      return new ManagedKeyData(fullKeyIdentity,
         ManagedKeyState.forValue((byte) response.getKeyState().getNumber()));
     } else {
-      return new ManagedKeyData(response.getKeyCust().toByteArray(), response.getKeyNamespace(),
-        ManagedKeyState.forValue((byte) response.getKeyState().getNumber()), keyMetadataHash,
+      return new ManagedKeyData(fullKeyIdentity,
+        ManagedKeyState.forValue((byte) response.getKeyState().getNumber()),
         response.getRefreshTimestamp());
     }
   }

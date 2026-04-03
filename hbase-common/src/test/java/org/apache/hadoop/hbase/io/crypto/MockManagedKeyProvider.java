@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 import javax.crypto.KeyGenerator;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyIdentity;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,27 +64,31 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
   }
 
   @Override
-  public ManagedKeyData getManagedKey(byte[] key_cust, String key_namespace) throws IOException {
+  public ManagedKeyData getManagedKey(ManagedKeyIdentity keyIdentity) throws IOException {
     if (shouldThrowExceptionOnGetManagedKey) {
       throw new IOException("Test exception on getManagedKey");
     }
-    String alias = Bytes.toString(key_cust);
+    String key_namespace = keyIdentity.getNamespaceString();
+    Bytes custView = keyIdentity.getCustodianView();
+    String alias = custView.toString();
+    byte[] key_cust = custView.copyBytesIfNecessary();
     return getKey(key_cust, alias, key_namespace);
   }
 
   @Override
-  public ManagedKeyData unwrapKey(String keyMetadata, byte[] wrappedKey) throws IOException {
+  public ManagedKeyData unwrapKey(ManagedKeyIdentity keyIdentity, String keyMetadata,
+    byte[] wrappedKey) throws IOException {
     String[] meta_toks = keyMetadata.split(":");
     Preconditions.checkArgument(meta_toks.length >= 3, "Invalid key metadata: %s", keyMetadata);
     if (allGeneratedKeys.containsKey(keyMetadata)) {
       ManagedKeyState keyState = this.keyState.get(meta_toks[1]);
-      ManagedKeyData managedKeyData =
-        new ManagedKeyData(meta_toks[0].getBytes(), meta_toks[2], allGeneratedKeys.get(keyMetadata),
-          keyState == null ? ManagedKeyState.ACTIVE : keyState, keyMetadata);
+      ManagedKeyData managedKeyData = new ManagedKeyData(meta_toks[0].getBytes(),
+        Bytes.toBytes(meta_toks[2]), allGeneratedKeys.get(keyMetadata),
+        keyState == null ? ManagedKeyState.ACTIVE : keyState, keyMetadata);
       return registerKeyData(meta_toks[1], managedKeyData);
     }
-    return new ManagedKeyData(meta_toks[0].getBytes(), meta_toks[2], null, ManagedKeyState.FAILED,
-      keyMetadata);
+    return new ManagedKeyData(meta_toks[0].getBytes(), Bytes.toBytes(meta_toks[2]), null,
+      ManagedKeyState.FAILED, keyMetadata);
   }
 
   public ManagedKeyData getLastGeneratedKeyData(String alias, String keyNamespace) {
@@ -175,7 +180,7 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
     String keyMetadata = partialMetadata + ":" + key_namespace + ":" + checksum;
     allGeneratedKeys.put(partialMetadata, key);
     allGeneratedKeys.put(keyMetadata, key);
-    ManagedKeyData managedKeyData = new ManagedKeyData(key_cust, key_namespace, key,
+    ManagedKeyData managedKeyData = new ManagedKeyData(key_cust, Bytes.toBytes(key_namespace), key,
       keyState == null ? ManagedKeyState.ACTIVE : keyState, keyMetadata);
     return registerKeyData(alias, managedKeyData);
   }

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.crypto;
 
-import static org.apache.hadoop.hbase.io.crypto.ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES;
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyData.KEY_SPACE_GLOBAL_BYTES;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStoreKeyProvider.KEY_METADATA_ALIAS;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStoreKeyProvider.KEY_METADATA_CUST;
 import static org.junit.Assert.assertEquals;
@@ -39,6 +39,10 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.keymeta.KeyIdentityBytesBacked;
+import org.apache.hadoop.hbase.keymeta.KeyIdentityPrefixBytesBacked;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyIdentity;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyIdentityUtils;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -91,6 +95,17 @@ public class TestManagedKeyProvider {
     private Map<Bytes, String> namespaceCust2alias = new HashMap<>();
     private String clusterId;
     private byte[] systemKey;
+
+    private static ManagedKeyIdentity managedKeyPrefixId(Bytes custodian, String namespace) {
+      if (namespace == null) {
+        return new KeyIdentityPrefixBytesBacked(custodian, KEY_SPACE_GLOBAL_BYTES);
+      }
+      return new KeyIdentityPrefixBytesBacked(custodian, new Bytes(Bytes.toBytes(namespace)));
+    }
+
+    private static ManagedKeyIdentity managedKeyPrefixId(byte[] custodian, String namespace) {
+      return managedKeyPrefixId(new Bytes(custodian), namespace);
+    }
 
     @Before
     public void setUp() throws Exception {
@@ -153,8 +168,8 @@ public class TestManagedKeyProvider {
     @Test
     public void testGetManagedKey() throws Exception {
       for (Bytes cust : cust2key.keySet()) {
-        ManagedKeyData keyData =
-          managedKeyProvider.getManagedKey(cust.get(), ManagedKeyData.KEY_SPACE_GLOBAL);
+        ManagedKeyData keyData = managedKeyProvider
+          .getManagedKey(managedKeyPrefixId(cust, ManagedKeyData.KEY_SPACE_GLOBAL));
         assertKeyData(keyData, ManagedKeyState.ACTIVE, cust2key.get(cust).get(), cust.get(),
           cust2alias.get(cust));
       }
@@ -162,11 +177,11 @@ public class TestManagedKeyProvider {
 
     @Test
     public void testGetGlobalCustodianKey() throws Exception {
-      byte[] globalCustodianKey = cust2key.get(new Bytes(KEY_GLOBAL_CUSTODIAN_BYTES)).get();
-      ManagedKeyData keyData = managedKeyProvider.getManagedKey(KEY_GLOBAL_CUSTODIAN_BYTES,
-        ManagedKeyData.KEY_SPACE_GLOBAL);
-      assertKeyData(keyData, ManagedKeyState.ACTIVE, globalCustodianKey, KEY_GLOBAL_CUSTODIAN_BYTES,
-        "global-cust-alias");
+      byte[] globalCustodianKey = cust2key.get(KEY_SPACE_GLOBAL_BYTES).get();
+      ManagedKeyData keyData = managedKeyProvider
+        .getManagedKey(managedKeyPrefixId(KEY_SPACE_GLOBAL_BYTES, ManagedKeyData.KEY_SPACE_GLOBAL));
+      assertKeyData(keyData, ManagedKeyState.ACTIVE, globalCustodianKey,
+        KEY_SPACE_GLOBAL_BYTES.get(), "global-cust-alias");
     }
 
     @Test
@@ -175,8 +190,8 @@ public class TestManagedKeyProvider {
       String encCust = Base64.getEncoder().encodeToString(firstCust.get());
       conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + ".*.active",
         "false");
-      ManagedKeyData keyData =
-        managedKeyProvider.getManagedKey(firstCust.get(), ManagedKeyData.KEY_SPACE_GLOBAL);
+      ManagedKeyData keyData = managedKeyProvider
+        .getManagedKey(managedKeyPrefixId(firstCust, ManagedKeyData.KEY_SPACE_GLOBAL));
       assertNotNull(keyData);
       assertKeyData(keyData, ManagedKeyState.INACTIVE, cust2key.get(firstCust).get(),
         firstCust.get(), cust2alias.get(firstCust));
@@ -185,8 +200,8 @@ public class TestManagedKeyProvider {
     @Test
     public void testGetInvalidKey() throws Exception {
       byte[] invalidCustBytes = "invalid".getBytes();
-      ManagedKeyData keyData =
-        managedKeyProvider.getManagedKey(invalidCustBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
+      ManagedKeyData keyData = managedKeyProvider
+        .getManagedKey(managedKeyPrefixId(invalidCustBytes, ManagedKeyData.KEY_SPACE_GLOBAL));
       assertNotNull(keyData);
       assertKeyData(keyData, ManagedKeyState.FAILED, null, invalidCustBytes, null);
     }
@@ -200,8 +215,8 @@ public class TestManagedKeyProvider {
         "disabled-alias");
       conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + invalidCustEnc + ".*.active",
         "false");
-      ManagedKeyData keyData =
-        managedKeyProvider.getManagedKey(invalidCust, ManagedKeyData.KEY_SPACE_GLOBAL);
+      ManagedKeyData keyData = managedKeyProvider
+        .getManagedKey(managedKeyPrefixId(invalidCust, ManagedKeyData.KEY_SPACE_GLOBAL));
       assertNotNull(keyData);
       assertKeyData(keyData, ManagedKeyState.DISABLED, null, invalidCust, "disabled-alias");
     }
@@ -227,7 +242,7 @@ public class TestManagedKeyProvider {
       String invalidCustEnc = ManagedKeyProvider.encodeToStr(invalidCust);
       String invalidMetadata =
         ManagedKeyStoreKeyProvider.generateKeyMetadata(invalidAlias, invalidCustEnc);
-      ManagedKeyData keyData = managedKeyProvider.unwrapKey(invalidMetadata, null);
+      ManagedKeyData keyData = managedKeyProvider.unwrapKey(null, invalidMetadata, null);
       assertNotNull(keyData);
       assertKeyData(keyData, ManagedKeyState.FAILED, null, invalidCust, invalidAlias);
     }
@@ -241,9 +256,67 @@ public class TestManagedKeyProvider {
         "false");
       String invalidMetadata = ManagedKeyStoreKeyProvider.generateKeyMetadata(invalidAlias,
         invalidCustEnc, ManagedKeyData.KEY_SPACE_GLOBAL);
-      ManagedKeyData keyData = managedKeyProvider.unwrapKey(invalidMetadata, null);
+      ManagedKeyData keyData = managedKeyProvider.unwrapKey(null, invalidMetadata, null);
       assertNotNull(keyData);
       assertKeyData(keyData, ManagedKeyState.DISABLED, null, invalidCust, invalidAlias);
+    }
+
+    @Test
+    public void testUnwrapKeyIdentityNullBuildsFullIdentityFromMetadata() throws Exception {
+      Bytes cust = cust2key.keySet().iterator().next();
+      ManagedKeyData fromGetManagedKey =
+        managedKeyProvider.getManagedKey(managedKeyPrefixId(cust, ManagedKeyData.KEY_SPACE_GLOBAL));
+      String keyMetadata = fromGetManagedKey.getKeyMetadata();
+
+      ManagedKeyData unwrapped = managedKeyProvider.unwrapKey(null, keyMetadata, null);
+
+      assertNotNull(unwrapped);
+      assertEquals(ManagedKeyState.ACTIVE, unwrapped.getKeyState());
+      assertEquals(keyMetadata, unwrapped.getKeyMetadata());
+      assertEquals(ManagedKeyData.KEY_SPACE_GLOBAL, unwrapped.getKeyNamespace());
+      assertTrue(Arrays.equals(cust.get(), unwrapped.getKeyCustodian()));
+      assertTrue(Arrays.equals(ManagedKeyIdentityUtils.constructMetadataHash(keyMetadata),
+        unwrapped.getPartialIdentity()));
+    }
+
+    @Test
+    public void testUnwrapKeyIdentityPartialExpandsToFullUsingMetadataHash() throws Exception {
+      Bytes cust = cust2key.keySet().iterator().next();
+      ManagedKeyIdentity partialIdentity =
+        managedKeyPrefixId(cust, ManagedKeyData.KEY_SPACE_GLOBAL);
+      ManagedKeyData fromGetManagedKey =
+        managedKeyProvider.getManagedKey(managedKeyPrefixId(cust, ManagedKeyData.KEY_SPACE_GLOBAL));
+      String keyMetadata = fromGetManagedKey.getKeyMetadata();
+
+      ManagedKeyData unwrapped = managedKeyProvider.unwrapKey(partialIdentity, keyMetadata, null);
+
+      assertNotNull(unwrapped);
+      assertEquals(ManagedKeyState.ACTIVE, unwrapped.getKeyState());
+      assertEquals(keyMetadata, unwrapped.getKeyMetadata());
+      assertTrue(Arrays.equals(cust.get(), unwrapped.getKeyCustodian()));
+      assertEquals(ManagedKeyData.KEY_SPACE_GLOBAL, unwrapped.getKeyNamespace());
+      assertTrue(Arrays.equals(ManagedKeyIdentityUtils.constructMetadataHash(keyMetadata),
+        unwrapped.getPartialIdentity()));
+    }
+
+    @Test
+    public void testUnwrapKeyIdentityFullIsKeptAsProvided() throws Exception {
+      Bytes cust = cust2key.keySet().iterator().next();
+      ManagedKeyData fromGetManagedKey =
+        managedKeyProvider.getManagedKey(managedKeyPrefixId(cust, ManagedKeyData.KEY_SPACE_GLOBAL));
+      String keyMetadata = fromGetManagedKey.getKeyMetadata();
+      byte[] customPartialIdentity = "custom-partial-identity".getBytes();
+      ManagedKeyIdentity fullIdentity =
+        new KeyIdentityBytesBacked(cust, KEY_SPACE_GLOBAL_BYTES, new Bytes(customPartialIdentity));
+
+      ManagedKeyData unwrapped = managedKeyProvider.unwrapKey(fullIdentity, keyMetadata, null);
+
+      assertNotNull(unwrapped);
+      assertEquals(ManagedKeyState.ACTIVE, unwrapped.getKeyState());
+      assertEquals(keyMetadata, unwrapped.getKeyMetadata());
+      assertTrue(Arrays.equals(cust.get(), unwrapped.getKeyCustodian()));
+      assertEquals(ManagedKeyData.KEY_SPACE_GLOBAL, unwrapped.getKeyNamespace());
+      assertTrue(Arrays.equals(customPartialIdentity, unwrapped.getPartialIdentity()));
     }
 
     @Test
@@ -253,7 +326,8 @@ public class TestManagedKeyProvider {
       int index = 0;
       for (Bytes cust : namespaceCust2key.keySet()) {
         String namespace = (index == 0) ? customNamespace1 : customNamespace2;
-        ManagedKeyData keyData = managedKeyProvider.getManagedKey(cust.get(), namespace);
+        ManagedKeyData keyData =
+          managedKeyProvider.getManagedKey(managedKeyPrefixId(cust, namespace));
         assertKeyDataWithNamespace(keyData, ManagedKeyState.ACTIVE,
           namespaceCust2key.get(cust).get(), cust.get(), namespaceCust2alias.get(cust), namespace);
         index++;
@@ -269,7 +343,8 @@ public class TestManagedKeyProvider {
       conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + "." + customNamespace
         + ".active", "false");
 
-      ManagedKeyData keyData = managedKeyProvider.getManagedKey(firstCust.get(), customNamespace);
+      ManagedKeyData keyData =
+        managedKeyProvider.getManagedKey(managedKeyPrefixId(firstCust, customNamespace));
       assertNotNull(keyData);
       assertKeyDataWithNamespace(keyData, ManagedKeyState.INACTIVE,
         namespaceCust2key.get(firstCust).get(), firstCust.get(), namespaceCust2alias.get(firstCust),
@@ -280,7 +355,8 @@ public class TestManagedKeyProvider {
     public void testGetManagedKeyWithInvalidCustomNamespace() throws Exception {
       byte[] invalidCustBytes = "invalid".getBytes();
       String customNamespace = "invalid/namespace";
-      ManagedKeyData keyData = managedKeyProvider.getManagedKey(invalidCustBytes, customNamespace);
+      ManagedKeyData keyData =
+        managedKeyProvider.getManagedKey(managedKeyPrefixId(invalidCustBytes, customNamespace));
       assertNotNull(keyData);
       assertKeyDataWithNamespace(keyData, ManagedKeyState.FAILED, null, invalidCustBytes, null,
         customNamespace);
@@ -294,7 +370,7 @@ public class TestManagedKeyProvider {
 
       // Request key with different namespace - should fail
       ManagedKeyData keyData =
-        managedKeyProvider.getManagedKey(firstCust.get(), requestedNamespace);
+        managedKeyProvider.getManagedKey(managedKeyPrefixId(firstCust, requestedNamespace));
 
       assertNotNull(keyData);
       assertEquals(ManagedKeyState.FAILED, keyData.getKeyState());
@@ -310,7 +386,7 @@ public class TestManagedKeyProvider {
       String configuredNamespace = "table1/cf1"; // This matches our test setup
 
       ManagedKeyData keyData =
-        managedKeyProvider.getManagedKey(firstCust.get(), configuredNamespace);
+        managedKeyProvider.getManagedKey(managedKeyPrefixId(firstCust, configuredNamespace));
 
       assertNotNull(keyData);
       assertEquals(ManagedKeyState.ACTIVE, keyData.getKeyState());
@@ -325,7 +401,8 @@ public class TestManagedKeyProvider {
 
       // Try to access it with a custom namespace - should fail
       String wrongNamespace = "table1/cf1";
-      ManagedKeyData keyData = managedKeyProvider.getManagedKey(globalCust.get(), wrongNamespace);
+      ManagedKeyData keyData =
+        managedKeyProvider.getManagedKey(managedKeyPrefixId(globalCust, wrongNamespace));
 
       assertNotNull(keyData);
       assertEquals(ManagedKeyState.FAILED, keyData.getKeyState());
@@ -339,8 +416,8 @@ public class TestManagedKeyProvider {
       Bytes namespaceCust = namespaceCust2key.keySet().iterator().next();
 
       // Try to access it as global - should fail
-      ManagedKeyData keyData =
-        managedKeyProvider.getManagedKey(namespaceCust.get(), ManagedKeyData.KEY_SPACE_GLOBAL);
+      ManagedKeyData keyData = managedKeyProvider
+        .getManagedKey(managedKeyPrefixId(namespaceCust, ManagedKeyData.KEY_SPACE_GLOBAL));
 
       assertNotNull(keyData);
       assertEquals(ManagedKeyState.FAILED, keyData.getKeyState());
@@ -357,13 +434,13 @@ public class TestManagedKeyProvider {
 
       // Verify we can access with configured namespace
       ManagedKeyData keyData1 =
-        managedKeyProvider.getManagedKey(namespaceCust.get(), configuredNamespace);
+        managedKeyProvider.getManagedKey(managedKeyPrefixId(namespaceCust, configuredNamespace));
       assertEquals(ManagedKeyState.ACTIVE, keyData1.getKeyState());
       assertEquals(configuredNamespace, keyData1.getKeyNamespace());
 
       // But accessing with different namespace should fail (even though it's the same custodian)
       ManagedKeyData keyData2 =
-        managedKeyProvider.getManagedKey(namespaceCust.get(), differentNamespace);
+        managedKeyProvider.getManagedKey(managedKeyPrefixId(namespaceCust, differentNamespace));
       assertEquals(ManagedKeyState.FAILED, keyData2.getKeyState());
       assertEquals(differentNamespace, keyData2.getKeyNamespace());
     }
@@ -373,8 +450,9 @@ public class TestManagedKeyProvider {
       // Get a global key (one from cust2key)
       Bytes globalCust = cust2key.keySet().iterator().next();
 
-      // Call getManagedKey with null namespace - should default to global and succeed
-      ManagedKeyData keyData = managedKeyProvider.getManagedKey(globalCust.get(), null);
+      // Null namespace in the old API defaulted to global; express the same with a global prefix id
+      ManagedKeyData keyData =
+        managedKeyProvider.getManagedKey(managedKeyPrefixId(globalCust, null));
 
       assertNotNull(keyData);
       assertEquals(ManagedKeyState.ACTIVE, keyData.getKeyState());
@@ -389,7 +467,8 @@ public class TestManagedKeyProvider {
       String wrongNamespace = "wrong/namespace";
 
       // Request with wrong namespace - should fail but have proper metadata
-      ManagedKeyData keyData = managedKeyProvider.getManagedKey(firstCust.get(), wrongNamespace);
+      ManagedKeyData keyData =
+        managedKeyProvider.getManagedKey(managedKeyPrefixId(firstCust, wrongNamespace));
 
       assertNotNull(keyData);
       assertEquals(ManagedKeyState.FAILED, keyData.getKeyState());
@@ -483,7 +562,7 @@ public class TestManagedKeyProvider {
       assertMetadataMatches(keyData.getKeyMetadata(), alias, encodedCust, expectedNamespace);
 
       assertTrue(Bytes.equals(custBytes, keyData.getKeyCustodian()));
-      assertEquals(keyData, managedKeyProvider.unwrapKey(keyData.getKeyMetadata(), null));
+      assertEquals(keyData, managedKeyProvider.unwrapKey(null, keyData.getKeyMetadata(), null));
     }
   }
 

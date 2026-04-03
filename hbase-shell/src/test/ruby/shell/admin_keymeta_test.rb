@@ -90,18 +90,17 @@ module Hbase
       assert(output.include?("#{cust} #{namespace} ACTIVE"),
              "Expected ACTIVE key after enable, got: #{output}")
 
-      # 2. Get the initial key metadata hash for use in disable_managed_key test
+      # 2. Get the initial KEY-IDENTITY (partial identity encoded) for use in disable_managed_key test
       output = capture_stdout { @shell.command('show_key_status', cust_and_namespace) }
       puts "show_key_status output: #{output}"
-      # Extract the metadata hash from the output (it's in the 5th column)
-      # Output format: ENCODED-KEY NAMESPACE STATUS METADATA METADATA-HASH REFRESH-TIMESTAMP
+      # Output format: ENCODED-KEY NAMESPACE STATUS KEY-IDENTITY REFRESH-TIMESTAMP
       lines = output.split("\n")
       key_line = lines.find { |line| line.include?(cust) && line.include?(namespace) }
       assert_not_nil(key_line, "Could not find key line in output")
-      # Parse the key metadata hash (Base64 encoded)
-      key_metadata_hash = key_line.split[3]
-      assert_not_nil(key_metadata_hash, "Could not extract key metadata hash")
-      puts "Extracted key metadata hash: #{key_metadata_hash}"
+      # KEY-IDENTITY is the 4th column (index 3)
+      key_identity_encoded = key_line.split[3]
+      assert_not_nil(key_identity_encoded, "Could not extract KEY-IDENTITY column value")
+      puts "Extracted KEY-IDENTITY (partial identity encoded): #{key_identity_encoded}"
 
       # 3. Refresh managed keys
       output = capture_stdout { @shell.command('refresh_managed_keys', cust_and_namespace) }
@@ -113,9 +112,9 @@ module Hbase
       puts "show_key_status after refresh: #{output}"
       assert(output.include?('ACTIVE'), "Expected ACTIVE key after refresh, got: #{output}")
 
-      # 4. Disable a specific managed key
+      # 4. Disable a specific managed key (use KEY-IDENTITY column value)
       output = capture_stdout do
-        @shell.command('disable_managed_key', cust_and_namespace, key_metadata_hash)
+        @shell.command('disable_managed_key', cust_and_namespace, key_identity_encoded)
       end
       puts "disable_managed_key output: #{output}"
       assert(output.include?("#{cust} #{namespace} DISABLED"),
@@ -132,15 +131,20 @@ module Hbase
       output = capture_stdout { @shell.command('disable_key_management', cust_and_namespace) }
       puts "disable_key_management output: #{output}"
       assert(output.include?("#{cust} #{namespace} DISABLED"),
-             "Expected DISABLED keys, got: #{output}")
-      # Verify all keys are now INACTIVE
+             "Expected DISABLED marker, got: #{output}")
+      # Verify all keys are now DISABLED
       output = capture_stdout { @shell.command('show_key_status', cust_and_namespace) }
       puts "show_key_status after disable_key_management: #{output}"
-      # All rows should show INACTIVE state
+      # All rows should show DISABLED state
       lines = output.split("\n")
       key_lines = lines.select { |line| line.include?(cust) && line.include?(namespace) }
       key_lines.each do |line|
-        assert(line.include?('INACTIVE'), "Expected all keys to be INACTIVE, but found: #{line}")
+        assert(
+          (line.include?('DISABLED') || line.include?('INACTIVE')) &&
+          !line.match?(/\bACTIVE\b/) &&
+          !line.include?('FAILED'),
+          "Expected all keys to be INACTIVE or DISABLED, but found: #{line}"
+        )
       end
 
       # 7. Refresh shouldn't do anything since the key management is disabled.
@@ -155,7 +159,7 @@ module Hbase
       # 7. Enable key management again
       @shell.command('enable_key_management', cust_and_namespace)
 
-      # 8. Get the key metadata hash for the enabled key
+      # 8. Get the KEY-IDENTITY for the enabled key
       output = capture_stdout { @shell.command('show_key_status', cust_and_namespace) }
       puts "show_key_status after enable_key_management: #{output}"
       assert(output.include?('ACTIVE'), "Expected ACTIVE key after enable_key_management, got: #{output}")
@@ -174,7 +178,7 @@ module Hbase
     end
 
     define_test 'Test disable operations error handling' do
-      # Test disable_managed_key with invalid metadata hash
+      # Test disable_managed_key with invalid KEY-IDENTITY (partial identity encoded)
       cust_and_namespace = "#{$CUST1_ENCODED}:*"
       error = assert_raises(ArgumentError) do
         @shell.command('disable_managed_key', cust_and_namespace, '!!!invalid!!!')

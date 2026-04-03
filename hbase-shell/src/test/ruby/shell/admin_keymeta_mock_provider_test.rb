@@ -37,13 +37,13 @@ module Hbase
 
     def setup
       setup_hbase
-      @key_provider = Encryption.getManagedKeyProvider($TEST_CLUSTER.getConfiguration)
+      key_provider = Encryption.getManagedKeyProvider($TEST_CLUSTER.getConfiguration)
       # Enable multikey generation mode for dynamic key creation on rotate
-      @key_provider.setMultikeyGenMode(true)
+      key_provider.setMultikeyGenMode(true)
 
       # Set up custodian variables
       @glob_cust = '*'
-      @glob_cust_encoded = ManagedKeyProvider.encodeToStr(@glob_cust.bytes.to_a)
+      @glob_cust_encoded = ManagedKeyProvider.encodeToStr(@glob_cust.bytes.to_a.to_java(:byte))
     end
 
     define_test 'Test rotate managed key operation' do
@@ -83,6 +83,7 @@ module Hbase
              "Expected 2 keys after rotation, got: #{output}")
 
       # 4. Rotate again to test multiple rotations
+      $TEST.logMessage("Rotating again to test multiple rotations")
       output = capture_stdout { @shell.command('rotate_managed_key', cust_and_namespace) }
       puts "rotate_managed_key (second) output: #{output}"
       assert(output.include?("#{cust} #{namespace}"),

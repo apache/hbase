@@ -76,8 +76,8 @@ import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyIdentityUtils;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
@@ -4731,7 +4731,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     List<ServerName> regionServers, byte[] keyCustodian, String keyNamespace, String keyMetadata) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     // Create the request once instead of repeatedly for each server
-    byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(keyMetadata);
+    byte[] keyMetadataHash = ManagedKeyIdentityUtils.constructMetadataHash(keyMetadata);
     ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
       .setKeyCustNs(ManagedKeyRequest.newBuilder().setKeyCust(ByteString.copyFrom(keyCustodian))
         .setKeyNamespace(keyNamespace).build())

@@ -29,9 +29,11 @@ import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
-import org.apache.hadoop.hbase.keymeta.KeyNamespaceUtil;
+import org.apache.hadoop.hbase.keymeta.KeyIdentitySingleArrayBacked;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyIdentity;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -85,7 +87,6 @@ public final class SecurityUtil {
     Encryption.Context cryptoContext = Encryption.Context.NONE;
     boolean isKeyManagementEnabled = isKeyManagementEnabled(conf);
     String cipherName = family.getEncryptionType();
-    String keyNamespace = null; // Will be set by fallback logic
     if (LOG.isDebugEnabled()) {
       LOG.debug("Creating encryption context for table: {} and column family: {}",
         tableDescriptor.getTableName().getNameAsString(), family.getNameAsString());
@@ -103,7 +104,7 @@ public final class SecurityUtil {
       ManagedKeyData kekKeyData =
         isKeyManagementEnabled ? systemKeyCache.getLatestSystemKey() : null;
 
-      // Scenario 1: If family has a key, unwrap it and use that as DEK.
+      // Scenario 1: If family has a key, unwrap it and use that as CEK.
       byte[] familyKeyBytes = family.getEncryptionKey();
       if (familyKeyBytes != null) {
         try {
@@ -114,8 +115,8 @@ public final class SecurityUtil {
             // Scenario 1b: If key management is disabled, unwrap the key using master key.
             key = EncryptionUtil.unwrapKey(conf, familyKeyBytes);
           }
-          LOG.debug("Scenario 1: Use family key for namespace {} cipher: {} "
-            + "key management enabled: {}", keyNamespace, cipherName, isKeyManagementEnabled);
+          LOG.debug("Scenario 1: Use family key for cipher: {} key management enabled: {}",
+            cipherName, isKeyManagementEnabled);
         } catch (KeyException e) {
           throw new IOException(e);
         }
@@ -124,66 +125,67 @@ public final class SecurityUtil {
           boolean localKeyGenEnabled =
             conf.getBoolean(HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY,
               HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_DEFAULT_ENABLED);
-          // Implement 4-step fallback logic for key namespace resolution in the order of
+          Bytes keyNamespaceCFAttribute = family.getEncryptionKeyNamespaceBytes();
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(
+              "Looking for active key for table: {} and column family: {} with "
+                + "encryption key namespace: {} and global namespace(custodian: {}, namespace: {})",
+              tableDescriptor.getTableName().getNameAsString(), family.getNameAsString(),
+              keyNamespaceCFAttribute, ManagedKeyData.GLOBAL_CUST_ENCODED,
+              ManagedKeyData.KEY_SPACE_GLOBAL);
+          }
+          // Implement 2-step fallback logic for key namespace resolution in the order of
           // 1. CF KEY_NAMESPACE attribute
-          // 2. Constructed namespace
-          // 3. Table name
-          // 4. Global namespace
-          String[] candidateNamespaces = { family.getEncryptionKeyNamespace(),
-            KeyNamespaceUtil.constructKeyNamespace(tableDescriptor, family),
-            tableDescriptor.getTableName().getNameAsString(), ManagedKeyData.KEY_SPACE_GLOBAL };
-
-          ManagedKeyData activeKeyData = null;
-          for (String candidate : candidateNamespaces) {
-            if (candidate != null) {
-              // Log information on the table and column family we are looking for the active key in
-              if (LOG.isDebugEnabled()) {
-                LOG.debug(
-                  "Looking for active key for table: {} and column family: {} with "
-                    + "(custodian: {}, namespace: {})",
-                  tableDescriptor.getTableName().getNameAsString(), family.getNameAsString(),
-                  ManagedKeyData.KEY_GLOBAL_CUSTODIAN, candidate);
-              }
-              activeKeyData = managedKeyDataCache
-                .getActiveEntry(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, candidate);
-              if (activeKeyData != null) {
-                keyNamespace = candidate;
-                break;
-              }
-            }
+          // 2. Global namespace
+          ManagedKeyData activeKeyData = keyNamespaceCFAttribute != null
+            ? managedKeyDataCache.getActiveEntry(ManagedKeyData.KEY_SPACE_GLOBAL_BYTES,
+              keyNamespaceCFAttribute)
+            : null;
+          if (activeKeyData == null) {
+            activeKeyData = managedKeyDataCache.getActiveEntry(
+              ManagedKeyData.KEY_SPACE_GLOBAL_BYTES, ManagedKeyData.KEY_SPACE_GLOBAL_BYTES);
           }
 
           // Scenario 2: There is an active key
           if (activeKeyData != null) {
             if (!localKeyGenEnabled) {
-              // Scenario 2a: Use active key as DEK and latest STK as KEK
+              // Scenario 2a: Use active key as CEK and latest STK as KEK
               key = activeKeyData.getTheKey();
+              if (LOG.isDebugEnabled()) {
+                LOG.debug(
+                  "Scenario 2a: Use active key as CEK with (custodian: {}, namespace: {}) and "
+                    + " STK as KEK for cipher: {} for table: {} and column family: {}",
+                  activeKeyData.getKeyCustodianEncoded(), activeKeyData.getKeyNamespace(),
+                  cipherName, tableDescriptor.getTableName().getNameAsString(),
+                  family.getNameAsString());
+              }
             } else {
-              // Scenario 2b: Use active key as KEK and generate local key as DEK
+              // Scenario 2b: Use active key (DEK) as KEK and let a local key be generated as CEK
+              // later.
               kekKeyData = activeKeyData;
               // TODO: Use the active key as a seed to generate the local key instead of
               // random generation
               cipher = getCipherIfValid(conf, cipherName, activeKeyData.getTheKey(),
                 family.getNameAsString());
-            }
-            if (LOG.isDebugEnabled()) {
-              LOG.debug(
-                "Scenario 2: Use active key with (custodian: {}, namespace: {}) for cipher: {} "
-                  + "localKeyGenEnabled: {} for table: {} and column family: {}",
-                activeKeyData.getKeyCustodianEncoded(), activeKeyData.getKeyNamespace(), cipherName,
-                localKeyGenEnabled, tableDescriptor.getTableName().getNameAsString(),
-                family.getNameAsString());
+              if (LOG.isDebugEnabled()) {
+                LOG.debug(
+                  "Scenario 2b: Use random key as CEK and active key as KEK with (custodian: {}, "
+                    + "namespace: {}) for cipher: {} for table: {} and column family: {}",
+                  activeKeyData.getKeyCustodianEncoded(), activeKeyData.getKeyNamespace(),
+                  cipherName, tableDescriptor.getTableName().getNameAsString(),
+                  family.getNameAsString());
+              }
             }
           } else {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Scenario 3a: No active key found for table: {} and column family: {}",
                 tableDescriptor.getTableName().getNameAsString(), family.getNameAsString());
             }
-            // Scenario 3a: Do nothing, let a random key be generated as DEK and if key management
+            // Scenario 3a: Do nothing, let a random key be generated as CEK and if key management
             // is enabled, let STK be used as KEK.
           }
         } else {
-          // Scenario 3b: Do nothing, let a random key be generated as DEK, let STK be used as KEK.
+          // Scenario 3b: Do nothing, let a random key be generated as CEK, let STK be used as KEK.
           if (LOG.isDebugEnabled()) {
             LOG.debug(
               "Scenario 3b: Key management is disabled and no ENCRYPTION_KEY attribute "
@@ -196,7 +198,7 @@ public final class SecurityUtil {
         LOG.debug(
           "Usigng KEK with (custodian: {}, namespace: {}), checksum: {} and metadata " + "hash: {}",
           kekKeyData.getKeyCustodianEncoded(), kekKeyData.getKeyNamespace(),
-          kekKeyData.getKeyChecksum(), kekKeyData.getKeyMetadataHashEncoded());
+          kekKeyData.getKeyChecksum(), kekKeyData.getPartialIdentityEncoded());
       }
 
       if (cipher == null) {
@@ -209,7 +211,6 @@ public final class SecurityUtil {
       cryptoContext = Encryption.newContext(conf);
       cryptoContext.setCipher(cipher);
       cryptoContext.setKey(key);
-      cryptoContext.setKeyNamespace(keyNamespace);
       cryptoContext.setKEKData(kekKeyData);
     }
     return cryptoContext;
@@ -239,52 +240,50 @@ public final class SecurityUtil {
 
       // When there is key material, determine the appropriate KEK
       boolean isKeyManagementEnabled = isKeyManagementEnabled(conf);
-      if (((trailer.getKEKChecksum() != 0L) || isKeyManagementEnabled) && systemKeyCache == null) {
+      byte[] kekIdentity = trailer.getKekIdentity();
+      boolean hasKekIdentity = (kekIdentity != null && kekIdentity.length > 0);
+      if ((hasKekIdentity || isKeyManagementEnabled) && systemKeyCache == null) {
         throw new IOException("SystemKeyCache can't be null when using key management feature");
       }
-      if ((trailer.getKEKChecksum() != 0L && !isKeyManagementEnabled)) {
+      if (hasKekIdentity && !isKeyManagementEnabled) {
         throw new IOException(
-          "Seeing newer trailer with KEK checksum, but key management is disabled");
+          "Seeing newer trailer with KEK identity, but key management is disabled");
       }
 
-      // Try STK lookup first if checksum is available.
-      if (trailer.getKEKChecksum() != 0L) {
-        LOG.debug("Looking for System Key with checksum: {}", trailer.getKEKChecksum());
-        ManagedKeyData systemKeyData =
-          systemKeyCache.getSystemKeyByChecksum(trailer.getKEKChecksum());
+      // Try STK lookup first if full identity is available.
+      if (hasKekIdentity) {
+        LOG.debug("Looking for System Key by identity (length: {})", kekIdentity.length);
+        ManagedKeyData systemKeyData = systemKeyCache.getSystemKeyByIdentity(kekIdentity);
         if (systemKeyData != null) {
           kek = systemKeyData.getTheKey();
           kekKeyData = systemKeyData;
           if (LOG.isDebugEnabled()) {
             LOG.debug(
-              "Found System Key with (custodian: {}, namespace: {}), checksum: {} and "
-                + "metadata hash: {}",
+              "Found System Key with (custodian: {}, namespace: {}), full identity and partial: {}",
               systemKeyData.getKeyCustodianEncoded(), systemKeyData.getKeyNamespace(),
-              systemKeyData.getKeyChecksum(), systemKeyData.getKeyMetadataHashEncoded());
+              systemKeyData.getPartialIdentityEncoded());
           }
         }
       }
 
-      // If STK lookup failed or no checksum available, try managed key lookup using metadata
-      if (kek == null && trailer.getKEKMetadata() != null) {
-        if (managedKeyDataCache == null) {
-          throw new IOException("KEK metadata is available, but ManagedKeyDataCache is null");
-        }
-        Throwable cause = null;
+      // If STK lookup failed or no identity available, try managed key lookup by full identity
+      if (kek == null && hasKekIdentity && managedKeyDataCache == null) {
+        throw new IOException("KEK identity is available, but ManagedKeyDataCache is null");
+      }
+      if (kek == null && hasKekIdentity && managedKeyDataCache != null) {
         try {
-          kekKeyData = managedKeyDataCache.getEntry(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES,
-            trailer.getKeyNamespace(), trailer.getKEKMetadata(), keyBytes);
-        } catch (KeyException | IOException e) {
-          cause = e;
+          ManagedKeyIdentity keyIdentity = new KeyIdentitySingleArrayBacked(kekIdentity);
+          kekKeyData = managedKeyDataCache.getEntry(keyIdentity, trailer.getKEKMetadata(), null);
+          if (kekKeyData != null) {
+            kek = kekKeyData.getTheKey();
+          }
+        } catch (KeyException e) {
+          throw new IOException("Failed to resolve KEK from trailer full identity", e);
         }
-        // When getEntry returns null we treat it the same as exception case.
-        if (kekKeyData == null) {
-          throw new IOException(
-            "Failed to get key data for KEK metadata: " + trailer.getKEKMetadata(), cause);
-        }
-        kek = kekKeyData.getTheKey();
-      } else if (kek == null && isKeyManagementEnabled) {
-        // No checksum or metadata available, fall back to latest system key for backwards
+      }
+
+      if (kek == null && isKeyManagementEnabled) {
+        // No identity or metadata available, fall back to latest system key for backwards
         // compatibility
         ManagedKeyData systemKeyData = systemKeyCache.getLatestSystemKey();
         if (systemKeyData == null) {
@@ -299,8 +298,8 @@ public final class SecurityUtil {
         try {
           key = EncryptionUtil.unwrapKey(conf, null, keyBytes, kek);
         } catch (KeyException | IOException e) {
-          throw new IOException("Failed to unwrap key with KEK checksum: "
-            + trailer.getKEKChecksum() + ", metadata: " + trailer.getKEKMetadata(), e);
+          throw new IOException("Failed to unwrap key with KEK identity (length: "
+            + (kekIdentity != null ? kekIdentity.length : 0) + ")", e);
         }
       } else {
         key = EncryptionUtil.unwrapKey(conf, keyBytes);
@@ -309,7 +308,6 @@ public final class SecurityUtil {
       Cipher cipher = getCipherIfValid(conf, key.getAlgorithm(), key, null);
       cryptoContext.setCipher(cipher);
       cryptoContext.setKey(key);
-      cryptoContext.setKeyNamespace(trailer.getKeyNamespace());
       cryptoContext.setKEKData(kekKeyData);
     }
     return cryptoContext;

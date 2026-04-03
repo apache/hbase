@@ -75,4 +75,12 @@ public interface KeyManagementService {
 
   /** Returns the configuration. */
   public Configuration getConfiguration();
+
+  /**
+   * Rotate the system key if it has changed.
+   * @return true if the key was rotated, false otherwise
+   */
+  default boolean rotateSystemKeyIfChanged() throws IOException {
+    return false;
+  }
 }
