@@ -102,7 +102,7 @@ public class MobFileCompactionChore extends ScheduledChore {
                 hcd.getNameAsString());
               if (regionBatchSize == MobConstants.DEFAULT_MOB_MAJOR_COMPACTION_REGION_BATCH_SIZE) {
                 LOG.debug(
-                  "Table={} cf ={}: batch MOB compaction is disabled, {}=0 -"
+                  "Table={} cf={}: batch MOB compaction is disabled, {}=0 -"
                     + " all regions will be compacted in parallel",
                   htd.getTableName(), hcd.getNameAsString(),
                   MobConstants.MOB_MAJOR_COMPACTION_REGION_BATCH_SIZE);
