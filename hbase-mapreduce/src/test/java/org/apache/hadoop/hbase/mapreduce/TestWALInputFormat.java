@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
@@ -33,7 +34,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 @Tag(MapReduceTests.TAG)
-@Tag(MediumTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestWALInputFormat {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
