@@ -40,7 +40,7 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
    * markers accumulate. This threshold avoids the seek overhead for the common case (one delete per
    * row/column) while still kicking in when markers pile up.
    */
-  private static final int SEEK_ON_DELETE_MARKER_THRESHOLD = 3;
+  private static final int SEEK_ON_DELETE_MARKER_THRESHOLD = 10;
 
   /** Keeps track of deletes */
   private final DeleteTracker deletes;

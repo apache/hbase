@@ -404,13 +404,15 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
    */
   @Test
   public void testSeekOnRangeDelete() throws IOException {
-    // DeleteColumn: first two SKIP, third triggers SEEK_NEXT_COL
+    // DeleteColumn: first nine SKIP, tenth triggers SEEK_NEXT_COL
     assertDeleteMatchCodes(KeepDeletedCells.FALSE, Type.DeleteColumn, MatchCode.SKIP,
-      MatchCode.SKIP, MatchCode.SEEK_NEXT_COL);
+      MatchCode.SKIP, MatchCode.SKIP, MatchCode.SKIP, MatchCode.SKIP, MatchCode.SKIP,
+      MatchCode.SKIP, MatchCode.SKIP, MatchCode.SKIP, MatchCode.SEEK_NEXT_COL);
 
     // DeleteFamily: same threshold behavior
     assertDeleteMatchCodes(KeepDeletedCells.FALSE, Type.DeleteFamily, MatchCode.SKIP,
-      MatchCode.SKIP, MatchCode.SEEK_NEXT_COL);
+      MatchCode.SKIP, MatchCode.SKIP, MatchCode.SKIP, MatchCode.SKIP, MatchCode.SKIP,
+      MatchCode.SKIP, MatchCode.SKIP, MatchCode.SKIP, MatchCode.SEEK_NEXT_COL);
 
     // Delete (version): always SKIP (point delete, not range)
     assertDeleteMatchCodes(KeepDeletedCells.FALSE, Type.Delete, MatchCode.SKIP, MatchCode.SKIP,
@@ -433,20 +435,16 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
       ttl, KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false), null,
       now - ttl, now, null);
 
-    // Feed enough DCs with empty qualifier to hit the threshold, then a DF.
+    // Feed DCs with empty qualifier past the threshold, then a DF.
     // The DF must NOT be seeked past -- it must be SKIP'd so the tracker picks it up.
-    KeyValue dc1 = new KeyValue(row1, fam1, e, now, Type.DeleteColumn);
-    KeyValue dc2 = new KeyValue(row1, fam1, e, now - 1, Type.DeleteColumn);
-    KeyValue dc3 = new KeyValue(row1, fam1, e, now - 2, Type.DeleteColumn);
-    KeyValue df = new KeyValue(row1, fam1, e, now - 3, Type.DeleteFamily);
-    KeyValue put = new KeyValue(row1, fam1, col1, now - 3, Type.Put, data);
-
-    qm.setToNewRow(dc1);
-    assertEquals(MatchCode.SKIP, qm.match(dc1));
-    assertEquals(MatchCode.SKIP, qm.match(dc2));
-    // Third DC hits threshold -- but since it's empty qualifier, it should NOT seek
-    // because a DeleteFamily might follow.
-    assertEquals(MatchCode.SKIP, qm.match(dc3));
+    qm.setToNewRow(new KeyValue(row1, fam1, e, now, Type.DeleteColumn));
+    for (int i = 0; i < 11; i++) {
+      // Empty qualifier DCs should never trigger seek, regardless of threshold
+      assertEquals("DC at i=" + i, MatchCode.SKIP,
+        qm.match(new KeyValue(row1, fam1, e, now - i, Type.DeleteColumn)));
+    }
+    KeyValue df = new KeyValue(row1, fam1, e, now - 11, Type.DeleteFamily);
+    KeyValue put = new KeyValue(row1, fam1, col1, now - 11, Type.Put, data);
     // DF must be processed (SKIP), not seeked past
     assertEquals(MatchCode.SKIP, qm.match(df));
     // Put in col1 at t=now-3 should be masked by DF@t=now-3
