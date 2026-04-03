@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.ReadOnlyConfiguration;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -1393,6 +1394,11 @@ public class HStore
     for (HStoreFile sf : this.getStorefiles()) {
       if (inputFiles.contains(sf.getPath().getName())) {
         inputStoreFiles.add(sf);
+      } else if (
+        !isPrimaryReplicaStore() && sf.getFileInfo().isLink()
+          && inputFiles.contains(HFileLink.getReferencedHFileName(sf.getPath().getName()))
+      ) {
+        inputStoreFiles.add(sf);
       }
     }
 
@@ -1404,7 +1410,8 @@ public class HStore
         compactionOutputs.remove(sf.getPath().getName());
       }
       for (String compactionOutput : compactionOutputs) {
-        StoreFileTracker sft = StoreFileTrackerFactory.create(conf, false, storeContext);
+        StoreFileTracker sft =
+          StoreFileTrackerFactory.create(conf, isPrimaryReplicaStore(), storeContext);
         StoreFileInfo storeFileInfo =
           getRegionFileSystem().getStoreFileInfo(getColumnFamilyName(), compactionOutput, sft);
         HStoreFile storeFile = storeEngine.createStoreFileAndReader(storeFileInfo);
@@ -2049,7 +2056,8 @@ public class HStore
       List<HStoreFile> storeFiles = new ArrayList<>(fileNames.size());
       for (String file : fileNames) {
         // open the file as a store file (hfile link, etc)
-        StoreFileTracker sft = StoreFileTrackerFactory.create(conf, false, storeContext);
+        StoreFileTracker sft =
+          StoreFileTrackerFactory.create(conf, isPrimaryReplicaStore(), storeContext);
         StoreFileInfo storeFileInfo =
           getRegionFileSystem().getStoreFileInfo(getColumnFamilyName(), file, sft);
         HStoreFile storeFile = storeEngine.createStoreFileAndReader(storeFileInfo);

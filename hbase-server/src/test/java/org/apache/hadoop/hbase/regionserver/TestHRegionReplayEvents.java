@@ -66,6 +66,9 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResultImpl;
 import org.apache.hadoop.hbase.regionserver.HRegion.PrepareFlushResult;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -193,6 +196,10 @@ public class TestHRegionReplayEvents {
     when(rss.getServerName()).thenReturn(ServerName.valueOf("foo", 1, 1));
     when(rss.getConfiguration()).thenReturn(CONF);
     when(rss.getRegionServerAccounting()).thenReturn(new RegionServerAccounting(CONF));
+    when(rss.getRegionServerSpaceQuotaManager()).thenReturn(null); // or mock it properly
+    when(rss.getFlushRequester()).thenReturn(mock(FlushRequester.class));
+    when(rss.getCompactionRequestor()).thenReturn(mock(CompactionRequester.class));
+    when(rss.getMetrics()).thenReturn(mock(MetricsRegionServer.class));
     String string =
       org.apache.hadoop.hbase.executor.EventType.RS_COMPACTED_FILES_DISCHARGER.toString();
     ExecutorService es = new ExecutorService(string);
@@ -421,10 +428,12 @@ public class TestHRegionReplayEvents {
 
         // assert that the compaction is applied
         for (HStore store : secondaryRegion.getStores()) {
+          StoreFileTracker sft =
+            StoreFileTrackerFactory.create(CONF, false, store.getStoreContext());
           if (store.getColumnFamilyName().equals("cf1")) {
             assertEquals(1, store.getStorefilesCount());
           } else {
-            assertEquals(expectedStoreFileCount, store.getStorefilesCount());
+            assertEquals(expectedStoreFileCount, sft.load().size());
           }
         }
       } else {
@@ -1538,17 +1547,17 @@ public class TestHRegionReplayEvents {
     // replay the bulk load event
     secondaryRegion.replayWALBulkLoadEventMarker(bulkloadEvent);
 
-    List<String> storeFileName = new ArrayList<>();
+    List<String> storeFileNames = new ArrayList<>();
     for (StoreDescriptor storeDesc : bulkloadEvent.getStoresList()) {
-      storeFileName.addAll(storeDesc.getStoreFileList());
+      storeFileNames.addAll(storeDesc.getStoreFileList());
     }
     // assert that the bulk loaded files are picked
     for (HStore s : secondaryRegion.getStores()) {
       for (HStoreFile sf : s.getStorefiles()) {
-        storeFileName.remove(sf.getPath().getName());
+        storeFileNames.remove(sf.getPath().getName());
       }
     }
-    assertTrue("Found some store file isn't loaded:" + storeFileName, storeFileName.isEmpty());
+    assertTrue("Found some store file isn't loaded:" + storeFileNames, storeFileNames.isEmpty());
 
     LOG.info("-- Verifying edits from secondary");
     for (byte[] family : families) {
