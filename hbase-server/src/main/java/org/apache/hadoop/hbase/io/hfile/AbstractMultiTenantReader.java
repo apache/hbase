@@ -509,6 +509,27 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
   }
 
   @Override
+  public boolean passesGeneralRowPrefixBloomFilter(byte[] rowPrefix, int offset, int length)
+    throws IOException {
+    byte[] sectionId = extractTenantSectionId(rowPrefix, offset, length);
+    if (sectionId == null) {
+      return true;
+    }
+    ImmutableBytesWritable cacheKey = new ImmutableBytesWritable(sectionId);
+    SectionReaderLease lease = getSectionReader(sectionId);
+    if (lease == null) {
+      return true;
+    }
+    try (lease) {
+      SectionBloomState bloomState = getOrLoadSectionBloomState(cacheKey, lease);
+      if (bloomState == null) {
+        return true;
+      }
+      return bloomState.passesRowPrefixBloom(rowPrefix, offset, length, lease.getReader());
+    }
+  }
+
+  @Override
   public boolean passesDeleteFamilyBloomFilter(byte[] row, int rowOffset, int rowLen)
     throws IOException {
     byte[] sectionId = extractTenantSectionId(row, rowOffset, rowLen);
@@ -832,10 +853,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     protected final byte[] tenantSectionId;
     /** The section metadata */
     protected final SectionMetadata metadata;
-    /** The underlying HFile reader */
-    protected HFileReaderImpl reader;
-    /** Whether this reader has been initialized */
-    protected volatile boolean initialized = false;
+    /** The underlying HFile reader; volatile for safe double-checked locking in subclasses */
+    protected volatile HFileReaderImpl reader;
     /** The base offset for this section */
     protected long sectionBaseOffset;
 
@@ -965,6 +984,17 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       return checkGeneralBloomFilter(null, 0, 0, kvKey, reader);
     }
 
+    boolean passesRowPrefixBloom(byte[] rowPrefix, int offset, int length, HFileReaderImpl reader)
+      throws IOException {
+      if (!hasGeneralBloom()) {
+        return true;
+      }
+      if (entryCount == 0) {
+        return false;
+      }
+      return checkGeneralBloomFilter(rowPrefix, offset, length, null, reader);
+    }
+
     boolean passesDeleteFamilyBloom(byte[] row, int rowOffset, int rowLen) {
       if (deleteFamilyCnt == 0) {
         return false;
@@ -1082,7 +1112,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       return true;
     }
 
-    void release(boolean evictOnClose) {
+    synchronized void release(boolean evictOnClose) {
       int refs = refCount.decrementAndGet();
       if (refs < 0) {
         LOG.error("Section reader {} released too many times (refCount={}), forcing close",
@@ -1418,22 +1448,66 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
 
     @Override
     public boolean seekBefore(ExtendedCell key) throws IOException {
-      // Extract tenant section ID
-      byte[] tenantSectionId = tenantExtractor.extractTenantSectionId(key);
+      byte[] targetSectionId = tenantExtractor.extractTenantSectionId(key);
 
-      // Get the scanner for this tenant section
-      if (!switchToSection(tenantSectionId)) {
-        seeked = false;
-        return false;
+      // Find the section index for this tenant (same lookup as seekTo)
+      int n = sectionIds.size();
+      int insertionIndex = n;
+      boolean exactSectionMatch = false;
+      for (int i = 0; i < n; i++) {
+        byte[] sid = sectionIds.get(i).get();
+        int cmp = Bytes.compareTo(sid, targetSectionId);
+        if (cmp == 0) {
+          insertionIndex = i;
+          exactSectionMatch = true;
+          break;
+        }
+        if (cmp > 0) {
+          insertionIndex = i;
+          break;
+        }
       }
+
+      // No exact section match — fall back to last key of the preceding section
+      if (!exactSectionMatch) {
+        if (insertionIndex == 0) {
+          seeked = false;
+          return false;
+        }
+        return seekBeforePreviousSection(insertionIndex - 1);
+      }
+
+      // Exact section found — try seekBefore within it
+      byte[] matchedSectionId = sectionIds.get(insertionIndex).get();
+      if (!switchToSection(matchedSectionId)) {
+        if (insertionIndex == 0) {
+          seeked = false;
+          return false;
+        }
+        return seekBeforePreviousSection(insertionIndex - 1);
+      }
+
       boolean result = currentScanner.seekBefore(key);
       if (result) {
         seeked = true;
-      } else {
-        seeked = false;
+        return true;
       }
 
-      return result;
+      // Key is at or before first key of this section — fall back to previous section
+      if (insertionIndex == 0) {
+        seeked = false;
+        return false;
+      }
+      return seekBeforePreviousSection(insertionIndex - 1);
+    }
+
+    /**
+     * Positions the scanner at the last key of the section at startIndex (or an earlier section if
+     * that one is unavailable). Mirrors {@link #positionToPreviousSection} but returns boolean.
+     */
+    private boolean seekBeforePreviousSection(int startIndex) throws IOException {
+      int result = positionToPreviousSection(startIndex);
+      return result != -1;
     }
 
     @Override
@@ -1651,13 +1725,11 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
    */
   protected ReaderContext buildSectionContext(SectionMetadata metadata,
     ReaderContext.ReaderType readerType) throws IOException {
-    // Create a special wrapper with offset translation capabilities
+    // Create a special wrapper with offset translation and boundary enforcement
     FSDataInputStreamWrapper parentWrapper = context.getInputStreamWrapper();
-    MultiTenantFSDataInputStreamWrapper sectionWrapper =
-      new MultiTenantFSDataInputStreamWrapper(parentWrapper, metadata.getOffset());
-
-    // Calculate section size and validate minimum requirements
     int sectionSize = metadata.getSize();
+    MultiTenantFSDataInputStreamWrapper sectionWrapper =
+      new MultiTenantFSDataInputStreamWrapper(parentWrapper, metadata.getOffset(), sectionSize);
     int trailerSize = FixedFileTrailer.getTrailerSize(3); // HFile v3 sections use v3 format
 
     if (sectionSize < trailerSize) {

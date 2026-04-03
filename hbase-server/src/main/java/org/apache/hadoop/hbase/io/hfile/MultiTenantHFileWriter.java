@@ -467,11 +467,7 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     // Update per-section metadata
     // 1) General bloom (deduped by context)
     if (bloomFilterEnabled && currentGeneralBloomContext != null) {
-      try {
-        currentGeneralBloomContext.writeBloom(cell);
-      } catch (IOException e) {
-        LOG.warn("Error adding cell to general bloom filter", e);
-      }
+      currentGeneralBloomContext.writeBloom(cell);
     }
     // 2) Delete family bloom and counter
     if (
@@ -480,11 +476,7 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     ) {
       currentSectionDeleteFamilyCnt++;
       if (currentDeleteFamilyBloomContext != null) {
-        try {
-          currentDeleteFamilyBloomContext.writeBloom(cell);
-        } catch (IOException e) {
-          LOG.warn("Error adding cell to delete family bloom filter", e);
-        }
+        currentDeleteFamilyBloomContext.writeBloom(cell);
       }
     }
     // 3) Time range and earliest put ts

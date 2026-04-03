@@ -404,27 +404,35 @@ public class StoreFileReader {
    * @return True if passes
    */
   private boolean passesGeneralRowPrefixBloomFilter(Scan scan) {
-    BloomFilter bloomFilter = this.generalBloomFilter;
-    if (bloomFilter == null) {
-      incrementBloomEligible();
-      return true;
-    }
-
     byte[] row = scan.getStartRow();
     byte[] rowPrefix;
     if (scan.isGetScan()) {
       rowPrefix = Bytes.copy(row, 0, Math.min(prefixLength, row.length));
     } else {
-      // For non-get scans
-      // Find out the common prefix of startRow and stopRow.
       int commonLength = Bytes.findCommonPrefix(scan.getStartRow(), scan.getStopRow(),
         scan.getStartRow().length, scan.getStopRow().length, 0, 0);
-      // startRow and stopRow don't have the common prefix.
-      // Or the common prefix length is less than prefixLength
       if (commonLength <= 0 || commonLength < prefixLength) {
         return true;
       }
       rowPrefix = Bytes.copy(row, 0, prefixLength);
+    }
+
+    if (reader instanceof MultiTenantBloomSupport) {
+      try {
+        boolean passed = ((MultiTenantBloomSupport) reader)
+          .passesGeneralRowPrefixBloomFilter(rowPrefix, 0, rowPrefix.length);
+        recordExternalBloomMetric(passed);
+        return passed;
+      } catch (IOException e) {
+        LOG.warn("Failed multi-tenant row prefix bloom check, proceeding without", e);
+        return true;
+      }
+    }
+
+    BloomFilter bloomFilter = this.generalBloomFilter;
+    if (bloomFilter == null) {
+      incrementBloomEligible();
+      return true;
     }
     return checkGeneralBloomFilter(rowPrefix, null, bloomFilter);
   }

@@ -84,42 +84,39 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
 
     @Override
     public HFileReaderImpl getReader() throws IOException {
-      if (initialized) {
-        return reader;
+      HFileReaderImpl local = reader;
+      if (local != null) {
+        return local;
       }
 
       synchronized (this) {
-        if (initialized) {
-          return reader;
+        local = reader;
+        if (local != null) {
+          return local;
         }
 
-        // Create section context with section-specific settings using parent method
         ReaderContext sectionContext =
           buildSectionContext(metadata, ReaderContext.ReaderType.STREAM);
 
         try {
-          // Create a section-specific HFileInfo
           HFileInfo sectionFileInfo = new HFileInfo(sectionContext, getConf());
+          local = new HFileStreamReader(sectionContext, sectionFileInfo, cacheConf, getConf());
 
-          // Create stream reader for this section with the section-specific fileInfo
-          reader = new HFileStreamReader(sectionContext, sectionFileInfo, cacheConf, getConf());
-
-          // Initialize section indices using the standard HFileInfo method
-          // This method was designed for HFile v3 format, which each section follows
           LOG.debug("Initializing section indices for tenant at offset {}", metadata.getOffset());
-          sectionFileInfo.initMetaAndIndex(reader);
+          sectionFileInfo.initMetaAndIndex(local);
           LOG.debug("Successfully initialized indices for section at offset {}",
             metadata.getOffset());
 
-          initialized = true;
+          reader = local;
           LOG.debug("Initialized HFileStreamReader for tenant section ID: {}",
-            org.apache.hadoop.hbase.util.Bytes.toStringBinary(tenantSectionId));
+            Bytes.toStringBinary(tenantSectionId));
         } catch (IOException e) {
           LOG.error("Failed to initialize section reader", e);
           throw e;
         }
+
+        return local;
       }
-      return reader;
     }
 
     @Override
@@ -130,14 +127,12 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
 
     @Override
     public void close(boolean evictOnClose) throws IOException {
-      if (reader != null) {
-        // Close underlying HFileStreamReader and unbuffer its wrapper
-        HFileReaderImpl r = reader;
+      HFileReaderImpl local = reader;
+      if (local != null) {
         reader = null;
-        r.close(evictOnClose);
-        r.getContext().getInputStreamWrapper().unbuffer();
+        local.close(evictOnClose);
+        local.getContext().getInputStreamWrapper().unbuffer();
       }
-      initialized = false;
     }
   }
 

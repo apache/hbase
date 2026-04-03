@@ -32,6 +32,18 @@ public interface MultiTenantBloomSupport {
 
   boolean passesGeneralRowBloomFilter(byte[] row, int rowOffset, int rowLen) throws IOException;
 
+  /**
+   * Checks whether the given pre-extracted row prefix passes the general bloom filter in the
+   * appropriate tenant section. Unlike {@link #passesGeneralRowBloomFilter}, the caller has already
+   * extracted the prefix bytes so the bloom is checked directly without ROWPREFIX length gating.
+   * @param rowPrefix the already-extracted prefix bytes
+   * @param offset    offset into the prefix array
+   * @param length    number of prefix bytes to use
+   * @return true if the prefix may exist (or bloom is unavailable), false if definitely absent
+   */
+  boolean passesGeneralRowPrefixBloomFilter(byte[] rowPrefix, int offset, int length)
+    throws IOException;
+
   boolean passesGeneralRowColBloomFilter(ExtendedCell cell) throws IOException;
 
   boolean passesDeleteFamilyBloomFilter(byte[] row, int rowOffset, int rowLen) throws IOException;

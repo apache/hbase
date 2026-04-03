@@ -74,8 +74,6 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
    * efficient random access to data within specific tenant boundaries.
    */
   protected class PreadSectionReader extends SectionReader {
-    /** The underlying HFile reader for this section */
-    private volatile HFileReaderImpl hFileReader;
 
     /**
      * Constructor for PreadSectionReader.
@@ -90,40 +88,36 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
 
     @Override
     public HFileReaderImpl getReader() throws IOException {
-      HFileReaderImpl reader = hFileReader;
-      if (reader != null) {
-        return reader;
+      HFileReaderImpl local = reader;
+      if (local != null) {
+        return local;
       }
 
       synchronized (this) {
-        reader = hFileReader;
-        if (reader != null) {
-          return reader;
+        local = reader;
+        if (local != null) {
+          return local;
         }
 
         try {
-          // Build section context with offset translation
           ReaderContext sectionContext =
             buildSectionContext(metadata, ReaderContext.ReaderType.PREAD);
 
-          // Create unique file path for each section to enable proper prefetch scheduling
           Path containerPath = sectionContext.getFilePath();
           String tenantSectionIdStr = Bytes.toStringBinary(tenantSectionId);
           Path perSectionPath = new Path(containerPath.toString() + "#" + tenantSectionIdStr);
           ReaderContext perSectionContext =
             ReaderContextBuilder.newBuilder(sectionContext).withFilePath(perSectionPath).build();
 
-          // Create HFile info and reader for this section
           HFileInfo info = new HFileInfo(perSectionContext, getConf());
-          hFileReader = new HFilePreadReader(perSectionContext, info, cacheConf, getConf());
+          local = new HFilePreadReader(perSectionContext, info, cacheConf, getConf());
+          info.initMetaAndIndex(local);
 
-          // Initialize metadata and indices
-          info.initMetaAndIndex(hFileReader);
-
+          reader = local;
           LOG.debug("Successfully initialized HFilePreadReader for tenant section ID: {}",
             Bytes.toStringBinary(tenantSectionId));
 
-          return hFileReader;
+          return local;
         } catch (IOException e) {
           LOG.error("Failed to initialize section reader for tenant section at offset {}: {}",
             metadata.getOffset(), e.getMessage());
@@ -135,18 +129,20 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
     @Override
     public HFileScanner getScanner(Configuration conf, boolean cacheBlocks, boolean pread,
       boolean isCompaction) throws IOException {
-      HFileReaderImpl reader = getReader();
-      HFileScanner scanner = reader.getScanner(conf, cacheBlocks, true, isCompaction);
+      HFileReaderImpl local = getReader();
+      HFileScanner scanner = local.getScanner(conf, cacheBlocks, true, isCompaction);
       LOG.debug(
         "PreadSectionReader.getScanner for tenant section ID: {}, reader: {}, " + "scanner: {}",
-        Bytes.toStringBinary(tenantSectionId), reader, scanner);
+        Bytes.toStringBinary(tenantSectionId), local, scanner);
       return scanner;
     }
 
     @Override
     public void close(boolean evictOnClose) throws IOException {
-      if (hFileReader != null) {
-        hFileReader.close(evictOnClose);
+      HFileReaderImpl local = reader;
+      if (local != null) {
+        reader = null;
+        local.close(evictOnClose);
       }
     }
   }
