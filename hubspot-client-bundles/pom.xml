@@ -13,6 +13,7 @@
     <module>hbase-mapreduce-bundle</module>
     <module>hbase-backup-restore-bundle</module>
     <module>hbase-server-it-bundle</module>
+    <module>hbase-testing-bundle</module>
   </modules>
 
   <properties>

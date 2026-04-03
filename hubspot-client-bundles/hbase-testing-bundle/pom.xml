@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.hubspot.hbase</groupId>
+    <artifactId>hubspot-client-bundles</artifactId>
+    <version>${revision}</version>
+  </parent>
+
+  <artifactId>hbase-testing-bundle</artifactId>
+  <name>HBase testing utilities bundle (MiniCluster, HBaseTestingUtility)</name>
+
+  <!--
+    Self-contained HBase testing bundle for in-process MiniHBaseCluster and
+    MiniDFSCluster. For use in acceptance and integration tests only.
+
+    Key classes provided:
+      - org.apache.hadoop.hbase.HBaseTestingUtility          (hbase-server:test-jar)
+      - org.apache.hadoop.hbase.MiniHBaseCluster             (hbase-server:test-jar)
+      - org.apache.hadoop.hbase.testing.TestingHBaseCluster  (hbase-testing-util)
+      - org.apache.hadoop.hdfs.MiniDFSCluster                (hadoop-hdfs:test-jar)
+
+    Design:
+      HubSpot's production Hadoop stack shades internal dependencies and stubs out
+      server-side components, making it incompatible with the complete, unshaded
+      Hadoop environment that HBase test infrastructure requires.
+
+      This bundle provides that environment: real hadoop-common, hadoop-hdfs,
+      hadoop-auth, Jetty, and javax.servlet-api at their original namespaces,
+      matching the classpath HBase's own test suite uses. This bundle must be
+      listed first in any consumer's dependencies to take precedence over the
+      production stack.
+
+    Shading strategy:
+      - HBase server JARs: included at original namespaces (org.apache.hadoop.hbase.*).
+      - Real Hadoop/Jetty/servlet stack: included at original namespaces.
+      - Conflict-prone deps (disruptor, caffeine, agrona, commons-math3): relocated
+        to org.apache.hadoop.testing.* to avoid version conflicts in consumers.
+      - commons-lang3 and opentelemetry: NOT relocated (see relocation section).
+      - Artifacts already in hbase-client-bundle: excluded.
+      - The generated dependency-reduced-pom.xml contains no org.apache.hbase:*
+        entries, satisfying HubSpot's banned-dependency enforcer.
+  -->
+
+  <dependencies>
+    <!--
+      Entry point: transitively pulls in all server-side HBase JARs plus
+      the real server stack via the hadoop-3.0 dependency graph.
+      Artifacts already provided by hbase-client-bundle are excluded below.
+    -->
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-testing-util</artifactId>
+      <version>${project.version}</version>
+      <exclusions>
+        <!-- provided by hbase-client-bundle -->
+        <exclusion>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-client</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-common</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-protocol</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-logging</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-protocol-shaded</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>commons-logging</groupId>
+          <artifactId>commons-logging</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-log4j12</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!--
+        Unpack test-jar artifacts into the output directory so the shade plugin
+        picks them up as project classes (shade cannot include classifier artifacts
+        directly). Covers HBaseTestingUtility, MiniHBaseCluster, MiniZooKeeperCluster,
+        and MiniDFSCluster.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>unpack-test-jars</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>org.apache.hbase</groupId>
+                  <artifactId>hbase-server</artifactId>
+                  <version>${project.version}</version>
+                  <classifier>tests</classifier>
+                  <type>test-jar</type>
+                  <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.hbase</groupId>
+                  <artifactId>hbase-zookeeper</artifactId>
+                  <version>${project.version}</version>
+                  <classifier>tests</classifier>
+                  <type>test-jar</type>
+                  <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.hbase</groupId>
+                  <artifactId>hbase-common</artifactId>
+                  <version>${project.version}</version>
+                  <classifier>tests</classifier>
+                  <type>test-jar</type>
+                  <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.hbase</groupId>
+                  <artifactId>hbase-annotations</artifactId>
+                  <version>${project.version}</version>
+                  <classifier>tests</classifier>
+                  <type>test-jar</type>
+                  <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.hbase</groupId>
+                  <artifactId>hbase-asyncfs</artifactId>
+                  <version>${project.version}</version>
+                  <classifier>tests</classifier>
+                  <type>test-jar</type>
+                  <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.hbase</groupId>
+                  <artifactId>hbase-hadoop-compat</artifactId>
+                  <version>${project.version}</version>
+                  <classifier>tests</classifier>
+                  <type>test-jar</type>
+                  <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.hbase</groupId>
+                  <artifactId>hbase-hadoop2-compat</artifactId>
+                  <version>${project.version}</version>
+                  <classifier>tests</classifier>
+                  <type>test-jar</type>
+                  <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                </artifactItem>
+                <!-- MiniDFSCluster and related HDFS test infrastructure -->
+                <artifactItem>
+                  <groupId>org.apache.hadoop</groupId>
+                  <artifactId>hadoop-hdfs</artifactId>
+                  <version>3.3.6-hubspot-SNAPSHOT</version>
+                  <classifier>tests</classifier>
+                  <type>test-jar</type>
+                  <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!--
+        Resolves ${revision} to its literal value in the generated
+        dependency-reduced-pom.xml before the shade plugin runs.
+      -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>flatten-maven-plugin</artifactId>
+        <version>1.6.0</version>
+        <configuration>
+          <updatePomFile>true</updatePomFile>
+          <flattenMode>resolveCiFriendliesOnly</flattenMode>
+        </configuration>
+        <executions>
+          <execution>
+            <id>flatten</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>flatten</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>flatten.clean</id>
+            <phase>clean</phase>
+            <goals>
+              <goal>clean</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- See top-level comment for shading strategy. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>create-bundle-with-relocations</id>
+            <configuration>
+              <artifactSet>
+                <includes>
+                  <include>org.apache.hbase:*</include>
+
+                  <!-- groupId does not match org.apache.hbase:*, must be listed separately -->
+                  <include>org.apache.hbase.thirdparty:*</include>
+
+                  <!-- parent relocates to org.apache.hadoop.hbase.shaded.com.google.protobuf.* -->
+                  <include>com.google.protobuf:protobuf-java</include>
+
+                  <!-- kept at original namespace — see relocation section -->
+                  <include>io.opentelemetry:opentelemetry-api</include>
+                  <include>io.opentelemetry:opentelemetry-context</include>
+
+                  <!-- parent relocates to org.apache.hadoop.hbase.shaded.com.codahale.metrics.* -->
+                  <include>io.dropwizard.metrics:metrics-core</include>
+
+                  <!-- HBase server deps absent from HubSpot Hadoop stubs; relocated to org.apache.hadoop.testing.* -->
+                  <include>com.lmax:disruptor</include>
+                  <include>com.github.ben-manes.caffeine:caffeine</include>
+                  <include>org.agrona:agrona</include>
+                  <!-- kept at original namespace — see relocation section -->
+                  <include>org.apache.commons:commons-lang3</include>
+                  <include>org.apache.commons:commons-math3</include>
+
+                  <!-- Real Hadoop stack at original namespaces (see top-level comment) -->
+                  <include>org.apache.hadoop:hadoop-common</include>
+                  <include>org.apache.hadoop:hadoop-hdfs</include>
+                  <include>org.apache.hadoop:hadoop-auth</include>
+                  <include>javax.servlet:javax.servlet-api</include>
+                  <include>org.eclipse.jetty:*</include>
+                </includes>
+                <excludes>
+                  <!-- already in hbase-client-bundle -->
+                  <exclude>org.apache.hbase:hbase-client</exclude>
+                  <exclude>org.apache.hbase:hbase-common</exclude>
+                  <exclude>org.apache.hbase:hbase-protocol</exclude>
+                  <exclude>org.apache.hbase:hbase-logging</exclude>
+                  <exclude>org.apache.hbase:hbase-protocol-shaded</exclude>
+                  <exclude>org.apache.hbase:hbase-openssl</exclude>
+                  <exclude>org.apache.hbase:hbase-endpoint</exclude>
+
+                  <!-- provided by hadoop-client-api -->
+                  <exclude>org.apache.hadoop:hadoop-hdfs-client</exclude>
+                </excludes>
+              </artifactSet>
+              <!--
+                Appends to the parent's relocations (protobuf, codahale.metrics, commons-io).
+                Only relocate deps that are absent from HubSpot's Hadoop stubs and not
+                exposed in hbase-client-bundle's public API — everything else stays at its
+                original namespace to keep the Hadoop/HBase surface area consistent across
+                both bundles.
+
+                NOT relocated:
+                  - commons-lang3: not bundled in hbase-client-bundle; classes like
+                    FastFailInterceptorContext load it from the classpath at the original
+                    namespace. Some public methods also expose MutableBoolean/MutableInt,
+                    so relocating would cause NoSuchMethodError across the bundle boundary.
+                  - opentelemetry: TraceUtil (in hbase-client-bundle) exposes
+                    io.opentelemetry.* types in its public API. Both bundles must use the
+                    same namespace or method signature resolution fails at runtime.
+              -->
+              <relocations combine.children="append">
+                <relocation>
+                  <pattern>com.lmax.disruptor</pattern>
+                  <shadedPattern>org.apache.hadoop.testing.disruptor</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.github.benmanes.caffeine</pattern>
+                  <shadedPattern>org.apache.hadoop.testing.caffeine</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.agrona</pattern>
+                  <shadedPattern>org.apache.hadoop.testing.agrona</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.apache.commons.math3</pattern>
+                  <shadedPattern>org.apache.hadoop.testing.commons.math3</shadedPattern>
+                </relocation>
+              </relocations>
+
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
