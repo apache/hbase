@@ -19,28 +19,23 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.mapreduce.Job;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
 /**
  * Tests various scan start and stop row scenarios. This is set in a scan and tested in a MapReduce
  * job to see if that is handed over and done properly too.
  */
-@Category({ VerySlowMapReduceTests.class, LargeTests.class })
+@Tag(VerySlowMapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMultiTableInputFormat extends MultiTableInputFormatTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultiTableInputFormat.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setupLogging() {
     TEST_UTIL.enableDebug(MultiTableInputFormat.class);
   }

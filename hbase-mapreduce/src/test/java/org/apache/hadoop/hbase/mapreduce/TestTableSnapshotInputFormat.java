@@ -23,7 +23,9 @@ import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNA
 import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_KEY;
 import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT;
 import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_SCANNER_READTYPE;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,7 +35,6 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -60,23 +61,18 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category({ VerySlowMapReduceTests.class, LargeTests.class })
+@Tag(VerySlowMapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableSnapshotInputFormat.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTableSnapshotInputFormat.class);
 
@@ -85,8 +81,12 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   private static final byte[] bbc = Bytes.toBytes("bbc");
   private static final byte[] yya = Bytes.toBytes("yya");
 
-  @Rule
-  public TestName name = new TestName();
+  private String name;
+
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    name = testInfo.getTestMethod().get().getName();
+  }
 
   @Override
   protected byte[] getStartRow() {
@@ -104,19 +104,18 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     Configuration conf = UTIL.getConfiguration();
 
     HDFSBlocksDistribution blockDistribution = new HDFSBlocksDistribution();
-    Assert.assertEquals(null,
+    assertEquals(null, TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
+
+    blockDistribution.addHostsAndBlockWeight(new String[] { "h1" }, 1);
+    assertEquals(Lists.newArrayList("h1"),
       TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] { "h1" }, 1);
-    Assert.assertEquals(Lists.newArrayList("h1"),
-      TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
-
-    blockDistribution.addHostsAndBlockWeight(new String[] { "h1" }, 1);
-    Assert.assertEquals(Lists.newArrayList("h1"),
+    assertEquals(Lists.newArrayList("h1"),
       TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] { "h2" }, 1);
-    Assert.assertEquals(Lists.newArrayList("h1"),
+    assertEquals(Lists.newArrayList("h1"),
       TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
 
     blockDistribution = new HDFSBlocksDistribution();
@@ -124,21 +123,21 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     blockDistribution.addHostsAndBlockWeight(new String[] { "h2" }, 7);
     blockDistribution.addHostsAndBlockWeight(new String[] { "h3" }, 5);
     blockDistribution.addHostsAndBlockWeight(new String[] { "h4" }, 1);
-    Assert.assertEquals(Lists.newArrayList("h1"),
+    assertEquals(Lists.newArrayList("h1"),
       TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] { "h2" }, 2);
-    Assert.assertEquals(Lists.newArrayList("h1", "h2"),
+    assertEquals(Lists.newArrayList("h1", "h2"),
       TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] { "h2" }, 3);
-    Assert.assertEquals(Lists.newArrayList("h2", "h1"),
+    assertEquals(Lists.newArrayList("h2", "h1"),
       TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] { "h3" }, 6);
     blockDistribution.addHostsAndBlockWeight(new String[] { "h4" }, 9);
 
-    Assert.assertEquals(Lists.newArrayList("h2", "h3", "h4"),
+    assertEquals(Lists.newArrayList("h2", "h3", "h4"),
       TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
   }
 
@@ -176,7 +175,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
   @Test
   public void testInitTableSnapshotMapperJobConfig() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name);
     String snapshotName = "foo";
 
     try {
@@ -190,11 +189,11 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
       // TODO: would be better to examine directly the cache instance that results from this
       // config. Currently this is not possible because BlockCache initialization is static.
-      Assert.assertEquals("Snapshot job should be configured for default LruBlockCache.",
-        HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT,
-        job.getConfiguration().getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, -1), 0.01);
-      Assert.assertEquals("Snapshot job should not use BucketCache.", 0,
-        job.getConfiguration().getFloat("hbase.bucketcache.size", -1), 0.01);
+      assertEquals(HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT,
+        job.getConfiguration().getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, -1), 0.01,
+        "Snapshot job should be configured for default LruBlockCache.");
+      assertEquals(0, job.getConfiguration().getFloat("hbase.bucketcache.size", -1), 0.01,
+        "Snapshot job should not use BucketCache.");
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
@@ -206,7 +205,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     Configuration conf = UTIL.getConfiguration();
     conf.setBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION, true);
     try {
-      testWithMockedMapReduce(UTIL, name.getMethodName() + "Snapshot", 1, 1, 1, true);
+      testWithMockedMapReduce(UTIL, name + "Snapshot", 1, 1, 1, true);
     } finally {
       conf.unset(SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION);
     }
@@ -224,7 +223,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   @Override
   public void testWithMockedMapReduce(HBaseTestingUtility util, String snapshotName, int numRegions,
     int numSplitsPerRegion, int expectedNumSplits, boolean setLocalityEnabledTo) throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name);
     try {
       createTableAndSnapshot(util, tableName, snapshotName, getStartRow(), getEndRow(), numRegions);
 
@@ -257,7 +256,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   @Test
   public void testWithMockedMapReduceWithSplitsPerRegion() throws Exception {
     String snapshotName = "testWithMockedMapReduceMultiRegion";
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name);
     try {
       createTableAndSnapshot(UTIL, tableName, snapshotName, getStartRow(), getEndRow(), 10);
 
@@ -282,7 +281,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   @Test
   public void testWithMockedMapReduceWithNoStartRowStopRow() throws Exception {
     String snapshotName = "testWithMockedMapReduceMultiRegion";
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name);
     try {
       createTableAndSnapshot(UTIL, tableName, snapshotName, getStartRow(), getEndRow(), 10);
 
@@ -308,7 +307,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
   @Test
   public void testScanLimit() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name);
     final String snapshotName = tableName + "Snapshot";
     Table table = null;
     try {
@@ -341,8 +340,8 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName, scan,
         RowCounter.RowCounterMapper.class, NullWritable.class, NullWritable.class, job, true,
         tmpTableDir);
-      Assert.assertTrue(job.waitForCompletion(true));
-      Assert.assertEquals(10 * regionNum,
+      assertTrue(job.waitForCompletion(true));
+      assertEquals(10 * regionNum,
         job.getCounters().findCounter(RowCounter.RowCounterMapper.Counters.ROWS).getValue());
     } finally {
       if (table != null) {
@@ -439,7 +438,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     TableSnapshotInputFormat tsif = new TableSnapshotInputFormat();
     List<InputSplit> splits = tsif.getSplits(job);
 
-    Assert.assertEquals(expectedNumSplits, splits.size());
+    assertEquals(expectedNumSplits, splits.size());
 
     HBaseTestingUtility.SeenRowTracker rowTracker = new HBaseTestingUtility.SeenRowTracker(startRow,
       stopRow.length > 0 ? stopRow : Bytes.toBytes("\uffff"));
@@ -453,38 +452,35 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     for (int i = 0; i < splits.size(); i++) {
       // validate input split
       InputSplit split = splits.get(i);
-      Assert.assertTrue(split instanceof TableSnapshotRegionSplit);
+      assertTrue(split instanceof TableSnapshotRegionSplit);
       TableSnapshotRegionSplit snapshotRegionSplit = (TableSnapshotRegionSplit) split;
       if (localityEnabled) {
-        Assert.assertTrue(split.getLocations() != null && split.getLocations().length != 0);
+        assertTrue(split.getLocations() != null && split.getLocations().length != 0);
         if (byRegionLoc) {
           // When it uses region location from meta, the hostname will be "localhost",
           // the location from hdfs block location is "127.0.0.1".
-          Assert.assertEquals(1, split.getLocations().length);
-          Assert.assertTrue("Not using region location!",
-            split.getLocations()[0].equals("localhost"));
+          assertEquals(1, split.getLocations().length);
+          assertTrue(split.getLocations()[0].equals("localhost"), "Not using region location!");
         } else {
-          Assert.assertTrue("Not using region location!",
-            split.getLocations()[0].equals("127.0.0.1"));
+          assertTrue(split.getLocations()[0].equals("127.0.0.1"), "Not using region location!");
         }
       } else {
-        Assert.assertTrue(split.getLocations() != null && split.getLocations().length == 0);
+        assertTrue(split.getLocations() != null && split.getLocations().length == 0);
       }
 
       Scan scan =
         TableMapReduceUtil.convertStringToScan(snapshotRegionSplit.getDelegate().getScan());
       if (startRow.length > 0) {
-        Assert.assertTrue(
-          Bytes.toStringBinary(startRow) + " should <= " + Bytes.toStringBinary(scan.getStartRow()),
-          Bytes.compareTo(startRow, scan.getStartRow()) <= 0);
+        assertTrue(Bytes.compareTo(startRow, scan.getStartRow()) <= 0,
+          Bytes.toStringBinary(startRow) + " should <= "
+            + Bytes.toStringBinary(scan.getStartRow()));
       }
       if (stopRow.length > 0) {
-        Assert.assertTrue(
-          Bytes.toStringBinary(stopRow) + " should >= " + Bytes.toStringBinary(scan.getStopRow()),
-          Bytes.compareTo(stopRow, scan.getStopRow()) >= 0);
+        assertTrue(Bytes.compareTo(stopRow, scan.getStopRow()) >= 0,
+          Bytes.toStringBinary(stopRow) + " should >= " + Bytes.toStringBinary(scan.getStopRow()));
       }
-      Assert.assertTrue("startRow should < stopRow",
-        Bytes.compareTo(scan.getStartRow(), scan.getStopRow()) < 0);
+      assertTrue(Bytes.compareTo(scan.getStartRow(), scan.getStopRow()) < 0,
+        "startRow should < stopRow");
 
       // validate record reader
       TaskAttemptContext taskAttemptContext = mock(TaskAttemptContext.class);
@@ -553,7 +549,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       job.setNumReduceTasks(1);
       job.setOutputFormatClass(NullOutputFormat.class);
 
-      Assert.assertTrue(job.waitForCompletion(true));
+      assertTrue(job.waitForCompletion(true));
     } finally {
       if (!shutdownCluster) {
         util.getAdmin().deleteSnapshot(snapshotName);
@@ -580,9 +576,9 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     FileSystem fs = workingDir.getFileSystem(job.getConfiguration());
     Path restorePath =
       new Path(job.getConfiguration().get("hbase.TableSnapshotInputFormat.restore.dir"));
-    Assert.assertTrue(fs.exists(restorePath));
+    assertTrue(fs.exists(restorePath));
     TableSnapshotInputFormat.cleanRestoreDir(job, snapshotName);
-    Assert.assertFalse(fs.exists(restorePath));
+    assertFalse(fs.exists(restorePath));
   }
 
   /**
@@ -596,7 +592,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
    */
   @Test
   public void testReadFromRestoredSnapshotViaMR() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name);
     final String snapshotName = tableName + "_snapshot";
     try {
       if (UTIL.getAdmin().tableExists(tableName)) {
@@ -619,7 +615,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       Path tempRestoreDir = UTIL.getDataTestDirOnTestFS("restore_" + snapshotName);
       RestoreSnapshotHelper.copySnapshotForScanner(UTIL.getConfiguration(), fs, rootDir,
         tempRestoreDir, snapshotName);
-      Assert.assertTrue("Restore directory should exist", fs.exists(tempRestoreDir));
+      assertTrue(fs.exists(tempRestoreDir), "Restore directory should exist");
 
       Job job = Job.getInstance(UTIL.getConfiguration());
       job.setJarByClass(TestTableSnapshotInputFormat.class);
@@ -637,13 +633,12 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
         scan, TestTableSnapshotMapper.class, ImmutableBytesWritable.class, NullWritable.class, job,
         false, false, TableSnapshotInputFormat.class);
       TableMapReduceUtil.resetCacheConfig(conf);
-      Assert.assertTrue(job.waitForCompletion(true));
-      Assert.assertTrue(job.isSuccessful());
+      assertTrue(job.waitForCompletion(true));
+      assertTrue(job.isSuccessful());
 
       // Now verify that job fails when restore directory is deleted
-      Assert.assertTrue(fs.delete(tempRestoreDir, true));
-      Assert.assertFalse("Restore directory should not exist after deletion",
-        fs.exists(tempRestoreDir));
+      assertTrue(fs.delete(tempRestoreDir, true));
+      assertFalse(fs.exists(tempRestoreDir), "Restore directory should not exist after deletion");
       Job failureJob = Job.getInstance(UTIL.getConfiguration());
       failureJob.setJarByClass(TestTableSnapshotInputFormat.class);
       TableMapReduceUtil.addDependencyJarsForClasses(failureJob.getConfiguration(),
@@ -662,12 +657,12 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
         TableSnapshotInputFormat.class);
       TableMapReduceUtil.resetCacheConfig(failureConf);
 
-      Assert.assertFalse("Restore directory should not exist before job execution",
-        fs.exists(tempRestoreDir));
+      assertFalse(fs.exists(tempRestoreDir),
+        "Restore directory should not exist before job execution");
       failureJob.waitForCompletion(true);
 
-      Assert.assertFalse("Job should fail since the restored snapshot directory is deleted",
-        failureJob.isSuccessful());
+      assertFalse(failureJob.isSuccessful(),
+        "Job should fail since the restored snapshot directory is deleted");
 
     } finally {
       try {

@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
@@ -33,14 +33,11 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.MapFile;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,32 +47,26 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 /**
  * Basic test for the HashTable M/R tool
  */
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestHashTable {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHashTable.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHashTable.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void testHashTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testHashTable(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     final byte[] family = Bytes.toBytes("family");
     final byte[] column1 = Bytes.toBytes("c1");
     final byte[] column2 = Bytes.toBytes("c2");
@@ -110,7 +101,7 @@ public class TestHashTable {
     int code =
       hashTable.run(new String[] { "--batchsize=" + batchSize, "--numhashfiles=" + numHashFiles,
         "--scanbatch=2", tableName.getNameAsString(), testDir.toString() });
-    assertEquals("test job failed", 0, code);
+    assertEquals(0, code, "test job failed");
 
     FileSystem fs = TEST_UTIL.getTestFileSystem();
 
@@ -165,7 +156,7 @@ public class TestHashTable {
           intKey = Bytes.toInt(key.get(), key.getOffset(), key.getLength());
         }
         if (actualHashes.containsKey(intKey)) {
-          Assert.fail("duplicate key in data files: " + intKey);
+          fail("duplicate key in data files: " + intKey);
         }
         actualHashes.put(intKey, new ImmutableBytesWritable(hash.copyBytes()));
       }
@@ -185,7 +176,7 @@ public class TestHashTable {
     if (!expectedHashes.equals(actualHashes)) {
       LOG.error("Diff: " + Maps.difference(expectedHashes, actualHashes));
     }
-    Assert.assertEquals(expectedHashes, actualHashes);
+    assertEquals(expectedHashes, actualHashes);
 
     TEST_UTIL.deleteTable(tableName);
     TEST_UTIL.cleanupDataTestDirOnTestFS();
