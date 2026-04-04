@@ -69,8 +69,7 @@ public final class ManagedKeyIdentityUtils {
   public static byte[] constructRowKeyForIdentity(byte[] keyCustodian, byte[] keyNamespace,
     byte[] partialIdentity) {
     Preconditions.checkNotNull(partialIdentity, "partialIdentity cannot be null");
-    Preconditions.checkArgument(
-      partialIdentity.length >= 0 && partialIdentity.length <= MAX_UNSIGNED_BYTE,
+    Preconditions.checkArgument(partialIdentity.length <= MAX_UNSIGNED_BYTE,
       "Partial identity length must be 0-255, got %s", partialIdentity.length);
     return constructRowKey(keyCustodian, keyNamespace, partialIdentity);
   }
