@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 @Tag(MapReduceTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestExportSnapshotV2NoCluster {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestExportSnapshotV2NoCluster.class);
 
   private HBaseCommonTestingUtility testUtil = new HBaseCommonTestingUtility();
