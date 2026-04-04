@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyBoolean;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -31,7 +31,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -52,19 +51,14 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.mapreduce.JobContext;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-@Category({ SmallTests.class })
+@Tag(SmallTests.TAG)
 public class TestTableInputFormatBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableInputFormatBase.class);
 
   @Test
   public void testReuseRegionSizeCalculator() throws IOException {
@@ -109,8 +103,8 @@ public class TestTableInputFormatBase {
     }
     System.out.println("Should retrun the hostname for this host " + localhost + " addr : " + addr);
     String actualHostName = inputFormat.reverseDNS(addr);
-    assertEquals("Should retrun the hostname for this host. Expected : " + localhost + " Actual : "
-      + actualHostName, localhost, actualHostName);
+    assertEquals(localhost, actualHostName, "Should retrun the hostname for this host. Expected : "
+      + localhost + " Actual : " + actualHostName);
   }
 
   @Test
