@@ -40,7 +40,7 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
    * markers accumulate. This threshold avoids the seek overhead for the common case (one delete per
    * row/column) while still kicking in when markers pile up.
    */
-  private static final int SEEK_ON_DELETE_MARKER_THRESHOLD = 10;
+  static final int SEEK_ON_DELETE_MARKER_THRESHOLD = 10;
 
   /** Keeps track of deletes */
   private final DeleteTracker deletes;
@@ -95,27 +95,28 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
         seePastDeleteMarkers ? tr.withinTimeRange(timestamp) : tr.withinOrAfterTimeRange(timestamp);
       if (includeDeleteMarker) {
         this.deletes.add(cell);
-        // A DeleteColumn or DeleteFamily masks all remaining cells for this column/family.
-        // Seek past them instead of skipping one cell at a time, but only after seeing
-        // enough consecutive markers for the same column to justify the seek overhead.
-        // Only safe with plain ScanDeleteTracker. Not safe with newVersionBehavior (sequence
-        // IDs determine visibility), visibility labels (delete/put label mismatch), or
-        // seePastDeleteMarkers (KEEP_DELETED_CELLS).
-        if (
-          canSeekOnDeleteMarker && (typeByte == KeyValue.Type.DeleteFamily.getCode()
-            || (typeByte == KeyValue.Type.DeleteColumn.getCode() && cell.getQualifierLength() > 0))
-        ) {
-          if (lastDelete != null && !CellUtil.matchingQualifier(cell, lastDelete)) {
-            rangeDeleteCount = 0;
-          }
-          lastDelete = cell;
-          if (++rangeDeleteCount >= SEEK_ON_DELETE_MARKER_THRESHOLD) {
-            rangeDeleteCount = 0;
-            return columns.getNextRowOrNextColumn(cell);
-          }
-        } else {
+      }
+
+      // A DeleteColumn or DeleteFamily masks all remaining cells for this column/family.
+      // Seek past them instead of skipping one cell at a time, but only after seeing
+      // enough consecutive markers for the same column to justify the seek overhead.
+      // Only safe with plain ScanDeleteTracker. Not safe with newVersionBehavior (sequence
+      // IDs determine visibility), visibility labels (delete/put label mismatch), or
+      // seePastDeleteMarkers (KEEP_DELETED_CELLS).
+      if (
+        canSeekOnDeleteMarker && (typeByte == KeyValue.Type.DeleteFamily.getCode()
+          || (typeByte == KeyValue.Type.DeleteColumn.getCode() && cell.getQualifierLength() > 0))
+      ) {
+        if (lastDelete != null && !CellUtil.matchingQualifier(cell, lastDelete)) {
           rangeDeleteCount = 0;
         }
+        lastDelete = cell;
+        if (++rangeDeleteCount >= SEEK_ON_DELETE_MARKER_THRESHOLD) {
+          rangeDeleteCount = 0;
+          return columns.getNextRowOrNextColumn(cell);
+        }
+      } else {
+        rangeDeleteCount = 0;
       }
       return MatchCode.SKIP;
     }
