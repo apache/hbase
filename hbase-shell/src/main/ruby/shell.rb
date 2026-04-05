@@ -451,7 +451,6 @@ Shell.load_command_group(
     normalizer_enabled
     is_in_maintenance_mode
     clear_slowlog_responses
-    reopen_regions
     close_region
     compact
     compaction_switch
