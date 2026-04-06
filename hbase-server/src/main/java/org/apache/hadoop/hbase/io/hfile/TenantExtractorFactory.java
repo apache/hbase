@@ -58,8 +58,8 @@ public class TenantExtractorFactory {
       if (trailer.isMultiTenant()) {
         int prefixLength = trailer.getTenantPrefixLength();
         if (prefixLength <= 0) {
-          LOG.warn("HFile v4 trailer has multiTenant=true but invalid prefixLength={},"
-            + " falling back to SingleTenantExtractor", prefixLength);
+          LOG.debug("HFile v4 single-tenant mode (prefixLength={}), using SingleTenantExtractor",
+            prefixLength);
           return new MultiTenantHFileWriter.SingleTenantExtractor();
         }
         LOG.debug("Multi-tenant enabled from HFile v4 trailer, prefixLength={}", prefixLength);

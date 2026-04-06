@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.util.Objects;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -58,6 +59,7 @@ public class DefaultTenantExtractor implements TenantExtractor {
    * @return The tenant prefix as a byte array
    */
   private byte[] extractPrefix(Cell cell) {
+    Objects.requireNonNull(cell, "cell must not be null");
     int rowLength = cell.getRowLength();
     if (rowLength < prefixLength) {
       throw new IllegalArgumentException("Row key too short for configured prefix length. "

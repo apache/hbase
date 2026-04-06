@@ -530,10 +530,12 @@ public class FixedFileTrailer {
   }
 
   public long getSectionIndexOffset() {
+    expectAtLeastMajorVersion(4);
     return sectionIndexOffset;
   }
 
   public void setSectionIndexOffset(long sectionIndexOffset) {
+    expectAtLeastMajorVersion(4);
     this.sectionIndexOffset = sectionIndexOffset;
   }
 
@@ -777,18 +779,22 @@ public class FixedFileTrailer {
   }
 
   public boolean isMultiTenant() {
+    expectAtLeastMajorVersion(4);
     return isMultiTenant;
   }
 
   public void setMultiTenant(boolean multiTenant) {
+    expectAtLeastMajorVersion(4);
     isMultiTenant = multiTenant;
   }
 
   public int getTenantPrefixLength() {
+    expectAtLeastMajorVersion(4);
     return tenantPrefixLength;
   }
 
   public void setTenantPrefixLength(int tenantPrefixLength) {
+    expectAtLeastMajorVersion(4);
     this.tenantPrefixLength = tenantPrefixLength;
   }
 }

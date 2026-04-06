@@ -234,6 +234,9 @@ public class SectionIndexManager {
      * @param maxChunkSize The maximum number of entries per block
      */
     public void setMaxChunkSize(int maxChunkSize) {
+      if (maxChunkSize <= 0) {
+        throw new IllegalArgumentException("maxChunkSize must be positive, got: " + maxChunkSize);
+      }
       this.maxChunkSize = maxChunkSize;
     }
 
@@ -264,9 +267,9 @@ public class SectionIndexManager {
       byte[] prefix = tenantPrefix != null ? tenantPrefix : new byte[0];
       if (!entries.isEmpty()) {
         byte[] lastPrefix = entries.get(entries.size() - 1).getTenantPrefix();
-        if (Bytes.compareTo(lastPrefix, prefix) > 0) {
+        if (Bytes.compareTo(lastPrefix, prefix) >= 0) {
           throw new IOException(
-            "Section index entries must be in non-decreasing prefix order. " + "Previous: "
+            "Section index entries must be in strictly increasing prefix order. " + "Previous: "
               + Bytes.toStringBinary(lastPrefix) + ", current: " + Bytes.toStringBinary(prefix));
         }
       }
@@ -576,6 +579,9 @@ public class SectionIndexManager {
   public static class Reader {
     private static final Logger LOG = LoggerFactory.getLogger(Reader.class);
 
+    private static final int MAX_PREFIX_LENGTH = 64 * 1024;
+    private static final int MAX_SECTION_COUNT = 1_000_000;
+
     /** List of all section entries loaded from the index */
     private final List<SectionIndexEntry> sections = new ArrayList<>();
     /** Number of levels in the loaded index */
@@ -605,11 +611,19 @@ public class SectionIndexManager {
       try {
         // Read the number of sections
         int numSections = in.readInt();
+        if (numSections < 0 || numSections > MAX_SECTION_COUNT) {
+          throw new IOException(
+            "Invalid section count: " + numSections + " (max " + MAX_SECTION_COUNT + ")");
+        }
 
         // Read each section entry
         for (int i = 0; i < numSections; i++) {
           // Read tenant prefix
           int prefixLength = in.readInt();
+          if (prefixLength < 0 || prefixLength > MAX_PREFIX_LENGTH) {
+            throw new IOException("Invalid tenant prefix length: " + prefixLength + " at entry " + i
+              + " (max " + MAX_PREFIX_LENGTH + ")");
+          }
           byte[] prefix = new byte[prefixLength];
           in.readFully(prefix);
 
@@ -668,6 +682,10 @@ public class SectionIndexManager {
       for (int i = 0; i < fanout; i++) {
         // Root entry: first leaf entry (prefix, offset, size) + child pointer (offset, size)
         int prefixLength = in.readInt();
+        if (prefixLength < 0 || prefixLength > MAX_PREFIX_LENGTH) {
+          throw new IOException("Invalid tenant prefix length: " + prefixLength
+            + " at root entry " + i + " (max " + MAX_PREFIX_LENGTH + ")");
+        }
         byte[] prefix = new byte[prefixLength];
         in.readFully(prefix);
         in.readLong(); // first entry offset (ignored)
@@ -713,6 +731,10 @@ public class SectionIndexManager {
         }
         for (int i = 0; i < entryCount; i++) {
           int prefixLength = in.readInt();
+          if (prefixLength < 0 || prefixLength > MAX_PREFIX_LENGTH) {
+            throw new IOException("Invalid tenant prefix length: " + prefixLength
+              + " at intermediate entry " + i + " (max " + MAX_PREFIX_LENGTH + ")");
+          }
           byte[] prefix = new byte[prefixLength];
           in.readFully(prefix);
           long nextOffset = in.readLong();
@@ -747,6 +769,10 @@ public class SectionIndexManager {
       }
       for (int i = 0; i < num; i++) {
         int prefixLength = in.readInt();
+        if (prefixLength < 0 || prefixLength > MAX_PREFIX_LENGTH) {
+          throw new IOException("Invalid tenant prefix length: " + prefixLength + " at leaf entry "
+            + i + " (max " + MAX_PREFIX_LENGTH + ")");
+        }
         byte[] prefix = new byte[prefixLength];
         in.readFully(prefix);
         long offset = in.readLong();

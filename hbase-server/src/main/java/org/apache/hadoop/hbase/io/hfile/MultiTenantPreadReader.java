@@ -102,6 +102,11 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
         try {
           ReaderContext sectionContext =
             buildSectionContext(metadata, ReaderContext.ReaderType.PREAD);
+          if (sectionContext == null) {
+            throw new IOException(
+              "Section too small to read at offset " + metadata.getOffset() + ", size "
+                + metadata.getSize() + " for tenant " + Bytes.toStringBinary(tenantSectionId));
+          }
 
           Path containerPath = sectionContext.getFilePath();
           String tenantSectionIdStr = Bytes.toStringBinary(tenantSectionId);
@@ -119,6 +124,13 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
 
           return local;
         } catch (IOException e) {
+          if (local != null) {
+            try {
+              local.close();
+            } catch (Exception closeEx) {
+              e.addSuppressed(closeEx);
+            }
+          }
           LOG.error("Failed to initialize section reader for tenant section at offset {}: {}",
             metadata.getOffset(), e.getMessage());
           throw e;

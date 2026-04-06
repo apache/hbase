@@ -147,6 +147,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
    * standard prefetch-on-open path runs and we can report status via {@link #prefetchComplete()}.
    */
   private volatile Path prefetchOnOpenPath;
+  /** Guards lazy loading of the file-level FileInfo block (see {@link #getHFileInfo()}) */
+  private volatile boolean fileInfoBlockLoaded;
   /** Cache of section readers keyed by tenant section ID */
   private final Cache<ImmutableBytesWritable, SectionReaderHolder> sectionReaderCache;
   /** Cached Bloom filter state per section */
@@ -160,6 +162,9 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
   private final boolean dataBlockIndexCacheEnabled;
   /** Cached section hint for data block index lookup */
   private final AtomicReference<byte[]> dataBlockIndexSectionHint;
+  /** Thread-safe cache for the last resolved data block index reader (avoids parent field race) */
+  private final AtomicReference<HFileBlockIndex.CellBasedKeyBlockIndexReader>
+    cachedDataBlockIndexReader = new AtomicReference<>();
 
   /**
    * Constructor for multi-tenant reader.
@@ -693,8 +698,30 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
 
   @Override
   public byte[] getLastBloomKey() throws IOException {
-    SectionBloomState state = findSectionBloomState(true, false);
-    return state != null ? state.getLastBloomKey() : null;
+    if (sectionIds == null || sectionIds.isEmpty()) {
+      return null;
+    }
+    byte[] maxKey = null;
+    for (ImmutableBytesWritable sectionId : sectionIds) {
+      byte[] key = sectionId.copyBytes();
+      SectionReaderLease lease = getSectionReader(key);
+      if (lease == null) {
+        continue;
+      }
+      try (lease) {
+        SectionBloomState state = getOrLoadSectionBloomState(sectionId, lease);
+        if (state == null || !state.hasGeneralBloom()) {
+          continue;
+        }
+        byte[] sectionLastKey = state.getLastBloomKey();
+        if (sectionLastKey != null) {
+          if (maxKey == null || Bytes.compareTo(sectionLastKey, maxKey) > 0) {
+            maxKey = sectionLastKey;
+          }
+        }
+      }
+    }
+    return maxKey;
   }
 
   @Override
@@ -1002,7 +1029,13 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       if (deleteBloom == null) {
         return true;
       }
-      return deleteBloom.contains(row, rowOffset, rowLen, null);
+      try {
+        return deleteBloom.contains(row, rowOffset, rowLen, null);
+      } catch (IllegalArgumentException e) {
+        LOG.error("Bad delete family bloom filter data in section {} -- proceeding without",
+          Bytes.toStringBinary(sectionId), e);
+        return true;
+      }
     }
 
     int getPrefixLength() {
@@ -1064,6 +1097,10 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
           }
           return generalBloom.contains(key, keyOffset, keyLen, bloomData);
         }
+      } catch (IllegalArgumentException e) {
+        LOG.error("Bad bloom filter data in section {} -- proceeding without",
+          Bytes.toStringBinary(sectionId), e);
+        return true;
       } finally {
         if (bloomBlock != null) {
           bloomBlock.release();
@@ -1725,11 +1762,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
    */
   protected ReaderContext buildSectionContext(SectionMetadata metadata,
     ReaderContext.ReaderType readerType) throws IOException {
-    // Create a special wrapper with offset translation and boundary enforcement
-    FSDataInputStreamWrapper parentWrapper = context.getInputStreamWrapper();
     int sectionSize = metadata.getSize();
-    MultiTenantFSDataInputStreamWrapper sectionWrapper =
-      new MultiTenantFSDataInputStreamWrapper(parentWrapper, metadata.getOffset(), sectionSize);
     int trailerSize = FixedFileTrailer.getTrailerSize(3); // HFile v3 sections use v3 format
 
     if (sectionSize < trailerSize) {
@@ -1738,6 +1771,25 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       return null;
     }
 
+    // For STREAM readers, open a dedicated file handle per section so that concurrent
+    // seek+read sequences from different sections don't interleave on a shared stream.
+    // PREAD readers use positioned reads which are thread-safe on a shared handle.
+    FSDataInputStreamWrapper streamWrapper;
+    boolean ownsStream;
+    if (readerType == ReaderContext.ReaderType.STREAM) {
+      // Use the resolved data file path, not context.getFilePath() which may be a reference path
+      Path dataFilePath = context.getInputStreamWrapper().getReaderPath();
+      streamWrapper = new FSDataInputStreamWrapper(context.getFileSystem(), dataFilePath);
+      ownsStream = true;
+    } else {
+      streamWrapper = context.getInputStreamWrapper();
+      ownsStream = false;
+    }
+
+    MultiTenantFSDataInputStreamWrapper sectionWrapper =
+      new MultiTenantFSDataInputStreamWrapper(streamWrapper, metadata.getOffset(), sectionSize,
+        ownsStream);
+
     // Build the reader context with proper file size calculation
     // Use section size; wrapper handles offset translation
     ReaderContext sectionContext =
@@ -1745,8 +1797,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
         .withFilePath(context.getFilePath()).withReaderType(readerType)
         .withFileSystem(context.getFileSystem()).withFileSize(sectionSize).build();
 
-    LOG.debug("Created section reader context for offset {}, size {}", metadata.getOffset(),
-      sectionSize);
+    LOG.debug("Created section reader context for offset {}, size {}, readerType={}",
+      metadata.getOffset(), sectionSize, readerType);
     return sectionContext;
   }
 
@@ -1935,7 +1987,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       HFileReaderImpl reader = lease.getReader();
       HFileBlockIndex.CellBasedKeyBlockIndexReader delegate = reader.getDataBlockIndexReader();
       if (delegate != null) {
-        setDataBlockIndexReader(delegate);
+        cachedDataBlockIndexReader.set(delegate);
         return delegate;
       }
     } catch (IOException e) {
@@ -2352,7 +2404,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
    */
   @Override
   public HFileBlockIndex.CellBasedKeyBlockIndexReader getDataBlockIndexReader() {
-    HFileBlockIndex.CellBasedKeyBlockIndexReader existing = super.getDataBlockIndexReader();
+    HFileBlockIndex.CellBasedKeyBlockIndexReader existing = cachedDataBlockIndexReader.get();
     if (existing != null) {
       return existing;
     }
@@ -2526,16 +2578,18 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
    */
   @Override
   public HFileInfo getHFileInfo() {
-    // For v4 files, ensure FileInfo block is loaded on-demand
-    if (fileInfo.isEmpty()) {
-      try {
-        loadFileInfoBlock();
-      } catch (IOException e) {
-        LOG.error("Failed to load FileInfo block for multi-tenant HFile", e);
-        // Continue with empty fileInfo rather than throwing exception
+    if (!fileInfoBlockLoaded) {
+      synchronized (this) {
+        if (!fileInfoBlockLoaded) {
+          try {
+            loadFileInfoBlock();
+          } catch (IOException e) {
+            LOG.error("Failed to load FileInfo block for multi-tenant HFile", e);
+          }
+          fileInfoBlockLoaded = true;
+        }
       }
     }
-
     return fileInfo;
   }
 

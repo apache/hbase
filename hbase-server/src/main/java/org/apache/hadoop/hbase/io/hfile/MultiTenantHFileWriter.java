@@ -851,7 +851,7 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     trailer.setUncompressedDataIndexSize(sectionIndexWriter.getTotalUncompressedSize());
     trailer.setDataIndexCount(sectionIndexWriter.getNumRootEntries());
 
-    // Set multi-tenant configuration in the trailer - MOST IMPORTANT PART
+    // Set multi-tenant configuration in the trailer
     trailer.setMultiTenant(true);
     trailer.setTenantPrefixLength(tenantExtractor.getPrefixLength());
 

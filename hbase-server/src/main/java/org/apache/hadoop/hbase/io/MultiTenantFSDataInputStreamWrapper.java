@@ -51,15 +51,31 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
   private final long sectionSize;
   /** The original input stream wrapper to delegate to */
   private final FSDataInputStreamWrapper parent;
+  /** Whether this wrapper owns the parent and must close it */
+  private final boolean ownsParent;
 
   /**
-   * Constructor that creates a wrapper with offset translation and boundary enforcement.
+   * Constructor that creates a wrapper with offset translation and boundary enforcement. The parent
+   * stream is shared (not owned) — it will NOT be closed when this wrapper is closed.
    * @param parent      the original input stream wrapper to delegate to
    * @param offset      the offset where the section starts in the parent file
    * @param sectionSize the size of the section in bytes
    */
   public MultiTenantFSDataInputStreamWrapper(FSDataInputStreamWrapper parent, long offset,
     long sectionSize) {
+    this(parent, offset, sectionSize, false);
+  }
+
+  /**
+   * Constructor that creates a wrapper with offset translation and boundary enforcement.
+   * @param parent      the original input stream wrapper to delegate to
+   * @param offset      the offset where the section starts in the parent file
+   * @param sectionSize the size of the section in bytes
+   * @param ownsParent  if true, closing this wrapper also closes the parent stream. Use true when
+   *                    the parent was opened exclusively for this section (e.g., stream readers).
+   */
+  public MultiTenantFSDataInputStreamWrapper(FSDataInputStreamWrapper parent, long offset,
+    long sectionSize, boolean ownsParent) {
     // Use test constructor to properly initialize both streams and avoid assertion issues
     super(parent.getStream(false), parent.getStream(true));
     if (offset < 0) {
@@ -71,9 +87,10 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
     this.parent = parent;
     this.sectionOffset = offset;
     this.sectionSize = sectionSize;
+    this.ownsParent = ownsParent;
 
-    LOG.debug("Created section wrapper at offset {}, size {} (translation: {})", offset,
-      sectionSize, offset == 0 ? "none" : "enabled");
+    LOG.debug("Created section wrapper at offset {}, size {} (ownsParent={}, translation: {})",
+      offset, sectionSize, ownsParent, offset == 0 ? "none" : "enabled");
   }
 
   /**
@@ -163,7 +180,9 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
 
   @Override
   public void close() {
-    // Keep parent.close() behavior (do not close parent stream here)
+    if (ownsParent) {
+      parent.close();
+    }
   }
 
   /**

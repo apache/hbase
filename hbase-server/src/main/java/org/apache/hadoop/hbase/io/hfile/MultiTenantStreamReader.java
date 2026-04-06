@@ -97,6 +97,11 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
 
         ReaderContext sectionContext =
           buildSectionContext(metadata, ReaderContext.ReaderType.STREAM);
+        if (sectionContext == null) {
+          throw new IOException(
+            "Section too small to read at offset " + metadata.getOffset() + ", size "
+              + metadata.getSize() + " for tenant " + Bytes.toStringBinary(tenantSectionId));
+        }
 
         try {
           HFileInfo sectionFileInfo = new HFileInfo(sectionContext, getConf());
@@ -111,6 +116,13 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
           LOG.debug("Initialized HFileStreamReader for tenant section ID: {}",
             Bytes.toStringBinary(tenantSectionId));
         } catch (IOException e) {
+          if (local != null) {
+            try {
+              local.close();
+            } catch (Exception closeEx) {
+              e.addSuppressed(closeEx);
+            }
+          }
           LOG.error("Failed to initialize section reader", e);
           throw e;
         }
@@ -130,8 +142,15 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
       HFileReaderImpl local = reader;
       if (local != null) {
         reader = null;
+        // HFileStreamReader.close() does not close fileInfo (by design — V3 readers don't
+        // own it). But section readers create their own HFileInfo, so we must close it
+        // explicitly to free load-on-open block buffers.
+        HFileInfo sectionInfo = local.getHFileInfo();
         local.close(evictOnClose);
-        local.getContext().getInputStreamWrapper().unbuffer();
+        if (sectionInfo != null) {
+          sectionInfo.close();
+        }
+        local.getContext().getInputStreamWrapper().close();
       }
     }
   }

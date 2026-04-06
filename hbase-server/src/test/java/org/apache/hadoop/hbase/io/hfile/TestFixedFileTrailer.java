@@ -70,7 +70,7 @@ public class TestFixedFileTrailer {
    * The number of used fields by version. Indexed by version minus two. Min version that we support
    * is V2
    */
-  private static final int[] NUM_FIELDS_BY_VERSION = new int[] { 14, 15 };
+  private static final int[] NUM_FIELDS_BY_VERSION = new int[] { 14, 15, 16 };
 
   private HBaseTestingUtil util = new HBaseTestingUtil();
   private FileSystem fs;
