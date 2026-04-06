@@ -1135,6 +1135,18 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     if (this.lastCell != null) {
       this.lastCell = KeyValueUtil.toNewKeyCell((ExtendedCell) this.lastCell);
     }
+
+    // Copy bloom filter writers' prevCell references to on-heap before the scanner
+    // recycles the backing ByteBuff. In v3 this is handled by
+    // StoreFileWriter$SingleStoreFileWriter.beforeShipped(), but for v4 the bloom
+    // lifecycle is owned by MultiTenantHFileWriter so the external bloom writer is
+    // null and the copy is skipped unless we do it here.
+    if (currentBloomFilterWriter != null) {
+      currentBloomFilterWriter.beforeShipped();
+    }
+    if (currentDeleteFamilyBloomFilterWriter != null) {
+      currentDeleteFamilyBloomFilterWriter.beforeShipped();
+    }
   }
 
   @Override
