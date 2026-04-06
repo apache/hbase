@@ -152,7 +152,7 @@ public class TestRowCacheWithMock {
     assertNull(rowCache.getRow(key));
 
     // Remove the table level barrier
-    rowCache.removeTableLevelBarrier(region);
+    rowCache.removeRegionLevelBarrier(region);
     assertNull(rowCache.getRegionLevelBarrier(region));
   }
 
@@ -332,7 +332,7 @@ public class TestRowCacheWithMock {
     // Verify the sequence of method calls
     inOrder.verify(rowCache, Mockito.times(1)).createRegionLevelBarrier(Mockito.any());
     inOrder.verify(rowCache, Mockito.times(1)).increaseRowCacheSeqNum(Mockito.any());
-    inOrder.verify(rowCache, Mockito.times(1)).removeTableLevelBarrier(Mockito.any());
+    inOrder.verify(rowCache, Mockito.times(1)).removeRegionLevelBarrier(Mockito.any());
   }
 
   @Test
