@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.security.Key;
 import java.util.ArrayList;
@@ -27,7 +27,6 @@ import java.util.List;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -50,18 +49,14 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestHBaseFsckEncryption {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseFsckEncryption.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -69,7 +64,7 @@ public class TestHBaseFsckEncryption {
   private HTableDescriptor htd;
   private Key cfKey;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     conf.setInt("hfile.format.version", 3);
@@ -97,7 +92,7 @@ public class TestHBaseFsckEncryption {
     TEST_UTIL.waitTableAvailable(htd.getTableName(), 5000);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -125,8 +120,8 @@ public class TestHBaseFsckEncryption {
     final List<Path> paths = findStorefilePaths(htd.getTableName());
     assertTrue(paths.size() > 0);
     for (Path path : paths) {
-      assertTrue("Store file " + path + " has incorrect key",
-        Bytes.equals(cfKey.getEncoded(), extractHFileKey(path)));
+      assertTrue(Bytes.equals(cfKey.getEncoded(), extractHFileKey(path)),
+        "Store file " + path + " has incorrect key");
     }
 
     // Insure HBck doesn't consider them corrupt
@@ -157,9 +152,9 @@ public class TestHBaseFsckEncryption {
       HFile.createReader(TEST_UTIL.getTestFileSystem(), path, new CacheConfig(conf), true, conf);
     try {
       Encryption.Context cryptoContext = reader.getFileContext().getEncryptionContext();
-      assertNotNull("Reader has a null crypto context", cryptoContext);
+      assertNotNull(cryptoContext, "Reader has a null crypto context");
       Key key = cryptoContext.getKey();
-      assertNotNull("Crypto context has no key", key);
+      assertNotNull(key, "Crypto context has no key");
       return key.getEncoded();
     } finally {
       reader.close();

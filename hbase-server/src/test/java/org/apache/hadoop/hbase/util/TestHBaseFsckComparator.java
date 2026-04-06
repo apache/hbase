@@ -17,28 +17,23 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.HbckRegionInfo.MetaEntry;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the comparator used by Hbck.
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHBaseFsckComparator {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseFsckComparator.class);
 
   TableName table = TableName.valueOf("table1");
   TableName table2 = TableName.valueOf("table2");
