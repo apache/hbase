@@ -17,44 +17,39 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import java.util.Arrays;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.provider.Arguments;
 
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: provider={0}")
 public class TestCompressedWAL extends CompressedWALTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompressedWAL.class);
-
-  @Parameter
   public String walProvider;
 
-  @Parameters(name = "{index}: provider={0}")
-  public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[] { "defaultProvider" }, new Object[] { "asyncfs" });
+  public TestCompressedWAL(String walProvider) {
+    this.walProvider = walProvider;
   }
 
-  @Before
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of("defaultProvider"), Arguments.of("asyncfs"));
+  }
+
+  @BeforeEach
   public void setUp() throws Exception {
     TEST_UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, walProvider);
     TEST_UTIL.getConfiguration().setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
     TEST_UTIL.startMiniDFSCluster(3);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -65,7 +65,6 @@ import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
-import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -546,9 +545,6 @@ public class BaseTestHBaseFsck {
       HBaseFsck.debugLsr(conf, p);
     }
   }
-
-  @org.junit.Rule
-  public TestName name = new TestName();
 
   public static class MasterSyncCoprocessor implements MasterCoprocessor, MasterObserver {
     volatile CountDownLatch tableCreationLatch = null;
