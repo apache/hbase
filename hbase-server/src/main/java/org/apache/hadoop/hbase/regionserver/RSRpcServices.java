@@ -2360,7 +2360,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       return bulkLoadHFileInternal(request);
     } finally {
       // The row cache for the region has been enabled again
-      rowCache.removeTableLevelBarrier(region);
+      rowCache.removeRegionLevelBarrier(region);
     }
   }
 

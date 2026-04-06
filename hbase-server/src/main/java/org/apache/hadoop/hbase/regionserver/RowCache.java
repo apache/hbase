@@ -256,7 +256,7 @@ public class RowCache {
     region.increaseRowCacheSeqNum();
   }
 
-  void removeTableLevelBarrier(HRegion region) {
+  void removeRegionLevelBarrier(HRegion region) {
     regionLevelBarrierMap.computeIfPresent(region, (k, counter) -> {
       int remaining = counter.decrementAndGet();
       return (remaining <= 0) ? null : counter;
