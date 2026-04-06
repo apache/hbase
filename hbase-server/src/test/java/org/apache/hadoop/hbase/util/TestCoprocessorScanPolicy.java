@@ -17,21 +17,21 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
@@ -58,43 +58,36 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
-@Category({ MiscTests.class, MediumTests.class })
-@RunWith(Parameterized.class)
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestCoprocessorScanPolicy {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCoprocessorScanPolicy.class);
 
   protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] F = Bytes.toBytes("fam");
   private static final byte[] Q = Bytes.toBytes("qual");
   private static final byte[] R = Bytes.toBytes("row");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, ScanObserver.class.getName());
     TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Parameters
-  public static Collection<Object[]> parameters() {
-    return HBaseCommonTestingUtil.BOOLEAN_PARAMETERIZED;
+  public static Stream<Arguments> parameters() {
+    return HBaseCommonTestingUtil.BOOLEAN_PARAMETERIZED.stream().map(arr -> Arguments.of(arr));
   }
 
   public TestCoprocessorScanPolicy(boolean parallelSeekEnable) {
@@ -102,7 +95,7 @@ public class TestCoprocessorScanPolicy {
       .setBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, parallelSeekEnable);
   }
 
-  @Test
+  @TestTemplate
   public void testBaseCases() throws Exception {
     TableName tableName = TableName.valueOf("baseCases");
     if (TEST_UTIL.getAdmin().tableExists(tableName)) {
@@ -161,7 +154,7 @@ public class TestCoprocessorScanPolicy {
     t.close();
   }
 
-  @Test
+  @TestTemplate
   public void testTTL() throws Exception {
     TableName tableName = TableName.valueOf("testTTL");
     if (TEST_UTIL.getAdmin().tableExists(tableName)) {

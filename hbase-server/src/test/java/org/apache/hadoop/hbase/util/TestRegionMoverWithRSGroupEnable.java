@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -39,12 +38,11 @@ import org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.RegionMover.RegionMoverBuilder;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,31 +50,28 @@ import org.slf4j.LoggerFactory;
  * Test for rsgroup enable, unloaded regions from decommissoned host of a rsgroup should be assigned
  * to those regionservers belonging to the same rsgroup.
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionMoverWithRSGroupEnable {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionMoverWithRSGroupEnable.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionMoverWithRSGroupEnable.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final String TEST_RSGROUP = "test";
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     RSGroupUtil.enableRSGroup(TEST_UTIL.getConfiguration());
     TEST_UTIL.startMiniCluster(5);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   private final List<Address> rsservers = new ArrayList<>(2);
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
 

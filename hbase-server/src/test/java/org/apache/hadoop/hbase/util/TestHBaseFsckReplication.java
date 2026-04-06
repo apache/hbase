@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -37,37 +36,31 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.HbckErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ ReplicationTests.class, MediumTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestHBaseFsckReplication {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseFsckReplication.class);
-
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
-  @Rule
-  public final TestName name = new TestName();
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
     UTIL.getConfiguration().setBoolean("hbase.write.hbck1.lock.file", false);
     UTIL.startMiniCluster(1);
-    TableName tableName = TableName.valueOf("replication_" + name.getMethodName());
+    TableName tableName =
+      TableName.valueOf("replication_" + testInfo.getTestMethod().get().getName());
     UTIL.getAdmin()
       .createTable(ReplicationStorageFactory.createReplicationQueueTableDescriptor(tableName));
     UTIL.getConfiguration().set(ReplicationStorageFactory.REPLICATION_QUEUE_TABLE_NAME,
       tableName.getNameAsString());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
