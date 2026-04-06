@@ -22,12 +22,13 @@ import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_SIZE_KEY;
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.ROW_CACHE_EVICTED_ROW_COUNT;
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.ROW_CACHE_HIT_COUNT;
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.ROW_CACHE_MISS_COUNT;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,7 +38,6 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
@@ -61,22 +61,17 @@ import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRowCache {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRowCache.class);
-
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] CF1 = Bytes.toBytes("cf1");
   private static final byte[] CF2 = Bytes.toBytes("cf2");
@@ -95,10 +90,7 @@ public class TestRowCache {
   HRegion region;
   private final Map<String, Long> counterBase = new HashMap<>();
 
-  @Rule
-  public TestName testName = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
 
@@ -118,20 +110,20 @@ public class TestRowCache {
     rowCache = regionServer.getRSRpcServices().getServer().getRowCache();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     HRegionServer.TEST_SKIP_REPORTING_TRANSITION = false;
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void beforeTestMethod() throws Exception {
+  @BeforeEach
+  public void beforeTestMethod(TestInfo testInfo) throws Exception {
     ColumnFamilyDescriptor cf1 = ColumnFamilyDescriptorBuilder.newBuilder(CF1).build();
     // To test data block encoding
     ColumnFamilyDescriptor cf2 = ColumnFamilyDescriptorBuilder.newBuilder(CF2)
       .setDataBlockEncoding(DataBlockEncoding.FAST_DIFF).build();
 
-    tableName = TableName.valueOf(testName.getMethodName());
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName).setRowCacheEnabled(true)
       .setColumnFamily(cf1).setColumnFamily(cf2).build();
     admin.createTable(td);
@@ -140,7 +132,7 @@ public class TestRowCache {
       .filter(r -> r.getRegionInfo().getTable().equals(tableName)).findFirst().orElseThrow();
   }
 
-  @After
+  @AfterEach
   public void afterTestMethod() throws Exception {
     counterBase.clear();
 
@@ -282,14 +274,16 @@ public class TestRowCache {
     assertNull(rowCache.getRow(rowCacheKey));
   }
 
-  @Test(expected = DoNotRetryIOException.class)
+  @Test
   public void testPutWithTTL() throws IOException {
     // Put with TTL is not allowed on tables with row cache enabled, because cached rows cannot
     // track TTL expiration
-    Put put = new Put("row".getBytes());
-    put.addColumn(CF1, Q1, "11".getBytes());
-    put.setTTL(1);
-    table.put(put);
+    assertThrows(DoNotRetryIOException.class, () -> {
+      Put put = new Put("row".getBytes());
+      put.addColumn(CF1, Q1, "11".getBytes());
+      put.setTTL(1);
+      table.put(put);
+    });
   }
 
   @Test
