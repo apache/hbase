@@ -957,7 +957,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       : conf.getBoolean(HConstants.ROW_CACHE_ENABLED_KEY, HConstants.ROW_CACHE_ENABLED_DEFAULT);
   }
 
-  // For testing only
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
   void setRowCache(RowCache rowCache) {
     this.rowCache = rowCache;
   }
