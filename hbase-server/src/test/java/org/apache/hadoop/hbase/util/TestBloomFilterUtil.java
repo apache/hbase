@@ -48,9 +48,11 @@ public class TestBloomFilterUtil {
     assertInstanceOf(Hash64.class, xxh3);
 
     long hash64 = ((Hash64) xxh3).hash64(hashKey);
-    Pair<Integer, Integer> hashPair = BloomFilterUtil.getHashPair(xxh3, hashKey);
-    assertEquals((int) hash64, hashPair.getFirst());
-    assertEquals((int) (hash64 >>> 32), hashPair.getSecond());
+    long hashPair = BloomFilterUtil.getHashPair(xxh3, hashKey);
+    int hash1 = BloomFilterUtil.unpackHash1(hashPair);
+    int hash2 = BloomFilterUtil.unpackHash2(hashPair);
+    assertEquals((int) hash64, hash1);
+    assertEquals((int) (hash64 >>> 32), hash2);
   }
 
   @Test
@@ -61,8 +63,10 @@ public class TestBloomFilterUtil {
     int expectedHash1 = murmurHash.hash(hashKey, 0);
     int expectedHash2 = murmurHash.hash(hashKey, expectedHash1);
 
-    Pair<Integer, Integer> hashPair = BloomFilterUtil.getHashPair(murmurHash, hashKey);
-    assertEquals(expectedHash1, hashPair.getFirst());
-    assertEquals(expectedHash2, hashPair.getSecond());
+    long hashPair = BloomFilterUtil.getHashPair(murmurHash, hashKey);
+    int hash1 = BloomFilterUtil.unpackHash1(hashPair);
+    int hash2 = BloomFilterUtil.unpackHash2(hashPair);
+    assertEquals(expectedHash1, hash1);
+    assertEquals(expectedHash2, hash2);
   }
 }

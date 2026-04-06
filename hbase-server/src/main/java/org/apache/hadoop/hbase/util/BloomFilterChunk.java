@@ -179,9 +179,9 @@ public class BloomFilterChunk implements BloomFilterBase {
   }
 
   private void setHashLoc(HashKey<?> hashKey) {
-    Pair<Integer, Integer> hashPair = BloomFilterUtil.getHashPair(this.hash, hashKey);
-    final int hash1 = hashPair.getFirst();
-    final int hash2 = hashPair.getSecond();
+    long hashPair = BloomFilterUtil.getHashPair(this.hash, hashKey);
+    final int hash1 = BloomFilterUtil.unpackHash1(hashPair);
+    final int hash2 = BloomFilterUtil.unpackHash2(hashPair);
     for (int i = 0; i < this.hashCount; i++) {
       long hashLoc = Math.abs((hash1 + i * hash2) % (this.byteSize * 8));
       set(hashLoc);
