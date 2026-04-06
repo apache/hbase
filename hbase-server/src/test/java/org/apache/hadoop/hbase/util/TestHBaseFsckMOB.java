@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.SynchronousQueue;
@@ -25,7 +25,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -36,26 +35,23 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 // revisit later
-@Ignore
-@Category({ MiscTests.class, MediumTests.class })
+@Disabled
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseFsckMOB.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       MasterSyncCoprocessor.class.getName());
@@ -87,7 +83,7 @@ public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
     TEST_UTIL.waitUntilAllRegionsAssigned(TableName.META_TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     tableExecutorService.shutdown();
     hbfsckExecutorService.shutdown();
@@ -95,7 +91,7 @@ public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     EnvironmentEdgeManager.reset();
   }
@@ -105,8 +101,8 @@ public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
    */
   @SuppressWarnings("deprecation")
   @Test
-  public void testQuarantineCorruptMobFile() throws Exception {
-    TableName table = TableName.valueOf(name.getMethodName());
+  public void testQuarantineCorruptMobFile(TestInfo testInfo) throws Exception {
+    TableName table = TableName.valueOf(testInfo.getTestMethod().get().getName());
     try {
       setupMobTable(table);
       assertEquals(ROWKEYS.length, countRows());

@@ -17,34 +17,29 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test {@link FSUtils}.
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestFSVisitor {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFSVisitor.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFSVisitor.class);
 
@@ -60,7 +55,7 @@ public class TestFSVisitor {
   private Path tableDir;
   private Path rootDir;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fs = FileSystem.get(TEST_UTIL.getConfiguration());
     rootDir = TEST_UTIL.getDataTestDir("hbase");
@@ -72,7 +67,7 @@ public class TestFSVisitor {
     CommonFSUtils.logFileSystemState(fs, rootDir, LOG);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     fs.delete(rootDir, true);
   }

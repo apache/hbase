@@ -17,18 +17,17 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
@@ -41,13 +40,11 @@ import org.apache.hadoop.hbase.util.RegionSplitter.DecimalStringSplit;
 import org.apache.hadoop.hbase.util.RegionSplitter.HexStringSplit;
 import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
 import org.apache.hadoop.hbase.util.RegionSplitter.UniformSplit;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,27 +52,21 @@ import org.slf4j.LoggerFactory;
  * Tests for {@link RegionSplitter}, which can create a pre-split table or do a rolling split of an
  * existing table.
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionSplitter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionSplitter.class);
 
   private final static Logger LOG = LoggerFactory.getLogger(TestRegionSplitter.class);
   private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private final static String CF_NAME = "SPLIT_TEST_CF";
   private final static byte xFF = (byte) 0xff;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     UTIL.startMiniCluster(2);
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -84,7 +75,7 @@ public class TestRegionSplitter {
    * Test creating a pre-split table using the HexStringSplit algorithm.
    */
   @Test
-  public void testCreatePresplitTableHex() throws Exception {
+  public void testCreatePresplitTableHex(TestInfo testInfo) throws Exception {
     final List<byte[]> expectedBounds = new ArrayList<>(17);
     expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
     expectedBounds.add(Bytes.toBytes("10000000"));
@@ -106,7 +97,7 @@ public class TestRegionSplitter {
 
     // Do table creation/pre-splitting and verification of region boundaries
     preSplitTableAndVerify(expectedBounds, HexStringSplit.class.getSimpleName(),
-      TableName.valueOf(name.getMethodName()));
+      TableName.valueOf(testInfo.getTestMethod().get().getName()));
   }
 
   /**
@@ -142,7 +133,7 @@ public class TestRegionSplitter {
    * Test creating a pre-split table using the UniformSplit algorithm.
    */
   @Test
-  public void testCreatePresplitTableUniform() throws Exception {
+  public void testCreatePresplitTableUniform(TestInfo testInfo) throws Exception {
     List<byte[]> expectedBounds = new ArrayList<>(17);
     expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
     expectedBounds.add(new byte[] { 0x10, 0, 0, 0, 0, 0, 0, 0 });
@@ -164,7 +155,7 @@ public class TestRegionSplitter {
 
     // Do table creation/pre-splitting and verification of region boundaries
     preSplitTableAndVerify(expectedBounds, UniformSplit.class.getSimpleName(),
-      TableName.valueOf(name.getMethodName()));
+      TableName.valueOf(testInfo.getTestMethod().get().getName()));
   }
 
   /**
