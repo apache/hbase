@@ -17,21 +17,21 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.stream.Stream;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -48,41 +48,34 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestSecureWAL {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSecureWAL.class);
 
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  @Rule
-  public TestName name = new TestName();
+  private String testMethodName;
 
-  @Parameter
   public String walProvider;
 
-  @Parameters(name = "{index}: provider={0}")
-  public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[] { "defaultProvider" }, new Object[] { "asyncfs" });
+  public TestSecureWAL(String walProvider) {
+    this.walProvider = walProvider;
   }
 
-  @BeforeClass
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of("defaultProvider"), Arguments.of("asyncfs"));
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
@@ -98,19 +91,20 @@ public class TestSecureWAL {
     TEST_UTIL.startMiniDFSCluster(3);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName() + "_" + walProvider;
     TEST_UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, walProvider);
   }
 
-  @Test
+  @TestTemplate
   public void testSecureWAL() throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName().replaceAll("[^a-zA-Z0-9]", "_"));
+    TableName tableName = TableName.valueOf(testMethodName.replaceAll("[^a-zA-Z0-9]", "_"));
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     scopes.put(tableName.getName(), 0);
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
@@ -143,7 +137,7 @@ public class TestSecureWAL {
     byte[] fileData = new byte[(int) length];
     IOUtils.readFully(in, fileData);
     in.close();
-    assertFalse("Cells appear to be plaintext", Bytes.contains(fileData, value));
+    assertFalse(Bytes.contains(fileData, value), "Cells appear to be plaintext");
 
     // Confirm the WAL can be read back
     WAL.Reader reader = wals.createReader(TEST_UTIL.getTestFileSystem(), walPath);
@@ -152,17 +146,17 @@ public class TestSecureWAL {
     while (reader.next(entry) != null) {
       count++;
       List<Cell> cells = entry.getEdit().getCells();
-      assertTrue("Should be one KV per WALEdit", cells.size() == 1);
+      assertTrue(cells.size() == 1, "Should be one KV per WALEdit");
       for (Cell cell : cells) {
-        assertTrue("Incorrect row", Bytes.equals(cell.getRowArray(), cell.getRowOffset(),
-          cell.getRowLength(), row, 0, row.length));
-        assertTrue("Incorrect family", Bytes.equals(cell.getFamilyArray(), cell.getFamilyOffset(),
-          cell.getFamilyLength(), family, 0, family.length));
-        assertTrue("Incorrect value", Bytes.equals(cell.getValueArray(), cell.getValueOffset(),
-          cell.getValueLength(), value, 0, value.length));
+        assertTrue(Bytes.equals(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), row,
+          0, row.length), "Incorrect row");
+        assertTrue(Bytes.equals(cell.getFamilyArray(), cell.getFamilyOffset(),
+          cell.getFamilyLength(), family, 0, family.length), "Incorrect family");
+        assertTrue(Bytes.equals(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(),
+          value, 0, value.length), "Incorrect value");
       }
     }
-    assertEquals("Should have read back as many KVs as written", total, count);
+    assertEquals(total, count, "Should have read back as many KVs as written");
     reader.close();
   }
 }

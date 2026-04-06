@@ -18,11 +18,11 @@
 package org.apache.hadoop.hbase.util;
 
 import static org.apache.hadoop.hbase.master.HMaster.HBASE_MASTER_RSPROC_DISPATCHER_CLASS;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
@@ -41,15 +41,12 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,22 +55,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 /**
  * Testing custom RSProcedureDispatcher to ensure retry limit can be imposed on certain errors.
  */
-@Category({ MiscTests.class, LargeTests.class })
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestProcDispatcher {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProcDispatcher.class);
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcDispatcher.class);
-
-  @Rule
-  public TestName name = new TestName();
-
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static ServerName rs0;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().set(HBASE_MASTER_RSPROC_DISPATCHER_CLASS,
       RSProcDispatcher.class.getName());
@@ -84,14 +75,14 @@ public class TestProcDispatcher {
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
     int startKey = 0;
@@ -100,9 +91,9 @@ public class TestProcDispatcher {
   }
 
   @Test
-  public void testRetryLimitOnConnClosedErrors() throws Exception {
+  public void testRetryLimitOnConnClosedErrors(TestInfo testInfo) throws Exception {
     HbckChore hbckChore = new HbckChore(TEST_UTIL.getHBaseCluster().getMaster());
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
     Table table = TEST_UTIL.getConnection().getTable(tableName);
@@ -122,9 +113,9 @@ public class TestProcDispatcher {
 
     hbckChore.choreForTesting();
     HbckReport hbckReport = hbckChore.getLastReport();
-    Assert.assertEquals(0, hbckReport.getInconsistentRegions().size());
-    Assert.assertEquals(0, hbckReport.getOrphanRegionsOnFS().size());
-    Assert.assertEquals(0, hbckReport.getOrphanRegionsOnRS().size());
+    assertEquals(0, hbckReport.getInconsistentRegions().size());
+    assertEquals(0, hbckReport.getOrphanRegionsOnFS().size());
+    assertEquals(0, hbckReport.getOrphanRegionsOnRS().size());
 
     HRegion region0 = !hRegionServer0.getRegions().isEmpty()
       ? hRegionServer0.getRegions().get(0)
