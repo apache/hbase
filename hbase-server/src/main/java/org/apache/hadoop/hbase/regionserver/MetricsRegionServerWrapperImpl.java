@@ -68,8 +68,8 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   private BlockCache l1Cache = null;
   private BlockCache l2Cache = null;
   private MobFileCache mobFileCache;
+  private RowCache rowCache;
   private CacheStats cacheStats;
-  private final RowCache rowCache;
   private CacheStats l1Stats = null;
   private CacheStats l2Stats = null;
   private volatile long numWALFiles = 0;
@@ -100,8 +100,7 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
     this.regionServer = regionServer;
     initBlockCache();
     initMobFileCache();
-    RSRpcServices rsRpcServices = this.regionServer.getRSRpcServices();
-    this.rowCache = rsRpcServices == null ? null : rsRpcServices.getServer().getRowCache();
+    initRowCache();
     this.excludeDatanodeManager = this.regionServer.getWalFactory().getExcludeDatanodeManager();
 
     this.period = regionServer.getConfiguration().getLong(HConstants.REGIONSERVER_METRICS_PERIOD,
@@ -150,6 +149,11 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
    */
   private void initMobFileCache() {
     this.mobFileCache = this.regionServer.getMobFileCache().orElse(null);
+  }
+
+  private void initRowCache() {
+    RSRpcServices rsRpcServices = this.regionServer.getRSRpcServices();
+    this.rowCache = rsRpcServices == null ? null : rsRpcServices.getServer().getRowCache();
   }
 
   @Override
