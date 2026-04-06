@@ -179,8 +179,8 @@ public final class BloomFilterUtil {
 
   private static <T> boolean contains(ByteBuff bloomBuf, int bloomOffset, int bloomSize, Hash hash,
     int hashCount, HashKey<T> hashKey) {
-    Pair<Integer, Integer> hashPair = getHashPair(hash, hashKey);
-    int hash1 = hashPair.getFirst();
+    long hashPair = getHashPair(hash, hashKey);
+    int hash1 = unpackHash1(hashPair);
     int bloomBitSize = bloomSize << 3;
 
     int hash2 = 0;
@@ -189,7 +189,7 @@ public final class BloomFilterUtil {
     if (randomGeneratorForTest == null) {
       // Production mode
       compositeHash = hash1;
-      hash2 = hashPair.getSecond();
+      hash2 = unpackHash2(hashPair);
     }
 
     for (int i = 0; i < hashCount; i++) {
@@ -281,8 +281,11 @@ public final class BloomFilterUtil {
   }
 
   /**
-   * Generate the two hash values needed for Bloom filter index generation. Bloom filters require a
-   * (hash1, hash2) pair to derive multiple probe locations.
+   * Generate the two hash values needed for Bloom filter index generation, packed into a single
+   * {@code long} to avoid object allocation. The lower 32 bits hold hash1 and the upper 32 bits
+   * hold hash2.
+   * <p>
+   * Use {@link #unpackHash1(long)} and {@link #unpackHash2(long)} to extract each value.
    * <ul>
    * <li>If the hash implementation provides a 64-bit hash, we split the 64-bit value into two
    * 32-bit hashes to avoid extra hashing cost.</li>
@@ -290,20 +293,24 @@ public final class BloomFilterUtil {
    * </ul>
    * @param hash the hash function
    * @param key  the hash key
-   * @return a pair of hash values (hash1, hash2)
+   * @return hash1 in bits [31..0], hash2 in bits [63..32]
    */
-  public static Pair<Integer, Integer> getHashPair(Hash hash, HashKey<?> key) {
+  public static long getHashPair(Hash hash, HashKey<?> key) {
     if (hash instanceof Hash64) {
-      long hash64 = ((Hash64) hash).hash64(key);
-      // Use lower 32 bits as first hash, upper 32 bits as second hash.
-      int hash1 = (int) hash64;
-      int hash2 = (int) (hash64 >>> 32);
-      return Pair.newPair(hash1, hash2);
+      return ((Hash64) hash).hash64(key);
     } else {
       // Use double hashing
       int hash1 = hash.hash(key, 0);
       int hash2 = hash.hash(key, hash1);
-      return Pair.newPair(hash1, hash2);
+      return (hash1 & 0xFFFFFFFFL) | ((long) hash2 << 32);
     }
+  }
+
+  public static int unpackHash1(long hashPair) {
+    return (int) hashPair;
+  }
+
+  public static int unpackHash2(long hashPair) {
+    return (int) (hashPair >>> 32);
   }
 }
