@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -104,8 +105,14 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
         }
 
         try {
-          HFileInfo sectionFileInfo = new HFileInfo(sectionContext, getConf());
-          local = new HFileStreamReader(sectionContext, sectionFileInfo, cacheConf, getConf());
+          Path containerPath = sectionContext.getFilePath();
+          String tenantSectionIdStr = Bytes.toStringBinary(tenantSectionId);
+          Path perSectionPath = new Path(containerPath.toString() + "#" + tenantSectionIdStr);
+          ReaderContext perSectionContext =
+            ReaderContextBuilder.newBuilder(sectionContext).withFilePath(perSectionPath).build();
+
+          HFileInfo sectionFileInfo = new HFileInfo(perSectionContext, getConf());
+          local = new HFileStreamReader(perSectionContext, sectionFileInfo, cacheConf, getConf());
 
           LOG.debug("Initializing section indices for tenant at offset {}", metadata.getOffset());
           sectionFileInfo.initMetaAndIndex(local);

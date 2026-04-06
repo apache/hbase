@@ -21,8 +21,12 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -78,7 +82,8 @@ public class SectionIndexManager {
      * @param sectionSize  the size of the section in bytes
      */
     public SectionIndexEntry(byte[] tenantPrefix, long offset, int sectionSize) {
-      this.tenantPrefix = tenantPrefix;
+      this.tenantPrefix =
+        (tenantPrefix != null) ? Arrays.copyOf(tenantPrefix, tenantPrefix.length) : new byte[0];
       this.offset = offset;
       this.sectionSize = sectionSize;
     }
@@ -385,7 +390,7 @@ public class SectionIndexManager {
       blockWriter.writeHeaderAndData(out);
 
       // Update metrics
-      totalUncompressedSize += blockWriter.getOnDiskSizeWithHeader();
+      totalUncompressedSize += blockWriter.getUncompressedSizeWithHeader();
       numLevels = 1;
 
       LOG.info("Wrote empty section index at offset {}", rootOffset);
@@ -406,7 +411,7 @@ public class SectionIndexManager {
       blockWriter.writeHeaderAndData(out);
 
       // Update metrics
-      totalUncompressedSize += blockWriter.getOnDiskSizeWithHeader();
+      totalUncompressedSize += blockWriter.getUncompressedSizeWithHeader();
 
       LOG.info("Wrote single-level section index with {} entries at offset {}", entries.size(),
         rootOffset);
@@ -584,6 +589,8 @@ public class SectionIndexManager {
 
     /** List of all section entries loaded from the index */
     private final List<SectionIndexEntry> sections = new ArrayList<>();
+    /** Fast prefix-to-entry lookup built after loading */
+    private final Map<ImmutableBytesWritable, SectionIndexEntry> sectionsByPrefix = new HashMap<>();
     /** Number of levels in the loaded index */
     private int numLevels = 1;
 
@@ -635,10 +642,12 @@ public class SectionIndexManager {
           sections.add(new SectionIndexEntry(prefix, offset, size));
         }
 
+        buildLookupMap();
         LOG.debug("Loaded section index with {} entries", sections.size());
       } catch (IOException e) {
         LOG.error("Failed to load section index", e);
         sections.clear();
+        sectionsByPrefix.clear();
         throw e;
       }
     }
@@ -696,6 +705,7 @@ public class SectionIndexManager {
         readChildIndexSubtree(childBlockOffset, childBlockSize, levels - 1, fsReader);
       }
 
+      buildLookupMap();
       LOG.debug("Loaded multi-level section index: levels={}, sections={}", this.numLevels,
         sections.size());
     }
@@ -787,12 +797,14 @@ public class SectionIndexManager {
      * @return the section entry, or null if not found
      */
     public SectionIndexEntry findSection(byte[] tenantPrefix) {
+      return sectionsByPrefix.get(new ImmutableBytesWritable(tenantPrefix));
+    }
+
+    private void buildLookupMap() {
+      sectionsByPrefix.clear();
       for (SectionIndexEntry entry : sections) {
-        if (Bytes.equals(entry.getTenantPrefix(), tenantPrefix)) {
-          return entry;
-        }
+        sectionsByPrefix.put(new ImmutableBytesWritable(entry.getTenantPrefix()), entry);
       }
-      return null;
     }
 
     /**

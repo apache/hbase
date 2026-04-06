@@ -116,7 +116,6 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
 
           HFileInfo info = new HFileInfo(perSectionContext, getConf());
           local = new HFilePreadReader(perSectionContext, info, cacheConf, getConf());
-          info.initMetaAndIndex(local);
 
           reader = local;
           LOG.debug("Successfully initialized HFilePreadReader for tenant section ID: {}",
@@ -124,13 +123,6 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
 
           return local;
         } catch (IOException e) {
-          if (local != null) {
-            try {
-              local.close();
-            } catch (Exception closeEx) {
-              e.addSuppressed(closeEx);
-            }
-          }
           LOG.error("Failed to initialize section reader for tenant section at offset {}: {}",
             metadata.getOffset(), e.getMessage());
           throw e;

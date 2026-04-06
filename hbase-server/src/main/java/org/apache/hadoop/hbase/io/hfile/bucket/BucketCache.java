@@ -1977,8 +1977,7 @@ public class BucketCache implements BlockCache, HeapSize {
       true, new BlockCacheKey(hfileName, end), true));
     if (!BlockCacheUtil.isMultiTenantSectionHFileName(hfileName)) {
       String prefix = hfileName + BlockCacheUtil.MULTI_TENANT_HFILE_NAME_DELIMITER;
-      // For section-decorated names, offsets are section-relative; filter offsets explicitly as the
-      // NavigableSet ordering is by (hfileName, offset).
+      // Also include blocks cached under section-decorated names (hfileName#tenantId).
       for (BlockCacheKey key : blocksByHFile.subSet(new BlockCacheKey(prefix, 0), true,
         new BlockCacheKey(prefix + Character.MAX_VALUE, Long.MAX_VALUE), true)) {
         if (

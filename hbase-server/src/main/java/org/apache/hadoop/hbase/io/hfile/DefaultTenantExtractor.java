@@ -34,10 +34,12 @@ public class DefaultTenantExtractor implements TenantExtractor {
    * Constructor for DefaultTenantExtractor.
    * @param prefixLength the length of the tenant prefix to extract from row keys
    */
+  private static final int MAX_PREFIX_LENGTH = 64 * 1024;
+
   public DefaultTenantExtractor(int prefixLength) {
-    if (prefixLength <= 0) {
+    if (prefixLength <= 0 || prefixLength > MAX_PREFIX_LENGTH) {
       throw new IllegalArgumentException(
-        "Tenant prefix length must be positive, got: " + prefixLength);
+        "Tenant prefix length must be in [1, " + MAX_PREFIX_LENGTH + "], got: " + prefixLength);
     }
     this.prefixLength = prefixLength;
   }

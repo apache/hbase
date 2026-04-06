@@ -137,6 +137,7 @@ public class StoreFileReader {
     this.deleteFamilyBloomFilter = storeFileReader.deleteFamilyBloomFilter;
     this.bloomFilterType = storeFileReader.bloomFilterType;
     this.bloomFilterMetrics = storeFileReader.bloomFilterMetrics;
+    this.bloomMetricsTrackedExternally = storeFileReader.bloomMetricsTrackedExternally;
     this.sequenceID = storeFileReader.sequenceID;
     this.timeRange = storeFileReader.timeRange;
     this.lastBloomKey = storeFileReader.lastBloomKey;

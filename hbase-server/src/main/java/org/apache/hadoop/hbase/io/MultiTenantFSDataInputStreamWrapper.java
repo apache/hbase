@@ -53,6 +53,9 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
   private final FSDataInputStreamWrapper parent;
   /** Whether this wrapper owns the parent and must close it */
   private final boolean ownsParent;
+  /** Cached translating wrappers to avoid per-call allocation (one per checksum mode) */
+  private volatile TranslatingFSStream cachedStreamWithChecksum;
+  private volatile TranslatingFSStream cachedStreamWithoutChecksum;
 
   /**
    * Constructor that creates a wrapper with offset translation and boundary enforcement. The parent
@@ -141,9 +144,22 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
 
   @Override
   public FSDataInputStream getStream(boolean useHBaseChecksum) {
-    // For all sections, wrap the raw stream with position translator
     FSDataInputStream rawStream = parent.getStream(useHBaseChecksum);
-    return new TranslatingFSStream(rawStream);
+    if (useHBaseChecksum) {
+      TranslatingFSStream cached = cachedStreamWithChecksum;
+      if (cached == null || cached.rawStream != rawStream) {
+        cached = new TranslatingFSStream(rawStream);
+        cachedStreamWithChecksum = cached;
+      }
+      return cached;
+    } else {
+      TranslatingFSStream cached = cachedStreamWithoutChecksum;
+      if (cached == null || cached.rawStream != rawStream) {
+        cached = new TranslatingFSStream(rawStream);
+        cachedStreamWithoutChecksum = cached;
+      }
+      return cached;
+    }
   }
 
   @Override

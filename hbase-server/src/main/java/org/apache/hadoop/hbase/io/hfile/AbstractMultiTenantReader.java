@@ -2690,30 +2690,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
    */
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append("MultiTenantReader{");
-    sb.append("path=").append(getPath());
-    sb.append(", majorVersion=").append(getMajorVersion());
-    sb.append(", sections=").append(sectionLocations.size());
-    sb.append(", tenantIndexLevels=").append(tenantIndexLevels);
-    sb.append(", fileSize=").append(length());
-
-    if (!sectionLocations.isEmpty()) {
-      try {
-        Optional<ExtendedCell> firstKey = getFirstKey();
-        Optional<ExtendedCell> lastKey = getLastKey();
-        if (firstKey.isPresent()) {
-          sb.append(", firstKey=").append(firstKey.get().toString());
-        }
-        if (lastKey.isPresent()) {
-          sb.append(", lastKey=").append(lastKey.get().toString());
-        }
-      } catch (Exception e) {
-        LOG.debug("Failed to get keys for toString", e);
-      }
-    }
-
-    sb.append("}");
-    return sb.toString();
+    return "MultiTenantReader{path=" + getPath() + ", majorVersion=" + getMajorVersion()
+      + ", sections=" + sectionLocations.size() + ", tenantIndexLevels=" + tenantIndexLevels
+      + ", fileSize=" + length() + "}";
   }
 }

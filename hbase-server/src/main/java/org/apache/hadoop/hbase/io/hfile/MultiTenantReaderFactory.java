@@ -47,12 +47,16 @@ public class MultiTenantReaderFactory {
   public static HFile.Reader create(ReaderContext context, HFileInfo fileInfo,
     CacheConfig cacheConf, Configuration conf) throws IOException {
 
-    if (context.getReaderType() == ReaderContext.ReaderType.STREAM) {
-      LOG.debug("Creating MultiTenantStreamReader for {}", context.getFilePath());
-      return new MultiTenantStreamReader(context, fileInfo, cacheConf, conf);
-    } else {
-      LOG.debug("Creating MultiTenantPreadReader for {}", context.getFilePath());
-      return new MultiTenantPreadReader(context, fileInfo, cacheConf, conf);
+    switch (context.getReaderType()) {
+      case STREAM:
+        LOG.debug("Creating MultiTenantStreamReader for {}", context.getFilePath());
+        return new MultiTenantStreamReader(context, fileInfo, cacheConf, conf);
+      case PREAD:
+        LOG.debug("Creating MultiTenantPreadReader for {}", context.getFilePath());
+        return new MultiTenantPreadReader(context, fileInfo, cacheConf, conf);
+      default:
+        throw new IllegalArgumentException(
+          "Unknown reader type: " + context.getReaderType() + " for " + context.getFilePath());
     }
   }
 }
