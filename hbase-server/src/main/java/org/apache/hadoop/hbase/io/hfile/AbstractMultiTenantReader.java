@@ -163,8 +163,9 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
   /** Cached section hint for data block index lookup */
   private final AtomicReference<byte[]> dataBlockIndexSectionHint;
   /** Thread-safe cache for the last resolved data block index reader (avoids parent field race) */
-  private final AtomicReference<HFileBlockIndex.CellBasedKeyBlockIndexReader>
-    cachedDataBlockIndexReader = new AtomicReference<>();
+  private final AtomicReference<
+    HFileBlockIndex.CellBasedKeyBlockIndexReader> cachedDataBlockIndexReader =
+      new AtomicReference<>();
 
   /**
    * Constructor for multi-tenant reader.
@@ -1786,9 +1787,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       ownsStream = false;
     }
 
-    MultiTenantFSDataInputStreamWrapper sectionWrapper =
-      new MultiTenantFSDataInputStreamWrapper(streamWrapper, metadata.getOffset(), sectionSize,
-        ownsStream);
+    MultiTenantFSDataInputStreamWrapper sectionWrapper = new MultiTenantFSDataInputStreamWrapper(
+      streamWrapper, metadata.getOffset(), sectionSize, ownsStream);
 
     // Build the reader context with proper file size calculation
     // Use section size; wrapper handles offset translation

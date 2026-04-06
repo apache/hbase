@@ -692,8 +692,8 @@ public class SectionIndexManager {
         // Root entry: first leaf entry (prefix, offset, size) + child pointer (offset, size)
         int prefixLength = in.readInt();
         if (prefixLength < 0 || prefixLength > MAX_PREFIX_LENGTH) {
-          throw new IOException("Invalid tenant prefix length: " + prefixLength
-            + " at root entry " + i + " (max " + MAX_PREFIX_LENGTH + ")");
+          throw new IOException("Invalid tenant prefix length: " + prefixLength + " at root entry "
+            + i + " (max " + MAX_PREFIX_LENGTH + ")");
         }
         byte[] prefix = new byte[prefixLength];
         in.readFully(prefix);
