@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
@@ -33,13 +32,11 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,16 +45,10 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 /**
  * Testcase for HBASE-20792.
  */
-@Category({ MediumTests.class, MasterTests.class })
+@Tag(MediumTests.TAG)
+@Tag(MasterTests.TAG)
 public class TestRegionMoveAndAbandon {
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionMoveAndAbandon.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionMoveAndAbandon.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private HBaseTestingUtil UTIL;
   private SingleProcessHBaseCluster cluster;
@@ -67,8 +58,8 @@ public class TestRegionMoveAndAbandon {
   private TableName tableName;
   private RegionInfo regionInfo;
 
-  @Before
-  public void setup() throws Exception {
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws Exception {
     UTIL = new HBaseTestingUtil();
     zkCluster = UTIL.startMiniZKCluster();
     StartTestingClusterOption option =
@@ -77,13 +68,13 @@ public class TestRegionMoveAndAbandon {
     rs1 = cluster.getRegionServer(0);
     rs2 = cluster.getRegionServer(1);
     assertEquals(2, cluster.getRegionServerThreads().size());
-    tableName = TableName.valueOf(name.getMethodName());
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     UTIL.createTable(tableName, Bytes.toBytes("cf"));
     UTIL.waitTableAvailable(tableName, 30_000);
     regionInfo = Iterables.getOnlyElement(cluster.getRegions(tableName)).getRegionInfo();
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();

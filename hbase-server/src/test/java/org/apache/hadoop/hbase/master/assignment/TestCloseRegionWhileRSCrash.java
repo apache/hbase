@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ProcedureTestUtil;
 import org.apache.hadoop.hbase.ServerName;
@@ -41,11 +40,10 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,13 +51,10 @@ import org.slf4j.LoggerFactory;
  * Confirm that we will do backoff when retrying on closing a region, to avoid consuming all the
  * CPUs.
  */
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestCloseRegionWhileRSCrash {
   private static final Logger LOG = LoggerFactory.getLogger(TestCloseRegionWhileRSCrash.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCloseRegionWhileRSCrash.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -143,7 +138,7 @@ public class TestCloseRegionWhileRSCrash {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
     UTIL.startMiniCluster(3);
@@ -158,7 +153,7 @@ public class TestCloseRegionWhileRSCrash {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }

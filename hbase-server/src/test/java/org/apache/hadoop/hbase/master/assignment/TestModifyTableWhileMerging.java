@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -32,23 +31,19 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestModifyTableWhileMerging {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestModifyTableWhileMerging.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestModifyTableWhileMerging.class);
 
@@ -59,7 +54,7 @@ public class TestModifyTableWhileMerging {
   private static byte[] CF = Bytes.toBytes("cf");
   private static byte[] SPLITKEY = Bytes.toBytes("bbbbbbb");
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     // Set procedure executor thread to 1, making reproducing this issue of HBASE-20921 easier
     UTIL.getConfiguration().setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
@@ -71,7 +66,7 @@ public class TestModifyTableWhileMerging {
     UTIL.waitTableAvailable(TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
     try {
       UTIL.shutdownMiniCluster();
@@ -98,8 +93,7 @@ public class TestModifyTableWhileMerging {
     long proc = executor.submitProcedure(mergeTableRegionsProcedure);
     UTIL.waitFor(3000000, () -> UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor()
       .isFinished(procModify));
-    Assert.assertEquals("Modify Table procedure should success!",
-      ProcedureProtos.ProcedureState.SUCCESS, modifyTableProcedure.getState());
+    assertEquals(modifyTableProcedure.getState(), ProcedureProtos.ProcedureState.SUCCESS, "Modify Table procedure should success!");
   }
 
 }

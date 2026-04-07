@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -38,18 +37,15 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestAssignmentManagerUtil {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAssignmentManagerUtil.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -61,7 +57,7 @@ public class TestAssignmentManagerUtil {
 
   private static int REGION_REPLICATION = 3;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(1);
     UTIL.getAdmin().balancerSwitch(false, true);
@@ -74,7 +70,7 @@ public class TestAssignmentManagerUtil {
     AM = master.getAssignmentManager();
   }
 
-  @After
+  @AfterEach
   public void tearDownAfterTest() throws IOException {
     for (RegionInfo region : UTIL.getAdmin().getRegions(TABLE_NAME)) {
       RegionStateNode regionNode = AM.getRegionStates().getRegionStateNode(region);
@@ -87,7 +83,7 @@ public class TestAssignmentManagerUtil {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -128,6 +124,6 @@ public class TestAssignmentManagerUtil {
     IntStream.range(0, REGION_REPLICATION)
       .mapToObj(i -> RegionReplicaUtil.getRegionInfoForReplica(regionA, i))
       .map(AM.getRegionStates()::getRegionStateNode).forEachOrdered(
-        rn -> assertFalse("Should have unset the proc for " + rn, rn.isTransitionScheduled()));
+        rn -> assertFalse(rn.isTransitionScheduled(), "Should have unset the proc for " + rn));
   }
 }

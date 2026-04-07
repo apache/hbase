@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.master.replication;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -37,11 +37,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
@@ -59,22 +58,18 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestReplicationPeerManagerMigrateQueuesFromZk {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationPeerManagerMigrateQueuesFromZk.class);
 
   private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -98,10 +93,10 @@ public class TestReplicationPeerManagerMigrateQueuesFromZk {
 
   private ServerName deadServerName;
 
-  @Rule
-  public final TableNameTestRule tableNameRule = new TableNameTestRule();
+  @RegisterExtension
+  public final TableNameTestExtension tableNameExtension = new TableNameTestExtension();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     UTIL.startMiniCluster(1);
     EXECUTOR = Executors.newFixedThreadPool(3,
@@ -110,17 +105,17 @@ public class TestReplicationPeerManagerMigrateQueuesFromZk {
         .build());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     EXECUTOR.shutdownNow();
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     Configuration conf = UTIL.getConfiguration();
     peerStorage = mock(ReplicationPeerStorage.class);
-    TableName tableName = tableNameRule.getTableName();
+    TableName tableName = tableNameExtension.getTableName();
     UTIL.getAdmin()
       .createTable(ReplicationStorageFactory.createReplicationQueueTableDescriptor(tableName));
     queueStorage = new TableReplicationQueueStorage(UTIL.getConnection(), tableName);
@@ -149,7 +144,7 @@ public class TestReplicationPeerManagerMigrateQueuesFromZk {
     // should have called initializer
     verify(queueStorageInitializer).initialize();
     // should have not migrated any data since there is no peer
-    try (Table table = UTIL.getConnection().getTable(tableNameRule.getTableName())) {
+    try (Table table = UTIL.getConnection().getTable(tableNameExtension.getTableName())) {
       assertEquals(0, HBaseTestingUtil.countRows(table));
     }
   }
@@ -177,7 +172,7 @@ public class TestReplicationPeerManagerMigrateQueuesFromZk {
       assertEquals(queueData.getId().getServerWALsBelongTo().toString() + ".0", offset.getWal());
     }
     // there is no method in ReplicationQueueStorage can list all the last pushed sequence ids
-    try (Table table = UTIL.getConnection().getTable(tableNameRule.getTableName());
+    try (Table table = UTIL.getConnection().getTable(tableNameExtension.getTableName());
       ResultScanner scanner =
         table.getScanner(TableReplicationQueueStorage.LAST_SEQUENCE_ID_FAMILY)) {
       for (int i = 0; i < 2; i++) {

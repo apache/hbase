@@ -18,14 +18,13 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil.insertData;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
@@ -41,24 +40,19 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionSplit {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionSplit.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionSplit.class);
 
@@ -68,14 +62,17 @@ public class TestRegionSplit {
 
   private static final int startRowNum = 11;
   private static final int rowCount = 60;
+  private String testMethodName;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
   private static void setupConf(Configuration conf) {
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     StartTestingClusterOption option =
@@ -83,7 +80,7 @@ public class TestRegionSplit {
     UTIL.startMiniCluster(option);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
     try {
       UTIL.shutdownMiniCluster();
@@ -92,7 +89,7 @@ public class TestRegionSplit {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     // Turn off the meta scanner so it don't remove parent on us.
     UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(false);
@@ -102,7 +99,7 @@ public class TestRegionSplit {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     for (TableDescriptor htd : UTIL.getAdmin().listTableDescriptors()) {
       UTIL.deleteTable(htd.getTableName());
@@ -111,7 +108,7 @@ public class TestRegionSplit {
 
   @Test
   public void testSplitTableRegion() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     RegionInfo[] regions =
@@ -120,8 +117,8 @@ public class TestRegionSplit {
     int splitRowNum = startRowNum + rowCount / 2;
     byte[] splitKey = Bytes.toBytes("" + splitRowNum);
 
-    assertTrue("not able to find a splittable region", regions != null);
-    assertTrue("not able to find a splittable region", regions.length == 1);
+    assertTrue(regions != null, "not able to find a splittable region");
+    assertTrue(regions.length == 1, "not able to find a splittable region");
 
     // Split region of the table
     long procId = procExec.submitProcedure(
@@ -130,7 +127,8 @@ public class TestRegionSplit {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
-    assertTrue("not able to split table", UTIL.getHBaseCluster().getRegions(tableName).size() == 2);
+    assertTrue(UTIL.getHBaseCluster().getRegions(tableName).size() == 2,
+      "not able to split table");
 
     // disable table
     UTIL.getAdmin().disableTable(tableName);
@@ -151,7 +149,7 @@ public class TestRegionSplit {
     Thread.sleep(500);
 
     List<HRegion> tableRegions = UTIL.getHBaseCluster().getRegions(tableName);
-    assertEquals("Table region not correct.", 2, tableRegions.size());
+    assertEquals(2, tableRegions.size(), "Table region not correct.");
     Map<RegionInfo, ServerName> regionInfoMap = UTIL.getHBaseCluster().getMaster()
       .getAssignmentManager().getRegionStates().getRegionAssignments();
     assertEquals(regionInfoMap.get(tableRegions.get(0).getRegionInfo()),
@@ -160,7 +158,7 @@ public class TestRegionSplit {
 
   @Test
   public void testSplitStoreFiles() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     RegionInfo[] regions =
@@ -178,8 +176,8 @@ public class TestRegionSplit {
     // split at the start row
     byte[] splitKey = Bytes.toBytes("" + startRowNum);
 
-    assertNotNull("Not able to find a splittable region", regions);
-    assertEquals("Not able to find a splittable region", 1, regions.length);
+    assertNotNull(regions, "Not able to find a splittable region");
+    assertEquals(1, regions.length, "Not able to find a splittable region");
 
     // Split region of the table
     long procId = procExec.submitProcedure(
@@ -188,7 +186,8 @@ public class TestRegionSplit {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
-    assertEquals("Not able to split table", 2, UTIL.getHBaseCluster().getRegions(tableName).size());
+    assertEquals(2, UTIL.getHBaseCluster().getRegions(tableName).size(),
+      "Not able to split table");
 
     // assert sum of the hfiles of all regions
     int childStoreFilesSum = 0;
@@ -198,7 +197,7 @@ public class TestRegionSplit {
     assertEquals(1, childStoreFilesSum);
 
     List<HRegion> tableRegions = UTIL.getHBaseCluster().getRegions(tableName);
-    assertEquals("Table region not correct.", 2, tableRegions.size());
+    assertEquals(2, tableRegions.size(), "Table region not correct.");
     Map<RegionInfo, ServerName> regionInfoMap = UTIL.getHBaseCluster().getMaster()
       .getAssignmentManager().getRegionStates().getRegionAssignments();
     assertEquals(regionInfoMap.get(tableRegions.get(0).getRegionInfo()),

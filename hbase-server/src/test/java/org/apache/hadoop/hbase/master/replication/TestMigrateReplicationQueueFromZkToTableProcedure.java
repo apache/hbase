@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.master.replication;
 
 import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MigrateReplicationQueueFromZkToTableState.MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_DISABLE_CLEANER;
 import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MigrateReplicationQueueFromZkToTableState.MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_WAIT_UPGRADING;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -32,7 +32,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -55,21 +54,17 @@ import org.apache.hadoop.hbase.replication.master.ReplicationLogCleanerBarrier;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMigrateReplicationQueueFromZkToTableProcedure {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMigrateReplicationQueueFromZkToTableProcedure.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -104,7 +99,7 @@ public class TestMigrateReplicationQueueFromZkToTableProcedure {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     // one hour, to make sure it will not run during the test
     UTIL.getConfiguration().setInt(HMaster.HBASE_MASTER_CLEANER_INTERVAL, 60 * 60 * 1000);
@@ -112,7 +107,7 @@ public class TestMigrateReplicationQueueFromZkToTableProcedure {
       StartTestingClusterOption.builder().masterClass(HMasterForTest.class).build());
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -121,7 +116,7 @@ public class TestMigrateReplicationQueueFromZkToTableProcedure {
     return UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     Admin admin = UTIL.getAdmin();
     for (ReplicationPeerDescription pd : admin.listReplicationPeers()) {

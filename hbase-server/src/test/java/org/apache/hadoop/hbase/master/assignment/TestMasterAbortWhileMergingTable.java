@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.assignment;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -34,21 +33,17 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMasterAbortWhileMergingTable {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterAbortWhileMergingTable.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterAbortWhileMergingTable.class);
 
@@ -59,7 +54,7 @@ public class TestMasterAbortWhileMergingTable {
   private static byte[] SPLITKEY = Bytes.toBytes("bbbbbbb");
   private static CountDownLatch mergeCommitArrive = new CountDownLatch(1);
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       MergeRegionObserver.class.getName());
@@ -71,7 +66,7 @@ public class TestMasterAbortWhileMergingTable {
     UTIL.waitTableAvailable(TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
     try {
       UTIL.shutdownMiniCluster();
@@ -96,11 +91,9 @@ public class TestMasterAbortWhileMergingTable {
       && UTIL.getMiniHBaseCluster().getMaster().isInitialized());
     UTIL.waitFor(30000,
       () -> UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().isFinished(procID));
-    Assert.assertTrue(
-      "Found region RIT, that's impossible! "
-        + UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionsInTransition(),
-      UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionsInTransition().size()
-          == 0);
+    assertTrue(UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionsInTransition().size()
+          == 0, "Found region RIT, that's impossible! "
+        + UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionsInTransition());
   }
 
   public static class MergeRegionObserver implements MasterCoprocessor, MasterObserver {

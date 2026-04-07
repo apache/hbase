@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collections;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
@@ -37,18 +36,14 @@ import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestAssignmentManager extends TestAssignmentManagerBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAssignmentManager.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAssignmentManager.class);
 
@@ -88,7 +83,7 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
 
   @Test
   public void testAssignSocketTimeout() throws Exception {
-    TableName tableName = TableName.valueOf(this.name.getMethodName());
+    TableName tableName = TableName.valueOf(testMethodName);
     RegionInfo hri = createRegionInfo(tableName, 1);
 
     // collect AM metrics before test
@@ -105,7 +100,7 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
 
   @Test
   public void testAssignQueueFullOnce() throws Exception {
-    TableName tableName = TableName.valueOf(this.name.getMethodName());
+    TableName tableName = TableName.valueOf(testMethodName);
     RegionInfo hri = createRegionInfo(tableName, 1);
 
     // collect AM metrics before test
@@ -120,7 +115,7 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
 
   @Test
   public void testTimeoutThenQueueFull() throws Exception {
-    TableName tableName = TableName.valueOf(this.name.getMethodName());
+    TableName tableName = TableName.valueOf(testMethodName);
     RegionInfo hri = createRegionInfo(tableName, 1);
 
     // collect AM metrics before test
@@ -151,7 +146,7 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
 
     for (int i = 0; i < assignments.length; ++i) {
       ProcedureTestingUtility.waitProcedure(master.getMasterProcedureExecutor(), assignments[i]);
-      assertTrue(assignments[i].toString(), assignments[i].isSuccess());
+      assertTrue(assignments[i].isSuccess(), assignments[i].toString());
     }
     long et = EnvironmentEdgeManager.currentTime();
     float sec = ((et - st) / 1000.0f);
@@ -300,14 +295,14 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
         TableName.valueOf("testLoadRegionFromMetaAfterRegionManuallyAdded");
       this.util.createTable(tableName, "f");
       RegionInfo hri = createRegionInfo(tableName, 1);
-      assertNull("RegionInfo was just instantiated by the test, but "
-        + "shouldn't be in AM regionStates yet.", am.getRegionStates().getRegionState(hri));
+      assertNull(am.getRegionStates().getRegionState(hri), "RegionInfo was just instantiated by "
+        + "the test, but shouldn't be in AM regionStates yet.");
       MetaTableAccessor.addRegionsToMeta(this.util.getConnection(), Collections.singletonList(hri),
         1);
       // TODO: is there a race here -- no other thread else will refresh the table states behind
       // the scenes?
-      assertNull("RegionInfo was manually added in META, but shouldn't be in AM regionStates yet.",
-        am.getRegionStates().getRegionState(hri));
+      assertNull(am.getRegionStates().getRegionState(hri),
+        "RegionInfo was manually added in META, but shouldn't be in AM regionStates yet.");
       am.populateRegionStatesFromMeta(hri.getEncodedName());
       assertNotNull(am.getRegionInfo(hri.getRegionName()));
       assertNotNull(am.getRegionInfo(hri.getEncodedName()));
@@ -324,10 +319,10 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
       final TableName tableName = TableName.valueOf("testLoadRegionFromMetaRegionNotInMeta");
       this.util.createTable(tableName, "f");
       final RegionInfo hri = createRegionInfo(tableName, 1);
-      assertNull("Bogus RegionInfo discovered in RegionStates.",
-        am.getRegionStates().getRegionState(hri));
+      assertNull(am.getRegionStates().getRegionState(hri),
+        "Bogus RegionInfo discovered in RegionStates.");
       am.populateRegionStatesFromMeta(hri.getEncodedName());
-      assertNull("RegionInfo was never added in META", am.getRegionStates().getRegionState(hri));
+      assertNull(am.getRegionStates().getRegionState(hri), "RegionInfo was never added in META");
     } finally {
       this.util.killMiniHBaseCluster();
     }
