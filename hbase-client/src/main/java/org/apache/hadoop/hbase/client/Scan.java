@@ -709,6 +709,10 @@ public class Scan extends Query {
 
   @Override
   public Scan setFilter(Filter filter) {
+    if (filter != null && filter.hasFilterRow() && this.batch > 0) {
+      throw new IncompatibleFilterException(
+        "Cannot set a filter that returns true for filter.hasFilterRow on a scan with batch set");
+    }
     super.setFilter(filter);
     return this;
   }
