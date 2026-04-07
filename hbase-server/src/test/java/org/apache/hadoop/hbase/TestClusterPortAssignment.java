@@ -17,24 +17,22 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.net.BindException;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(MediumTests.class)
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestClusterPortAssignment {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClusterPortAssignment.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestClusterPortAssignment.class);
@@ -42,7 +40,7 @@ public class TestClusterPortAssignment {
   /**
    * Check that we can start an HBase cluster specifying a custom set of RPC and infoserver ports.
    */
-  @Test(timeout = 300000)
+  @Test
   public void testClusterPortAssignment() throws Exception {
     boolean retry = false;
     do {
@@ -60,16 +58,17 @@ public class TestClusterPortAssignment {
       LOG.info("Ports: {}, {}, {}, {}", masterPort, masterInfoPort, rsPort, rsInfoPort);
       try {
         SingleProcessHBaseCluster cluster = TEST_UTIL.startMiniCluster();
-        assertTrue("Cluster failed to come up", cluster.waitForActiveAndReadyMaster(30000));
+        assertTrue(cluster.waitForActiveAndReadyMaster(30000), "Cluster failed to come up");
         retry = false;
-        assertEquals("Master RPC port is incorrect", masterPort,
-          cluster.getMaster().getRpcServer().getListenerAddress().getPort());
-        assertEquals("Master info port is incorrect", masterInfoPort,
-          cluster.getMaster().getInfoServer().getPort());
-        assertEquals("RS RPC port is incorrect", rsPort,
-          cluster.getRegionServer(0).getRpcServer().getListenerAddress().getPort());
-        assertEquals("RS info port is incorrect", rsInfoPort,
-          cluster.getRegionServer(0).getInfoServer().getPort());
+        assertEquals(masterPort, cluster.getMaster().getRpcServer().getListenerAddress().getPort(),
+          "Master RPC port is incorrect");
+        assertEquals(masterInfoPort, cluster.getMaster().getInfoServer().getPort(),
+          "Master info port is incorrect");
+        assertEquals(rsPort,
+          cluster.getRegionServer(0).getRpcServer().getListenerAddress().getPort(),
+          "RS RPC port is incorrect");
+        assertEquals(rsInfoPort, cluster.getRegionServer(0).getInfoServer().getPort(),
+          "RS info port is incorrect");
       } catch (Exception e) {
         Throwable rootCause = ExceptionUtils.getRootCause(e);
         if (rootCause instanceof BindException) {

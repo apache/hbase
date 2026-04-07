@@ -17,27 +17,23 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests the boot order indifference between regionserver and master
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestClusterBootOrder {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClusterBootOrder.class);
 
   private static final long SLEEP_INTERVAL = 1000;
   private static final long SLEEP_TIME = 4000;
@@ -47,7 +43,7 @@ public class TestClusterBootOrder {
   private RegionServerThread rs;
   private MasterThread master;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     testUtil = new HBaseTestingUtil();
     testUtil.startMiniDFSCluster(1);
@@ -56,7 +52,7 @@ public class TestClusterBootOrder {
     cluster = new LocalHBaseCluster(testUtil.getConfiguration(), 0, 0);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     cluster.shutdown();
     cluster.join();
