@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,39 +26,35 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.DNS;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHDFSBlocksDistribution {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHDFSBlocksDistribution.class);
 
   @Test
   public void testAddHostsAndBlockWeight() throws Exception {
     HDFSBlocksDistribution distribution = new HDFSBlocksDistribution();
     distribution.addHostsAndBlockWeight(null, 100);
-    assertEquals("Expecting no hosts weights", 0, distribution.getHostAndWeights().size());
+    assertEquals(0, distribution.getHostAndWeights().size(), "Expecting no hosts weights");
     distribution.addHostsAndBlockWeight(new String[0], 100);
-    assertEquals("Expecting no hosts weights", 0, distribution.getHostAndWeights().size());
+    assertEquals(0, distribution.getHostAndWeights().size(), "Expecting no hosts weights");
     distribution.addHostsAndBlockWeight(new String[] { "test" }, 101);
-    assertEquals("Should be one host", 1, distribution.getHostAndWeights().size());
+    assertEquals(1, distribution.getHostAndWeights().size(), "Should be one host");
     distribution.addHostsAndBlockWeight(new String[] { "test" }, 202);
-    assertEquals("Should be one host", 1, distribution.getHostAndWeights().size());
-    assertEquals("test host should have weight 303", 303,
-      distribution.getHostAndWeights().get("test").getWeight());
+    assertEquals(1, distribution.getHostAndWeights().size(), "Should be one host");
+    assertEquals(303, distribution.getHostAndWeights().get("test").getWeight(),
+      "test host should have weight 303");
     distribution.addHostsAndBlockWeight(new String[] { "testTwo" }, 222);
-    assertEquals("Should be two hosts", 2, distribution.getHostAndWeights().size());
-    assertEquals("Total weight should be 525", 525, distribution.getUniqueBlocksTotalWeight());
+    assertEquals(2, distribution.getHostAndWeights().size(), "Should be two hosts");
+    assertEquals(525, distribution.getUniqueBlocksTotalWeight(), "Total weight should be 525");
     distribution.addHostsAndBlockWeight(new String[] { "test" }, 100,
       new StorageType[] { StorageType.SSD });
-    assertEquals("test host should have weight 403", 403,
-      distribution.getHostAndWeights().get("test").getWeight());
-    assertEquals("test host should have weight for ssd 100", 100,
-      distribution.getHostAndWeights().get("test").getWeightForSsd());
+    assertEquals(403, distribution.getHostAndWeights().get("test").getWeight(),
+      "test host should have weight 403");
+    assertEquals(100, distribution.getHostAndWeights().get("test").getWeightForSsd(),
+      "test host should have weight for ssd 100");
   }
 
   public class MockHDFSBlocksDistribution extends HDFSBlocksDistribution {
@@ -75,25 +71,25 @@ public class TestHDFSBlocksDistribution {
   public void testAdd() throws Exception {
     HDFSBlocksDistribution distribution = new HDFSBlocksDistribution();
     distribution.add(new MockHDFSBlocksDistribution());
-    assertEquals("Expecting no hosts weights", 0, distribution.getHostAndWeights().size());
+    assertEquals(0, distribution.getHostAndWeights().size(), "Expecting no hosts weights");
     distribution.addHostsAndBlockWeight(new String[] { "test" }, 10);
-    assertEquals("Should be one host", 1, distribution.getHostAndWeights().size());
+    assertEquals(1, distribution.getHostAndWeights().size(), "Should be one host");
     distribution.add(new MockHDFSBlocksDistribution());
-    assertEquals("Should be one host", 1, distribution.getHostAndWeights().size());
-    assertEquals("Total weight should be 10", 10, distribution.getUniqueBlocksTotalWeight());
+    assertEquals(1, distribution.getHostAndWeights().size(), "Should be one host");
+    assertEquals(10, distribution.getUniqueBlocksTotalWeight(), "Total weight should be 10");
   }
 
   @Test
   public void testLocalHostCompatibility() throws Exception {
     String currentHost = DNS.getDefaultHost("default", "default");
     HDFSBlocksDistribution distribution = new HDFSBlocksDistribution();
-    assertEquals("Locality should be 0.0", 0.0, distribution.getBlockLocalityIndex(currentHost),
-      0.01);
+    assertEquals(0.0, distribution.getBlockLocalityIndex(currentHost), 0.01,
+      "Locality should be 0.0");
     distribution.addHostsAndBlockWeight(new String[] { "localhost" }, 10);
-    assertEquals("Should be one host", 1, distribution.getHostAndWeights().size());
-    assertEquals("Locality should be 0.0", 0.0, distribution.getBlockLocalityIndex("test"), 0.01);
-    assertNotEquals("Locality should be 0.0", 0.0, distribution.getBlockLocalityIndex(currentHost),
-      0.01);
+    assertEquals(1, distribution.getHostAndWeights().size(), "Should be one host");
+    assertEquals(0.0, distribution.getBlockLocalityIndex("test"), 0.01, "Locality should be 0.0");
+    assertNotEquals(0.0, distribution.getBlockLocalityIndex(currentHost), 0.01,
+      "Locality should be 0.0");
   }
 
 }

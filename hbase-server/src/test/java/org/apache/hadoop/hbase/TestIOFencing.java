@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -49,9 +49,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,12 +78,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDes
  * that has had some files removed because of a compaction. This sort of hurry's along and makes
  * certain what is a chance occurance.
  */
-@Category({ MiscTests.class, LargeTests.class })
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestIOFencing {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIOFencing.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestIOFencing.class);
   static {
@@ -312,8 +308,8 @@ public class TestIOFencing {
           + compactingRegion.getRegionInfo().getRegionNameAsString());
         Thread.sleep(1000);
         admin.flush(table.getName());
-        assertTrue("Timed out waiting for the region to flush",
-          EnvironmentEdgeManager.currentTime() - startWaitTime < 30000);
+        assertTrue(EnvironmentEdgeManager.currentTime() - startWaitTime < 30000,
+          "Timed out waiting for the region to flush");
       }
       assertTrue(compactingRegion.countStoreFiles() > 1);
       final byte REGION_NAME[] = compactingRegion.getRegionInfo().getRegionName();
@@ -345,7 +341,7 @@ public class TestIOFencing {
       // all the files we expect are still working when region is up in new location.
       FileSystem fs = newRegion.getFilesystem();
       for (String f : newRegion.getStoreFileList(new byte[][] { FAMILY })) {
-        assertTrue("After compaction, does not exist: " + f, fs.exists(new Path(f)));
+        assertTrue(fs.exists(new Path(f)), "After compaction, does not exist: " + f);
       }
       LOG.info("Allowing compaction to proceed");
       compactingRegion.allowCompactions();
@@ -364,8 +360,8 @@ public class TestIOFencing {
       startWaitTime = EnvironmentEdgeManager.currentTime();
       while (newRegion.compactCount.get() == 0) {
         Thread.sleep(1000);
-        assertTrue("New region never compacted",
-          EnvironmentEdgeManager.currentTime() - startWaitTime < 180000);
+        assertTrue(EnvironmentEdgeManager.currentTime() - startWaitTime < 180000,
+          "New region never compacted");
       }
       int count;
       for (int i = 0;; i++) {
