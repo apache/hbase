@@ -323,8 +323,8 @@ public class TestPrefetchWithBucketCache {
     conf.setLong(BUCKET_CACHE_SIZE_KEY, 1);
     conf.set(BUCKET_CACHE_BUCKETS_KEY, "3072");
     conf.setDouble("hbase.bucketcache.acceptfactor", 0.98);
-    conf.setDouble("hbase.bucketcache.minfactor", 0.98);
-    conf.setDouble("hbase.bucketcache.extrafreefactor", 0.0);
+    conf.setDouble("hbase.bucketcache.minfactor", 0.95);
+    conf.setDouble("hbase.bucketcache.extrafreefactor", 0.01);
     conf.setLong(QUEUE_ADDITION_WAIT_TIME, 0);
     blockCache = BlockCacheFactory.createBlockCache(conf);
     cacheConf = new CacheConfig(conf, blockCache);

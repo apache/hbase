@@ -24,7 +24,6 @@ import static org.apache.hadoop.hbase.io.hfile.HFileWriterImpl.KEY_VALUE_VER_WIT
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -275,18 +274,15 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     TenantExtractor tenantExtractor, HFileContext fileContext, BloomType bloomType,
     FSDataOutputStream outputStream, boolean closeOutputStream) throws IOException {
     this.path = path;
-    this.conf = conf;
-    this.cacheConf = cacheConf;
-    this.tenantExtractor = tenantExtractor;
-    this.fileContext = fileContext;
+    this.conf = Objects.requireNonNull(conf, "conf");
+    this.cacheConf = Objects.requireNonNull(cacheConf, "cacheConf");
+    this.tenantExtractor = Objects.requireNonNull(tenantExtractor, "tenantExtractor");
+    this.fileContext = Objects.requireNonNull(fileContext, "fileContext");
 
-    // Initialize bloom filter configuration using existing HBase properties
-    // This reuses the standard io.storefile.bloom.enabled property instead of creating
-    // a new multi-tenant specific property, ensuring consistency with existing HBase behavior
+    BloomType effectiveBloomType = bloomType != null ? bloomType : BloomType.NONE;
     this.bloomFilterEnabled =
-      bloomType != BloomType.NONE && BloomFilterFactory.isGeneralBloomEnabled(conf);
-    // Bloom filter type is passed from table properties, respecting column family configuration
-    this.bloomFilterType = bloomType;
+      effectiveBloomType != BloomType.NONE && BloomFilterFactory.isGeneralBloomEnabled(conf);
+    this.bloomFilterType = effectiveBloomType;
 
     this.outputStream = Objects.requireNonNull(outputStream, "outputStream");
     this.closeOutputStream = closeOutputStream;
@@ -329,43 +325,56 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
       shouldCloseStream = true;
     }
 
-    // Create tenant extractor using factory - it will decide whether to use
-    // DefaultTenantExtractor or SingleTenantExtractor based on table properties
-    TenantExtractor tenantExtractor =
-      TenantExtractorFactory.createTenantExtractor(conf, tableProperties);
+    boolean success = false;
+    try {
+      // Create tenant extractor using factory - it will decide whether to use
+      // DefaultTenantExtractor or SingleTenantExtractor based on table properties
+      TenantExtractor tenantExtractor =
+        TenantExtractorFactory.createTenantExtractor(conf, tableProperties);
 
-    // Determine bloom configuration with precedence: column family > table property > builder >
-    // default ROW
-    BloomType bloomType = columnFamilyBloomType;
-    if (
-      tableProperties != null
-        && tableProperties.containsKey(ColumnFamilyDescriptorBuilder.BLOOMFILTER)
-    ) {
-      try {
-        bloomType = BloomType
-          .valueOf(tableProperties.get(ColumnFamilyDescriptorBuilder.BLOOMFILTER).toUpperCase());
-      } catch (IllegalArgumentException e) {
-        LOG.warn("Invalid bloom filter type in table properties: {}, ignoring override",
-          tableProperties.get(ColumnFamilyDescriptorBuilder.BLOOMFILTER));
+      // Determine bloom configuration with precedence: column family > table property > builder >
+      // default ROW
+      BloomType bloomType = columnFamilyBloomType;
+      if (
+        tableProperties != null
+          && tableProperties.containsKey(ColumnFamilyDescriptorBuilder.BLOOMFILTER)
+      ) {
+        try {
+          bloomType = BloomType
+            .valueOf(tableProperties.get(ColumnFamilyDescriptorBuilder.BLOOMFILTER).toUpperCase());
+        } catch (IllegalArgumentException e) {
+          LOG.warn("Invalid bloom filter type in table properties: {}, ignoring override",
+            tableProperties.get(ColumnFamilyDescriptorBuilder.BLOOMFILTER));
+        }
+      }
+      if (bloomType == null) {
+        bloomType = defaultBloomType;
+      }
+      if (bloomType == null) {
+        bloomType = BloomType.ROW;
+      }
+
+      LOG.info(
+        "Creating MultiTenantHFileWriter with tenant extractor: {}, bloom type: {} "
+          + "(cf override: {}, default: {}) and target {}",
+        tenantExtractor.getClass().getSimpleName(), bloomType,
+        columnFamilyBloomType != null ? columnFamilyBloomType : "<not-set>",
+        defaultBloomType != null ? defaultBloomType : "<none>", path != null ? path : writerStream);
+
+      // HFile version 4 inherently implies multi-tenant
+      MultiTenantHFileWriter writer = new MultiTenantHFileWriter(path, conf, cacheConf,
+        tenantExtractor, fileContext, bloomType, writerStream, shouldCloseStream);
+      success = true;
+      return writer;
+    } finally {
+      if (!success && shouldCloseStream && writerStream != outputStream) {
+        try {
+          writerStream.close();
+        } catch (IOException e) {
+          LOG.warn("Failed to close output stream after factory method failure for {}", path, e);
+        }
       }
     }
-    if (bloomType == null) {
-      bloomType = defaultBloomType;
-    }
-    if (bloomType == null) {
-      bloomType = BloomType.ROW;
-    }
-
-    LOG.info(
-      "Creating MultiTenantHFileWriter with tenant extractor: {}, bloom type: {} "
-        + "(cf override: {}, default: {}) and target {}",
-      tenantExtractor.getClass().getSimpleName(), bloomType,
-      columnFamilyBloomType != null ? columnFamilyBloomType : "<not-set>",
-      defaultBloomType != null ? defaultBloomType : "<none>", path != null ? path : writerStream);
-
-    // HFile version 4 inherently implies multi-tenant
-    return new MultiTenantHFileWriter(path, conf, cacheConf, tenantExtractor, fileContext,
-      bloomType, writerStream, shouldCloseStream);
   }
 
   /**
@@ -444,19 +453,42 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
 
   @Override
   public void append(ExtendedCell cell) throws IOException {
+    if (closed.get()) {
+      throw new IOException("Cannot append to a closed writer: " + streamName);
+    }
     if (cell == null) {
       throw new IOException("Cannot append null cell");
     }
 
-    // Extract tenant section ID from the cell for section indexing
-    byte[] tenantSectionId = tenantExtractor.extractTenantSectionId(cell);
+    // Fast path: check if the cell belongs to the current section without allocation
+    boolean sameSection = currentSectionWriter != null
+      && tenantExtractor.matchesTenantSectionId(cell, currentTenantSectionId);
 
-    // If this is the first cell or tenant section has changed, switch to new section
-    if (currentSectionWriter == null || !Arrays.equals(currentTenantSectionId, tenantSectionId)) {
+    if (!sameSection) {
+      // Allocate only on section transitions (rare) or first cell
+      byte[] tenantSectionId = tenantExtractor.extractTenantSectionId(cell);
+      if (tenantSectionId == null) {
+        throw new IOException("Row key too short for configured tenant prefix length ("
+          + tenantExtractor.getPrefixLength() + "). Row length: " + cell.getRowLength()
+          + ". Check hbase.multi.tenant.prefix.length or TENANT_PREFIX_LENGTH configuration.");
+      }
+
+      // Validate cross-section sort order: the first cell of the new section must
+      // sort strictly after the last cell of the previous section.
+      if (lastCell != null) {
+        int cmp = fileContext.getCellComparator().compare(cell, (ExtendedCell) lastCell);
+        if (cmp <= 0) {
+          throw new IOException("Cross-section sort order violation: new section cell "
+            + CellUtil.getCellKeyAsString(cell) + " does not sort after previous section's last "
+            + "cell " + CellUtil.getCellKeyAsString(lastCell) + ". Section transition from "
+            + Bytes.toStringBinary(currentTenantSectionId) + " to "
+            + Bytes.toStringBinary(tenantSectionId));
+        }
+      }
+
       if (currentSectionWriter != null) {
         closeCurrentSection();
       }
-      // Extract tenant ID from the cell
       byte[] tenantId = tenantExtractor.extractTenantId(cell);
       createNewSection(tenantSectionId, tenantId);
     }
@@ -678,12 +710,23 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     // Set the start offset for this section
     sectionStartOffset = outputStream.getPos();
 
-    // Create a new virtual section writer
-    currentSectionWriter = new SectionWriter(conf, cacheConf, outputStream, fileContext,
+    // Create a new virtual section writer. If post-construction init fails,
+    // clean up the partially-initialized writer to avoid resource leaks.
+    SectionWriter newSection = new SectionWriter(conf, cacheConf, outputStream, fileContext,
       tenantSectionId, tenantId, sectionStartOffset);
-    if (customTieringSupplier != null) {
-      currentSectionWriter.setTimeRangeTrackerForTiering(customTieringSupplier);
+    try {
+      if (customTieringSupplier != null) {
+        newSection.setTimeRangeTrackerForTiering(customTieringSupplier);
+      }
+    } catch (Exception e) {
+      try {
+        newSection.close();
+      } catch (IOException closeEx) {
+        e.addSuppressed(closeEx);
+      }
+      throw e instanceof IOException ? (IOException) e : new IOException(e);
     }
+    currentSectionWriter = newSection;
 
     // Initialize per-section trackers
     this.currentSectionTimeRangeTracker = org.apache.hadoop.hbase.regionserver.TimeRangeTracker
@@ -772,16 +815,16 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
       return;
     }
 
-    // Ensure all sections are closed and resources flushed
-    if (currentSectionWriter != null) {
-      closeCurrentSection();
-      currentSectionWriter = null;
-    }
-
-    // HFile v4 structure: Section Index + File Info + Trailer
-    // (Each section contains complete HFile v3 with its own blocks)
-    // Note: v4 readers skip initMetaAndIndex, so no meta block index needed
     try {
+      // Ensure all sections are closed and resources flushed
+      if (currentSectionWriter != null) {
+        closeCurrentSection();
+        currentSectionWriter = null;
+      }
+
+      // HFile v4 structure: Section Index + File Info + Trailer
+      // (Each section contains complete HFile v3 with its own blocks)
+      // Note: v4 readers skip initMetaAndIndex, so no meta block index needed
       trailer = new FixedFileTrailer(getMajorVersion(), getMinorVersion());
 
       // 1. Write Section Index Block (replaces data block index in v4)
@@ -793,7 +836,6 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
       long loadOnOpenOffset =
         maxSectionDataEndOffset > 0 ? maxSectionDataEndOffset : rootIndexOffset;
       if (loadOnOpenOffset > rootIndexOffset) {
-        // Clamp to ensure we never point past the actual section index start.
         loadOnOpenOffset = rootIndexOffset;
       }
       trailer.setLoadOnOpenOffset(loadOnOpenOffset);
@@ -813,7 +855,19 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
           + "totalUncompressedBytes={}",
         streamName, sectionCount, entryCount, totalUncompressedBytes);
     } finally {
-      blockWriter.release();
+      try {
+        if (blockWriter != null) {
+          blockWriter.release();
+        }
+      } finally {
+        if (closeOutputStream) {
+          try {
+            outputStream.close();
+          } catch (IOException e) {
+            LOG.warn("Failed to close output stream during cleanup for {}", streamName, e);
+          }
+        }
+      }
     }
   }
 
@@ -874,19 +928,12 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     trailer.serialize(outputStream);
     HFile.updateWriteLatency(EnvironmentEdgeManager.currentTime() - startTime);
 
-    // Close the output stream - no file renaming needed since caller handles temporary files
+    // Flush (but do not close) the output stream — close is handled by the finally in close()
     try {
-      if (closeOutputStream) {
-        outputStream.close();
-        LOG.info("Successfully closed MultiTenantHFileWriter: {}", streamName);
-      } else {
-        try {
-          outputStream.hflush();
-        } catch (UnsupportedOperationException uoe) {
-          outputStream.flush();
-        }
-        LOG.debug("Flushed MultiTenantHFileWriter output stream (caller retains ownership): {}",
-          streamName);
+      try {
+        outputStream.hflush();
+      } catch (UnsupportedOperationException uoe) {
+        outputStream.flush();
       }
     } catch (IOException e) {
       LOG.error("Error finalizing MultiTenantHFileWriter for {}", streamName, e);
@@ -1008,6 +1055,9 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
 
   @Override
   public void appendFileInfo(byte[] key, byte[] value) throws IOException {
+    if (closed.get()) {
+      throw new IOException("Cannot append file info to a closed writer: " + streamName);
+    }
     if (shouldStoreInGlobalFileInfo(key) && fileInfo.get(key) == null) {
       fileInfo.append(key, value, true);
     }
@@ -1015,9 +1065,11 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     if (isPropagatedDefaultKey(key)) {
       sectionDefaultFileInfo.append(key, value, true);
     }
-    // If a section is active, also apply immediately
-    if (currentSectionWriter != null) {
-      currentSectionWriter.appendFileInfo(key, value);
+    // If a section is active, also apply immediately. Capture local reference
+    // to avoid NPE if a concurrent close() nulls the field.
+    SectionWriter section = currentSectionWriter;
+    if (section != null) {
+      section.appendFileInfo(key, value);
     }
   }
 
@@ -1072,7 +1124,7 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
         globalCustomTimeRangePresent = true;
       }
     }
-    if (currentSectionWriter != null) {
+    if (currentSectionWriter != null && timeRangeTracker != null) {
       currentSectionWriter.appendCustomCellTimestampsToMetadata(timeRangeTracker);
     }
   }
@@ -1222,7 +1274,7 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     /** The starting offset of this section in the parent file */
     private final long sectionStartOffset;
     /** Whether this section writer has been closed */
-    private boolean closed = false;
+    private volatile boolean closed = false;
     /** Absolute offset where this section's load-on-open data begins */
     private long sectionLoadOnOpenOffset = -1L;
     /** Absolute offset of this section's first data block, or -1 if section is empty */
@@ -1313,12 +1365,7 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
 
       @Override
       public long getPos() {
-        try {
-          // Return position relative to section start
-          return delegate.getPos() - baseOffset;
-        } catch (Exception e) {
-          throw new RuntimeException("Failed to get position", e);
-        }
+        return delegate.getPos() - baseOffset;
       }
 
       @Override
@@ -1589,8 +1636,10 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
         throw new AssertionError("Please specify exactly one of filesystem/path or path");
       }
 
+      boolean createdStream = false;
       if (path != null) {
         ostream = HFileWriterImpl.createOutputStream(conf, fs, path, favoredNodes);
+        createdStream = true;
         try {
           ostream.setDropBehind(shouldDropBehind && cacheConf.shouldDropBehindCompaction());
         } catch (UnsupportedOperationException uoe) {
@@ -1599,25 +1648,35 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
         }
       }
 
-      // IMPORTANT:
-      // This code path runs on regionserver/master threads during flush/compaction.
-      // Never perform any filesystem or RPC lookups here (e.g. fetching a TableDescriptor), as that
-      // can deadlock during shutdown and is also very expensive.
-      //
-      // The `conf` passed here is typically a Store-specific CompoundConfiguration which already
-      // includes table/CF descriptor values (see StoreUtils#createStoreConfiguration).
-      // TenantExtractorFactory reads multi-tenant enablement/prefix length from that Configuration.
-      Map<String, String> tableProperties = null;
-      BloomType columnFamilyBloomType = preferredBloomType;
+      boolean success = false;
+      try {
+        // IMPORTANT:
+        // This code path runs on regionserver/master threads during flush/compaction.
+        // Never perform any filesystem or RPC lookups here (e.g. fetching a TableDescriptor),
+        // as that can deadlock during shutdown and is also very expensive.
+        //
+        // The `conf` passed here is typically a Store-specific CompoundConfiguration which already
+        // includes table/CF descriptor values (see StoreUtils#createStoreConfiguration).
+        // TenantExtractorFactory reads multi-tenant enablement/prefix length from that
+        // Configuration.
+        Map<String, String> tableProperties = null;
+        BloomType columnFamilyBloomType = preferredBloomType;
 
-      // Create the writer using the factory method
-      // For system tables with MULTI_TENANT_ENABLED=false, this will use SingleTenantExtractor
-      // which creates HFile v4 with a single default section (clean and consistent)
-      // For user tables with multi-tenant properties, this will use DefaultTenantExtractor
-      // which creates HFile v4 with multiple tenant sections based on row key prefixes
-      boolean ownsStream = path != null;
-      return MultiTenantHFileWriter.create(fs, path, conf, cacheConf, tableProperties,
-        writerFileContext, columnFamilyBloomType, preferredBloomType, ostream, ownsStream);
+        boolean ownsStream = path != null;
+        HFile.Writer writer =
+          MultiTenantHFileWriter.create(fs, path, conf, cacheConf, tableProperties,
+            writerFileContext, columnFamilyBloomType, preferredBloomType, ostream, ownsStream);
+        success = true;
+        return writer;
+      } finally {
+        if (!success && createdStream && ostream != null) {
+          try {
+            ostream.close();
+          } catch (IOException e) {
+            LOG.warn("Failed to close output stream after WriterFactory failure for {}", path, e);
+          }
+        }
+      }
     }
   }
 }

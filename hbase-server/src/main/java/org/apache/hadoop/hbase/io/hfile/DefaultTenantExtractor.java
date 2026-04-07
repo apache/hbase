@@ -34,7 +34,7 @@ public class DefaultTenantExtractor implements TenantExtractor {
    * Constructor for DefaultTenantExtractor.
    * @param prefixLength the length of the tenant prefix to extract from row keys
    */
-  private static final int MAX_PREFIX_LENGTH = 64 * 1024;
+  private static final int MAX_PREFIX_LENGTH = Short.MAX_VALUE;
 
   public DefaultTenantExtractor(int prefixLength) {
     if (prefixLength <= 0 || prefixLength > MAX_PREFIX_LENGTH) {
@@ -58,17 +58,16 @@ public class DefaultTenantExtractor implements TenantExtractor {
   /**
    * Extract tenant prefix from a cell.
    * @param cell The cell to extract tenant information from
-   * @return The tenant prefix as a byte array
+   * @return The tenant prefix as a byte array, or null if the row key is shorter than the
+   *         configured prefix length (e.g., synthetic seek keys, bloom filter probes)
    */
   private byte[] extractPrefix(Cell cell) {
     Objects.requireNonNull(cell, "cell must not be null");
     int rowLength = cell.getRowLength();
     if (rowLength < prefixLength) {
-      throw new IllegalArgumentException("Row key too short for configured prefix length. "
-        + "Row key length: " + rowLength + ", required: " + prefixLength);
+      return null;
     }
 
-    // Create and populate result array - always from start of row
     byte[] prefix = new byte[prefixLength];
     System.arraycopy(cell.getRowArray(), cell.getRowOffset(), prefix, 0, prefixLength);
     return prefix;
@@ -81,5 +80,22 @@ public class DefaultTenantExtractor implements TenantExtractor {
   @Override
   public int getPrefixLength() {
     return prefixLength;
+  }
+
+  /**
+   * Zero-allocation comparison: checks whether the cell's row prefix matches the given section ID
+   * by comparing directly from the cell's backing byte array.
+   */
+  @Override
+  public boolean matchesTenantSectionId(Cell cell, byte[] currentSectionId) {
+    if (cell == null || currentSectionId == null) {
+      return false;
+    }
+    int rowLength = cell.getRowLength();
+    if (rowLength < prefixLength || currentSectionId.length != prefixLength) {
+      return false;
+    }
+    return org.apache.hadoop.hbase.util.Bytes.equals(cell.getRowArray(), cell.getRowOffset(),
+      prefixLength, currentSectionId, 0, prefixLength);
   }
 }

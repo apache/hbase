@@ -115,7 +115,15 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
             ReaderContextBuilder.newBuilder(sectionContext).withFilePath(perSectionPath).build();
 
           HFileInfo info = new HFileInfo(perSectionContext, getConf());
-          local = new HFilePreadReader(perSectionContext, info, cacheConf, getConf());
+          boolean infoSuccess = false;
+          try {
+            local = new HFilePreadReader(perSectionContext, info, cacheConf, getConf());
+            infoSuccess = true;
+          } finally {
+            if (!infoSuccess) {
+              info.close();
+            }
+          }
 
           reader = local;
           LOG.debug("Successfully initialized HFilePreadReader for tenant section ID: {}",
@@ -123,8 +131,8 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
 
           return local;
         } catch (IOException e) {
-          LOG.error("Failed to initialize section reader for tenant section at offset {}: {}",
-            metadata.getOffset(), e.getMessage());
+          LOG.error("Failed to initialize section reader for tenant section at offset {}",
+            metadata.getOffset(), e);
           throw e;
         }
       }

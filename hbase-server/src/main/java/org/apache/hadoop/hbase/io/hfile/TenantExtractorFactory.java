@@ -54,7 +54,7 @@ public class TenantExtractorFactory {
   public static TenantExtractor createFromReader(HFile.Reader reader) {
     // Check if this is a v4 file with tenant configuration in the trailer
     FixedFileTrailer trailer = reader.getTrailer();
-    if (trailer.getMajorVersion() == HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT) {
+    if (trailer.getMajorVersion() >= HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT) {
       if (trailer.isMultiTenant()) {
         int prefixLength = trailer.getTenantPrefixLength();
         if (prefixLength <= 0) {
@@ -62,10 +62,16 @@ public class TenantExtractorFactory {
             prefixLength);
           return new MultiTenantHFileWriter.SingleTenantExtractor();
         }
-        LOG.debug("Multi-tenant enabled from HFile v4 trailer, prefixLength={}", prefixLength);
-        return new DefaultTenantExtractor(prefixLength);
+        try {
+          LOG.debug("Multi-tenant enabled from HFile v4 trailer, prefixLength={}", prefixLength);
+          return new DefaultTenantExtractor(prefixLength);
+        } catch (IllegalArgumentException e) {
+          LOG.warn("Invalid tenant prefix length {} from trailer of {}, "
+            + "falling back to SingleTenantExtractor", prefixLength, reader.getPath(), e);
+          return new MultiTenantHFileWriter.SingleTenantExtractor();
+        }
       } else {
-        LOG.debug("HFile v4 format, but multi-tenant not enabled in trailer");
+        LOG.debug("HFile v4+ format, but multi-tenant not enabled in trailer");
         return new MultiTenantHFileWriter.SingleTenantExtractor();
       }
     }
@@ -137,10 +143,15 @@ public class TenantExtractorFactory {
       prefixLength = clusterPrefixLength;
     }
 
+    if (prefixLength <= 0) {
+      LOG.warn("Configured tenant prefix length {} is invalid (must be > 0), "
+        + "falling back to SingleTenantExtractor", prefixLength);
+      return new MultiTenantHFileWriter.SingleTenantExtractor();
+    }
+
     LOG.debug("Tenant configuration initialized: prefixLength={}, from table properties: {}",
       prefixLength, (tablePrefixLengthStr != null));
 
-    // Create and return a DefaultTenantExtractor with the configured parameters
     return new DefaultTenantExtractor(prefixLength);
   }
 }

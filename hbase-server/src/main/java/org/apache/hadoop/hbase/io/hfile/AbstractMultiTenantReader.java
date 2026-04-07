@@ -192,7 +192,9 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     logTenantIndexStructureInfo();
 
     // Create tenant extractor with consistent configuration
-    this.tenantExtractor = TenantExtractorFactory.createFromReader(this);
+    this.tenantExtractor =
+      java.util.Objects.requireNonNull(TenantExtractorFactory.createFromReader(this),
+        "TenantExtractorFactory.createFromReader returned null for " + context.getFilePath());
 
     // Initialize prefetch configuration
     this.prefetchEnabled =
@@ -326,11 +328,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
           rootIndexBlock.release();
         }
       }
-    } catch (IOException e) {
-      LOG.error("Failed to load tenant section index", e);
-      throw e;
     } finally {
-      // Restore original position
       fsdis.seek(originalPosition);
     }
   }
@@ -393,29 +391,43 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     return cache;
   }
 
+  private static final int MAX_TENANT_INDEX_LEVELS = 16;
+
   private void loadTenantIndexMetadata() {
     byte[] tenantIndexLevelsBytes =
       fileInfo.get(Bytes.toBytes(MultiTenantHFileWriter.FILEINFO_TENANT_INDEX_LEVELS));
     if (tenantIndexLevelsBytes != null) {
-      int parsedLevels = Bytes.toInt(tenantIndexLevelsBytes);
-      if (parsedLevels >= 1) {
-        tenantIndexLevels = parsedLevels;
+      if (tenantIndexLevelsBytes.length != Bytes.SIZEOF_INT) {
+        LOG.warn("Corrupt tenant index levels byte array (length={}) in file info for {}, "
+          + "using default", tenantIndexLevelsBytes.length, context.getFilePath());
       } else {
-        LOG.warn("Ignoring invalid tenant index level count {} in file info for {}", parsedLevels,
-          context.getFilePath());
-        tenantIndexLevels = 1;
+        int parsedLevels = Bytes.toInt(tenantIndexLevelsBytes);
+        if (parsedLevels >= 1 && parsedLevels <= MAX_TENANT_INDEX_LEVELS) {
+          tenantIndexLevels = parsedLevels;
+        } else {
+          LOG.warn(
+            "Ignoring invalid tenant index level count {} in file info for {} "
+              + "(valid range: [1, {}])",
+            parsedLevels, context.getFilePath(), MAX_TENANT_INDEX_LEVELS);
+          tenantIndexLevels = 1;
+        }
       }
     }
 
     byte[] chunkSizeBytes =
       fileInfo.get(Bytes.toBytes(MultiTenantHFileWriter.FILEINFO_TENANT_INDEX_MAX_CHUNK));
     if (chunkSizeBytes != null) {
-      int parsedChunkSize = Bytes.toInt(chunkSizeBytes);
-      if (parsedChunkSize > 0) {
-        tenantIndexMaxChunkSize = parsedChunkSize;
+      if (chunkSizeBytes.length != Bytes.SIZEOF_INT) {
+        LOG.warn("Corrupt tenant index chunk size byte array (length={}) in file info for {}, "
+          + "using default", chunkSizeBytes.length, context.getFilePath());
       } else {
-        LOG.warn("Ignoring invalid tenant index chunk size {} in file info for {}", parsedChunkSize,
-          context.getFilePath());
+        int parsedChunkSize = Bytes.toInt(chunkSizeBytes);
+        if (parsedChunkSize > 0) {
+          tenantIndexMaxChunkSize = parsedChunkSize;
+        } else {
+          LOG.warn("Ignoring invalid tenant index chunk size {} in file info for {}",
+            parsedChunkSize, context.getFilePath());
+        }
       }
     }
   }
@@ -446,8 +458,18 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     for (SectionIndexManager.SectionIndexEntry entry : sectionIndexReader.getSections()) {
       ImmutableBytesWritable key = new ImmutableBytesWritable(entry.getTenantPrefix());
       SectionMetadata metadata = new SectionMetadata(entry.getOffset(), entry.getSectionSize());
-      sectionLocations.put(key, metadata);
+
+      SectionMetadata previous = sectionLocations.put(key, metadata);
+      if (previous != null) {
+        sectionOffsetIndex.remove(previous.getOffset());
+        LOG.warn("Duplicate tenant prefix {} in section index: replacing offset {} with {}",
+          Bytes.toStringBinary(entry.getTenantPrefix()), previous.getOffset(), entry.getOffset());
+      }
       sectionOffsetIndex.put(entry.getOffset(), key);
+    }
+
+    if (sectionLocations.isEmpty()) {
+      LOG.warn("Multi-tenant HFile {} contains zero sections", context.getFilePath());
     }
 
     // Create list for section navigation
@@ -483,7 +505,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     ImmutableBytesWritable cacheKey = new ImmutableBytesWritable(sectionId);
     SectionReaderLease lease = getSectionReader(sectionId);
     if (lease == null) {
-      return true;
+      // No section for this tenant prefix → key definitively cannot exist in this file
+      return false;
     }
     try (lease) {
       SectionBloomState bloomState = getOrLoadSectionBloomState(cacheKey, lease);
@@ -496,6 +519,11 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
 
   @Override
   public boolean passesGeneralRowColBloomFilter(ExtendedCell cell) throws IOException {
+    // Gracefully handle short row keys (same as the byte[] path)
+    int prefixLength = tenantExtractor.getPrefixLength();
+    if (prefixLength > 0 && cell.getRowLength() < prefixLength) {
+      return true;
+    }
     byte[] sectionId = tenantExtractor.extractTenantSectionId(cell);
     if (sectionId == null) {
       return true;
@@ -503,7 +531,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     ImmutableBytesWritable cacheKey = new ImmutableBytesWritable(sectionId);
     SectionReaderLease lease = getSectionReader(sectionId);
     if (lease == null) {
-      return true;
+      return false;
     }
     try (lease) {
       SectionBloomState bloomState = getOrLoadSectionBloomState(cacheKey, lease);
@@ -524,7 +552,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     ImmutableBytesWritable cacheKey = new ImmutableBytesWritable(sectionId);
     SectionReaderLease lease = getSectionReader(sectionId);
     if (lease == null) {
-      return true;
+      return false;
     }
     try (lease) {
       SectionBloomState bloomState = getOrLoadSectionBloomState(cacheKey, lease);
@@ -545,7 +573,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     ImmutableBytesWritable cacheKey = new ImmutableBytesWritable(sectionId);
     SectionReaderLease lease = getSectionReader(sectionId);
     if (lease == null) {
-      return true;
+      return false;
     }
     try (lease) {
       SectionBloomState bloomState = getOrLoadSectionBloomState(cacheKey, lease);
@@ -748,9 +776,9 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
    */
   protected static class SectionMetadata {
     /** The offset where the section starts */
-    final long offset;
+    private final long offset;
     /** The size of the section in bytes */
-    final int size;
+    private final int size;
 
     /**
      * Constructor for SectionMetadata.
@@ -758,6 +786,12 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
      * @param size   the size of the section in bytes
      */
     SectionMetadata(long offset, int size) {
+      if (offset < 0) {
+        throw new IllegalArgumentException("Section offset must be non-negative, got: " + offset);
+      }
+      if (size <= 0) {
+        throw new IllegalArgumentException("Section size must be positive, got: " + size);
+      }
       this.offset = offset;
       this.size = size;
     }
@@ -786,6 +820,9 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
    * @throws IOException If an error occurs during lookup
    */
   protected SectionMetadata getSectionMetadata(byte[] tenantSectionId) throws IOException {
+    if (tenantSectionId == null) {
+      return null;
+    }
     return sectionLocations.get(new ImmutableBytesWritable(tenantSectionId));
   }
 
@@ -1175,7 +1212,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       }
     }
 
-    void forceClose(boolean evictOnClose) {
+    synchronized void forceClose(boolean evictOnClose) {
       evicted.set(true);
       closeInternal(evictOnClose);
     }
@@ -1471,8 +1508,11 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       // Extract tenant section ID
       byte[] tenantSectionId = tenantExtractor.extractTenantSectionId(key);
 
-      // If tenant section changed, we need to do a full seek
+      // If tenant section changed, check direction before seeking
       if (!Bytes.equals(tenantSectionId, currentTenantSectionId)) {
+        if (Bytes.compareTo(tenantSectionId, currentTenantSectionId) < 0) {
+          return 1;
+        }
         return seekTo(key);
       }
 
@@ -1558,17 +1598,13 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
 
     @Override
     public ExtendedCell getKey() {
-      if (!isSeeked()) {
-        return null;
-      }
+      assertSeeked();
       return currentScanner.getKey();
     }
 
     @Override
     public java.nio.ByteBuffer getValue() {
-      if (!isSeeked()) {
-        return null;
-      }
+      assertSeeked();
       return currentScanner.getValue();
     }
 
@@ -1578,27 +1614,32 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
 
       boolean hasNext = currentScanner.next();
       if (!hasNext) {
-        // Try to find the next tenant section
-        byte[] nextTenantSectionId = findNextTenantSectionId(currentTenantSectionId);
-        if (nextTenantSectionId == null) {
-          seeked = false;
-          return false;
-        }
+        // Try subsequent sections until we find one with data or exhaust all sections
+        while (true) {
+          byte[] nextTenantSectionId = findNextTenantSectionId(currentTenantSectionId);
+          if (nextTenantSectionId == null) {
+            seeked = false;
+            return false;
+          }
 
-        // Move to the next tenant section
-        if (!switchToSection(nextTenantSectionId)) {
-          seeked = false;
-          return false;
-        }
+          if (!switchToSection(nextTenantSectionId)) {
+            // Section unavailable; advance currentSectionIndex so we skip past it
+            currentTenantSectionId = nextTenantSectionId;
+            currentSectionIndex = resolveCurrentSectionIndex(nextTenantSectionId);
+            continue;
+          }
 
-        // Prefetch the section after next if enabled
-        if (prefetchEnabled) {
-          prefetchNextSection(nextTenantSectionId);
-        }
+          if (prefetchEnabled) {
+            prefetchNextSection(nextTenantSectionId);
+          }
 
-        boolean result = currentScanner.seekTo();
-        seeked = result;
-        return result;
+          boolean result = currentScanner.seekTo();
+          if (result) {
+            seeked = true;
+            return true;
+          }
+          // Empty section — continue to next
+        }
       }
 
       return true;
@@ -1664,15 +1705,21 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       return currentScanner.getNextIndexedKey();
     }
 
+    private boolean scannerClosed = false;
+
     @Override
     public void close() {
-      if (currentScanner != null) {
-        currentScanner.close();
-        currentScanner = null;
-      }
-      if (currentSectionLease != null) {
-        currentSectionLease.close();
-        currentSectionLease = null;
+      scannerClosed = true;
+      try {
+        if (currentScanner != null) {
+          currentScanner.close();
+          currentScanner = null;
+        }
+      } finally {
+        if (currentSectionLease != null) {
+          currentSectionLease.close();
+          currentSectionLease = null;
+        }
       }
       currentSectionReader = null;
       currentTenantSectionId = null;
@@ -1705,7 +1752,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
    */
   @Override
   public void close() throws IOException {
-    close(false);
+    close(cacheConf.shouldEvictOnClose());
   }
 
   /**
@@ -1713,28 +1760,39 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
    * @param evictOnClose Whether to evict blocks on close
    * @throws IOException If an error occurs during close
    */
+  private final AtomicBoolean readerClosed = new AtomicBoolean(false);
+
   @Override
   public void close(boolean evictOnClose) throws IOException {
-    sectionReaderCache.asMap().forEach((key, holder) -> {
-      if (holder != null) {
-        holder.forceClose(evictOnClose);
+    if (!readerClosed.compareAndSet(false, true)) {
+      return;
+    }
+
+    try {
+      sectionReaderCache.asMap().forEach((key, holder) -> {
+        if (holder != null) {
+          holder.forceClose(evictOnClose);
+        }
+      });
+      sectionReaderCache.invalidateAll();
+      sectionReaderCache.cleanUp();
+      sectionBloomCache.invalidateAll();
+      sectionBloomCache.cleanUp();
+    } finally {
+      try {
+        if (fileInfo != null) {
+          fileInfo.close();
+        }
+      } finally {
+        try {
+          if (fsBlockReader != null) {
+            fsBlockReader.closeStreams();
+          }
+        } finally {
+          context.getInputStreamWrapper().unbuffer();
+        }
       }
-    });
-    sectionReaderCache.invalidateAll();
-    sectionReaderCache.cleanUp();
-
-    // Release load-on-open block buffers held by fileInfo
-    if (fileInfo != null) {
-      fileInfo.close();
     }
-
-    // Close filesystem block reader streams
-    if (fsBlockReader != null) {
-      fsBlockReader.closeStreams();
-    }
-
-    // Unbuffer the main input stream wrapper
-    context.getInputStreamWrapper().unbuffer();
   }
 
   /**
@@ -1847,8 +1905,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       }
 
       return Optional.empty();
-    } catch (Exception e) {
-      LOG.error("Failed to get first key from multi-tenant HFile", e);
+    } catch (IOException e) {
+      LOG.error("Failed to get first key from multi-tenant HFile {}", getPath(), e);
       return Optional.empty();
     }
   }
@@ -1885,8 +1943,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       }
 
       return Optional.empty();
-    } catch (Exception e) {
-      LOG.error("Failed to get last key from multi-tenant HFile", e);
+    } catch (IOException e) {
+      LOG.error("Failed to get last key from multi-tenant HFile {}", getPath(), e);
       return Optional.empty();
     }
   }
@@ -2583,10 +2641,11 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
         if (!fileInfoBlockLoaded) {
           try {
             loadFileInfoBlock();
+            fileInfoBlockLoaded = true;
           } catch (IOException e) {
-            LOG.error("Failed to load FileInfo block for multi-tenant HFile", e);
+            LOG.error("Failed to load FileInfo block for multi-tenant HFile; "
+              + "will retry on next access", e);
           }
-          fileInfoBlockLoaded = true;
         }
       }
     }

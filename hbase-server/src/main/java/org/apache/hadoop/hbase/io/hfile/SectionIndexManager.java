@@ -84,16 +84,22 @@ public class SectionIndexManager {
     public SectionIndexEntry(byte[] tenantPrefix, long offset, int sectionSize) {
       this.tenantPrefix =
         (tenantPrefix != null) ? Arrays.copyOf(tenantPrefix, tenantPrefix.length) : new byte[0];
+      if (offset < 0) {
+        throw new IllegalArgumentException("Section offset must be non-negative, got: " + offset);
+      }
+      if (sectionSize <= 0) {
+        throw new IllegalArgumentException("Section size must be positive, got: " + sectionSize);
+      }
       this.offset = offset;
       this.sectionSize = sectionSize;
     }
 
     /**
      * Get the tenant prefix for this section.
-     * @return the tenant prefix
+     * @return a defensive copy of the tenant prefix
      */
     public byte[] getTenantPrefix() {
-      return tenantPrefix;
+      return Arrays.copyOf(tenantPrefix, tenantPrefix.length);
     }
 
     /**

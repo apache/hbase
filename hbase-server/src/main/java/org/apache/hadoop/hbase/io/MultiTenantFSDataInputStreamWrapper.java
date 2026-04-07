@@ -79,8 +79,8 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
    */
   public MultiTenantFSDataInputStreamWrapper(FSDataInputStreamWrapper parent, long offset,
     long sectionSize, boolean ownsParent) {
-    // Use test constructor to properly initialize both streams and avoid assertion issues
-    super(parent.getStream(false), parent.getStream(true));
+    super(java.util.Objects.requireNonNull(parent, "parent stream wrapper").getStream(false),
+      parent.getStream(true));
     if (offset < 0) {
       throw new IllegalArgumentException("Section offset must be non-negative, got: " + offset);
     }
@@ -367,12 +367,10 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
       long relativePosition = toRelativePosition(absolutePosition);
       LOG.trace("Section getPos: absolute {} -> relative {}, sectionOffset={}", absolutePosition,
         relativePosition, sectionOffset);
-      // Validate position translation
       if (relativePosition < 0) {
-        LOG.warn(
-          "Position translation resulted in negative relative position: "
-            + "absolute={}, relative={}, sectionOffset={}",
-          absolutePosition, relativePosition, sectionOffset);
+        throw new IOException(
+          "Position translation resulted in negative relative position: absolute="
+            + absolutePosition + ", sectionOffset=" + sectionOffset);
       }
       return relativePosition;
     }
@@ -423,6 +421,8 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
     private final long sectionOffset;
     /** The section size for boundary enforcement */
     private final long sectionSize;
+    /** Absolute end boundary: reads must not go beyond this position */
+    private final long sectionEndAbsolute;
 
     /**
      * Constructor for OffsetTranslatingInputStream.
@@ -435,24 +435,39 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
       this.rawStream = rawStream;
       this.sectionOffset = sectionOffset;
       this.sectionSize = sectionSize;
+      this.sectionEndAbsolute = sectionOffset + sectionSize;
+    }
+
+    private long remainingInSection() throws IOException {
+      return sectionEndAbsolute - rawStream.getPos();
     }
 
     @Override
     public int read() throws IOException {
-      // For single byte reads, we rely on the current position being correctly set
+      if (remainingInSection() <= 0) {
+        return -1;
+      }
       return rawStream.read();
     }
 
     @Override
     public int read(byte[] buffer, int offset, int length) throws IOException {
-      // This is the key method that gets called by DataInputStream's final methods
-      // We need to ensure the stream is positioned correctly before reading
-      return rawStream.read(buffer, offset, length);
+      long remaining = remainingInSection();
+      if (remaining <= 0) {
+        return -1;
+      }
+      int clampedLength = (int) Math.min(length, remaining);
+      return rawStream.read(buffer, offset, clampedLength);
     }
 
     @Override
     public long skip(long bytesToSkip) throws IOException {
-      return rawStream.skip(bytesToSkip);
+      long remaining = remainingInSection();
+      if (remaining <= 0) {
+        return 0;
+      }
+      long clampedSkip = Math.min(bytesToSkip, remaining);
+      return rawStream.skip(clampedSkip);
     }
 
     @Override
