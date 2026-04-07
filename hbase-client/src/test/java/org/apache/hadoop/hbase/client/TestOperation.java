@@ -371,7 +371,7 @@ public class TestOperation {
     scan.setLimit(5);
     scan.setReadType(Scan.ReadType.PREAD);
     scan.setNeedCursorResult(true);
-    scan.setFilter(SCV_FILTER);
+    scan.setFilter(VALUE_FILTER);
     scan.setReplicaId(1);
     scan.setConsistency(Consistency.STRONG);
     scan.setLoadColumnFamiliesOnDemand(true);

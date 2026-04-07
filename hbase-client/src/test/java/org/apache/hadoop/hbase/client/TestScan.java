@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -29,6 +30,8 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.filter.FilterList;
+import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
+import org.apache.hadoop.hbase.filter.PageFilter;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -252,6 +255,36 @@ public class TestScan {
 
     assertTrue(EqualsBuilder.reflectionEquals(scan, scanCopy),
       "Make sure copy constructor adds all the fields in the copied object");
+  }
+
+  @Test
+  public void testSetFilterWithBatchThrows() {
+    Scan scan = new Scan();
+    scan.setBatch(5);
+    assertThrows(IncompatibleFilterException.class, () -> scan.setFilter(new PageFilter(10)));
+  }
+
+  @Test
+  public void testSetFilterWithoutBatchDoesNotThrow() {
+    Scan scan = new Scan();
+    scan.setFilter(new PageFilter(10));
+    // no exception expected
+  }
+
+  @Test
+  public void testSetFilterWithBatchAndNonFilterRowFilter() {
+    Scan scan = new Scan();
+    scan.setBatch(5);
+    scan.setFilter(new FilterList());
+    // FilterList.hasFilterRow() returns false, so no exception expected
+  }
+
+  @Test
+  public void testSetFilterWithBatchAndNullFilter() {
+    Scan scan = new Scan();
+    scan.setBatch(5);
+    scan.setFilter(null);
+    // null filter should not throw
   }
 
   @Test
