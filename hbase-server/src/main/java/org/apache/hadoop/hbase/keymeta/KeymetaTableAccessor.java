@@ -444,8 +444,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     ManagedKeyIdentity originalFullKeyIdentity, Result result) throws IOException, KeyException {
     if (result == null || result.isEmpty()) {
       LOG.warn(
-        "parseFromResult: returning null because result is null or empty (keyCust={}, keyCust length={}, "
-          + "keyNamespace={})",
+        "parseFromResult: returning null because result is null or empty "
+          + "(keyCust={}, keyCust length={}, keyNamespace={})",
         originalFullKeyIdentity.getCustodianEncoded(), originalFullKeyIdentity.getCustodianLength(),
         originalFullKeyIdentity.getNamespaceString());
       return null;

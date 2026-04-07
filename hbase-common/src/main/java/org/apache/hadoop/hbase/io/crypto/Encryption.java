@@ -99,7 +99,7 @@ public final class Encryption {
    * Crypto context
    */
   @InterfaceAudience.Public
-  public static class Context extends org.apache.hadoop.hbase.io.crypto.Context {
+  public static final class Context extends org.apache.hadoop.hbase.io.crypto.Context {
 
     /** The null crypto context */
     public static final Context NONE = new Context();
@@ -402,7 +402,7 @@ public final class Encryption {
   public static void decrypt(OutputStream out, InputStream in, int outLen, Decryptor d)
     throws IOException {
     InputStream cin = d.createDecryptionStream(in);
-    byte buf[] = new byte[8 * 1024];
+    byte[] buf = new byte[8 * 1024];
     long remaining = outLen;
     try {
       while (remaining > 0) {
