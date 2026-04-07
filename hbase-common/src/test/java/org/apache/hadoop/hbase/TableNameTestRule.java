@@ -23,7 +23,6 @@ import org.junit.runner.Description;
 /**
  * Returns a {@code TableName} based on currently running test method name. Supports tests built on
  * the {@link org.junit.runners.Parameterized} runner.
- *
  * @deprecated Use {@link TableNameTestExtension} instead, once we finish the migration of JUnit5,
  *             which means we do not need {@link TableNameTestRule} any more, we can remove these
  *             dependencies, see

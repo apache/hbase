@@ -47,7 +47,6 @@ public class TableNameTestExtension implements BeforeEachCallback {
 
   @Override
   public void beforeEach(ExtensionContext context) {
-    tableName = TableName
-      .valueOf(cleanUpTestName(context.getRequiredTestMethod().getName()));
+    tableName = TableName.valueOf(cleanUpTestName(context.getRequiredTestMethod().getName()));
   }
 }

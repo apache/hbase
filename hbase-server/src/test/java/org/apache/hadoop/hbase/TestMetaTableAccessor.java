@@ -293,16 +293,16 @@ public class TestMetaTableAccessor {
     long regionId = EnvironmentEdgeManager.currentTime();
     RegionInfo primary =
       RegionInfoBuilder.newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName()))
-      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
-      .setRegionId(regionId).setReplicaId(0).build();
+        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+        .setRegionId(regionId).setReplicaId(0).build();
     RegionInfo replica1 =
       RegionInfoBuilder.newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName()))
-      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
-      .setRegionId(regionId).setReplicaId(1).build();
+        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+        .setRegionId(regionId).setReplicaId(1).build();
     RegionInfo replica100 =
       RegionInfoBuilder.newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName()))
-      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
-      .setRegionId(regionId).setReplicaId(100).build();
+        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+        .setRegionId(regionId).setReplicaId(100).build();
 
     long seqNum0 = rand.nextLong();
     long seqNum1 = rand.nextLong();
@@ -372,8 +372,8 @@ public class TestMetaTableAccessor {
     long regionId = EnvironmentEdgeManager.currentTime();
     RegionInfo primary =
       RegionInfoBuilder.newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName()))
-      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
-      .setRegionId(regionId).setReplicaId(0).build();
+        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+        .setRegionId(regionId).setReplicaId(0).build();
 
     Table meta = MetaTableAccessor.getMetaHTable(connection);
     try {
@@ -434,13 +434,12 @@ public class TestMetaTableAccessor {
    * Tests whether maximum of masters system time versus RSs local system time is used
    */
   @Test
-  public void testMastersSystemTimeIsUsedInUpdateLocations(TestInfo testInfo)
-    throws IOException {
+  public void testMastersSystemTimeIsUsedInUpdateLocations(TestInfo testInfo) throws IOException {
     long regionId = EnvironmentEdgeManager.currentTime();
     RegionInfo regionInfo =
       RegionInfoBuilder.newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName()))
-      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
-      .setRegionId(regionId).setReplicaId(0).build();
+        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+        .setRegionId(regionId).setReplicaId(0).build();
 
     ServerName sn = ServerName.valueOf("bar", 0, 0);
     try (Table meta = MetaTableAccessor.getMetaHTable(connection)) {

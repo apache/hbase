@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -35,10 +37,9 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.jupiter.api.AfterAll;
-import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 @Tag(MasterTests.TAG)
 @Tag(MediumTests.TAG)
@@ -93,10 +94,14 @@ public class TestExceptionInAssignRegion {
     long prodId = procedureExecutor.submitProcedure(assignRegionProcedure);
     ProcedureTestingUtility.waitProcedure(procedureExecutor, prodId);
 
-    assertEquals(UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size(), 2, "Should be two RS since other is aborted");
-    assertNull(getRegionServer(0).getRegionsInTransitionInRS().get(hri.getEncodedNameAsBytes()), "RIT Map doesn't have correct value");
-    assertNull(getRegionServer(1).getRegionsInTransitionInRS().get(hri.getEncodedNameAsBytes()), "RIT Map doesn't have correct value");
-    assertNull(getRegionServer(2).getRegionsInTransitionInRS().get(hri.getEncodedNameAsBytes()), "RIT Map doesn't have correct value");
+    assertEquals(UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size(), 2,
+      "Should be two RS since other is aborted");
+    assertNull(getRegionServer(0).getRegionsInTransitionInRS().get(hri.getEncodedNameAsBytes()),
+      "RIT Map doesn't have correct value");
+    assertNull(getRegionServer(1).getRegionsInTransitionInRS().get(hri.getEncodedNameAsBytes()),
+      "RIT Map doesn't have correct value");
+    assertNull(getRegionServer(2).getRegionsInTransitionInRS().get(hri.getEncodedNameAsBytes()),
+      "RIT Map doesn't have correct value");
   }
 
   private HRegionServer getRegionServer(int index) {

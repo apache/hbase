@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
@@ -34,10 +36,9 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.AfterAll;
-import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,8 +92,10 @@ public class TestMasterAbortWhileMergingTable {
       && UTIL.getMiniHBaseCluster().getMaster().isInitialized());
     UTIL.waitFor(30000,
       () -> UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().isFinished(procID));
-    assertTrue(UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionsInTransition().size()
-          == 0, "Found region RIT, that's impossible! "
+    assertTrue(
+      UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionsInTransition().size()
+          == 0,
+      "Found region RIT, that's impossible! "
         + UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionsInTransition());
   }
 

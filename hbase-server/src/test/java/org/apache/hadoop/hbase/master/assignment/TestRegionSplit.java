@@ -40,12 +40,12 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -127,8 +127,7 @@ public class TestRegionSplit {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
-    assertTrue(UTIL.getHBaseCluster().getRegions(tableName).size() == 2,
-      "not able to split table");
+    assertTrue(UTIL.getHBaseCluster().getRegions(tableName).size() == 2, "not able to split table");
 
     // disable table
     UTIL.getAdmin().disableTable(tableName);
@@ -186,8 +185,7 @@ public class TestRegionSplit {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
-    assertEquals(2, UTIL.getHBaseCluster().getRegions(tableName).size(),
-      "Not able to split table");
+    assertEquals(2, UTIL.getHBaseCluster().getRegions(tableName).size(), "Not able to split table");
 
     // assert sum of the hfiles of all regions
     int childStoreFilesSum = 0;

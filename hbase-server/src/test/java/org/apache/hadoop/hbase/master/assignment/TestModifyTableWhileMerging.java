@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -32,10 +34,9 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.AfterAll;
-import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,7 +94,8 @@ public class TestModifyTableWhileMerging {
     long proc = executor.submitProcedure(mergeTableRegionsProcedure);
     UTIL.waitFor(3000000, () -> UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor()
       .isFinished(procModify));
-    assertEquals(modifyTableProcedure.getState(), ProcedureProtos.ProcedureState.SUCCESS, "Modify Table procedure should success!");
+    assertEquals(modifyTableProcedure.getState(), ProcedureProtos.ProcedureState.SUCCESS,
+      "Modify Table procedure should success!");
   }
 
 }

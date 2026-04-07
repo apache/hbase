@@ -47,8 +47,8 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
@@ -194,6 +194,7 @@ public class TestReportRegionStateTransitionFromDeadServer {
       .getActiveProcIds().isEmpty());
     boolean onRS1 = !rs1.getRegions(NAME).isEmpty();
     boolean onRS2 = !rs2.getRegions(NAME).isEmpty();
-    assertNotEquals(onRS2, onRS1, "should either be on rs1 or rs2, but onRS1 is " + onRS1 + " and on RS2 is " + onRS2);
+    assertNotEquals(onRS2, onRS1,
+      "should either be on rs1 or rs2, but onRS1 is " + onRS1 + " and on RS2 is " + onRS2);
   }
 }
