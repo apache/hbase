@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -30,26 +29,22 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test that verifies we do not have memstore size negative when a postPut/Delete hook is
  * slow/expensive and a flush is triggered at the same time the coprocessow is doing its work. To
  * simulate this we call flush from the coprocessor itself
  */
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestNegativeMemStoreSizeWithSlowCoprocessor {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNegativeMemStoreSizeWithSlowCoprocessor.class);
 
   static final Logger LOG =
     LoggerFactory.getLogger(TestNegativeMemStoreSizeWithSlowCoprocessor.class);
@@ -59,7 +54,7 @@ public class TestNegativeMemStoreSizeWithSlowCoprocessor {
   private static final byte[] family = Bytes.toBytes("f");
   private static final byte[] qualifier = Bytes.toBytes("q");
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
@@ -70,7 +65,7 @@ public class TestNegativeMemStoreSizeWithSlowCoprocessor {
     TEST_UTIL.createTable(TableName.valueOf(tableName), family);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -93,7 +88,7 @@ public class TestNegativeMemStoreSizeWithSlowCoprocessor {
     } catch (IOException e) {
       IOEthrown = true;
     } finally {
-      Assert.assertFalse("Shouldn't have thrown an exception", IOEthrown);
+      assertFalse(IOEthrown, "Shouldn't have thrown an exception");
       if (table != null) {
         table.close();
       }
@@ -110,7 +105,7 @@ public class TestNegativeMemStoreSizeWithSlowCoprocessor {
 
       if (Bytes.equals(put.getRow(), Bytes.toBytes("row2"))) {
         region.flush(false);
-        Assert.assertTrue(region.getMemStoreDataSize() >= 0);
+        assertTrue(region.getMemStoreDataSize() >= 0);
       }
     }
   }

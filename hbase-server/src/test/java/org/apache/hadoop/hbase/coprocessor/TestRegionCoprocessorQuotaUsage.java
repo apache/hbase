@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -26,7 +26,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -38,20 +37,16 @@ import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MediumTests.class, CoprocessorTests.class })
+@Tag(MediumTests.TAG)
+@Tag(CoprocessorTests.TAG)
 public class TestRegionCoprocessorQuotaUsage {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionCoprocessorQuotaUsage.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionCoprocessorQuotaUsage.class);
 
@@ -94,7 +89,7 @@ public class TestRegionCoprocessorQuotaUsage {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     conf.setBoolean("hbase.quota.enabled", true);
@@ -112,7 +107,7 @@ public class TestRegionCoprocessorQuotaUsage {
     TABLE.put(new Put(Bytes.toBytes(String.format("%d", 0))).addColumn(CF, CQ, Bytes.toBytes(0L)));
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -126,6 +121,6 @@ public class TestRegionCoprocessorQuotaUsage {
         break;
       }
     }
-    assertTrue("Throttling did not happen as expected", THROTTLING_OCCURRED.get());
+    assertTrue(THROTTLING_OCCURRED.get(), "Throttling did not happen as expected");
   }
 }

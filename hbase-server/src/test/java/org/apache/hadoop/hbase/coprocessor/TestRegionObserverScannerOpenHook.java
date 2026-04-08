@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -71,24 +70,24 @@ import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionObserverScannerOpenHook {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionObserverScannerOpenHook.class);
 
   private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   static final Path DIR = UTIL.getDataTestDir();
 
-  @Rule
-  public TestName name = new TestName();
+  private String currentTestName;
+
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    currentTestName = testInfo.getTestMethod().get().getName();
+  }
 
   public static class NoDataFilter extends FilterBase {
 
@@ -230,10 +229,8 @@ public class TestRegionObserverScannerOpenHook {
 
     Get get = new Get(ROW);
     Result r = region.get(get);
-    assertNull(
-      "Got an unexpected number of rows - "
-        + "no data should be returned with the NoDataFromScan coprocessor. Found: " + r,
-      r.listCells());
+    assertNull(r.listCells(), "Got an unexpected number of rows - "
+        + "no data should be returned with the NoDataFromScan coprocessor. Found: " + r);
     HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
@@ -258,10 +255,8 @@ public class TestRegionObserverScannerOpenHook {
     region.flush(true);
     Get get = new Get(ROW);
     Result r = region.get(get);
-    assertNull(
-      "Got an unexpected number of rows - "
-        + "no data should be returned with the NoDataFromScan coprocessor. Found: " + r,
-      r.listCells());
+    assertNull(r.listCells(), "Got an unexpected number of rows - "
+        + "no data should be returned with the NoDataFromScan coprocessor. Found: " + r);
     HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
@@ -319,7 +314,7 @@ public class TestRegionObserverScannerOpenHook {
     byte[] ROW = Bytes.toBytes("testRow");
     byte[] A = Bytes.toBytes("A");
     TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTestName))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(A))
         .setCoprocessor(CoprocessorDescriptorBuilder
           .newBuilder(EmptyRegionObsever.class.getName()).setJarPath(null)
@@ -341,7 +336,7 @@ public class TestRegionObserverScannerOpenHook {
 
     HRegionServer rs = UTIL.getRSForFirstRegionInTable(tableDescriptor.getTableName());
     List<HRegion> regions = rs.getRegions(tableDescriptor.getTableName());
-    assertEquals("More than 1 region serving test table with 1 row", 1, regions.size());
+    assertEquals(1, regions.size(), "More than 1 region serving test table with 1 row");
     Region region = regions.get(0);
     admin.flushRegion(region.getRegionInfo().getRegionName());
     CountDownLatch latch =
@@ -359,17 +354,13 @@ public class TestRegionObserverScannerOpenHook {
     // check both rows to ensure that they aren't there
     Get get = new Get(ROW);
     Result r = table.get(get);
-    assertNull(
-      "Got an unexpected number of rows - "
-        + "no data should be returned with the NoDataFromScan coprocessor. Found: " + r,
-      r.listCells());
+    assertNull(r.listCells(), "Got an unexpected number of rows - "
+        + "no data should be returned with the NoDataFromScan coprocessor. Found: " + r);
 
     get = new Get(Bytes.toBytes("anotherrow"));
     r = table.get(get);
-    assertNull(
-      "Got an unexpected number of rows - "
-        + "no data should be returned with the NoDataFromScan coprocessor Found: " + r,
-      r.listCells());
+    assertNull(r.listCells(), "Got an unexpected number of rows - "
+        + "no data should be returned with the NoDataFromScan coprocessor Found: " + r);
 
     table.close();
     UTIL.shutdownMiniCluster();

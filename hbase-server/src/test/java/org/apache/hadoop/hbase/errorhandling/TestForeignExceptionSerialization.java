@@ -17,28 +17,23 @@
  */
 package org.apache.hadoop.hbase.errorhandling;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Objects;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test that we correctly serialize exceptions from a remote source
  */
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestForeignExceptionSerialization {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestForeignExceptionSerialization.class);
 
   private static final String srcName = "someNode";
 
@@ -59,8 +54,8 @@ public class TestForeignExceptionSerialization {
     e = ForeignException.deserialize(ForeignException.serialize(srcName, in));
 
     assertNotNull(e);
-    assertEquals("Stack trace got corrupted", elem, e.getCause().getStackTrace()[0]);
-    assertEquals("Got an unexpectedly long stack trace", 1, e.getCause().getStackTrace().length);
+    assertEquals(elem, e.getCause().getStackTrace()[0], "Stack trace got corrupted");
+    assertEquals(1, e.getCause().getStackTrace().length, "Got an unexpectedly long stack trace");
   }
 
   /**
@@ -78,11 +73,11 @@ public class TestForeignExceptionSerialization {
 
     // Workaround for java 11 - replaced assertArrayEquals with individual elements comparison
     // using custom comparison helper method
-    assertEquals("Stacktrace lengths don't match", generic.getStackTrace().length,
-      e.getCause().getStackTrace().length);
+    assertEquals(generic.getStackTrace().length, e.getCause().getStackTrace().length,
+      "Stacktrace lengths don't match");
     for (int i = 0; i < generic.getStackTrace().length; i++) {
-      assertTrue("Local stack trace got corrupted at " + i + "th index",
-        compareStackTraceElement(generic.getStackTrace()[i], e.getCause().getStackTrace()[i]));
+      assertTrue(compareStackTraceElement(generic.getStackTrace()[i], e.getCause().getStackTrace()[i]),
+        "Local stack trace got corrupted at " + i + "th index");
     }
 
     e.printStackTrace(); // should have ForeignException and source node in it.

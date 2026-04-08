@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -27,7 +27,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -44,24 +43,20 @@ import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Test that a coprocessor can open a connection and write to another table, inside a hook.
  */
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestOpenTableInCoprocessor {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestOpenTableInCoprocessor.class);
 
   private static final TableName otherTable = TableName.valueOf("otherTable");
   private static final TableName primaryTable = TableName.valueOf("primary");
@@ -135,12 +130,12 @@ public class TestOpenTableInCoprocessor {
 
   private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     UTIL.startMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void cleanupTestTable() throws Exception {
     UTIL.getAdmin().disableTable(primaryTable);
     UTIL.getAdmin().deleteTable(primaryTable);
@@ -150,7 +145,7 @@ public class TestOpenTableInCoprocessor {
 
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownCluster() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -188,8 +183,8 @@ public class TestOpenTableInCoprocessor {
     table.close();
 
     Table target = UTIL.getConnection().getTable(otherTable);
-    assertTrue("Didn't complete update to target table!", completeCheck[0]);
-    assertEquals("Didn't find inserted row", 1, getKeyValueCount(target));
+    assertTrue(completeCheck[0], "Didn't complete update to target table!");
+    assertEquals(1, getKeyValueCount(target), "Didn't find inserted row");
     target.close();
   }
 

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -25,25 +25,20 @@ import java.security.cert.X509Certificate;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ipc.RpcCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRpcCoprocessor {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRpcCoprocessor.class);
 
   public static class AuthorizationRpcObserver implements RpcCoprocessor, RpcObserver {
     final AtomicInteger ctPostAuthorization = new AtomicInteger(0);
@@ -71,7 +66,7 @@ public class TestRpcCoprocessor {
 
   private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     // set configure to indicate which cp should be loaded
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -80,7 +75,7 @@ public class TestRpcCoprocessor {
     TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }

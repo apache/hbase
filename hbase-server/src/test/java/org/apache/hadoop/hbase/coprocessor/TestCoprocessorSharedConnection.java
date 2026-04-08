@@ -17,44 +17,34 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.SharedConnection;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 /**
  * Ensure Coprocessors get ShardConnections when they get a Connection from their
  * CoprocessorEnvironment.
  */
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCoprocessorSharedConnection {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCoprocessorSharedConnection.class);
-
-  @Rule
-  public TestName name = new TestName();
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
 
   /**
    * Start up a mini cluster with my three CPs loaded.
    */
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     // Set my test Coprocessors into the Configuration before we start up the cluster.
     Configuration conf = HTU.getConfiguration();
@@ -67,7 +57,7 @@ public class TestCoprocessorSharedConnection {
     HTU.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     HTU.shutdownMiniCluster();
   }

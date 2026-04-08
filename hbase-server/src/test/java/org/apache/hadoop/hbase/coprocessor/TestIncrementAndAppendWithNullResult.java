@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -27,7 +27,6 @@ import java.util.Optional;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -39,18 +38,14 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestIncrementAndAppendWithNullResult {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIncrementAndAppendWithNullResult.class);
 
   private static final HBaseTestingUtil util = new HBaseTestingUtil();
   private static final TableName TEST_TABLE = TableName.valueOf("test");
@@ -59,7 +54,7 @@ public class TestIncrementAndAppendWithNullResult {
   private static final byte[] qualifierCol1 = Bytes.toBytes("col1");
   private static Table table;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     util.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       MyObserver.class.getName());
@@ -69,7 +64,7 @@ public class TestIncrementAndAppendWithNullResult {
     table = util.createTable(TEST_TABLE, TEST_FAMILY);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     util.shutdownMiniCluster();
   }
@@ -148,9 +143,9 @@ public class TestIncrementAndAppendWithNullResult {
 
   private static void checkResult(Object[] results) {
     for (int i = 0; i != results.length; ++i) {
-      assertNotNull("The result[" + i + "] should not be null", results[i]);
-      assertTrue("The result[" + i + "] should be Result type", results[i] instanceof Result);
-      assertTrue("The result[" + i + "] shuold be empty", ((Result) results[i]).isEmpty());
+      assertNotNull(results[i], "The result[" + i + "] should not be null");
+      assertTrue(results[i] instanceof Result, "The result[" + i + "] should be Result type");
+      assertTrue(((Result) results[i]).isEmpty(), "The result[" + i + "] shuold be empty");
     }
   }
 }

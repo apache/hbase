@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -29,7 +29,6 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -58,13 +57,12 @@ import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,12 +75,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableNa
  * Tests invocation of the {@link org.apache.hadoop.hbase.coprocessor.MasterObserver} interface
  * hooks at all appropriate times during normal HMaster operations.
  */
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMasterObserver {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterObserver.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterObserver.class);
 
@@ -1096,10 +1091,14 @@ public class TestMasterObserver {
   private static String TEST_SNAPSHOT = "observed_snapshot";
   private static TableName TEST_CLONE = TableName.valueOf("observed_clone");
   private static byte[] TEST_FAMILY = Bytes.toBytes("fam1");
-  @Rule
-  public TestName name = new TestName();
+  private String currentTestName;
 
-  @BeforeClass
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    currentTestName = testInfo.getTestMethod().get().getName();
+  }
+
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, CPMasterObserver.class.getName());
@@ -1107,7 +1106,7 @@ public class TestMasterObserver {
     UTIL.startMiniCluster(2);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -1117,28 +1116,27 @@ public class TestMasterObserver {
     SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
-    assertTrue("Master should be active", master.isActiveMaster());
+    assertTrue(master.isActiveMaster(), "Master should be active");
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
-    assertNotNull("CoprocessorHost should not be null", host);
+    assertNotNull(host, "CoprocessorHost should not be null");
     CPMasterObserver cp = host.findCoprocessor(CPMasterObserver.class);
-    assertNotNull("CPMasterObserver coprocessor not found or not installed!", cp);
+    assertNotNull(cp, "CPMasterObserver coprocessor not found or not installed!");
 
     // check basic lifecycle
-    assertTrue("MasterObserver should have been started", cp.wasStarted());
-    assertTrue("preMasterInitialization() hook should have been called",
-      cp.wasMasterInitializationCalled());
-    assertTrue("postStartMaster() hook should have been called", cp.wasStartMasterCalled());
+    assertTrue(cp.wasStarted(), "MasterObserver should have been started");
+    assertTrue(cp.wasMasterInitializationCalled(), "preMasterInitialization() hook should have been called");
+    assertTrue(cp.wasStartMasterCalled(), "postStartMaster() hook should have been called");
   }
 
   @Test
   public void testTableOperations() throws Exception {
     SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(currentTestName);
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
     CPMasterObserver cp = host.findCoprocessor(CPMasterObserver.class);
     cp.resetStates();
-    assertFalse("No table created yet", cp.wasCreateTableCalled());
+    assertFalse(cp.wasCreateTableCalled(), "No table created yet");
 
     // create a table
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
@@ -1149,31 +1147,30 @@ public class TestMasterObserver {
       admin.createTable(tableDescriptor,
         Arrays.copyOfRange(HBaseTestingUtil.KEYS, 1, HBaseTestingUtil.KEYS.length));
 
-      assertTrue("Test table should be created", cp.wasCreateTableCalled());
+      assertTrue(cp.wasCreateTableCalled(), "Test table should be created");
       tableCreationLatch.await();
-      assertTrue("Table pre create handler called.", cp.wasPreCreateTableActionCalled());
-      assertTrue("Table create handler should be called.", cp.wasCreateTableActionCalled());
+      assertTrue(cp.wasPreCreateTableActionCalled(), "Table pre create handler called.");
+      assertTrue(cp.wasCreateTableActionCalled(), "Table create handler should be called.");
 
       RegionLocator regionLocator = connection.getRegionLocator(tableDescriptor.getTableName());
       List<HRegionLocation> regions = regionLocator.getAllRegionLocations();
 
       admin.mergeRegionsAsync(regions.get(0).getRegion().getEncodedNameAsBytes(),
         regions.get(1).getRegion().getEncodedNameAsBytes(), true).get();
-      assertTrue("Coprocessor should have been called on region merge", cp.wasMergeRegionsCalled());
+      assertTrue(cp.wasMergeRegionsCalled(), "Coprocessor should have been called on region merge");
 
       tableCreationLatch = new CountDownLatch(1);
       admin.disableTable(tableName);
       assertTrue(admin.isTableDisabled(tableName));
-      assertTrue("Coprocessor should have been called on table disable",
-        cp.wasDisableTableCalled());
-      assertTrue("Disable table handler should be called.", cp.wasDisableTableActionCalled());
+      assertTrue(cp.wasDisableTableCalled(), "Coprocessor should have been called on table disable");
+      assertTrue(cp.wasDisableTableActionCalled(), "Disable table handler should be called.");
 
       // enable
       assertFalse(cp.wasEnableTableCalled());
       admin.enableTable(tableName);
       assertTrue(admin.isTableEnabled(tableName));
-      assertTrue("Coprocessor should have been called on table enable", cp.wasEnableTableCalled());
-      assertTrue("Enable table handler should be called.", cp.wasEnableTableActionCalled());
+      assertTrue(cp.wasEnableTableCalled(), "Coprocessor should have been called on table enable");
+      assertTrue(cp.wasEnableTableActionCalled(), "Enable table handler should be called.");
 
       admin.disableTable(tableName);
       assertTrue(admin.isTableDisabled(tableName));
@@ -1182,7 +1179,7 @@ public class TestMasterObserver {
       tableDescriptor = TableDescriptorBuilder.newBuilder(tableDescriptor)
         .setMaxFileSize(512 * 1024 * 1024).build();
       modifyTableSync(admin, tableName, tableDescriptor);
-      assertTrue("Test table should have been modified", cp.wasModifyTableCalled());
+      assertTrue(cp.wasModifyTableCalled(), "Test table should have been modified");
 
       // truncate table
       admin.truncateTable(tableName, false);
@@ -1191,59 +1188,58 @@ public class TestMasterObserver {
       admin.disableTable(tableName);
       assertTrue(admin.isTableDisabled(tableName));
       deleteTable(admin, tableName);
-      assertFalse("Test table should have been deleted", admin.tableExists(tableName));
-      assertTrue("Coprocessor should have been called on table delete", cp.wasDeleteTableCalled());
-      assertTrue("Delete table handler should be called.", cp.wasDeleteTableActionCalled());
+      assertFalse(admin.tableExists(tableName), "Test table should have been deleted");
+      assertTrue(cp.wasDeleteTableCalled(), "Coprocessor should have been called on table delete");
+      assertTrue(cp.wasDeleteTableActionCalled(), "Delete table handler should be called.");
 
       // When bypass was supported, we'd turn off bypass and rerun tests. Leaving rerun in place.
       cp.resetStates();
 
       admin.createTable(tableDescriptor);
-      assertTrue("Test table should be created", cp.wasCreateTableCalled());
+      assertTrue(cp.wasCreateTableCalled(), "Test table should be created");
       tableCreationLatch.await();
-      assertTrue("Table pre create handler called.", cp.wasPreCreateTableActionCalled());
-      assertTrue("Table create handler should be called.", cp.wasCreateTableActionCalled());
+      assertTrue(cp.wasPreCreateTableActionCalled(), "Table pre create handler called.");
+      assertTrue(cp.wasCreateTableActionCalled(), "Table create handler should be called.");
 
       // disable
       assertFalse(cp.wasDisableTableCalled());
       assertFalse(cp.wasDisableTableActionCalled());
       admin.disableTable(tableName);
       assertTrue(admin.isTableDisabled(tableName));
-      assertTrue("Coprocessor should have been called on table disable",
-        cp.wasDisableTableCalled());
-      assertTrue("Disable table handler should be called.", cp.wasDisableTableActionCalled());
+      assertTrue(cp.wasDisableTableCalled(), "Coprocessor should have been called on table disable");
+      assertTrue(cp.wasDisableTableActionCalled(), "Disable table handler should be called.");
 
       // modify table
       tableDescriptor = TableDescriptorBuilder.newBuilder(tableDescriptor)
         .setMaxFileSize(512 * 1024 * 1024).build();
       modifyTableSync(admin, tableName, tableDescriptor);
-      assertTrue("Test table should have been modified", cp.wasModifyTableCalled());
+      assertTrue(cp.wasModifyTableCalled(), "Test table should have been modified");
 
       // enable
       assertFalse(cp.wasEnableTableCalled());
       assertFalse(cp.wasEnableTableActionCalled());
       admin.enableTable(tableName);
       assertTrue(admin.isTableEnabled(tableName));
-      assertTrue("Coprocessor should have been called on table enable", cp.wasEnableTableCalled());
-      assertTrue("Enable table handler should be called.", cp.wasEnableTableActionCalled());
+      assertTrue(cp.wasEnableTableCalled(), "Coprocessor should have been called on table enable");
+      assertTrue(cp.wasEnableTableActionCalled(), "Enable table handler should be called.");
 
       // disable again
       admin.disableTable(tableName);
       assertTrue(admin.isTableDisabled(tableName));
 
       // delete table
-      assertFalse("No table deleted yet", cp.wasDeleteTableCalled());
-      assertFalse("Delete table handler should not be called.", cp.wasDeleteTableActionCalled());
+      assertFalse(cp.wasDeleteTableCalled(), "No table deleted yet");
+      assertFalse(cp.wasDeleteTableActionCalled(), "Delete table handler should not be called.");
       deleteTable(admin, tableName);
-      assertFalse("Test table should have been deleted", admin.tableExists(tableName));
-      assertTrue("Coprocessor should have been called on table delete", cp.wasDeleteTableCalled());
-      assertTrue("Delete table handler should be called.", cp.wasDeleteTableActionCalled());
+      assertFalse(admin.tableExists(tableName), "Test table should have been deleted");
+      assertTrue(cp.wasDeleteTableCalled(), "Coprocessor should have been called on table delete");
+      assertTrue(cp.wasDeleteTableActionCalled(), "Delete table handler should be called.");
     }
   }
 
   @Test
   public void testSnapshotOperations() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(currentTestName);
     SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
@@ -1265,21 +1261,18 @@ public class TestMasterObserver {
 
     try {
       // Test snapshot operation
-      assertFalse("Coprocessor should not have been called yet", cp.wasSnapshotCalled());
+      assertFalse(cp.wasSnapshotCalled(), "Coprocessor should not have been called yet");
       admin.snapshot(TEST_SNAPSHOT, tableName);
-      assertTrue("Coprocessor should have been called on snapshot", cp.wasSnapshotCalled());
+      assertTrue(cp.wasSnapshotCalled(), "Coprocessor should have been called on snapshot");
 
       // Test list operation
       admin.listSnapshots();
-      assertTrue("Coprocessor should have been called on snapshot list",
-        cp.wasListSnapshotCalled());
+      assertTrue(cp.wasListSnapshotCalled(), "Coprocessor should have been called on snapshot list");
 
       // Test clone operation
       admin.cloneSnapshot(TEST_SNAPSHOT, TEST_CLONE);
-      assertTrue("Coprocessor should have been called on snapshot clone",
-        cp.wasCloneSnapshotCalled());
-      assertFalse("Coprocessor restore should not have been called on snapshot clone",
-        cp.wasRestoreSnapshotCalled());
+      assertTrue(cp.wasCloneSnapshotCalled(), "Coprocessor should have been called on snapshot clone");
+      assertFalse(cp.wasRestoreSnapshotCalled(), "Coprocessor restore should not have been called on snapshot clone");
       admin.disableTable(TEST_CLONE);
       assertTrue(admin.isTableDisabled(tableName));
       deleteTable(admin, TEST_CLONE);
@@ -1287,14 +1280,11 @@ public class TestMasterObserver {
       // Test restore operation
       cp.resetStates();
       admin.restoreSnapshot(TEST_SNAPSHOT);
-      assertTrue("Coprocessor should have been called on snapshot restore",
-        cp.wasRestoreSnapshotCalled());
-      assertFalse("Coprocessor clone should not have been called on snapshot restore",
-        cp.wasCloneSnapshotCalled());
+      assertTrue(cp.wasRestoreSnapshotCalled(), "Coprocessor should have been called on snapshot restore");
+      assertFalse(cp.wasCloneSnapshotCalled(), "Coprocessor clone should not have been called on snapshot restore");
 
       admin.deleteSnapshot(TEST_SNAPSHOT);
-      assertTrue("Coprocessor should have been called on snapshot delete",
-        cp.wasDeleteSnapshotCalled());
+      assertTrue(cp.wasDeleteSnapshotCalled(), "Coprocessor should have been called on snapshot delete");
     } finally {
       deleteTable(admin, tableName);
     }
@@ -1312,15 +1302,14 @@ public class TestMasterObserver {
     Admin admin = UTIL.getAdmin();
 
     admin.listNamespaces();
-    assertTrue("preListNamespaces should have been called", cp.preListNamespacesCalled);
-    assertTrue("postListNamespaces should have been called", cp.postListNamespacesCalled);
+    assertTrue(cp.preListNamespacesCalled, "preListNamespaces should have been called");
+    assertTrue(cp.postListNamespacesCalled, "postListNamespaces should have been called");
 
     admin.createNamespace(NamespaceDescriptor.create(testNamespace).build());
-    assertTrue("Test namespace should be created", cp.wasCreateNamespaceCalled());
+    assertTrue(cp.wasCreateNamespaceCalled(), "Test namespace should be created");
 
     assertNotNull(admin.getNamespaceDescriptor(testNamespace));
-    assertTrue("Test namespace descriptor should have been called",
-      cp.wasGetNamespaceDescriptorCalled());
+    assertTrue(cp.wasGetNamespaceDescriptorCalled(), "Test namespace descriptor should have been called");
     // This test used to do a bunch w/ bypass but bypass of these table and namespace stuff has
     // been removed so the testing code was removed.
   }
@@ -1340,7 +1329,7 @@ public class TestMasterObserver {
 
   @Test
   public void testRegionTransitionOperations() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(currentTestName);
     SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
@@ -1361,7 +1350,7 @@ public class TestMasterObserver {
           break;
         }
       }
-      assertNotNull("Found a non-null entry", firstGoodPair);
+      assertNotNull(firstGoodPair, "Found a non-null entry");
       LOG.info("Found " + firstGoodPair.toString());
       // Try to force a move
       Collection<ServerName> servers = master.getClusterMetrics().getLiveServerMetrics().keySet();
@@ -1381,16 +1370,15 @@ public class TestMasterObserver {
           break;
         }
       }
-      assertTrue("Found server", found);
+      assertTrue(found, "Found server");
       LOG.info("Found " + destName);
       master.getMasterRpcServices().moveRegion(null, RequestConverter.buildMoveRegionRequest(
         firstGoodPair.getRegion().getEncodedNameAsBytes(), ServerName.valueOf(destName)));
-      assertTrue("Coprocessor should have been called on region move", cp.wasMoveCalled());
+      assertTrue(cp.wasMoveCalled(), "Coprocessor should have been called on region move");
 
       // make sure balancer is on
       master.balanceSwitch(true);
-      assertTrue("Coprocessor should have been called on balance switch",
-        cp.wasBalanceSwitchCalled());
+      assertTrue(cp.wasBalanceSwitchCalled(), "Coprocessor should have been called on balance switch");
 
       // turn balancer off
       master.balanceSwitch(false);
@@ -1418,7 +1406,7 @@ public class TestMasterObserver {
       // now trigger a balance
       master.balanceSwitch(true);
       master.balance();
-      assertTrue("Coprocessor should be called on region rebalancing", cp.wasBalanceCalled());
+      assertTrue(cp.wasBalanceCalled(), "Coprocessor should be called on region rebalancing");
     } finally {
       Admin admin = UTIL.getAdmin();
       admin.disableTable(tableName);
@@ -1439,8 +1427,7 @@ public class TestMasterObserver {
       RequestConverter.buildGetTableDescriptorsRequest((List<TableName>) null);
     master.getMasterRpcServices().getTableDescriptors(null, req);
 
-    assertTrue("Coprocessor should be called on table descriptors request",
-      cp.wasGetTableDescriptorsCalled());
+    assertTrue(cp.wasGetTableDescriptorsCalled(), "Coprocessor should be called on table descriptors request");
   }
 
   @Test
@@ -1453,7 +1440,7 @@ public class TestMasterObserver {
     cp.resetStates();
 
     master.getMasterRpcServices().getTableNames(null, GetTableNamesRequest.newBuilder().build());
-    assertTrue("Coprocessor should be called on table names request", cp.wasGetTableNamesCalled());
+    assertTrue(cp.wasGetTableNamesCalled(), "Coprocessor should be called on table names request");
   }
 
   @Test
@@ -1466,8 +1453,7 @@ public class TestMasterObserver {
     cp.resetStates();
 
     master.abortProcedure(1, true);
-    assertTrue("Coprocessor should be called on abort procedure request",
-      cp.wasAbortProcedureCalled());
+    assertTrue(cp.wasAbortProcedureCalled(), "Coprocessor should be called on abort procedure request");
   }
 
   @Test
@@ -1480,8 +1466,7 @@ public class TestMasterObserver {
     cp.resetStates();
 
     master.getProcedures();
-    assertTrue("Coprocessor should be called on get procedures request",
-      cp.wasGetProceduresCalled());
+    assertTrue(cp.wasGetProceduresCalled(), "Coprocessor should be called on get procedures request");
   }
 
   @Test
@@ -1494,7 +1479,7 @@ public class TestMasterObserver {
     cp.resetStates();
 
     master.getLocks();
-    assertTrue("Coprocessor should be called on get locks request", cp.wasGetLocksCalled());
+    assertTrue(cp.wasGetLocksCalled(), "Coprocessor should be called on get locks request");
   }
 
   private void deleteTable(Admin admin, TableName tableName) throws Exception {
@@ -1530,15 +1515,15 @@ public class TestMasterObserver {
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
     CPMasterObserver cp = host.findCoprocessor(CPMasterObserver.class);
     cp.resetStates();
-    assertFalse("No master store flush call", cp.preMasterStoreFlushCalled);
-    assertFalse("No master store flush call", cp.postMasterStoreFlushCalled);
+    assertFalse(cp.preMasterStoreFlushCalled, "No master store flush call");
+    assertFalse(cp.postMasterStoreFlushCalled, "No master store flush call");
 
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
       Admin admin = connection.getAdmin()) {
       admin.flushMasterStore();
 
-      assertTrue("Master store flush called", cp.preMasterStoreFlushCalled);
-      assertTrue("Master store flush called", cp.postMasterStoreFlushCalled);
+      assertTrue(cp.preMasterStoreFlushCalled, "Master store flush called");
+      assertTrue(cp.postMasterStoreFlushCalled, "Master store flush called");
     }
   }
 
@@ -1549,15 +1534,15 @@ public class TestMasterObserver {
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
     CPMasterObserver cp = host.findCoprocessor(CPMasterObserver.class);
     cp.resetStates();
-    assertFalse("No update configuration call", cp.preUpdateMasterConfigurationCalled);
-    assertFalse("No update configuration call", cp.postUpdateMasterConfigurationCalled);
+    assertFalse(cp.preUpdateMasterConfigurationCalled, "No update configuration call");
+    assertFalse(cp.postUpdateMasterConfigurationCalled, "No update configuration call");
 
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
       Admin admin = connection.getAdmin()) {
       admin.updateConfiguration();
 
-      assertTrue("Update configuration called", cp.preUpdateMasterConfigurationCalled);
-      assertTrue("Update configuration called", cp.postUpdateMasterConfigurationCalled);
+      assertTrue(cp.preUpdateMasterConfigurationCalled, "Update configuration called");
+      assertTrue(cp.postUpdateMasterConfigurationCalled, "Update configuration called");
     }
   }
 }

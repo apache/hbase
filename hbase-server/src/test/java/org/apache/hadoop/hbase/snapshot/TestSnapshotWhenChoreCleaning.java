@@ -26,10 +26,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -39,28 +37,23 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSVisitor;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test Case for HBASE-21387
  */
-@Category({ MediumTests.class })
+@Tag(MediumTests.TAG)
 public class TestSnapshotWhenChoreCleaning {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotWhenChoreCleaning.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Configuration CONF = TEST_UTIL.getConfiguration();
@@ -72,10 +65,7 @@ public class TestSnapshotWhenChoreCleaning {
   private static final byte[] VALUE = Bytes.toBytes("value");
   private static Table TABLE;
 
-  @Rule
-  public TableNameTestRule testTable = new TableNameTestRule();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     // Set the hbase.snapshot.thread.pool.max to 1;
     CONF.setInt("hbase.snapshot.thread.pool.max", 1);
@@ -99,7 +89,7 @@ public class TestSnapshotWhenChoreCleaning {
     TABLE = TEST_UTIL.createTable(TABLE_NAME, FAMILY, splitKeys);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -156,10 +146,10 @@ public class TestSnapshotWhenChoreCleaning {
     }
 
     TEST_UTIL.getAdmin().snapshot("snapshotName_prev", TABLE_NAME);
-    Assert.assertEquals(Lists.newArrayList(cleaner.getDeletableFiles(files)).size(), 0);
+    assertEquals(Lists.newArrayList(cleaner.getDeletableFiles(files)).size(), 0);
     TEST_UTIL.getAdmin().deleteSnapshot("snapshotName_prev");
     cleaner.getFileCacheForTesting().triggerCacheRefreshForTesting();
-    Assert.assertEquals(Lists.newArrayList(cleaner.getDeletableFiles(files)).size(), 100);
+    assertEquals(Lists.newArrayList(cleaner.getDeletableFiles(files)).size(), 100);
 
     Runnable snapshotRunnable = () -> {
       try {
@@ -200,6 +190,6 @@ public class TestSnapshotWhenChoreCleaning {
     t2.start();
     t1.join();
     t2.join();
-    Assert.assertTrue(success.get());
+    assertTrue(success.get());
   }
 }

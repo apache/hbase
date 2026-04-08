@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -41,7 +41,6 @@ import javax.management.ObjectName;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.JMXListener;
 import org.apache.hadoop.hbase.TableName;
@@ -57,20 +56,16 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.Matcher;
 import org.hamcrest.core.AllOf;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ CoprocessorTests.class, LargeTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMetaTableMetrics {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetaTableMetrics.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaTableMetrics.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -91,7 +86,7 @@ public class TestMetaTableMetrics {
   private byte[] tablename;
   private final int nthreads = 20;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     // Set system coprocessor so it can be applied to meta regions
@@ -120,7 +115,7 @@ public class TestMetaTableMetrics {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }

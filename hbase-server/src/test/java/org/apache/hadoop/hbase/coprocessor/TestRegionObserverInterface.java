@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
@@ -87,26 +86,22 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@Category({ CoprocessorTests.class, LargeTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRegionObserverInterface {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionObserverInterface.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionObserverInterface.class);
 
@@ -120,10 +115,14 @@ public class TestRegionObserverInterface {
   private static HBaseTestingUtil util = new HBaseTestingUtil();
   private static SingleProcessHBaseCluster cluster = null;
 
-  @Rule
-  public TestName name = new TestName();
+  private String currentTestName;
 
-  @BeforeClass
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    currentTestName = testInfo.getTestMethod().get().getName();
+  }
+
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     // set configure to indicate which cp should be loaded
     Configuration conf = util.getConfiguration();
@@ -135,7 +134,7 @@ public class TestRegionObserverInterface {
     cluster = util.getMiniHBaseCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     util.shutdownMiniCluster();
   }
@@ -143,7 +142,7 @@ public class TestRegionObserverInterface {
   @Test
   public void testRegionObserver() throws IOException {
     final TableName tableName =
-      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
+      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + currentTestName);
     // recreate table every time in order to reset the status of the
     // coprocessor.
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
@@ -204,7 +203,7 @@ public class TestRegionObserverInterface {
   @Test
   public void testRowMutation() throws IOException {
     final TableName tableName =
-      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
+      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + currentTestName);
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
     try {
       verifyMethodResult(SimpleRegionObserver.class,
@@ -237,7 +236,7 @@ public class TestRegionObserverInterface {
   @Test
   public void testIncrementHook() throws IOException {
     final TableName tableName =
-      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
+      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + currentTestName);
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
     try {
       Increment inc = new Increment(Bytes.toBytes(0));
@@ -263,7 +262,7 @@ public class TestRegionObserverInterface {
   @Test
   public void testCheckAndPutHooks() throws IOException {
     final TableName tableName =
-      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
+      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + currentTestName);
     try (Table table = util.createTable(tableName, new byte[][] { A, B, C })) {
       Put p = new Put(Bytes.toBytes(0));
       p.addColumn(A, A, A);
@@ -301,7 +300,7 @@ public class TestRegionObserverInterface {
   @Test
   public void testCheckAndDeleteHooks() throws IOException {
     final TableName tableName =
-      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
+      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + currentTestName);
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
     try {
       Put p = new Put(Bytes.toBytes(0));
@@ -341,7 +340,7 @@ public class TestRegionObserverInterface {
   @Test
   public void testCheckAndIncrementHooks() throws Exception {
     final TableName tableName =
-      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
+      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + currentTestName);
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
     try {
       byte[] row = Bytes.toBytes(0);
@@ -373,7 +372,7 @@ public class TestRegionObserverInterface {
   @Test
   public void testCheckAndAppendHooks() throws Exception {
     final TableName tableName =
-      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
+      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + currentTestName);
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
     try {
       byte[] row = Bytes.toBytes(0);
@@ -405,7 +404,7 @@ public class TestRegionObserverInterface {
   @Test
   public void testCheckAndRowMutationsHooks() throws Exception {
     final TableName tableName =
-      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
+      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + currentTestName);
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
     try {
       byte[] row = Bytes.toBytes(0);
@@ -444,7 +443,7 @@ public class TestRegionObserverInterface {
   @Test
   public void testAppendHook() throws IOException {
     final TableName tableName =
-      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
+      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + currentTestName);
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
     try {
       Append app = new Append(Bytes.toBytes(0));
@@ -470,7 +469,7 @@ public class TestRegionObserverInterface {
   @Test
   // HBase-3583
   public void testHBase3583() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(currentTestName);
     util.createTable(tableName, new byte[][] { A, B, C });
     util.waitUntilAllRegionsAssigned(tableName);
 
@@ -512,7 +511,7 @@ public class TestRegionObserverInterface {
 
   @Test
   public void testHBASE14489() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(currentTestName);
     Table table = util.createTable(tableName, new byte[][] { A });
     Put put = new Put(ROW);
     put.addColumn(A, A, A);
@@ -537,7 +536,7 @@ public class TestRegionObserverInterface {
   @Test
   // HBase-3758
   public void testHBase3758() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(currentTestName);
     util.createTable(tableName, new byte[][] { A, B, C });
 
     verifyMethodResult(SimpleRegionObserver.class,
@@ -637,7 +636,7 @@ public class TestRegionObserverInterface {
    */
   @Test
   public void testCompactionOverride() throws Exception {
-    final TableName compactTable = TableName.valueOf(name.getMethodName());
+    final TableName compactTable = TableName.valueOf(currentTestName);
     Admin admin = util.getAdmin();
     if (admin.tableExists(compactTable)) {
       admin.disableTable(compactTable);
@@ -660,7 +659,7 @@ public class TestRegionObserverInterface {
 
     HRegion firstRegion = cluster.getRegions(compactTable).get(0);
     Coprocessor cp = firstRegion.getCoprocessorHost().findCoprocessor(EvenOnlyCompactor.class);
-    assertNotNull("EvenOnlyCompactor coprocessor should be loaded", cp);
+    assertNotNull(cp, "EvenOnlyCompactor coprocessor should be loaded");
     EvenOnlyCompactor compactor = (EvenOnlyCompactor) cp;
 
     // force a compaction
@@ -673,7 +672,7 @@ public class TestRegionObserverInterface {
       }
       Thread.sleep(1000);
     }
-    assertTrue("Flush didn't complete", compactor.lastFlush >= ts);
+    assertTrue(compactor.lastFlush >= ts, "Flush didn't complete");
     LOG.debug("Flush complete");
 
     ts = compactor.lastFlush;
@@ -686,7 +685,7 @@ public class TestRegionObserverInterface {
       Thread.sleep(1000);
     }
     LOG.debug("Last compaction was at " + compactor.lastCompaction);
-    assertTrue("Compaction didn't complete", compactor.lastCompaction >= ts);
+    assertTrue(compactor.lastCompaction >= ts, "Compaction didn't complete");
 
     // only even rows should remain
     ResultScanner scanner = table.getScanner(new Scan());
@@ -696,8 +695,8 @@ public class TestRegionObserverInterface {
         assertNotNull(r);
         assertFalse(r.isEmpty());
         byte[] iBytes = Bytes.toBytes(i);
-        assertArrayEquals("Row should be " + i, r.getRow(), iBytes);
-        assertArrayEquals("Value should be " + i, r.getValue(A, A), iBytes);
+        assertArrayEquals(r.getRow(), iBytes, "Row should be " + i);
+        assertArrayEquals(r.getValue(A, A), iBytes, "Value should be " + i);
       }
     } finally {
       scanner.close();
@@ -708,9 +707,9 @@ public class TestRegionObserverInterface {
   @Test
   public void bulkLoadHFileTest() throws Exception {
     final String testName =
-      TestRegionObserverInterface.class.getName() + "." + name.getMethodName();
+      TestRegionObserverInterface.class.getName() + "." + currentTestName;
     final TableName tableName =
-      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
+      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + currentTestName);
     Configuration conf = util.getConfiguration();
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
     try (RegionLocator locator = util.getConnection().getRegionLocator(tableName)) {
@@ -738,9 +737,9 @@ public class TestRegionObserverInterface {
 
   @Test
   public void testRecovery() throws Exception {
-    LOG.info(TestRegionObserverInterface.class.getName() + "." + name.getMethodName());
+    LOG.info(TestRegionObserverInterface.class.getName() + "." + currentTestName);
     final TableName tableName =
-      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
+      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + currentTestName);
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
     try (RegionLocator locator = util.getConnection().getRegionLocator(tableName)) {
 
@@ -789,7 +788,7 @@ public class TestRegionObserverInterface {
 
   @Test
   public void testPreWALRestoreSkip() throws Exception {
-    LOG.info(TestRegionObserverInterface.class.getName() + "." + name.getMethodName());
+    LOG.info(TestRegionObserverInterface.class.getName() + "." + currentTestName);
     TableName tableName = TableName.valueOf(SimpleRegionObserver.TABLE_SKIPPED);
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
 
@@ -861,15 +860,15 @@ public class TestRegionObserverInterface {
       new WALKeyImpl(Bytes.toBytes("region"), TEST_TABLE, EnvironmentEdgeManager.currentTime());
     WALEdit edit = new WALEdit();
     sro.preWALAppend(ctx, key, edit);
-    Assert.assertEquals(1, key.getExtendedAttributes().size());
-    Assert.assertArrayEquals(SimpleRegionObserver.WAL_EXTENDED_ATTRIBUTE_BYTES,
+    assertEquals(1, key.getExtendedAttributes().size());
+    assertArrayEquals(SimpleRegionObserver.WAL_EXTENDED_ATTRIBUTE_BYTES,
       key.getExtendedAttribute(Integer.toString(sro.getCtPreWALAppend())));
   }
 
   @Test
   public void testPreWALAppendIsWrittenToWAL() throws Exception {
     final TableName tableName =
-      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
+      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + currentTestName);
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
 
     PreWALAppendWALActionsListener listener = new PreWALAppendWALActionsListener();
@@ -879,14 +878,14 @@ public class TestRegionObserverInterface {
     region.getWAL().registerWALActionsListener(listener);
     testPreWALAppendHook(table, tableName);
     boolean[] expectedResults = { true, true, true, true };
-    Assert.assertArrayEquals(expectedResults, listener.getWalKeysCorrectArray());
+    assertArrayEquals(expectedResults, listener.getWalKeysCorrectArray());
 
   }
 
   @Test
   public void testPreWALAppendNotCalledOnMetaEdit() throws Exception {
     final TableName tableName =
-      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
+      TableName.valueOf(TEST_TABLE.getNameAsString() + "." + currentTestName);
     TableDescriptorBuilder tdBuilder = TableDescriptorBuilder.newBuilder(tableName);
     ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
     tdBuilder.setColumnFamily(cfBuilder.build());
@@ -933,9 +932,8 @@ public class TestRegionObserverInterface {
           for (int i = 0; i < methodName.length; ++i) {
             Method m = coprocessor.getMethod(methodName[i]);
             Object o = m.invoke(cp);
-            assertTrue("Result of " + coprocessor.getName() + "." + methodName[i]
-              + " is expected to be " + value[i].toString() + ", while we get " + o.toString(),
-              o.equals(value[i]));
+            assertTrue(o.equals(value[i]), "Result of " + coprocessor.getName() + "." + methodName[i]
+              + " is expected to be " + value[i].toString() + ", while we get " + o.toString());
           }
         }
       }

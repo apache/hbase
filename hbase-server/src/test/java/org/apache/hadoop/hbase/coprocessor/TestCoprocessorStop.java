@@ -17,36 +17,31 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Tests for master and regionserver coprocessor stop method
  */
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCoprocessorStop {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCoprocessorStop.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCoprocessorStop.class);
   private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -92,7 +87,7 @@ public class TestCoprocessorStop {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     Configuration conf = UTIL.getConfiguration();
 
@@ -102,7 +97,7 @@ public class TestCoprocessorStop {
     UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -120,9 +115,9 @@ public class TestCoprocessorStop {
     FileSystem fs = FileSystem.get(conf);
 
     Path resultFile = new Path(UTIL.getDataTestDirOnTestFS(), MASTER_FILE);
-    assertTrue("Master flag file should have been created", fs.exists(resultFile));
+    assertTrue(fs.exists(resultFile), "Master flag file should have been created");
 
     resultFile = new Path(UTIL.getDataTestDirOnTestFS(), REGIONSERVER_FILE);
-    assertTrue("RegionServer flag file should have been created", fs.exists(resultFile));
+    assertTrue(fs.exists(resultFile), "RegionServer flag file should have been created");
   }
 }

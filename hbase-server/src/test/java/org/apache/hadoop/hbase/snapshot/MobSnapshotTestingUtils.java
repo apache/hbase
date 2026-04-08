@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import org.apache.commons.lang3.StringUtils;
@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MobSnapshotTestingUtils {
 
@@ -133,7 +133,7 @@ public class MobSnapshotTestingUtils {
         count++;
         for (Cell cell : res.listCells()) {
           // Verify the value
-          Assert.assertTrue(CellUtil.cloneValue(cell).length > 0);
+          assertTrue(CellUtil.cloneValue(cell).length > 0);
         }
       }
       return count;

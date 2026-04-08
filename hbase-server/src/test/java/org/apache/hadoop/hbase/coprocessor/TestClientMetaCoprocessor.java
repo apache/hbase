@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -45,14 +44,11 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,16 +56,10 @@ import org.slf4j.LoggerFactory;
  * Tests invocation of the {@link MasterObserver} interface hooks at all appropriate times during
  * normal HMaster operations.
  */
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestClientMetaCoprocessor {
   private static final Logger LOG = LoggerFactory.getLogger(TestClientMetaCoprocessor.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClientMetaCoprocessor.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -124,7 +114,7 @@ public class TestClientMetaCoprocessor {
     getCoprocessor().resetMock();
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     conf.set(CoprocessorHost.CLIENT_META_COPROCESSOR_CONF_KEY, TestCoprocessor.class.getName());
@@ -132,12 +122,12 @@ public class TestClientMetaCoprocessor {
     UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setupBefore() {
     resetObserverMock();
   }
