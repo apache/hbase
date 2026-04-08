@@ -18,17 +18,17 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -50,37 +50,48 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCreateTableProcedure.class);
 
   private static final String F1 = "f1";
   private static final String F2 = "f2";
+  private String testMethodName;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeAll
+  public static void setupCluster() throws Exception {
+    TestTableDDLProcedureBase.setupCluster();
+  }
+
+  @AfterAll
+  public static void cleanupTest() throws Exception {
+    TestTableDDLProcedureBase.cleanupTest();
+  }
+
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
   @Test
   public void testSimpleCreate() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final byte[][] splitKeys = null;
     testSimpleCreate(tableName, splitKeys);
   }
 
   @Test
   public void testSimpleCreateWithSplits() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final byte[][] splitKeys =
       new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
     testSimpleCreate(tableName, splitKeys);
@@ -94,7 +105,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
 
   @Test
   public void testCreateWithTrackImpl() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, F1);
     String trackerName = StoreFileTrackerForTest.class.getName();
@@ -112,7 +123,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     procExec.getEnvironment().getMasterConfiguration().set(StoreFileTrackerFactory.TRACKER_IMPL,
       StoreFileTrackerFactory.Trackers.FILE.name());
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, F1);
     RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, null);
     long procId = ProcedureTestingUtility.submitAndWait(procExec,
@@ -125,7 +136,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
   @Test
   public void testCreateWithoutColumnFamily() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     // create table with 0 families will fail
     final TableDescriptorBuilder builder =
       TableDescriptorBuilder.newBuilder(MasterProcedureTestingUtility.createHTD(tableName));
@@ -140,13 +151,13 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     final Procedure<?> result = procExec.getResult(procId);
     assertEquals(true, result.isFailed());
     Throwable cause = ProcedureTestingUtility.getExceptionCause(result);
-    assertTrue("expected DoNotRetryIOException, got " + cause,
-      cause instanceof DoNotRetryIOException);
+    assertTrue(cause instanceof DoNotRetryIOException,
+      "expected DoNotRetryIOException, got " + cause);
   }
 
-  @Test(expected = TableExistsException.class)
+  @Test
   public void testCreateExisting() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     final TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f");
     final RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, null);
@@ -164,12 +175,12 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId1));
 
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
-    latch2.await();
+    assertThrows(TableExistsException.class, latch2::await);
   }
 
   @Test
   public void testRecoveryAndDoubleExecution() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
 
     // create the table
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -189,14 +200,14 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
 
   @Test
   public void testRollbackAndDoubleExecution() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     testRollbackAndDoubleExecution(TableDescriptorBuilder
       .newBuilder(MasterProcedureTestingUtility.createHTD(tableName, F1, F2)));
   }
 
   @Test
   public void testRollbackAndDoubleExecutionOnMobTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, F1, F2);
     TableDescriptorBuilder builder =
       TableDescriptorBuilder.newBuilder(htd).modifyColumnFamily(ColumnFamilyDescriptorBuilder
@@ -275,7 +286,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
 
   @Test
   public void testOnHDFSFailure() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
 
     // create the table
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -291,7 +302,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
   @Test
   public void testCreateTableWithManyRegionReplication() throws IOException {
     final int EXCEED_MAX_REGION_REPLICATION = 0x10001;
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(testMethodName);
     ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     TableDescriptor tableWithManyRegionReplication = TableDescriptorBuilder.newBuilder(tableName)
