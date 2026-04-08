@@ -40,6 +40,8 @@ public final class KeyIdentityBytesBacked implements ManagedKeyIdentity {
   private final Bytes namespace;
   private final Bytes partialIdentity;
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_PARAM_DEREF",
+      justification = "Null checks are performed in the sibling constructor")
   public KeyIdentityBytesBacked(byte[] custodian, byte[] namespace, byte[] partialIdentity) {
     this(custodian == null ? null : new Bytes(custodian),
       namespace == null ? null : new Bytes(namespace),

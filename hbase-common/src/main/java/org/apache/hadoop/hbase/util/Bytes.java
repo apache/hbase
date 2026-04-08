@@ -282,7 +282,16 @@ public class Bytes implements Comparable<Bytes>, Cloneable {
 
   @Override
   public Bytes clone() {
-    return new Bytes(copyBytes(), 0, length);
+    try {
+      Bytes cloned = (Bytes) super.clone();
+      cloned.bytes = copyBytes();
+      cloned.offset = 0;
+      cloned.length = length;
+      return cloned;
+    } catch (CloneNotSupportedException e) {
+      // This should never happen since we implement Cloneable
+      throw new AssertionError(e);
+    }
   }
 
   /** Returns a copy of the bytes referred to by this writable */

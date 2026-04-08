@@ -184,7 +184,7 @@ public class ManagedKeyDataCache extends KeyManagementBase {
   }
 
   /**
-   * Ejects the key with specified full key identity from all the caches.  Ejects from the active
+   * Ejects the key with specified full key identity from all the caches. Ejects from the active
    * keys cache if a key exists for the specified prefix and the full identity matches.
    * @param fullKeyIdentity the full key identity
    * @return true if the key was ejected from the active keys cache, false otherwise

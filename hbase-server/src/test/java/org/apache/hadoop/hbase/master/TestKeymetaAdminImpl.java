@@ -747,7 +747,8 @@ public class TestKeymetaAdminImpl {
     }
 
     @Test
-    public void testDisableKeyManagementSkipsNullMetadataAndReturnsSyntheticMarker() throws Exception {
+    public void testDisableKeyManagementSkipsNullMetadataAndReturnsSyntheticMarker()
+      throws Exception {
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMasterServices, mockAccessor);
 
       // FAILED marker-style key with null metadata should be skipped by disable loop.
@@ -928,7 +929,8 @@ public class TestKeymetaAdminImpl {
     public void testRefreshManagedKeysReturnsEarlyWhenDisabledMarkerPresent() throws Exception {
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMasterServices, mockAccessor);
 
-      ManagedKeyData disabledMarker = new ManagedKeyData(CUST_GLOBAL_PREFIX, ManagedKeyState.DISABLED);
+      ManagedKeyData disabledMarker =
+        new ManagedKeyData(CUST_GLOBAL_PREFIX, ManagedKeyState.DISABLED);
       when(mockAccessor.getKeyManagementStateMarker(CUST_GLOBAL_PREFIX)).thenReturn(disabledMarker);
 
       admin.refreshManagedKeys(CUST_BYTES, KEY_SPACE_GLOBAL);
@@ -1021,8 +1023,8 @@ public class TestKeymetaAdminImpl {
       when(mockAccessor.getAllKeys(CUST_GLOBAL_PREFIX, false)).thenReturn(keys);
       when(mockAccessor.getKeyProvider()).thenReturn(mockProvider);
       doThrow(new IOException("first refresh failure"), new IOException("second refresh failure"))
-        .when(mockAccessor).updateActiveState(any(ManagedKeyData.class), any(ManagedKeyState.class),
-          anyBoolean());
+        .when(mockAccessor)
+        .updateActiveState(any(ManagedKeyData.class), any(ManagedKeyState.class), anyBoolean());
       when(mockProvider.unwrapKey(key1.getKeyIdentity(), key1.getKeyMetadata(), null))
         .thenReturn(refreshedKey1);
       when(mockProvider.unwrapKey(key2.getKeyIdentity(), key2.getKeyMetadata(), null))

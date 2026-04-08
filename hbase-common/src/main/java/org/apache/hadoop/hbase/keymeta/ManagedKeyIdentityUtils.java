@@ -25,6 +25,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.DigestAlgorithms;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -132,6 +133,10 @@ public final class ManagedKeyIdentityUtils {
     return result;
   }
 
+  // Public only for testing
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_EXPOSE_REP",
+      justification = "Public only for testing; internal usage does not modify the list")
   public static List<DigestAlgorithms> getDigestAlgos() {
     if (DIGEST_ALGOS == null) {
       initDigestAlgos(null);
@@ -192,6 +197,8 @@ public final class ManagedKeyIdentityUtils {
       new Bytes(constructMetadataHash(metadata)));
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_PARAM_DEREF",
+      justification = "Null checks are performed in the fullKeyIdentityFromMetadata method")
   public static ManagedKeyIdentity buildIdentityFromMetadata(byte[] key_cust, byte[] key_namespace,
     String keyMetadata) {
     return fullKeyIdentityFromMetadata(key_cust == null ? null : new Bytes(key_cust),

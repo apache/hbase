@@ -194,8 +194,7 @@ public final class KeyIdentitySingleArrayBacked implements ManagedKeyIdentity {
       return -1;
     }
     int partialLen = keyIdentity[off] & 0xFF;
-    Preconditions.checkArgument(partialLen >= 0,
-      "Partial identity length must be at least 0, got %s", partialLen);
+    // partialLen is always non-negative (0-255) due to the & 0xFF operation
     Preconditions.checkArgument(off + 1 + partialLen == offset + length,
       "keyIdentity too short for partialIdentity length expected %s, got %s", off + partialLen,
       offset + length);

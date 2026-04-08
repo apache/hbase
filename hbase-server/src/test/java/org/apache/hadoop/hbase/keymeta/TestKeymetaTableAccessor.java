@@ -330,8 +330,10 @@ public class TestKeymetaTableAccessor {
     public void testParseMarkerResultWithNonZeroPartialIdentityLength() throws Exception {
       byte[] row = KEY_IDENTITY_FULL.getFullIdentityView().copyBytesIfNecessary();
       Result result = Result.create(Arrays.asList(
-        new KeyValue(row, KEY_META_INFO_FAMILY, KEY_STATE_QUAL_BYTES, new byte[] { FAILED.getVal() }),
-        new KeyValue(row, KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES, Bytes.toBytes(0L))));
+        new KeyValue(row, KEY_META_INFO_FAMILY, KEY_STATE_QUAL_BYTES,
+          new byte[] { FAILED.getVal() }),
+        new KeyValue(row, KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES,
+          Bytes.toBytes(0L))));
 
       IllegalArgumentException ex = null;
       try {
@@ -425,10 +427,13 @@ public class TestKeymetaTableAccessor {
       ManagedKeyData keyData = setupActiveKey(CUST_ID, result1);
       byte[] markerRow = KEY_IDENTITY_PREFIX.getIdentityPrefixView().copyBytesIfNecessary();
       Result markerResult = Result.create(Arrays.asList(
-        new KeyValue(markerRow, KEY_META_INFO_FAMILY, KEY_STATE_QUAL_BYTES, new byte[] { FAILED.getVal() }),
-        new KeyValue(markerRow, KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES, Bytes.toBytes(0L))));
+        new KeyValue(markerRow, KEY_META_INFO_FAMILY, KEY_STATE_QUAL_BYTES,
+          new byte[] { FAILED.getVal() }),
+        new KeyValue(markerRow, KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES,
+          Bytes.toBytes(0L))));
 
-      when(scanner.iterator()).thenReturn(java.util.Arrays.asList(result1, markerResult).iterator());
+      when(scanner.iterator())
+        .thenReturn(java.util.Arrays.asList(result1, markerResult).iterator());
       when(table.getScanner(any(Scan.class))).thenReturn(scanner);
 
       List<ManagedKeyData> allKeys = accessor.getAllKeys(KEY_IDENTITY_PREFIX, false);
@@ -455,8 +460,8 @@ public class TestKeymetaTableAccessor {
         .thenReturn(Bytes.toBytes(0L));
       when(missingStkResult.getValue(eq(KEY_META_INFO_FAMILY), eq(REFRESHED_TIMESTAMP_QUAL_BYTES)))
         .thenReturn(Bytes.toBytes(0L));
-      when(systemKeyCache.getSystemKeyByIdentity(any(byte[].class)))
-        .thenReturn(latestSystemKey, (ManagedKeyData) null);
+      when(systemKeyCache.getSystemKeyByIdentity(any(byte[].class))).thenReturn(latestSystemKey,
+        (ManagedKeyData) null);
 
       when(scanner.iterator())
         .thenReturn(java.util.Arrays.asList(result1, missingStkResult).iterator());
@@ -484,7 +489,8 @@ public class TestKeymetaTableAccessor {
     }
 
     @Test
-    public void testGetKeyManagementStateMarkerWithFullIdentityCoversFalseBranch() throws Exception {
+    public void testGetKeyManagementStateMarkerWithFullIdentityCoversFalseBranch()
+      throws Exception {
       ManagedKeyData keyData = setupActiveKey(CUST_ID, result1);
 
       when(table.get(any(Get.class))).thenReturn(result1);
@@ -646,12 +652,14 @@ public class TestKeymetaTableAccessor {
       assertEquals(2, mutations.size());
       assertTrue(mutations.get(0) instanceof Put);
       assertTrue(mutations.get(1) instanceof Delete);
-      assertTrue(Bytes.compareTo(constructRowKeyForIdentity(keyData.getKeyCustodian(),
-        keyData.getKeyNamespaceBytes(), keyData.getPartialIdentity()), mutations.get(0).getRow())
-        == 0);
-      assertTrue(Bytes.compareTo(constructRowKeyForIdentity(keyData.getKeyCustodian(),
-        keyData.getKeyNamespaceBytes(), keyData.getPartialIdentity()), mutations.get(1).getRow())
-        == 0);
+      assertTrue(Bytes
+        .compareTo(constructRowKeyForIdentity(keyData.getKeyCustodian(),
+          keyData.getKeyNamespaceBytes(), keyData.getPartialIdentity()), mutations.get(0).getRow())
+          == 0);
+      assertTrue(Bytes
+        .compareTo(constructRowKeyForIdentity(keyData.getKeyCustodian(),
+          keyData.getKeyNamespaceBytes(), keyData.getPartialIdentity()), mutations.get(1).getRow())
+          == 0);
       assertDeleteColumns((Delete) mutations.get(1), false);
     }
   }
