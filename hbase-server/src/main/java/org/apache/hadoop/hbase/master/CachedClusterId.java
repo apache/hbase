@@ -102,7 +102,7 @@ public class CachedClusterId {
       // the waiting threads.
       try {
         cacheMisses.incrementAndGet();
-        setClusterId(FSUtils.getClusterId(fs, rootDir));
+        setClusterId(FSUtils.getClusterIdFile(fs, rootDir, new ClusterId.Parser()));
       } catch (IOException e) {
         LOG.warn("Error fetching cluster ID", e);
       } finally {

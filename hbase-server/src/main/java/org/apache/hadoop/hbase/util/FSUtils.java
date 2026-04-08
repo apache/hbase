@@ -65,8 +65,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.ActiveClusterSuffix;
-import org.apache.hadoop.hbase.ClusterId;
+import org.apache.hadoop.hbase.ClusterIdFile;
+import org.apache.hadoop.hbase.ClusterIdFileParser;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.TableName;
@@ -565,15 +565,13 @@ public final class FSUtils {
   }
 
   /**
-   * Returns the value of the unique cluster ID stored for this HBase instance.
-   * @param fs      the root directory FileSystem
-   * @param rootdir the path to the HBase root directory
-   * @return the unique cluster identifier
-   * @throws IOException if reading the cluster ID file fails
+   * Use the given parser object to read and parse contents of Cluster Id file. e.g. Cluster Id or
+   * Active read-replica Cluster Id
    */
-  public static ClusterId getClusterId(FileSystem fs, Path rootdir) throws IOException {
-    Path idPath = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
-    ClusterId clusterId = null;
+  public static <T extends ClusterIdFile> T getClusterIdFile(FileSystem fs, Path rootdir,
+    ClusterIdFileParser<T> parser) throws IOException {
+    Path idPath = new Path(rootdir, parser.getFileName());
+    T cs = null;
     FileStatus status = fs.exists(idPath) ? fs.getFileStatus(idPath) : null;
     if (status != null) {
       int len = Ints.checkedCast(status.getLen());
@@ -582,12 +580,12 @@ public final class FSUtils {
       try {
         in.readFully(content);
       } catch (EOFException eof) {
-        LOG.warn("Cluster ID file {} is empty", idPath);
+        LOG.warn("Cluster file {} is empty", idPath);
       } finally {
         in.close();
       }
       try {
-        clusterId = ClusterId.parseFrom(content);
+        cs = parser.parseFrom(content);
       } catch (DeserializationException e) {
         throw new IOException("content=" + Bytes.toString(content), e);
       }
@@ -597,122 +595,53 @@ public final class FSUtils {
         in = fs.open(idPath);
         try {
           cid = in.readUTF();
-          clusterId = new ClusterId(cid);
+          cs = parser.readString(cid);
         } catch (EOFException eof) {
-          LOG.warn("Cluster ID file {} is empty", idPath);
+          LOG.warn("Cluster file {} is empty", idPath);
         } finally {
           in.close();
         }
-        rewriteAsPb(fs, rootdir, idPath, clusterId);
-      }
-      return clusterId;
-    } else {
-      LOG.warn("Cluster ID file does not exist at {}", idPath);
-    }
-    return clusterId;
-  }
-
-  public static ActiveClusterSuffix getActiveClusterSuffix(FileSystem fs, Path rootdir)
-    throws IOException {
-    Path idPath = new Path(rootdir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
-    ActiveClusterSuffix cs = null;
-    FileStatus status = fs.exists(idPath) ? fs.getFileStatus(idPath) : null;
-    if (status != null) {
-      int len = Ints.checkedCast(status.getLen());
-      byte[] content = new byte[len];
-      FSDataInputStream in = fs.open(idPath);
-      try {
-        in.readFully(content);
-      } catch (EOFException eof) {
-        LOG.warn("Cluster Suffix file {} is empty   ", idPath);
-      } finally {
-        in.close();
-      }
-      try {
-        cs = ActiveClusterSuffix.parseFrom(content);
-      } catch (DeserializationException e) {
-        throw new IOException("content=" + Bytes.toString(content), e);
-      }
-      // If not pb'd, make it so.
-      if (!ProtobufUtil.isPBMagicPrefix(content)) {
-        String data = null;
-        in = fs.open(idPath);
-        try {
-          data = in.readUTF();
-          cs = new ActiveClusterSuffix(data);
-        } catch (EOFException eof) {
-          LOG.warn("[Read-replica Feature] Active Cluster id file {} is empty ", idPath);
-        } finally {
-          in.close();
-        }
-        rewriteAsPb(fs, rootdir, idPath, cs);
+        rewriteAsPb(fs, rootdir, idPath, parser.getFileName(), cs);
       }
       return cs;
     } else {
-      throw new FileNotFoundException(
-        "[Read-replica feature] Active Cluster Suffix File " + idPath + " not found");
+      LOG.warn("Cluster file does not exist at {}", idPath);
     }
+    return cs;
   }
 
-  private static void rewriteAsPb(final FileSystem fs, final Path rootdir, final Path p,
-    final ClusterId cid) throws IOException {
+  private static <T extends ClusterIdFile> void rewriteAsPb(final FileSystem fs, final Path rootdir,
+    final Path p, final String fileName, final T cs) throws IOException {
     // Rewrite the file as pb. Move aside the old one first, write new
     // then delete the moved-aside file.
     Path movedAsideName = new Path(p + "." + EnvironmentEdgeManager.currentTime());
     if (!fs.rename(p, movedAsideName)) throw new IOException("Failed rename of " + p);
-    setClusterId(fs, rootdir, cid, 100);
+    setClusterIdFile(fs, rootdir, fileName, cs, 100);
     if (!fs.delete(movedAsideName, false)) {
       throw new IOException("Failed delete of " + movedAsideName);
     }
-    LOG.debug("Rewrote the hbase.id file as pb");
-  }
-
-  private static void rewriteAsPb(final FileSystem fs, final Path rootdir, final Path p,
-    final ActiveClusterSuffix cs) throws IOException {
-    // Rewrite the file as pb. Move aside the old one first, write new
-    // then delete the moved-aside file.
-    Path movedAsideName = new Path(p + "." + EnvironmentEdgeManager.currentTime());
-    if (!fs.rename(p, movedAsideName)) throw new IOException("Failed rename of " + p);
-    setActiveClusterSuffix(fs, rootdir, cs, 100);
-    if (!fs.delete(movedAsideName, false)) {
-      throw new IOException("Failed delete of " + movedAsideName);
-    }
-    LOG.debug("Rewrote the active.cluster.suffix.id file as pb");
+    LOG.debug("Rewrote the {} file as pb", fileName);
   }
 
   /**
-   * Writes a new unique identifier for this cluster to the "hbase.id" file in the HBase root
-   * directory. If any operations on the ID file fails, and {@code wait} is a positive value, the
-   * method will retry to produce the ID file until the thread is forcibly interrupted.
-   * @param fs        the root directory FileSystem
-   * @param rootdir   the path to the HBase root directory
-   * @param clusterId the unique identifier to store
-   * @param wait      how long (in milliseconds) to wait between retries
+   * Writes a new unique identifier for this cluster to the Cluster Id ("hbase.id" or
+   * "active.cluster.suffix.id") file in the HBase root directory. If any operations on the ID file
+   * fails, and {@code wait} is a positive value, the method will retry to produce the ID file until
+   * the thread is forcibly interrupted.
+   * @param fs       the root directory FileSystem
+   * @param rootdir  the path to the HBase root directory
+   * @param fileName name of the file to be written
+   * @param cs       the object to be written
+   * @param wait     how long (in milliseconds) to wait between retries
    * @throws IOException if writing to the FileSystem fails and no wait value
    */
-  public static void setClusterId(final FileSystem fs, final Path rootdir,
-    final ClusterId clusterId, final long wait) throws IOException {
-    final Path idFile = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
+  public static <T extends ClusterIdFile> void setClusterIdFile(final FileSystem fs,
+    final Path rootdir, final String fileName, final T cs, final long wait) throws IOException {
+    final Path idFile = new Path(rootdir, fileName);
     final Path tempDir = new Path(rootdir, HConstants.HBASE_TEMP_DIRECTORY);
-    final Path tempIdFile = new Path(tempDir, HConstants.CLUSTER_ID_FILE_NAME);
+    final Path tempIdFile = new Path(tempDir, fileName);
 
-    LOG.debug("Create cluster ID file [{}] with ID: {}", idFile, clusterId);
-    writeClusterInfo(fs, rootdir, idFile, tempIdFile, clusterId.toByteArray(), wait);
-  }
-
-  /**
-   * Writes a user provided suffix for this cluster to the "active_cluster_suffix.id" file in the
-   * HBase root directory. If any operations on the ID file fails, and {@code wait} is a positive
-   * value, the method will retry to produce the ID file until the thread is forcibly interrupted.
-   */
-  public static void setActiveClusterSuffix(final FileSystem fs, final Path rootdir,
-    final ActiveClusterSuffix cs, final long wait) throws IOException {
-    final Path idFile = new Path(rootdir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
-    final Path tempDir = new Path(rootdir, HConstants.HBASE_TEMP_DIRECTORY);
-    final Path tempIdFile = new Path(tempDir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
-
-    LOG.debug("[Read-replica feature] id file [{}] is present and contains cluster id: {}", idFile,
-      cs);
+    LOG.debug("Cluster file [{}] is present and contains cluster id: {}", idFile, cs);
     writeClusterInfo(fs, rootdir, idFile, tempIdFile, cs.toByteArray(), wait);
   }
 
@@ -723,7 +652,6 @@ public final class FSUtils {
    * {@code wait} is a positive value, the method will retry to produce the ID file until the thread
    * is forcibly interrupted.
    */
-
   private static void writeClusterInfo(final FileSystem fs, final Path rootdir, final Path idFile,
     final Path tempIdFile, byte[] fileData, final long wait) throws IOException {
     while (true) {

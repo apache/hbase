@@ -31,8 +31,46 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterIdProtos;
  * is a container for the id. Also knows how to serialize and deserialize the cluster id.
  */
 @InterfaceAudience.Private
-public class ClusterId {
+public class ClusterId implements ClusterIdFile {
   private final String id;
+
+  public static class Parser implements ClusterIdFileParser<ClusterId> {
+
+    @Override
+    public String getFileName() {
+      return HConstants.CLUSTER_ID_FILE_NAME;
+    }
+
+    /**
+     * Parse the serialized representation of the {@link ClusterId}
+     * @param bytes A pb serialized {@link ClusterId} instance with pb magic prefix
+     * @return An instance of {@link ClusterId} made from <code>bytes</code>
+     * @see #toByteArray()
+     */
+    @Override
+    public ClusterId parseFrom(byte[] bytes) throws DeserializationException {
+      if (ProtobufUtil.isPBMagicPrefix(bytes)) {
+        int pblen = ProtobufUtil.lengthOfPBMagic();
+        ClusterIdProtos.ClusterId.Builder builder = ClusterIdProtos.ClusterId.newBuilder();
+        ClusterIdProtos.ClusterId cid = null;
+        try {
+          ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
+          cid = builder.build();
+        } catch (IOException e) {
+          throw new DeserializationException(e);
+        }
+        return convert(cid);
+      } else {
+        // Presume it was written out this way, the old way.
+        return new ClusterId(Bytes.toString(bytes));
+      }
+    }
+
+    @Override
+    public ClusterId readString(String input) {
+      return new ClusterId(input);
+    }
+  }
 
   /**
    * New ClusterID. Generates a uniqueid.
@@ -48,30 +86,6 @@ public class ClusterId {
   /** Returns The clusterid serialized using pb w/ pb magic prefix */
   public byte[] toByteArray() {
     return ProtobufUtil.prependPBMagic(convert().toByteArray());
-  }
-
-  /**
-   * Parse the serialized representation of the {@link ClusterId}
-   * @param bytes A pb serialized {@link ClusterId} instance with pb magic prefix
-   * @return An instance of {@link ClusterId} made from <code>bytes</code>
-   * @see #toByteArray()
-   */
-  public static ClusterId parseFrom(final byte[] bytes) throws DeserializationException {
-    if (ProtobufUtil.isPBMagicPrefix(bytes)) {
-      int pblen = ProtobufUtil.lengthOfPBMagic();
-      ClusterIdProtos.ClusterId.Builder builder = ClusterIdProtos.ClusterId.newBuilder();
-      ClusterIdProtos.ClusterId cid = null;
-      try {
-        ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
-        cid = builder.build();
-      } catch (IOException e) {
-        throw new DeserializationException(e);
-      }
-      return convert(cid);
-    } else {
-      // Presume it was written out this way, the old way.
-      return new ClusterId(Bytes.toString(bytes));
-    }
   }
 
   /** Returns A pb instance to represent this instance. */
