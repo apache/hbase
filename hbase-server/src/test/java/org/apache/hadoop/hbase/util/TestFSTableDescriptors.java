@@ -510,8 +510,8 @@ public class TestFSTableDescriptors {
     FSTableDescriptors tableDescriptors = new FSTableDescriptors(fs, testDir);
     Map<String, TableDescriptor> allTables = tableDescriptors.getAll();
 
-    assertFalse("Should not contain meta_replica1", allTables.containsKey("hbase:meta_replica1"));
-    assertTrue("Should include the local hbase:meta", allTables.containsKey("hbase:meta"));
+    assertFalse(allTables.containsKey("hbase:meta_replica1"), "Should not contain meta_replica1");
+    assertTrue(allTables.containsKey("hbase:meta"), "Should include the local hbase:meta");
   }
 
   private static class FSTableDescriptorsTest extends FSTableDescriptors {
