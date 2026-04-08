@@ -30,13 +30,53 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ActiveClusterSuffixProtos;
 
 /**
- * The suffix for this cluster. It is serialized to the filesystem and up into zookeeper. This is a
- * container for the id. Also knows how to serialize and deserialize the cluster id.
+ * The read-replica cluster id for this cluster. It is serialized to the filesystem and up into
+ * zookeeper. This is a container for the id. Also knows how to serialize and deserialize the
+ * cluster id.
  */
 @InterfaceAudience.Private
-public class ActiveClusterSuffix {
+public class ActiveClusterSuffix implements ClusterIdFile {
   private final String cluster_id;
   private final String suffix;
+
+  public static class Parser implements ClusterIdFileParser<ActiveClusterSuffix> {
+
+    @Override
+    public String getFileName() {
+      return HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME;
+    }
+
+    /**
+     * Parse the serialized representation of the {@link ActiveClusterSuffix}
+     * @param bytes A pb serialized {@link ActiveClusterSuffix} instance with pb magic prefix
+     * @return An instance of {@link ActiveClusterSuffix} made from <code>bytes</code>
+     * @see #toByteArray()
+     */
+    @Override
+    public ActiveClusterSuffix parseFrom(byte[] bytes) throws DeserializationException {
+      if (ProtobufUtil.isPBMagicPrefix(bytes)) {
+        int pblen = ProtobufUtil.lengthOfPBMagic();
+        ActiveClusterSuffixProtos.ActiveClusterSuffix.Builder builder =
+          ActiveClusterSuffixProtos.ActiveClusterSuffix.newBuilder();
+        ActiveClusterSuffixProtos.ActiveClusterSuffix cs = null;
+        try {
+          ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
+          cs = builder.build();
+        } catch (IOException e) {
+          throw new DeserializationException(e);
+        }
+        return convert(cs);
+      } else {
+        // Presume it was written out this way, the old way.
+        return new ActiveClusterSuffix(Bytes.toString(bytes));
+      }
+    }
+
+    @Override
+    public ActiveClusterSuffix readString(String input) {
+      return new ActiveClusterSuffix(input);
+    }
+  }
 
   public ActiveClusterSuffix(final String ci, final String suffix) {
     this.cluster_id = ci;
@@ -53,6 +93,10 @@ public class ActiveClusterSuffix {
     }
   }
 
+  public static ActiveClusterSuffix parseFrom(byte[] bytes) throws DeserializationException {
+    return new Parser().parseFrom(bytes);
+  }
+
   public static ActiveClusterSuffix fromConfig(Configuration conf, ClusterId clusterId) {
     return new ActiveClusterSuffix(clusterId.toString(), conf
       .get(HConstants.HBASE_META_TABLE_SUFFIX, HConstants.HBASE_META_TABLE_SUFFIX_DEFAULT_VALUE));
@@ -61,31 +105,6 @@ public class ActiveClusterSuffix {
   /** Returns The active cluster suffix serialized using pb w/ pb magic prefix */
   public byte[] toByteArray() {
     return ProtobufUtil.prependPBMagic(convert().toByteArray());
-  }
-
-  /**
-   * Parse the serialized representation of the {@link ActiveClusterSuffix}
-   * @param bytes A pb serialized {@link ActiveClusterSuffix} instance with pb magic prefix
-   * @return An instance of {@link ActiveClusterSuffix} made from <code>bytes</code>
-   * @see #toByteArray()
-   */
-  public static ActiveClusterSuffix parseFrom(final byte[] bytes) throws DeserializationException {
-    if (ProtobufUtil.isPBMagicPrefix(bytes)) {
-      int pblen = ProtobufUtil.lengthOfPBMagic();
-      ActiveClusterSuffixProtos.ActiveClusterSuffix.Builder builder =
-        ActiveClusterSuffixProtos.ActiveClusterSuffix.newBuilder();
-      ActiveClusterSuffixProtos.ActiveClusterSuffix cs = null;
-      try {
-        ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
-        cs = builder.build();
-      } catch (IOException e) {
-        throw new DeserializationException(e);
-      }
-      return convert(cs);
-    } else {
-      // Presume it was written out this way, the old way.
-      return new ActiveClusterSuffix(Bytes.toString(bytes));
-    }
   }
 
   /** Returns A pb instance to represent this instance. */
