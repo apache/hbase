@@ -143,6 +143,28 @@ public class ScanDeleteTracker implements DeleteTracker {
   }
 
   @Override
+  public boolean isRedundantDelete(Cell cell) {
+    byte type = cell.getTypeByte();
+    boolean coveredByFamily = hasFamilyStamp && cell.getTimestamp() <= familyStamp;
+
+    if (
+      type == KeyValue.Type.DeleteFamily.getCode()
+        || type == KeyValue.Type.DeleteFamilyVersion.getCode()
+    ) {
+      return coveredByFamily;
+    }
+
+    boolean coveredByColumn =
+      deleteCell != null && deleteType == KeyValue.Type.DeleteColumn.getCode()
+        && CellUtil.matchingQualifier(cell, deleteCell) && cell.getTimestamp() <= deleteTimestamp;
+
+    if (type == KeyValue.Type.DeleteColumn.getCode() || type == KeyValue.Type.Delete.getCode()) {
+      return coveredByFamily || coveredByColumn;
+    }
+    return false;
+  }
+
+  @Override
   public boolean isEmpty() {
     return deleteCell == null && !hasFamilyStamp && familyVersionStamps.isEmpty();
   }
