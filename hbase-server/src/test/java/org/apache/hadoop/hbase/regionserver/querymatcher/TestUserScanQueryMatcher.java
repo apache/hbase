@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.FilterBase;
@@ -395,5 +396,145 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     Cell lastCell = memstore.get(memstore.size() - 1);
     Cell nextCell = qm.getKeyForNextColumn(lastCell);
     assertArrayEquals(nextCell.getQualifierArray(), col4);
+  }
+
+  /**
+   * After enough consecutive range delete markers, the matcher should switch from SKIP to
+   * SEEK_NEXT_COL. Point deletes and KEEP_DELETED_CELLS always SKIP.
+   */
+  @Test
+  public void testSeekOnRangeDelete() throws IOException {
+    int n = NormalUserScanQueryMatcher.SEEK_ON_DELETE_MARKER_THRESHOLD;
+
+    // DeleteColumn: first N-1 SKIP, N-th triggers SEEK_NEXT_COL
+    assertSeekAfterThreshold(KeepDeletedCells.FALSE, Type.DeleteColumn, n);
+
+    // DeleteFamily: same threshold behavior
+    assertSeekAfterThreshold(KeepDeletedCells.FALSE, Type.DeleteFamily, n);
+
+    // Delete (version): always SKIP (point delete, not range)
+    assertAllSkip(KeepDeletedCells.FALSE, Type.Delete, n + 1);
+
+    // KEEP_DELETED_CELLS=TRUE: always SKIP
+    assertAllSkip(KeepDeletedCells.TRUE, Type.DeleteColumn, n + 1);
+  }
+
+  /**
+   * DeleteColumn with empty qualifier must not cause seeking past a subsequent DeleteFamily.
+   * DeleteFamily masks all columns, so it must be tracked by the delete tracker.
+   */
+  @Test
+  public void testDeleteColumnEmptyQualifierDoesNotSkipDeleteFamily() throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    byte[] e = HConstants.EMPTY_BYTE_ARRAY;
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(scan, new ScanInfo(this.conf, fam1, 0, 1,
+      ttl, KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false), null,
+      now - ttl, now, null);
+
+    int n = NormalUserScanQueryMatcher.SEEK_ON_DELETE_MARKER_THRESHOLD;
+    // Feed DCs with empty qualifier past the threshold, then a DF.
+    // The DF must NOT be seeked past -- it must be SKIP'd so the tracker picks it up.
+    qm.setToNewRow(new KeyValue(row1, fam1, e, now, Type.DeleteColumn));
+    for (int i = 0; i < n + 1; i++) {
+      // Empty qualifier DCs should never trigger seek, regardless of threshold
+      assertEquals("DC at i=" + i, MatchCode.SKIP,
+        qm.match(new KeyValue(row1, fam1, e, now - i, Type.DeleteColumn)));
+    }
+    KeyValue df = new KeyValue(row1, fam1, e, now - n - 1, Type.DeleteFamily);
+    KeyValue put = new KeyValue(row1, fam1, col1, now - n - 1, Type.Put, data);
+    // DF must be processed (SKIP), not seeked past
+    assertEquals(MatchCode.SKIP, qm.match(df));
+    // Put in col1 at t=now-3 should be masked by DF@t=now-3
+    MatchCode putCode = qm.match(put);
+    assertEquals(MatchCode.SEEK_NEXT_COL, putCode);
+  }
+
+  /**
+   * DeleteColumn markers for different qualifiers should not accumulate the seek counter. Only
+   * consecutive markers for the same qualifier should trigger seeking.
+   */
+  @Test
+  public void testDeleteColumnDifferentQualifiersDoNotSeek() throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(scan, new ScanInfo(this.conf, fam1, 0, 1,
+      ttl, KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false), null,
+      now - ttl, now, null);
+
+    // DCs for different qualifiers: counter resets on qualifier change, never seeks
+    qm.setToNewRow(new KeyValue(row1, fam1, col1, now, Type.DeleteColumn));
+    assertEquals(MatchCode.SKIP, qm.match(new KeyValue(row1, fam1, col1, now, Type.DeleteColumn)));
+    assertEquals(MatchCode.SKIP,
+      qm.match(new KeyValue(row1, fam1, col2, now - 1, Type.DeleteColumn)));
+    assertEquals(MatchCode.SKIP,
+      qm.match(new KeyValue(row1, fam1, col3, now - 2, Type.DeleteColumn)));
+    assertEquals(MatchCode.SKIP,
+      qm.match(new KeyValue(row1, fam1, col4, now - 3, Type.DeleteColumn)));
+    assertEquals(MatchCode.SKIP,
+      qm.match(new KeyValue(row1, fam1, col5, now - 4, Type.DeleteColumn)));
+  }
+
+  /**
+   * Delete markers outside the scan's time range (includeDeleteMarker=false) should still
+   * accumulate the seek counter and trigger SEEK_NEXT_COL after the threshold.
+   */
+  @Test
+  public void testSeekOnRangeDeleteOutsideTimeRange() throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    long futureTs = now + 1_000_000;
+    Scan scanWithTimeRange = new Scan(scan).setTimeRange(futureTs, Long.MAX_VALUE);
+
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(scanWithTimeRange,
+      new ScanInfo(this.conf, fam1, 0, 1, ttl, KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE,
+        0, rowComparator, false),
+      null, now - ttl, now, null);
+
+    int n = NormalUserScanQueryMatcher.SEEK_ON_DELETE_MARKER_THRESHOLD;
+    qm.setToNewRow(new KeyValue(row1, fam1, col1, now, Type.DeleteColumn));
+    // All DCs have timestamps below the time range, so includeDeleteMarker is false.
+    // The seek counter should still accumulate.
+    for (int i = 0; i < n - 1; i++) {
+      assertEquals("DC at i=" + i, MatchCode.SKIP,
+        qm.match(new KeyValue(row1, fam1, col1, now - i, Type.DeleteColumn)));
+    }
+    assertEquals(MatchCode.SEEK_NEXT_COL,
+      qm.match(new KeyValue(row1, fam1, col1, now - n + 1, Type.DeleteColumn)));
+  }
+
+  private UserScanQueryMatcher createDeleteMatcher(KeepDeletedCells keepDeletedCells)
+    throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    return UserScanQueryMatcher.create(scan, new ScanInfo(this.conf, fam1, 0, 1, ttl,
+      keepDeletedCells, HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false), null, now - ttl,
+      now, null);
+  }
+
+  /** First n-1 markers SKIP, n-th triggers SEEK_NEXT_COL. */
+  private void assertSeekAfterThreshold(KeepDeletedCells keepDeletedCells, Type type, int n)
+    throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    UserScanQueryMatcher qm = createDeleteMatcher(keepDeletedCells);
+    boolean familyLevel = type == Type.DeleteFamily || type == Type.DeleteFamilyVersion;
+    byte[] qual = familyLevel ? HConstants.EMPTY_BYTE_ARRAY : col1;
+    qm.setToNewRow(new KeyValue(row1, fam1, qual, now, type));
+    for (int i = 0; i < n - 1; i++) {
+      assertEquals("Mismatch at index " + i, MatchCode.SKIP,
+        qm.match(new KeyValue(row1, fam1, qual, now - i, type)));
+    }
+    assertEquals("Expected SEEK_NEXT_COL at index " + (n - 1), MatchCode.SEEK_NEXT_COL,
+      qm.match(new KeyValue(row1, fam1, qual, now - n + 1, type)));
+  }
+
+  /** All markers should SKIP regardless of count. */
+  private void assertAllSkip(KeepDeletedCells keepDeletedCells, Type type, int count)
+    throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    UserScanQueryMatcher qm = createDeleteMatcher(keepDeletedCells);
+    boolean familyLevel = type == Type.DeleteFamily || type == Type.DeleteFamilyVersion;
+    byte[] qual = familyLevel ? HConstants.EMPTY_BYTE_ARRAY : col1;
+    qm.setToNewRow(new KeyValue(row1, fam1, qual, now, type));
+    for (int i = 0; i < count; i++) {
+      assertEquals("Mismatch at index " + i, MatchCode.SKIP,
+        qm.match(new KeyValue(row1, fam1, qual, now - i, type)));
+    }
   }
 }
