@@ -244,9 +244,10 @@ public class TestHFile {
       Mockito.verify(cache).shouldCacheBlock(Mockito.any(), Mockito.anyLong(), Mockito.any());
       Mockito.verify(cache, Mockito.never()).cacheBlock(Mockito.any(), Mockito.any(),
         Mockito.anyBoolean(), Mockito.anyBoolean());
-      System.gc();
-      Thread.sleep(1000);
-      alloc.allocate(128 * 1024).release();
+      for (int i = 0; i < 15 && counter.get() == 0; i++) {
+        System.gc();
+        alloc.allocate(128 * 1024).release();
+      }
       assertEquals(0, counter.get());
     } finally {
       fs.delete(hfilePath, false);

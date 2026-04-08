@@ -207,12 +207,10 @@ public class TestHFileBlockIndex {
       new HFileBlockIndex.BlockIndexWriter(hbw, cacheConfig, path.getName(), null);
 
     writeDataBlocksAndCreateIndex(hbw, outputStream, biw);
-
-    System.gc();
-    Thread.sleep(1000);
-
-    allocator.allocate(128 * 1024).release();
-
+    for (int i = 0; i < 15 && counter.get() == 0; i++) {
+      System.gc();
+      allocator.allocate(128 * 1024).release();
+    }
     assertEquals(0, counter.get());
   }
 
@@ -258,9 +256,10 @@ public class TestHFileBlockIndex {
     try {
       writeDataBlocksAndCreateIndex(hbw, outputStream, biw);
       assertTrue(biw.getNumLevels() >= 3);
-      System.gc();
-      Thread.sleep(1000);
-      allocator.allocate(128 * 1024).release();
+      for (int i = 0; i < 15 && counter.get() == 0; i++) {
+        System.gc();
+        allocator.allocate(128 * 1024).release();
+      }
       assertEquals(0, counter.get());
     } finally {
       hbw.release();
