@@ -718,13 +718,13 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
       if (customTieringSupplier != null) {
         newSection.setTimeRangeTrackerForTiering(customTieringSupplier);
       }
-    } catch (Exception e) {
+    } catch (RuntimeException e) {
       try {
         newSection.close();
       } catch (IOException closeEx) {
         e.addSuppressed(closeEx);
       }
-      throw e instanceof IOException ? (IOException) e : new IOException(e);
+      throw new IOException(e);
     }
     currentSectionWriter = newSection;
 

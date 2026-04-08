@@ -1711,11 +1711,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       return currentScanner.getNextIndexedKey();
     }
 
-    private boolean scannerClosed = false;
-
     @Override
     public void close() {
-      scannerClosed = true;
       try {
         if (currentScanner != null) {
           currentScanner.close();
