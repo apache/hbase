@@ -172,7 +172,7 @@ require 'shell/formatter'
 @hbase = conf_from_cli.nil? ? Hbase::Hbase.new : Hbase::Hbase.new(conf_from_cli)
 
 # Setup console
-@shell = Shell::Shell.new(@hbase, interactive)
+@shell = Shell::Shell.new(@hbase, interactive: interactive)
 @shell.debug = @shell_debug
 
 ##
@@ -227,7 +227,7 @@ IRB.conf[:USE_AUTOCOMPLETE] = autocomplete
 IRB.conf[:USE_COLORIZE] = colorize
 
 # Create a workspace we'll use across sessions.
-workspace = @shell.get_workspace
+workspace = @shell.workspace
 
 # If script2run, try running it.  If we're in interactive mode, will go on to run the shell unless
 # script calls 'exit' or 'exit 0' or 'exit errcode'.

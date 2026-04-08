@@ -72,7 +72,7 @@ module IRB
       super(omit) unless @context.last_value.nil?
     end
 
-    # Copied from https://github.com/ruby/irb/blob/v1.4.2/lib/irb.rb 
+    # Copied from https://github.com/ruby/irb/blob/v1.4.2/lib/irb.rb
     # We override the rescue Exception block so the
     # Shell::exception_handler can deal with the exceptions.
     def eval_input
@@ -186,7 +186,7 @@ module IRB
                 warn "WARN: '#{var}' is a reserved HBase command. Local variable assignment ignored."
               end
 
-              new_binding = @context.workspace.main.get_binding
+              new_binding = @context.workspace.main.to_binding
               (workspace_binding.local_variables - shadowing_vars).each do |var|
                 new_binding.local_variable_set(var, workspace_binding.local_variable_get(var))
               end
