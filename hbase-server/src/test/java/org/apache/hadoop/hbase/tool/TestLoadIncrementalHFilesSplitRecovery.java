@@ -445,9 +445,9 @@ public class TestLoadIncrementalHFilesSplitRecovery {
         @Override
         protected Pair<List<LoadQueueItem>, String> groupOrSplit(
           Multimap<ByteBuffer, LoadQueueItem> regionGroups, final LoadQueueItem item,
-          final Table htable, final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
+          final Table htable, final Pair<byte[][], byte[][]> startEndKeys, boolean copyFile) throws IOException {
           Pair<List<LoadQueueItem>, String> lqis =
-            super.groupOrSplit(regionGroups, item, htable, startEndKeys);
+            super.groupOrSplit(regionGroups, item, htable, startEndKeys, false);
           if (lqis != null && lqis.getFirst() != null) {
             countedLqis.addAndGet(lqis.getFirst().size());
           }
@@ -545,13 +545,13 @@ public class TestLoadIncrementalHFilesSplitRecovery {
         @Override
         protected Pair<List<LoadQueueItem>, String> groupOrSplit(
           Multimap<ByteBuffer, LoadQueueItem> regionGroups, final LoadQueueItem item,
-          final Table table, final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
+          final Table table, final Pair<byte[][], byte[][]> startEndKeys, boolean copyFile) throws IOException {
           i++;
 
           if (i == 5) {
             throw new IOException("failure");
           }
-          return super.groupOrSplit(regionGroups, item, table, startEndKeys);
+          return super.groupOrSplit(regionGroups, item, table, startEndKeys, false);
         }
       };
 
@@ -586,9 +586,9 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       @Override
       protected Pair<List<LoadQueueItem>, String> groupOrSplit(
         Multimap<ByteBuffer, LoadQueueItem> regionGroups, final LoadQueueItem item,
-        final Table htable, final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
+        final Table htable, final Pair<byte[][], byte[][]> startEndKeys, boolean copyFile) throws IOException {
         Pair<List<LoadQueueItem>, String> lqis =
-          super.groupOrSplit(regionGroups, item, htable, startEndKeys);
+          super.groupOrSplit(regionGroups, item, htable, startEndKeys, false);
         if (lqis != null && lqis.getFirst() != null) {
           countedLqis.addAndGet(lqis.getFirst().size());
         }
