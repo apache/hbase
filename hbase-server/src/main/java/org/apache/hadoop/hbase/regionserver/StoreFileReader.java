@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.MultiTenantBloomSupport;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -78,6 +79,11 @@ public class StoreFileReader {
   private KeyValue.KeyOnlyKeyValue lastBloomKeyOnlyKV = null;
   private boolean skipResetSeqId = true;
   private int prefixLength = -1;
+  /**
+   * True when bloom metrics need explicit tracking in this class because the loaded BloomFilter
+   * instance is sourced from a multi-tenant section reader and is not wired with metrics.
+   */
+  private boolean bloomMetricsTrackedExternally = false;
   protected Configuration conf;
 
   /**
@@ -87,6 +93,30 @@ public class StoreFileReader {
    */
   private final StoreFileInfo storeFileInfo;
   private final ReaderContext context;
+  private volatile boolean closed;
+
+  private void incrementBloomEligible() {
+    if (bloomFilterMetrics != null) {
+      bloomFilterMetrics.incrementEligible();
+    }
+  }
+
+  private void incrementBloomRequests(boolean passed) {
+    if (bloomFilterMetrics != null) {
+      bloomFilterMetrics.incrementRequests(passed);
+    }
+  }
+
+  private void recordExternalBloomMetric(boolean passed) {
+    if (!bloomMetricsTrackedExternally) {
+      return;
+    }
+    if (bloomFilterType == BloomType.NONE || generalBloomFilter == null) {
+      incrementBloomEligible();
+      return;
+    }
+    incrementBloomRequests(passed);
+  }
 
   private StoreFileReader(HFile.Reader reader, StoreFileInfo storeFileInfo, ReaderContext context,
     Configuration conf) {
@@ -107,6 +137,7 @@ public class StoreFileReader {
     this.deleteFamilyBloomFilter = storeFileReader.deleteFamilyBloomFilter;
     this.bloomFilterType = storeFileReader.bloomFilterType;
     this.bloomFilterMetrics = storeFileReader.bloomFilterMetrics;
+    this.bloomMetricsTrackedExternally = storeFileReader.bloomMetricsTrackedExternally;
     this.sequenceID = storeFileReader.sequenceID;
     this.timeRange = storeFileReader.timeRange;
     this.lastBloomKey = storeFileReader.lastBloomKey;
@@ -191,7 +222,20 @@ public class StoreFileReader {
   }
 
   public void close(boolean evictOnClose) throws IOException {
-    reader.close(evictOnClose);
+    if (closed) {
+      return;
+    }
+    try {
+      if (reader != null) {
+        reader.close(evictOnClose);
+      }
+    } finally {
+      closed = true;
+    }
+  }
+
+  boolean isClosed() {
+    return closed;
   }
 
   /**
@@ -249,36 +293,40 @@ public class StoreFileReader {
         return passesGeneralRowPrefixBloomFilter(scan);
       default:
         if (scan.isGetScan()) {
-          bloomFilterMetrics.incrementEligible();
+          incrementBloomEligible();
         }
         return true;
     }
   }
 
   public boolean passesDeleteFamilyBloomFilter(byte[] row, int rowOffset, int rowLen) {
-    // Cache Bloom filter as a local variable in case it is set to null by
-    // another thread on an IO error.
     BloomFilter bloomFilter = this.deleteFamilyBloomFilter;
 
-    // Empty file or there is no delete family at all
     if (reader.getTrailer().getEntryCount() == 0 || deleteFamilyCnt == 0) {
       return false;
     }
 
-    if (bloomFilter == null) {
+    if (bloomFilter != null) {
+      try {
+        if (!bloomFilter.supportsAutoLoading()) {
+          return true;
+        }
+        return bloomFilter.contains(row, rowOffset, rowLen, null);
+      } catch (IllegalArgumentException e) {
+        LOG.error("Bad Delete Family bloom filter data -- proceeding without", e);
+        setDeleteFamilyBloomFilterFaulty();
+      }
       return true;
     }
-
-    try {
-      if (!bloomFilter.supportsAutoLoading()) {
+    if (reader instanceof MultiTenantBloomSupport) {
+      try {
+        return ((MultiTenantBloomSupport) reader).passesDeleteFamilyBloomFilter(row, rowOffset,
+          rowLen);
+      } catch (IOException e) {
+        LOG.warn("Failed multi-tenant delete-family bloom check, proceeding without", e);
         return true;
       }
-      return bloomFilter.contains(row, rowOffset, rowLen, null);
-    } catch (IllegalArgumentException e) {
-      LOG.error("Bad Delete Family bloom filter data -- proceeding without", e);
-      setDeleteFamilyBloomFilterFaulty();
     }
-
     return true;
   }
 
@@ -289,18 +337,25 @@ public class StoreFileReader {
    */
   private boolean passesGeneralRowBloomFilter(byte[] row, int rowOffset, int rowLen) {
     BloomFilter bloomFilter = this.generalBloomFilter;
-    if (bloomFilter == null) {
-      bloomFilterMetrics.incrementEligible();
-      return true;
+    if (bloomFilter != null) {
+      if (rowOffset != 0 || rowLen != row.length) {
+        throw new AssertionError("For row-only Bloom filters the row must occupy the whole array");
+      }
+      return checkGeneralBloomFilter(row, null, bloomFilter);
     }
-
-    // Used in ROW bloom
-    byte[] key = null;
-    if (rowOffset != 0 || rowLen != row.length) {
-      throw new AssertionError("For row-only Bloom filters the row must occupy the whole array");
+    if (reader instanceof MultiTenantBloomSupport) {
+      try {
+        boolean passed =
+          ((MultiTenantBloomSupport) reader).passesGeneralRowBloomFilter(row, rowOffset, rowLen);
+        recordExternalBloomMetric(passed);
+        return passed;
+      } catch (IOException e) {
+        LOG.warn("Failed multi-tenant row bloom check, proceeding without", e);
+        return true;
+      }
     }
-    key = row;
-    return checkGeneralBloomFilter(key, null, bloomFilter);
+    incrementBloomEligible();
+    return true;
   }
 
   /**
@@ -310,19 +365,27 @@ public class StoreFileReader {
    */
   public boolean passesGeneralRowColBloomFilter(ExtendedCell cell) {
     BloomFilter bloomFilter = this.generalBloomFilter;
-    if (bloomFilter == null) {
-      bloomFilterMetrics.incrementEligible();
-      return true;
+    if (bloomFilter != null) {
+      ExtendedCell kvKey;
+      if (cell.getTypeByte() == KeyValue.Type.Maximum.getCode() && cell.getFamilyLength() == 0) {
+        kvKey = cell;
+      } else {
+        kvKey = PrivateCellUtil.createFirstOnRowCol(cell);
+      }
+      return checkGeneralBloomFilter(null, kvKey, bloomFilter);
     }
-    // Used in ROW_COL bloom
-    ExtendedCell kvKey = null;
-    // Already if the incoming key is a fake rowcol key then use it as it is
-    if (cell.getTypeByte() == KeyValue.Type.Maximum.getCode() && cell.getFamilyLength() == 0) {
-      kvKey = cell;
-    } else {
-      kvKey = PrivateCellUtil.createFirstOnRowCol(cell);
+    if (reader instanceof MultiTenantBloomSupport) {
+      try {
+        boolean passed = ((MultiTenantBloomSupport) reader).passesGeneralRowColBloomFilter(cell);
+        recordExternalBloomMetric(passed);
+        return passed;
+      } catch (IOException e) {
+        LOG.warn("Failed multi-tenant row/col bloom check, proceeding without", e);
+        return true;
+      }
     }
-    return checkGeneralBloomFilter(null, kvKey, bloomFilter);
+    incrementBloomEligible();
+    return true;
   }
 
   /**
@@ -331,29 +394,36 @@ public class StoreFileReader {
    * @return True if passes
    */
   private boolean passesGeneralRowPrefixBloomFilter(Scan scan) {
-    BloomFilter bloomFilter = this.generalBloomFilter;
-    if (bloomFilter == null) {
-      bloomFilterMetrics.incrementEligible();
-      return true;
-    }
-
     byte[] row = scan.getStartRow();
     byte[] rowPrefix;
     if (scan.isGetScan()) {
       rowPrefix = Bytes.copy(row, 0, Math.min(prefixLength, row.length));
     } else {
-      // For non-get scans
-      // Find out the common prefix of startRow and stopRow.
       int commonLength = Bytes.findCommonPrefix(scan.getStartRow(), scan.getStopRow(),
         scan.getStartRow().length, scan.getStopRow().length, 0, 0);
-      // startRow and stopRow don't have the common prefix.
-      // Or the common prefix length is less than prefixLength
       if (commonLength <= 0 || commonLength < prefixLength) {
         return true;
       }
       rowPrefix = Bytes.copy(row, 0, prefixLength);
     }
-    return checkGeneralBloomFilter(rowPrefix, null, bloomFilter);
+
+    BloomFilter bloomFilter = this.generalBloomFilter;
+    if (bloomFilter != null) {
+      return checkGeneralBloomFilter(rowPrefix, null, bloomFilter);
+    }
+    if (reader instanceof MultiTenantBloomSupport) {
+      try {
+        boolean passed = ((MultiTenantBloomSupport) reader)
+          .passesGeneralRowPrefixBloomFilter(rowPrefix, 0, rowPrefix.length);
+        recordExternalBloomMetric(passed);
+        return passed;
+      } catch (IOException e) {
+        LOG.warn("Failed multi-tenant row prefix bloom check, proceeding without", e);
+        return true;
+      }
+    }
+    incrementBloomEligible();
+    return true;
   }
 
   private boolean checkGeneralBloomFilter(byte[] key, Cell kvKey, BloomFilter bloomFilter) {
@@ -409,6 +479,7 @@ public class StoreFileReader {
           exists = !keyIsAfterLast && bloomFilter.contains(key, 0, key.length, bloom);
         }
 
+        recordExternalBloomMetric(exists);
         return exists;
       }
     } catch (IOException e) {
@@ -463,18 +534,41 @@ public class StoreFileReader {
       bloomFilterType = BloomType.valueOf(Bytes.toString(b));
     }
 
+    if (bloomFilterType == BloomType.NONE && reader instanceof MultiTenantBloomSupport) {
+      bloomFilterType = ((MultiTenantBloomSupport) reader).getGeneralBloomFilterType();
+    }
+
     byte[] p = fi.get(BLOOM_FILTER_PARAM_KEY);
-    if (bloomFilterType == BloomType.ROWPREFIX_FIXED_LENGTH) {
+    if (p != null) {
       prefixLength = Bytes.toInt(p);
+    } else if (reader instanceof MultiTenantBloomSupport) {
+      try {
+        prefixLength = ((MultiTenantBloomSupport) reader).getGeneralBloomPrefixLength();
+      } catch (IOException e) {
+        LOG.debug("Failed to obtain prefix length from multi-tenant reader", e);
+      }
     }
 
     lastBloomKey = fi.get(LAST_BLOOM_KEY);
-    if (bloomFilterType == BloomType.ROWCOL) {
+    if (lastBloomKey == null && reader instanceof MultiTenantBloomSupport) {
+      try {
+        lastBloomKey = ((MultiTenantBloomSupport) reader).getLastBloomKey();
+      } catch (IOException e) {
+        LOG.debug("Failed to obtain last bloom key from multi-tenant reader", e);
+      }
+    }
+    if (bloomFilterType == BloomType.ROWCOL && lastBloomKey != null) {
       lastBloomKeyOnlyKV = new KeyValue.KeyOnlyKeyValue(lastBloomKey, 0, lastBloomKey.length);
     }
     byte[] cnt = fi.get(DELETE_FAMILY_COUNT);
     if (cnt != null) {
       deleteFamilyCnt = Bytes.toLong(cnt);
+    } else if (reader instanceof MultiTenantBloomSupport) {
+      try {
+        deleteFamilyCnt = ((MultiTenantBloomSupport) reader).getDeleteFamilyBloomCount();
+      } catch (IOException e) {
+        LOG.debug("Failed to obtain delete family bloom count from multi-tenant reader", e);
+      }
     }
 
     return fi;
@@ -491,6 +585,7 @@ public class StoreFileReader {
     try {
       this.bloomFilterMetrics = metrics;
       if (blockType == BlockType.GENERAL_BLOOM_META) {
+        bloomMetricsTrackedExternally = false;
         if (this.generalBloomFilter != null) return; // Bloom has been loaded
 
         DataInput bloomMeta = reader.getGeneralBloomFilterMetadata();
@@ -506,6 +601,13 @@ public class StoreFileReader {
                 + reader.getName());
             }
           }
+        } else if (reader instanceof MultiTenantBloomSupport) {
+          try {
+            generalBloomFilter = ((MultiTenantBloomSupport) reader).getGeneralBloomFilterInstance();
+            bloomMetricsTrackedExternally = generalBloomFilter != null;
+          } catch (IOException e) {
+            LOG.debug("Failed to obtain general bloom filter from multi-tenant reader", e);
+          }
         }
       } else if (blockType == BlockType.DELETE_FAMILY_BLOOM_META) {
         if (this.deleteFamilyBloomFilter != null) return; // Bloom has been loaded
@@ -518,6 +620,13 @@ public class StoreFileReader {
           LOG.info(
             "Loaded Delete Family Bloom (" + deleteFamilyBloomFilter.getClass().getSimpleName()
               + ") metadata for " + reader.getName());
+        } else if (reader instanceof MultiTenantBloomSupport) {
+          try {
+            deleteFamilyBloomFilter =
+              ((MultiTenantBloomSupport) reader).getDeleteFamilyBloomFilterInstance();
+          } catch (IOException e) {
+            LOG.debug("Failed to obtain delete family bloom filter from multi-tenant reader", e);
+          }
         }
       } else {
         throw new RuntimeException(

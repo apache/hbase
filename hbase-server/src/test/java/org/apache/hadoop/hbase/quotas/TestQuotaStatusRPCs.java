@@ -199,16 +199,42 @@ public class TestQuotaStatusRPCs {
 
   @Test
   public void testQuotaStatusFromMaster() throws Exception {
-    final long sizeLimit = 1024L * 25L; // 25KB
-    // As of 2.0.0-beta-2, this 1KB of "Cells" actually results in about 15KB on disk (HFiles)
-    // This is skewed a bit since we're writing such little data, so the test needs to keep
-    // this in mind; else, the quota will be in violation before the test expects it to be.
+    // On-disk overhead per HFile varies across format versions (v3 ≈ 15KB, v4 ≈ 39KB for 1KB
+    // of cell data spread over 10 regions). Rather than hardcoding a size limit that bakes in
+    // format-specific assumptions, we write initial data first, measure the actual reported
+    // disk usage, then set the quota limit proportionally. This keeps the test agnostic of
+    // HFile version and tenant layout.
     final long tableSize = 1024L * 1; // 1KB
     final long nsLimit = Long.MAX_VALUE;
     final int numRegions = 10;
     final TableName tn = helper.createTableWithRegions(numRegions);
 
-    // Define the quota
+    // Write initial data before setting quotas so we can measure actual on-disk size.
+    helper.writeData(tn, tableSize);
+
+    final Connection conn = TEST_UTIL.getConnection();
+
+    // Wait for the actual table size to be reported to the master.
+    final AtomicLong reportedTableSize = new AtomicLong(0);
+    Waiter.waitFor(TEST_UTIL.getConfiguration(), 30 * 1000, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        Map<TableName, Long> sizes = TEST_UTIL.getAdmin().getSpaceQuotaTableSizes();
+        Long size = sizes.get(tn);
+        if (size != null && size > 0) {
+          reportedTableSize.set(size);
+          return true;
+        }
+        return false;
+      }
+    });
+
+    // Set the limit to 2x the actual reported size: the initial write is comfortably under
+    // the limit, while a subsequent write of equal size will push total usage past it.
+    final long sizeLimit = reportedTableSize.get() * 2;
+    LOG.info("Measured on-disk size after initial write: {}, quota limit set to: {}",
+      reportedTableSize.get(), sizeLimit);
+
     QuotaSettings settings =
       QuotaSettingsFactory.limitTableSpace(tn, sizeLimit, SpaceViolationPolicy.NO_INSERTS);
     TEST_UTIL.getAdmin().setQuota(settings);
@@ -216,11 +242,7 @@ public class TestQuotaStatusRPCs {
       nsLimit, SpaceViolationPolicy.NO_INSERTS);
     TEST_UTIL.getAdmin().setQuota(nsSettings);
 
-    // Write at least `tableSize` data
-    helper.writeData(tn, tableSize);
-
-    final Connection conn = TEST_UTIL.getConnection();
-    // Make sure the master has a snapshot for our table
+    // Make sure the master has a snapshot for our table with the dynamically computed limit.
     Waiter.waitFor(TEST_UTIL.getConfiguration(), 30 * 1000, new Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -249,13 +271,15 @@ public class TestQuotaStatusRPCs {
       }
     });
 
-    // Sanity check: the below assertions will fail if we somehow write too much data
-    // and force the table to move into violation before we write the second bit of data.
+    // Sanity check: with the limit at 2x measured size the table must not be in violation.
     SpaceQuotaSnapshot snapshot =
       (SpaceQuotaSnapshot) conn.getAdmin().getCurrentSpaceQuotaSnapshot(tn);
     assertTrue("QuotaSnapshot for " + tn + " should be non-null and not in violation",
       snapshot != null && !snapshot.getQuotaStatus().isInViolation());
 
+    // Write enough additional data to exceed the quota. Writing 2x the initial amount
+    // produces a comparable number of new HFiles (with their per-file overhead), pushing
+    // total usage well past the 2x limit.
     try {
       helper.writeData(tn, tableSize * 2L);
     } catch (RetriesExhaustedWithDetailsException | SpaceLimitingException e) {

@@ -417,7 +417,14 @@ public class HStoreFile implements StoreFile {
     StoreFileReader reader = fileInfo.preStoreFileReaderOpen(context, cacheConf);
     if (reader == null) {
       reader = fileInfo.createReader(context, cacheConf);
-      fileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
+      // Only initialize meta and index for non-multi-tenant files (v3 and below)
+      // Multi-tenant files (v4) skip this initialization just like in HFile.createReader()
+      if (
+        fileInfo.getHFileInfo().getTrailer().getMajorVersion()
+            != HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT
+      ) {
+        fileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
+      }
     }
     this.initialReader = fileInfo.postStoreFileReaderOpen(context, cacheConf, reader);
 
@@ -538,9 +545,9 @@ public class HStoreFile implements StoreFile {
    * Initialize the reader used for pread.
    */
   public void initReader() throws IOException {
-    if (initialReader == null) {
+    if (initialReader == null || initialReader.isClosed()) {
       synchronized (this) {
-        if (initialReader == null) {
+        if (initialReader == null || initialReader.isClosed()) {
           try {
             open();
           } catch (Exception e) {

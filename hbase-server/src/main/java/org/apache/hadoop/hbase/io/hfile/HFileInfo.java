@@ -369,25 +369,46 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
     ReaderContext context = reader.getContext();
     try {
       HFileBlock.FSReader blockReader = reader.getUncachedBlockReader();
-      // Initialize an block iterator, and parse load-on-open blocks in the following.
-      blockIter = blockReader.blockRange(trailer.getLoadOnOpenDataOffset(),
-        context.getFileSize() - trailer.getTrailerSize());
-      // Data index. We also read statistics about the block index written after
-      // the root level.
-      HFileBlock dataBlockRootIndex = blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX);
-      HFileBlock metaBlockIndex = blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX);
-      loadMetaInfo(blockIter, hfileContext);
+      long loadOnOpenOffset = trailer.getLoadOnOpenDataOffset();
+      boolean isMultiTenantFile =
+        trailer.getMajorVersion() == HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT
+          && trailer.getSectionIndexOffset() >= 0;
+      if (isMultiTenantFile) {
+        loadOnOpenOffset = trailer.getSectionIndexOffset();
+      }
 
-      HFileIndexBlockEncoder indexBlockEncoder =
-        HFileIndexBlockEncoderImpl.createFromFileInfo(this);
-      this.dataIndexReader = new HFileBlockIndex.CellBasedKeyBlockIndexReaderV2(
-        trailer.createComparator(), trailer.getNumDataIndexLevels(), indexBlockEncoder);
-      dataIndexReader.readMultiLevelIndexRoot(dataBlockRootIndex, trailer.getDataIndexCount());
-      reader.setDataBlockIndexReader(dataIndexReader);
-      // Meta index.
-      this.metaIndexReader = new HFileBlockIndex.ByteArrayKeyBlockIndexReader(1);
-      metaIndexReader.readRootIndex(metaBlockIndex, trailer.getMetaIndexCount());
-      reader.setMetaBlockIndexReader(metaIndexReader);
+      // Initialize an block iterator, and parse load-on-open blocks in the following.
+      blockIter =
+        blockReader.blockRange(loadOnOpenOffset, context.getFileSize() - trailer.getTrailerSize());
+      if (isMultiTenantFile) {
+        HFileBlock sectionIndexRoot = blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX);
+        try {
+          loadMetaInfo(blockIter, hfileContext);
+        } finally {
+          sectionIndexRoot.release();
+        }
+        this.dataIndexReader = null;
+        this.metaIndexReader = null;
+        reader.setDataBlockIndexReader(null);
+        reader.setMetaBlockIndexReader(null);
+      } else {
+        // Data index. We also read statistics about the block index written after
+        // the root level.
+        HFileBlock dataBlockRootIndex = blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX);
+        HFileBlock metaBlockIndex = blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX);
+        loadMetaInfo(blockIter, hfileContext);
+
+        HFileIndexBlockEncoder indexBlockEncoder =
+          HFileIndexBlockEncoderImpl.createFromFileInfo(this);
+        this.dataIndexReader = new HFileBlockIndex.CellBasedKeyBlockIndexReaderV2(
+          trailer.createComparator(), trailer.getNumDataIndexLevels(), indexBlockEncoder);
+        dataIndexReader.readMultiLevelIndexRoot(dataBlockRootIndex, trailer.getDataIndexCount());
+        reader.setDataBlockIndexReader(dataIndexReader);
+        // Meta index.
+        this.metaIndexReader = new HFileBlockIndex.ByteArrayKeyBlockIndexReader(1);
+        metaIndexReader.readRootIndex(metaBlockIndex, trailer.getMetaIndexCount());
+        reader.setMetaBlockIndexReader(metaIndexReader);
+      }
 
       reader.setDataBlockEncoder(HFileDataBlockEncoderImpl.createFromFileInfo(this));
       // Load-On-Open info
@@ -452,12 +473,15 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
   }
 
   /**
-   * File version check is a little sloppy. We read v3 files but can also read v2 files if their
-   * content has been pb'd; files written with 0.98.
+   * File version check is a little sloppy. We read v4 and v3 files but can also read v2 files if
+   * their content has been pb'd; files written with 0.98.
    */
   private void checkFileVersion(Path path) {
     int majorVersion = trailer.getMajorVersion();
     if (majorVersion == getMajorVersion()) {
+      return;
+    }
+    if (majorVersion == HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
       return;
     }
     int minorVersion = trailer.getMinorVersion();
@@ -477,7 +501,7 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
   }
 
   public int getMajorVersion() {
-    return 3;
+    return 4;
   }
 
   public void setTrailer(FixedFileTrailer trailer) {
