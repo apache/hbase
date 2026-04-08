@@ -40,6 +40,20 @@ module Hbase
       assert_equal(1, @admin.getRSGroup(group_name).getServers.count)
     end
 
+    
+    def add_rsgroup_and_move_all_servers(src_group_name, dest_group_name)
+      assert_nil(@admin.getRSGroup(src_group_name))
+      @shell.command(:add_rsgroup, src_group_name)
+      assert_not_nil(@admin.getRSGroup(src_group_name))
+      assert_nil(@admin.getRSGroup(dest_group_name))
+      @shell.command(:add_rsgroup, dest_group_name)
+      assert_not_nil(@admin.getRSGroup(dest_group_name))
+
+      @shell.command(:move_all_servers_rsgroup, dest_group_name, src_group_name)
+      assert_equal(2, @admin.getRSGroup(dest_group_name).getServers.count)
+    end
+
+
     def remove_rsgroup(group_name)
       rsgroup = @admin.getRSGroup(group_name)
       @admin.moveServersToRSGroup(rsgroup.getServers, 'default')
@@ -101,8 +115,11 @@ module Hbase
       group_name = 'test_group'
       namespace_name = 'test_namespace'
       ns_table_name = 'test_namespace:test_ns_table'
+      dest_group = 'dest_group'
 
       add_rsgroup_and_move_one_server(group_name)
+      add_rsgroup_and_move_all_servers(group_name, dest_group)
+      add_rsgroup_and_move_all_servers(dest_group, group_name)
 
       @shell.command(:create_namespace, namespace_name)
       @shell.command(:create, ns_table_name, 'f')
@@ -128,6 +145,7 @@ module Hbase
       @shell.command(:drop, ns_table_name2)
       @shell.command(:drop_namespace, namespace_name)
       remove_rsgroup(group_name)
+      remove_rsgroup(dest_group)
     end
 
     define_test 'Test RSGroup Move Server Namespace RSGroup Commands' do
