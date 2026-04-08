@@ -17,22 +17,17 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHMasterCommandLine {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHMasterCommandLine.class);
 
   private static final HBaseTestingUtil TESTING_UTIL = new HBaseTestingUtil();
 

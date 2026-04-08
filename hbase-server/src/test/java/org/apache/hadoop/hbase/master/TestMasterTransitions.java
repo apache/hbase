@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.io.IOException;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -34,14 +35,12 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,12 +48,9 @@ import org.slf4j.LoggerFactory;
  * Test transitions of state across the master. Sets up the cluster once and then runs a couple of
  * tests.
  */
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMasterTransitions {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterTransitions.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterTransitions.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -65,7 +61,7 @@ public class TestMasterTransitions {
   /**
    * Start up a mini cluster and put a small table of many empty regions into it.
    */
-  @BeforeClass
+  @BeforeAll
   public static void beforeAllTests() throws Exception {
     TEST_UTIL.startMiniCluster(2);
     // Create a table of three families. This will assign a region.
@@ -80,12 +76,12 @@ public class TestMasterTransitions {
     t.close();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterAllTests() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     TEST_UTIL.ensureSomeRegionServersAvailable(2);
   }
@@ -139,7 +135,7 @@ public class TestMasterTransitions {
    * In 2428, the meta region has just been set offline and then a close comes in.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-2428">HBASE-2428</a>
    */
-  @Ignore
+  @Disabled
   @Test
   public void testRegionCloseWhenNoMetaHBase2428() throws Exception {
     /*
@@ -172,7 +168,7 @@ public class TestMasterTransitions {
    * onerous by having the server under test carry the meta. If confusion between old and new,
    * purportedly meta never comes back. Test that meta gets redeployed.
    */
-  @Ignore
+  @Disabled
   @Test
   public void testAddingServerBeforeOldIsDead2413() throws IOException {
     /*
@@ -241,7 +237,7 @@ public class TestMasterTransitions {
    * happen soon as the processing of the killed server is done.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-2482">HBASE-2482</a>
    */
-  @Ignore
+  @Disabled
   @Test
   public void testKillRSWithOpeningRegion2482() throws Exception {
     /*
@@ -325,7 +321,7 @@ public class TestMasterTransitions {
       rows++;
     }
     s.close();
-    Assert.assertEquals(expected, rows);
+    assertEquals(expected, rows);
     t.close();
     meta.close();
     return rows;

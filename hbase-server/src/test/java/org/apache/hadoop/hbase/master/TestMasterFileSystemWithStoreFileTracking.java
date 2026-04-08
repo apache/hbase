@@ -19,45 +19,43 @@ package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
 import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.Trackers.FILE;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Test the master filesystem in a local cluster with Store File Tracking explicitly set in global
  * config
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMasterFileSystemWithStoreFileTracking {
+  private String testMethodName;
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterFileSystemWithStoreFileTracking.class);
-
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
-  @BeforeClass
+  @BeforeAll
   public static void setupTest() throws Exception {
     UTIL.getConfiguration().set(TRACKER_IMPL, FILE.name());
     UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownTest() throws Exception {
     UTIL.shutdownMiniCluster();
   }

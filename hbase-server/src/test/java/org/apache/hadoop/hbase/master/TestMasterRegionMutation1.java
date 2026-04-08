@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RegionTooBusyException;
@@ -48,15 +49,12 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,45 +64,41 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  * MasterRegion related test that ensures the operations continue even when Procedure state update
  * encounters retriable IO errors.
  */
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMasterRegionMutation1 {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterRegionMutation1.class);
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterRegionMutation1.class);
-
-  @Rule
-  public TestName name = new TestName();
-
   protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected static ServerName rs0;
+  protected static int numMasters = 2;
+  protected static Class<? extends HRegion> regionImplClass = TestRegion.class;
 
   protected static final AtomicBoolean ERROR_OUT = new AtomicBoolean(false);
   private static final AtomicInteger ERROR_COUNTER = new AtomicInteger(0);
   private static final AtomicBoolean FIRST_TIME_ERROR = new AtomicBoolean(true);
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setClass(HConstants.REGION_IMPL, TestRegion.class, HRegion.class);
+    TEST_UTIL.getConfiguration().setClass(HConstants.REGION_IMPL, regionImplClass, HRegion.class);
     StartTestingClusterOption.Builder builder = StartTestingClusterOption.builder();
     // 1 master is expected to be aborted with this test
-    builder.numMasters(2).numRegionServers(3);
+    builder.numMasters(numMasters).numRegionServers(3);
     TEST_UTIL.startMiniCluster(builder.build());
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     rs0 = cluster.getRegionServer(0).getServerName();
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
     int startKey = 0;
@@ -126,9 +120,9 @@ public class TestMasterRegionMutation1 {
 
     hbckChore.choreForTesting();
     HbckReport hbckReport = hbckChore.getLastReport();
-    Assert.assertEquals(0, hbckReport.getInconsistentRegions().size());
-    Assert.assertEquals(0, hbckReport.getOrphanRegionsOnFS().size());
-    Assert.assertEquals(0, hbckReport.getOrphanRegionsOnRS().size());
+    assertEquals(0, hbckReport.getInconsistentRegions().size());
+    assertEquals(0, hbckReport.getOrphanRegionsOnFS().size());
+    assertEquals(0, hbckReport.getOrphanRegionsOnRS().size());
 
     // procedure state store update encounters retriable error, master abort is not required
     ERROR_OUT.set(true);

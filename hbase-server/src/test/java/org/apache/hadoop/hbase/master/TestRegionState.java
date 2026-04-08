@@ -17,30 +17,28 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestRegionState {
+  private String testMethodName;
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionState.class);
-
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
   @Test
   public void testSerializeDeserialize() {
@@ -56,7 +54,7 @@ public class TestRegionState {
     ClusterStatusProtos.RegionState protobuf1 = state1.convert();
     RegionState state2 = RegionState.convert(protobuf1);
     ClusterStatusProtos.RegionState protobuf2 = state1.convert();
-    assertEquals("RegionState does not match " + state, state1, state2);
-    assertEquals("Protobuf does not match " + state, protobuf1, protobuf2);
+    assertEquals(state1, state2, "RegionState does not match " + state);
+    assertEquals(protobuf1, protobuf2, "Protobuf does not match " + state);
   }
 }

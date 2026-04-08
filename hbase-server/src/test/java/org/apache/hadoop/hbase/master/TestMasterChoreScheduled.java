@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
@@ -32,34 +33,29 @@ import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests to validate if HMaster default chores are scheduled
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMasterChoreScheduled {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterChoreScheduled.class);
 
   private static HMaster hMaster;
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(StartTestingClusterOption.builder().numRegionServers(1).build());
     hMaster = UTIL.getMiniHBaseCluster().getMaster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -132,8 +128,8 @@ public class TestMasterChoreScheduled {
     }
 
     private void testIfChoreScheduled(E choreObj) {
-      Assert.assertNotNull(choreObj);
-      Assert.assertTrue(hMaster.getChoreService().isChoreScheduled(choreObj));
+      assertNotNull(choreObj);
+      assertTrue(hMaster.getChoreService().isChoreScheduled(choreObj));
     }
   }
 }

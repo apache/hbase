@@ -17,31 +17,27 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, SmallTests.class }) // Plays with the ManualEnvironmentEdge
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG) // Plays with the ManualEnvironmentEdge
 public class TestClusterStatusPublisher {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClusterStatusPublisher.class);
 
   private ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
 
-  @Before
+  @BeforeEach
   public void before() {
     mee.setValue(0);
     EnvironmentEdgeManager.injectEdge(mee);
@@ -56,7 +52,7 @@ public class TestClusterStatusPublisher {
       }
     };
 
-    Assert.assertTrue(csp.generateDeadServersListToSend().isEmpty());
+    assertTrue(csp.generateDeadServersListToSend().isEmpty());
   }
 
   @Test
@@ -80,10 +76,10 @@ public class TestClusterStatusPublisher {
 
     mee.setValue(2);
     for (int i = 0; i < ClusterStatusPublisher.NB_SEND; i++) {
-      Assert.assertEquals("i=" + i, 1, csp.generateDeadServersListToSend().size());
+      assertEquals(1, csp.generateDeadServersListToSend().size(), "i=" + i);
     }
     mee.setValue(1000);
-    Assert.assertTrue(csp.generateDeadServersListToSend().isEmpty());
+    assertTrue(csp.generateDeadServersListToSend().isEmpty());
   }
 
   @Test
@@ -103,34 +99,34 @@ public class TestClusterStatusPublisher {
     mee.setValue(3);
     List<ServerName> allSNS = csp.generateDeadServersListToSend();
 
-    Assert.assertEquals(10, ClusterStatusPublisher.MAX_SERVER_PER_MESSAGE);
-    Assert.assertEquals(10, allSNS.size());
+    assertEquals(10, ClusterStatusPublisher.MAX_SERVER_PER_MESSAGE);
+    assertEquals(10, allSNS.size());
 
     List<ServerName> nextMes = csp.generateDeadServersListToSend();
-    Assert.assertEquals(10, nextMes.size());
+    assertEquals(10, nextMes.size());
     for (ServerName sn : nextMes) {
       if (!allSNS.contains(sn)) {
         allSNS.add(sn);
       }
     }
-    Assert.assertEquals(20, allSNS.size());
+    assertEquals(20, allSNS.size());
 
     nextMes = csp.generateDeadServersListToSend();
-    Assert.assertEquals(10, nextMes.size());
+    assertEquals(10, nextMes.size());
     for (ServerName sn : nextMes) {
       if (!allSNS.contains(sn)) {
         allSNS.add(sn);
       }
     }
-    Assert.assertEquals(25, allSNS.size());
+    assertEquals(25, allSNS.size());
 
     nextMes = csp.generateDeadServersListToSend();
-    Assert.assertEquals(10, nextMes.size());
+    assertEquals(10, nextMes.size());
     for (ServerName sn : nextMes) {
       if (!allSNS.contains(sn)) {
         allSNS.add(sn);
       }
     }
-    Assert.assertEquals(25, allSNS.size());
+    assertEquals(25, allSNS.size());
   }
 }

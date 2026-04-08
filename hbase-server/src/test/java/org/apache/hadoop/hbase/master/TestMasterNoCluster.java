@@ -18,11 +18,11 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.HConstants.ZOOKEEPER_QUORUM;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Waiter;
@@ -35,15 +35,13 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.zookeeper.KeeperException;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,21 +52,21 @@ import org.slf4j.LoggerFactory;
  * cluster context. TODO: Speed up the zk connection by Master. It pauses 5 seconds establishing
  * session.
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMasterNoCluster {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterNoCluster.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterNoCluster.class);
 
   private static final HBaseTestingUtil TESTUTIL = new HBaseTestingUtil();
+  private String testMethodName;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration c = TESTUTIL.getConfiguration();
     // We use local filesystem. Set it so it writes into the testdir.
@@ -78,15 +76,15 @@ public class TestMasterNoCluster {
     TESTUTIL.startMiniZKCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TESTUTIL.shutdownMiniZKCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws KeeperException, ZooKeeperConnectionException, IOException {
     // Make sure zk is clean before we run the next test.
-    ZKWatcher zkw = new ZKWatcher(TESTUTIL.getConfiguration(), "@Before", new Abortable() {
+    ZKWatcher zkw = new ZKWatcher(TESTUTIL.getConfiguration(), "@BeforeEach", new Abortable() {
       @Override
       public void abort(String why, Throwable e) {
         throw new RuntimeException(why, e);
@@ -140,7 +138,7 @@ public class TestMasterNoCluster {
   @Test
   public void testMasterInitWithObserverModeClientZKQuorum() throws Exception {
     Configuration conf = new Configuration(TESTUTIL.getConfiguration());
-    Assert.assertFalse(Boolean.getBoolean(HConstants.CLIENT_ZOOKEEPER_OBSERVER_MODE));
+    assertFalse(Boolean.getBoolean(HConstants.CLIENT_ZOOKEEPER_OBSERVER_MODE));
     // set client ZK to some non-existing address and make sure server won't access client ZK
     // (server start should not be affected)
     conf.set(HConstants.CLIENT_ZOOKEEPER_QUORUM, HConstants.LOCALHOST);
@@ -157,8 +155,8 @@ public class TestMasterNoCluster {
     while (!master.isInitialized()) {
       Threads.sleep(200);
     }
-    Assert.assertNull(master.getMetaLocationSyncer());
-    Assert.assertNull(master.masterAddressSyncer);
+    assertNull(master.getMetaLocationSyncer());
+    assertNull(master.masterAddressSyncer);
     master.stopMaster();
     master.join();
   }
