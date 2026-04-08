@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -87,17 +88,16 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Tag(CoprocessorTests.TAG)
 @Tag(LargeTests.TAG)
@@ -706,8 +706,7 @@ public class TestRegionObserverInterface {
 
   @Test
   public void bulkLoadHFileTest() throws Exception {
-    final String testName =
-      TestRegionObserverInterface.class.getName() + "." + currentTestName;
+    final String testName = TestRegionObserverInterface.class.getName() + "." + currentTestName;
     final TableName tableName =
       TableName.valueOf(TEST_TABLE.getNameAsString() + "." + currentTestName);
     Configuration conf = util.getConfiguration();
@@ -932,8 +931,9 @@ public class TestRegionObserverInterface {
           for (int i = 0; i < methodName.length; ++i) {
             Method m = coprocessor.getMethod(methodName[i]);
             Object o = m.invoke(cp);
-            assertTrue(o.equals(value[i]), "Result of " + coprocessor.getName() + "." + methodName[i]
-              + " is expected to be " + value[i].toString() + ", while we get " + o.toString());
+            assertTrue(o.equals(value[i]),
+              "Result of " + coprocessor.getName() + "." + methodName[i] + " is expected to be "
+                + value[i].toString() + ", while we get " + o.toString());
           }
         }
       }

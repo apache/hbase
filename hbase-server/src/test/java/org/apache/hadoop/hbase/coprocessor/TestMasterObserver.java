@@ -58,10 +58,10 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1124,7 +1124,8 @@ public class TestMasterObserver {
 
     // check basic lifecycle
     assertTrue(cp.wasStarted(), "MasterObserver should have been started");
-    assertTrue(cp.wasMasterInitializationCalled(), "preMasterInitialization() hook should have been called");
+    assertTrue(cp.wasMasterInitializationCalled(),
+      "preMasterInitialization() hook should have been called");
     assertTrue(cp.wasStartMasterCalled(), "postStartMaster() hook should have been called");
   }
 
@@ -1162,7 +1163,8 @@ public class TestMasterObserver {
       tableCreationLatch = new CountDownLatch(1);
       admin.disableTable(tableName);
       assertTrue(admin.isTableDisabled(tableName));
-      assertTrue(cp.wasDisableTableCalled(), "Coprocessor should have been called on table disable");
+      assertTrue(cp.wasDisableTableCalled(),
+        "Coprocessor should have been called on table disable");
       assertTrue(cp.wasDisableTableActionCalled(), "Disable table handler should be called.");
 
       // enable
@@ -1206,7 +1208,8 @@ public class TestMasterObserver {
       assertFalse(cp.wasDisableTableActionCalled());
       admin.disableTable(tableName);
       assertTrue(admin.isTableDisabled(tableName));
-      assertTrue(cp.wasDisableTableCalled(), "Coprocessor should have been called on table disable");
+      assertTrue(cp.wasDisableTableCalled(),
+        "Coprocessor should have been called on table disable");
       assertTrue(cp.wasDisableTableActionCalled(), "Disable table handler should be called.");
 
       // modify table
@@ -1267,12 +1270,15 @@ public class TestMasterObserver {
 
       // Test list operation
       admin.listSnapshots();
-      assertTrue(cp.wasListSnapshotCalled(), "Coprocessor should have been called on snapshot list");
+      assertTrue(cp.wasListSnapshotCalled(),
+        "Coprocessor should have been called on snapshot list");
 
       // Test clone operation
       admin.cloneSnapshot(TEST_SNAPSHOT, TEST_CLONE);
-      assertTrue(cp.wasCloneSnapshotCalled(), "Coprocessor should have been called on snapshot clone");
-      assertFalse(cp.wasRestoreSnapshotCalled(), "Coprocessor restore should not have been called on snapshot clone");
+      assertTrue(cp.wasCloneSnapshotCalled(),
+        "Coprocessor should have been called on snapshot clone");
+      assertFalse(cp.wasRestoreSnapshotCalled(),
+        "Coprocessor restore should not have been called on snapshot clone");
       admin.disableTable(TEST_CLONE);
       assertTrue(admin.isTableDisabled(tableName));
       deleteTable(admin, TEST_CLONE);
@@ -1280,11 +1286,14 @@ public class TestMasterObserver {
       // Test restore operation
       cp.resetStates();
       admin.restoreSnapshot(TEST_SNAPSHOT);
-      assertTrue(cp.wasRestoreSnapshotCalled(), "Coprocessor should have been called on snapshot restore");
-      assertFalse(cp.wasCloneSnapshotCalled(), "Coprocessor clone should not have been called on snapshot restore");
+      assertTrue(cp.wasRestoreSnapshotCalled(),
+        "Coprocessor should have been called on snapshot restore");
+      assertFalse(cp.wasCloneSnapshotCalled(),
+        "Coprocessor clone should not have been called on snapshot restore");
 
       admin.deleteSnapshot(TEST_SNAPSHOT);
-      assertTrue(cp.wasDeleteSnapshotCalled(), "Coprocessor should have been called on snapshot delete");
+      assertTrue(cp.wasDeleteSnapshotCalled(),
+        "Coprocessor should have been called on snapshot delete");
     } finally {
       deleteTable(admin, tableName);
     }
@@ -1309,7 +1318,8 @@ public class TestMasterObserver {
     assertTrue(cp.wasCreateNamespaceCalled(), "Test namespace should be created");
 
     assertNotNull(admin.getNamespaceDescriptor(testNamespace));
-    assertTrue(cp.wasGetNamespaceDescriptorCalled(), "Test namespace descriptor should have been called");
+    assertTrue(cp.wasGetNamespaceDescriptorCalled(),
+      "Test namespace descriptor should have been called");
     // This test used to do a bunch w/ bypass but bypass of these table and namespace stuff has
     // been removed so the testing code was removed.
   }
@@ -1378,7 +1388,8 @@ public class TestMasterObserver {
 
       // make sure balancer is on
       master.balanceSwitch(true);
-      assertTrue(cp.wasBalanceSwitchCalled(), "Coprocessor should have been called on balance switch");
+      assertTrue(cp.wasBalanceSwitchCalled(),
+        "Coprocessor should have been called on balance switch");
 
       // turn balancer off
       master.balanceSwitch(false);
@@ -1427,7 +1438,8 @@ public class TestMasterObserver {
       RequestConverter.buildGetTableDescriptorsRequest((List<TableName>) null);
     master.getMasterRpcServices().getTableDescriptors(null, req);
 
-    assertTrue(cp.wasGetTableDescriptorsCalled(), "Coprocessor should be called on table descriptors request");
+    assertTrue(cp.wasGetTableDescriptorsCalled(),
+      "Coprocessor should be called on table descriptors request");
   }
 
   @Test
@@ -1453,7 +1465,8 @@ public class TestMasterObserver {
     cp.resetStates();
 
     master.abortProcedure(1, true);
-    assertTrue(cp.wasAbortProcedureCalled(), "Coprocessor should be called on abort procedure request");
+    assertTrue(cp.wasAbortProcedureCalled(),
+      "Coprocessor should be called on abort procedure request");
   }
 
   @Test
@@ -1466,7 +1479,8 @@ public class TestMasterObserver {
     cp.resetStates();
 
     master.getProcedures();
-    assertTrue(cp.wasGetProceduresCalled(), "Coprocessor should be called on get procedures request");
+    assertTrue(cp.wasGetProceduresCalled(),
+      "Coprocessor should be called on get procedures request");
   }
 
   @Test

@@ -64,12 +64,12 @@ import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitter;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -136,8 +136,8 @@ public class TestWALObserver {
     this.hbaseRootDir = CommonFSUtils.getRootDir(conf);
     this.hbaseWALRootDir = CommonFSUtils.getWALRootDir(conf);
     this.oldLogDir = new Path(this.hbaseWALRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
-    String serverName = ServerName
-      .valueOf(currentTestName, 16010, EnvironmentEdgeManager.currentTime()).toString();
+    String serverName =
+      ServerName.valueOf(currentTestName, 16010, EnvironmentEdgeManager.currentTime()).toString();
     this.logDir =
       new Path(this.hbaseWALRootDir, AbstractFSWALProvider.getWALDirectoryName(serverName));
 
@@ -340,10 +340,8 @@ public class TestWALObserver {
         Path p = runWALSplit(newConf);
         LOG.info("WALSplit path == " + p);
         // Make a new wal for new region open.
-        final WALFactory wals2 = new WALFactory(conf,
-          ServerName
-            .valueOf(currentTestName + "2", 16010, EnvironmentEdgeManager.currentTime())
-            .toString());
+        final WALFactory wals2 = new WALFactory(conf, ServerName
+          .valueOf(currentTestName + "2", 16010, EnvironmentEdgeManager.currentTime()).toString());
         WAL wal2 = wals2.getWAL(null);
         HRegion region = HRegion.openHRegion(newConf, FileSystem.get(newConf), hbaseRootDir, hri,
           htd, wal2, TEST_UTIL.getHBaseCluster().getRegionServer(0), null);

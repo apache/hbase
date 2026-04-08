@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.snapshot;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -75,7 +76,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Utilities class for snapshots
@@ -197,7 +197,8 @@ public final class SnapshotTestingUtils {
     // check snapshot dir
     Path snapshotDir =
       SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotDescriptor, rootDir);
-    assertTrue(fs.exists(snapshotDir), "target snapshot directory, '" + snapshotDir + "', doesn't exist.");
+    assertTrue(fs.exists(snapshotDir),
+      "target snapshot directory, '" + snapshotDir + "', doesn't exist.");
 
     SnapshotProtos.SnapshotDescription desc =
       SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
@@ -220,16 +221,17 @@ public final class SnapshotTestingUtils {
     // Verify that there are store files in the specified families
     if (nonEmptyTestFamilies != null) {
       for (final byte[] familyName : nonEmptyTestFamilies) {
-        assertTrue(snapshotFamilies.contains(familyName), "Expected snapshot to contain family '" + Bytes.toString(familyName)
-          + "', but it does not.");
+        assertTrue(snapshotFamilies.contains(familyName), "Expected snapshot to contain family '"
+          + Bytes.toString(familyName) + "', but it does not.");
       }
     }
 
     // Verify that there are no store files in the specified families
     if (emptyTestFamilies != null) {
       for (final byte[] familyName : emptyTestFamilies) {
-        assertFalse(snapshotFamilies.contains(familyName), "Expected snapshot to skip empty family '" + Bytes.toString(familyName)
-          + "', but it is present.");
+        assertFalse(snapshotFamilies.contains(familyName),
+          "Expected snapshot to skip empty family '" + Bytes.toString(familyName)
+            + "', but it is present.");
       }
     }
 
@@ -258,7 +260,8 @@ public final class SnapshotTestingUtils {
     // Verify Regions (redundant check, see MasterSnapshotVerifier)
     for (RegionInfo info : regions) {
       String regionName = info.getEncodedName();
-      assertTrue(regionManifests.containsKey(regionName), "Missing region name: '" + regionName + "'");
+      assertTrue(regionManifests.containsKey(regionName),
+        "Missing region name: '" + regionName + "'");
     }
   }
 

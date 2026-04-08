@@ -42,8 +42,8 @@ import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for global coprocessor loading configuration
@@ -109,9 +109,12 @@ public class TestCoprocessorConfiguration {
     systemCoprocessorLoaded.set(false);
     tableCoprocessorLoaded.set(false);
     new RegionCoprocessorHost(region, rsServices, conf);
-    assertEquals(CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get(), "System coprocessors loading default was not honored");
-    assertEquals(CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED
-        && CoprocessorHost.DEFAULT_USER_COPROCESSORS_ENABLED, tableCoprocessorLoaded.get(), "Table coprocessors loading default was not honored");
+    assertEquals(CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get(),
+      "System coprocessors loading default was not honored");
+    assertEquals(
+      CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED
+        && CoprocessorHost.DEFAULT_USER_COPROCESSORS_ENABLED,
+      tableCoprocessorLoaded.get(), "Table coprocessors loading default was not honored");
   }
 
   @Test
@@ -120,7 +123,8 @@ public class TestCoprocessorConfiguration {
     RegionServerServices rsServices = mock(RegionServerServices.class);
     systemCoprocessorLoaded.set(false);
     new RegionServerCoprocessorHost(rsServices, conf);
-    assertEquals(CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get(), "System coprocessors loading default was not honored");
+    assertEquals(CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get(),
+      "System coprocessors loading default was not honored");
   }
 
   @Test
@@ -129,7 +133,8 @@ public class TestCoprocessorConfiguration {
     MasterServices masterServices = mock(MasterServices.class);
     systemCoprocessorLoaded.set(false);
     new MasterCoprocessorHost(masterServices, conf);
-    assertEquals(CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get(), "System coprocessors loading default was not honored");
+    assertEquals(CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get(),
+      "System coprocessors loading default was not honored");
   }
 
   @Test

@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.coprocessor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)

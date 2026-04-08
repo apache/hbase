@@ -34,8 +34,8 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,7 +97,8 @@ public class TestSnapshotDescriptionUtils {
     Path workingDir = new Path(tmpDir, "not_a_snapshot");
     Configuration conf = new Configuration();
     FileSystem workingFs = workingDir.getFileSystem(conf);
-    assertFalse(fs.exists(workingDir), "Already have working snapshot dir: " + workingDir + " but shouldn't. Test file leak?");
+    assertFalse(fs.exists(workingDir),
+      "Already have working snapshot dir: " + workingDir + " but shouldn't. Test file leak?");
     SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName("snapshot").build();
     Path finishedDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, snapshotDir);
 

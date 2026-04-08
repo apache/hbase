@@ -174,9 +174,8 @@ public class TestHFileArchiving {
   @Test
   public void testArchiveStoreFilesDifferentFileSystemsArchiveFileMismatch() throws Exception {
     String baseDir = CommonFSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
-    assertThrows(IOException.class,
-      () -> testArchiveStoreFilesDifferentFileSystems("/hbase/wals/", baseDir, true, true, true,
-        HFileArchiver::archiveStoreFiles));
+    assertThrows(IOException.class, () -> testArchiveStoreFilesDifferentFileSystems("/hbase/wals/",
+      baseDir, true, true, true, HFileArchiver::archiveStoreFiles));
   }
 
   private void testArchiveStoreFilesDifferentFileSystems(String walDir, String expectedBase,
@@ -282,9 +281,9 @@ public class TestHFileArchiving {
     // Internally, testArchiveStoreFilesDifferentFileSystems will pass a "mockedFS"
     // to HFileArchiver.archiveRecoveredEdits, but since wal-dir is supposedly on same FS
     // as root dir it would lead to conflicting FSes and an IOException is expected.
-    assertThrows(IOException.class, () -> testArchiveStoreFilesDifferentFileSystems("/wal-dir",
-      baseDir, (conf, fs, region, dir, family, list) ->
-        HFileArchiver.archiveRecoveredEdits(conf, fs, region, family, list)));
+    assertThrows(IOException.class,
+      () -> testArchiveStoreFilesDifferentFileSystems("/wal-dir", baseDir, (conf, fs, region, dir,
+        family, list) -> HFileArchiver.archiveRecoveredEdits(conf, fs, region, family, list)));
   }
 
   @Test
@@ -480,8 +479,8 @@ public class TestHFileArchiving {
       UserGroupInformation.createUserForTesting("foo1234", new String[] { "group1" });
 
     try {
-      IOException e = assertThrows(IOException.class, () -> ugi.doAs(
-        (PrivilegedExceptionAction<Void>) () -> {
+      IOException e =
+        assertThrows(IOException.class, () -> ugi.doAs((PrivilegedExceptionAction<Void>) () -> {
           FileSystem fs = UTIL.getTestFileSystem();
           HFileArchiver.archiveRegions(UTIL.getConfiguration(), fs, rootDir, tableDir,
             regionDirList);
@@ -633,8 +632,9 @@ public class TestHFileArchiving {
     FileSystem fs = UTIL.getTestFileSystem();
 
     Path archiveDir = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
-    Path regionDir = new Path(CommonFSUtils.getTableDir(new Path("./"),
-      TableName.valueOf(testMethodName(testInfo))), "abcdef");
+    Path regionDir = new Path(
+      CommonFSUtils.getTableDir(new Path("./"), TableName.valueOf(testMethodName(testInfo))),
+      "abcdef");
     Path familyDir = new Path(regionDir, "cf");
 
     Path sourceRegionDir = new Path(rootDir, regionDir);
@@ -698,8 +698,9 @@ public class TestHFileArchiving {
   @Test
   public void testArchiveRegionWithTableDirNull(TestInfo testInfo) throws IOException {
     Configuration conf = UTIL.getMiniHBaseCluster().getMaster().getConfiguration();
-    Path regionDir = new Path(CommonFSUtils.getTableDir(new Path("./"),
-      TableName.valueOf(testMethodName(testInfo))), "xyzabc");
+    Path regionDir = new Path(
+      CommonFSUtils.getTableDir(new Path("./"), TableName.valueOf(testMethodName(testInfo))),
+      "xyzabc");
     Path familyDir = new Path(regionDir, "rd");
     Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
     Path file = new Path(familyDir, "1");
@@ -716,8 +717,9 @@ public class TestHFileArchiving {
   @Test
   public void testArchiveRegionWithRegionDirNull(TestInfo testInfo) throws IOException {
     Configuration conf = UTIL.getMiniHBaseCluster().getMaster().getConfiguration();
-    Path regionDir = new Path(CommonFSUtils.getTableDir(new Path("./"),
-      TableName.valueOf(testMethodName(testInfo))), "elgn4nf");
+    Path regionDir = new Path(
+      CommonFSUtils.getTableDir(new Path("./"), TableName.valueOf(testMethodName(testInfo))),
+      "elgn4nf");
     Path familyDir = new Path(regionDir, "rdar");
     Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
     Path file = new Path(familyDir, "2");

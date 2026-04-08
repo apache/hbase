@@ -136,8 +136,9 @@ public class TestBlockReorderBlockLocation {
         + "/" + host1 + ",6977,6576" + "/mylogfile";
 
       // Check that it will be possible to extract a ServerName from our construction
-      assertNotNull(AbstractFSWALProvider.getServerNameFromWALDirectoryName(dfs.getConf(),
-        pseudoLogFile), "log= " + pseudoLogFile);
+      assertNotNull(
+        AbstractFSWALProvider.getServerNameFromWALDirectoryName(dfs.getConf(), pseudoLogFile),
+        "log= " + pseudoLogFile);
 
       // And check we're doing the right reorder.
       lrb.reorderBlocks(conf, lbs, pseudoLogFile);

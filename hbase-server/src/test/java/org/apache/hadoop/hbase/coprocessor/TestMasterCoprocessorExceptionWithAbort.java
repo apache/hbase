@@ -45,8 +45,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests unhandled exceptions thrown by coprocessors running on master. Expected result is that the
@@ -91,7 +91,8 @@ public class TestMasterCoprocessorExceptionWithAbort {
         admin.createTable(tableDescriptor);
         fail("BuggyMasterObserver failed to throw an exception.");
       } catch (IOException e) {
-        assertEquals("java.io.InterruptedIOException", e.getClass().getName(), "HBaseAdmin threw an interrupted IOException as expected.");
+        assertEquals("java.io.InterruptedIOException", e.getClass().getName(),
+          "HBaseAdmin threw an interrupted IOException as expected.");
       }
     }
   }
@@ -222,13 +223,15 @@ public class TestMasterCoprocessorExceptionWithAbort {
       }
     }
 
-    assertTrue(masterTracker.masterZKNodeWasDeleted, "Master aborted on coprocessor exception, as expected.");
+    assertTrue(masterTracker.masterZKNodeWasDeleted,
+      "Master aborted on coprocessor exception, as expected.");
 
     createTableThread.interrupt();
     try {
       createTableThread.join(1000);
     } catch (InterruptedException e) {
-      assertTrue(true, "Ignoring InterruptedException while waiting for " + " createTableThread.join().");
+      assertTrue(true,
+        "Ignoring InterruptedException while waiting for " + " createTableThread.join().");
     }
   }
 

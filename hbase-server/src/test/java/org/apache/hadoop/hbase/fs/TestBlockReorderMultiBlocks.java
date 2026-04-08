@@ -259,8 +259,7 @@ public class TestBlockReorderMultiBlocks {
       } while (!done);
 
       for (int y = 0; y < lbs.getLocatedBlocks().size() && done; y++) {
-        assertEquals(localhost,
-          getLocatedBlockLocations(lbs.get(y))[repCount - 1].getHostName());
+        assertEquals(localhost, getLocatedBlockLocations(lbs.get(y))[repCount - 1].getHostName());
       }
     }
   }

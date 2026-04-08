@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.commons.lang3.StringUtils;
@@ -39,7 +40,6 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MobSnapshotTestingUtils {
 

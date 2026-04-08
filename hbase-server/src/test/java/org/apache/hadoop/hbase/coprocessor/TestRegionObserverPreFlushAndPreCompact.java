@@ -39,8 +39,8 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTrack
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 /**
@@ -94,8 +94,8 @@ public class TestRegionObserverPreFlushAndPreCompact {
   @Test
   public void testPreCompactReturningNull() throws IOException {
     RegionCoprocessorHost rch = getRegionCoprocessorHost();
-    assertThrows(CoprocessorException.class, () -> rch.preCompact(null, null, null, null, null,
-      null));
+    assertThrows(CoprocessorException.class,
+      () -> rch.preCompact(null, null, null, null, null, null));
   }
 
   private RegionCoprocessorHost getRegionCoprocessorHost() {

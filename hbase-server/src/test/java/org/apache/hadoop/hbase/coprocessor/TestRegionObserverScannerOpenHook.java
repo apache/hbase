@@ -71,8 +71,8 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
 @Tag(CoprocessorTests.TAG)
@@ -230,7 +230,7 @@ public class TestRegionObserverScannerOpenHook {
     Get get = new Get(ROW);
     Result r = region.get(get);
     assertNull(r.listCells(), "Got an unexpected number of rows - "
-        + "no data should be returned with the NoDataFromScan coprocessor. Found: " + r);
+      + "no data should be returned with the NoDataFromScan coprocessor. Found: " + r);
     HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
@@ -256,7 +256,7 @@ public class TestRegionObserverScannerOpenHook {
     Get get = new Get(ROW);
     Result r = region.get(get);
     assertNull(r.listCells(), "Got an unexpected number of rows - "
-        + "no data should be returned with the NoDataFromScan coprocessor. Found: " + r);
+      + "no data should be returned with the NoDataFromScan coprocessor. Found: " + r);
     HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
@@ -355,12 +355,12 @@ public class TestRegionObserverScannerOpenHook {
     Get get = new Get(ROW);
     Result r = table.get(get);
     assertNull(r.listCells(), "Got an unexpected number of rows - "
-        + "no data should be returned with the NoDataFromScan coprocessor. Found: " + r);
+      + "no data should be returned with the NoDataFromScan coprocessor. Found: " + r);
 
     get = new Get(Bytes.toBytes("anotherrow"));
     r = table.get(get);
     assertNull(r.listCells(), "Got an unexpected number of rows - "
-        + "no data should be returned with the NoDataFromScan coprocessor Found: " + r);
+      + "no data should be returned with the NoDataFromScan coprocessor Found: " + r);
 
     table.close();
     UTIL.shutdownMiniCluster();

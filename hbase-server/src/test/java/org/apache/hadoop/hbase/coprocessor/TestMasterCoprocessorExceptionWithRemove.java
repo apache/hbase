@@ -43,8 +43,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests unhandled exceptions thrown by coprocessors running on master. Expected result is that the
@@ -209,7 +209,8 @@ public class TestMasterCoprocessorExceptionWithRemove {
       fail("InterruptedException while sleeping.");
     }
 
-    assertFalse(masterTracker.masterZKNodeWasDeleted, "Master survived coprocessor NPE, as expected.");
+    assertFalse(masterTracker.masterZKNodeWasDeleted,
+      "Master survived coprocessor NPE, as expected.");
 
     String loadedCoprocessors = HMaster.getLoadedCoprocessors();
     assertTrue(loadedCoprocessors.contains(coprocessorName));

@@ -307,8 +307,7 @@ public class TestZooKeeperTableArchiveClient {
     for (Path file : archivedFiles) {
       String tableName = file.getParent().getParent().getParent().getName();
       // ensure we don't have files from the non-archived table
-      assertFalse(tableName.equals(otherTable),
-        "Have a file from the non-archived table: " + file);
+      assertFalse(tableName.equals(otherTable), "Have a file from the non-archived table: " + file);
       if (tableName.equals(STRING_TABLE_NAME)) {
         archivedForPrimary++;
       }

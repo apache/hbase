@@ -57,8 +57,8 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
@@ -98,6 +98,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
   public void setUp(TestInfo testInfo) {
     currentTestName = testInfo.getTestMethod().get().getName();
   }
+
   private static final byte[] VALUE2 = Bytes.toBytes("valuevalue");
   private static final String USER = "User";
   private static final Permission PERMS =

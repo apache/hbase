@@ -76,7 +76,8 @@ public class TestForeignExceptionSerialization {
     assertEquals(generic.getStackTrace().length, e.getCause().getStackTrace().length,
       "Stacktrace lengths don't match");
     for (int i = 0; i < generic.getStackTrace().length; i++) {
-      assertTrue(compareStackTraceElement(generic.getStackTrace()[i], e.getCause().getStackTrace()[i]),
+      assertTrue(
+        compareStackTraceElement(generic.getStackTrace()[i], e.getCause().getStackTrace()[i]),
         "Local stack trace got corrupted at " + i + "th index");
     }
 

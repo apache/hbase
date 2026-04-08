@@ -54,8 +54,8 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
 @Tag(SmallTests.TAG)
@@ -175,17 +175,20 @@ public class TestRegionCoprocessorHost {
     // By default SimpleRegionObserver is set as region coprocessor which implements
     // postScannerFilterRow
     RegionCoprocessorHost host = new RegionCoprocessorHost(region, rsServices, conf);
-    assertTrue(host.hasCustomPostScannerFilterRow(), "Region coprocessor implement postScannerFilterRow");
+    assertTrue(host.hasCustomPostScannerFilterRow(),
+      "Region coprocessor implement postScannerFilterRow");
 
     // Set a region CP which doesn't implement postScannerFilterRow
     init(true);
     host = new RegionCoprocessorHost(region, rsServices, conf);
-    assertFalse(host.hasCustomPostScannerFilterRow(), "Region coprocessor implement postScannerFilterRow");
+    assertFalse(host.hasCustomPostScannerFilterRow(),
+      "Region coprocessor implement postScannerFilterRow");
 
     // Set multiple region CPs, in which one implements postScannerFilterRow
     init(false);
     host = new RegionCoprocessorHost(region, rsServices, conf);
-    assertTrue(host.hasCustomPostScannerFilterRow(), "Region coprocessor doesn't implement postScannerFilterRow");
+    assertTrue(host.hasCustomPostScannerFilterRow(),
+      "Region coprocessor doesn't implement postScannerFilterRow");
   }
 
   private void verifyScanInfo(ScanInfo newScanInfo) {
