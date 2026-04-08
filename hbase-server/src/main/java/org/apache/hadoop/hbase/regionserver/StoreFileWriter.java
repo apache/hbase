@@ -118,6 +118,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
   private int livePutCellCount;
   private final int maxVersions;
   private final boolean newVersionBehavior;
+  private volatile boolean closed = false;
 
   /**
    * Creates an HFile.Writer that also write helpful meta data.
@@ -312,6 +313,10 @@ public class StoreFileWriter implements CellSink, ShipperListener {
   }
 
   public void close() throws IOException {
+    if (closed) {
+      return;
+    }
+    closed = true;
     liveFileWriter.appendFileInfo(HISTORICAL_KEY, Bytes.toBytes(false));
     liveFileWriter.close();
     if (historicalFileWriter != null) {

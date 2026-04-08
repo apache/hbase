@@ -300,6 +300,24 @@ public class StoreFileReader {
   }
 
   public boolean passesDeleteFamilyBloomFilter(byte[] row, int rowOffset, int rowLen) {
+    BloomFilter bloomFilter = this.deleteFamilyBloomFilter;
+
+    if (reader.getTrailer().getEntryCount() == 0 || deleteFamilyCnt == 0) {
+      return false;
+    }
+
+    if (bloomFilter != null) {
+      try {
+        if (!bloomFilter.supportsAutoLoading()) {
+          return true;
+        }
+        return bloomFilter.contains(row, rowOffset, rowLen, null);
+      } catch (IllegalArgumentException e) {
+        LOG.error("Bad Delete Family bloom filter data -- proceeding without", e);
+        setDeleteFamilyBloomFilterFaulty();
+      }
+      return true;
+    }
     if (reader instanceof MultiTenantBloomSupport) {
       try {
         return ((MultiTenantBloomSupport) reader).passesDeleteFamilyBloomFilter(row, rowOffset,
@@ -309,29 +327,6 @@ public class StoreFileReader {
         return true;
       }
     }
-    // Cache Bloom filter as a local variable in case it is set to null by
-    // another thread on an IO error.
-    BloomFilter bloomFilter = this.deleteFamilyBloomFilter;
-
-    // Empty file or there is no delete family at all
-    if (reader.getTrailer().getEntryCount() == 0 || deleteFamilyCnt == 0) {
-      return false;
-    }
-
-    if (bloomFilter == null) {
-      return true;
-    }
-
-    try {
-      if (!bloomFilter.supportsAutoLoading()) {
-        return true;
-      }
-      return bloomFilter.contains(row, rowOffset, rowLen, null);
-    } catch (IllegalArgumentException e) {
-      LOG.error("Bad Delete Family bloom filter data -- proceeding without", e);
-      setDeleteFamilyBloomFilterFaulty();
-    }
-
     return true;
   }
 
@@ -341,6 +336,13 @@ public class StoreFileReader {
    * @return True if passes
    */
   private boolean passesGeneralRowBloomFilter(byte[] row, int rowOffset, int rowLen) {
+    BloomFilter bloomFilter = this.generalBloomFilter;
+    if (bloomFilter != null) {
+      if (rowOffset != 0 || rowLen != row.length) {
+        throw new AssertionError("For row-only Bloom filters the row must occupy the whole array");
+      }
+      return checkGeneralBloomFilter(row, null, bloomFilter);
+    }
     if (reader instanceof MultiTenantBloomSupport) {
       try {
         boolean passed =
@@ -352,19 +354,8 @@ public class StoreFileReader {
         return true;
       }
     }
-    BloomFilter bloomFilter = this.generalBloomFilter;
-    if (bloomFilter == null) {
-      incrementBloomEligible();
-      return true;
-    }
-
-    // Used in ROW bloom
-    byte[] key = null;
-    if (rowOffset != 0 || rowLen != row.length) {
-      throw new AssertionError("For row-only Bloom filters the row must occupy the whole array");
-    }
-    key = row;
-    return checkGeneralBloomFilter(key, null, bloomFilter);
+    incrementBloomEligible();
+    return true;
   }
 
   /**
@@ -373,6 +364,16 @@ public class StoreFileReader {
    * @return True if passes
    */
   public boolean passesGeneralRowColBloomFilter(ExtendedCell cell) {
+    BloomFilter bloomFilter = this.generalBloomFilter;
+    if (bloomFilter != null) {
+      ExtendedCell kvKey;
+      if (cell.getTypeByte() == KeyValue.Type.Maximum.getCode() && cell.getFamilyLength() == 0) {
+        kvKey = cell;
+      } else {
+        kvKey = PrivateCellUtil.createFirstOnRowCol(cell);
+      }
+      return checkGeneralBloomFilter(null, kvKey, bloomFilter);
+    }
     if (reader instanceof MultiTenantBloomSupport) {
       try {
         boolean passed = ((MultiTenantBloomSupport) reader).passesGeneralRowColBloomFilter(cell);
@@ -383,20 +384,8 @@ public class StoreFileReader {
         return true;
       }
     }
-    BloomFilter bloomFilter = this.generalBloomFilter;
-    if (bloomFilter == null) {
-      incrementBloomEligible();
-      return true;
-    }
-    // Used in ROW_COL bloom
-    ExtendedCell kvKey = null;
-    // Already if the incoming key is a fake rowcol key then use it as it is
-    if (cell.getTypeByte() == KeyValue.Type.Maximum.getCode() && cell.getFamilyLength() == 0) {
-      kvKey = cell;
-    } else {
-      kvKey = PrivateCellUtil.createFirstOnRowCol(cell);
-    }
-    return checkGeneralBloomFilter(null, kvKey, bloomFilter);
+    incrementBloomEligible();
+    return true;
   }
 
   /**
@@ -418,6 +407,10 @@ public class StoreFileReader {
       rowPrefix = Bytes.copy(row, 0, prefixLength);
     }
 
+    BloomFilter bloomFilter = this.generalBloomFilter;
+    if (bloomFilter != null) {
+      return checkGeneralBloomFilter(rowPrefix, null, bloomFilter);
+    }
     if (reader instanceof MultiTenantBloomSupport) {
       try {
         boolean passed = ((MultiTenantBloomSupport) reader)
@@ -429,13 +422,8 @@ public class StoreFileReader {
         return true;
       }
     }
-
-    BloomFilter bloomFilter = this.generalBloomFilter;
-    if (bloomFilter == null) {
-      incrementBloomEligible();
-      return true;
-    }
-    return checkGeneralBloomFilter(rowPrefix, null, bloomFilter);
+    incrementBloomEligible();
+    return true;
   }
 
   private boolean checkGeneralBloomFilter(byte[] key, Cell kvKey, BloomFilter bloomFilter) {

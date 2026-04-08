@@ -761,12 +761,18 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
 
   @Override
   public BloomFilter getGeneralBloomFilterInstance() throws IOException {
+    if (getSectionCount() != 1) {
+      return null;
+    }
     SectionBloomState state = findSectionBloomState(true, false);
     return state != null ? state.getGeneralBloom() : null;
   }
 
   @Override
   public BloomFilter getDeleteFamilyBloomFilterInstance() throws IOException {
+    if (getSectionCount() != 1) {
+      return null;
+    }
     SectionBloomState state = findSectionBloomState(false, true);
     return state != null ? state.getDeleteBloom() : null;
   }
