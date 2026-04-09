@@ -17,10 +17,6 @@
 # limitations under the License.
 #
 
-include Java
-java_import org.apache.hadoop.hbase.client.ConnectionFactory
-java_import org.apache.hadoop.hbase.HBaseConfiguration
-
 require 'hbase/admin'
 require 'hbase/table'
 require 'hbase/taskmonitor'
@@ -28,7 +24,13 @@ require 'hbase/quotas'
 require 'hbase/security'
 require 'hbase/visibility_labels'
 
+# HBase module containing the main connection and admin classes
 module Hbase
+  include Java
+  java_import org.apache.hadoop.hbase.client.ConnectionFactory
+  java_import org.apache.hadoop.hbase.HBaseConfiguration
+
+  # Main HBase class for connection and admin operations
   class Hbase
     attr_accessor :configuration
 
