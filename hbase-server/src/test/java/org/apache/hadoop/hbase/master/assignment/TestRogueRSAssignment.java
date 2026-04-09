@@ -18,13 +18,13 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.hamcrest.core.Is.isA;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -41,17 +41,14 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,20 +63,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 /**
  * Tests to verify master/ assignment manager functionality against rogue RS
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRogueRSAssignment {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRogueRSAssignment.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestRogueRSAssignment.class);
+  private String testMethodName;
 
-  @Rule
-  public final TestName name = new TestName();
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
   private static final int initialRegionCount = 3;
   private final static byte[] FAMILY = Bytes.toBytes("FAMILY");
 
@@ -97,7 +92,7 @@ public class TestRogueRSAssignment {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     setupConf(conf);
     UTIL.startMiniCluster(2);
@@ -112,7 +107,7 @@ public class TestRogueRSAssignment {
     assertNotNull(master);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
     try {
       UTIL.shutdownMiniCluster();
@@ -123,13 +118,13 @@ public class TestRogueRSAssignment {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     // Turn off balancer
     admin.setBalancerRunning(false, true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     for (TableDescriptor td : UTIL.getAdmin().listTableDescriptors()) {
       LOG.info("Tear down, remove table=" + td.getTableName());
@@ -143,9 +138,9 @@ public class TestRogueRSAssignment {
    * Ignore this test, see HBASE-21421
    */
   @Test
-  @Ignore
+  @Disabled
   public void testReportRSWithWrongRegion() throws Exception {
-    final TableName tableName = TableName.valueOf(this.name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
 
     List<HRegionInfo> tableRegions = createTable(tableName);
 
@@ -158,10 +153,10 @@ public class TestRogueRSAssignment {
 
     // sending fake request to master
     // TODO: replace YouAreDeadException with appropriate exception as and when necessary
-    exception.expect(ServiceException.class);
-    exception.expectCause(isA(YouAreDeadException.class));
-    RegionServerStatusProtos.RegionServerReportResponse response =
-      master.getMasterRpcServices().regionServerReport(null, request.build());
+    ServiceException exception = assertThrows(ServiceException.class,
+      () -> master.getMasterRpcServices().regionServerReport(null, request.build()));
+    org.hamcrest.MatcherAssert.assertThat((YouAreDeadException) exception.getCause(),
+      isA(YouAreDeadException.class));
   }
 
   private RegionServerStatusProtos.RegionServerReportRequest.Builder
