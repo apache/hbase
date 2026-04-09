@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
@@ -35,24 +39,20 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the ClusterStatus.
  */
-@Category(MediumTests.class)
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestClientClusterStatus {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClientClusterStatus.class);
 
   private static HBaseTestingUtility UTIL;
   private static Admin ADMIN;
@@ -61,7 +61,7 @@ public class TestClientClusterStatus {
   private static MiniHBaseCluster CLUSTER;
   private static HRegionServer DEAD;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, MyObserver.class.getName());
@@ -89,16 +89,16 @@ public class TestClientClusterStatus {
       new ClusterStatus(ADMIN.getClusterMetrics(EnumSet.allOf(Option.class)));
     checkPbObjectNotNull(origin);
     checkPbObjectNotNull(defaults);
-    Assert.assertEquals(origin.getHBaseVersion(), defaults.getHBaseVersion());
-    Assert.assertEquals(origin.getClusterId(), defaults.getClusterId());
-    Assert.assertTrue(origin.getAverageLoad() == defaults.getAverageLoad());
-    Assert.assertTrue(origin.getBackupMastersSize() == defaults.getBackupMastersSize());
-    Assert.assertTrue(origin.getDeadServersSize() == defaults.getDeadServersSize());
-    Assert.assertTrue(origin.getRegionsCount() == defaults.getRegionsCount());
-    Assert.assertTrue(origin.getServersSize() == defaults.getServersSize());
-    Assert.assertTrue(origin.getMasterInfoPort() == defaults.getMasterInfoPort());
-    Assert.assertTrue(origin.equals(defaults));
-    Assert.assertTrue(origin.getServersName().size() == defaults.getServersName().size());
+    assertEquals(origin.getHBaseVersion(), defaults.getHBaseVersion());
+    assertEquals(origin.getClusterId(), defaults.getClusterId());
+    assertTrue(origin.getAverageLoad() == defaults.getAverageLoad());
+    assertTrue(origin.getBackupMastersSize() == defaults.getBackupMastersSize());
+    assertTrue(origin.getDeadServersSize() == defaults.getDeadServersSize());
+    assertTrue(origin.getRegionsCount() == defaults.getRegionsCount());
+    assertTrue(origin.getServersSize() == defaults.getServersSize());
+    assertTrue(origin.getMasterInfoPort() == defaults.getMasterInfoPort());
+    assertTrue(origin.equals(defaults));
+    assertTrue(origin.getServersName().size() == defaults.getServersName().size());
   }
 
   @Test
@@ -107,8 +107,7 @@ public class TestClientClusterStatus {
     ClusterMetrics status1 = ADMIN.getClusterMetrics(EnumSet.noneOf(Option.class));
     // Do a rough compare. More specific compares can fail because all regions not deployed yet
     // or more requests than expected.
-    Assert.assertEquals(status0.getLiveServerMetrics().size(),
-      status1.getLiveServerMetrics().size());
+    assertEquals(status0.getLiveServerMetrics().size(), status1.getLiveServerMetrics().size());
     checkPbObjectNotNull(new ClusterStatus(status0));
     checkPbObjectNotNull(new ClusterStatus(status1));
   }
@@ -131,7 +130,7 @@ public class TestClientClusterStatus {
       public boolean evaluate() throws Exception {
         ClusterStatus status =
           new ClusterStatus(ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)));
-        Assert.assertNotNull(status);
+        assertNotNull(status);
         return status.getRegionsCount() > 0;
       }
     });
@@ -140,21 +139,21 @@ public class TestClientClusterStatus {
       EnumSet.of(Option.LIVE_SERVERS, Option.DEAD_SERVERS, Option.SERVERS_NAME);
     ClusterStatus status = new ClusterStatus(ADMIN.getClusterMetrics(options));
     checkPbObjectNotNull(status);
-    Assert.assertNotNull(status);
-    Assert.assertNotNull(status.getServers());
+    assertNotNull(status);
+    assertNotNull(status.getServers());
     // exclude a dead region server
-    Assert.assertEquals(SLAVES - 1, numRs);
+    assertEquals(SLAVES - 1, numRs);
     // live servers = nums of regionservers
     // By default, HMaster don't carry any regions so it won't report its load.
     // Hence, it won't be in the server list.
-    Assert.assertEquals(status.getServers().size(), numRs);
-    Assert.assertTrue(status.getRegionsCount() > 0);
-    Assert.assertNotNull(status.getDeadServerNames());
-    Assert.assertEquals(1, status.getDeadServersSize());
+    assertEquals(status.getServers().size(), numRs);
+    assertTrue(status.getRegionsCount() > 0);
+    assertNotNull(status.getDeadServerNames());
+    assertEquals(1, status.getDeadServersSize());
     ServerName deadServerName = status.getDeadServerNames().iterator().next();
-    Assert.assertEquals(DEAD.getServerName(), deadServerName);
-    Assert.assertNotNull(status.getServersName());
-    Assert.assertEquals(numRs, status.getServersName().size());
+    assertEquals(DEAD.getServerName(), deadServerName);
+    assertNotNull(status.getServersName());
+    assertEquals(numRs, status.getServersName().size());
   }
 
   @Test
@@ -173,14 +172,14 @@ public class TestClientClusterStatus {
         activeName = active.getServerName();
       }
     }
-    Assert.assertNotNull(active);
-    Assert.assertEquals(1, numActive);
-    Assert.assertEquals(MASTERS, masterThreads.size());
+    assertNotNull(active);
+    assertEquals(1, numActive);
+    assertEquals(MASTERS, masterThreads.size());
     // Retrieve master and backup masters infos only.
     EnumSet<Option> options = EnumSet.of(Option.MASTER, Option.BACKUP_MASTERS);
     ClusterStatus status = new ClusterStatus(ADMIN.getClusterMetrics(options));
-    Assert.assertTrue(status.getMaster().equals(activeName));
-    Assert.assertEquals(MASTERS - 1, status.getBackupMastersSize());
+    assertTrue(status.getMaster().equals(activeName));
+    assertEquals(MASTERS - 1, status.getBackupMastersSize());
   }
 
   @Test
@@ -188,14 +187,14 @@ public class TestClientClusterStatus {
     EnumSet<Option> options = EnumSet.of(Option.MASTER_COPROCESSORS, Option.HBASE_VERSION,
       Option.CLUSTER_ID, Option.BALANCER_ON);
     ClusterStatus status = new ClusterStatus(ADMIN.getClusterMetrics(options));
-    Assert.assertTrue(status.getMasterCoprocessors().length == 1);
-    Assert.assertNotNull(status.getHBaseVersion());
-    Assert.assertNotNull(status.getClusterId());
-    Assert.assertTrue(status.getAverageLoad() == 0.0);
-    Assert.assertNotNull(status.getBalancerOn());
+    assertTrue(status.getMasterCoprocessors().length == 1);
+    assertNotNull(status.getHBaseVersion());
+    assertNotNull(status.getClusterId());
+    assertTrue(status.getAverageLoad() == 0.0);
+    assertNotNull(status.getBalancerOn());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     if (ADMIN != null) ADMIN.close();
     UTIL.shutdownMiniCluster();
@@ -205,10 +204,10 @@ public class TestClientClusterStatus {
   public void testObserver() throws IOException {
     int preCount = MyObserver.PRE_COUNT.get();
     int postCount = MyObserver.POST_COUNT.get();
-    Assert.assertTrue(Stream.of(ADMIN.getClusterStatus().getMasterCoprocessors())
+    assertTrue(Stream.of(ADMIN.getClusterStatus().getMasterCoprocessors())
       .anyMatch(s -> s.equals(MyObserver.class.getSimpleName())));
-    Assert.assertEquals(preCount + 1, MyObserver.PRE_COUNT.get());
-    Assert.assertEquals(postCount + 1, MyObserver.POST_COUNT.get());
+    assertEquals(preCount + 1, MyObserver.PRE_COUNT.get());
+    assertEquals(postCount + 1, MyObserver.POST_COUNT.get());
   }
 
   /**
@@ -219,9 +218,9 @@ public class TestClientClusterStatus {
   private static void checkPbObjectNotNull(ClusterStatus status) {
     for (ServerName name : status.getLiveServerMetrics().keySet()) {
       ServerLoad load = status.getLoad(name);
-      Assert.assertNotNull(load.obtainServerLoadPB());
+      assertNotNull(load.obtainServerLoadPB());
       for (RegionLoad rl : load.getRegionsLoad().values()) {
-        Assert.assertNotNull(rl.regionLoadPB);
+        assertNotNull(rl.regionLoadPB);
       }
     }
   }

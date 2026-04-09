@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import org.apache.hadoop.fs.Path;
@@ -30,28 +30,21 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Verify that the HColumnDescriptor version is set correctly by default, hbase-site.xml, and user
  * input
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestHColumnDescriptorDefaultVersions {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHColumnDescriptorDefaultVersions.class);
-
-  @Rule
-  public TestName name = new TestName();
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static TableName TABLE_NAME = null;
   private static final byte[] FAMILY = Bytes.toBytes("cf0");
@@ -59,18 +52,18 @@ public class TestHColumnDescriptorDefaultVersions {
   /**
    * Start up a mini cluster and put a small table of empty regions into it.
    */
-  @BeforeClass
+  @BeforeAll
   public static void beforeAllTests() throws Exception {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @Before
-  public void setup() {
-    TABLE_NAME = TableName.valueOf(name.getMethodName());
+  @BeforeEach
+  public void setup(TestInfo testInfo) {
+    TABLE_NAME = TableName.valueOf(testInfo.getTestMethod().get().getName());
 
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterAllTests() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
