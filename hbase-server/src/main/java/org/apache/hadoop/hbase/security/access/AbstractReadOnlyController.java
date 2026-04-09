@@ -26,10 +26,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ActiveClusterSuffix;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.WriteAttemptedOnReadOnlyClusterException;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -56,8 +56,8 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
     return writableTables.contains(tableName);
   }
 
-  protected void internalReadOnlyGuard() throws DoNotRetryIOException {
-    throw new DoNotRetryIOException("Operation not allowed in Read-Only Mode");
+  protected void internalReadOnlyGuard() throws WriteAttemptedOnReadOnlyClusterException {
+    throw new WriteAttemptedOnReadOnlyClusterException("Operation not allowed in Read-Only Mode");
   }
 
   @Override

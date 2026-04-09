@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -24,9 +25,9 @@ import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.WriteAttemptedOnReadOnlyClusterException;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.CheckAndMutateResult;
@@ -180,9 +181,11 @@ public class TestReadOnlyControllerRegionObserver {
     when(regionInfo.getTable()).thenReturn(MasterRegionFactory.TABLE_NAME);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreFlushV1ReadOnlyException() throws IOException {
-    regionReadOnlyController.preFlush(c, flushLifeCycleTracker);
+  @Test
+  public void testPreFlushV1ReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preFlush(c, flushLifeCycleTracker);
+    });
   }
 
   @Test
@@ -197,9 +200,11 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.preFlush(c, flushLifeCycleTracker);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreFlushV2ReadOnlyException() throws IOException {
-    regionReadOnlyController.preFlush(c, store, scanner, flushLifeCycleTracker);
+  @Test
+  public void testPreFlushV2ReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preFlush(c, store, scanner, flushLifeCycleTracker);
+    });
   }
 
   @Test
@@ -214,9 +219,11 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.preFlush(c, store, scanner, flushLifeCycleTracker);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreFlushScannerOpenReadOnlyException() throws IOException {
-    regionReadOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
+  @Test
+  public void testPreFlushScannerOpenReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
+    });
   }
 
   @Test
@@ -231,24 +238,33 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreMemStoreCompactionReadOnlyException() throws IOException {
-    regionReadOnlyController.preMemStoreCompaction(c, store);
+  @Test
+  public void testPreMemStoreCompactionReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preMemStoreCompaction(c, store);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreMemStoreCompactionCompactScannerOpenReadOnlyException() throws IOException {
-    regionReadOnlyController.preMemStoreCompactionCompactScannerOpen(c, store, options);
+  @Test
+  public void testPreMemStoreCompactionCompactScannerOpenReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preMemStoreCompactionCompactScannerOpen(c, store, options);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreMemStoreCompactionCompactReadOnlyException() throws IOException {
-    regionReadOnlyController.preMemStoreCompactionCompact(c, store, scanner);
+  @Test
+  public void testPreMemStoreCompactionCompactReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preMemStoreCompactionCompact(c, store, scanner);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreCompactSelectionReadOnlyException() throws IOException {
-    regionReadOnlyController.preCompactSelection(c, store, candidates, compactionLifeCycleTracker);
+  @Test
+  public void testPreCompactSelectionReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preCompactSelection(c, store, candidates,
+        compactionLifeCycleTracker);
+    });
   }
 
   @Test
@@ -263,10 +279,12 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.preCompactSelection(c, store, candidates, compactionLifeCycleTracker);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreCompactScannerOpenReadOnlyException() throws IOException {
-    regionReadOnlyController.preCompactScannerOpen(c, store, scanType, options,
-      compactionLifeCycleTracker, compactionRequest);
+  @Test
+  public void testPreCompactScannerOpenReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preCompactScannerOpen(c, store, scanType, options,
+        compactionLifeCycleTracker, compactionRequest);
+    });
   }
 
   @Test
@@ -283,10 +301,12 @@ public class TestReadOnlyControllerRegionObserver {
       compactionLifeCycleTracker, compactionRequest);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreCompactReadOnlyException() throws IOException {
-    regionReadOnlyController.preCompact(c, store, scanner, scanType, compactionLifeCycleTracker,
-      compactionRequest);
+  @Test
+  public void testPreCompactReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preCompact(c, store, scanner, scanType, compactionLifeCycleTracker,
+        compactionRequest);
+    });
   }
 
   @Test
@@ -303,9 +323,11 @@ public class TestReadOnlyControllerRegionObserver {
       compactionRequest);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPrePutV1ReadOnlyException() throws IOException {
-    regionReadOnlyController.prePut(c, put, edit);
+  @Test
+  public void testPrePutV1ReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.prePut(c, put, edit);
+    });
   }
 
   @Test
@@ -320,9 +342,11 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.prePut(c, put, edit);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPrePutV2ReadOnlyException() throws IOException {
-    regionReadOnlyController.prePut(c, put, edit, durability);
+  @Test
+  public void testPrePutV2ReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.prePut(c, put, edit, durability);
+    });
   }
 
   @Test
@@ -337,9 +361,11 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.prePut(c, put, edit, durability);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreDeleteV1ReadOnlyException() throws IOException {
-    regionReadOnlyController.preDelete(c, delete, edit);
+  @Test
+  public void testPreDeleteV1ReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preDelete(c, delete, edit);
+    });
   }
 
   @Test
@@ -354,9 +380,11 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.preDelete(c, delete, edit);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreDeleteV2ReadOnlyException() throws IOException {
-    regionReadOnlyController.preDelete(c, delete, edit, durability);
+  @Test
+  public void testPreDeleteV2ReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preDelete(c, delete, edit, durability);
+    });
   }
 
   @Test
@@ -371,9 +399,11 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.preDelete(c, delete, edit, durability);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreBatchMutateReadOnlyException() throws IOException {
-    regionReadOnlyController.preBatchMutate(c, miniBatchOp);
+  @Test
+  public void testPreBatchMutateReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preBatchMutate(c, miniBatchOp);
+    });
   }
 
   @Test
@@ -388,9 +418,12 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.preBatchMutate(c, miniBatchOp);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreCheckAndPutV1ReadOnlyException() throws IOException {
-    regionReadOnlyController.preCheckAndPut(c, row, family, qualifier, op, comparator, put, result);
+  @Test
+  public void testPreCheckAndPutV1ReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preCheckAndPut(c, row, family, qualifier, op, comparator, put,
+        result);
+    });
   }
 
   @Test
@@ -405,9 +438,11 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.preCheckAndPut(c, row, family, qualifier, op, comparator, put, result);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreCheckAndPutV2ReadOnlyException() throws IOException {
-    regionReadOnlyController.preCheckAndPut(c, row, filter, put, result);
+  @Test
+  public void testPreCheckAndPutV2ReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preCheckAndPut(c, row, filter, put, result);
+    });
   }
 
   @Test
@@ -422,10 +457,12 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.preCheckAndPut(c, row, filter, put, result);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreCheckAndPutAfterRowLockV1ReadOnlyException() throws IOException {
-    regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, family, qualifier, op, comparator,
-      put, result);
+  @Test
+  public void testPreCheckAndPutAfterRowLockV1ReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, family, qualifier, op, comparator,
+        put, result);
+    });
   }
 
   @Test
@@ -442,9 +479,11 @@ public class TestReadOnlyControllerRegionObserver {
       put, result);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreCheckAndPutAfterRowLockV2ReadOnlyException() throws IOException {
-    regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
+  @Test
+  public void testPreCheckAndPutAfterRowLockV2ReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
+    });
   }
 
   @Test
@@ -459,10 +498,12 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreCheckAndDeleteV1ReadOnlyException() throws IOException {
-    regionReadOnlyController.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete,
-      result);
+  @Test
+  public void testPreCheckAndDeleteV1ReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete,
+        result);
+    });
   }
 
   @Test
@@ -479,9 +520,11 @@ public class TestReadOnlyControllerRegionObserver {
       result);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreCheckAndDeleteV2ReadOnlyException() throws IOException {
-    regionReadOnlyController.preCheckAndDelete(c, row, filter, delete, result);
+  @Test
+  public void testPreCheckAndDeleteV2ReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preCheckAndDelete(c, row, filter, delete, result);
+    });
   }
 
   @Test
@@ -496,10 +539,12 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.preCheckAndDelete(c, row, filter, delete, result);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreCheckAndDeleteAfterRowLockV1ReadOnlyException() throws IOException {
-    regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op,
-      comparator, delete, result);
+  @Test
+  public void testPreCheckAndDeleteAfterRowLockV1ReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op,
+        comparator, delete, result);
+    });
   }
 
   @Test
@@ -517,9 +562,11 @@ public class TestReadOnlyControllerRegionObserver {
       comparator, delete, result);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreCheckAndDeleteAfterRowLockV2ReadOnlyException() throws IOException {
-    regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
+  @Test
+  public void testPreCheckAndDeleteAfterRowLockV2ReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
+    });
   }
 
   @Test
@@ -535,49 +582,68 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreCheckAndMutateReadOnlyException() throws IOException {
-    regionReadOnlyController.preCheckAndMutate(c, checkAndMutate, checkAndMutateResult);
+  @Test
+  public void testPreCheckAndMutateReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preCheckAndMutate(c, checkAndMutate, checkAndMutateResult);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreCheckAndMutateAfterRowLockReadOnlyException() throws IOException {
-    regionReadOnlyController.preCheckAndMutateAfterRowLock(c, checkAndMutate, checkAndMutateResult);
+  @Test
+  public void testPreCheckAndMutateAfterRowLockReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preCheckAndMutateAfterRowLock(c, checkAndMutate,
+        checkAndMutateResult);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreAppendV1ReadOnlyException() throws IOException {
-    regionReadOnlyController.preAppend(c, append);
+  @Test
+  public void testPreAppendV1ReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preAppend(c, append);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreAppendV2ReadOnlyException() throws IOException {
-    regionReadOnlyController.preAppend(c, append, edit);
+  @Test
+  public void testPreAppendV2ReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preAppend(c, append, edit);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreAppendAfterRowLockReadOnlyException() throws IOException {
-    regionReadOnlyController.preAppendAfterRowLock(c, append);
+  @Test
+  public void testPreAppendAfterRowLockReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preAppendAfterRowLock(c, append);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreIncrementV1ReadOnlyException() throws IOException {
-    regionReadOnlyController.preIncrement(c, increment);
+  @Test
+  public void testPreIncrementV1ReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preIncrement(c, increment);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreIncrementV2ReadOnlyException() throws IOException {
-    regionReadOnlyController.preIncrement(c, increment, edit);
+  @Test
+  public void testPreIncrementV2ReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preIncrement(c, increment, edit);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreIncrementAfterRowLockReadOnlyException() throws IOException {
-    regionReadOnlyController.preIncrementAfterRowLock(c, increment);
+  @Test
+  public void testPreIncrementAfterRowLockReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preIncrementAfterRowLock(c, increment);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreReplayWALsReadOnlyException() throws IOException {
-    regionReadOnlyController.preReplayWALs(ctx, info, edits);
+  @Test
+  public void testPreReplayWALsReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preReplayWALs(ctx, info, edits);
+    });
   }
 
   @Test
@@ -592,19 +658,25 @@ public class TestReadOnlyControllerRegionObserver {
     regionReadOnlyController.preReplayWALs(ctx, info, edits);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreBulkLoadHFileReadOnlyException() throws IOException {
-    regionReadOnlyController.preBulkLoadHFile(ctx, familyPaths);
+  @Test
+  public void testPreBulkLoadHFileReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preBulkLoadHFile(ctx, familyPaths);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreCommitStoreFileReadOnlyException() throws IOException {
-    regionReadOnlyController.preCommitStoreFile(ctx, family, pairs);
+  @Test
+  public void testPreCommitStoreFileReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preCommitStoreFile(ctx, family, pairs);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreWALAppendReadOnlyException() throws IOException {
-    regionReadOnlyController.preWALAppend(ctx, key, edit);
+  @Test
+  public void testPreWALAppendReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      regionReadOnlyController.preWALAppend(ctx, key, edit);
+    });
   }
 
   @Test

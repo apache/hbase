@@ -17,16 +17,16 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.mock;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.WriteAttemptedOnReadOnlyClusterException;
 import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -145,249 +145,348 @@ public class TestReadOnlyControllerMasterObserver {
 
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreCreateTableRegionsInfosReadOnlyException() throws IOException {
-    MasterReadOnlyController.preCreateTableRegionsInfos(ctx, desc);
+  @Test
+  public void testPreCreateTableRegionsInfosReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preCreateTableRegionsInfos(ctx, desc);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreCreateTableReadOnlyException() throws IOException {
-    MasterReadOnlyController.preCreateTable(ctx, desc, regions);
+  @Test
+  public void testPreCreateTableReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preCreateTable(ctx, desc, regions);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreCreateTableActionReadOnlyException() throws IOException {
-    MasterReadOnlyController.preCreateTableAction(ctx, desc, regions);
+  @Test
+  public void testPreCreateTableActionReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preCreateTableAction(ctx, desc, regions);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreDeleteTableReadOnlyException() throws IOException {
-    MasterReadOnlyController.preDeleteTable(ctx, tableName);
+  @Test
+  public void testPreDeleteTableReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preDeleteTable(ctx, tableName);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreDeleteTableActionReadOnlyException() throws IOException {
-    MasterReadOnlyController.preDeleteTableAction(ctx, tableName);
+  @Test
+  public void testPreDeleteTableActionReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preDeleteTableAction(ctx, tableName);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreTruncateTableReadOnlyException() throws IOException {
-    MasterReadOnlyController.preTruncateTable(ctx, tableName);
+  @Test
+  public void testPreTruncateTableReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preTruncateTable(ctx, tableName);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreTruncateTableActionReadOnlyException() throws IOException {
-    MasterReadOnlyController.preTruncateTableAction(ctx, tableName);
+  @Test
+  public void testPreTruncateTableActionReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preTruncateTableAction(ctx, tableName);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreModifyTableReadOnlyException() throws IOException {
-    MasterReadOnlyController.preModifyTable(ctx, tableName, currentDescriptor, newDescriptor);
+  @Test
+  public void testPreModifyTableReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preModifyTable(ctx, tableName, currentDescriptor, newDescriptor);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreModifyTableStoreFileTrackerReadOnlyException() throws IOException {
-    MasterReadOnlyController.preModifyTableStoreFileTracker(ctx, tableName, dstSFT);
+  @Test
+  public void testPreModifyTableStoreFileTrackerReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preModifyTableStoreFileTracker(ctx, tableName, dstSFT);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreModifyColumnFamilyStoreFileTrackerReadOnlyException() throws IOException {
-    MasterReadOnlyController.preModifyColumnFamilyStoreFileTracker(ctx, tableName, family, dstSFT);
+  @Test
+  public void testPreModifyColumnFamilyStoreFileTrackerReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preModifyColumnFamilyStoreFileTracker(ctx, tableName, family,
+        dstSFT);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreModifyTableActionReadOnlyException() throws IOException {
-    MasterReadOnlyController.preModifyTableAction(ctx, tableName, currentDescriptor, newDescriptor);
+  @Test
+  public void testPreModifyTableActionReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preModifyTableAction(ctx, tableName, currentDescriptor,
+        newDescriptor);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreSplitRegionReadOnlyException() throws IOException {
-    MasterReadOnlyController.preSplitRegion(c, tableName, splitRow);
+  @Test
+  public void testPreSplitRegionReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preSplitRegion(c, tableName, splitRow);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreSplitRegionActionReadOnlyException() throws IOException {
-    MasterReadOnlyController.preSplitRegionAction(c, tableName, splitRow);
+  @Test
+  public void testPreSplitRegionActionReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preSplitRegionAction(c, tableName, splitRow);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreSplitRegionBeforeMETAActionReadOnlyException() throws IOException {
-    MasterReadOnlyController.preSplitRegionBeforeMETAAction(ctx, splitKey, metaEntries);
+  @Test
+  public void testPreSplitRegionBeforeMETAActionReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preSplitRegionBeforeMETAAction(ctx, splitKey, metaEntries);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreSplitRegionAfterMETAActionReadOnlyException() throws IOException {
-    MasterReadOnlyController.preSplitRegionAfterMETAAction(ctx);
+  @Test
+  public void testPreSplitRegionAfterMETAActionReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preSplitRegionAfterMETAAction(ctx);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreMergeRegionsActionReadOnlyException() throws IOException {
-    MasterReadOnlyController.preMergeRegionsAction(ctx, regionsToMerge);
+  @Test
+  public void testPreMergeRegionsActionReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preMergeRegionsAction(ctx, regionsToMerge);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreMergeRegionsCommitActionReadOnlyException() throws IOException {
-    MasterReadOnlyController.preMergeRegionsCommitAction(ctx, regionsToMerge, metaEntries);
+  @Test
+  public void testPreMergeRegionsCommitActionReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preMergeRegionsCommitAction(ctx, regionsToMerge, metaEntries);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreSnapshotReadOnlyException() throws IOException {
-    MasterReadOnlyController.preSnapshot(ctx, snapshot, tableDescriptor);
+  @Test
+  public void testPreSnapshotReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preSnapshot(ctx, snapshot, tableDescriptor);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreCloneSnapshotReadOnlyException() throws IOException {
-    MasterReadOnlyController.preCloneSnapshot(ctx, snapshot, tableDescriptor);
+  @Test
+  public void testPreCloneSnapshotReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preCloneSnapshot(ctx, snapshot, tableDescriptor);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreRestoreSnapshotReadOnlyException() throws IOException {
-    MasterReadOnlyController.preRestoreSnapshot(ctx, snapshot, tableDescriptor);
+  @Test
+  public void testPreRestoreSnapshotReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preRestoreSnapshot(ctx, snapshot, tableDescriptor);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreDeleteSnapshotReadOnlyException() throws IOException {
-    MasterReadOnlyController.preDeleteSnapshot(ctx, snapshot);
+  @Test
+  public void testPreDeleteSnapshotReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preDeleteSnapshot(ctx, snapshot);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreCreateNamespaceReadOnlyException() throws IOException {
-    MasterReadOnlyController.preCreateNamespace(ctx, ns);
+  @Test
+  public void testPreCreateNamespaceReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preCreateNamespace(ctx, ns);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreModifyNamespaceReadOnlyException() throws IOException {
-    MasterReadOnlyController.preModifyNamespace(ctx, currentNsDescriptor, newNsDescriptor);
+  @Test
+  public void testPreModifyNamespaceReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preModifyNamespace(ctx, currentNsDescriptor, newNsDescriptor);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreDeleteNamespaceReadOnlyException() throws IOException {
-    MasterReadOnlyController.preDeleteNamespace(ctx, namespace);
+  @Test
+  public void testPreDeleteNamespaceReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preDeleteNamespace(ctx, namespace);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreMasterStoreFlushReadOnlyException() throws IOException {
-    MasterReadOnlyController.preMasterStoreFlush(ctx);
+  @Test
+  public void testPreMasterStoreFlushReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preMasterStoreFlush(ctx);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreSetUserQuotaReadOnlyException() throws IOException {
-    MasterReadOnlyController.preSetUserQuota(ctx, userName, quotas);
+  @Test
+  public void testPreSetUserQuotaReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preSetUserQuota(ctx, userName, quotas);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreSetUserQuotaOnTableReadOnlyException() throws IOException {
-    MasterReadOnlyController.preSetUserQuota(ctx, userName, tableName, quotas);
+  @Test
+  public void testPreSetUserQuotaOnTableReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preSetUserQuota(ctx, userName, tableName, quotas);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreSetUserQuotaOnNamespaceReadOnlyException() throws IOException {
-    MasterReadOnlyController.preSetUserQuota(ctx, userName, namespace, quotas);
+  @Test
+  public void testPreSetUserQuotaOnNamespaceReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preSetUserQuota(ctx, userName, namespace, quotas);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreSetTableQuotaReadOnlyException() throws IOException {
-    MasterReadOnlyController.preSetTableQuota(ctx, tableName, quotas);
+  @Test
+  public void testPreSetTableQuotaReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preSetTableQuota(ctx, tableName, quotas);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreSetNamespaceQuotaReadOnlyException() throws IOException {
-    MasterReadOnlyController.preSetNamespaceQuota(ctx, namespace, quotas);
+  @Test
+  public void testPreSetNamespaceQuotaReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preSetNamespaceQuota(ctx, namespace, quotas);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreSetRegionServerQuotaReadOnlyException() throws IOException {
-    MasterReadOnlyController.preSetRegionServerQuota(ctx, regionServer, quotas);
+  @Test
+  public void testPreSetRegionServerQuotaReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preSetRegionServerQuota(ctx, regionServer, quotas);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreMergeRegionsReadOnlyException() throws IOException {
-    MasterReadOnlyController.preMergeRegions(ctx, regionsToMerge);
+  @Test
+  public void testPreMergeRegionsReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preMergeRegions(ctx, regionsToMerge);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreMoveServersAndTablesReadOnlyException() throws IOException {
-    MasterReadOnlyController.preMoveServersAndTables(ctx, servers, tables, targetGroup);
+  @Test
+  public void testPreMoveServersAndTablesReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preMoveServersAndTables(ctx, servers, tables, targetGroup);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreMoveServersReadOnlyException() throws IOException {
-    MasterReadOnlyController.preMoveServers(ctx, servers, targetGroup);
+  @Test
+  public void testPreMoveServersReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preMoveServers(ctx, servers, targetGroup);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreMoveTablesReadOnlyException() throws IOException {
-    MasterReadOnlyController.preMoveTables(ctx, tables, targetGroup);
+  @Test
+  public void testPreMoveTablesReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preMoveTables(ctx, tables, targetGroup);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreAddRSGroupReadOnlyException() throws IOException {
-    MasterReadOnlyController.preAddRSGroup(ctx, name);
+  @Test
+  public void testPreAddRSGroupReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preAddRSGroup(ctx, name);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreRemoveRSGroupReadOnlyException() throws IOException {
-    MasterReadOnlyController.preRemoveRSGroup(ctx, name);
+  @Test
+  public void testPreRemoveRSGroupReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preRemoveRSGroup(ctx, name);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreBalanceRSGroupReadOnlyException() throws IOException {
-    MasterReadOnlyController.preBalanceRSGroup(ctx, groupName, request);
+  @Test
+  public void testPreBalanceRSGroupReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preBalanceRSGroup(ctx, groupName, request);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreRemoveServersReadOnlyException() throws IOException {
-    MasterReadOnlyController.preRemoveServers(ctx, servers);
+  @Test
+  public void testPreRemoveServersReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preRemoveServers(ctx, servers);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreRenameRSGroupReadOnlyException() throws IOException {
-    MasterReadOnlyController.preRenameRSGroup(ctx, oldName, newName);
+  @Test
+  public void testPreRenameRSGroupReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preRenameRSGroup(ctx, oldName, newName);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreUpdateRSGroupConfigReadOnlyException() throws IOException {
-    MasterReadOnlyController.preUpdateRSGroupConfig(ctx, groupName, configuration);
+  @Test
+  public void testPreUpdateRSGroupConfigReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preUpdateRSGroupConfig(ctx, groupName, configuration);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreAddReplicationPeerReadOnlyException() throws IOException {
-    MasterReadOnlyController.preAddReplicationPeer(ctx, peerId, peerConfig);
+  @Test
+  public void testPreAddReplicationPeerReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preAddReplicationPeer(ctx, peerId, peerConfig);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreRemoveReplicationPeerReadOnlyException() throws IOException {
-    MasterReadOnlyController.preRemoveReplicationPeer(ctx, peerId);
+  @Test
+  public void testPreRemoveReplicationPeerReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preRemoveReplicationPeer(ctx, peerId);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreEnableReplicationPeerReadOnlyException() throws IOException {
-    MasterReadOnlyController.preEnableReplicationPeer(ctx, peerId);
+  @Test
+  public void testPreEnableReplicationPeerReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preEnableReplicationPeer(ctx, peerId);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreDisableReplicationPeerReadOnlyException() throws IOException {
-    MasterReadOnlyController.preDisableReplicationPeer(ctx, peerId);
+  @Test
+  public void testPreDisableReplicationPeerReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preDisableReplicationPeer(ctx, peerId);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreUpdateReplicationPeerConfigReadOnlyException() throws IOException {
-    MasterReadOnlyController.preUpdateReplicationPeerConfig(ctx, peerId, peerConfig);
+  @Test
+  public void testPreUpdateReplicationPeerConfigReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preUpdateReplicationPeerConfig(ctx, peerId, peerConfig);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreTransitReplicationPeerSyncReplicationStateReadOnlyException()
-    throws IOException {
-    MasterReadOnlyController.preTransitReplicationPeerSyncReplicationState(ctx, peerId, state);
+  @Test
+  public void testPreTransitReplicationPeerSyncReplicationStateReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preTransitReplicationPeerSyncReplicationState(ctx, peerId, state);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreGrantReadOnlyException() throws IOException {
-    MasterReadOnlyController.preGrant(ctx, userPermission, mergeExistingPermissions);
+  @Test
+  public void testPreGrantReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preGrant(ctx, userPermission, mergeExistingPermissions);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreRevokeReadOnlyException() throws IOException {
-    MasterReadOnlyController.preRevoke(ctx, userPermission);
+  @Test
+  public void testPreRevokeReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preRevoke(ctx, userPermission);
+    });
   }
 }
