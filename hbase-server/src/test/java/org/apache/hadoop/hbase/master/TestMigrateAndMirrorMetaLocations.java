@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.lengthOfPBMag
 import static org.apache.hadoop.hbase.zookeeper.ZKMetadata.removeMetaData;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -94,18 +95,29 @@ public class TestMigrateAndMirrorMetaLocations {
 
   private void checkMirrorLocation(int replicaCount) throws Exception {
     MasterRegion masterRegion = UTIL.getMiniHBaseCluster().getMaster().getMasterRegion();
+    Result locationResult = null;
     try (RegionScanner scanner =
       masterRegion.getRegionScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
       List<Cell> cells = new ArrayList<>();
-      boolean moreRows = scanner.next(cells);
-      // should only have one row as we have only one meta region, different replicas will be in the
-      // same row
-      assertFalse(moreRows);
-      assertFalse(cells.isEmpty());
-      Result result = Result.create(cells);
-      // make sure we publish the correct location to zookeeper too
-      assertLocationEquals(result, replicaCount);
+      boolean moreRows;
+      do {
+        cells.clear();
+        moreRows = scanner.next(cells);
+        if (!cells.isEmpty()) {
+          Result result = Result.create(cells);
+          // find the row that contains meta region location data; other rows in CATALOG_FAMILY
+          // (e.g. meta_table_name written by MetaTableNameStore) should be skipped
+          if (CatalogFamilyFormat.getRegionLocations(result) != null) {
+            locationResult = result;
+            break;
+          }
+        }
+      } while (moreRows);
     }
+    // should have one meta region row with all replicas in the same row
+    assertNotNull("No meta region location found in MasterRegion CATALOG_FAMILY", locationResult);
+    // make sure we publish the correct location to zookeeper too
+    assertLocationEquals(locationResult, replicaCount);
   }
 
   private void waitUntilNoSCP() throws IOException {

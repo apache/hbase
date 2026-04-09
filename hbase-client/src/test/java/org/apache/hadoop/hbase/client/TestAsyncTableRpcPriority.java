@@ -156,8 +156,8 @@ public class TestAsyncTableRpcPriority {
       }
     }).when(stub).get(any(HBaseRpcController.class), any(GetRequest.class), any());
     User user = UserProvider.instantiate(CONF).getCurrent();
-    conn = new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF, user), "test", null,
-      user) {
+    conn = new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF, user), "test",
+      TableName.META_TABLE_NAME, null, user) {
 
       @Override
       AsyncRegionLocator getLocator() {
@@ -230,7 +230,7 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testGetMetaTable() {
-    conn.getTable(TableName.META_TABLE_NAME).get(new Get(Bytes.toBytes(0))).join();
+    conn.getTable(conn.getMetaTableName()).get(new Get(Bytes.toBytes(0))).join();
     verify(stub, times(1)).get(assertPriority(SYSTEMTABLE_QOS), any(GetRequest.class), any());
   }
 
@@ -257,7 +257,7 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testPutMetaTable() {
-    conn.getTable(TableName.META_TABLE_NAME).put(new Put(Bytes.toBytes(0))
+    conn.getTable(conn.getMetaTableName()).put(new Put(Bytes.toBytes(0))
       .addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))).join();
     verify(stub, times(1)).mutate(assertPriority(SYSTEMTABLE_QOS), any(MutateRequest.class), any());
   }
@@ -284,7 +284,7 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testDeleteMetaTable() {
-    conn.getTable(TableName.META_TABLE_NAME).delete(new Delete(Bytes.toBytes(0))).join();
+    conn.getTable(conn.getMetaTableName()).delete(new Delete(Bytes.toBytes(0))).join();
     verify(stub, times(1)).mutate(assertPriority(SYSTEMTABLE_QOS), any(MutateRequest.class), any());
   }
 
@@ -313,7 +313,7 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testAppendMetaTable() {
-    conn.getTable(TableName.META_TABLE_NAME).append(new Append(Bytes.toBytes(0))
+    conn.getTable(conn.getMetaTableName()).append(new Append(Bytes.toBytes(0))
       .addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))).join();
     verify(stub, times(1)).mutate(assertPriority(SYSTEMTABLE_QOS), any(MutateRequest.class), any());
   }
@@ -341,7 +341,7 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testIncrementMetaTable() {
-    conn.getTable(TableName.META_TABLE_NAME)
+    conn.getTable(conn.getMetaTableName())
       .incrementColumnValue(Bytes.toBytes(0), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1).join();
     verify(stub, times(1)).mutate(assertPriority(SYSTEMTABLE_QOS), any(MutateRequest.class), any());
   }
@@ -377,7 +377,7 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testCheckAndPutMetaTable() {
-    conn.getTable(TableName.META_TABLE_NAME).checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf"))
+    conn.getTable(conn.getMetaTableName()).checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf"))
       .qualifier(Bytes.toBytes("cq")).ifNotExists().thenPut(new Put(Bytes.toBytes(0))
         .addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v")))
       .join();
@@ -410,7 +410,7 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testCheckAndDeleteMetaTable() {
-    conn.getTable(TableName.META_TABLE_NAME).checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf"))
+    conn.getTable(conn.getMetaTableName()).checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf"))
       .qualifier(Bytes.toBytes("cq")).ifNotExists().thenPut(new Put(Bytes.toBytes(0))
         .addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v")))
       .join();
@@ -450,7 +450,7 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testCheckAndMutateMetaTable() throws IOException {
-    conn.getTable(TableName.META_TABLE_NAME).checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf"))
+    conn.getTable(conn.getMetaTableName()).checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf"))
       .qualifier(Bytes.toBytes("cq")).ifEquals(Bytes.toBytes("v"))
       .thenMutate(new RowMutations(Bytes.toBytes(0)).add((Mutation) new Delete(Bytes.toBytes(0))))
       .join();
@@ -537,7 +537,7 @@ public class TestAsyncTableRpcPriority {
   @Test
   public void testScanMetaTable() throws Exception {
     CompletableFuture<Void> renewFuture = mockScanReturnRenewFuture(SYSTEMTABLE_QOS);
-    testForTable(TableName.META_TABLE_NAME, renewFuture, Optional.empty());
+    testForTable(conn.getMetaTableName(), renewFuture, Optional.empty());
   }
 
   private void testForTable(TableName tableName, CompletableFuture<Void> renewFuture,
@@ -580,7 +580,7 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testBatchMetaTable() {
-    conn.getTable(TableName.META_TABLE_NAME).batchAll(Arrays.asList(new Delete(Bytes.toBytes(0))))
+    conn.getTable(conn.getMetaTableName()).batchAll(Arrays.asList(new Delete(Bytes.toBytes(0))))
       .join();
     verify(stub, times(1)).multi(assertPriority(SYSTEMTABLE_QOS),
       any(ClientProtos.MultiRequest.class), any());

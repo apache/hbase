@@ -226,6 +226,11 @@ public class TestTableInputFormatBase {
     }
 
     @Override
+    public TableName getMetaTableName() {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
     public Table getTable(TableName tableName) throws IOException {
       Table table = mock(Table.class);
       when(table.getName()).thenReturn(tableName);

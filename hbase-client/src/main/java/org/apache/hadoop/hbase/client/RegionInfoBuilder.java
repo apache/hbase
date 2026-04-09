@@ -42,6 +42,8 @@ public class RegionInfoBuilder {
    */
   // TODO: How come Meta regions still do not have encoded region names? Fix.
   // hbase:meta,,1.1588230740 should be the hbase:meta first region name.
+  // TODO: For now, hardcode to default. Future: lazy initialization based on config or make it use
+  // connection
   public static final RegionInfo FIRST_META_REGIONINFO =
     new MutableRegionInfo(1L, TableName.META_TABLE_NAME, RegionInfo.DEFAULT_REPLICA_ID);
 
