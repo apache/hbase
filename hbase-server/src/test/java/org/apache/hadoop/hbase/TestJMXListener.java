@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import javax.management.MBeanServerConnection;
@@ -29,29 +30,23 @@ import org.apache.hadoop.hbase.net.BoundSocketMaker;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestJMXListener {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestJMXListener.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestJMXListener.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static int CONNECTOR_PORT;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     // Default RMI timeouts are too long. Make them short for test.
     System.setProperty("sun.rmi.transport.connectionTimeout", Integer.toString(5000));
@@ -89,7 +84,7 @@ public class TestJMXListener {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -101,14 +96,12 @@ public class TestJMXListener {
 
     MBeanServerConnection mb = connector.getMBeanServerConnection();
     String domain = mb.getDefaultDomain();
-    Assert.assertTrue("default domain is not correct", !domain.isEmpty());
+    Assertions.assertTrue(!domain.isEmpty(), "default domain is not correct");
     connector.close();
 
   }
 
   // shutdown hbase only. then try connect, IOException expected
-  @Rule
-  public ExpectedException expectedEx = ExpectedException.none();
 
   @Test
   public void testStop() throws Exception {
@@ -120,8 +113,7 @@ public class TestJMXListener {
 
     JMXConnector connector = JMXConnectorFactory
       .newJMXConnector(JMXListener.buildJMXServiceURL(CONNECTOR_PORT, CONNECTOR_PORT), null);
-    expectedEx.expect(IOException.class);
-    connector.connect();
+    assertThrows(IOException.class, () -> connector.connect());
 
   }
 

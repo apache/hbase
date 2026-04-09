@@ -83,6 +83,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 @Category({ MiscTests.class, MediumTests.class })
 @SuppressWarnings("deprecation")
 public class TestMetaTableAccessor {
+
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestMetaTableAccessor.class);

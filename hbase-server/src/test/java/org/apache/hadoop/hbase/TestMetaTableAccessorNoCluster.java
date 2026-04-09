@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -40,11 +41,10 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -62,12 +62,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRespon
  * Test MetaTableAccessor but without spinning up a cluster. We mock regionserver back and forth (we
  * do spin up a zk cluster).
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMetaTableAccessorNoCluster {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetaTableAccessorNoCluster.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaTableAccessorNoCluster.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -87,12 +84,12 @@ public class TestMetaTableAccessorNoCluster {
     }
   };
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     UTIL.startMiniZKCluster();
   }
 
-  @After
+  @AfterEach
   public void after() throws IOException {
     UTIL.shutdownMiniZKCluster();
   }
@@ -101,14 +98,15 @@ public class TestMetaTableAccessorNoCluster {
    * Expect a IOE to come out of multiMutate, even if down in the depths we throw a
    * RuntimeException. See HBASE-23904
    */
-  @Test(expected = IOException.class)
+  @Test
   public void testMultiMutate() throws Throwable {
     Table table = Mockito.mock(Table.class);
     Mockito
       .when(table.coprocessorService(Mockito.any(), Mockito.any(byte[].class),
         Mockito.any(byte[].class), Mockito.any(Batch.Call.class)))
       .thenThrow(new RuntimeException("FAIL TEST WITH RuntimeException!"));
-    MetaTableAccessor.multiMutate(table, HConstants.LAST_ROW, Collections.emptyList());
+    assertThrows(IOException.class,
+      () -> MetaTableAccessor.multiMutate(table, HConstants.LAST_ROW, Collections.emptyList()));
   }
 
   @Test

@@ -17,37 +17,30 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Test that an HBase cluster can run on top of an existing MiniDfsCluster
  */
-@Category(MediumTests.class)
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestHBaseOnOtherDfsCluster {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseOnOtherDfsCluster.class);
-
-  @Rule
-  public TestName name = new TestName();
-
   @Test
-  public void testOveralyOnOtherCluster() throws Exception {
+  public void testOveralyOnOtherCluster(TestInfo testInfo) throws Exception {
     // just run HDFS
     HBaseTestingUtility util1 = new HBaseTestingUtility();
     MiniDFSCluster dfs = util1.startMiniDFSCluster(1);
@@ -67,13 +60,13 @@ public class TestHBaseOnOtherDfsCluster {
     targetFs = FileSystem.get(util2.getConfiguration());
     assertFsSameUri(fs, targetFs);
 
-    Path randomFile = new Path("/" + util1.getRandomUUID());
+    Path randomFile = new Path("/" + HBaseTestingUtility.getRandomUUID());
     assertTrue(targetFs.createNewFile(randomFile));
     assertTrue(fs.exists(randomFile));
 
     // do a simple create/write to ensure the cluster works as expected
     byte[] family = Bytes.toBytes("testfamily");
-    final TableName tablename = TableName.valueOf(name.getMethodName());
+    final TableName tablename = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table table = util2.createTable(tablename, family);
     Put p = new Put(new byte[] { 1, 2, 3 });
     p.addColumn(family, null, new byte[] { 1 });

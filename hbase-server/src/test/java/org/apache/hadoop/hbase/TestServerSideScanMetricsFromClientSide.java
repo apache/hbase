@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -41,22 +41,17 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueExcludeFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestServerSideScanMetricsFromClientSide {
   private static final Logger LOG =
     LoggerFactory.getLogger(TestServerSideScanMetricsFromClientSide.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestServerSideScanMetricsFromClientSide.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -91,7 +86,7 @@ public class TestServerSideScanMetricsFromClientSide {
   // getCellHeapSize().
   private static long CELL_HEAP_SIZE = -1;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
     TABLE = createTestTable(TABLE_NAME, ROWS, FAMILIES, QUALIFIERS, VALUE);
@@ -106,7 +101,7 @@ public class TestServerSideScanMetricsFromClientSide {
     return ht;
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -343,7 +338,7 @@ public class TestServerSideScanMetricsFromClientSide {
    * @throws Exception on unexpected failure
    */
   public void testMetric(Scan scan, String metricKey, long expectedValue) throws Exception {
-    assertTrue("Scan should be configured to record metrics", scan.isScanMetricsEnabled());
+    assertTrue(scan.isScanMetricsEnabled(), "Scan should be configured to record metrics");
     ResultScanner scanner = TABLE.getScanner(scan);
     // Iterate through all the results
     while (scanner.next() != null) {
@@ -351,12 +346,10 @@ public class TestServerSideScanMetricsFromClientSide {
     }
     scanner.close();
     ScanMetrics metrics = scanner.getScanMetrics();
-    assertTrue("Metrics are null", metrics != null);
-    assertTrue("Metric : " + metricKey + " does not exist", metrics.hasCounter(metricKey));
+    assertTrue(metrics != null, "Metrics are null");
+    assertTrue(metrics.hasCounter(metricKey), "Metric : " + metricKey + " does not exist");
     final long actualMetricValue = metrics.getCounter(metricKey).get();
-    assertEquals(
-      "Metric: " + metricKey + " Expected: " + expectedValue + " Actual: " + actualMetricValue,
-      expectedValue, actualMetricValue);
-
+    assertEquals(expectedValue, actualMetricValue,
+      "Metric: " + metricKey + " Expected: " + expectedValue + " Actual: " + actualMetricValue);
   }
 }

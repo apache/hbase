@@ -17,21 +17,16 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestTagRewriteCell {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTagRewriteCell.class);
 
   @Test
   public void testHeapSize() {
@@ -47,11 +42,10 @@ public class TestTagRewriteCell {
     // VisibilityController and AccessController)
     Cell trCell2 = PrivateCellUtil.createCell(trCell, new byte[fakeTagArrayLength]);
 
-    assertTrue(
+    assertTrue(trCellHeapSize < ((HeapSize) trCell2).heapSize(),
       "TagRewriteCell containing a TagRewriteCell's heapsize should be "
-        + "larger than a single TagRewriteCell's heapsize",
-      trCellHeapSize < ((HeapSize) trCell2).heapSize());
-    assertTrue("TagRewriteCell should have had nulled out tags array",
-      ((HeapSize) trCell).heapSize() < trCellHeapSize);
+        + "larger than a single TagRewriteCell's heapsize");
+    assertTrue(((HeapSize) trCell).heapSize() < trCellHeapSize,
+      "TagRewriteCell should have had nulled out tags array");
   }
 }
