@@ -23,7 +23,7 @@ import static org.apache.hadoop.hbase.io.hfile.CacheConfig.CACHE_BLOCKS_ON_WRITE
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.EVICT_BLOCKS_ON_CLOSE_KEY;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.EVICT_BLOCKS_ON_SPLIT_KEY;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -42,26 +42,18 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, LargeTests.class })
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestCacheEviction {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCacheEviction.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestCacheEviction.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT, 1000);
     UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
@@ -71,7 +63,7 @@ public class TestCacheEviction {
     UTIL.getConfiguration().set(StoreFileTrackerFactory.TRACKER_IMPL, "FILE");
   }
 
-  @Before
+  @BeforeEach
   public void testSetup() {
     UTIL.getConfiguration().set(BUCKET_CACHE_IOENGINE_KEY,
       "file:" + UTIL.getDataTestDir() + "/bucketcache");
