@@ -174,7 +174,7 @@ class ShellTest < Test::Unit::TestCase
   end
 
   define_test 'Shell::Shell should prevent HBase commands from being shadowed by local variables (HBASE-28660)' do
-    workspace = @shell.get_workspace
+    workspace = @shell.workspace
     IRB.setup(__FILE__) unless IRB.conf[:IRB_NAME]
 
     lines = [
