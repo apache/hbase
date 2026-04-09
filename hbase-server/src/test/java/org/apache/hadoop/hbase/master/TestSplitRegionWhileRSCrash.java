@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseTestingUtil;

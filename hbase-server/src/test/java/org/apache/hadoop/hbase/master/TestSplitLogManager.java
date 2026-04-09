@@ -30,7 +30,6 @@ import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_resubmit_force;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_resubmit_threshold_reached;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_resubmit_unassigned;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_task_deleted;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
