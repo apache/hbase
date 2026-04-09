@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -28,28 +28,20 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
  * Test whether moved region cache is correct
  */
-@Category({ MiscTests.class, LargeTests.class })
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMovedRegionCache {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMovedRegionCache.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private HBaseTestingUtility UTIL;
   private MiniZooKeeperCluster zkCluster;
@@ -57,8 +49,8 @@ public class TestMovedRegionCache {
   private HRegionServer dest;
   private RegionInfo movedRegionInfo;
 
-  @Before
-  public void setup() throws Exception {
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws Exception {
     UTIL = new HBaseTestingUtility();
     zkCluster = UTIL.startMiniZKCluster();
     StartMiniClusterOption option = StartMiniClusterOption.builder().numRegionServers(2).build();
@@ -66,7 +58,7 @@ public class TestMovedRegionCache {
     source = cluster.getRegionServer(0);
     dest = cluster.getRegionServer(1);
     assertEquals(2, cluster.getRegionServerThreads().size());
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     UTIL.createTable(tableName, Bytes.toBytes("cf"));
     UTIL.waitTableAvailable(tableName, 30_000);
     movedRegionInfo = Iterables.getOnlyElement(cluster.getRegions(tableName)).getRegionInfo();
@@ -79,7 +71,7 @@ public class TestMovedRegionCache {
     });
   }
 
-  @After
+  @AfterEach
   public void after() throws Exception {
     UTIL.shutdownMiniCluster();
     if (zkCluster != null) {
@@ -96,10 +88,10 @@ public class TestMovedRegionCache {
         return dest.getOnlineRegion(movedRegionInfo.getRegionName()) != null;
       }
     });
-    assertNotNull("Moved region NOT in the cache!",
-      source.getMovedRegion(movedRegionInfo.getEncodedName()));
+    assertNotNull(source.getMovedRegion(movedRegionInfo.getEncodedName()),
+      "Moved region NOT in the cache!");
     Thread.sleep(source.movedRegionCacheExpiredTime());
-    assertNull("Expired moved region exist in the cache!",
-      source.getMovedRegion(movedRegionInfo.getEncodedName()));
+    assertNull(source.getMovedRegion(movedRegionInfo.getEncodedName()),
+      "Expired moved region exist in the cache!");
   }
 }

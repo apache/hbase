@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,11 +35,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,12 +49,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
  * Test HBASE-3694 whether the GlobalMemStoreSize is the same as the summary of all the online
  * region's MemStoreSize
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestGlobalMemStoreSize {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestGlobalMemStoreSize.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestGlobalMemStoreSize.class);
   private static int regionServerNum = 4;
@@ -65,15 +62,8 @@ public class TestGlobalMemStoreSize {
   private HBaseTestingUtility TEST_UTIL;
   private MiniHBaseCluster cluster;
 
-  @Rule
-  public TestName name = new TestName();
-
-  /**
-   * Test the global mem store size in the region server is equal to sum of each region's mem store
-   * size
-   */
-  @Test
-  public void testGlobalMemStore() throws Exception {
+  @BeforeEach
+  public void setUp() throws Exception {
     // Start the cluster
     LOG.info("Starting cluster");
     Configuration conf = HBaseConfiguration.create();
@@ -82,9 +72,21 @@ public class TestGlobalMemStoreSize {
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");
     cluster.waitForActiveAndReadyMaster();
+  }
 
+  @AfterEach
+  public void tearDown() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
+  /**
+   * Test the global mem store size in the region server is equal to sum of each region's mem store
+   * size
+   */
+  @Test
+  public void testGlobalMemStore(TestInfo testInfo) throws Exception {
     // Create a table with regions
-    final TableName table = TableName.valueOf(name.getMethodName());
+    final TableName table = TableName.valueOf(testInfo.getTestMethod().get().getName());
     byte[] family = Bytes.toBytes("family");
     LOG.info("Creating table with " + regionNum + " regions");
     Table ht = TEST_UTIL.createMultiRegionTable(table, family, regionNum);
@@ -141,11 +143,10 @@ public class TestGlobalMemStoreSize {
         }
       }
       size = server.getRegionServerAccounting().getGlobalMemStoreDataSize();
-      assertEquals("Server=" + server.getServerName() + ", i=" + i++, 0, size);
+      assertEquals(0, size, "Server=" + server.getServerName() + ", i=" + i++);
     }
 
     ht.close();
-    TEST_UTIL.shutdownMiniCluster();
   }
 
   /**

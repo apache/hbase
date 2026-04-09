@@ -28,7 +28,10 @@ import org.junit.experimental.categories.Category;
 
 /**
  * Checks tests are categorized.
+ * <p>
+ * @deprecated Will be removed after we fully upgrade to junit5, so keep it as is.
  */
+@Deprecated
 @Category({ MiscTests.class, SmallTests.class })
 public class TestCheckTestClasses {
 
