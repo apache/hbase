@@ -31,7 +31,7 @@ public class TableNameTestExtension implements BeforeEachCallback {
    * Helper to handle parameterized method names. Unlike regular test methods, parameterized method
    * names look like 'foo[x]'. This is problematic for tests that use this name for HBase tables.
    * This helper strips out the parameter suffixes.
-   * @return current test method name with out parameterized suffixes.
+   * @return current test method name without parameterized suffixes.
    */
   public static String cleanUpTestName(String methodName) {
     int index = methodName.indexOf('[');
