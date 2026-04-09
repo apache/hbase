@@ -17,33 +17,21 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 /**
- * Returns a {@code TableName} based on currently running test method name. Supports tests built on
- * the {@link org.junit.runners.Parameterized} runner.
- * @deprecated Use {@link TableNameTestExtension} instead, once we finish the migration of JUnit5,
- *             which means we do not need {@link TableNameTestRule} any more, we can remove these
- *             dependencies, see
- *             <a href="https://issues.apache.org/jira/browse/HBASE-23671">HBASE-23671</a> for more
- *             details.
+ * Returns a {@code TableName} based on currently running test method name.
  */
-@Deprecated
-public class TableNameTestRule extends TestWatcher {
+public class TableNameTestExtension implements BeforeEachCallback {
 
   private TableName tableName;
-
-  @Override
-  protected void starting(Description description) {
-    tableName = TableName.valueOf(cleanUpTestName(description.getMethodName()));
-  }
 
   /**
    * Helper to handle parameterized method names. Unlike regular test methods, parameterized method
    * names look like 'foo[x]'. This is problematic for tests that use this name for HBase tables.
    * This helper strips out the parameter suffixes.
-   * @return current test method name with out parameterized suffixes.
+   * @return current test method name without parameterized suffixes.
    */
   public static String cleanUpTestName(String methodName) {
     int index = methodName.indexOf('[');
@@ -55,5 +43,10 @@ public class TableNameTestRule extends TestWatcher {
 
   public TableName getTableName() {
     return tableName;
+  }
+
+  @Override
+  public void beforeEach(ExtensionContext context) {
+    tableName = TableName.valueOf(cleanUpTestName(context.getRequiredTestMethod().getName()));
   }
 }

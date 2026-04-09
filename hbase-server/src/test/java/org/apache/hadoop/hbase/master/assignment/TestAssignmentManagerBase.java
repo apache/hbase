@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -64,10 +64,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,9 +91,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 public abstract class TestAssignmentManagerBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAssignmentManagerBase.class);
-
-  @Rule
-  public TestName name = new TestName();
+  protected String testMethodName;
 
   protected static final int PROC_NTHREADS = 64;
   protected static final int NREGIONS = 1 * 1000;
@@ -149,7 +146,7 @@ public abstract class TestAssignmentManagerBase {
     conf.setInt("hbase.master.rs.remote.proc.fail.fast.limit", Integer.MAX_VALUE);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     util = new HBaseTestingUtil();
     this.executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
@@ -169,13 +166,18 @@ public abstract class TestAssignmentManagerBase {
     setUpMeta();
   }
 
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
+
   protected void setUpMeta() throws Exception {
     rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
     am.assign(RegionInfoBuilder.FIRST_META_REGIONINFO);
     am.wakeMetaLoadedEvent();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     master.stop("tearDown");
     this.executor.shutdownNow();
