@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -31,6 +31,7 @@ import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -47,12 +48,13 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,9 +72,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
  * TestSnapshotFromClient. This is worth refactoring this because there will be a few more flavors
  * of snapshots that need to run these tests.
  */
-@Tag(RegionServerTests.TAG)
-@Tag(LargeTests.TAG)
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestFlushSnapshotFromClient {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestFlushSnapshotFromClient.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFlushSnapshotFromClient.class);
 
@@ -83,7 +88,7 @@ public class TestFlushSnapshotFromClient {
   protected final int DEFAULT_NUM_ROWS = 100;
   protected Admin admin = null;
 
-  @BeforeAll
+  @BeforeClass
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_RS);
@@ -106,7 +111,7 @@ public class TestFlushSnapshotFromClient {
       ConstantSizeRegionSplitPolicy.class.getName());
   }
 
-  @BeforeEach
+  @Before
   public void setup() throws Exception {
     createTable();
     this.admin = UTIL.getConnection().getAdmin();
@@ -116,7 +121,7 @@ public class TestFlushSnapshotFromClient {
     SnapshotTestingUtils.createTable(UTIL, TABLE_NAME, TEST_FAM);
   }
 
-  @AfterEach
+  @After
   public void tearDown() throws Exception {
     UTIL.deleteTable(TABLE_NAME);
     SnapshotTestingUtils.deleteAllSnapshots(this.admin);
@@ -124,7 +129,7 @@ public class TestFlushSnapshotFromClient {
     SnapshotTestingUtils.deleteArchiveDirectory(UTIL);
   }
 
-  @AfterAll
+  @AfterClass
   public static void cleanupTest() throws Exception {
     try {
       UTIL.shutdownMiniCluster();

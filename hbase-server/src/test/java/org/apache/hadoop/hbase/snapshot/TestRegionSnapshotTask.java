@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 
@@ -31,6 +31,7 @@ import java.util.concurrent.Future;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
@@ -45,10 +46,11 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,9 +60,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
  * Testing the region snapshot task on a cluster.
  * @see org.apache.hadoop.hbase.regionserver.snapshot.FlushSnapshotSubprocedure.RegionSnapshotTask
  */
-@Tag(MediumTests.TAG)
-@Tag(RegionServerTests.TAG)
+@Category({ MediumTests.class, RegionServerTests.class })
 public class TestRegionSnapshotTask {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestRegionSnapshotTask.class);
 
   private final Logger LOG = LoggerFactory.getLogger(getClass());
 
@@ -69,7 +74,7 @@ public class TestRegionSnapshotTask {
   private static FileSystem fs;
   private static Path rootDir;
 
-  @BeforeAll
+  @BeforeClass
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
 
@@ -87,7 +92,7 @@ public class TestRegionSnapshotTask {
     fs = TEST_UTIL.getTestFileSystem();
   }
 
-  @AfterAll
+  @AfterClass
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }

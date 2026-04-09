@@ -19,13 +19,16 @@ package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,17 +37,19 @@ import org.slf4j.LoggerFactory;
  * TestRestoreSnapshotFromClient. This is worth refactoring this because there will be a few more
  * flavors of snapshots that need to run these tests.
  */
-@Tag(ClientTests.TAG)
+@Category({ ClientTests.class, LargeTests.class })
 public class TestMobRestoreFlushSnapshotFromClient extends TestRestoreFlushSnapshotFromClient {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestMobRestoreFlushSnapshotFromClient.class);
 
   final Logger LOG = LoggerFactory.getLogger(getClass());
 
-  @BeforeAll
+  @BeforeClass
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
-    if (UTIL.getMiniHBaseCluster() == null) {
-      UTIL.startMiniCluster(3);
-    }
+    UTIL.startMiniCluster(3);
   }
 
   protected static void setupConf(Configuration conf) {

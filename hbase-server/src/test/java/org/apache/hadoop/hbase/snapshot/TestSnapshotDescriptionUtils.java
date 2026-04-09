@@ -17,25 +17,27 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.URI;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,21 +46,24 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 /**
  * Test that the {@link SnapshotDescription} helper is helping correctly.
  */
-@Tag(RegionServerTests.TAG)
-@Tag(SmallTests.TAG)
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestSnapshotDescriptionUtils {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestSnapshotDescriptionUtils.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static FileSystem fs;
   private static Path root;
 
-  @BeforeAll
+  @BeforeClass
   public static void setupFS() throws Exception {
     fs = UTIL.getTestFileSystem();
     root = new Path(UTIL.getDataTestDir(), "hbase");
   }
 
-  @AfterEach
+  @After
   public void cleanupFS() throws Exception {
     if (fs.exists(root)) {
       if (!fs.delete(root, true)) {
@@ -97,8 +102,9 @@ public class TestSnapshotDescriptionUtils {
     Path workingDir = new Path(tmpDir, "not_a_snapshot");
     Configuration conf = new Configuration();
     FileSystem workingFs = workingDir.getFileSystem(conf);
-    assertFalse(fs.exists(workingDir),
-      "Already have working snapshot dir: " + workingDir + " but shouldn't. Test file leak?");
+    assertFalse(
+      "Already have working snapshot dir: " + workingDir + " but shouldn't. Test file leak?",
+      fs.exists(workingDir));
     SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName("snapshot").build();
     Path finishedDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, snapshotDir);
 

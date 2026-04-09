@@ -18,23 +18,28 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Tag(ClientTests.TAG)
+@Category({ ClientTests.class, MediumTests.class })
 public class TestConcurrentFlushSnapshotFromClient extends TestFlushSnapshotFromClient {
   private static final Logger LOG = LoggerFactory.getLogger(TestFlushSnapshotFromClient.class);
 
-  @BeforeAll
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestConcurrentFlushSnapshotFromClient.class);
+
+  @BeforeClass
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
-    if (UTIL.getMiniHBaseCluster() == null) {
-      UTIL.startMiniCluster(3);
-    }
+    UTIL.startMiniCluster(3);
   }
 
   protected static void setupConf(Configuration conf) {
