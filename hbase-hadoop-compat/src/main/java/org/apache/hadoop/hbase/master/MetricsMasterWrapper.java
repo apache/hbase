@@ -158,4 +158,9 @@ public interface MetricsMasterWrapper {
    * Get the size of old WALs directory in bytes.
    */
   long getOldWALsDirSize();
+
+  /*
+   * Get the HBase version.
+   */
+  String getSoftwareVersion();
 }

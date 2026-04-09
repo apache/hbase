@@ -786,4 +786,9 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   public long getRpcFullScanRequestsCount() {
     return 10;
   }
+
+  @Override
+  public String getSoftwareVersion() {
+    return "version";
+  }
 }
