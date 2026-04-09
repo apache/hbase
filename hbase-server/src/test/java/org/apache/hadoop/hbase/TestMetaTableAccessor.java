@@ -72,6 +72,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 @Tag(MediumTests.TAG)
 @SuppressWarnings("deprecation")
 public class TestMetaTableAccessor {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaTableAccessor.class);
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static Connection connection;

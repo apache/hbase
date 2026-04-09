@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.Closeable;
@@ -2013,11 +2013,11 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       get.setReplicaId(replicaId);
       get.setConsistency(Consistency.TIMELINE);
       Result result = table.get(get);
-      assertTrue(failMsg, result.containsColumn(f, null));
-      assertEquals(failMsg, 1, result.getColumnCells(f, null).size());
+      assertTrue(result.containsColumn(f, null), failMsg);
+      assertEquals(1, result.getColumnCells(f, null).size(), failMsg);
       Cell cell = result.getColumnLatestCell(f, null);
-      assertTrue(failMsg, Bytes.equals(data, 0, data.length, cell.getValueArray(),
-        cell.getValueOffset(), cell.getValueLength()));
+      assertTrue(Bytes.equals(data, 0, data.length, cell.getValueArray(), cell.getValueOffset(),
+        cell.getValueLength()), failMsg);
     }
   }
 
@@ -2044,14 +2044,14 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       Result result = region.get(new Get(data));
 
       boolean hasResult = result != null && !result.isEmpty();
-      assertEquals(failMsg + result, present, hasResult);
+      assertEquals(present, hasResult, failMsg + result);
       if (!present) continue;
 
-      assertTrue(failMsg, result.containsColumn(f, null));
-      assertEquals(failMsg, 1, result.getColumnCells(f, null).size());
+      assertTrue(result.containsColumn(f, null), failMsg);
+      assertEquals(1, result.getColumnCells(f, null).size(), failMsg);
       Cell cell = result.getColumnLatestCell(f, null);
-      assertTrue(failMsg, Bytes.equals(data, 0, data.length, cell.getValueArray(),
-        cell.getValueOffset(), cell.getValueLength()));
+      assertTrue(Bytes.equals(data, 0, data.length, cell.getValueArray(), cell.getValueOffset(),
+        cell.getValueLength()), failMsg);
     }
   }
 
@@ -3408,8 +3408,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
           }
           Collection<HRegion> hrs = rs.getOnlineRegionsLocalContext();
           for (HRegion r : hrs) {
-            assertTrue("Region should not be double assigned",
-              r.getRegionInfo().getRegionId() != hri.getRegionId());
+            assertTrue(r.getRegionInfo().getRegionId() != hri.getRegionId(),
+              "Region should not be double assigned");
           }
         }
         return; // good, we are happy
