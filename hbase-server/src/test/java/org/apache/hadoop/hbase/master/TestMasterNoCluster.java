@@ -39,10 +39,8 @@ import org.apache.zookeeper.KeeperException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,12 +58,6 @@ public class TestMasterNoCluster {
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterNoCluster.class);
 
   private static final HBaseTestingUtil TESTUTIL = new HBaseTestingUtil();
-  private String testMethodName;
-
-  @BeforeEach
-  public void setTestMethod(TestInfo testInfo) {
-    testMethodName = testInfo.getTestMethod().get().getName();
-  }
 
   @BeforeAll
   public static void setUpBeforeClass() throws Exception {

@@ -46,7 +46,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 
 /**
  * Test reuse storefiles within data directory when cluster failover with a set of new region
@@ -55,12 +54,6 @@ import org.junit.jupiter.api.TestInfo;
  */
 @Tag(LargeTests.TAG)
 public class TestRecreateCluster {
-  private String testMethodName;
-
-  @BeforeEach
-  public void setTestMethod(TestInfo testInfo) {
-    testMethodName = testInfo.getTestMethod().get().getName();
-  }
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final int NUM_RS = 3;

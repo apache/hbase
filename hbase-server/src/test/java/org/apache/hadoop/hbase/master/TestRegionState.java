@@ -23,22 +23,14 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 
 @Tag(MasterTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestRegionState {
-  private String testMethodName;
-
-  @BeforeEach
-  public void setTestMethod(TestInfo testInfo) {
-    testMethodName = testInfo.getTestMethod().get().getName();
-  }
 
   @Test
   public void testSerializeDeserialize() {
