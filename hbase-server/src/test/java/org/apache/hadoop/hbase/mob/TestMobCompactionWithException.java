@@ -111,9 +111,9 @@ public class TestMobCompactionWithException {
     this.columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_FAMILY).setMobEnabled(true)
         .setMobThreshold(mobThreshold).setMaxVersions(1).setBlocksize(500).build();
-    this.tableDescriptor =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(TestMobUtils.getTableName(testMethodName)))
-        .setColumnFamily(columnFamilyDescriptor).build();
+    this.tableDescriptor = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(TestMobUtils.getTableName(testMethodName)))
+      .setColumnFamily(columnFamilyDescriptor).build();
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     region = HBaseTestingUtil.createRegionAndWAL(regionInfo, HTU.getDataTestDir(), conf,
       tableDescriptor, new MobFileCache(conf));

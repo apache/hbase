@@ -82,8 +82,8 @@ public class TestCallRunner {
     Waiter.waitFor(conf, TimeUnit.SECONDS.toMillis(5), new MatcherPredicate<>(otelRule::getSpans,
       hasItem(allOf(hasName(testMethodName), hasEnded()))));
 
-    assertThat(otelRule.getSpans(), hasItem(
-      allOf(hasName(testMethodName), hasStatusWithCode(StatusCode.OK), hasEnded())));
+    assertThat(otelRule.getSpans(),
+      hasItem(allOf(hasName(testMethodName), hasStatusWithCode(StatusCode.OK), hasEnded())));
   }
 
   @Test

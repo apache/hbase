@@ -79,9 +79,11 @@ public class TestNettyRpcServer {
   }
 
   public static Stream<Arguments> parameters() {
-    return Arrays.stream(new Object[] { NettyRpcServer.POOLED_ALLOCATOR_TYPE,
-      NettyRpcServer.UNPOOLED_ALLOCATOR_TYPE, NettyRpcServer.HEAP_ALLOCATOR_TYPE,
-      SimpleByteBufAllocator.class.getName() }).map(Arguments::of);
+    return Arrays
+      .stream(
+        new Object[] { NettyRpcServer.POOLED_ALLOCATOR_TYPE, NettyRpcServer.UNPOOLED_ALLOCATOR_TYPE,
+          NettyRpcServer.HEAP_ALLOCATOR_TYPE, SimpleByteBufAllocator.class.getName() })
+      .map(Arguments::of);
   }
 
   @BeforeEach

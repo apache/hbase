@@ -139,8 +139,9 @@ public class TestMobStoreCompaction {
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
     familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_FAMILY).setMobEnabled(true)
       .setMobThreshold(mobThreshold).setMaxVersions(1).build();
-    tableDescriptor = UTIL.createModifyableTableDescriptor(TestMobUtils.getTableName(testMethodName))
-      .modifyColumnFamily(familyDescriptor).build();
+    tableDescriptor =
+      UTIL.createModifyableTableDescriptor(TestMobUtils.getTableName(testMethodName))
+        .modifyColumnFamily(familyDescriptor).build();
 
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     region = HBaseTestingUtil.createRegionAndWAL(regionInfo, UTIL.getDataTestDir(), conf,

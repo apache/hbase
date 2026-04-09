@@ -56,8 +56,8 @@ public class TestRWQueueRpcExecutor {
   public void itProvidesCorrectQueuesToBalancers() throws InterruptedException {
     PriorityFunction qosFunction = mock(PriorityFunction.class);
     int softQueueLimit = 100;
-    RWQueueRpcExecutor executor = new RWQueueRpcExecutor(testMethodName, 100,
-      softQueueLimit, qosFunction, conf, null);
+    RWQueueRpcExecutor executor =
+      new RWQueueRpcExecutor(testMethodName, 100, softQueueLimit, qosFunction, conf, null);
 
     QueueBalancer readBalancer = executor.getReadBalancer();
     QueueBalancer writeBalancer = executor.getWriteBalancer();
@@ -74,8 +74,7 @@ public class TestRWQueueRpcExecutor {
     assertEquals(25, readQueues.size());
     assertEquals(50, writeQueues.size());
     assertEquals(25, scanQueues.size());
-    assertEquals(softQueueLimit, executor.currentQueueLimit,
-      "Soft limit is not applied properly");
+    assertEquals(softQueueLimit, executor.currentQueueLimit, "Soft limit is not applied properly");
     // Hard Limit is applied as the max capacity of the queue
     int hardQueueLimit = readQueues.get(0).remainingCapacity() + readQueues.get(0).size();
     assertEquals(DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT, hardQueueLimit,

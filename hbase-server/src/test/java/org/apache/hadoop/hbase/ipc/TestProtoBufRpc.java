@@ -27,8 +27,8 @@ import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
@@ -68,8 +68,9 @@ public class TestProtoBufRpc {
   }
 
   public static Stream<Arguments> parameters() {
-    return Arrays.stream(new Object[] { SimpleRpcServer.class.getName(),
-      NettyRpcServer.class.getName() }).map(Arguments::of);
+    return Arrays
+      .stream(new Object[] { SimpleRpcServer.class.getName(), NettyRpcServer.class.getName() })
+      .map(Arguments::of);
   }
 
   @BeforeEach
