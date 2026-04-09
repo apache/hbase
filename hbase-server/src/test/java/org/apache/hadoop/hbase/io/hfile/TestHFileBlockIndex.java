@@ -250,8 +250,8 @@ public class TestHFileBlockIndex {
     HFileContext meta = new HFileContextBuilder().withHBaseCheckSum(true)
       .withIncludesMvcc(includesMemstoreTS).withIncludesTags(true).withCompression(compr)
       .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM).build();
-    HFileBlock.Writer hbw = new HFileBlock.Writer(localConf, null, meta, allocator,
-      meta.getBlocksize());
+    HFileBlock.Writer hbw =
+      new HFileBlock.Writer(localConf, null, meta, allocator, meta.getBlocksize());
     FSDataOutputStream outputStream = fs.create(localPath);
     LruBlockCache cache = new LruBlockCache(8 * 1024 * 1024, 1024, true, localConf);
     CacheConfig cacheConfig = new CacheConfig(localConf, null, cache, allocator);
