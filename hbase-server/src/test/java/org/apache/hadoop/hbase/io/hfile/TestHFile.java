@@ -244,8 +244,14 @@ public class TestHFile {
       Mockito.verify(cache).shouldCacheBlock(Mockito.any(), Mockito.anyLong(), Mockito.any());
       Mockito.verify(cache, Mockito.never()).cacheBlock(Mockito.any(), Mockito.any(),
         Mockito.anyBoolean(), Mockito.anyBoolean());
-      for (int i = 0; i < 15 && counter.get() == 0; i++) {
+      for (int i = 0; i < 30 && counter.get() == 0; i++) {
         System.gc();
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          break;
+        }
         alloc.allocate(128 * 1024).release();
       }
       assertEquals(0, counter.get());
