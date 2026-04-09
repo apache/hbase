@@ -37,7 +37,7 @@ public class QosTestHelper {
     final AnnotationReadingPriorityFunction qosf, final Message param) {
     RPCProtos.RequestHeader.Builder builder = RPCProtos.RequestHeader.newBuilder();
     builder.setMethodName(methodName);
-    assertEquals(methodName, expected, qosf.getPriority(builder.build(), param,
-      User.createUserForTesting(conf, "someuser", new String[] { "somegroup" })));
+    assertEquals(expected, qosf.getPriority(builder.build(), param,
+      User.createUserForTesting(conf, "someuser", new String[] { "somegroup" })), methodName);
   }
 }
