@@ -22,6 +22,7 @@ import static org.mockito.Mockito.mock;
 import java.io.IOException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.WriteAttemptedOnReadOnlyClusterException;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -68,7 +69,7 @@ public class TestReadOnlyControllerEndpointObserver {
 
   }
 
-  @Test(expected = DoNotRetryIOException.class)
+  @Test(expected = WriteAttemptedOnReadOnlyClusterException.class)
   public void testPreEndpointInvocationReadOnlyException() throws IOException {
     endpointReadOnlyController.preEndpointInvocation(ctx, service, methodName, request);
   }

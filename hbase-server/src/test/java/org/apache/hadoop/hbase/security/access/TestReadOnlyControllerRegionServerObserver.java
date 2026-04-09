@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.security.access;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.WriteAttemptedOnReadOnlyClusterException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -72,17 +72,17 @@ public class TestReadOnlyControllerRegionServerObserver {
 
   }
 
-  @Test(expected = DoNotRetryIOException.class)
+  @Test(expected = WriteAttemptedOnReadOnlyClusterException.class)
   public void testPreRollWALWriterRequestReadOnlyException() throws IOException {
     regionServerReadOnlyController.preRollWALWriterRequest(ctx);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
+  @Test(expected = WriteAttemptedOnReadOnlyClusterException.class)
   public void testPreReplicationSinkBatchMutateReadOnlyException() throws IOException {
     regionServerReadOnlyController.preReplicationSinkBatchMutate(ctx, walEntry, mutation);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
+  @Test(expected = WriteAttemptedOnReadOnlyClusterException.class)
   public void testPreReplicateLogEntriesReadOnlyException() throws IOException {
     regionServerReadOnlyController.preReplicateLogEntries(ctx);
   }

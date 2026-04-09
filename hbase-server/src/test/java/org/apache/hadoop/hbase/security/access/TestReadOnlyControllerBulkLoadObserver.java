@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.security.access;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.WriteAttemptedOnReadOnlyClusterException;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -58,12 +58,12 @@ public class TestReadOnlyControllerBulkLoadObserver {
 
   }
 
-  @Test(expected = DoNotRetryIOException.class)
+  @Test(expected = WriteAttemptedOnReadOnlyClusterException.class)
   public void testPrePrepareBulkLoadReadOnlyException() throws IOException {
     bulkLoadReadOnlyController.prePrepareBulkLoad(ctx);
   }
 
-  @Test(expected = DoNotRetryIOException.class)
+  @Test(expected = WriteAttemptedOnReadOnlyClusterException.class)
   public void testPreCleanupBulkLoadReadOnlyException() throws IOException {
     bulkLoadReadOnlyController.preCleanupBulkLoad(ctx);
   }
