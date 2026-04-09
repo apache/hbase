@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.mob;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -27,7 +27,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -42,11 +41,10 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,12 +54,9 @@ import org.slf4j.LoggerFactory;
  * directory is N+1 5. Waits for a period of time larger than minimum age to archive 6. Runs Mob
  * cleaner chore 7 Verifies that number of MOB files in a mob directory is 1.
  */
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestMobFileCleanupUtil {
   private static final Logger LOG = LoggerFactory.getLogger(TestMobFileCleanupUtil.class);
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobFileCleanupUtil.class);
 
   private HBaseTestingUtil HTU;
 
@@ -82,7 +77,7 @@ public class TestMobFileCleanupUtil {
   public TestMobFileCleanupUtil() {
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     HTU = new HBaseTestingUtil();
     conf = HTU.getConfiguration();
@@ -135,7 +130,7 @@ public class TestMobFileCleanupUtil {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     admin.disableTable(tableDescriptor.getTableName());
     admin.deleteTable(tableDescriptor.getTableName());

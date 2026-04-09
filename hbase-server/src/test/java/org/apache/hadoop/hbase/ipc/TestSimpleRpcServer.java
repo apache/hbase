@@ -17,13 +17,11 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -35,19 +33,16 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ RPCTests.class, MediumTests.class })
+@Tag(RPCTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestSimpleRpcServer {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSimpleRpcServer.class);
 
   private static final byte[] FAMILY = Bytes.toBytes("f");
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
@@ -56,12 +51,10 @@ public class TestSimpleRpcServer {
   private static final int MAX_LEN = 1000000;
   protected static final LoadTestKVGenerator GENERATOR = new LoadTestKVGenerator(MIN_LEN, MAX_LEN);
   protected static HBaseTestingUtil TEST_UTIL;
-
-  @Rule
-  public TableNameTestRule name = new TableNameTestRule();
+  protected TableName tableName;
 
   @SuppressWarnings("deprecation")
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     // A subclass may have already created TEST_UTIL and is now upcalling to us
     if (TEST_UTIL == null) {
@@ -73,14 +66,19 @@ public class TestSimpleRpcServer {
     TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  @BeforeEach
+  public void setUpTest(TestInfo testInfo) {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
+  }
+
   @Test
   public void testSimpleRpcServer() throws Exception {
-    doTest(name.getTableName());
+    doTest(tableName);
   }
 
   protected void doTest(TableName tableName) throws Exception {
@@ -99,10 +97,10 @@ public class TestSimpleRpcServer {
       for (int i = 0; i < NUM_ROWS; i++) {
         final byte[] rowKey = Bytes.toBytes(LoadTestKVGenerator.md5PrefixedKey(i));
         final Result r = table.get(new Get(rowKey).addColumn(FAMILY, QUALIFIER));
-        assertNotNull("Result was empty", r);
+        assertNotNull(r, "Result was empty");
         final byte[] v = r.getValue(FAMILY, QUALIFIER);
-        assertNotNull("Result did not contain expected value", v);
-        assertTrue("Value was not verified", LoadTestKVGenerator.verify(v, rowKey, QUALIFIER));
+        assertNotNull(v, "Result did not contain expected value");
+        assertTrue(LoadTestKVGenerator.verify(v, rowKey, QUALIFIER), "Value was not verified");
       }
     }
   }

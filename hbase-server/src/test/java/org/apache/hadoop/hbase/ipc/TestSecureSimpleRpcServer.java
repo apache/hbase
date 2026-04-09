@@ -21,27 +21,20 @@ import java.io.File;
 import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RPCTests.class, MediumTests.class })
+@Tag(RPCTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestSecureSimpleRpcServer extends TestSimpleRpcServer {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSecureSimpleRpcServer.class);
 
   private static File KEYTAB_FILE;
   private static MiniKdc KDC;
@@ -49,10 +42,7 @@ public class TestSecureSimpleRpcServer extends TestSimpleRpcServer {
   private static String PRINCIPAL;
   private static UserGroupInformation UGI;
 
-  @Rule
-  public TableNameTestRule name = new TableNameTestRule();
-
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
     KEYTAB_FILE = new File(TEST_UTIL.getDataTestDir("keytab").toUri().getPath());
@@ -68,7 +58,7 @@ public class TestSecureSimpleRpcServer extends TestSimpleRpcServer {
 
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() throws Exception {
     if (KDC != null) {
       KDC.stop();
@@ -84,7 +74,7 @@ public class TestSecureSimpleRpcServer extends TestSimpleRpcServer {
     UGI.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        doTest(name.getTableName());
+        doTest(tableName);
         return null;
       }
     });

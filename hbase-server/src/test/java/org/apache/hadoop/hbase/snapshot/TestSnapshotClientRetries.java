@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -34,52 +33,57 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MediumTests.class })
+@Tag(MediumTests.TAG)
 public class TestSnapshotClientRetries {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotClientRetries.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotClientRetries.class);
 
-  @Rule
-  public TableNameTestRule testTable = new TableNameTestRule();
+  private static final class TestTableName {
+    private TableName tableName;
 
-  @Before
-  public void setUp() throws Exception {
+    private TableName getTableName() {
+      return tableName;
+    }
+  }
+
+  private final TestTableName testTable = new TestTableName();
+
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    testTable.tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       MasterSyncObserver.class.getName());
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(expected = SnapshotExistsException.class)
+  @Test
   public void testSnapshotAlreadyExist() throws Exception {
     final String snapshotName = "testSnapshotAlreadyExist";
     TEST_UTIL.createTable(testTable.getTableName(), "f");
     TEST_UTIL.getAdmin().snapshot(snapshotName, testTable.getTableName());
-    snapshotAndAssertOneRetry(snapshotName, testTable.getTableName());
+    assertThrows(SnapshotExistsException.class,
+      () -> snapshotAndAssertOneRetry(snapshotName, testTable.getTableName()));
   }
 
-  @Test(expected = SnapshotDoesNotExistException.class)
+  @Test
   public void testCloneNonExistentSnapshot() throws Exception {
     final String snapshotName = "testCloneNonExistentSnapshot";
-    cloneAndAssertOneRetry(snapshotName, testTable.getTableName());
+    assertThrows(SnapshotDoesNotExistException.class,
+      () -> cloneAndAssertOneRetry(snapshotName, testTable.getTableName()));
   }
 
   public static class MasterSyncObserver implements MasterCoprocessor, MasterObserver {

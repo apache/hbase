@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.mob;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import java.util.Date;
 import java.util.List;
@@ -41,7 +44,6 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.Assert;
 
 public class MobTestUtil {
   protected static final char FIRST_CHAR = 'a';
@@ -85,13 +87,11 @@ public class MobTestUtil {
    * Compare two Cells only for their row family qualifier value
    */
   public static void assertCellEquals(Cell firstKeyValue, Cell secondKeyValue) {
-    Assert.assertArrayEquals(CellUtil.cloneRow(firstKeyValue), CellUtil.cloneRow(secondKeyValue));
-    Assert.assertArrayEquals(CellUtil.cloneFamily(firstKeyValue),
-      CellUtil.cloneFamily(secondKeyValue));
-    Assert.assertArrayEquals(CellUtil.cloneQualifier(firstKeyValue),
+    assertArrayEquals(CellUtil.cloneRow(firstKeyValue), CellUtil.cloneRow(secondKeyValue));
+    assertArrayEquals(CellUtil.cloneFamily(firstKeyValue), CellUtil.cloneFamily(secondKeyValue));
+    assertArrayEquals(CellUtil.cloneQualifier(firstKeyValue),
       CellUtil.cloneQualifier(secondKeyValue));
-    Assert.assertArrayEquals(CellUtil.cloneValue(firstKeyValue),
-      CellUtil.cloneValue(secondKeyValue));
+    assertArrayEquals(CellUtil.cloneValue(firstKeyValue), CellUtil.cloneValue(secondKeyValue));
   }
 
   public static void assertCellsValue(Table table, Scan scan, byte[] expectedValue,
@@ -102,12 +102,12 @@ public class MobTestUtil {
       List<Cell> cells = res.listCells();
       for (Cell cell : cells) {
         // Verify the value
-        Assert.assertArrayEquals(expectedValue, CellUtil.cloneValue(cell));
+        assertArrayEquals(expectedValue, CellUtil.cloneValue(cell));
         count++;
       }
     }
     results.close();
-    Assert.assertEquals(expectedCount, count);
+    assertEquals(expectedCount, count);
   }
 
   /**

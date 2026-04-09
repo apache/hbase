@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -30,7 +31,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -62,14 +62,12 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,12 +77,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 /**
  * Test the restore/clone operation from a file-system point of view.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRestoreSnapshotHelper {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRestoreSnapshotHelper.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRestoreSnapshotHelper.class);
 
@@ -99,18 +94,18 @@ public class TestRestoreSnapshotHelper {
   protected void setupConf(Configuration conf) {
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     TEST_UTIL.getConfiguration().setInt(AssignmentManager.ASSIGN_MAX_ATTEMPTS, 3);
     TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownCluster() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     rootDir = TEST_UTIL.getDataTestDir("testRestore");
     archiveDir = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
@@ -122,7 +117,7 @@ public class TestRestoreSnapshotHelper {
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     fs.delete(TEST_UTIL.getDataTestDir(), true);
   }
@@ -191,7 +186,7 @@ public class TestRestoreSnapshotHelper {
         fs, conf, restoredRegion, htd, null, null);
       region2.initialize();
       long maxSeqId2 = WALSplitUtil.getMaxRegionSequenceId(fs, recoveredEdit);
-      Assert.assertTrue(maxSeqId2 > maxSeqId);
+      assertTrue(maxSeqId2 > maxSeqId);
     }
   }
 
@@ -342,7 +337,7 @@ public class TestRestoreSnapshotHelper {
       CommonFSUtils.getTableDir(new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY), tableName),
       CommonFSUtils.getTableDir(MobUtils.getMobHome(rootDir), tableName) };
     for (Path tableDir : tableDirs) {
-      Assert.assertFalse(hasHFileLink(tableDir));
+      assertFalse(hasHFileLink(tableDir));
     }
   }
 
@@ -395,13 +390,13 @@ public class TestRestoreSnapshotHelper {
     for (int i = 0; i < files.size(); i += 2) {
       String linkFile = files.get(i);
       String refFile = files.get(i + 1);
-      assertTrue(linkFile + " should be a HFileLink", HFileLink.isHFileLink(linkFile));
-      assertTrue(refFile + " should be a Referene", StoreFileInfo.isReference(refFile));
+      assertTrue(HFileLink.isHFileLink(linkFile), linkFile + " should be a HFileLink");
+      assertTrue(StoreFileInfo.isReference(refFile), refFile + " should be a Referene");
       assertEquals(sourceHtd.getTableName(), HFileLink.getReferencedTableName(linkFile));
       Path refPath = getReferredToFile(refFile);
       LOG.debug("get reference name for file " + refFile + " = " + refPath);
-      assertTrue(refPath.getName() + " should be a HFileLink",
-        HFileLink.isHFileLink(refPath.getName()));
+      assertTrue(HFileLink.isHFileLink(refPath.getName()),
+        refPath.getName() + " should be a HFileLink");
       assertEquals(linkFile, refPath.getName());
     }
   }
