@@ -33,10 +33,8 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 
 /**
  * MasterRegion related test that ensures the operations continue even when Procedure state update
@@ -44,27 +42,16 @@ import org.junit.jupiter.api.TestInfo;
  */
 @Tag(MasterTests.TAG)
 @Tag(LargeTests.TAG)
-public class TestMasterRegionMutation2 extends TestMasterRegionMutation1 {
+public class TestMasterRegionMutation2 extends AbstractTestMasterRegionMutation {
 
-  static {
-    numMasters = 3;
-    regionImplClass = TestRegion.class;
-  }
-
-  @BeforeEach
-  public void setUp(TestInfo testInfo) throws Exception {
-    super.setUp(testInfo);
+  @BeforeAll
+  public static void setUpBeforeClass() throws Exception {
+    AbstractTestMasterRegionMutation.setUpBeforeClass(3, TestRegion.class);
   }
 
   @AfterAll
-  public static void tearDownAfterClass() {
-    numMasters = 2;
-    regionImplClass = TestMasterRegionMutation1.TestRegion.class;
-  }
-
-  @Test
-  public void testMasterRegionMutations() throws Exception {
-    super.testMasterRegionMutations();
+  public static void tearDownAfterClass() throws Exception {
+    AbstractTestMasterRegionMutation.tearDownAfterClass();
   }
 
   public static class TestRegion extends HRegion {
