@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
