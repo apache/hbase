@@ -30,9 +30,9 @@ import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_resubmit_force;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_resubmit_threshold_reached;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_resubmit_unassigned;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_task_deleted;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Map;
@@ -41,7 +41,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -62,22 +61,17 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Ids;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSplitLogManager {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSplitLogManager.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSplitLogManager.class);
 
@@ -117,7 +111,7 @@ public class TestSplitLogManager {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
     TEST_UTIL.startMiniZKCluster();
@@ -149,7 +143,7 @@ public class TestSplitLogManager {
     to = to + 16 * 100;
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException, KeeperException {
     master.stop("");
     if (slm != null) {
@@ -342,8 +336,7 @@ public class TestSplitLogManager {
         return (tot_mgr_resubmit.sum() + tot_mgr_resubmit_failed.sum());
       }
     }, 0, 1, 5 * 60000); // wait long enough
-    Assert.assertEquals("Could not run test. Lost ZK connection?", 0,
-      tot_mgr_resubmit_failed.sum());
+    assertEquals(tot_mgr_resubmit_failed.sum(), 0, "Could not run test. Lost ZK connection?");
     int version1 = ZKUtil.checkExists(zkw, tasknode);
     assertTrue(version1 > version);
     byte[] taskstate = ZKUtil.getData(zkw, tasknode);
@@ -503,7 +496,7 @@ public class TestSplitLogManager {
     }
 
     // Not yet resubmitted.
-    Assert.assertEquals(0, tot_mgr_resubmit.sum());
+    assertEquals(0, tot_mgr_resubmit.sum());
 
     // This server becomes dead
     Mockito.when(sm.isServerOnline(worker1)).thenReturn(false);
@@ -511,7 +504,7 @@ public class TestSplitLogManager {
     Thread.sleep(1300); // The timeout checker is done every 1000 ms (hardcoded).
 
     // It has been resubmitted
-    Assert.assertEquals(1, tot_mgr_resubmit.sum());
+    assertEquals(1, tot_mgr_resubmit.sum());
   }
 
   @Test

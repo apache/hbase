@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -29,7 +29,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
@@ -45,18 +44,14 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestClusterRestartFailover extends AbstractTestRestartCluster {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClusterRestartFailover.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClusterRestartFailover.class);
   private static final MetricsAssertHelper metricsHelper =
@@ -87,8 +82,8 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
     UTIL.waitFor(60000, () -> getServerStateNode(SERVER_FOR_TEST) != null);
     ServerStateNode serverNode = getServerStateNode(SERVER_FOR_TEST);
     assertNotNull(serverNode);
-    assertTrue("serverNode should be ONLINE when cluster runs normally",
-      serverNode.isInState(ServerState.ONLINE));
+    assertTrue(serverNode.isInState(ServerState.ONLINE),
+      "serverNode should be ONLINE when cluster runs normally");
 
     SCP_LATCH = new CountDownLatch(1);
 
@@ -122,23 +117,22 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
       .filter(p -> (p instanceof ServerCrashProcedure)
         && ((ServerCrashProcedure) p).getServerName().equals(SERVER_FOR_TEST))
       .findAny();
-    assertTrue("Should have one SCP for " + SERVER_FOR_TEST, procedure.isPresent());
-    assertEquals("Submit the SCP for the same serverName " + SERVER_FOR_TEST + " which should fail",
-      Procedure.NO_PROC_ID,
-      UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST));
+    assertTrue(procedure.isPresent(), "Should have one SCP for " + SERVER_FOR_TEST);
+    assertEquals(Procedure.NO_PROC_ID,
+      UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST),
+      "Submit the SCP for the same serverName " + SERVER_FOR_TEST + " which should fail");
 
     // Wait the SCP to finish
     LOG.info("Waiting on latch");
     SCP_LATCH.countDown();
     UTIL.waitFor(60000, () -> procedure.get().isFinished());
-    assertNull("serverNode should be deleted after SCP finished",
-      getServerStateNode(SERVER_FOR_TEST));
+    assertNull(getServerStateNode(SERVER_FOR_TEST),
+      "serverNode should be deleted after SCP finished");
 
-    assertEquals(
+    assertEquals(Procedure.NO_PROC_ID,
+      UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST),
       "Even when the SCP is finished, the duplicate SCP should not be scheduled for "
-        + SERVER_FOR_TEST,
-      Procedure.NO_PROC_ID,
-      UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST));
+        + SERVER_FOR_TEST);
 
     MetricsMasterSource masterSource =
       UTIL.getHBaseCluster().getMaster().getMasterMetrics().getMetricsSource();
