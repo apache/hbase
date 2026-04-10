@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -28,7 +28,6 @@ import com.google.protobuf.RpcController;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.JMXListener;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
@@ -56,21 +55,16 @@ import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.Visibil
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests that the MasterRpcServices is correctly searching for implementations of the Coprocessor
  * Service and not just the "default" implementations of those services.
  */
-@Category({ SmallTests.class })
+@Tag(SmallTests.TAG)
 public class TestMasterCoprocessorServices {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterCoprocessorServices.class);
 
   private static class MockAccessController implements AccessControlService.Interface,
     MasterCoprocessor, RegionCoprocessor, MasterObserver, RegionObserver {
@@ -133,7 +127,7 @@ public class TestMasterCoprocessorServices {
   private MasterRpcServices masterServices;
 
   @SuppressWarnings("unchecked")
-  @Before
+  @BeforeEach
   public void setup() {
     masterServices = mock(MasterRpcServices.class);
     when(masterServices.hasAccessControlServiceCoprocessor(any(MasterCoprocessorHost.class)))

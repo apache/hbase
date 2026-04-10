@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
@@ -43,25 +42,23 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMasterRepairMode {
+  private String testMethodName;
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterRepairMode.class);
-
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterRepairMode.class);
 
@@ -69,12 +66,12 @@ public class TestMasterRepairMode {
 
   private static HBaseTestingUtility TEST_UTIL;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -97,13 +94,13 @@ public class TestMasterRepairMode {
 
     try (Table table = conn.getTable(TableName.META_TABLE_NAME);
       ResultScanner scanner = table.getScanner(new Scan())) {
-      assertNotNull("Could not read meta.", scanner.next());
+      assertNotNull(scanner.next(), "Could not read meta.");
     }
   }
 
   @Test
   public void testExistingCluster() throws Exception {
-    TableName testRepairMode = TableName.valueOf(name.getMethodName());
+    TableName testRepairMode = TableName.valueOf(testMethodName);
 
     TEST_UTIL.startMiniCluster();
     Table t = TEST_UTIL.createTable(testRepairMode, FAMILYNAME);
@@ -125,20 +122,19 @@ public class TestMasterRepairMode {
     try (Table table = conn.getTable(TableName.META_TABLE_NAME);
       ResultScanner scanner = table.getScanner(HConstants.TABLE_FAMILY);
       Stream<Result> results = StreamSupport.stream(scanner.spliterator(), false)) {
-      assertTrue("Did not find user table records while reading hbase:meta",
-        results.anyMatch(r -> Arrays.equals(r.getRow(), testRepairMode.getName())));
+      assertTrue(results.anyMatch(r -> Arrays.equals(r.getRow(), testRepairMode.getName())),
+        "Did not find user table records while reading hbase:meta");
     }
     try (AsyncConnection asyncConn =
       ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
       // use async table so we can set the timeout and retry value to let the operation fail fast
       AsyncTable<?> table = asyncConn.getTableBuilder(testRepairMode)
         .setScanTimeout(5, TimeUnit.SECONDS).setMaxRetries(2).build();
-      assertThrows("Should not be able to access user-space tables in repair mode.",
-        Exception.class, () -> {
-          try (ResultScanner scanner = table.getScanner(new Scan())) {
-            scanner.next();
-          }
-        });
+      assertThrows(Exception.class, () -> {
+        try (ResultScanner scanner = table.getScanner(new Scan())) {
+          scanner.next();
+        }
+      }, "Should not be able to access user-space tables in repair mode.");
     }
   }
 }

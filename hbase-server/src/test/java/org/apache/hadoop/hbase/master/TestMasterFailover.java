@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.ClusterMetrics;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
@@ -35,24 +34,24 @@ import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ FlakeyTests.class, LargeTests.class })
+@Tag(FlakeyTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMasterFailover {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterFailover.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterFailover.class);
-  @Rule
-  public TestName name = new TestName();
+  private String testMethodName;
+
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
   /**
    * Simple test of master failover.
@@ -194,8 +193,8 @@ public class TestMasterFailover {
 
       // meta should remain where it was
       RegionState metaState = MetaTableLocator.getMetaRegionState(hrs.getZooKeeper());
-      assertEquals("hbase:meta should be online on RS", metaState.getServerName(), metaServerName);
-      assertEquals("hbase:meta should be online on RS", State.OPEN, metaState.getState());
+      assertEquals(metaServerName, metaState.getServerName(), "hbase:meta should be online on RS");
+      assertEquals(metaState.getState(), State.OPEN, "hbase:meta should be online on RS");
 
       // Start up a new master
       LOG.info("Starting up a new master");
@@ -206,8 +205,8 @@ public class TestMasterFailover {
 
       // ensure meta is still deployed on RS
       metaState = MetaTableLocator.getMetaRegionState(activeMaster.getZooKeeper());
-      assertEquals("hbase:meta should be online on RS", metaState.getServerName(), metaServerName);
-      assertEquals("hbase:meta should be online on RS", State.OPEN, metaState.getState());
+      assertEquals(metaServerName, metaState.getServerName(), "hbase:meta should be online on RS");
+      assertEquals(metaState.getState(), State.OPEN, "hbase:meta should be online on RS");
 
       // Done, shutdown the cluster
     } finally {

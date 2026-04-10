@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
@@ -34,11 +33,10 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,11 +44,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestGetReplicationLoad {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestGetReplicationLoad.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestGetReplicationLoad.class);
 
@@ -69,7 +65,7 @@ public class TestGetReplicationLoad {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void startCluster() throws Exception {
     LOG.info("Starting cluster");
     TEST_UTIL = new HBaseTestingUtility();
@@ -83,7 +79,7 @@ public class TestGetReplicationLoad {
     master = cluster.getMaster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void after() throws Exception {
     if (TEST_UTIL != null) {
       TEST_UTIL.shutdownMiniCluster();
@@ -126,12 +122,13 @@ public class TestGetReplicationLoad {
     master.getMasterRpcServices().regionServerReport(null, request.build());
     HashMap<String, List<Pair<ServerName, ReplicationLoadSource>>> replicationLoad =
       master.getReplicationLoad(new ServerName[] { serverName });
-    assertEquals("peer size ", 2, replicationLoad.size());
-    assertEquals("load size ", 1, replicationLoad.get(peer1).size());
-    assertEquals("log queue size of peer1", sizeOfLogQueue,
-      replicationLoad.get(peer1).get(0).getSecond().getSizeOfLogQueue());
-    assertEquals("replication lag of peer2", replicationLag + 1,
-      replicationLoad.get(peer2).get(0).getSecond().getReplicationLag());
+    assertEquals(2, replicationLoad.size(), "peer size ");
+    assertEquals(1, replicationLoad.get(peer1).size(), "load size ");
+    assertEquals(sizeOfLogQueue, replicationLoad.get(peer1).get(0).getSecond().getSizeOfLogQueue(),
+      "log queue size of peer1");
+    assertEquals(replicationLag + 1,
+      replicationLoad.get(peer2).get(0).getSecond().getReplicationLag(),
+      "replication lag of peer2");
     master.stopMaster();
   }
 }

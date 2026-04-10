@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -31,31 +30,27 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Ignore // SimpleLoadBalancer seems borked whether AMv2 or not. Disabling till gets attention.
-@Category({ MasterTests.class, MediumTests.class })
+@Disabled // SimpleLoadBalancer seems borked whether AMv2 or not. Disabling till gets attention.
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMasterBalanceThrottling {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterBalanceThrottling.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
 
-  @Before
+  @BeforeEach
   public void setupConfiguration() {
     TEST_UTIL.getConfiguration().set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
       "org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer");
   }
 
-  @After
+  @AfterEach
   public void shutdown() throws Exception {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_BALANCER_MAX_BALANCING,
       HConstants.DEFAULT_HBASE_BALANCER_PERIOD);
@@ -83,7 +78,7 @@ public class TestMasterBalanceThrottling {
     stop.set(true);
     checker.interrupt();
     checker.join();
-    assertTrue("max regions in transition: " + maxCount.get(), maxCount.get() == 1);
+    assertTrue(maxCount.get() == 1, "max regions in transition: " + maxCount.get());
 
     TEST_UTIL.deleteTable(tableName);
   }
@@ -107,7 +102,7 @@ public class TestMasterBalanceThrottling {
     checker.interrupt();
     checker.join();
     // The max number of regions in transition is 100 * 0.05 = 5
-    assertTrue("max regions in transition: " + maxCount.get(), maxCount.get() == 5);
+    assertTrue(maxCount.get() == 5, "max regions in transition: " + maxCount.get());
 
     TEST_UTIL.deleteTable(tableName);
   }
