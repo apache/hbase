@@ -98,8 +98,7 @@ final public class FilterWrapper extends Filter {
   /**
    * Delegates to the wrapped filter's {@link Filter#getHintForRejectedRow(Cell)} so that the scan
    * pipeline can seek directly past a rejected row rather than iterating cell-by-cell via
-   * {@code nextRow()}.
-   * {@inheritDoc}
+   * {@code nextRow()}. {@inheritDoc}
    */
   @Override
   public Cell getHintForRejectedRow(Cell firstRowCell) throws IOException {

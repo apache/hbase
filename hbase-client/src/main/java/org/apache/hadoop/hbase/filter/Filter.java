@@ -195,21 +195,20 @@ public abstract class Filter {
    * moving on. If the filter can determine a better forward position — for example, the next range
    * boundary in a {@code MultiRowRangeFilter} — it should return that target cell here, allowing
    * the scanner to seek directly past the unwanted rows.
-   *
-   * <p>Contract:
+   * <p>
+   * Contract:
    * <ul>
    * <li>Only called after {@link #filterRowKey(Cell)} has returned {@code true} for the same
    * {@code firstRowCell}.</li>
    * <li>Implementations may use state that was set during {@link #filterRowKey(Cell)} (e.g. an
-   * updated range pointer), but <strong>must not</strong> invoke {@link #filterCell(Cell)}
-   * logic — the caller guarantees that {@code filterCell} has not been called for this row.</li>
+   * updated range pointer), but <strong>must not</strong> invoke {@link #filterCell(Cell)} logic —
+   * the caller guarantees that {@code filterCell} has not been called for this row.</li>
    * <li>The returned {@link Cell}, if non-null, must be an
    * {@link org.apache.hadoop.hbase.ExtendedCell} because filters are evaluated on the server
    * side.</li>
    * <li>Returning {@code null} (the default) falls through to the existing {@code nextRow()}
    * behaviour, preserving full backward compatibility.</li>
    * </ul>
-   *
    * @param firstRowCell the first cell encountered in the rejected row; contains the row key that
    *                     was passed to {@code filterRowKey}
    * @return a {@link Cell} representing the earliest position the scanner should seek to, or
@@ -227,26 +226,24 @@ public abstract class Filter {
    * several criteria — time-range mismatch, column-set exclusion, and version-limit exhaustion —
    * and in each case the filter is bypassed entirely. When an implementation can compute a
    * meaningful forward position purely from the cell's coordinates (without needing the
-   * {@code filterCell} call sequence), it should return that position here so the scanner can
-   * seek ahead instead of advancing one cell at a time.
-   *
-   * <p>Contract:
+   * {@code filterCell} call sequence), it should return that position here so the scanner can seek
+   * ahead instead of advancing one cell at a time.
+   * <p>
+   * Contract:
    * <ul>
    * <li>May be called for cells that have <strong>never</strong> been passed to
    * {@link #filterCell(Cell)}.</li>
-   * <li>Implementations <strong>must not</strong> modify any filter state; this method is
-   * treated as logically stateless. Only filters whose hint computation is based solely on
-   * immutable configuration (e.g. a fixed column range or a fuzzy-row pattern) should
-   * override this.</li>
+   * <li>Implementations <strong>must not</strong> modify any filter state; this method is treated
+   * as logically stateless. Only filters whose hint computation is based solely on immutable
+   * configuration (e.g. a fixed column range or a fuzzy-row pattern) should override this.</li>
    * <li>The returned {@link Cell}, if non-null, must be an
    * {@link org.apache.hadoop.hbase.ExtendedCell} because filters are evaluated on the server
    * side.</li>
-   * <li>Returning {@code null} (the default) falls through to the existing structural
-   * skip/seek behaviour, preserving full backward compatibility.</li>
+   * <li>Returning {@code null} (the default) falls through to the existing structural skip/seek
+   * behaviour, preserving full backward compatibility.</li>
    * </ul>
-   *
-   * @param skippedCell the cell that was rejected by the time-range, column, or version gate
-   *                    before {@code filterCell} could be consulted
+   * @param skippedCell the cell that was rejected by the time-range, column, or version gate before
+   *                    {@code filterCell} could be consulted
    * @return a {@link Cell} representing the earliest position the scanner should seek to, or
    *         {@code null} if this filter cannot provide a better position than the structural hint
    * @throws IOException in case an I/O or filter-specific failure needs to be signaled

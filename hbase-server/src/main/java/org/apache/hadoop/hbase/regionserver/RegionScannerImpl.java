@@ -760,21 +760,20 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
 
   /**
    * Fast-path alternative to {@link #nextRow} used when the filter has provided a seek hint via
-   * {@link org.apache.hadoop.hbase.filter.Filter#getHintForRejectedRow(Cell)}. Instead of
-   * iterating through every cell in the rejected row one-by-one, this method issues a single
+   * {@link org.apache.hadoop.hbase.filter.Filter#getHintForRejectedRow(Cell)}. Instead of iterating
+   * through every cell in the rejected row one-by-one, this method issues a single
    * {@code requestSeek} to jump directly to the filter's suggested position.
-   *
-   * <p>The skipping-row mode flag is set around the seek so that block-level size tracking
-   * continues to function (consistent with {@link #nextRow}), and the filter state is reset
-   * afterwards so the next row starts with a clean filter context.
-   *
+   * <p>
+   * The skipping-row mode flag is set around the seek so that block-level size tracking continues
+   * to function (consistent with {@link #nextRow}), and the filter state is reset afterwards so the
+   * next row starts with a clean filter context.
    * @param scannerContext scanner context used for limit tracking
    * @param curRowCell     the first cell of the row that was rejected by {@code filterRowKey};
    *                       passed to the coprocessor hook for observability
-   * @param hint           the validated {@link ExtendedCell} returned by the filter; the
-   *                       scanner will seek to this position
-   * @return {@code true} if scanning should continue, {@code false} if a coprocessor requests
-   *         an early stop (mirrors the contract of {@link #nextRow})
+   * @param hint           the validated {@link ExtendedCell} returned by the filter; the scanner
+   *                       will seek to this position
+   * @return {@code true} if scanning should continue, {@code false} if a coprocessor requests an
+   *         early stop (mirrors the contract of {@link #nextRow})
    * @throws IOException if the seek or the coprocessor hook signals a failure
    */
   private boolean nextRowViaHint(ScannerContext scannerContext, Cell curRowCell, ExtendedCell hint)
@@ -803,13 +802,12 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
    * after a row has been rejected by {@link #filterRowKey}. If the wrapped filter overrides
    * {@link org.apache.hadoop.hbase.filter.Filter#getHintForRejectedRow(Cell)}, this returns its
    * answer as an {@link ExtendedCell}; otherwise returns {@code null}.
-   *
-   * <p>The returned cell is validated to be an {@link ExtendedCell} because filters run on the
-   * server side and the scanner infrastructure requires {@code ExtendedCell} references.
-   *
+   * <p>
+   * The returned cell is validated to be an {@link ExtendedCell} because filters run on the server
+   * side and the scanner infrastructure requires {@code ExtendedCell} references.
    * @param rowCell the first cell of the rejected row (same cell passed to {@code filterRowKey})
-   * @return a validated {@link ExtendedCell} seek target, or {@code null} if the filter provides
-   *         no hint
+   * @return a validated {@link ExtendedCell} seek target, or {@code null} if the filter provides no
+   *         hint
    * @throws DoNotRetryIOException if the filter returns a non-{@link ExtendedCell} instance
    * @throws IOException           if the filter signals an I/O failure
    */

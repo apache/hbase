@@ -66,8 +66,8 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
    * at one of the structural short-circuit points in {@link #matchColumn}. When non-null this is
    * returned by {@link #getNextKeyHint} instead of delegating to
    * {@link org.apache.hadoop.hbase.filter.Filter#getNextCellHint}, because the hint was computed
-   * for a cell that never reached {@code filterCell}. Cleared on every {@link #getNextKeyHint}
-   * call so it cannot leak across multiple seek-hint cycles.
+   * for a cell that never reached {@code filterCell}. Cleared on every {@link #getNextKeyHint} call
+   * so it cannot leak across multiple seek-hint cycles.
    */
   private ExtendedCell pendingSkipHint = null;
 
@@ -214,15 +214,14 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
   /**
    * Asks the current filter for a seek hint via
    * {@link org.apache.hadoop.hbase.filter.Filter#getSkipHint(Cell)}, validates the returned cell
-   * type, and if non-null stores it in {@link #pendingSkipHint} so that {@link #getNextKeyHint}
-   * can return it when the scan pipeline asks for the seek target after receiving
+   * type, and if non-null stores it in {@link #pendingSkipHint} so that {@link #getNextKeyHint} can
+   * return it when the scan pipeline asks for the seek target after receiving
    * {@link ScanQueryMatcher.MatchCode#SEEK_NEXT_USING_HINT}.
-   *
-   * <p>This is only called from the structural short-circuit branches of {@link #matchColumn},
-   * where {@code filterCell} has <em>not</em> been called, in accordance with the stateless
-   * contract of {@code Filter#getSkipHint}. The filter-null guard is included here so call-sites
-   * need no boilerplate.
-   *
+   * <p>
+   * This is only called from the structural short-circuit branches of {@link #matchColumn}, where
+   * {@code filterCell} has <em>not</em> been called, in accordance with the stateless contract of
+   * {@code Filter#getSkipHint}. The filter-null guard is included here so call-sites need no
+   * boilerplate.
    * @param cell the cell that triggered the structural short-circuit
    * @return {@code true} if the filter returned a valid hint (stored in {@link #pendingSkipHint}),
    *         {@code false} if no filter is set or the filter returned {@code null}

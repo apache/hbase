@@ -51,19 +51,18 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * Integration tests for HBASE-29974 Path 1:
- * {@link Filter#getHintForRejectedRow(Cell)} allows the scan pipeline to seek directly past
- * rejected rows instead of iterating through every cell in each rejected row one-by-one via
- * {@code nextRow()}.
- *
- * <p>Each test verifies two properties simultaneously:
+ * Integration tests for HBASE-29974 Path 1: {@link Filter#getHintForRejectedRow(Cell)} allows the
+ * scan pipeline to seek directly past rejected rows instead of iterating through every cell in each
+ * rejected row one-by-one via {@code nextRow()}.
+ * <p>
+ * Each test verifies two properties simultaneously:
  * <ol>
- *   <li><b>Correctness</b> — the scan returns exactly the rows that are not rejected by
- *       {@link Filter#filterRowKey(Cell)}, regardless of whether the hint path or the
- *       legacy cell-iteration path is used.</li>
- *   <li><b>Efficiency</b> — when a filter provides a hint that jumps over all N rejected rows
- *       in one seek, {@code getHintForRejectedRow} is called exactly once (not N times), proving
- *       that the scanner did not fall back to cell-by-cell iteration for the skipped rows.</li>
+ * <li><b>Correctness</b> — the scan returns exactly the rows that are not rejected by
+ * {@link Filter#filterRowKey(Cell)}, regardless of whether the hint path or the legacy
+ * cell-iteration path is used.</li>
+ * <li><b>Efficiency</b> — when a filter provides a hint that jumps over all N rejected rows in one
+ * seek, {@code getHintForRejectedRow} is called exactly once (not N times), proving that the
+ * scanner did not fall back to cell-by-cell iteration for the skipped rows.</li>
  * </ol>
  */
 @Category({ FilterTests.class, MediumTests.class })
@@ -89,8 +88,7 @@ public class TestFilterHintForRejectedRow {
     TableDescriptor tableDescriptor =
       TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
-    RegionInfo info =
-      RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     this.region = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
       TEST_UTIL.getConfiguration(), tableDescriptor);
   }
@@ -105,12 +103,11 @@ public class TestFilterHintForRejectedRow {
   // -------------------------------------------------------------------------
 
   /**
-   * Writes {@code count} rows into the test region. Row keys are formatted as
-   * {@code "row-XX"} (zero-padded to two digits) and each row contains
-   * {@link #CELLS_PER_ROW} cells with qualifier {@code "q-NN"}.
-   *
-   * @param prefix  string prefix used for both row keys and qualifier names
-   * @param count   number of rows to write
+   * Writes {@code count} rows into the test region. Row keys are formatted as {@code "row-XX"}
+   * (zero-padded to two digits) and each row contains {@link #CELLS_PER_ROW} cells with qualifier
+   * {@code "q-NN"}.
+   * @param prefix string prefix used for both row keys and qualifier names
+   * @param count  number of rows to write
    * @throws IOException if any put fails
    */
   private void writeRows(String prefix, int count) throws IOException {
@@ -132,19 +129,19 @@ public class TestFilterHintForRejectedRow {
 
   /**
    * HBASE-29974 Path 1 — single-batch seek hint.
-   *
-   * <p>The filter rejects the first 5 rows ({@code "row-00"} through {@code "row-04"}) via
-   * {@link Filter#filterRowKey(Cell)} and, for every rejected row, returns a hint pointing
-   * directly to {@code "row-05"} via {@link Filter#getHintForRejectedRow(Cell)}.
-   *
-   * <p>Expected behaviour:
+   * <p>
+   * The filter rejects the first 5 rows ({@code "row-00"} through {@code "row-04"}) via
+   * {@link Filter#filterRowKey(Cell)} and, for every rejected row, returns a hint pointing directly
+   * to {@code "row-05"} via {@link Filter#getHintForRejectedRow(Cell)}.
+   * <p>
+   * Expected behaviour:
    * <ul>
-   *   <li>The scanner seeks directly to {@code "row-05"} after the very first rejection,
-   *       bypassing cells in rows {@code "row-01"} through {@code "row-04"} entirely.</li>
-   *   <li>{@code getHintForRejectedRow} is called exactly once (not five times), confirming
-   *       no cell-by-cell iteration occurred for the skipped rows.</li>
-   *   <li>Rows {@code "row-05"} through {@code "row-09"} are returned with all their cells
-   *       intact.</li>
+   * <li>The scanner seeks directly to {@code "row-05"} after the very first rejection, bypassing
+   * cells in rows {@code "row-01"} through {@code "row-04"} entirely.</li>
+   * <li>{@code getHintForRejectedRow} is called exactly once (not five times), confirming no
+   * cell-by-cell iteration occurred for the skipped rows.</li>
+   * <li>Rows {@code "row-05"} through {@code "row-09"} are returned with all their cells
+   * intact.</li>
    * </ul>
    */
   @Test
@@ -166,9 +163,9 @@ public class TestFilterHintForRejectedRow {
       }
 
       /**
-       * Returns a hint pointing directly to the first accepted row, regardless of which
-       * rejected row triggered this call. Because the hint bypasses all remaining rejected
-       * rows in one seek, this method should be invoked exactly once for the whole scan.
+       * Returns a hint pointing directly to the first accepted row, regardless of which rejected
+       * row triggered this call. Because the hint bypasses all remaining rejected rows in one seek,
+       * this method should be invoked exactly once for the whole scan.
        */
       @Override
       public Cell getHintForRejectedRow(Cell firstRowCell) {
@@ -178,8 +175,8 @@ public class TestFilterHintForRejectedRow {
     };
 
     List<Cell> results = new ArrayList<>();
-    try (RegionScanner scanner = region.getScanner(new Scan().addFamily(FAMILY)
-      .setFilter(hintFilter))) {
+    try (RegionScanner scanner =
+      region.getScanner(new Scan().addFamily(FAMILY).setFilter(hintFilter))) {
       List<Cell> rowCells = new ArrayList<>();
       boolean hasMore;
       do {
@@ -190,8 +187,7 @@ public class TestFilterHintForRejectedRow {
     }
 
     // ----- Correctness assertions -----
-    assertEquals(
-      "Scan must return exactly the cells from the " + acceptedCount + " accepted rows",
+    assertEquals("Scan must return exactly the cells from the " + acceptedCount + " accepted rows",
       acceptedCount * CELLS_PER_ROW, results.size());
     for (Cell c : results) {
       assertTrue("Every returned cell must belong to the accepted row range",
@@ -203,17 +199,17 @@ public class TestFilterHintForRejectedRow {
     // The hint jumps over all 5 rejected rows in one seek, so the filter should be asked for
     // a hint exactly once — not once per rejected row.
     assertEquals(
-      "getHintForRejectedRow must be called exactly once: the hint skips all rejected rows",
-      1, hintCallCount.get());
+      "getHintForRejectedRow must be called exactly once: the hint skips all rejected rows", 1,
+      hintCallCount.get());
   }
 
   /**
    * HBASE-29974 Path 1 — backward compatibility: null hint falls through to {@code nextRow()}.
-   *
-   * <p>When {@link Filter#getHintForRejectedRow(Cell)} returns {@code null} (the default from
+   * <p>
+   * When {@link Filter#getHintForRejectedRow(Cell)} returns {@code null} (the default from
    * {@link FilterBase}), the scanner must fall back to the existing cell-by-cell {@code nextRow()}
-   * behaviour and still return the correct results. This test acts as a regression guard to
-   * confirm that the null-hint path does not alter observable scan results.
+   * behaviour and still return the correct results. This test acts as a regression guard to confirm
+   * that the null-hint path does not alter observable scan results.
    */
   @Test
   public void testNullHintFallsThroughToLegacyNextRowBehaviour() throws IOException {
@@ -234,8 +230,8 @@ public class TestFilterHintForRejectedRow {
     };
 
     List<Cell> results = new ArrayList<>();
-    try (RegionScanner scanner = region.getScanner(new Scan().addFamily(FAMILY)
-      .setFilter(noHintFilter))) {
+    try (RegionScanner scanner =
+      region.getScanner(new Scan().addFamily(FAMILY).setFilter(noHintFilter))) {
       List<Cell> rowCells = new ArrayList<>();
       boolean hasMore;
       do {
@@ -245,8 +241,7 @@ public class TestFilterHintForRejectedRow {
       } while (hasMore);
     }
 
-    assertEquals(
-      "Null-hint path must still return the correct cells from the accepted rows",
+    assertEquals("Null-hint path must still return the correct cells from the accepted rows",
       acceptedCount * CELLS_PER_ROW, results.size());
     for (Cell c : results) {
       assertTrue("Every returned cell must belong to the accepted row range",
@@ -257,10 +252,10 @@ public class TestFilterHintForRejectedRow {
 
   /**
    * HBASE-29974 Path 1 — hint pointing beyond the last row terminates the scan cleanly.
-   *
-   * <p>If the filter's {@link Filter#getHintForRejectedRow(Cell)} returns a position that is
-   * past the end of the table (beyond all written rows), the scan must complete without
-   * returning any results and without throwing an exception.
+   * <p>
+   * If the filter's {@link Filter#getHintForRejectedRow(Cell)} returns a position that is past the
+   * end of the table (beyond all written rows), the scan must complete without returning any
+   * results and without throwing an exception.
    */
   @Test
   public void testHintBeyondLastRowTerminatesScanGracefully() throws IOException {
@@ -283,8 +278,8 @@ public class TestFilterHintForRejectedRow {
     };
 
     List<Cell> results = new ArrayList<>();
-    try (RegionScanner scanner = region.getScanner(new Scan().addFamily(FAMILY)
-      .setFilter(beyondHintFilter))) {
+    try (RegionScanner scanner =
+      region.getScanner(new Scan().addFamily(FAMILY).setFilter(beyondHintFilter))) {
       List<Cell> rowCells = new ArrayList<>();
       boolean hasMore;
       do {
@@ -294,17 +289,17 @@ public class TestFilterHintForRejectedRow {
       } while (hasMore);
     }
 
-    assertTrue(
-      "When the hint is past the last row, no cells should be returned", results.isEmpty());
+    assertTrue("When the hint is past the last row, no cells should be returned",
+      results.isEmpty());
   }
 
   /**
    * HBASE-29974 Path 1 — hint for every rejected row (per-row hint stepping).
-   *
-   * <p>When the filter provides a hint that advances only one row at a time (i.e. it always
-   * points to the immediate next row key), {@code getHintForRejectedRow} is called once per
-   * rejected row. This verifies that the hint mechanism works correctly in the incremental-step
-   * case, not just the bulk-jump case.
+   * <p>
+   * When the filter provides a hint that advances only one row at a time (i.e. it always points to
+   * the immediate next row key), {@code getHintForRejectedRow} is called once per rejected row.
+   * This verifies that the hint mechanism works correctly in the incremental-step case, not just
+   * the bulk-jump case.
    */
   @Test
   public void testPerRowHintCalledOncePerRejectedRow() throws IOException {
@@ -324,9 +319,9 @@ public class TestFilterHintForRejectedRow {
       }
 
       /**
-       * Returns a hint pointing to the cell immediately after the current one (one row at a
-       * time). This causes the scanner to seek per-row, so this method is called once for
-       * each rejected row.
+       * Returns a hint pointing to the cell immediately after the current one (one row at a time).
+       * This causes the scanner to seek per-row, so this method is called once for each rejected
+       * row.
        */
       @Override
       public Cell getHintForRejectedRow(Cell firstRowCell) {
@@ -337,8 +332,8 @@ public class TestFilterHintForRejectedRow {
     };
 
     List<Cell> results = new ArrayList<>();
-    try (RegionScanner scanner = region.getScanner(new Scan().addFamily(FAMILY)
-      .setFilter(perRowHintFilter))) {
+    try (RegionScanner scanner =
+      region.getScanner(new Scan().addFamily(FAMILY).setFilter(perRowHintFilter))) {
       List<Cell> rowCells = new ArrayList<>();
       boolean hasMore;
       do {
@@ -349,8 +344,7 @@ public class TestFilterHintForRejectedRow {
     }
 
     // ----- Correctness -----
-    assertEquals(
-      "Scan must return exactly the cells from the " + acceptedCount + " accepted rows",
+    assertEquals("Scan must return exactly the cells from the " + acceptedCount + " accepted rows",
       acceptedCount * CELLS_PER_ROW, results.size());
     for (Cell c : results) {
       assertTrue("Every returned cell must belong to the accepted row range",
