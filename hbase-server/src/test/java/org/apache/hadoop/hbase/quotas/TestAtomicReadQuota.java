@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -38,26 +37,23 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestAtomicReadQuota {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAtomicReadQuota.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestAtomicReadQuota.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final TableName TABLE_NAME = TableName.valueOf(UUID.randomUUID().toString());
   private static final byte[] FAMILY = Bytes.toBytes("cf");
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     ThrottleQuotaTestUtil.clearQuotaCache(TEST_UTIL);
     EnvironmentEdgeManager.reset();
@@ -65,7 +61,7 @@ public class TestAtomicReadQuota {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
     TEST_UTIL.getConfiguration().setInt(QuotaCache.REFRESH_CONF_KEY, 1000);

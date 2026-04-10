@@ -2786,10 +2786,15 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * Expire a ZooKeeper session as recommended in ZooKeeper documentation
-   * http://hbase.apache.org/book.html#trouble.zookeeper There are issues when doing this: [1]
-   * http://www.mail-archive.com/dev@zookeeper.apache.org/msg01942.html [2]
-   * https://issues.apache.org/jira/browse/ZOOKEEPER-1105
+   * Expire a ZooKeeper session as recommended in ZooKeeper documentation <a href=
+   * "https://hbase.apache.org/docs/troubleshooting#troubleshooting-zookeeper">Troubleshooting
+   * ZooKeeper</a>
+   * <p/>
+   * There are issues when doing this:
+   * <ol>
+   * <li>http://www.mail-archive.com/dev@zookeeper.apache.org/msg01942.html</li>
+   * <li>https://issues.apache.org/jira/browse/ZOOKEEPER-1105</li>
+   * </ol>
    * @param nodeZK      - the ZK watcher to expire
    * @param checkStatus - true to check if we can create a Table with the current configuration.
    */

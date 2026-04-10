@@ -15,21 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.snapshot;
 
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-@Category(LargeTests.class)
-public class TestAcidGuaranteesWithBasicPolicy extends AcidGuaranteesTestBase {
+@Tag(MapReduceTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: mob = {0}")
+public class TestSecureExportSnapshotMisc extends ExportSnapshotMiscTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAcidGuaranteesWithBasicPolicy.class);
+  protected TestSecureExportSnapshotMisc(boolean mob) {
+    super(mob);
+  }
 
-  @Override
-  protected MemoryCompactionPolicy getMemoryCompactionPolicy() {
-    return MemoryCompactionPolicy.BASIC;
+  @BeforeAll
+  public static void setUpBeforeClass() throws Exception {
+    ExportSnapshotTestHelpers.startSecureCluster(TEST_UTIL);
   }
 }

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #
 #
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -24,7 +26,8 @@ require 'irb/workspace'
 # in our HBase shell. This will hold all the commands we want in our shell.
 #
 class HBaseReceiver < Object
-  def get_binding
+  # Returns the binding context for this receiver object
+  def to_binding
     binding
   end
 end
@@ -39,38 +42,37 @@ module HBaseIOExtensions
   end
 end
 
-
 # Shell commands module
 module Shell
-  @@commands = {}
-  def self.commands
-    @@commands
+  class << self
+    attr_accessor :commands, :command_groups
   end
 
-  @@command_groups = {}
-  def self.command_groups
-    @@command_groups
-  end
+  @commands = {}
+  @command_groups = {}
 
+  # rubocop:disable Metrics/AbcSize
   def self.load_command(name, group, aliases = [])
     return if commands[name]
 
     # Register command in the group
     raise ArgumentError, "Unknown group: #{group}" unless command_groups[group]
+
     command_groups[group][:commands] << name
 
     # Load command
     begin
       require "shell/commands/#{name}"
       klass_name = name.to_s.gsub(/(?:^|_)(.)/) { Regexp.last_match(1).upcase } # camelize
-      commands[name] = eval("Commands::#{klass_name}")
+      commands[name] = Commands.const_get(klass_name)
       aliases.each do |an_alias|
         commands[an_alias] = commands[name]
       end
-    rescue => e
+    rescue StandardError => e
       raise "Can't load hbase shell command: #{name}. Error: #{e}\n#{e.backtrace.join("\n")}"
     end
   end
+  # rubocop:enable Metrics/AbcSize
 
   def self.load_command_group(group, opts)
     raise ArgumentError, "No :commands for group #{group}" unless opts[:commands]
@@ -93,16 +95,8 @@ module Shell
   #----------------------------------------------------------------------
   # rubocop:disable Metrics/ClassLength
   class Shell
-    attr_accessor :hbase
-    attr_accessor :interactive
+    attr_accessor :hbase, :interactive, :debug, :exit_code
     alias interactive? interactive
-
-    @debug = false
-    attr_accessor :debug
-
-    # keep track of the passed exit code. nil means never called.
-    @exit_code = nil
-    attr_accessor :exit_code
 
     alias __exit__ exit
     # exit the interactive shell and save that this
@@ -112,7 +106,7 @@ module Shell
       IRB.irb_exit(IRB.CurrentContext.irb, ret)
     end
 
-    def initialize(hbase, interactive = true)
+    def initialize(hbase, interactive: true)
       self.hbase = hbase
       self.interactive = interactive
     end
@@ -147,7 +141,7 @@ module Shell
     end
 
     def hbase_rsgroup_admin
-      @rsgroup_admin ||= hbase.rsgroup_admin
+      @hbase_rsgroup_admin ||= hbase.rsgroup_admin
     end
 
     ##
@@ -161,7 +155,7 @@ module Shell
       shell_inst = self
       # Define each method as a lambda. We need to use a lambda (rather than a Proc or block) for
       # its properties: preservation of local variables and return
-      ::Shell.commands.keys.each do |cmd|
+      ::Shell.commands.each_key do |cmd|
         target.send :define_singleton_method, cmd.to_sym, lambda { |*args|
           ret = shell_inst.command(cmd.to_s, *args)
           puts
@@ -215,7 +209,7 @@ module Shell
       puts 'HBase Shell'
       puts 'Use "help" to get list of supported commands.'
       puts 'Use "exit" to quit this interactive shell.'
-      puts 'For Reference, please visit: http://hbase.apache.org/book.html#shell'
+      puts 'For Reference, please visit: https://hbase.apache.org/docs/shell'
       print 'Version '
       command('version')
       puts
@@ -245,10 +239,12 @@ module Shell
       nil
     end
 
+    # rubocop:disable Metrics/AbcSize
     def help(command = nil)
       if command
         return help_command(command) if ::Shell.commands[command.to_s]
         return help_group(command) if ::Shell.command_groups[command.to_s]
+
         puts "ERROR: Invalid command or command group name: #{command}"
         puts
       end
@@ -257,8 +253,8 @@ module Shell
       puts
       puts 'COMMAND GROUPS:'
       ::Shell.command_groups.each do |name, group|
-        puts '  Group name: ' + name
-        puts '  Commands: ' + group[:command_names].sort.join(', ')
+        puts "  Group name: #{name}"
+        puts "  Commands: #{group[:command_names].sort.join(', ')}"
         puts
       end
       unless command
@@ -267,14 +263,19 @@ module Shell
       end
       nil
     end
+    # rubocop:enable Metrics/AbcSize
 
+    # rubocop:disable Metrics/AbcSize
     def help_header
       "HBase Shell, version #{org.apache.hadoop.hbase.util.VersionInfo.getVersion}, " \
-             "r#{org.apache.hadoop.hbase.util.VersionInfo.getRevision}, " \
-             "#{org.apache.hadoop.hbase.util.VersionInfo.getDate}" + "\n" \
-             "Type 'help \"COMMAND\"', (e.g. 'help \"get\"' -- the quotes are necessary) for help on a specific command.\n" \
-             "Commands are grouped. Type 'help \"COMMAND_GROUP\"', (e.g. 'help \"general\"') for help on a command group."
+        "r#{org.apache.hadoop.hbase.util.VersionInfo.getRevision}, " \
+        "#{org.apache.hadoop.hbase.util.VersionInfo.getDate}\n" \
+        "Type 'help \"COMMAND\"', (e.g. 'help \"get\"' -- the quotes are necessary) " \
+        "for help on a specific command.\n" \
+        "Commands are grouped. Type 'help \"COMMAND_GROUP\"', " \
+        "(e.g. 'help \"general\"') for help on a command group."
     end
+    # rubocop:enable Metrics/AbcSize
 
     def help_footer
       puts <<-HERE
@@ -298,14 +299,13 @@ double-quote'd hexadecimal representation. For example:
   hbase> put 't1', "test\\xef\\xff", 'f1:', "\\x01\\x33\\x40"
 
 The HBase shell is the (J)Ruby IRB with the above HBase-specific commands added.
-For more on the HBase Shell, see http://hbase.apache.org/book.html
+For more on the HBase Shell, see https://hbase.apache.org/docs
       HERE
     end
 
-    @irb_workspace = nil
     ##
     # Returns an IRB Workspace for this shell instance with all the IRB and HBase commands installed
-    def get_workspace
+    def workspace
       return @irb_workspace unless @irb_workspace.nil?
 
       hbase_receiver = HBaseReceiver.new
@@ -320,12 +320,11 @@ For more on the HBase Shell, see http://hbase.apache.org/book.html
       }
       at_exit do
         # Non-deamon Netty threadpool in ZK ClientCnxnSocketNetty cannot be shut down otherwise
-        begin
-          hbase.shutdown
-        rescue Exception
-        end
+        hbase.shutdown
+      rescue StandardError
+        # Intentionally suppressed - cleanup on exit, allow system signals to propagate
       end
-      ::IRB::WorkSpace.new(hbase_receiver.get_binding)
+      ::IRB::WorkSpace.new(hbase_receiver.to_binding)
     end
 
     ##
@@ -334,24 +333,21 @@ For more on the HBase Shell, see http://hbase.apache.org/book.html
     # @param [Boolean] hide_traceback if true, Exceptions will be converted to
     #   a SystemExit so that the traceback is not printed
     def self.exception_handler(hide_traceback)
-      begin
-        yield
-      rescue Exception => e
-        message = e.to_s
-        # exception unwrapping in shell means we'll have to handle Java exceptions
-        # as a special case in order to format them properly.
-        if e.is_a? java.lang.Exception
-          warn 'java exception'
-          message = e.get_message
-        end
-        # Include the 'ERROR' string to try to make transition easier for scripts that
-        # may have already been relying on grepping output.
-        puts "ERROR #{e.class}: #{message}"
-        raise e unless hide_traceback
-
-        exit 1
+      yield
+    rescue StandardError => e
+      message = e.to_s
+      # exception unwrapping in shell means we'll have to handle Java exceptions
+      # as a special case in order to format them properly.
+      if e.is_a? java.lang.Exception
+        warn 'java exception'
+        message = e.get_message
       end
-      nil
+      # Include the 'ERROR' string to try to make transition easier for scripts that
+      # may have already been relying on grepping output.
+      puts "ERROR #{e.class}: #{message}"
+      raise e unless hide_traceback
+
+      exit 1
     end
   end
   # rubocop:enable Metrics/ClassLength
@@ -451,6 +447,7 @@ Shell.load_command_group(
     normalizer_enabled
     is_in_maintenance_mode
     clear_slowlog_responses
+    reopen_regions
     close_region
     compact
     compaction_switch
@@ -585,7 +582,8 @@ Shell.load_command_group(
 Shell.load_command_group(
   'security',
   full_name: 'SECURITY TOOLS',
-  comment: 'NOTE: Above commands are only applicable if running with the AccessController coprocessor',
+  comment: 'NOTE: Above commands are only applicable if running with the ' \
+           'AccessController coprocessor',
   commands: %w[
     list_security_capabilities
     grant
@@ -606,7 +604,8 @@ Shell.load_command_group(
 Shell.load_command_group(
   'visibility labels',
   full_name: 'VISIBILITY LABEL TOOLS',
-  comment: 'NOTE: Above commands are only applicable if running with the VisibilityController coprocessor',
+  comment: 'NOTE: Above commands are only applicable if running with the ' \
+           'VisibilityController coprocessor',
   commands: %w[
     add_labels
     list_labels
@@ -620,8 +619,9 @@ Shell.load_command_group(
 Shell.load_command_group(
   'rsgroup',
   full_name: 'RSGroups',
-  comment: "NOTE: The rsgroup Coprocessor Endpoint must be enabled on the Master else commands fail with:
-  UnknownProtocolException: No registered Master Coprocessor Endpoint found for RSGroupAdminService",
+  comment: 'NOTE: The rsgroup Coprocessor Endpoint must be enabled on the Master else ' \
+           'commands fail with: UnknownProtocolException: No registered Master ' \
+           'Coprocessor Endpoint found for RSGroupAdminService',
   commands: %w[
     list_rsgroups
     get_rsgroup

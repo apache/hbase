@@ -22,6 +22,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
@@ -129,8 +130,8 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
     }
   }
 
-  @InterfaceAudience.Private
-  static class TableSnapshotRegionRecordReader
+  @InterfaceAudience.Public
+  public static class TableSnapshotRegionRecordReader
     extends RecordReader<ImmutableBytesWritable, Result> {
     private TableSnapshotInputFormatImpl.RecordReader delegate =
       new TableSnapshotInputFormatImpl.RecordReader();
@@ -168,6 +169,14 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
     @Override
     public float getProgress() throws IOException, InterruptedException {
       return delegate.getProgress();
+    }
+
+    /**
+     * Returns the set of store file paths that were successfully read by the underlying region
+     * scanner. Typically populated after the reader (or scanner) is closed.
+     */
+    public Set<Path> getFilesRead() {
+      return delegate.getScanner().getFilesRead();
     }
 
     @Override

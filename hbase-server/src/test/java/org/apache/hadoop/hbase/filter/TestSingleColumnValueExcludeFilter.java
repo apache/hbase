@@ -17,35 +17,30 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link SingleColumnValueExcludeFilter}. Because this filter extends
  * {@link SingleColumnValueFilter}, only the added functionality is tested. That is, method
  * filterCell(Cell).
  */
-@Category({ FilterTests.class, SmallTests.class })
+@Tag(FilterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestSingleColumnValueExcludeFilter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSingleColumnValueExcludeFilter.class);
 
   private static final byte[] ROW = Bytes.toBytes("test");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");
@@ -72,22 +67,22 @@ public class TestSingleColumnValueExcludeFilter {
 
     filter.filterRowCells(kvs);
 
-    assertEquals("resultSize", 2, kvs.size());
-    assertTrue("leftKV1", CellComparatorImpl.COMPARATOR.compare(kvs.get(0), c) == 0);
-    assertTrue("leftKV2", CellComparatorImpl.COMPARATOR.compare(kvs.get(1), c) == 0);
-    assertFalse("allRemainingWhenMatch", filter.filterAllRemaining());
+    assertEquals(2, kvs.size(), "resultSize");
+    assertTrue(CellComparatorImpl.COMPARATOR.compare(kvs.get(0), c) == 0, "leftKV1");
+    assertTrue(CellComparatorImpl.COMPARATOR.compare(kvs.get(1), c) == 0, "leftKV2");
+    assertFalse(filter.filterAllRemaining(), "allRemainingWhenMatch");
 
     // A 'mismatch' situation
     filter.reset();
     // INCLUDE expected because test column has not yet passed
     c = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1);
-    assertTrue("otherColumn", filter.filterCell(c) == Filter.ReturnCode.INCLUDE);
+    assertTrue(filter.filterCell(c) == Filter.ReturnCode.INCLUDE, "otherColumn");
     // Test column will pass (wont match), expect NEXT_ROW
     c = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_2);
-    assertTrue("testedMismatch", filter.filterCell(c) == Filter.ReturnCode.NEXT_ROW);
+    assertTrue(filter.filterCell(c) == Filter.ReturnCode.NEXT_ROW, "testedMismatch");
     // After a mismatch (at least with LatestVersionOnly), subsequent columns are EXCLUDE
     c = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1);
-    assertTrue("otherColumn", filter.filterCell(c) == Filter.ReturnCode.NEXT_ROW);
+    assertTrue(filter.filterCell(c) == Filter.ReturnCode.NEXT_ROW, "otherColumn");
   }
 
 }

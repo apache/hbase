@@ -84,17 +84,17 @@ In addition to the usual API versioning considerations HBase has other compatibi
 
 #### Summary [!toc]
 
-- A patch upgrade is a drop-in replacement. Any change that is not Java binary and source compatible would not be allowed. Downgrading versions within patch releases may not be compatible. [^2]
+- A patch upgrade is a drop-in replacement. Any change that is not Java binary and source compatible would not be allowed.[^2] Downgrading versions within patch releases may not be compatible.
 - A minor upgrade requires no application/client code modification. Ideally it would be a drop-in replacement but client code, coprocessors, filters, etc might have to be recompiled if new jars are used.
 - A major upgrade allows the HBase community to make breaking changes.
 
-#### Compatibility Matrix: [!toc]
+#### Compatibility Matrix: [^3] [!toc]
 
 |                                           | Major  | Minor | Patch |
 | ----------------------------------------- | :----: | :---: | :---: |
 | Client-Server wire Compatibility          |   N    |   Y   |   Y   |
 | Server-Server Compatibility               |   N    |   Y   |   Y   |
-| File Format Compatibility                 | N [^1] |   Y   |   Y   |
+| File Format Compatibility                 | N [^4] |   Y   |   Y   |
 | Client API Compatibility                  |   N    |   Y   |   Y   |
 | Client Binary Compatibility               |   N    |   N   |   Y   |
 | **Server-Side Limited API Compatibility** |        |       |       |
@@ -145,6 +145,10 @@ All classes annotated with InterfaceAudience.Private or all classes that do not 
 
 When we say two HBase versions are compatible, we mean that the versions are wire and binary compatible. Compatible HBase versions means that clients can talk to compatible but differently versioned servers. It means too that you can just swap out the jars of one version and replace them with the jars of another, compatible version and all will just work. Unless otherwise specified, HBase point versions are (mostly) binary compatible. You can safely do rolling upgrades between binary compatible versions; i.e. across maintenance releases: e.g. from 1.4.4 to 1.4.6. See "Does compatibility between versions also mean binary compatibility?" discussion on the HBase dev mailing list.
 
-[^1]: Running an offline upgrade tool without downgrade might be needed. We will typically only support migrating data from major version X to major version X+1.
+[^1]: See 'Source Compatibility' https://wiki.openjdk.org/spaces/csr/pages/32342052/Kinds+of+Compatibility
 
-[^2]: See http://docs.oracle.com/javase/specs/jls/se7/html/jls-13.html.
+[^2]: See http://docs.oracle.com/javase/specs/jls/se8/html/jls-13.html.
+
+[^3]: Note that this indicates what could break, not that it will break. We will/should add specifics in our release notes.
+
+[^4]: Running an offline upgrade tool without downgrade might be needed. We will typically only support migrating data from major version X to major version X+1.

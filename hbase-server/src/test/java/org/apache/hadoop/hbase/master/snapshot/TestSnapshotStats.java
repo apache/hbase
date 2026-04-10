@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.snapshot;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Optional;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -34,33 +33,27 @@ import org.apache.hadoop.hbase.snapshot.SnapshotInfo;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSnapshotStats {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotStats.class);
-
   private final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private Admin admin;
+  private String currentTestName;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @Before
-  public void setup() throws Exception {
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws Exception {
+    currentTestName = testInfo.getTestMethod().get().getName();
     TEST_UTIL.startMiniCluster(1);
     admin = TEST_UTIL.getAdmin();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     admin.close();
     TEST_UTIL.shutdownMiniCluster();
@@ -69,8 +62,7 @@ public class TestSnapshotStats {
 
   @Test
   public void testSnapshotTableWithoutAnyData() throws IOException {
-    // Create a table without any data
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(currentTestName);
     TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(tableName);
     ColumnFamilyDescriptor columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("info")).build();
@@ -78,7 +70,7 @@ public class TestSnapshotStats {
     admin.createTable(tableDescriptorBuilder.build());
     assertTrue(admin.tableExists(tableName));
 
-    String snapshotName = "snapshot_" + name.getMethodName();
+    String snapshotName = "snapshot_" + currentTestName;
     admin.snapshot(snapshotName, tableName);
 
     Optional<SnapshotDescription> optional =
@@ -98,7 +90,7 @@ public class TestSnapshotStats {
   @Test
   public void testSnapshotMobTableWithoutAnyData() throws IOException {
     // Create a MOB table without any data
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(currentTestName);
     TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(tableName);
     ColumnFamilyDescriptor columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("info")).setMobEnabled(true).build();
@@ -106,7 +98,7 @@ public class TestSnapshotStats {
     admin.createTable(tableDescriptorBuilder.build());
     assertTrue(admin.tableExists(tableName));
 
-    String snapshotName = "snapshot_" + name.getMethodName();
+    String snapshotName = "snapshot_" + currentTestName;
     admin.snapshot(snapshotName, tableName);
 
     Optional<SnapshotDescription> optional =

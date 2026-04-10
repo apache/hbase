@@ -46,7 +46,14 @@ import org.junit.rules.ExternalResource;
  *   }
  * }
  * </pre>
+ *
+ * @deprecated Use {@link ConnectionExtension} instead, once we finish the migration of JUnit5,
+ *             which means we do not need {@link ConnectionRule} any more, we can remove these
+ *             dependencies, see
+ *             <a href="https://issues.apache.org/jira/browse/HBASE-23671">HBASE-23671</a> for more
+ *             details.
  */
+@Deprecated
 public final class ConnectionRule extends ExternalResource {
 
   private final Supplier<Connection> connectionSupplier;

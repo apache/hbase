@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -36,7 +39,10 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.RegionMetrics;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -51,9 +57,6 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -123,8 +126,8 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase {
         tableDescs.get(tableName).getRegionServerGroup().orElse(RSGroupInfo.DEFAULT_GROUP);
       assertTrue(StringUtils.isNotEmpty(groupName));
       RSGroupInfo gInfo = getMockedGroupInfoManager().getRSGroup(groupName);
-      assertTrue("Region is not correctly assigned to group servers.",
-        gInfo.containsServer(server.getAddress()));
+      assertTrue(gInfo.containsServer(server.getAddress()),
+        "Region is not correctly assigned to group servers.");
     }
   }
 
@@ -145,8 +148,8 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase {
     Set<ServerName> onlineServerSet = new TreeSet<>(servers);
     Set<RegionInfo> assignedRegions = new TreeSet<>(RegionInfo.COMPARATOR);
     for (Map.Entry<ServerName, List<RegionInfo>> a : assignment.entrySet()) {
-      assertTrue("Region assigned to server that was not listed as online",
-        onlineServerSet.contains(a.getKey()));
+      assertTrue(onlineServerSet.contains(a.getKey()),
+        "Region assigned to server that was not listed as online");
       for (RegionInfo r : a.getValue()) {
         assignedRegions.add(r);
       }
@@ -168,8 +171,8 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase {
           tableDescs.get(tableName).getRegionServerGroup().orElse(RSGroupInfo.DEFAULT_GROUP);
         assertTrue(StringUtils.isNotEmpty(groupName));
         RSGroupInfo gInfo = getMockedGroupInfoManager().getRSGroup(groupName);
-        assertTrue("Region is not correctly assigned to group servers.",
-          gInfo.containsServer(currentServer.getAddress()));
+        assertTrue(gInfo.containsServer(currentServer.getAddress()),
+          "Region is not correctly assigned to group servers.");
         if (
           oldAssignedServer != null && onlineHostNames.contains(oldAssignedServer.getHostname())
         ) {
@@ -227,7 +230,7 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase {
           }
         }
         List<RegionInfo> regions = serversMap.get(actual);
-        assertTrue("No load for " + actual, regions != null);
+        assertTrue(regions != null, "No load for " + actual);
         loadMap.put(gInfo.getName(), new ServerAndLoad(actual, regions.size()));
       }
     }
@@ -384,31 +387,28 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase {
   }
 
   protected static MasterServices getMockedMaster() throws IOException {
-    TableDescriptors tds = Mockito.mock(TableDescriptors.class);
-    Mockito.when(tds.get(tables[0])).thenReturn(tableDescs.get(tables[0]));
-    Mockito.when(tds.get(tables[1])).thenReturn(tableDescs.get(tables[1]));
-    Mockito.when(tds.get(tables[2])).thenReturn(tableDescs.get(tables[2]));
-    Mockito.when(tds.get(tables[3])).thenReturn(tableDescs.get(tables[3]));
-    MasterServices services = Mockito.mock(HMaster.class);
-    Mockito.when(services.getTableDescriptors()).thenReturn(tds);
-    AssignmentManager am = Mockito.mock(AssignmentManager.class);
-    Mockito.when(services.getAssignmentManager()).thenReturn(am);
-    Mockito.when(services.getConfiguration()).thenReturn(conf);
+    TableDescriptors tds = mock(TableDescriptors.class);
+    when(tds.get(tables[0])).thenReturn(tableDescs.get(tables[0]));
+    when(tds.get(tables[1])).thenReturn(tableDescs.get(tables[1]));
+    when(tds.get(tables[2])).thenReturn(tableDescs.get(tables[2]));
+    when(tds.get(tables[3])).thenReturn(tableDescs.get(tables[3]));
+    MasterServices services = mock(HMaster.class);
+    when(services.getTableDescriptors()).thenReturn(tds);
+    AssignmentManager am = mock(AssignmentManager.class);
+    when(services.getAssignmentManager()).thenReturn(am);
+    when(services.getConfiguration()).thenReturn(conf);
     RSGroupInfoManager manager = getMockedGroupInfoManager();
-    Mockito.when(services.getRSGroupInfoManager()).thenReturn(manager);
+    when(services.getRSGroupInfoManager()).thenReturn(manager);
     return services;
   }
 
   protected static RSGroupInfoManager getMockedGroupInfoManager() throws IOException {
-    RSGroupInfoManager gm = Mockito.mock(RSGroupInfoManager.class);
-    Mockito.when(gm.getRSGroup(Mockito.any())).thenAnswer(new Answer<RSGroupInfo>() {
-      @Override
-      public RSGroupInfo answer(InvocationOnMock invocation) throws Throwable {
-        return groupMap.get(invocation.getArgument(0));
-      }
+    RSGroupInfoManager gm = mock(RSGroupInfoManager.class);
+    when(gm.getRSGroup(any())).thenAnswer(invocation -> {
+      return groupMap.get(invocation.getArgument(0));
     });
-    Mockito.when(gm.listRSGroups()).thenReturn(Lists.newLinkedList(groupMap.values()));
-    Mockito.when(gm.isOnline()).thenReturn(true);
+    when(gm.listRSGroups()).thenReturn(Lists.newLinkedList(groupMap.values()));
+    when(gm.isOnline()).thenReturn(true);
     return gm;
   }
 
@@ -430,5 +430,29 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase {
       }
     }
     return tableName;
+  }
+
+  protected ServerMetrics mockServerMetricsWithRegionCacheInfo(ServerName server,
+    List<RegionInfo> regionsOnServer, float currentCacheRatio, List<RegionInfo> oldRegionCacheInfo,
+    int oldRegionCachedSize, int regionSize) {
+    ServerMetrics serverMetrics = mock(ServerMetrics.class);
+    Map<byte[], RegionMetrics> regionLoadMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    for (RegionInfo info : regionsOnServer) {
+      RegionMetrics rl = mock(RegionMetrics.class);
+      when(rl.getReadRequestCount()).thenReturn(0L);
+      when(rl.getWriteRequestCount()).thenReturn(0L);
+      when(rl.getMemStoreSize()).thenReturn(Size.ZERO);
+      when(rl.getStoreFileSize()).thenReturn(Size.ZERO);
+      when(rl.getCurrentRegionCachedRatio()).thenReturn(currentCacheRatio);
+      when(rl.getRegionSizeMB()).thenReturn(new Size(regionSize, Size.Unit.MEGABYTE));
+      regionLoadMap.put(info.getRegionName(), rl);
+    }
+    when(serverMetrics.getRegionMetrics()).thenReturn(regionLoadMap);
+    Map<String, Integer> oldCacheRatioMap = new HashMap<>();
+    for (RegionInfo info : oldRegionCacheInfo) {
+      oldCacheRatioMap.put(info.getEncodedName(), oldRegionCachedSize);
+    }
+    when(serverMetrics.getRegionCachedInfo()).thenReturn(oldCacheRatioMap);
+    return serverMetrics;
   }
 }

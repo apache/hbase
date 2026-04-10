@@ -50,6 +50,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -3754,6 +3755,60 @@ public class TestHRegion {
       // so we can close the region in tearDown
       region.closed.set(false);
     }
+  }
+
+  @Test
+  public void testRegionScanner_getFilesRead() throws IOException {
+    // Setup: init region with one family; put two rows and flush to create store files.
+    byte[] family = Bytes.toBytes("fam1");
+    byte[][] families = { family };
+    this.region = initHRegion(tableName, method, CONF, families);
+    Put put = new Put(Bytes.toBytes("row1"));
+    put.addColumn(family, Bytes.toBytes("q1"), Bytes.toBytes("v1"));
+    region.put(put);
+    put = new Put(Bytes.toBytes("row2"));
+    put.addColumn(family, Bytes.toBytes("q1"), Bytes.toBytes("v1"));
+    region.put(put);
+    region.flush(true);
+
+    // Collect expected store file paths from all stores (before opening the scanner).
+    Set<Path> expectedFilePaths = new HashSet<>();
+    FileSystem fs = region.getFilesystem();
+    for (HStore store : region.getStores()) {
+      for (HStoreFile storeFile : store.getStorefiles()) {
+        expectedFilePaths.add(fs.makeQualified(storeFile.getPath()));
+      }
+    }
+    assertTrue("Should have at least one store file after flush", expectedFilePaths.size() >= 1);
+
+    // Get region scanner; before close getFilesRead must be empty.
+    RegionScannerImpl scanner = region.getScanner(new Scan());
+
+    Set<Path> filesReadBeforeClose = scanner.getFilesRead();
+    assertTrue("Should return empty set before closing", filesReadBeforeClose.isEmpty());
+
+    // Drain scanner (next up to two rows) to exercise store heap reads.
+    List<Cell> cells = new ArrayList<>();
+    int count = 0;
+    while (count < 2) {
+      if (!scanner.next(cells)) {
+        break;
+      }
+      cells.clear();
+      count++;
+    }
+
+    // Still before close: set must remain empty until scanner is closed.
+    filesReadBeforeClose = scanner.getFilesRead();
+    assertTrue("Should return empty set before closing even after scanning",
+      filesReadBeforeClose.isEmpty());
+    scanner.close();
+
+    // After close: set must contain exactly the expected store file paths.
+    Set<Path> filesReadAfterClose = scanner.getFilesRead();
+    assertEquals("Should have exact file count after closing", expectedFilePaths.size(),
+      filesReadAfterClose.size());
+    assertEquals("Should contain all expected file paths", expectedFilePaths, filesReadAfterClose);
   }
 
   @Test

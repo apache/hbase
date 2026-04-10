@@ -21,7 +21,7 @@ pipeline {
     }
   }
   triggers {
-    cron('@daily')
+    pollSCM('@daily')
   }
   options {
     buildDiscarder(logRotator(numToKeepStr: '20'))
@@ -46,7 +46,7 @@ pipeline {
       }
     }
     // This is meant to mimic what a release manager will do to create RCs.
-    // See http://hbase.apache.org/book.html#maven.release
+    // See https://hbase.apache.org/docs/building-and-developing/releasing#making-a-release-candidate
     // TODO (HBASE-23870): replace this with invocation of the release tool
     stage ('packaging test') {
       steps {
@@ -314,6 +314,13 @@ pipeline {
   post {
     always {
       script {
+        sh "printenv"
+        // wipe out all the output directories before unstashing
+        sh'''
+          echo "Clean up result directories"
+          rm -rf output-srctarball
+          rm -rf output-integration-hadoop-*
+        '''
         def results = []
         results.add('output-srctarball/commentfile')
         for (hadoopVersion in getHadoopVersions(env.HADOOP_VERSIONS)) {

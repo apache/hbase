@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,7 +29,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -47,22 +47,16 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestBackupRestoreExpiry extends TestBackupBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupRestoreExpiry.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
     conf1 = TEST_UTIL.getConfiguration();
@@ -180,8 +174,8 @@ public class TestBackupRestoreExpiry extends TestBackupBase {
     List<LocatedFileStatus> postRestoreBackupFiles = getBackupFiles();
 
     // Check that the backup files are the same before and after the restore process
-    Assert.assertEquals(postRestoreBackupFiles, preRestoreBackupFiles);
-    Assert.assertEquals(TEST_UTIL.countRows(table1_restore), NB_ROWS_IN_BATCH);
+    assertEquals(postRestoreBackupFiles, preRestoreBackupFiles);
+    assertEquals(NB_ROWS_IN_BATCH, TEST_UTIL.countRows(table1_restore));
 
     int ROWS_TO_ADD = 1_000;
     // different IDs so that rows don't overlap

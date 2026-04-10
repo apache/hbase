@@ -148,8 +148,11 @@ public class BackupInfo implements Comparable<BackupInfo> {
   private List<String> incrBackupFileList;
 
   /**
-   * New region server log timestamps for table set after distributed log roll key - table name,
-   * value - map of RegionServer hostname -> last log rolled timestamp
+   * New region server log timestamps for table set after distributed log roll. The keys consist of
+   * all tables that are part of the backup chain of the backup root (not just the tables that were
+   * specified when creating the backup, which could be a subset). The value is a map of
+   * RegionServer hostname to the last log-roll timestamp, i.e. the point up to which logs are
+   * included in the backup.
    */
   private Map<TableName, Map<String, Long>> tableSetTimestampMap;
 

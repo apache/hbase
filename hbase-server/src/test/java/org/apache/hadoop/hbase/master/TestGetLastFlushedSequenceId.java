@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -36,11 +35,10 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 
@@ -48,12 +46,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.Reg
  * Trivial test to confirm that we can get last flushed sequence id by encodedRegionName. See
  * HBASE-12715.
  */
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestGetLastFlushedSequenceId {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestGetLastFlushedSequenceId.class);
 
   private final HBaseTestingUtil testUtil = new HBaseTestingUtil();
 
@@ -63,13 +57,13 @@ public class TestGetLastFlushedSequenceId {
 
   private final byte[][] families = new byte[][] { family };
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     testUtil.getConfiguration().setInt("hbase.regionserver.msginterval", 1000);
     testUtil.startMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     testUtil.shutdownMiniCluster();
   }
@@ -103,8 +97,8 @@ public class TestGetLastFlushedSequenceId {
     Thread.sleep(2000);
     ids = testUtil.getHBaseCluster().getMaster().getServerManager()
       .getLastFlushedSequenceId(region.getRegionInfo().getEncodedNameAsBytes());
-    assertTrue(ids.getLastFlushedSequenceId() + " > " + storeSequenceId,
-      ids.getLastFlushedSequenceId() > storeSequenceId);
+    assertTrue(ids.getLastFlushedSequenceId() > storeSequenceId,
+      ids.getLastFlushedSequenceId() + " > " + storeSequenceId);
     assertEquals(ids.getLastFlushedSequenceId(), ids.getStoreSequenceId(0).getSequenceId());
     table.close();
   }

@@ -148,6 +148,18 @@ const renderer = toClientRenderer(
         }
       }
 
+      // Bare fragment links must use a plain <a> — React Router's Link resolves
+      // to="#fragment" relative to the current pathname, producing e.g.
+      // /docs/single-page#transactions, which Chrome embeds as an absolute
+      // localhost URL in PDFs instead of an internal GoTo annotation.
+      if (transformedHref?.startsWith("#")) {
+        return (
+          <a href={transformedHref} {...rest}>
+            {children}
+          </a>
+        );
+      }
+
       // Use default Link component for all links (external links are handled by Link component)
       return (
         <Link to={transformedHref ?? "#"} {...rest}>
@@ -256,10 +268,10 @@ const renderer = toClientRenderer(
 
         {route !== undefined && (
           <a
-            href={`https://github.com/apache/hbase/${baseGithubPath}${mdxFileRoute}`}
+            href={`https://github.com/apache/hbase/edit/master/${baseGithubPath}${mdxFileRoute}`}
             rel="noreferrer noopener"
             target="_blank"
-            className="text-fd-secondary-foreground bg-fd-secondary hover:text-fd-accent-foreground hover:bg-fd-accent w-fit rounded-xl border p-2 text-sm font-medium transition-colors"
+            className="no-print text-fd-secondary-foreground bg-fd-secondary hover:text-fd-accent-foreground hover:bg-fd-accent w-fit rounded-xl border p-2 text-sm font-medium transition-colors"
           >
             Edit on GitHub
           </a>

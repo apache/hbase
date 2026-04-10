@@ -58,6 +58,14 @@ public class MultiRowResourceTestBase {
   private static final String VALUE_1 = "testvalue5";
   private static final String ROW_2 = "testrow6";
   private static final String VALUE_2 = "testvalue6";
+  private static final String TIMESTAMPED_ROW_1 = "testrow7";
+  private static final String TIMESTAMPED_ROW_2 = "testrow8";
+  private static final String TIMESTAMPED_OLD_VALUE_1 = "testvalue7-old";
+  private static final String TIMESTAMPED_NEW_VALUE_1 = "testvalue7-new";
+  private static final String TIMESTAMPED_OLD_VALUE_2 = "testvalue8-old";
+  private static final String TIMESTAMPED_NEW_VALUE_2 = "testvalue8-new";
+  private static final long TIMESTAMP_1 = 1000L;
+  private static final long TIMESTAMP_2 = 2000L;
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
@@ -196,6 +204,72 @@ public class MultiRowResourceTestBase {
 
     client.delete(row_5_url, extraHdr);
     client.delete(row_6_url, extraHdr);
+  }
+
+  private void postBinaryWithTimestamp(String path, String value, long timestamp)
+    throws IOException {
+    Header[] headers = new Header[] { new BasicHeader("Content-Type", Constants.MIMETYPE_BINARY),
+      new BasicHeader("X-Timestamp", Long.toString(timestamp)), extraHdr };
+    Response response = client.post(path, headers, Bytes.toBytes(value));
+    assertEquals(200, response.getCode());
+  }
+
+  @Test
+  public void testMultiCellGetWithExactTimestampJSON() throws IOException {
+    String row_7_url = "/" + TABLE + "/" + TIMESTAMPED_ROW_1 + "/" + COLUMN_1;
+    String row_8_url = "/" + TABLE + "/" + TIMESTAMPED_ROW_2 + "/" + COLUMN_2;
+    String row_7_delete_url = "/" + TABLE + "/" + TIMESTAMPED_ROW_1;
+    String row_8_delete_url = "/" + TABLE + "/" + TIMESTAMPED_ROW_2;
+
+    postBinaryWithTimestamp(row_7_url, TIMESTAMPED_OLD_VALUE_1, TIMESTAMP_1);
+    postBinaryWithTimestamp(row_7_url, TIMESTAMPED_NEW_VALUE_1, TIMESTAMP_2);
+    postBinaryWithTimestamp(row_8_url, TIMESTAMPED_OLD_VALUE_2, TIMESTAMP_1);
+    postBinaryWithTimestamp(row_8_url, TIMESTAMPED_NEW_VALUE_2, TIMESTAMP_2);
+
+    try {
+      StringBuilder path = new StringBuilder();
+      path.append("/");
+      path.append(TABLE);
+      path.append("/multiget/?row=");
+      path.append(TIMESTAMPED_ROW_1);
+      path.append("/");
+      path.append("/");
+      path.append(TIMESTAMP_1);
+      path.append("&row=");
+      path.append(TIMESTAMPED_ROW_2);
+      path.append("/");
+      path.append("/");
+      path.append(TIMESTAMP_1);
+
+      Response response = client.get(path.toString(), Constants.MIMETYPE_JSON);
+      assertEquals(200, response.getCode());
+      assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
+
+      ObjectMapper mapper = new JacksonJaxbJsonProvider().locateMapper(CellSetModel.class,
+        MediaType.APPLICATION_JSON_TYPE);
+      CellSetModel cellSet = mapper.readValue(response.getBody(), CellSetModel.class);
+
+      assertEquals(2, cellSet.getRows().size());
+
+      RowModel rowModel = cellSet.getRows().get(0);
+      assertEquals(TIMESTAMPED_ROW_1, Bytes.toString(rowModel.getKey()));
+      assertEquals(1, rowModel.getCells().size());
+      CellModel cell = rowModel.getCells().get(0);
+      assertEquals(COLUMN_1, Bytes.toString(cell.getColumn()));
+      assertEquals(TIMESTAMPED_OLD_VALUE_1, Bytes.toString(cell.getValue()));
+      assertEquals(TIMESTAMP_1, cell.getTimestamp());
+
+      rowModel = cellSet.getRows().get(1);
+      assertEquals(TIMESTAMPED_ROW_2, Bytes.toString(rowModel.getKey()));
+      assertEquals(1, rowModel.getCells().size());
+      cell = rowModel.getCells().get(0);
+      assertEquals(COLUMN_2, Bytes.toString(cell.getColumn()));
+      assertEquals(TIMESTAMPED_OLD_VALUE_2, Bytes.toString(cell.getValue()));
+      assertEquals(TIMESTAMP_1, cell.getTimestamp());
+    } finally {
+      client.delete(row_7_delete_url, extraHdr);
+      client.delete(row_8_delete_url, extraHdr);
+    }
   }
 
   @Test

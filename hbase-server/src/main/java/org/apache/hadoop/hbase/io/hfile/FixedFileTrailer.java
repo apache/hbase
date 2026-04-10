@@ -69,7 +69,7 @@ public class FixedFileTrailer {
    * In version 1, the offset to the data block index. Starting from version 2, the meaning of this
    * field is the offset to the section of the file that should be loaded at the time the file is
    * being opened: i.e. on open we load the root index, file info, etc. See
-   * http://hbase.apache.org/book.html#_hfile_format_2 in the reference guide.
+   * <a href="https://hbase.apache.org/docs/hfile-format/">HFile Format</a> in the reference guide.
    */
   private long loadOnOpenDataOffset;
 
