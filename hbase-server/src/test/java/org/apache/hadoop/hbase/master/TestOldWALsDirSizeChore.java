@@ -17,21 +17,19 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.master.assignment.MockMasterServices;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,11 +37,9 @@ import org.slf4j.LoggerFactory;
  * Tests for OldWALsDirSizeChore Here we are using the {@link MockMasterServices} to mock the Hbase
  * Master. Chore's won't be running automatically; we need to run every time.
  */
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestOldWALsDirSizeChore {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestOldWALsDirSizeChore.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestOldWALsDirSizeChore.class);
 
@@ -51,13 +47,13 @@ public class TestOldWALsDirSizeChore {
 
   private static final HBaseTestingUtil HBASE_TESTING_UTILITY = new HBaseTestingUtil();
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     master = new MockMasterServices(HBASE_TESTING_UTILITY.getConfiguration());
     master.start(10, null);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     master.stop("tearDown");
   }
@@ -66,8 +62,8 @@ public class TestOldWALsDirSizeChore {
   public void testOldWALsDirSizeChore() throws IOException {
     // Assume the OldWALs directory size is initially zero as the chore hasn't run yet
     long currentOldWALsDirSize = master.getMasterWalManager().getOldWALsDirSize();
-    assertEquals("Initial OldWALs directory size should be zero before running the chore", 0,
-      currentOldWALsDirSize);
+    assertEquals(0, currentOldWALsDirSize,
+      "Initial OldWALs directory size should be zero before running the chore");
 
     int dummyFileSize = 50 * 1024 * 1024; // 50MB
     byte[] dummyData = new byte[dummyFileSize];
@@ -84,7 +80,7 @@ public class TestOldWALsDirSizeChore {
     oldWALsDirSizeChore.chore();
 
     // Verify that the OldWALs directory size has increased by the file size
-    assertEquals("OldWALs directory size after chore should be as expected", dummyFileSize,
-      master.getMasterWalManager().getOldWALsDirSize());
+    assertEquals(dummyFileSize, master.getMasterWalManager().getOldWALsDirSize(),
+      "OldWALs directory size after chore should be as expected");
   }
 }
