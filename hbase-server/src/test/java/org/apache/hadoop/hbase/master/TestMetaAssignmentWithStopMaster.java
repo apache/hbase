@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
@@ -30,35 +29,30 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ LargeTests.class })
+@Tag(LargeTests.TAG)
 public class TestMetaAssignmentWithStopMaster {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaAssignmentWithStopMaster.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetaAssignmentWithStopMaster.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static final long WAIT_TIMEOUT = 120000;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     StartTestingClusterOption option =
       StartTestingClusterOption.builder().numMasters(2).numRegionServers(3).numDataNodes(3).build();
     UTIL.startMiniCluster(option);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -92,8 +86,8 @@ public class TestMetaAssignmentWithStopMaster {
       }
 
       ServerName newMetaServer = locator.getAllRegionLocations().get(0).getServerName();
-      assertTrue("The new meta server " + newMetaServer + " should be same with"
-        + " the old meta server " + oldMetaServer, newMetaServer.equals(oldMetaServer));
+      assertTrue(newMetaServer.equals(oldMetaServer), "The new meta server " + newMetaServer
+        + " should be same with" + " the old meta server " + oldMetaServer);
     }
   }
 }

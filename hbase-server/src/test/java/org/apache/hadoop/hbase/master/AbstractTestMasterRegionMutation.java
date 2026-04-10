@@ -1,0 +1,137 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hbase.master;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.master.hbck.HbckChore;
+import org.apache.hadoop.hbase.master.hbck.HbckReport;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
+
+public abstract class AbstractTestMasterRegionMutation {
+
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractTestMasterRegionMutation.class);
+
+  protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  protected static ServerName rs0;
+
+  protected static final AtomicBoolean ERROR_OUT = new AtomicBoolean(false);
+  protected static final AtomicInteger ERROR_COUNTER = new AtomicInteger(0);
+  protected static final AtomicBoolean FIRST_TIME_ERROR = new AtomicBoolean(true);
+
+  protected static void setUpBeforeClass(int numMasters, Class<? extends HRegion> regionImplClass)
+    throws Exception {
+    TEST_UTIL.getConfiguration().setClass(HConstants.REGION_IMPL, regionImplClass, HRegion.class);
+    StartTestingClusterOption.Builder builder = StartTestingClusterOption.builder();
+    builder.numMasters(numMasters).numRegionServers(3);
+    TEST_UTIL.startMiniCluster(builder.build());
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    rs0 = cluster.getRegionServer(0).getServerName();
+    TEST_UTIL.getAdmin().balancerSwitch(false, true);
+  }
+
+  protected static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @BeforeEach
+  protected void setUp(TestInfo testInfo) throws Exception {
+    TableName tableName = TableName.valueOf(testInfo.getTestMethod().orElseThrow().getName());
+    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
+    int startKey = 0;
+    int endKey = 80000;
+    TEST_UTIL.getAdmin().createTable(tableDesc, Bytes.toBytes(startKey), Bytes.toBytes(endKey), 9);
+  }
+
+  @Test
+  protected void testMasterRegionMutations() throws Exception {
+    HbckChore hbckChore = new HbckChore(TEST_UTIL.getHBaseCluster().getMaster());
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+
+    int numRegions0 = cluster.getRegionServer(0).getNumberOfOnlineRegions();
+    int numRegions1 = cluster.getRegionServer(1).getNumberOfOnlineRegions();
+    int numRegions2 = cluster.getRegionServer(2).getNumberOfOnlineRegions();
+
+    hbckChore.choreForTesting();
+    HbckReport hbckReport = hbckChore.getLastReport();
+    assertEquals(0, hbckReport.getInconsistentRegions().size());
+    assertEquals(0, hbckReport.getOrphanRegionsOnFS().size());
+    assertEquals(0, hbckReport.getOrphanRegionsOnRS().size());
+
+    ERROR_OUT.set(true);
+    TEST_UTIL.getAdmin().move(
+      cluster.getRegionServer(1).getRegions().get(0).getRegionInfo().getEncodedNameAsBytes(), rs0);
+
+    ERROR_OUT.set(true);
+    TEST_UTIL.getAdmin().move(
+      cluster.getRegionServer(2).getRegions().get(0).getRegionInfo().getEncodedNameAsBytes(), rs0);
+
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+
+    TEST_UTIL.waitFor(5000, 1000, () -> {
+      LOG.info("numRegions0: {} , numRegions1: {} , numRegions2: {}", numRegions0, numRegions1,
+        numRegions2);
+      LOG.info("Online regions - server0 : {} , server1: {} , server2: {}",
+        cluster.getRegionServer(0).getNumberOfOnlineRegions(),
+        cluster.getRegionServer(1).getNumberOfOnlineRegions(),
+        cluster.getRegionServer(2).getNumberOfOnlineRegions());
+      LOG.info("Num of successfully completed procedures: {} , num of all procedures: {}",
+        master.getMasterProcedureExecutor().getProcedures().stream()
+          .filter(masterProcedureEnvProcedure -> masterProcedureEnvProcedure.getState()
+              == ProcedureProtos.ProcedureState.SUCCESS)
+          .count(),
+        master.getMasterProcedureExecutor().getProcedures().size());
+      return (numRegions0 + numRegions1 + numRegions2)
+          == (cluster.getRegionServer(0).getNumberOfOnlineRegions()
+            + cluster.getRegionServer(1).getNumberOfOnlineRegions()
+            + cluster.getRegionServer(2).getNumberOfOnlineRegions())
+        && master.getMasterProcedureExecutor().getProcedures().stream()
+          .filter(masterProcedureEnvProcedure -> masterProcedureEnvProcedure.getState()
+              == ProcedureProtos.ProcedureState.SUCCESS)
+          .count() == master.getMasterProcedureExecutor().getProcedures().size();
+    });
+
+    TEST_UTIL.waitFor(5000, 1000, () -> {
+      HbckChore hbck = new HbckChore(TEST_UTIL.getHBaseCluster().getMaster());
+      hbck.choreForTesting();
+      HbckReport report = hbck.getLastReport();
+      return report.getInconsistentRegions().isEmpty() && report.getOrphanRegionsOnFS().isEmpty()
+        && report.getOrphanRegionsOnRS().isEmpty();
+    });
+  }
+}
