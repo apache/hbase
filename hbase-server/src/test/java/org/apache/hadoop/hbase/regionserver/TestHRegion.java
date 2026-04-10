@@ -5327,7 +5327,7 @@ public class TestHRegion {
     Runnable flusher = new Runnable() {
       @Override
       public void run() {
-        while (!incrementDone.get()) {
+        while (!incrementDone.get() && !Thread.currentThread().isInterrupted()) {
           try {
             region.flush(true);
           } catch (Exception e) {
@@ -5343,28 +5343,39 @@ public class TestHRegion {
     long expected = (long) threadNum * incCounter;
     Thread[] incrementers = new Thread[threadNum];
     Thread flushThread = new Thread(flusher);
+    flushThread.setName("FlushThread-" + method);
     for (int i = 0; i < threadNum; i++) {
       incrementers[i] = new Thread(new Incrementer(this.region, incCounter));
       incrementers[i].start();
     }
     flushThread.start();
-    for (int i = 0; i < threadNum; i++) {
-      incrementers[i].join();
+    try {
+      for (int i = 0; i < threadNum; i++) {
+        incrementers[i].join();
+      }
+
+      incrementDone.set(true);
+      flushThread.join();
+
+      Get get = new Get(Incrementer.incRow);
+      get.addColumn(Incrementer.family, Incrementer.qualifier);
+      get.readVersions(1);
+      Result res = this.region.get(get);
+      List<Cell> kvs = res.getColumnCells(Incrementer.family, Incrementer.qualifier);
+
+      // we just got the latest version
+      assertEquals(1, kvs.size());
+      Cell kv = kvs.get(0);
+      assertEquals(expected, Bytes.toLong(kv.getValueArray(), kv.getValueOffset()));
+    } finally {
+      // Ensure flush thread is stopped even if test fails or times out
+      incrementDone.set(true);
+      flushThread.interrupt();
+      flushThread.join(5000); // Wait up to 5 seconds for thread to stop
+      if (flushThread.isAlive()) {
+        LOG.warn("Flush thread did not stop within timeout for test " + method);
+      }
     }
-
-    incrementDone.set(true);
-    flushThread.join();
-
-    Get get = new Get(Incrementer.incRow);
-    get.addColumn(Incrementer.family, Incrementer.qualifier);
-    get.readVersions(1);
-    Result res = this.region.get(get);
-    List<Cell> kvs = res.getColumnCells(Incrementer.family, Incrementer.qualifier);
-
-    // we just got the latest version
-    assertEquals(1, kvs.size());
-    Cell kv = kvs.get(0);
-    assertEquals(expected, Bytes.toLong(kv.getValueArray(), kv.getValueOffset()));
   }
 
   /**
@@ -5412,7 +5423,7 @@ public class TestHRegion {
     Runnable flusher = new Runnable() {
       @Override
       public void run() {
-        while (!appendDone.get()) {
+        while (!appendDone.get() && !Thread.currentThread().isInterrupted()) {
           try {
             region.flush(true);
           } catch (Exception e) {
@@ -5432,30 +5443,41 @@ public class TestHRegion {
     }
     Thread[] appenders = new Thread[threadNum];
     Thread flushThread = new Thread(flusher);
+    flushThread.setName("FlushThread-" + method);
     for (int i = 0; i < threadNum; i++) {
       appenders[i] = new Thread(new Appender(this.region, appendCounter));
       appenders[i].start();
     }
     flushThread.start();
-    for (int i = 0; i < threadNum; i++) {
-      appenders[i].join();
+    try {
+      for (int i = 0; i < threadNum; i++) {
+        appenders[i].join();
+      }
+
+      appendDone.set(true);
+      flushThread.join();
+
+      Get get = new Get(Appender.appendRow);
+      get.addColumn(Appender.family, Appender.qualifier);
+      get.readVersions(1);
+      Result res = this.region.get(get);
+      List<Cell> kvs = res.getColumnCells(Appender.family, Appender.qualifier);
+
+      // we just got the latest version
+      assertEquals(1, kvs.size());
+      Cell kv = kvs.get(0);
+      byte[] appendResult = new byte[kv.getValueLength()];
+      System.arraycopy(kv.getValueArray(), kv.getValueOffset(), appendResult, 0, kv.getValueLength());
+      assertArrayEquals(expected, appendResult);
+    } finally {
+      // Ensure flush thread is stopped even if test fails or times out
+      appendDone.set(true);
+      flushThread.interrupt();
+      flushThread.join(5000); // Wait up to 5 seconds for thread to stop
+      if (flushThread.isAlive()) {
+        LOG.warn("Flush thread did not stop within timeout for test " + method);
+      }
     }
-
-    appendDone.set(true);
-    flushThread.join();
-
-    Get get = new Get(Appender.appendRow);
-    get.addColumn(Appender.family, Appender.qualifier);
-    get.readVersions(1);
-    Result res = this.region.get(get);
-    List<Cell> kvs = res.getColumnCells(Appender.family, Appender.qualifier);
-
-    // we just got the latest version
-    assertEquals(1, kvs.size());
-    Cell kv = kvs.get(0);
-    byte[] appendResult = new byte[kv.getValueLength()];
-    System.arraycopy(kv.getValueArray(), kv.getValueOffset(), appendResult, 0, kv.getValueLength());
-    assertArrayEquals(expected, appendResult);
   }
 
   /**
