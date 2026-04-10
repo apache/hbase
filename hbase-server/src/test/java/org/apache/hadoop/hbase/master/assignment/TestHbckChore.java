@@ -278,11 +278,11 @@ public class TestHbckChore extends TestAssignmentManagerBase {
         false);
     }
 
-    assertTrue("HbckChore should run successfully", hbckChore.runChore());
+    assertTrue(hbckChore.runChore(), "HbckChore should run successfully");
     HbckReport report = hbckChore.getLastReport();
-    assertNotNull("HbckReport should not be null", report);
+    assertNotNull(report, "HbckReport should not be null");
     boolean hasForeignMetaOrphan = report.getOrphanRegionsOnFS().values().stream()
       .anyMatch(path -> path.toString().contains("meta_replica1"));
-    assertFalse("HbckChore should not report foreign meta tables as orphans", hasForeignMetaOrphan);
+    assertFalse(hasForeignMetaOrphan, "HbckChore should not report foreign meta tables as orphans");
   }
 }
