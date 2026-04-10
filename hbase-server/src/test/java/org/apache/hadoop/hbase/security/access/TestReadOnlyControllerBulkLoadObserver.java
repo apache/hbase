@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.mock;
 
-import java.io.IOException;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.WriteAttemptedOnReadOnlyClusterException;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -58,13 +58,17 @@ public class TestReadOnlyControllerBulkLoadObserver {
 
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPrePrepareBulkLoadReadOnlyException() throws IOException {
-    bulkLoadReadOnlyController.prePrepareBulkLoad(ctx);
+  @Test
+  public void testPrePrepareBulkLoadReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      bulkLoadReadOnlyController.prePrepareBulkLoad(ctx);
+    });
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreCleanupBulkLoadReadOnlyException() throws IOException {
-    bulkLoadReadOnlyController.preCleanupBulkLoad(ctx);
+  @Test
+  public void testPreCleanupBulkLoadReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      bulkLoadReadOnlyController.preCleanupBulkLoad(ctx);
+    });
   }
 }

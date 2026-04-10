@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.mock;
 
-import java.io.IOException;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.WriteAttemptedOnReadOnlyClusterException;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
@@ -72,18 +72,21 @@ public class TestReadOnlyControllerRegionServerObserver {
 
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreRollWALWriterRequestReadOnlyException() throws IOException {
-    regionServerReadOnlyController.preRollWALWriterRequest(ctx);
+  @Test
+  public void testPreRollWALWriterRequestReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class,
+      () -> regionServerReadOnlyController.preRollWALWriterRequest(ctx));
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreReplicationSinkBatchMutateReadOnlyException() throws IOException {
-    regionServerReadOnlyController.preReplicationSinkBatchMutate(ctx, walEntry, mutation);
+  @Test
+  public void testPreReplicationSinkBatchMutateReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class,
+      () -> regionServerReadOnlyController.preReplicationSinkBatchMutate(ctx, walEntry, mutation));
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testPreReplicateLogEntriesReadOnlyException() throws IOException {
-    regionServerReadOnlyController.preReplicateLogEntries(ctx);
+  @Test
+  public void testPreReplicateLogEntriesReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class,
+      () -> regionServerReadOnlyController.preReplicateLogEntries(ctx));
   }
 }
