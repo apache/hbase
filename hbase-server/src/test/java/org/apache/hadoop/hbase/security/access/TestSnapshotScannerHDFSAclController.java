@@ -22,9 +22,9 @@ import static org.apache.hadoop.hbase.security.access.Permission.Action.WRITE;
 import static org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclController.SnapshotScannerHDFSAclStorage.hasUserGlobalHdfsAcl;
 import static org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclController.SnapshotScannerHDFSAclStorage.hasUserNamespaceHdfsAcl;
 import static org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclController.SnapshotScannerHDFSAclStorage.hasUserTableHdfsAcl;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -50,23 +49,17 @@ import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ SecurityTests.class, LargeTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSnapshotScannerHDFSAclController {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotScannerHDFSAclController.class);
-  @Rule
-  public TestName name = new TestName();
   private static final Logger LOG =
     LoggerFactory.getLogger(TestSnapshotScannerHDFSAclController.class);
 
@@ -80,7 +73,7 @@ public class TestSnapshotScannerHDFSAclController {
   private static SnapshotScannerHDFSAclHelper helper;
   private static Table aclTable;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     // enable hdfs acl and set umask to 027
     conf.setBoolean("dfs.namenode.acls.enabled", true);
@@ -135,7 +128,7 @@ public class TestSnapshotScannerHDFSAclController {
     aclTable = admin.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -148,11 +141,11 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testGrantGlobal1() throws Exception {
-    final String grantUserName = name.getMethodName();
+  public void testGrantGlobal1(TestInfo testInfo) throws Exception {
+    final String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
-    String namespace = name.getMethodName();
-    TableName table = TableName.valueOf(namespace, name.getMethodName());
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName table = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName());
     String snapshot1 = namespace + "s1";
     String snapshot2 = namespace + "s2";
 
@@ -182,13 +175,15 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testGrantGlobal2() throws Exception {
-    final String grantUserName = name.getMethodName();
+  public void testGrantGlobal2(TestInfo testInfo) throws Exception {
+    final String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
-    String namespace1 = name.getMethodName();
-    TableName table1 = TableName.valueOf(namespace1, name.getMethodName() + ".1");
+    String namespace1 = testInfo.getTestMethod().get().getName();
+    TableName table1 =
+      TableName.valueOf(namespace1, testInfo.getTestMethod().get().getName() + ".1");
     String namespace2 = namespace1 + "2";
-    TableName table2 = TableName.valueOf(namespace2, name.getMethodName() + ".2");
+    TableName table2 =
+      TableName.valueOf(namespace2, testInfo.getTestMethod().get().getName() + ".2");
     String snapshot1 = namespace1 + "s1";
     String snapshot2 = namespace2 + "s2";
 
@@ -218,12 +213,14 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testGrantGlobal3() throws Exception {
-    final String grantUserName = name.getMethodName();
+  public void testGrantGlobal3(TestInfo testInfo) throws Exception {
+    final String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
-    String namespace = name.getMethodName();
-    TableName table1 = TableName.valueOf(namespace, name.getMethodName() + ".1");
-    TableName table2 = TableName.valueOf(namespace, name.getMethodName() + ".2");
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName table1 =
+      TableName.valueOf(namespace, testInfo.getTestMethod().get().getName() + ".1");
+    TableName table2 =
+      TableName.valueOf(namespace, testInfo.getTestMethod().get().getName() + ".2");
     String snapshot1 = namespace + "s1";
     String snapshot2 = namespace + "s2";
     // grant G(R)
@@ -251,12 +248,14 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testGrantNamespace1() throws Exception {
-    final String grantUserName = name.getMethodName();
+  public void testGrantNamespace1(TestInfo testInfo) throws Exception {
+    final String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
-    String namespace = name.getMethodName();
-    TableName table1 = TableName.valueOf(namespace, name.getMethodName() + ".1");
-    TableName table2 = TableName.valueOf(namespace, name.getMethodName() + ".2");
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName table1 =
+      TableName.valueOf(namespace, testInfo.getTestMethod().get().getName() + ".1");
+    TableName table2 =
+      TableName.valueOf(namespace, testInfo.getTestMethod().get().getName() + ".2");
     String snapshot1 = namespace + "s1";
     String snapshot2 = namespace + "s2";
 
@@ -285,11 +284,11 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testGrantNamespace2() throws Exception {
-    final String grantUserName = name.getMethodName();
+  public void testGrantNamespace2(TestInfo testInfo) throws Exception {
+    final String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
-    String namespace = name.getMethodName();
-    TableName table1 = TableName.valueOf(namespace, name.getMethodName());
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName table1 = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName());
     String snapshot1 = namespace + "s1";
 
     // create table1 and snapshot
@@ -312,11 +311,11 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testGrantNamespace3() throws Exception {
-    final String grantUserName = name.getMethodName();
+  public void testGrantNamespace3(TestInfo testInfo) throws Exception {
+    final String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
-    String namespace = name.getMethodName();
-    TableName table = TableName.valueOf(namespace, name.getMethodName());
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName table = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName());
     String snapshot = namespace + "t1";
 
     // create table1 and snapshot
@@ -338,12 +337,12 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testGrantTable() throws Exception {
-    final String grantUserName = name.getMethodName();
+  public void testGrantTable(TestInfo testInfo) throws Exception {
+    final String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
 
-    String namespace = name.getMethodName();
-    TableName table1 = TableName.valueOf(namespace, name.getMethodName());
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName table1 = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName());
     String snapshot1 = namespace + "s1";
     String snapshot2 = namespace + "s2";
 
@@ -388,11 +387,11 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testGrantMobTable() throws Exception {
-    final String grantUserName = name.getMethodName();
+  public void testGrantMobTable(TestInfo testInfo) throws Exception {
+    final String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
-    String namespace = name.getMethodName();
-    TableName table = TableName.valueOf(namespace, name.getMethodName());
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName table = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName());
     String snapshot = namespace + "s1";
 
     try (Table t = TestHDFSAclHelper.createMobTable(TEST_UTIL, table)) {
@@ -407,11 +406,11 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testRevokeGlobal1() throws Exception {
-    final String grantUserName = name.getMethodName();
+  public void testRevokeGlobal1(TestInfo testInfo) throws Exception {
+    final String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
-    String namespace = name.getMethodName();
-    TableName table1 = TableName.valueOf(namespace, name.getMethodName());
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName table1 = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName());
     String snapshot1 = namespace + "t1";
 
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table1);
@@ -425,13 +424,13 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testRevokeGlobal2() throws Exception {
-    final String grantUserName = name.getMethodName();
+  public void testRevokeGlobal2(TestInfo testInfo) throws Exception {
+    final String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
 
-    String namespace = name.getMethodName();
+    String namespace = testInfo.getTestMethod().get().getName();
     String snapshot1 = namespace + "s1";
-    TableName table1 = TableName.valueOf(namespace, name.getMethodName());
+    TableName table1 = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName());
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table1);
     snapshotAndWait(snapshot1, table1);
 
@@ -450,12 +449,12 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testRevokeGlobal3() throws Exception {
-    final String grantUserName = name.getMethodName();
+  public void testRevokeGlobal3(TestInfo testInfo) throws Exception {
+    final String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
 
-    String namespace = name.getMethodName();
-    TableName table1 = TableName.valueOf(namespace, name.getMethodName());
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName table1 = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName());
     String snapshot1 = namespace + "t1";
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table1);
     snapshotAndWait(snapshot1, table1);
@@ -476,11 +475,11 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testRevokeNamespace1() throws Exception {
-    String grantUserName = name.getMethodName();
+  public void testRevokeNamespace1(TestInfo testInfo) throws Exception {
+    String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
-    String namespace = name.getMethodName();
-    TableName table1 = TableName.valueOf(namespace, name.getMethodName());
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName table1 = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName());
     String snapshot1 = namespace + "s1";
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table1);
     snapshotAndWait(snapshot1, table1);
@@ -505,11 +504,11 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testRevokeNamespace2() throws Exception {
-    String grantUserName = name.getMethodName();
+  public void testRevokeNamespace2(TestInfo testInfo) throws Exception {
+    String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
-    String namespace = name.getMethodName();
-    TableName table = TableName.valueOf(namespace, name.getMethodName());
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName table = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName());
     String snapshot = namespace + "s1";
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table);
     snapshotAndWait(snapshot, table);
@@ -528,11 +527,11 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testRevokeTable1() throws Exception {
-    final String grantUserName = name.getMethodName();
+  public void testRevokeTable1(TestInfo testInfo) throws Exception {
+    final String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
-    String namespace = name.getMethodName();
-    TableName table = TableName.valueOf(namespace, name.getMethodName());
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName table = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName());
     String snapshot = namespace + "t1";
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table);
     snapshotAndWait(snapshot, table);
@@ -553,11 +552,11 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testRevokeTable2() throws Exception {
-    final String grantUserName = name.getMethodName();
+  public void testRevokeTable2(TestInfo testInfo) throws Exception {
+    final String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
-    String namespace = name.getMethodName();
-    TableName table = TableName.valueOf(namespace, name.getMethodName());
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName table = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName());
     String snapshot = namespace + "t1";
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table);
     snapshotAndWait(snapshot, table);
@@ -575,11 +574,11 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testRevokeTable3() throws Exception {
-    final String grantUserName = name.getMethodName();
+  public void testRevokeTable3(TestInfo testInfo) throws Exception {
+    final String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
-    String namespace = name.getMethodName();
-    TableName table = TableName.valueOf(namespace, name.getMethodName());
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName table = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName());
     String snapshot = namespace + "t1";
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table);
     snapshotAndWait(snapshot, table);
@@ -597,14 +596,14 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testTruncateTable() throws Exception {
-    String grantUserName = name.getMethodName();
+  public void testTruncateTable(TestInfo testInfo) throws Exception {
+    String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
     String grantUserName2 = grantUserName + "2";
     User grantUser2 = User.createUserForTesting(conf, grantUserName2, new String[] {});
 
-    String namespace = name.getMethodName();
-    TableName tableName = TableName.valueOf(namespace, name.getMethodName());
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName tableName = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName());
     String snapshot = namespace + "s1";
     String snapshot2 = namespace + "s2";
     try (Table t = TestHDFSAclHelper.createTable(TEST_UTIL, tableName)) {
@@ -636,13 +635,13 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testDeleteTable() throws Exception {
-    String namespace = name.getMethodName();
+  public void testDeleteTable(TestInfo testInfo) throws Exception {
+    String namespace = testInfo.getTestMethod().get().getName();
     String grantUserName1 = namespace + "1";
     String grantUserName2 = namespace + "2";
     User grantUser1 = User.createUserForTesting(conf, grantUserName1, new String[] {});
     User grantUser2 = User.createUserForTesting(conf, grantUserName2, new String[] {});
-    TableName table = TableName.valueOf(namespace, name.getMethodName());
+    TableName table = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName());
     String snapshot1 = namespace + "t1";
 
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table);
@@ -674,11 +673,11 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testDeleteTable2() throws Exception {
-    String namespace1 = name.getMethodName() + "1";
-    String namespace2 = name.getMethodName() + "2";
-    String grantUser = name.getMethodName();
-    TableName table = TableName.valueOf(namespace1, name.getMethodName());
+  public void testDeleteTable2(TestInfo testInfo) throws Exception {
+    String namespace1 = testInfo.getTestMethod().get().getName() + "1";
+    String namespace2 = testInfo.getTestMethod().get().getName() + "2";
+    String grantUser = testInfo.getTestMethod().get().getName();
+    TableName table = TableName.valueOf(namespace1, testInfo.getTestMethod().get().getName());
 
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table);
     // grant user table permission
@@ -694,11 +693,11 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testDeleteNamespace() throws Exception {
-    String grantUserName = name.getMethodName();
+  public void testDeleteNamespace(TestInfo testInfo) throws Exception {
+    String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
-    String namespace = name.getMethodName();
-    TableName table = TableName.valueOf(namespace, name.getMethodName());
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName table = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName());
     String snapshot = namespace + "t1";
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table);
     // snapshot
@@ -723,11 +722,11 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testCleanArchiveTableDir() throws Exception {
-    final String grantUserName = name.getMethodName();
+  public void testCleanArchiveTableDir(TestInfo testInfo) throws Exception {
+    final String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
-    String namespace = name.getMethodName();
-    TableName table = TableName.valueOf(namespace, name.getMethodName());
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName table = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName());
     String snapshot = namespace + "t1";
 
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table);
@@ -753,12 +752,12 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testModifyTable1() throws Exception {
-    String namespace = name.getMethodName();
-    TableName table = TableName.valueOf(namespace, name.getMethodName());
+  public void testModifyTable1(TestInfo testInfo) throws Exception {
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName table = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName());
     String snapshot = namespace + "t1";
 
-    String tableUserName = name.getMethodName();
+    String tableUserName = testInfo.getTestMethod().get().getName();
     User tableUser = User.createUserForTesting(conf, tableUserName, new String[] {});
     String tableUserName2 = tableUserName + "2";
     User tableUser2 = User.createUserForTesting(conf, tableUserName2, new String[] {});
@@ -815,13 +814,14 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testModifyTable2() throws Exception {
-    String namespace = name.getMethodName();
-    TableName table = TableName.valueOf(namespace, name.getMethodName() + ".1");
+  public void testModifyTable2(TestInfo testInfo) throws Exception {
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName table = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName() + ".1");
     String snapshot = namespace + "t1";
-    TableName table2 = TableName.valueOf(namespace, name.getMethodName() + ".2");
+    TableName table2 =
+      TableName.valueOf(namespace, testInfo.getTestMethod().get().getName() + ".2");
 
-    String tableUserName = name.getMethodName();
+    String tableUserName = testInfo.getTestMethod().get().getName();
     User tableUser = User.createUserForTesting(conf, tableUserName, new String[] {});
     String tableUserName2 = tableUserName + "2";
     User tableUser2 = User.createUserForTesting(conf, tableUserName2, new String[] {});
@@ -880,12 +880,13 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   @Test
-  public void testRestartMaster() throws Exception {
-    final String grantUserName = name.getMethodName();
+  public void testRestartMaster(TestInfo testInfo) throws Exception {
+    final String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
-    String namespace = name.getMethodName();
-    TableName table = TableName.valueOf(namespace, name.getMethodName() + ".1");
-    TableName table2 = TableName.valueOf(namespace, name.getMethodName() + ".2");
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName table = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName() + ".1");
+    TableName table2 =
+      TableName.valueOf(namespace, testInfo.getTestMethod().get().getName() + ".2");
     String snapshot = namespace + "t1";
     admin.createNamespace(NamespaceDescriptor.create(namespace).build());
 
@@ -953,8 +954,8 @@ public class TestSnapshotScannerHDFSAclController {
       }
     }
     String message = "require user: " + userName + ", path: " + path.toString() + " acl";
-    assertEquals(message, requireAccessAcl, accessAclEntry);
-    assertEquals(message, requireDefaultAcl, defaultAclEntry);
+    assertEquals(requireAccessAcl, accessAclEntry, message);
+    assertEquals(requireDefaultAcl, defaultAclEntry, message);
   }
 
   static void deleteTable(TableName tableName) {

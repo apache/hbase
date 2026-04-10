@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -26,7 +26,6 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -45,22 +44,18 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Performs coprocessor loads for various paths and malformed strings
  */
-@Category({ SecurityTests.class, LargeTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCoprocessorWhitelistMasterObserver.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestCoprocessorWhitelistMasterObserver.class);
@@ -68,7 +63,7 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
   private static final TableName TEST_TABLE = TableName.valueOf("testTable");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("fam1");
 
-  @After
+  @AfterEach
   public void tearDownTestCoprocessorWhitelistMasterObserver() throws Exception {
     Admin admin = UTIL.getAdmin();
     try {

@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.security.visibility;
 
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -34,12 +34,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
@@ -73,24 +70,17 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 
-@Category({ SecurityTests.class, MediumTests.class })
+@org.junit.jupiter.api.Tag(SecurityTests.TAG)
+@org.junit.jupiter.api.Tag(MediumTests.TAG)
 public class TestVisibilityLabelsReplication {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVisibilityLabelsReplication.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestVisibilityLabelsReplication.class);
   protected static final int NON_VIS_TAG_TYPE = 100;
@@ -128,12 +118,9 @@ public class TestVisibilityLabelsReplication {
       "(!\"topsecret\"&\"secret\")|(!\"topsecret\"&\"confidential\")", "(\"secret\"&\"" + COPYRIGHT
         + "\\\"" + ACCENT + "\\\\" + SECRET + "\\\"" + "\u0027&\\\\" + "\")" };
 
-  @Rule
-  public final TestName TEST_NAME = new TestName();
   public static User SUPERUSER, USER1;
 
-  @Before
-  public void setup() throws Exception {
+  protected void setUpTest() throws Exception {
     // setup configuration
     conf = HBaseConfiguration.create();
     conf.setInt("hfile.format.version", 3);
@@ -217,6 +204,11 @@ public class TestVisibilityLabelsReplication {
     setAuths(conf1);
   }
 
+  @BeforeEach
+  public void setUp() throws Exception {
+    setUpTest();
+  }
+
   protected static void setVisibilityLabelServiceImpl(Configuration conf) {
     conf.setClass(VisibilityLabelServiceManager.VISIBILITY_LABEL_SERVICE_CLASS,
       DefaultVisibilityLabelServiceImpl.class, VisibilityLabelService.class);
@@ -284,9 +276,9 @@ public class TestVisibilityLabelsReplication {
     if (VisibilityReplicationEndPointForTest.lastEntries == null) {
       return; // first call
     }
-    Assert.assertEquals(1, VisibilityReplicationEndPointForTest.lastEntries.size());
+    Assertions.assertEquals(1, VisibilityReplicationEndPointForTest.lastEntries.size());
     List<Cell> cells = VisibilityReplicationEndPointForTest.lastEntries.get(0).getEdit().getCells();
-    Assert.assertEquals(4, cells.size());
+    Assertions.assertEquals(4, cells.size());
     boolean tagFound = false;
     for (Cell cell : cells) {
       if (
@@ -382,7 +374,7 @@ public class TestVisibilityLabelsReplication {
           }
         }
       };
-    VisibilityLabelsResponse response = SUPERUSER.runAs(action);
+    SUPERUSER.runAs(action);
   }
 
   static Table writeData(TableName tableName, String... labelExps) throws Exception {
@@ -419,16 +411,15 @@ public class TestVisibilityLabelsReplication {
       if (attribute != null) {
         for (List<? extends Cell> edits : m.getFamilyCellMap().values()) {
           for (Cell cell : edits) {
-            KeyValue kv = KeyValueUtil.ensureKeyValue((ExtendedCell) cell);
             if (cf == null) {
-              cf = CellUtil.cloneFamily(kv);
+              cf = CellUtil.cloneFamily(cell);
             }
             Tag tag = new ArrayBackedTag((byte) NON_VIS_TAG_TYPE, attribute);
             List<Tag> tagList =
               new ArrayList<>(PrivateCellUtil.getTags((ExtendedCell) cell).size() + 1);
             tagList.add(tag);
             tagList.addAll(PrivateCellUtil.getTags((ExtendedCell) cell));
-            Cell newcell = PrivateCellUtil.createCell(kv, tagList);
+            Cell newcell = PrivateCellUtil.createCell((ExtendedCell) cell, tagList);
             ((List<Cell>) updatedCells).add(newcell);
           }
         }
