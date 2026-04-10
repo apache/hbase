@@ -200,7 +200,7 @@ public class CreateNamespaceProcedure
   private static void setNamespaceQuota(final MasterProcedureEnv env,
     final NamespaceDescriptor nsDescriptor) throws IOException {
     if (env.getMasterServices().isInitialized()) {
-      env.getMasterServices().getMasterQuotaManager().setNamespaceQuota(nsDescriptor);
+      ProcedureSyncWait.getMasterQuotaManager(env).setNamespaceQuota(nsDescriptor);
     }
   }
 }

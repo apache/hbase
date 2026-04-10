@@ -20,6 +20,11 @@ package org.apache.hadoop.hbase.master.procedure;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
@@ -30,9 +35,13 @@ import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.procedure2.StateMachineProcedure.Flow;
+import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.After;
@@ -46,6 +55,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DeleteNamespaceState;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestDeleteNamespaceProcedure {
@@ -209,6 +220,27 @@ public class TestDeleteNamespaceProcedure {
     assertNotNull(createdNsDescriptor);
   }
 
+  @Test
+  public void testDeleteNamespaceQuotaStepWaitsForQuotaManagerAfterInitialization()
+    throws Exception {
+    final String namespaceName = "testDeleteNamespaceWithNullQuotaManager";
+    final MasterProcedureEnv env = mock(MasterProcedureEnv.class);
+    final MasterServices masterServices = mock(MasterServices.class);
+    final MasterQuotaManager masterQuotaManager = mock(MasterQuotaManager.class);
+    final DeleteNamespaceProcedure proc =
+      createProcedureForQuotaStep(env, namespaceName, masterServices, masterQuotaManager);
+
+    // The initialized event has already been released, but the quota manager is not available on
+    // the first poll yet.
+    when(env.waitInitialized(proc)).thenReturn(false);
+
+    assertFalse(proc.waitInitialized(env));
+    assertEquals(Flow.NO_MORE_STATE,
+      proc.executeFromState(env, DeleteNamespaceState.DELETE_NAMESPACE_REMOVE_NAMESPACE_QUOTA));
+    assertFalse(proc.isFailed());
+    verify(masterQuotaManager).removeNamespaceQuota(namespaceName);
+  }
+
   private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
     return UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
   }
@@ -231,5 +263,20 @@ public class TestDeleteNamespaceProcedure {
     } catch (NamespaceNotFoundException nsnfe) {
       // Expected
     }
+  }
+
+  private static DeleteNamespaceProcedure createProcedureForQuotaStep(MasterProcedureEnv env,
+    String namespaceName, MasterServices masterServices, MasterQuotaManager masterQuotaManager)
+    throws IOException {
+    Configuration conf = new Configuration(false);
+    conf.setLong("hbase.master.wait.on.region", 1000);
+    conf.setInt("hbase.master.event.waiting.time", 1);
+    when(env.getRequestUser()).thenReturn(User.getCurrent());
+    when(env.getMasterConfiguration()).thenReturn(conf);
+    when(env.getMasterServices()).thenReturn(masterServices);
+    when(env.isRunning()).thenReturn(true);
+    when(masterServices.isInitialized()).thenReturn(true);
+    when(masterServices.getMasterQuotaManager()).thenReturn(null, masterQuotaManager);
+    return new DeleteNamespaceProcedure(env, namespaceName);
   }
 }

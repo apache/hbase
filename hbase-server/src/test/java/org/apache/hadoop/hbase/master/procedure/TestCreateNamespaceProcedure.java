@@ -20,6 +20,11 @@ package org.apache.hadoop.hbase.master.procedure;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
@@ -29,9 +34,13 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceExistException;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.procedure2.StateMachineProcedure.Flow;
+import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.After;
@@ -43,6 +52,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.CreateNamespaceState;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestCreateNamespaceProcedure {
@@ -228,6 +239,28 @@ public class TestCreateNamespaceProcedure {
     }
   }
 
+  @Test
+  public void testCreateNamespaceQuotaStepWaitsForQuotaManagerAfterInitialization()
+    throws Exception {
+    final NamespaceDescriptor nsd =
+      NamespaceDescriptor.create("testCreateNamespaceWithNullQuotaManager").build();
+    final MasterProcedureEnv env = mock(MasterProcedureEnv.class);
+    final MasterServices masterServices = mock(MasterServices.class);
+    final MasterQuotaManager masterQuotaManager = mock(MasterQuotaManager.class);
+    final CreateNamespaceProcedure proc =
+      createProcedureForQuotaStep(env, nsd, masterServices, masterQuotaManager);
+
+    // The initialized event has already been released, but the quota manager is not available on
+    // the first poll yet.
+    when(env.waitInitialized(proc)).thenReturn(false);
+
+    assertFalse(proc.waitInitialized(env));
+    assertEquals(Flow.NO_MORE_STATE,
+      proc.executeFromState(env, CreateNamespaceState.CREATE_NAMESPACE_SET_NAMESPACE_QUOTA));
+    assertFalse(proc.isFailed());
+    verify(masterQuotaManager).setNamespaceQuota(nsd);
+  }
+
   private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
     return UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
   }
@@ -235,5 +268,20 @@ public class TestCreateNamespaceProcedure {
   private void validateNamespaceCreated(NamespaceDescriptor nsd) throws IOException {
     NamespaceDescriptor createdNsDescriptor = UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
     assertNotNull(createdNsDescriptor);
+  }
+
+  private static CreateNamespaceProcedure createProcedureForQuotaStep(MasterProcedureEnv env,
+    NamespaceDescriptor nsd, MasterServices masterServices, MasterQuotaManager masterQuotaManager)
+    throws IOException {
+    Configuration conf = new Configuration(false);
+    conf.setLong("hbase.master.wait.on.region", 1000);
+    conf.setInt("hbase.master.event.waiting.time", 1);
+    when(env.getRequestUser()).thenReturn(User.getCurrent());
+    when(env.getMasterConfiguration()).thenReturn(conf);
+    when(env.getMasterServices()).thenReturn(masterServices);
+    when(env.isRunning()).thenReturn(true);
+    when(masterServices.isInitialized()).thenReturn(true);
+    when(masterServices.getMasterQuotaManager()).thenReturn(null, masterQuotaManager);
+    return new CreateNamespaceProcedure(env, nsd);
   }
 }
