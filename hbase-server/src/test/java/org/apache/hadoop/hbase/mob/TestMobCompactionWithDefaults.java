@@ -97,8 +97,7 @@ public class TestMobCompactionWithDefaults {
   }
 
   public static Stream<Arguments> parameters() {
-    Boolean[] data = { false, true };
-    return Arrays.asList(data).stream().map(Arguments::of);
+    return Stream.of(false, true).map(Arguments::of);
   }
 
   protected void htuStart() throws Exception {
@@ -127,7 +126,8 @@ public class TestMobCompactionWithDefaults {
 
   @BeforeEach
   public void setUp(TestInfo testInfo) throws Exception {
-    testMethodName = testInfo.getTestMethod().get().getName();
+    testMethodName = testInfo.getTestMethod().get().getName()
+      + testInfo.getDisplayName().replaceAll("[:= ]", "_").replaceAll("_+", "_").trim();
     htuStart();
     admin = HTU.getAdmin();
     familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(fam).setMobEnabled(true)

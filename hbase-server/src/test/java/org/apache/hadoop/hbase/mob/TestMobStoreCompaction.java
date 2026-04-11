@@ -26,7 +26,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -84,8 +83,6 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.params.provider.Arguments;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Test mob store compaction
@@ -93,7 +90,7 @@ import org.slf4j.LoggerFactory;
 @Tag(MediumTests.TAG)
 @HBaseParameterizedTestTemplate(name = "{index}: useFileBasedSFT={0}")
 public class TestMobStoreCompaction {
-  static final Logger LOG = LoggerFactory.getLogger(TestMobStoreCompaction.class.getName());
+
   private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private Configuration conf = null;
   private String testMethodName;
@@ -116,13 +113,13 @@ public class TestMobStoreCompaction {
   }
 
   public static Stream<Arguments> parameters() {
-    Boolean[] data = { false, true };
-    return Arrays.asList(data).stream().map(Arguments::of);
+    return Stream.of(false, true).map(Arguments::of);
   }
 
   @BeforeEach
   public void setUp(TestInfo testInfo) {
-    testMethodName = testInfo.getTestMethod().get().getName();
+    testMethodName = testInfo.getTestMethod().get().getName()
+      + testInfo.getDisplayName().replaceAll("[:= ]", "_").replaceAll("_+", "_").trim();
   }
 
   private void init(Configuration conf, long mobThreshold) throws Exception {
@@ -133,8 +130,6 @@ public class TestMobStoreCompaction {
 
     this.conf = conf;
     this.mobCellThreshold = mobThreshold;
-
-    HBaseTestingUtil UTIL = new HBaseTestingUtil(conf);
 
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
     familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_FAMILY).setMobEnabled(true)

@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.mob;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 import org.apache.hadoop.hbase.Cell;
@@ -68,13 +67,13 @@ public class TestDefaultMobStoreFlusher {
   }
 
   public static Stream<Arguments> parameters() {
-    Boolean[] data = { false, true };
-    return Arrays.asList(data).stream().map(Arguments::of);
+    return Stream.of(false, true).map(Arguments::of);
   }
 
   @BeforeEach
   public void setUpBefore(TestInfo testInfo) throws Exception {
-    testMethodName = testInfo.getTestMethod().get().getName();
+    testMethodName = testInfo.getTestMethod().get().getName()
+      + testInfo.getDisplayName().replaceAll("[:= ]", "_").replaceAll("_+", "_").trim();
     if (useFileBasedSFT) {
       TEST_UTIL.getConfiguration().set(StoreFileTrackerFactory.TRACKER_IMPL,
         "org.apache.hadoop.hbase.regionserver.storefiletracker.FileBasedStoreFileTracker");

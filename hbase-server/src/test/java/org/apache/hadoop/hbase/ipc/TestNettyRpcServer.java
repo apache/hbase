@@ -88,7 +88,9 @@ public class TestNettyRpcServer {
 
   @BeforeEach
   public void setUpTable(TestInfo testInfo) {
-    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
+    String sanitizedAllocatorType = allocatorType.replaceAll("[^a-zA-Z0-9_.-]", "_");
+    tableName =
+      TableName.valueOf(testInfo.getTestMethod().get().getName() + "_" + sanitizedAllocatorType);
   }
 
   @BeforeEach
