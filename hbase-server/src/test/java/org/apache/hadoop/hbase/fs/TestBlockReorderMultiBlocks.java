@@ -246,7 +246,7 @@ public class TestBlockReorderMultiBlocks {
       final long max = EnvironmentEdgeManager.currentTime() + 10000;
       boolean done;
       do {
-        assertTrue(EnvironmentEdgeManager.currentTime() < max, "Can't get enouth replica");
+        assertTrue(EnvironmentEdgeManager.currentTime() < max, "Can't get enough replica");
         lbs = getNamenode(dfs.getClient()).getBlockLocations(src, 0, 1);
         assertNotNull(lbs, "Can't get block locations for " + src);
         assertNotNull(lbs.getLocatedBlocks());

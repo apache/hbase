@@ -147,10 +147,10 @@ public class TestSnapshotWhenChoreCleaning {
     }
 
     TEST_UTIL.getAdmin().snapshot("snapshotName_prev", TABLE_NAME);
-    assertEquals(Lists.newArrayList(cleaner.getDeletableFiles(files)).size(), 0);
+    assertEquals(0, Lists.newArrayList(cleaner.getDeletableFiles(files)).size());
     TEST_UTIL.getAdmin().deleteSnapshot("snapshotName_prev");
     cleaner.getFileCacheForTesting().triggerCacheRefreshForTesting();
-    assertEquals(Lists.newArrayList(cleaner.getDeletableFiles(files)).size(), 100);
+    assertEquals(100, Lists.newArrayList(cleaner.getDeletableFiles(files)).size());
 
     Runnable snapshotRunnable = () -> {
       try {

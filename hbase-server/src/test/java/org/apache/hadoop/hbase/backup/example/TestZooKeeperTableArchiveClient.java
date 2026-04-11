@@ -162,20 +162,21 @@ public class TestZooKeeperTableArchiveClient {
     // 1. turn on hfile backups
     LOG.debug("----Starting archiving");
     archivingClient.enableHFileBackupAsync(TABLE_NAME);
-    assertTrue(archivingClient.getArchivingEnabled(TABLE_NAME), "Archving didn't get turned on");
+    assertTrue(archivingClient.getArchivingEnabled(TABLE_NAME), "Archiving didn't get turned on");
 
     // 2. Turn off archiving and make sure its off
     archivingClient.disableHFileBackup();
-    assertFalse(archivingClient.getArchivingEnabled(TABLE_NAME), "Archving didn't get turned off.");
+    assertFalse(archivingClient.getArchivingEnabled(TABLE_NAME),
+      "Archiving didn't get turned off.");
 
     // 3. Check enable/disable on a single table
     archivingClient.enableHFileBackupAsync(TABLE_NAME);
-    assertTrue(archivingClient.getArchivingEnabled(TABLE_NAME), "Archving didn't get turned on");
+    assertTrue(archivingClient.getArchivingEnabled(TABLE_NAME), "Archiving didn't get turned on");
 
     // 4. Turn off archiving and make sure its off
     archivingClient.disableHFileBackup(TABLE_NAME);
     assertFalse(archivingClient.getArchivingEnabled(TABLE_NAME),
-      "Archving didn't get turned off for " + STRING_TABLE_NAME);
+      "Archiving didn't get turned off for " + STRING_TABLE_NAME);
   }
 
   @Test
@@ -358,7 +359,7 @@ public class TestZooKeeperTableArchiveClient {
     // turn on hfile retention
     LOG.debug("----Starting archiving for table:" + tableName);
     archivingClient.enableHFileBackupAsync(Bytes.toBytes(tableName));
-    assertTrue(archivingClient.getArchivingEnabled(tableName), "Archving didn't get turned on");
+    assertTrue(archivingClient.getArchivingEnabled(tableName), "Archiving didn't get turned on");
 
     // wait for the archiver to get the notification
     List<BaseHFileCleanerDelegate> cleaners = cleaner.getDelegatesForTesting();

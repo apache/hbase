@@ -391,7 +391,7 @@ public class TestRestoreSnapshotHelper {
       String linkFile = files.get(i);
       String refFile = files.get(i + 1);
       assertTrue(HFileLink.isHFileLink(linkFile), linkFile + " should be a HFileLink");
-      assertTrue(StoreFileInfo.isReference(refFile), refFile + " should be a Referene");
+      assertTrue(StoreFileInfo.isReference(refFile), refFile + " should be a Reference");
       assertEquals(sourceHtd.getTableName(), HFileLink.getReferencedTableName(linkFile));
       Path refPath = getReferredToFile(refFile);
       LOG.debug("get reference name for file " + refFile + " = " + refPath);

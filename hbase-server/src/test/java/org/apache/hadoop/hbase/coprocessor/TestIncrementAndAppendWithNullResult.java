@@ -145,7 +145,7 @@ public class TestIncrementAndAppendWithNullResult {
     for (int i = 0; i != results.length; ++i) {
       assertNotNull(results[i], "The result[" + i + "] should not be null");
       assertTrue(results[i] instanceof Result, "The result[" + i + "] should be Result type");
-      assertTrue(((Result) results[i]).isEmpty(), "The result[" + i + "] shuold be empty");
+      assertTrue(((Result) results[i]).isEmpty(), "The result[" + i + "] should be empty");
     }
   }
 }
