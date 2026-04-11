@@ -31,26 +31,22 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test case for JMX Connector Server.
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestJMXConnectorServer {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestJMXConnectorServer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestJMXConnectorServer.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -62,7 +58,7 @@ public class TestJMXConnectorServer {
   // Switch for customized Accesscontroller to throw ACD exception while executing test case
   private volatile static boolean hasAccess;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf = UTIL.getConfiguration();
     String cps = JMXListener.class.getName() + "," + MyAccessController.class.getName();
@@ -75,18 +71,18 @@ public class TestJMXConnectorServer {
     admin = UTIL.getConnection().getAdmin();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     admin.close();
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     hasAccess = false;
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     hasAccess = true;
   }
@@ -105,7 +101,7 @@ public class TestJMXConnectorServer {
       LOG.info("Exception occurred while stopping HMaster. ", e);
       accessDenied = true;
     }
-    Assert.assertTrue(accessDenied);
+    Assertions.assertTrue(accessDenied);
 
     checkConnector();
   }
@@ -136,7 +132,7 @@ public class TestJMXConnectorServer {
       LOG.error("Exception occurred while stopping HMaster. ", e);
       accessDenied = true;
     }
-    Assert.assertTrue(accessDenied);
+    Assertions.assertTrue(accessDenied);
 
     checkConnector();
   }
@@ -149,10 +145,10 @@ public class TestJMXConnectorServer {
         .connect(JMXListener.buildJMXServiceURL(rmiRegistryPort, rmiRegistryPort));
     } catch (IOException e) {
       if (e.getCause() instanceof ServiceUnavailableException) {
-        Assert.fail("Can't connect to ConnectorServer.");
+        Assertions.fail("Can't connect to ConnectorServer.");
       }
     }
-    Assert.assertNotNull("JMXConnector should not be null.", connector);
+    Assertions.assertNotNull(connector, "JMXConnector should not be null.");
     connector.close();
   }
 
