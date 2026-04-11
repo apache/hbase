@@ -18,15 +18,10 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestAcidGuaranteesWithNoInMemCompaction extends AcidGuaranteesTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAcidGuaranteesWithNoInMemCompaction.class);
 
   protected MemoryCompactionPolicy getMemoryCompactionPolicy() {
     return MemoryCompactionPolicy.NONE;

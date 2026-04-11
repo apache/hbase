@@ -28,11 +28,11 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -49,7 +49,7 @@ public abstract class AcidGuaranteesTestBase {
 
   protected abstract MemoryCompactionPolicy getMemoryCompactionPolicy();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // Set small flush size for minicluster so we exercise reseeking scanners
     Configuration conf = UTIL.getConfiguration();
@@ -61,12 +61,12 @@ public abstract class AcidGuaranteesTestBase {
     UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MemoryCompactionPolicy policy = getMemoryCompactionPolicy();
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TABLE_NAME)
@@ -81,7 +81,7 @@ public abstract class AcidGuaranteesTestBase {
     tool.setConf(UTIL.getConfiguration());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     UTIL.deleteTable(TABLE_NAME);
   }

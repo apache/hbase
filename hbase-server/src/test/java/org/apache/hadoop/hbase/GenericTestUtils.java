@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
@@ -32,7 +36,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -68,7 +71,7 @@ public abstract class GenericTestUtils {
    * Assert that a given file exists.
    */
   public static void assertExists(File f) {
-    Assert.assertTrue("File " + f + " should exist", f.exists());
+    assertTrue(f.exists(), "File " + f + " should exist");
   }
 
   /**
@@ -86,8 +89,8 @@ public abstract class GenericTestUtils {
       }
     }
     Set<String> expectedSet = Sets.newTreeSet(Arrays.asList(expectedMatches));
-    Assert.assertEquals("Bad files matching " + pattern + " in " + dir,
-      Joiner.on(",").join(expectedSet), Joiner.on(",").join(found));
+    assertEquals("Bad files matching " + pattern + " in " + dir, Joiner.on(",").join(expectedSet),
+      Joiner.on(",").join(found));
   }
 
   public static void waitFor(Supplier<Boolean> check, int checkEveryMillis, int waitForMillis)
@@ -273,8 +276,8 @@ public abstract class GenericTestUtils {
   }
 
   public static void assertMatches(String output, String pattern) {
-    Assert.assertTrue("Expected output to match /" + pattern + "/" + " but got:\n" + output,
-      Pattern.compile(pattern).matcher(output).find());
+    assertTrue(Pattern.compile(pattern).matcher(output).find(),
+      "Expected output to match /" + pattern + "/" + " but got:\n" + output);
   }
 
   public static void assertValueNear(long expected, long actual, long allowedError) {
@@ -282,9 +285,8 @@ public abstract class GenericTestUtils {
   }
 
   public static void assertValueWithinRange(long expectedMin, long expectedMax, long actual) {
-    Assert.assertTrue(
-      "Expected " + actual + " to be in range (" + expectedMin + "," + expectedMax + ")",
-      expectedMin <= actual && actual <= expectedMax);
+    assertTrue(expectedMin <= actual && actual <= expectedMax,
+      "Expected " + actual + " to be in range (" + expectedMin + "," + expectedMax + ")");
   }
 
   /**
@@ -299,7 +301,7 @@ public abstract class GenericTestUtils {
     for (ThreadInfo info : infos) {
       if (info == null) continue;
       if (pattern.matcher(info.getThreadName()).matches()) {
-        Assert.fail("Leaked thread: " + info + "\n" + Joiner.on("\n").join(info.getStackTrace()));
+        fail("Leaked thread: " + info + "\n" + Joiner.on("\n").join(info.getStackTrace()));
       }
     }
   }
