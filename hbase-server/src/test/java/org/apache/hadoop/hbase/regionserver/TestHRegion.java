@@ -5472,7 +5472,8 @@ public class TestHRegion {
       assertEquals(1, kvs.size());
       Cell kv = kvs.get(0);
       byte[] appendResult = new byte[kv.getValueLength()];
-      System.arraycopy(kv.getValueArray(), kv.getValueOffset(), appendResult, 0, kv.getValueLength());
+      System.arraycopy(kv.getValueArray(), kv.getValueOffset(), appendResult, 0,
+        kv.getValueLength());
       assertArrayEquals(expected, appendResult);
     } finally {
       // Ensure flush thread is stopped even if test fails or times out
