@@ -1351,18 +1351,23 @@ public class TestHRegion {
         threads[i].start();
       }
     } finally {
+      done.set(true);
+      for (GetTillDoneOrException t : threads) {
+        if (t != null) {
+          try {
+            t.join(5000);
+          } catch (InterruptedException e) {
+            e.printStackTrace();
+          }
+        }
+      }
       if (this.region != null) {
         HBaseTestingUtil.closeRegionAndWAL(this.region);
         this.region = null;
       }
     }
-    done.set(true);
+    // Check for errors after threads have been stopped
     for (GetTillDoneOrException t : threads) {
-      try {
-        t.join();
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
       if (t.e != null) {
         LOG.info("Exception=" + t.e);
         assertFalse("Found a NPE in " + t.getName(), t.e instanceof NullPointerException);
@@ -1390,7 +1395,7 @@ public class TestHRegion {
 
     @Override
     public void run() {
-      while (!this.done.get()) {
+      while (!this.done.get() && !Thread.currentThread().isInterrupted()) {
         try {
           assertTrue(region.get(g).size() > 0);
           this.count.incrementAndGet();
@@ -4574,7 +4579,7 @@ public class TestHRegion {
     @Override
     public void run() {
       done = false;
-      while (!done) {
+      while (!done && !Thread.currentThread().isInterrupted()) {
         synchronized (this) {
           try {
             wait();
@@ -4790,7 +4795,7 @@ public class TestHRegion {
     @Override
     public void run() {
       done = false;
-      while (!done) {
+      while (!done && !Thread.currentThread().isInterrupted()) {
         try {
           for (int r = 0; r < numRows; r++) {
             byte[] row = Bytes.toBytes("row" + r);
@@ -7511,7 +7516,7 @@ public class TestHRegion {
     // Writer thread
     Thread writerThread = new Thread(() -> {
       try {
-        while (true) {
+        while (!Thread.currentThread().isInterrupted()) {
           // If all the reader threads finish, then stop the writer thread
           if (latch.await(0, TimeUnit.MILLISECONDS)) {
             return;
@@ -7536,15 +7541,19 @@ public class TestHRegion {
             .addColumn(fam1, q3, tsIncrement + 1, Bytes.toBytes(1L))
             .addColumn(fam1, q4, tsAppend + 1, Bytes.toBytes("a")) });
         }
+      } catch (InterruptedException e) {
+        // Test interrupted, exit gracefully
+        Thread.currentThread().interrupt();
       } catch (Exception e) {
         assertionError.set(new AssertionError(e));
       }
     });
+    writerThread.setName("WriterThread-" + method);
     writerThread.start();
 
     // Reader threads
     for (int i = 0; i < numReaderThreads; i++) {
-      new Thread(() -> {
+      Thread readerThread = new Thread(() -> {
         try {
           for (int j = 0; j < 10000; j++) {
             // Verify the values
@@ -7573,13 +7582,24 @@ public class TestHRegion {
         }
 
         latch.countDown();
-      }).start();
+      });
+      readerThread.setName("ReaderThread-" + i + "-" + method);
+      readerThread.start();
     }
 
-    writerThread.join();
+    try {
+      writerThread.join();
 
-    if (assertionError.get() != null) {
-      throw assertionError.get();
+      if (assertionError.get() != null) {
+        throw assertionError.get();
+      }
+    } finally {
+      // Ensure writer thread is stopped on test timeout
+      writerThread.interrupt();
+      writerThread.join(5000);
+      if (writerThread.isAlive()) {
+        LOG.warn("Writer thread did not stop within timeout for test " + method);
+      }
     }
   }
 
