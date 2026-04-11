@@ -107,15 +107,15 @@ public class TestWALProcedureStoreOnHDFS {
 
   @Test
   public void testWalAbortOnLowReplication() throws Exception {
+    setupDFS();
+
+    assertEquals(3, UTIL.getDFSCluster().getDataNodes().size());
+
+    LOG.info("Stop DataNode");
+    UTIL.getDFSCluster().stopDataNode(0);
+    assertEquals(2, UTIL.getDFSCluster().getDataNodes().size());
+
     assertThrows(RuntimeException.class, () -> {
-      setupDFS();
-
-      assertEquals(3, UTIL.getDFSCluster().getDataNodes().size());
-
-      LOG.info("Stop DataNode");
-      UTIL.getDFSCluster().stopDataNode(0);
-      assertEquals(2, UTIL.getDFSCluster().getDataNodes().size());
-
       store.insert(new TestProcedure(1, -1), null);
       for (long i = 2; store.isRunning(); ++i) {
         assertEquals(2, UTIL.getDFSCluster().getDataNodes().size());

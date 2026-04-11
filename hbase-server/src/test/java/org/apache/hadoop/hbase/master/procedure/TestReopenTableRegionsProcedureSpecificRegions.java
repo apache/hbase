@@ -194,7 +194,7 @@ public class TestReopenTableRegionsProcedureSpecificRegions {
       ProcedureTestingUtility.waitProcedure(getProcExec(), procId);
 
       assertFalse(proc.isFailed(), "Procedure should succeed");
-      assertEquals(proc.getRegionsReopened(), 0,
+      assertEquals(0, proc.getRegionsReopened(),
         "Should not reopen any regions for disabled table");
     }
   }
@@ -242,7 +242,7 @@ public class TestReopenTableRegionsProcedureSpecificRegions {
     ReopenTableRegionsProcedure proc =
       ReopenTableRegionsProcedure.throttled(conf, UTIL.getAdmin().getDescriptor(tableName));
 
-    assertEquals(proc.getReopenBatchBackoffMillis(), 2000,
+    assertEquals(2000, proc.getReopenBatchBackoffMillis(),
       "Table descriptor config should override global config");
   }
 
@@ -263,7 +263,7 @@ public class TestReopenTableRegionsProcedureSpecificRegions {
 
     ReopenTableRegionsProcedure unthrottledProc =
       new ReopenTableRegionsProcedure(tableName, regionNames);
-    assertEquals(unthrottledProc.getReopenBatchBackoffMillis(), 0,
+    assertEquals(0, unthrottledProc.getReopenBatchBackoffMillis(),
       "Unthrottled should use default (0ms)");
 
     ReopenTableRegionsProcedure throttledProc = ReopenTableRegionsProcedure
@@ -420,13 +420,13 @@ public class TestReopenTableRegionsProcedureSpecificRegions {
     ReopenTableRegionsProcedure proc = ReopenTableRegionsProcedure
       .throttled(UTIL.getConfiguration(), UTIL.getAdmin().getDescriptor(tableName));
 
-    assertEquals(proc.getReopenBatchBackoffMillis(), 1000L, "Initial config should be 1000ms");
+    assertEquals(1000L, proc.getReopenBatchBackoffMillis(), "Initial config should be 1000ms");
 
     TableDescriptor modifiedTd = TableDescriptorBuilder.newBuilder(td)
       .setValue(ReopenTableRegionsProcedure.PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY, "5000").build();
     UTIL.getAdmin().modifyTable(modifiedTd);
 
-    assertEquals(proc.getReopenBatchBackoffMillis(), 1000L,
+    assertEquals(1000L, proc.getReopenBatchBackoffMillis(),
       "Running procedure should keep original config");
 
     long procId = getProcExec().submitProcedure(proc);
