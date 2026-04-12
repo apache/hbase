@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
@@ -26,22 +28,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ClassLoaderTestHelper;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ SmallTests.class })
+@Tag(SmallTests.TAG)
 public class TestCoprocessorHost {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCoprocessorHost.class);
 
   private static final HBaseCommonTestingUtil TEST_UTIL = new HBaseCommonTestingUtil();
 
@@ -54,7 +49,7 @@ public class TestCoprocessorHost {
     @Override
     public void abort(String why, Throwable e) {
       this.aborted = true;
-      Assert.fail(e.getMessage());
+      fail(e.getMessage());
     }
 
     @Override
@@ -82,7 +77,7 @@ public class TestCoprocessorHost {
 
     // Three coprocessors(SimpleRegionObserver, SimpleRegionObserverV2,
     // SimpleRegionObserverV3) loaded
-    Assert.assertEquals(3, host.coprocEnvironments.size());
+    assertEquals(3, host.coprocEnvironments.size());
 
     // Check the priority value
     CoprocessorEnvironment<?> simpleEnv =
@@ -164,7 +159,7 @@ public class TestCoprocessorHost {
     }
   }
 
-  @Test(expected = AssertionError.class)
+  @Test
   public void testLoadSystemCoprocessorWithPathDoesNotExist() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     final String key = "KEY";
@@ -179,10 +174,10 @@ public class TestCoprocessorHost {
     // Try and load a system coprocessors
     conf.setStrings(key, coprocessorWithPath);
     // when loading non-exist with CoprocessorHostForTest host, it aborts with AssertionError
-    host.loadSystemCoprocessors(conf, key);
+    assertThrows(AssertionError.class, () -> host.loadSystemCoprocessors(conf, key));
   }
 
-  @Test(expected = AssertionError.class)
+  @Test
   public void testLoadSystemCoprocessorWithPathDoesNotExistAndPriority() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     final String key = "KEY";
@@ -199,7 +194,7 @@ public class TestCoprocessorHost {
     // Try and load a system coprocessors
     conf.setStrings(key, coprocessor);
     // when loading non-exist coprocessor, it aborts with AssertionError
-    host.loadSystemCoprocessors(conf, key);
+    assertThrows(AssertionError.class, () -> host.loadSystemCoprocessors(conf, key));
   }
 
   public static class SimpleRegionObserverV2 extends SimpleRegionObserver {
