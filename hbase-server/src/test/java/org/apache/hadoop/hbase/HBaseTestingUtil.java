@@ -434,29 +434,26 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
     String sysValue = System.getProperty(propertyName);
 
-    if (sysValue != null) {
-      // There is already a value set by a previous test. Check if the directory still exists.
-      File sysDir = new File(sysValue);
-      if (sysDir.exists()) {
-        // Directory exists, so another test may still be using it. Reuse it to avoid conflicts.
-        LOG.info("System.getProperty(\"" + propertyName + "\") already set to: " + sysValue
-          + " and directory exists, so reusing it for " + parent);
-        String confValue = conf.get(propertyName);
-        if (confValue != null && !confValue.endsWith(sysValue)) {
-          LOG.warn(propertyName + " property value differs in configuration and system: "
-            + "Configuration=" + confValue + " while System=" + sysValue
-            + " Erasing configuration value by system value.");
-        }
-        conf.set(propertyName, sysValue);
-      } else {
-        // Directory was deleted (previous test cleaned up), so create our own.
-        LOG.info("System.getProperty(\"" + propertyName + "\") set to: " + sysValue
-          + " but directory no longer exists. Creating new directory under " + parent);
-        createSubDir(propertyName, parent, subDirName);
-        System.setProperty(propertyName, conf.get(propertyName));
+    // Check if directory sharing should be disabled for this test.
+    // Tests that run with high parallelism and don't need shared directories can set this
+    // to avoid race conditions where one test's tearDown() deletes directories another test
+    // is still using.
+    boolean disableSharing = conf.getBoolean("hbase.test.disable-directory-sharing", false);
+
+    if (sysValue != null && !disableSharing) {
+      // There is already a value set. So we do nothing but hope
+      //  that there will be no conflicts
+      LOG.info("System.getProperty(\"" + propertyName + "\") already set to: " + sysValue
+        + " so I do NOT create it in " + parent);
+      String confValue = conf.get(propertyName);
+      if (confValue != null && !confValue.endsWith(sysValue)) {
+        LOG.warn(propertyName + " property value differs in configuration and system: "
+          + "Configuration=" + confValue + " while System=" + sysValue
+          + " Erasing configuration value by system value.");
       }
+      conf.set(propertyName, sysValue);
     } else {
-      // Ok, it's not set, so we create it as a subdirectory
+      // Ok, it's not set (or sharing is disabled), so we create it as a subdirectory
       createSubDir(propertyName, parent, subDirName);
       System.setProperty(propertyName, conf.get(propertyName));
     }
