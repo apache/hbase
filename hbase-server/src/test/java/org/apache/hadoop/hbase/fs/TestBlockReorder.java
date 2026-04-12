@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.fs;
 
 import static org.apache.hadoop.hbase.util.LocatedBlockHelper.getLocatedBlockLocations;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -30,7 +32,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -41,14 +42,10 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,12 +55,9 @@ import org.slf4j.LoggerFactory;
  * cleared in hadoop's ShutdownHookManager in hadoop 3. This leads to 'Failed suppression of fs
  * shutdown hook' error in region server.
  */
-@Category({ MiscTests.class, LargeTests.class })
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestBlockReorder {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBlockReorder.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBlockReorder.class);
 
@@ -75,10 +69,7 @@ public class TestBlockReorder {
   private static final String host2 = "host2";
   private static final String host3 = "host3";
 
-  @Rule
-  public TestName name = new TestName();
-
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     htu = new HBaseTestingUtility();
     htu.getConfiguration().setInt("dfs.blocksize", 1024);// For the test with multiple blocks
@@ -91,7 +82,7 @@ public class TestBlockReorder {
     dfs = (DistributedFileSystem) FileSystem.get(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDownAfterClass() throws Exception {
     htu.shutdownMiniCluster();
   }
@@ -103,7 +94,7 @@ public class TestBlockReorder {
   public void testBlockLocationReorder() throws Exception {
     Path p = new Path("hello");
 
-    Assert.assertTrue((short) cluster.getDataNodes().size() > 1);
+    assertTrue((short) cluster.getDataNodes().size() > 1);
     final int repCount = 2;
 
     // Let's write the file
@@ -115,11 +106,11 @@ public class TestBlockReorder {
     // Let's check we can read it when everybody's there
     long start = EnvironmentEdgeManager.currentTime();
     FSDataInputStream fin = dfs.open(p);
-    Assert.assertTrue(toWrite == fin.readDouble());
+    assertTrue(toWrite == fin.readDouble());
     long end = EnvironmentEdgeManager.currentTime();
     LOG.info("readtime= " + (end - start));
     fin.close();
-    Assert.assertTrue((end - start) < 30 * 1000);
+    assertTrue((end - start) < 30 * 1000);
 
     // Let's kill the first location. But actually the fist location returned will change
     // The first thing to do is to get the location, then the port
@@ -129,7 +120,7 @@ public class TestBlockReorder {
       lbs = dfs.getFileBlockLocations(f, 0, 1);
     } while (lbs.length != 1 && lbs[0].getLength() != repCount);
     final String name = lbs[0].getNames()[0];
-    Assert.assertTrue(name.indexOf(':') > 0);
+    assertTrue(name.indexOf(':') > 0);
     String portS = name.substring(name.indexOf(':') + 1);
     final int port = Integer.parseInt(portS);
     LOG.info("port= " + port);
@@ -152,28 +143,26 @@ public class TestBlockReorder {
         break;
       }
     }
-    Assert.assertTrue("didn't find the server to kill, was looking for " + lookup + " found " + sb,
-      ok);
+    assertTrue(ok, "didn't find the server to kill, was looking for " + lookup + " found " + sb);
     LOG.info("ipc port= " + ipcPort);
 
     // Add the hook, with an implementation checking that we don't use the port we've just killed.
-    Assert
-      .assertTrue(HFileSystem.addLocationsOrderInterceptor(conf, new HFileSystem.ReorderBlocks() {
-        @Override
-        public void reorderBlocks(Configuration c, LocatedBlocks lbs, String src) {
-          for (LocatedBlock lb : lbs.getLocatedBlocks()) {
-            if (getLocatedBlockLocations(lb).length > 1) {
-              DatanodeInfo[] infos = getLocatedBlockLocations(lb);
-              if (infos[0].getHostName().equals(lookup)) {
-                LOG.info("HFileSystem bad host, inverting");
-                DatanodeInfo tmp = infos[0];
-                infos[0] = infos[1];
-                infos[1] = tmp;
-              }
+    assertTrue(HFileSystem.addLocationsOrderInterceptor(conf, new HFileSystem.ReorderBlocks() {
+      @Override
+      public void reorderBlocks(Configuration c, LocatedBlocks lbs, String src) {
+        for (LocatedBlock lb : lbs.getLocatedBlocks()) {
+          if (getLocatedBlockLocations(lb).length > 1) {
+            DatanodeInfo[] infos = getLocatedBlockLocations(lb);
+            if (infos[0].getHostName().equals(lookup)) {
+              LOG.info("HFileSystem bad host, inverting");
+              DatanodeInfo tmp = infos[0];
+              infos[0] = infos[1];
+              infos[1] = tmp;
             }
           }
         }
-      }));
+      }
+    }));
 
     final int retries = 10;
     ServerSocket ss = null;
@@ -196,11 +185,11 @@ public class TestBlockReorder {
     for (int i = 0; i < retries; i++) {
       start = EnvironmentEdgeManager.currentTime();
       fin = dfs.open(p);
-      Assert.assertTrue(toWrite == fin.readDouble());
+      assertTrue(toWrite == fin.readDouble());
       fin.close();
       end = EnvironmentEdgeManager.currentTime();
       LOG.info("HFileSystem readtime= " + (end - start));
-      Assert.assertFalse("We took too much time to read", (end - start) > 60000);
+      assertFalse((end - start) > 60000, "We took too much time to read");
     }
 
     ss.close();

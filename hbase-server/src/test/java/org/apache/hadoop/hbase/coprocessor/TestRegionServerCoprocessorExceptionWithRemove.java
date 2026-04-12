@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
@@ -34,23 +33,19 @@ import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests unhandled exceptions thrown by coprocessors running on regionserver. Expected result is
  * that the region server will remove the buggy coprocessor from its set of coprocessors and throw a
  * org.apache.hadoop.hbase.exceptions.DoNotRetryIOException back to the client. (HBASE-4014).
  */
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionServerCoprocessorExceptionWithRemove {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerCoprocessorExceptionWithRemove.class);
 
   public static class BuggyRegionObserver extends SimpleRegionObserver {
     @SuppressWarnings("null")
@@ -69,7 +64,7 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
 
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     // set configure to indicate which cp should be loaded
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -78,7 +73,7 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
     TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -113,7 +108,7 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
     } catch (IOException e) {
       threwIOE = true;
     } finally {
-      assertTrue("The regionserver should have thrown an exception", threwIOE);
+      assertTrue(threwIOE, "The regionserver should have thrown an exception");
     }
 
     // Wait 10 seconds for the regionserver to abort: expected result is that

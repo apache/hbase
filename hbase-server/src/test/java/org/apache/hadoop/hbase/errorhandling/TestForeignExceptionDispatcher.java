@@ -17,15 +17,13 @@
  */
 package org.apache.hadoop.hbase.errorhandling;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,12 +32,9 @@ import org.slf4j.LoggerFactory;
  * Test that we propagate errors through an dispatcher exactly once via different failure injection
  * mechanisms.
  */
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestForeignExceptionDispatcher {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestForeignExceptionDispatcher.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestForeignExceptionDispatcher.class);
 
@@ -77,7 +72,7 @@ public class TestForeignExceptionDispatcher {
       dispatcher.rethrowException();
       fail("Monitor should have thrown an exception after getting error.");
     } catch (ForeignException ex) {
-      assertTrue("Got an unexpected exception:" + ex, ex.getCause() == EXTEXN.getCause());
+      assertTrue(ex.getCause() == EXTEXN.getCause(), "Got an unexpected exception:" + ex);
       LOG.debug("Got the testing exception!");
     }
 
@@ -102,7 +97,7 @@ public class TestForeignExceptionDispatcher {
     timer.start();
     timer.trigger();
 
-    assertTrue("Monitor didn't get timeout", monitor.hasException());
+    assertTrue(monitor.hasException(), "Monitor didn't get timeout");
 
     // verify that that we propagated the error
     Mockito.verify(listener1).receive(Mockito.any());

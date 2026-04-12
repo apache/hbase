@@ -18,11 +18,11 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.REGION_COPROCESSOR_CONF_KEY;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -39,11 +39,8 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTrack
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 /**
@@ -53,15 +50,9 @@ import org.mockito.Mockito;
  * {@link RegionObserver#preCompact(ObserverContext, Store, InternalScanner, ScanType, CompactionLifeCycleTracker, CompactionRequest)}
  * @see <a href=https://issues.apache.org/jira/browse/HBASE-19122>HBASE-19122</a>
  */
-@Category({ CoprocessorTests.class, SmallTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestRegionObserverPreFlushAndPreCompact {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionObserverPreFlushAndPreCompact.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   /**
    * Coprocessor that returns null when preCompact or preFlush is called.
@@ -90,20 +81,21 @@ public class TestRegionObserverPreFlushAndPreCompact {
    * Ensure we get expected exception when we try to return null from a preFlush call.
    * @throws IOException We expect it to throw {@link CoprocessorException}
    */
-  @Test(expected = CoprocessorException.class)
+  @Test
   public void testPreFlushReturningNull() throws IOException {
     RegionCoprocessorHost rch = getRegionCoprocessorHost();
-    rch.preFlush(null, null, null);
+    assertThrows(CoprocessorException.class, () -> rch.preFlush(null, null, null));
   }
 
   /**
    * Ensure we get expected exception when we try to return null from a preCompact call.
    * @throws IOException We expect it to throw {@link CoprocessorException}
    */
-  @Test(expected = CoprocessorException.class)
+  @Test
   public void testPreCompactReturningNull() throws IOException {
     RegionCoprocessorHost rch = getRegionCoprocessorHost();
-    rch.preCompact(null, null, null, null, null, null);
+    assertThrows(CoprocessorException.class,
+      () -> rch.preCompact(null, null, null, null, null, null));
   }
 
   private RegionCoprocessorHost getRegionCoprocessorHost() {
