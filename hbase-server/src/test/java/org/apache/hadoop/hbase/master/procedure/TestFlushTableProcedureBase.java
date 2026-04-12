@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -26,9 +29,8 @@ import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 public class TestFlushTableProcedureBase {
 
@@ -39,7 +41,7 @@ public class TestFlushTableProcedureBase {
   protected byte[] FAMILY2;
   protected byte[] FAMILY3;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
     addConfiguration(TEST_UTIL.getConfiguration());
@@ -65,28 +67,28 @@ public class TestFlushTableProcedureBase {
   protected void assertTableMemStoreNotEmpty() {
     long totalSize = TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).stream()
       .mapToLong(HRegion::getMemStoreDataSize).sum();
-    Assert.assertTrue(totalSize > 0);
+    assertTrue(totalSize > 0);
   }
 
   protected void assertTableMemStoreEmpty() {
     long totalSize = TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).stream()
       .mapToLong(HRegion::getMemStoreDataSize).sum();
-    Assert.assertEquals(0, totalSize);
+    assertEquals(0, totalSize);
   }
 
   protected void assertColumnFamilyMemStoreNotEmpty(byte[] columnFamily) {
     long totalSize = TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).stream()
       .mapToLong(r -> r.getStore(columnFamily).getMemStoreSize().getDataSize()).sum();
-    Assert.assertTrue(totalSize > 0);
+    assertTrue(totalSize > 0);
   }
 
   protected void assertColumnFamilyMemStoreEmpty(byte[] columnFamily) {
     long totalSize = TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).stream()
       .mapToLong(r -> r.getStore(columnFamily).getMemStoreSize().getDataSize()).sum();
-    Assert.assertEquals(0, totalSize);
+    assertEquals(0, totalSize);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     if (TEST_UTIL.getHBaseCluster().getMaster() != null) {
       ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(

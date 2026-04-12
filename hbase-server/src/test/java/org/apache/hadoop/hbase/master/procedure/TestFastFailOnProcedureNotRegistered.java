@@ -17,30 +17,39 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestFastFailOnProcedureNotRegistered extends TestTableDDLProcedureBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFastFailOnProcedureNotRegistered.class);
+  @BeforeAll
+  public static void setupCluster() throws Exception {
+    TestTableDDLProcedureBase.setupCluster();
+  }
 
-  @Test(expected = DoNotRetryIOException.class)
+  @AfterAll
+  public static void cleanupTest() throws Exception {
+    TestTableDDLProcedureBase.cleanupTest();
+  }
+
+  @Test
   public void testFastFailOnProcedureNotRegistered() throws IOException {
     Admin admin = UTIL.getAdmin();
     Map<String, String> props = new HashMap<String, String>();
-    admin.execProcedure("fake1", "fake2", props);
+    assertThrows(DoNotRetryIOException.class, () -> admin.execProcedure("fake1", "fake2", props));
   }
 
 }
