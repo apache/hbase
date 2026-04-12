@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.util.concurrent.Semaphore;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -31,21 +30,16 @@ import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestSchedulerQueueDeadLock {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSchedulerQueueDeadLock.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -145,7 +139,7 @@ public class TestSchedulerQueueDeadLock {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws IOException {
     UTIL.cleanupTestDir();
   }
@@ -154,14 +148,12 @@ public class TestSchedulerQueueDeadLock {
 
   private ProcedureExecutor<TestEnv> procExec;
 
-  @Rule
-  public final TestName name = new TestName();
-
-  @Before
-  public void setUp() throws IOException {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
     UTIL.getConfiguration().setInt("hbase.procedure.worker.stuck.threshold.msec", 6000000);
+    String testMethodName = testInfo.getTestMethod().get().getName();
     procStore = ProcedureTestingUtility.createWalStore(UTIL.getConfiguration(),
-      UTIL.getDataTestDir(name.getMethodName()));
+      UTIL.getDataTestDir(testMethodName));
     procStore.start(1);
     MasterProcedureScheduler scheduler = new MasterProcedureScheduler(pid -> null);
     procExec = new ProcedureExecutor<>(UTIL.getConfiguration(), new TestEnv(scheduler), procStore,
@@ -169,10 +161,14 @@ public class TestSchedulerQueueDeadLock {
     procExec.init(1, false);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
-    procExec.stop();
-    procStore.stop(false);
+    if (procExec != null) {
+      procExec.stop();
+    }
+    if (procStore != null) {
+      procStore.stop(false);
+    }
   }
 
   public static final class TableSharedProcedureWithId extends TableSharedProcedure {

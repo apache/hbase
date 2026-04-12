@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -25,10 +25,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,18 +34,16 @@ public abstract class TestTableDDLProcedureBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestTableDDLProcedureBase.class);
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  private static void setupConf(Configuration conf) {
+  protected static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
   }
 
-  @BeforeClass
-  public static void setupCluster() throws Exception {
+  protected static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
-  public static void cleanupTest() throws Exception {
+  protected static void cleanupTest() throws Exception {
     try {
       UTIL.shutdownMiniCluster();
     } catch (Exception e) {
@@ -55,12 +51,12 @@ public abstract class TestTableDDLProcedureBase {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     resetProcExecutorTestingKillFlag();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     resetProcExecutorTestingKillFlag();
     for (HTableDescriptor htd : UTIL.getAdmin().listTables()) {
@@ -72,7 +68,7 @@ public abstract class TestTableDDLProcedureBase {
   protected void resetProcExecutorTestingKillFlag() {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
-    assertTrue("expected executor to be running", procExec.isRunning());
+    assertTrue(procExec.isRunning(), "expected executor to be running");
   }
 
   protected ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {

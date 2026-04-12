@@ -19,11 +19,14 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -37,18 +40,14 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestSplitWALProcedure {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSplitWALProcedure.class);
 
   private static HBaseTestingUtility TEST_UTIL;
   private HMaster master;
@@ -56,7 +55,7 @@ public class TestSplitWALProcedure {
   private SplitWALManager splitWALManager;
   private byte[] FAMILY;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
     TEST_UTIL.getConfiguration().setBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK, false);
@@ -68,7 +67,7 @@ public class TestSplitWALProcedure {
     FAMILY = Bytes.toBytes("test");
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     if (this.master != null) {
       ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(master.getMasterProcedureExecutor(),
@@ -86,18 +85,18 @@ public class TestSplitWALProcedure {
     HRegionServer testServer = TEST_UTIL.getHBaseCluster().getRegionServer(0);
     ProcedureExecutor<MasterProcedureEnv> masterPE = master.getMasterProcedureExecutor();
     List<FileStatus> wals = splitWALManager.getWALsToSplit(testServer.getServerName(), false);
-    Assert.assertEquals(1, wals.size());
+    assertEquals(1, wals.size());
     TEST_UTIL.getHBaseCluster().killRegionServer(testServer.getServerName());
     TEST_UTIL.waitFor(30000, () -> master.getProcedures().stream()
       .anyMatch(procedure -> procedure instanceof SplitWALProcedure));
     Procedure splitWALProcedure = master.getProcedures().stream()
       .filter(procedure -> procedure instanceof SplitWALProcedure).findAny().get();
-    Assert.assertNotNull(splitWALProcedure);
+    assertNotNull(splitWALProcedure);
     TEST_UTIL.waitFor(5000, () -> ((SplitWALProcedure) splitWALProcedure).getWorker() != null);
     TEST_UTIL.getHBaseCluster()
       .killRegionServer(((SplitWALProcedure) splitWALProcedure).getWorker());
     ProcedureTestingUtility.waitProcedure(masterPE, splitWALProcedure.getProcId());
-    Assert.assertTrue(splitWALProcedure.isSuccess());
+    assertTrue(splitWALProcedure.isSuccess());
     ProcedureTestingUtility.waitAllProcedures(masterPE);
   }
 
@@ -109,7 +108,7 @@ public class TestSplitWALProcedure {
     }
     HRegionServer testServer = TEST_UTIL.getHBaseCluster().getRegionServer(0);
     List<FileStatus> wals = splitWALManager.getWALsToSplit(testServer.getServerName(), false);
-    Assert.assertEquals(1, wals.size());
+    assertEquals(1, wals.size());
     SplitWALProcedure splitWALProcedure =
       new SplitWALProcedure(wals.get(0).getPath().toString(), testServer.getServerName());
     long pid = ProcedureTestingUtility.submitProcedure(master.getMasterProcedureExecutor(),
@@ -126,9 +125,9 @@ public class TestSplitWALProcedure {
     Optional<Procedure<?>> procedure =
       master.getProcedures().stream().filter(p -> p.getProcId() == pid).findAny();
     // make sure procedure is successful and wal is deleted
-    Assert.assertTrue(procedure.isPresent());
-    Assert.assertTrue(procedure.get().isSuccess());
-    Assert.assertFalse(TEST_UTIL.getTestFileSystem().exists(wals.get(0).getPath()));
+    assertTrue(procedure.isPresent());
+    assertTrue(procedure.get().isSuccess());
+    assertFalse(TEST_UTIL.getTestFileSystem().exists(wals.get(0).getPath()));
   }
 
 }
