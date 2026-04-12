@@ -83,9 +83,9 @@ public abstract class AbstractTestAsyncTableScan {
     return conf;
   }
 
-  protected static final MiniClusterRule MINI_CLUSTER_RULE = MiniClusterRule.newBuilder()
-    .setConfiguration(createConfiguration())
-    .setMiniClusterOption(StartTestingClusterOption.builder().numWorkers(3).build()).build();
+  protected static final MiniClusterRule MINI_CLUSTER_RULE =
+    MiniClusterRule.newBuilder().setConfiguration(createConfiguration())
+      .setMiniClusterOption(StartTestingClusterOption.builder().numWorkers(3).build()).build();
 
   protected static final ConnectionRule CONN_RULE =
     ConnectionRule.createAsyncConnectionRule(MINI_CLUSTER_RULE::createAsyncConnection);

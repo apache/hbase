@@ -442,7 +442,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
     if (sysValue != null && !disableSharing) {
       // There is already a value set. So we do nothing but hope
-      //  that there will be no conflicts
+      // that there will be no conflicts
       LOG.info("System.getProperty(\"" + propertyName + "\") already set to: " + sysValue
         + " so I do NOT create it in " + parent);
       String confValue = conf.get(propertyName);
