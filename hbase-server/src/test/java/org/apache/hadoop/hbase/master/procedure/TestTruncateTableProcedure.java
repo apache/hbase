@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -27,7 +27,6 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
@@ -46,31 +45,42 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTruncateTableProcedure.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestTruncateTableProcedure.class);
+  private String testMethodName;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeAll
+  public static void setupCluster() throws Exception {
+    TestTableDDLProcedureBase.setupCluster();
+  }
+
+  @AfterAll
+  public static void cleanupTest() throws Exception {
+    TestTableDDLProcedureBase.cleanupTest();
+  }
+
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
   @Test
   public void testTruncateNotExistentTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
 
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     // HBASE-20178 has us fail-fast, in the constructor, so add try/catch for this case.
@@ -93,7 +103,7 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
 
   @Test
   public void testTruncateNotDisabledTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
 
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f");
@@ -118,13 +128,13 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
 
   @Test
   public void testSimpleTruncatePreserveSplits() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     testSimpleTruncate(tableName, true);
   }
 
   @Test
   public void testSimpleTruncateNoPreserveSplits() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     testSimpleTruncate(tableName, false);
   }
 
@@ -174,13 +184,13 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
 
   @Test
   public void testRecoveryAndDoubleExecutionPreserveSplits() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     testRecoveryAndDoubleExecution(tableName, true);
   }
 
   @Test
   public void testRecoveryAndDoubleExecutionNoPreserveSplits() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     testRecoveryAndDoubleExecution(tableName, false);
   }
 
@@ -236,13 +246,13 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
 
   @Test
   public void testOnHDFSFailurePreserveSplits() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     testOnHDFSFailure(tableName, true);
   }
 
   @Test
   public void testOnHDFSFailureNoPreserveSplits() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     testOnHDFSFailure(tableName, false);
   }
 
@@ -320,7 +330,7 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
     String[] families = new String[] { "f1", "f2" };
     byte[][] splitKeys =
       new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(testMethodName);
     RegionInfo[] regions = MasterProcedureTestingUtility.createTable(getMasterProcedureExecutor(),
       tableName, splitKeys, families);
     splitAndTruncate(tableName, regions, 1);
@@ -331,7 +341,7 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
     String[] families = new String[] { "f1", "f2" };
     byte[][] splitKeys =
       new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(testMethodName);
 
     // create a table with region replications
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(3)

@@ -31,16 +31,16 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 
 import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.sdk.testing.junit5.OpenTelemetryExtension;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.ConnectionRule;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.ConnectionExtension;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MatcherPredicate;
-import org.apache.hadoop.hbase.MiniClusterRule;
+import org.apache.hadoop.hbase.MiniClusterExtension;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -51,58 +51,56 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.trace.StringTraceRenderer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.trace.OpenTelemetryClassRule;
-import org.apache.hadoop.hbase.trace.OpenTelemetryTestRule;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test of master ProcedureV2 tracing.
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestProcedureTracing {
   private static final Logger LOG = LoggerFactory.getLogger(TestProcedureTracing.class);
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcedureTracing.class);
+  @RegisterExtension
+  @Order(1)
+  static final OpenTelemetryExtension otelExtension = OpenTelemetryExtension.create();
 
-  private static final OpenTelemetryClassRule otelClassRule = OpenTelemetryClassRule.create();
-  private static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder()
+  @RegisterExtension
+  @Order(2)
+  static final MiniClusterExtension miniClusterExtension = MiniClusterExtension.newBuilder()
     .setMiniClusterOption(StartTestingClusterOption.builder().numWorkers(3).build()).build();
-  protected static final ConnectionRule connectionRule =
-    ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
 
-  @ClassRule
-  public static final TestRule classRule =
-    RuleChain.outerRule(otelClassRule).around(miniClusterRule).around(connectionRule);
+  @RegisterExtension
+  @Order(3)
+  static final ConnectionExtension connectionExtension =
+    ConnectionExtension.createAsyncConnectionExtension(miniClusterExtension::createAsyncConnection);
+  private String testMethodName;
 
-  @Rule
-  public final OpenTelemetryTestRule otelTestRule = new OpenTelemetryTestRule(otelClassRule);
-
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
   @Test
   public void testCreateOpenDeleteTableSpans() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    final AsyncConnection conn = connectionRule.getAsyncConnection();
+    final TableName tableName = TableName.valueOf(testMethodName);
+    final AsyncConnection conn = connectionExtension.getAsyncConnection();
     final AsyncAdmin admin = conn.getAdmin();
 
     final AtomicReference<List<String>> tableRegionsRef = new AtomicReference<>();
     TraceUtil.trace(() -> {
-      try (final Table ignored = miniClusterRule.getTestingUtility()
+      try (final Table ignored = miniClusterExtension.getTestingUtility()
         .createMultiRegionTable(tableName, Bytes.toBytes("fam"), 5)) {
         final List<String> tableRegions = conn.getRegionLocator(tableName).getAllRegionLocations()
           .get().stream().map(HRegionLocation::getRegion).map(RegionInfo::getEncodedName)
@@ -115,19 +113,19 @@ public class TestProcedureTracing {
         }
         admin.deleteTable(tableName).get();
       }
-    }, name.getMethodName());
+    }, testMethodName);
 
-    final Matcher<SpanData> testSpanMatcher = allOf(hasName(name.getMethodName()), hasEnded());
+    final Matcher<SpanData> testSpanMatcher = allOf(hasName(testMethodName), hasEnded());
     Waiter.waitFor(conn.getConfiguration(), TimeUnit.MINUTES.toMillis(3),
-      new MatcherPredicate<>(otelClassRule::getSpans, hasItem(testSpanMatcher)));
-    final List<SpanData> spans = otelClassRule.getSpans();
+      new MatcherPredicate<>(otelExtension::getSpans, hasItem(testSpanMatcher)));
+    final List<SpanData> spans = otelExtension.getSpans();
     final StringTraceRenderer renderer = new StringTraceRenderer(spans);
     renderer.render(LOG::debug);
 
     // Expect to find a span for a CreateTableProcedure for the test table
     final Matcher<SpanData> createTableProcedureSpanMatcher = allOf(
-      hasName(allOf(containsString("CreateTableProcedure"),
-        containsString("table=" + name.getMethodName()))),
+      hasName(
+        allOf(containsString("CreateTableProcedure"), containsString("table=" + testMethodName))),
       hasEnded(), hasStatusWithCode(StatusCode.OK),
       hasAttributes(allOf(containsEntry(longKey("procId"), any(Long.class)),
         containsEntry(longKey("parentProcId"), any(Long.class)))));
@@ -137,7 +135,7 @@ public class TestProcedureTracing {
     // Expect to find a span for a TransitRegionStateProcedure for the test table
     final Matcher<SpanData> transitRegionStateProcedureSpanMatcher = allOf(
       hasName(allOf(containsString("TransitRegionStateProcedure"),
-        containsString("table=" + name.getMethodName()))),
+        containsString("table=" + testMethodName))),
       hasEnded(), hasStatusWithCode(StatusCode.OK),
       hasAttributes(allOf(containsEntry(longKey("procId"), any(Long.class)),
         containsEntry(longKey("parentProcId"), any(Long.class)))));
@@ -166,8 +164,8 @@ public class TestProcedureTracing {
 
     // Expect to find a span for a DisableTableProcedure for the test table
     final Matcher<SpanData> disableTableProcedureSpanMatcher = allOf(
-      hasName(allOf(containsString("DisableTableProcedure"),
-        containsString("table=" + name.getMethodName()))),
+      hasName(
+        allOf(containsString("DisableTableProcedure"), containsString("table=" + testMethodName))),
       hasEnded(), hasStatusWithCode(StatusCode.OK),
       hasAttributes(allOf(containsEntry(longKey("procId"), any(Long.class)),
         containsEntry(longKey("parentProcId"), any(Long.class)))));
@@ -176,8 +174,8 @@ public class TestProcedureTracing {
 
     // Expect to find a span for a DeleteTableProcedure for the test table
     final Matcher<SpanData> deleteTableProcedureSpanMatcher = allOf(
-      hasName(allOf(containsString("DeleteTableProcedure"),
-        containsString("table=" + name.getMethodName()))),
+      hasName(
+        allOf(containsString("DeleteTableProcedure"), containsString("table=" + testMethodName))),
       hasEnded(), hasStatusWithCode(StatusCode.OK),
       hasAttributes(allOf(containsEntry(longKey("procId"), any(Long.class)),
         containsEntry(longKey("parentProcId"), any(Long.class)))));

@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.security;
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,6 +28,7 @@ import java.net.InetSocketAddress;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
@@ -45,10 +46,10 @@ import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
@@ -65,14 +66,11 @@ public abstract class AbstractTestTlsRejectPlainText {
 
   protected static X509TestContextProvider PROVIDER;
 
-  @Parameterized.Parameter(0)
-  public X509KeyType caKeyType;
+  protected X509KeyType caKeyType;
 
-  @Parameterized.Parameter(1)
-  public X509KeyType certKeyType;
+  protected X509KeyType certKeyType;
 
-  @Parameterized.Parameter(2)
-  public char[] keyPassword;
+  protected char[] keyPassword;
 
   private X509TestContext x509TestContext;
 
@@ -80,17 +78,23 @@ public abstract class AbstractTestTlsRejectPlainText {
 
   protected RpcClient rpcClient;
 
-  @Parameterized.Parameters(name = "{index}: caKeyType={0}, certKeyType={1}, keyPassword={2}")
-  public static List<Object[]> data() {
-    List<Object[]> params = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     for (X509KeyType caKeyType : X509KeyType.values()) {
       for (X509KeyType certKeyType : X509KeyType.values()) {
         for (char[] keyPassword : new char[][] { "".toCharArray(), "pa$$w0rd".toCharArray() }) {
-          params.add(new Object[] { caKeyType, certKeyType, keyPassword });
+          params.add(Arguments.of(caKeyType, certKeyType, keyPassword));
         }
       }
     }
-    return params;
+    return params.stream();
+  }
+
+  protected AbstractTestTlsRejectPlainText(X509KeyType caKeyType, X509KeyType certKeyType,
+    char[] keyPassword) {
+    this.caKeyType = caKeyType;
+    this.certKeyType = certKeyType;
+    this.keyPassword = keyPassword;
   }
 
   protected static void initialize() throws IOException {
@@ -115,7 +119,7 @@ public abstract class AbstractTestTlsRejectPlainText {
     UTIL.cleanupTestDir();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     x509TestContext = PROVIDER.get(caKeyType, certKeyType, keyPassword);
     x509TestContext.setConfigurations(KeyStoreFileType.JKS, KeyStoreFileType.JKS);
@@ -127,7 +131,7 @@ public abstract class AbstractTestTlsRejectPlainText {
     rpcClient = new NettyRpcClient(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (rpcServer != null) {
       rpcServer.stop();
@@ -145,7 +149,7 @@ public abstract class AbstractTestTlsRejectPlainText {
 
   protected abstract BlockingInterface createStub() throws Exception;
 
-  @Test
+  @TestTemplate
   public void testReject() throws Exception {
     BlockingInterface stub = createStub();
     ServiceException se = assertThrows(ServiceException.class,

@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -34,52 +34,68 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDeleteTableProcedure.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestDeleteTableProcedure.class);
-  @Rule
-  public TestName name = new TestName();
+  private String testMethodName;
 
-  @Test(expected = TableNotFoundException.class)
-  public void testDeleteNotExistentTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-    ProcedurePrepareLatch latch = new ProcedurePrepareLatch.CompatibilityLatch();
-    long procId = ProcedureTestingUtility.submitAndWait(procExec,
-      new DeleteTableProcedure(procExec.getEnvironment(), tableName, latch));
-    latch.await();
+  @BeforeAll
+  public static void setupCluster() throws Exception {
+    TestTableDDLProcedureBase.setupCluster();
   }
 
-  @Test(expected = TableNotDisabledException.class)
+  @AfterAll
+  public static void cleanupTest() throws Exception {
+    TestTableDDLProcedureBase.cleanupTest();
+  }
+
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
+
+  @Test
+  public void testDeleteNotExistentTable() throws Exception {
+    final TableName tableName = TableName.valueOf(testMethodName);
+
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    assertThrows(TableNotFoundException.class, () -> {
+      ProcedurePrepareLatch latch = new ProcedurePrepareLatch.CompatibilityLatch();
+      ProcedureTestingUtility.submitAndWait(procExec,
+        new DeleteTableProcedure(procExec.getEnvironment(), tableName, latch));
+      latch.await();
+    });
+  }
+
+  @Test
   public void testDeleteNotDisabledTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
 
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f");
 
-    ProcedurePrepareLatch latch = new ProcedurePrepareLatch.CompatibilityLatch();
-    long procId = ProcedureTestingUtility.submitAndWait(procExec,
-      new DeleteTableProcedure(procExec.getEnvironment(), tableName, latch));
-    latch.await();
+    assertThrows(TableNotDisabledException.class, () -> {
+      ProcedurePrepareLatch latch = new ProcedurePrepareLatch.CompatibilityLatch();
+      ProcedureTestingUtility.submitAndWait(procExec,
+        new DeleteTableProcedure(procExec.getEnvironment(), tableName, latch));
+      latch.await();
+    });
   }
 
   @Test
   public void testDeleteDeletedTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     RegionInfo[] regions =
@@ -110,14 +126,14 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
 
   @Test
   public void testSimpleDelete() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final byte[][] splitKeys = null;
     testSimpleDelete(tableName, splitKeys);
   }
 
   @Test
   public void testSimpleDeleteWithSplits() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final byte[][] splitKeys =
       new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
     testSimpleDelete(tableName, splitKeys);
@@ -125,17 +141,17 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
 
   @Test
   public void testDeleteFromMeta() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     RegionInfo[] regions = MasterProcedureTestingUtility.createTable(getMasterProcedureExecutor(),
       tableName, null, "f1", "f2");
     List<RegionInfo> regionsList = new ArrayList<>();
     UTIL.getAdmin().disableTable(tableName);
     MasterProcedureEnv procedureEnv = getMasterProcedureExecutor().getEnvironment();
-    assertNotNull("Table should be on TableDescriptors cache.",
-      procedureEnv.getMasterServices().getTableDescriptors().get(tableName));
+    assertNotNull(procedureEnv.getMasterServices().getTableDescriptors().get(tableName),
+      "Table should be on TableDescriptors cache.");
     DeleteTableProcedure.deleteFromMeta(procedureEnv, tableName, regionsList);
-    assertNull("Table shouldn't be on TableDescriptors anymore.",
-      procedureEnv.getMasterServices().getTableDescriptors().get(tableName));
+    assertNull(procedureEnv.getMasterServices().getTableDescriptors().get(tableName),
+      "Table shouldn't be on TableDescriptors anymore.");
   }
 
   private void testSimpleDelete(final TableName tableName, byte[][] splitKeys) throws Exception {
@@ -153,7 +169,7 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
 
   @Test
   public void testRecoveryAndDoubleExecution() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
 
     // create the table
     byte[][] splitKeys = null;

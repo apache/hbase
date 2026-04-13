@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -32,36 +31,42 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ModifyTableState;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestModifyTableProcedureWithRecovery extends TestTableDDLProcedureBase {
+  private String testMethodName;
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestModifyTableProcedureWithRecovery.class);
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     // Enable recovery snapshots
+    TestTableDDLProcedureBase.setupConf(UTIL.getConfiguration());
     UTIL.getConfiguration().setBoolean(HConstants.SNAPSHOT_BEFORE_DESTRUCTIVE_ACTION_ENABLED_KEY,
       true);
-    TestTableDDLProcedureBase.setupCluster();
+    UTIL.startMiniCluster(1);
+  }
+
+  @AfterAll
+  public static void cleanupTest() throws Exception {
+    TestTableDDLProcedureBase.cleanupTest();
   }
 
   @Test
   public void testRecoverySnapshotRollback() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final String cf1 = "cf1";
     final String cf2 = "cf2";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -86,7 +91,7 @@ public class TestModifyTableProcedureWithRecovery extends TestTableDDLProcedureB
     // Wait for procedure to complete (should fail)
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     Procedure<MasterProcedureEnv> result = procExec.getResult(procId);
-    assertTrue("Procedure should have failed", result.isFailed());
+    assertTrue(result.isFailed(), "Procedure should have failed");
 
     // Verify no recovery snapshots remain after rollback
     boolean snapshotFound = false;
@@ -96,13 +101,13 @@ public class TestModifyTableProcedureWithRecovery extends TestTableDDLProcedureB
         break;
       }
     }
-    assertTrue("Recovery snapshot should have been cleaned up during rollback", !snapshotFound);
+    assertTrue(!snapshotFound, "Recovery snapshot should have been cleaned up during rollback");
   }
 
   @Test
   public void testRecoverySnapshotAndRestore() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    final TableName restoredTableName = TableName.valueOf(name.getMethodName() + "_restored");
+    final TableName tableName = TableName.valueOf(testMethodName);
+    final TableName restoredTableName = TableName.valueOf(testMethodName + "_restored");
     final String cf1 = "cf1";
     final String cf2 = "cf2";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -124,8 +129,8 @@ public class TestModifyTableProcedureWithRecovery extends TestTableDDLProcedureB
 
     // Verify table modification was successful
     TableDescriptor currentHtd = UTIL.getAdmin().getDescriptor(tableName);
-    assertEquals("Should have one column family", 1, currentHtd.getColumnFamilyNames().size());
-    assertTrue("Should only have cf1", currentHtd.hasColumnFamily(cf1.getBytes()));
+    assertEquals(1, currentHtd.getColumnFamilyNames().size(), "Should have one column family");
+    assertTrue(currentHtd.hasColumnFamily(cf1.getBytes()), "Should only have cf1");
 
     // Find the recovery snapshot
     String recoverySnapshotName = null;
@@ -135,7 +140,7 @@ public class TestModifyTableProcedureWithRecovery extends TestTableDDLProcedureB
         break;
       }
     }
-    assertTrue("Recovery snapshot should exist", recoverySnapshotName != null);
+    assertTrue(recoverySnapshotName != null, "Recovery snapshot should exist");
 
     // Restore from snapshot by cloning to a new table
     UTIL.getAdmin().cloneSnapshot(recoverySnapshotName, restoredTableName);
@@ -143,9 +148,9 @@ public class TestModifyTableProcedureWithRecovery extends TestTableDDLProcedureB
 
     // Verify restored table has original structure with both column families
     TableDescriptor restoredHtd = UTIL.getAdmin().getDescriptor(restoredTableName);
-    assertEquals("Should have two column families", 2, restoredHtd.getColumnFamilyNames().size());
-    assertTrue("Should have cf1", restoredHtd.hasColumnFamily(cf1.getBytes()));
-    assertTrue("Should have cf2", restoredHtd.hasColumnFamily(cf2.getBytes()));
+    assertEquals(2, restoredHtd.getColumnFamilyNames().size(), "Should have two column families");
+    assertTrue(restoredHtd.hasColumnFamily(cf1.getBytes()), "Should have cf1");
+    assertTrue(restoredHtd.hasColumnFamily(cf2.getBytes()), "Should have cf2");
 
     // Clean up the cloned table
     UTIL.getAdmin().disableTable(restoredTableName);

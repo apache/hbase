@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase.coprocessor;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.fam2;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.fam3;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTestConst;
@@ -66,24 +65,24 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTrack
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCoprocessorInterface {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCoprocessorInterface.class);
-
-  @Rule
-  public TestName name = new TestName();
+  private String currentTestName;
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   static final Path DIR = TEST_UTIL.getDataTestDir();
+
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    currentTestName = testInfo.getTestMethod().get().getName();
+  }
 
   private static class CustomScanner implements RegionScanner {
 
@@ -305,11 +304,11 @@ public class TestCoprocessorInterface {
 
   @Test
   public void testSharedData() throws IOException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(currentTestName);
     byte[][] families = { fam1, fam2, fam3 };
 
     Configuration hc = initConfig();
-    HRegion region = initHRegion(tableName, name.getMethodName(), hc, new Class<?>[] {}, families);
+    HRegion region = initHRegion(tableName, currentTestName, hc, new Class<?>[] {}, families);
 
     for (int i = 0; i < 3; i++) {
       HTestConst.addContent(region, fam3);
@@ -367,11 +366,11 @@ public class TestCoprocessorInterface {
 
   @Test
   public void testCoprocessorInterface() throws IOException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(currentTestName);
     byte[][] families = { fam1, fam2, fam3 };
 
     Configuration hc = initConfig();
-    HRegion region = initHRegion(tableName, name.getMethodName(), hc,
+    HRegion region = initHRegion(tableName, currentTestName, hc,
       new Class<?>[] { CoprocessorImpl.class }, families);
     for (int i = 0; i < 3; i++) {
       HTestConst.addContent(region, fam3);
@@ -390,8 +389,8 @@ public class TestCoprocessorInterface {
     HBaseTestingUtil.closeRegionAndWAL(region);
     Coprocessor c = region.getCoprocessorHost().findCoprocessor(CoprocessorImpl.class);
 
-    assertTrue("Coprocessor not started", ((CoprocessorImpl) c).wasStarted());
-    assertTrue("Coprocessor not stopped", ((CoprocessorImpl) c).wasStopped());
+    assertTrue(((CoprocessorImpl) c).wasStarted(), "Coprocessor not started");
+    assertTrue(((CoprocessorImpl) c).wasStopped(), "Coprocessor not stopped");
     assertTrue(((CoprocessorImpl) c).wasOpened());
     assertTrue(((CoprocessorImpl) c).wasClosed());
     assertTrue(((CoprocessorImpl) c).wasFlushed());
