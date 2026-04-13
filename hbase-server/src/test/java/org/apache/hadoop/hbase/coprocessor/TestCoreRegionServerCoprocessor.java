@@ -17,51 +17,45 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.MockRegionServerServices;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Test CoreCoprocessor Annotation works giving access to facility not usually available. Test
  * RegionServerCoprocessor.
  */
-@Category({ CoprocessorTests.class, SmallTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCoreRegionServerCoprocessor {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCoreRegionServerCoprocessor.class);
-
-  @Rule
-  public TestName name = new TestName();
+  private String currentTestName;
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private RegionServerServices rss;
   private RegionServerCoprocessorHost rsch;
 
-  @Before
-  public void before() throws IOException {
-    String methodName = this.name.getMethodName();
+  @BeforeEach
+  public void before(TestInfo testInfo) throws IOException {
+    currentTestName = testInfo.getTestMethod().get().getName();
+    String methodName = this.currentTestName;
     this.rss = new MockRegionServerServices(HTU.getConfiguration());
     this.rsch = new RegionServerCoprocessorHost(this.rss, HTU.getConfiguration());
   }
 
-  @After
+  @AfterEach
   public void after() throws IOException {
     this.rsch.preStop("Stopping", null);
   }

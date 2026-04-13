@@ -17,28 +17,23 @@
  */
 package org.apache.hadoop.hbase.monitoring;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test case for the MemoryBoundedLogMessageBuffer utility. Ensures that it uses no more memory than
  * it's supposed to, and that it properly deals with multibyte encodings.
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMemoryBoundedLogMessageBuffer {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMemoryBoundedLogMessageBuffer.class);
 
   private static final long TEN_KB = 10 * 1024;
   private static final String JP_TEXT = "こんにちは";
@@ -50,14 +45,14 @@ public class TestMemoryBoundedLogMessageBuffer {
     for (int i = 0; i < 1000; i++) {
       buf.add("hello " + i);
     }
-    assertTrue("Usage too big: " + buf.estimateHeapUsage(), buf.estimateHeapUsage() < TEN_KB);
-    assertTrue("Too many retained: " + buf.getMessages().size(), buf.getMessages().size() < 100);
+    assertTrue(buf.estimateHeapUsage() < TEN_KB, "Usage too big: " + buf.estimateHeapUsage());
+    assertTrue(buf.getMessages().size() < 100, "Too many retained: " + buf.getMessages().size());
     StringWriter sw = new StringWriter();
     buf.dumpTo(new PrintWriter(sw));
     String dump = sw.toString();
     String eol = System.getProperty("line.separator");
-    assertFalse("The early log messages should be evicted", dump.contains("hello 1" + eol));
-    assertTrue("The late log messages should be retained", dump.contains("hello 999" + eol));
+    assertFalse(dump.contains("hello 1" + eol), "The early log messages should be evicted");
+    assertTrue(dump.contains("hello 999" + eol), "The late log messages should be retained");
   }
 
   @Test
