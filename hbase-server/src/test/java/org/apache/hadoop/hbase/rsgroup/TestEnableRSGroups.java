@@ -18,18 +18,13 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RSGroupTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 
-@Category({ RSGroupTests.class, MediumTests.class })
+@Tag(RSGroupTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestEnableRSGroups extends EnableRSGroupsTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestEnableRSGroups.class);
 
   @Override
   protected void enableRSGroup(Configuration conf) {
