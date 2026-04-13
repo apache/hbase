@@ -18,19 +18,21 @@
 package org.apache.hadoop.hbase.security.access;
 
 import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContextImpl;
@@ -45,13 +47,11 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,12 +60,9 @@ import org.slf4j.LoggerFactory;
  * NOTE: Only one test in here. In AMv2, there is problem deleting because we are missing auth. For
  * now disabled. See the cleanup method.
  */
-@Category({ SecurityTests.class, MediumTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestAccessController3 extends SecureTestUtil {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAccessController3.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAccessController.class);
   private static TableName TEST_TABLE = TableName.valueOf("testtable1");
@@ -119,9 +116,6 @@ public class TestAccessController3 extends SecureTestUtil {
 
   private static boolean callSuperTwice = true;
 
-  @Rule
-  public TestName name = new TestName();
-
   // class with faulty stop() method, controlled by flag
   public static class FaultyAccessController extends AccessController {
     public FaultyAccessController() {
@@ -136,7 +130,7 @@ public class TestAccessController3 extends SecureTestUtil {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
@@ -190,13 +184,13 @@ public class TestAccessController3 extends SecureTestUtil {
     setUpTableAndUserPermissions();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     assertEquals(1, TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().size());
     HRegionServer rs =
       TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().get(0).getRegionServer();
     // Strange place for an assert.
-    assertFalse("RegionServer should have ABORTED (FaultyAccessController)", rs.isAborted());
+    assertFalse(rs.isAborted(), "RegionServer should have ABORTED (FaultyAccessController)");
     cleanUp();
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -263,13 +257,15 @@ public class TestAccessController3 extends SecureTestUtil {
   }
 
   @Test
-  public void testTableCreate() throws Exception {
+  public void testTableCreate(TestInfo testInfo) throws Exception {
     AccessTestAction createTable = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-        htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-        ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV), htd, null);
+        TableDescriptor tableDescriptor = TableDescriptorBuilder
+          .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName()))
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
+        ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV),
+          tableDescriptor, null);
         return null;
       }
     };
