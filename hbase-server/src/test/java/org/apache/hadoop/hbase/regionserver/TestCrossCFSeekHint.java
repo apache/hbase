@@ -60,7 +60,8 @@ public class TestCrossCFSeekHint {
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  private static final byte[] ROW = Bytes.toBytes("row");
+  private static final byte[] ROW1 = Bytes.toBytes("row1");
+  private static final byte[] ROW2 = Bytes.toBytes("row2");
   private static final byte[] QUAL = Bytes.toBytes("q");
   private static final int NUM_CELLS = 100;
 
@@ -87,24 +88,42 @@ public class TestCrossCFSeekHint {
   }
 
   /**
-   * Filter that returns SEEK_NEXT_USING_HINT for cells not in the target family, with a hint
-   * pointing to the target family. Counts how many times filterCell is called so we can verify the
-   * scanner didn't traverse all cells.
+   * Filter that INCLUDEs cells from the data family up to a threshold qualifier, then returns
+   * SEEK_NEXT_USING_HINT with a hint pointing to the target family. All target family cells are
+   * INCLUDEd. Counts filterCell calls to verify no cell-by-cell traversal.
+   * <p>
+   * This simulates a filter that wants some cells from CF1, then skips ahead to CF2. If the fix
+   * permanently closes CF1's store scanner, CF1 cells would be missing on subsequent rows.
    */
   public static class CrossCFHintFilter extends FilterBase {
     private final byte[] targetFamily;
     private final byte[] targetQualifier;
+    private final byte[] hintThreshold;
     private long filterCellCount;
 
-    public CrossCFHintFilter(byte[] targetFamily, byte[] targetQualifier) {
+    /**
+     * @param targetFamily    the CF to hint/seek to
+     * @param targetQualifier qualifier for the hint cell
+     * @param hintThreshold   when a data CF cell's qualifier >= this, return SEEK_NEXT_USING_HINT
+     *                        instead of INCLUDE. Cells before this threshold are INCLUDEd.
+     */
+    public CrossCFHintFilter(byte[] targetFamily, byte[] targetQualifier, byte[] hintThreshold) {
       this.targetFamily = targetFamily;
       this.targetQualifier = targetQualifier;
+      this.hintThreshold = hintThreshold;
     }
 
     @Override
     public ReturnCode filterCell(Cell c) throws IOException {
       filterCellCount++;
       if (CellUtil.matchingFamily(c, targetFamily)) {
+        return ReturnCode.INCLUDE;
+      }
+      // Data CF cell: include if qualifier < threshold, otherwise hint to target CF
+      if (
+        Bytes.compareTo(c.getQualifierArray(), c.getQualifierOffset(), c.getQualifierLength(),
+          hintThreshold, 0, hintThreshold.length) < 0
+      ) {
         return ReturnCode.INCLUDE;
       }
       return ReturnCode.SEEK_NEXT_USING_HINT;
@@ -136,34 +155,52 @@ public class TestCrossCFSeekHint {
       TEST_UTIL.getConfiguration(), td);
 
     try {
-      for (int i = 0; i < NUM_CELLS; i++) {
-        Put p = new Put(ROW);
-        p.addColumn(dataCF, Bytes.toBytes(String.format("q%05d", i)), Bytes.toBytes("v"));
+      // Write two rows. Each row has NUM_CELLS qualifiers in dataCF (q00000..q00099)
+      // and one cell in targetCF.
+      for (byte[] row : new byte[][] { ROW1, ROW2 }) {
+        for (int i = 0; i < NUM_CELLS; i++) {
+          Put p = new Put(row);
+          p.addColumn(dataCF, Bytes.toBytes(String.format("q%05d", i)), Bytes.toBytes("v"));
+          region.put(p);
+        }
+        Put p = new Put(row);
+        p.addColumn(targetCF, QUAL, Bytes.toBytes("target"));
         region.put(p);
       }
-      Put p = new Put(ROW);
-      p.addColumn(targetCF, QUAL, Bytes.toBytes("target"));
-      region.put(p);
       if (flush) {
         region.flush(true);
       }
 
-      CrossCFHintFilter filter = new CrossCFHintFilter(targetCF, QUAL);
+      // The filter INCLUDEs dataCF cells with qualifier < "q00002" (i.e. q00000, q00001),
+      // then returns SEEK_NEXT_USING_HINT at q00002 with a hint to targetCF.
+      // This means each row should return: dataCF:q00000, dataCF:q00001, targetCF:q.
+      byte[] hintThreshold = Bytes.toBytes("q00002");
+      int includedPerRow = 2; // q00000, q00001
+      CrossCFHintFilter filter = new CrossCFHintFilter(targetCF, QUAL, hintThreshold);
       Scan scan = new Scan();
       scan.setFilter(filter);
       scan.setReversed(reversed);
 
-      List<Cell> results = new ArrayList<>();
+      List<Cell> row1Results = new ArrayList<>();
+      List<Cell> row2Results = new ArrayList<>();
       try (RegionScanner scanner = region.getScanner(scan)) {
-        scanner.next(results);
+        boolean hasMore = scanner.next(row1Results);
+        assertTrue(hasMore, "Should have more rows after first row");
+        scanner.next(row2Results);
       }
 
-      assertEquals(1, results.size(), "Should return the cell from target CF");
-      assertTrue(CellUtil.matchingFamily(results.get(0), targetCF),
-        "Result should be from target CF");
+      // First row: includedPerRow data CF cells + 1 target CF cell
+      assertEquals(includedPerRow + 1, row1Results.size(), "First row result count");
 
-      // 1 call for the first data CF cell (hint triggers close) + 1 for the target CF cell
-      assertEquals(2, filter.getFilterCellCount(),
+      // Second row: if the data CF's store scanner was permanently closed on the
+      // first row, we would lose the data CF cells here.
+      assertEquals(includedPerRow + 1, row2Results.size(),
+        "Second row must also return data CF cells; store scanner must survive cross-CF hint");
+
+      // Verify no cell-by-cell traversal of the remaining 98 data CF cells per row.
+      // Per row: includedPerRow INCLUDEs + 1 SEEK_NEXT_USING_HINT + 1 target CF INCLUDE.
+      int callsPerRow = includedPerRow + 1 + 1;
+      assertEquals(callsPerRow * 2, filter.getFilterCellCount(),
         "Cross-CF hint should not cause cell-by-cell traversal (HBASE-28902)");
     } finally {
       HBaseTestingUtil.closeRegionAndWAL(region);
