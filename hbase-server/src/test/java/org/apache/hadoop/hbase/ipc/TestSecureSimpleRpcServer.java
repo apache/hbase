@@ -34,7 +34,7 @@ import org.junit.jupiter.api.Test;
 
 @Tag(RPCTests.TAG)
 @Tag(MediumTests.TAG)
-public class TestSecureSimpleRpcServer extends TestSimpleRpcServer {
+public class TestSecureSimpleRpcServer extends AbstractTestRpcServer {
 
   private static File KEYTAB_FILE;
   private static MiniKdc KDC;
@@ -54,8 +54,9 @@ public class TestSecureSimpleRpcServer extends TestSimpleRpcServer {
     Configuration conf = TEST_UTIL.getConfiguration();
     HBaseKerberosUtils.setSecuredConfiguration(conf, principalName, principalName);
     UGI = login(KEYTAB_FILE.toString(), principalName);
-    TestSimpleRpcServer.setupClass();
-
+    TEST_UTIL.getConfiguration().set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
+      SimpleRpcServer.class.getName());
+    TEST_UTIL.startMiniCluster();
   }
 
   @AfterAll
@@ -63,12 +64,15 @@ public class TestSecureSimpleRpcServer extends TestSimpleRpcServer {
     if (KDC != null) {
       KDC.stop();
     }
-    KEYTAB_FILE.delete();
-    TestSimpleRpcServer.tearDownClass();
-    TEST_UTIL.cleanupTestDir();
+    if (KEYTAB_FILE != null) {
+      KEYTAB_FILE.delete();
+    }
+    if (TEST_UTIL != null) {
+      TEST_UTIL.shutdownMiniCluster();
+      TEST_UTIL.cleanupTestDir();
+    }
   }
 
-  @Override
   @Test
   public void testSimpleRpcServer() throws Exception {
     UGI.doAs(new PrivilegedExceptionAction<Void>() {
