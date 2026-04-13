@@ -18,27 +18,25 @@
 package org.apache.hadoop.hbase.security.visibility;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ SecurityTests.class, MediumTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestVisibilityLabelsOnNewVersionBehaviorTable
   extends VisibilityLabelsWithDeletesTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVisibilityLabelsOnNewVersionBehaviorTable.class);
-
   @Override
-  protected Table createTable(byte[] fam) throws IOException {
-    TableName tableName = TableName.valueOf(testName.getMethodName());
+  protected Table createTable(byte[] fam, TestInfo testInfo) throws IOException {
+    TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     TEST_UTIL.getAdmin()
       .createTable(TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(
