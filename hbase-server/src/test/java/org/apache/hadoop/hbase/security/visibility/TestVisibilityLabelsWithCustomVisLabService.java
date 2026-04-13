@@ -23,26 +23,21 @@ import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LA
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ SecurityTests.class, MediumTests.class })
-public class TestVisibilityLabelsWithCustomVisLabService extends TestVisibilityLabels {
+@Tag(SecurityTests.TAG)
+@Tag(MediumTests.TAG)
+public class TestVisibilityLabelsWithCustomVisLabService extends VisibilityLabelsTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVisibilityLabelsWithCustomVisLabService.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
@@ -60,12 +55,10 @@ public class TestVisibilityLabelsWithCustomVisLabService extends TestVisibilityL
     addLabels();
   }
 
-  // Extending this test from super as we don't verify predefined labels in
-  // ExpAsStringVisibilityLabelServiceImpl
-  @Override
+  // we don't verify predefined labels in ExpAsStringVisibilityLabelServiceImpl
   @Test
   public void testVisibilityLabelsInPutsThatDoesNotMatchAnyDefinedLabels() throws Exception {
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    TableName tableName = name.getTableName();
     // This put with label "SAMPLE_LABEL" should not get failed.
     createTableAndWriteDataWithLabels(tableName, "SAMPLE_LABEL", "TEST");
   }

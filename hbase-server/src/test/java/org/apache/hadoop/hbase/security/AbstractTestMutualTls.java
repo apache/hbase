@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.security;
 
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,13 +49,13 @@ import org.bouncycastle.asn1.x500.X500NameBuilder;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.OperatorCreationException;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestTemplate;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
@@ -75,24 +75,20 @@ public abstract class AbstractTestMutualTls {
   protected RpcServer rpcServer;
 
   protected RpcClient rpcClient;
+
   private TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface stub;
 
-  @Parameterized.Parameter(0)
-  public X509KeyType caKeyType;
+  protected X509KeyType caKeyType;
 
-  @Parameterized.Parameter(1)
-  public X509KeyType certKeyType;
+  protected X509KeyType certKeyType;
 
-  @Parameterized.Parameter(2)
-  public String keyPassword;
-  @Parameterized.Parameter(3)
-  public boolean expectSuccess;
+  protected String keyPassword;
 
-  @Parameterized.Parameter(4)
-  public boolean validateHostnames;
+  protected boolean expectSuccess;
 
-  @Parameterized.Parameter(5)
-  public CertConfig certConfig;
+  protected boolean validateHostnames;
+
+  protected CertConfig certConfig;
 
   public enum CertConfig {
     // For no cert, we literally pass no certificate to the server. It's possible (assuming server
@@ -111,7 +107,17 @@ public abstract class AbstractTestMutualTls {
     VERIFIABLE_CERT_WITH_BAD_HOST
   }
 
-  @BeforeClass
+  protected AbstractTestMutualTls(X509KeyType caKeyType, X509KeyType certKeyType,
+    String keyPassword, boolean expectSuccess, boolean validateHostnames, CertConfig certConfig) {
+    this.caKeyType = caKeyType;
+    this.certKeyType = certKeyType;
+    this.keyPassword = keyPassword;
+    this.expectSuccess = expectSuccess;
+    this.validateHostnames = validateHostnames;
+    this.certConfig = certConfig;
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws IOException {
     UTIL = new HBaseCommonTestingUtil();
     Security.addProvider(new BouncyCastleProvider());
@@ -130,7 +136,7 @@ public abstract class AbstractTestMutualTls {
     PROVIDER = new X509TestContextProvider(conf, DIR);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanUp() {
     Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME);
     UTIL.cleanupTestDir();
@@ -139,7 +145,7 @@ public abstract class AbstractTestMutualTls {
   protected abstract void initialize(Configuration serverConf, Configuration clientConf)
     throws IOException, GeneralSecurityException, OperatorCreationException;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     x509TestContext = PROVIDER.get(caKeyType, certKeyType, keyPassword.toCharArray());
     x509TestContext.setConfigurations(KeyStoreFileType.JKS, KeyStoreFileType.JKS);
@@ -191,7 +197,7 @@ public abstract class AbstractTestMutualTls {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (rpcServer != null) {
       rpcServer.stop();
@@ -207,7 +213,7 @@ public abstract class AbstractTestMutualTls {
     Security.setProperty("com.sun.security.enableCRLDP", Boolean.FALSE.toString());
   }
 
-  @Test
+  @TestTemplate
   public void testClientAuth() throws Exception {
     if (expectSuccess) {
       // we expect no exception, so if one is thrown the test will fail
@@ -215,17 +221,15 @@ public abstract class AbstractTestMutualTls {
     } else {
       ServiceException se = assertThrows(ServiceException.class, this::submitRequest);
       // The SSLHandshakeException is encapsulated differently depending on the TLS version
-      boolean seenSSLHandshakeException = false;
       Throwable current = se;
       do {
         if (current instanceof SSLHandshakeException) {
-          seenSSLHandshakeException = true;
-          break;
+          return;
         }
         current = current.getCause();
       } while (current != null);
-      assertTrue("Exception chain does not include SSLHandshakeException",
-        seenSSLHandshakeException);
+      fail("Exception chain does not include SSLHandshakeException: "
+        + Throwables.getStackTraceAsString(se));
     }
   }
 
