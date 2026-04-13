@@ -18,10 +18,10 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import static org.apache.hadoop.hbase.util.Threads.sleep;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -44,44 +43,39 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Category({ LargeTests.class })
+@Tag(LargeTests.TAG)
 public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupsAdmin2.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsAdmin2.class);
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     setUpTestBeforeClass();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     tearDownAfterClass();
   }
 
-  @Before
-  public void beforeMethod() throws Exception {
-    setUpBeforeMethod();
+  @BeforeEach
+  public void beforeMethod(TestInfo testInfo) throws Exception {
+    setUpBeforeMethod(testInfo);
   }
 
-  @After
+  @AfterEach
   public void afterMethod() throws Exception {
     tearDownAfterMethod();
   }
@@ -159,7 +153,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     RSGroupInfo appInfo = addGroup(getGroupName(name.getMethodName()), 1);
     RSGroupInfo adminInfo = addGroup(getGroupName(name.getMethodName()), 1);
     RSGroupInfo dInfo = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP);
-    Assert.assertEquals(initNumGroups + 2, rsGroupAdmin.listRSGroups().size());
+    assertEquals(initNumGroups + 2, rsGroupAdmin.listRSGroups().size());
     assertEquals(1, adminInfo.getServers().size());
     assertEquals(1, appInfo.getServers().size());
     assertEquals(getNumServers() - 2, dInfo.getServers().size());
@@ -167,7 +161,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     rsGroupAdmin.removeRSGroup(appInfo.getName());
     rsGroupAdmin.moveServers(adminInfo.getServers(), RSGroupInfo.DEFAULT_GROUP);
     rsGroupAdmin.removeRSGroup(adminInfo.getName());
-    Assert.assertEquals(rsGroupAdmin.listRSGroups().size(), initNumGroups);
+    assertEquals(rsGroupAdmin.listRSGroups().size(), initNumGroups);
   }
 
   @Test
@@ -188,7 +182,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     } catch (IOException ex) {
       String exp = "Server foo:9999 is either offline or it does not exist.";
       String msg = "Expected '" + exp + "' in exception message: ";
-      assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
+      assertTrue(ex.getMessage().contains(exp), msg + " " + ex.getMessage());
     }
 
     // test success case
@@ -217,10 +211,10 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     // test group removal
     LOG.info("Remove group " + barGroup.getName());
     rsGroupAdmin.removeRSGroup(barGroup.getName());
-    Assert.assertEquals(null, rsGroupAdmin.getRSGroupInfo(barGroup.getName()));
+    assertEquals(null, rsGroupAdmin.getRSGroupInfo(barGroup.getName()));
     LOG.info("Remove group " + fooGroup.getName());
     rsGroupAdmin.removeRSGroup(fooGroup.getName());
-    Assert.assertEquals(null, rsGroupAdmin.getRSGroupInfo(fooGroup.getName()));
+    assertEquals(null, rsGroupAdmin.getRSGroupInfo(fooGroup.getName()));
   }
 
   @Test
@@ -238,7 +232,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       String exp =
         "Server " + targetServer.getAddress() + " is an online server, not allowed to remove.";
       String msg = "Expected '" + exp + "' in exception message: ";
-      assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
+      assertTrue(ex.getMessage().contains(exp), msg + " " + ex.getMessage());
     }
     assertTrue(newGroup.getServers().contains(targetServer.getAddress()));
 
@@ -269,7 +263,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       String exp = "Server " + targetServer.getAddress() + " is on the dead servers list,"
         + " Maybe it will come back again, not allowed to remove.";
       String msg = "Expected '" + exp + "' in exception message: ";
-      assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
+      assertTrue(ex.getMessage().contains(exp), msg + " " + ex.getMessage());
     }
     assertTrue(newGroup.getServers().contains(targetServer.getAddress()));
 
@@ -338,7 +332,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     } catch (IOException ex) {
       String exp = "Server foo:9999 is either offline or it does not exist.";
       String msg = "Expected '" + exp + "' in exception message: ";
-      assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
+      assertTrue(ex.getMessage().contains(exp), msg + " " + ex.getMessage());
     }
 
     // test move when src = dst
@@ -346,14 +340,14 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       Sets.newHashSet(tableName), RSGroupInfo.DEFAULT_GROUP);
 
     // verify default group info
-    Assert.assertEquals(oldDefaultGroupServerSize,
+    assertEquals(oldDefaultGroupServerSize,
       rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size());
-    Assert.assertEquals(oldDefaultGroupTableSize,
+    assertEquals(oldDefaultGroupTableSize,
       rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables().size());
 
     // verify new group info
-    Assert.assertEquals(1, rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getServers().size());
-    Assert.assertEquals(0, rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getTables().size());
+    assertEquals(1, rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getServers().size());
+    assertEquals(0, rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getTables().size());
 
     // get all region to move targetServer
     List<String> regionList = getTableRegionMap().get(tableName);
@@ -375,7 +369,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     });
 
     // verify that all region move to targetServer
-    Assert.assertEquals(5, getTableServerRegionMap().get(tableName).get(targetServer).size());
+    assertEquals(5, getTableServerRegionMap().get(tableName).get(targetServer).size());
 
     // move targetServer and table to newGroup
     LOG.info("moving server and table to newGroup");
@@ -383,8 +377,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       Sets.newHashSet(tableName), newGroup.getName());
 
     // verify group change
-    Assert.assertEquals(newGroup.getName(),
-      rsGroupAdmin.getRSGroupInfoOfTable(tableName).getName());
+    assertEquals(newGroup.getName(), rsGroupAdmin.getRSGroupInfoOfTable(tableName).getName());
 
     // verify servers' not exist in old group
     Set<Address> defaultServers =
@@ -405,7 +398,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     assertTrue(newGroupTables.contains(tableName));
 
     // verify that all region still assgin on targetServer
-    Assert.assertEquals(5, getTableServerRegionMap().get(tableName).get(targetServer).size());
+    assertEquals(5, getTableServerRegionMap().get(tableName).get(targetServer).size());
 
     assertTrue(observer.preMoveServersAndTables);
     assertTrue(observer.postMoveServersAndTables);
@@ -455,7 +448,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     // test group removal
     LOG.info("Remove group " + fooGroup.getName());
     rsGroupAdmin.removeRSGroup(fooGroup.getName());
-    Assert.assertEquals(null, rsGroupAdmin.getRSGroupInfo(fooGroup.getName()));
+    assertEquals(null, rsGroupAdmin.getRSGroupInfo(fooGroup.getName()));
   }
 
   @Test
@@ -673,7 +666,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     // This test case is meant to be used for verifying the performance quickly by a developer.
     // Moving 100 regions takes much less than 15000 ms. Given 15000 ms so test cases passes
     // on all environment.
-    assertTrue(msg, timeTaken < 15000);
+    assertTrue(timeTaken < 15000, msg);
     LOG.info("Time taken to move a table with 100 region is {} ms", timeTaken);
   }
 }

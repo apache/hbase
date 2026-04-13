@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.hbase.namespace;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -37,7 +38,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -82,28 +82,23 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.zookeeper.KeeperException;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestNamespaceAuditor {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNamespaceAuditor.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestNamespaceAuditor.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static Admin ADMIN;
   private String prefix = "TestNamespaceAuditor";
 
-  @BeforeClass
+  @BeforeAll
   public static void before() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, CustomObserver.class.getName());
@@ -119,12 +114,12 @@ public class TestNamespaceAuditor {
     ADMIN = UTIL.getAdmin();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws Exception, KeeperException {
     for (HTableDescriptor table : ADMIN.listTables()) {
       ADMIN.disableTable(table.getTableName());
@@ -135,8 +130,8 @@ public class TestNamespaceAuditor {
         ADMIN.deleteNamespace(ns.getName());
       }
     }
-    assertTrue("Quota manager not initialized",
-      UTIL.getHBaseCluster().getMaster().getMasterQuotaManager().isQuotaInitialized());
+    assertTrue(UTIL.getHBaseCluster().getMaster().getMasterQuotaManager().isQuotaInitialized(),
+      "Quota manager not initialized");
   }
 
   @Test
@@ -146,7 +141,7 @@ public class TestNamespaceAuditor {
       NamespaceDescriptor.create(nsp).addConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "5")
         .addConfiguration(TableNamespaceManager.KEY_MAX_TABLES, "2").build();
     ADMIN.createNamespace(nspDesc);
-    assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(nsp));
+    assertNotNull(ADMIN.getNamespaceDescriptor(nsp), "Namespace descriptor found null.");
     assertEquals(3, ADMIN.listNamespaceDescriptors().length);
     HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
 
@@ -167,8 +162,8 @@ public class TestNamespaceAuditor {
       assertTrue(exp instanceof IOException);
       constraintViolated = true;
     } finally {
-      assertTrue("Constraint not violated for table " + tableDescTwo.getTableName(),
-        constraintViolated);
+      assertTrue(constraintViolated,
+        "Constraint not violated for table " + tableDescTwo.getTableName());
     }
     ADMIN.createTable(tableDescTwo, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
     NamespaceTableAndRegionInfo nspState = getQuotaManager().getState(nsp);
@@ -182,8 +177,8 @@ public class TestNamespaceAuditor {
       assertTrue(exp instanceof IOException);
       constraintViolated = true;
     } finally {
-      assertTrue("Constraint not violated for table " + tableDescThree.getTableName(),
-        constraintViolated);
+      assertTrue(constraintViolated,
+        "Constraint not violated for table " + tableDescThree.getTableName());
     }
   }
 
@@ -249,9 +244,9 @@ public class TestNamespaceAuditor {
       .addConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "100")
       .addConfiguration(TableNamespaceManager.KEY_MAX_TABLES, "3").build();
     ADMIN.createNamespace(nspDesc);
-    assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(namespace));
+    assertNotNull(ADMIN.getNamespaceDescriptor(namespace), "Namespace descriptor found null.");
     NamespaceTableAndRegionInfo stateInfo = getNamespaceState(nspDesc.getName());
-    assertNotNull("Namespace state found null for " + namespace, stateInfo);
+    assertNotNull(stateInfo, "Namespace state found null for " + namespace);
     HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
     HTableDescriptor tableDescOne =
       new HTableDescriptor(TableName.valueOf(namespace + TableName.NAMESPACE_DELIM + "table1"));
@@ -262,21 +257,21 @@ public class TestNamespaceAuditor {
     ADMIN.createTable(tableDescOne);
     ADMIN.createTable(tableDescTwo, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 5);
     stateInfo = getNamespaceState(nspDesc.getName());
-    assertNotNull("Namespace state found to be null.", stateInfo);
+    assertNotNull(stateInfo, "Namespace state found to be null.");
     assertEquals(2, stateInfo.getTables().size());
     assertEquals(5, stateInfo.getRegionCountOfTable(tableDescTwo.getTableName()));
     assertEquals(6, stateInfo.getRegionCount());
     ADMIN.disableTable(tableDescOne.getTableName());
     deleteTable(tableDescOne.getTableName());
     stateInfo = getNamespaceState(nspDesc.getName());
-    assertNotNull("Namespace state found to be null.", stateInfo);
+    assertNotNull(stateInfo, "Namespace state found to be null.");
     assertEquals(5, stateInfo.getRegionCount());
     assertEquals(1, stateInfo.getTables().size());
     ADMIN.disableTable(tableDescTwo.getTableName());
     deleteTable(tableDescTwo.getTableName());
     ADMIN.deleteNamespace(namespace);
     stateInfo = getNamespaceState(namespace);
-    assertNull("Namespace state not found to be null.", stateInfo);
+    assertNull(stateInfo, "Namespace state not found to be null.");
   }
 
   public static class CPRegionServerObserver
@@ -439,8 +434,8 @@ public class TestNamespaceAuditor {
       assertFalse(ADMIN.tableExists(tableOne));
 
       NamespaceTableAndRegionInfo nstate = getNamespaceState(nsp1);
-      assertEquals("First table creation failed in namespace so number of tables in namespace "
-        + "should be 0.", 0, nstate.getTables().size());
+      assertEquals(0, nstate.getTables().size(),
+        "First table creation failed in namespace so number of tables in namespace should be 0.");
 
       MasterSyncObserver.throwExceptionInPreCreateTableAction = false;
       try {
@@ -451,9 +446,8 @@ public class TestNamespaceAuditor {
       }
       assertTrue(ADMIN.tableExists(tableOne));
       nstate = getNamespaceState(nsp1);
-      assertEquals(
-        "First table was created successfully so table size in namespace should " + "be one now.",
-        1, nstate.getTables().size());
+      assertEquals(1, nstate.getTables().size(),
+        "First table was created successfully so table size in namespace should be one now.");
     } finally {
       MasterSyncObserver.throwExceptionInPreCreateTableAction = false;
       if (ADMIN.tableExists(tableOne)) {
@@ -522,8 +516,8 @@ public class TestNamespaceAuditor {
     NamespaceTableAndRegionInfo before = getNamespaceState(nsp1);
     killActiveMaster();
     NamespaceTableAndRegionInfo after = getNamespaceState(nsp1);
-    assertEquals("Expected: " + before.getTables() + " Found: " + after.getTables(),
-      before.getTables().size(), after.getTables().size());
+    assertEquals(before.getTables().size(), after.getTables().size(),
+      "Expected: " + before.getTables() + " Found: " + after.getTables());
   }
 
   public static void waitForQuotaInitialize(final HBaseTestingUtility util) throws Exception {
@@ -590,13 +584,13 @@ public class TestNamespaceAuditor {
     observer.tableDeletionLatch.await();
   }
 
-  @Test(expected = QuotaExceededException.class)
+  @Test
   public void testExceedTableQuotaInNamespace() throws Exception {
     String nsp = prefix + "_testExceedTableQuotaInNamespace";
     NamespaceDescriptor nspDesc = NamespaceDescriptor.create(nsp)
       .addConfiguration(TableNamespaceManager.KEY_MAX_TABLES, "1").build();
     ADMIN.createNamespace(nspDesc);
-    assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(nsp));
+    assertNotNull(ADMIN.getNamespaceDescriptor(nsp), "Namespace descriptor found null.");
     assertEquals(3, ADMIN.listNamespaceDescriptors().length);
     HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
     HTableDescriptor tableDescOne =
@@ -609,13 +603,13 @@ public class TestNamespaceAuditor {
     ADMIN.createTable(tableDescTwo, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
   }
 
-  @Test(expected = QuotaExceededException.class)
+  @Test
   public void testCloneSnapshotQuotaExceed() throws Exception {
     String nsp = prefix + "_testTableQuotaExceedWithCloneSnapshot";
     NamespaceDescriptor nspDesc = NamespaceDescriptor.create(nsp)
       .addConfiguration(TableNamespaceManager.KEY_MAX_TABLES, "1").build();
     ADMIN.createNamespace(nspDesc);
-    assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(nsp));
+    assertNotNull(ADMIN.getNamespaceDescriptor(nsp), "Namespace descriptor found null.");
     TableName tableName = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1");
     TableName cloneTableName = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table2");
     HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
@@ -624,7 +618,7 @@ public class TestNamespaceAuditor {
     ADMIN.createTable(tableDescOne);
     String snapshot = "snapshot_testTableQuotaExceedWithCloneSnapshot";
     ADMIN.snapshot(snapshot, tableName);
-    ADMIN.cloneSnapshot(snapshot, cloneTableName);
+    assertThrows(QuotaExceededException.class, () -> ADMIN.cloneSnapshot(snapshot, cloneTableName));
     ADMIN.deleteSnapshot(snapshot);
   }
 
@@ -635,7 +629,7 @@ public class TestNamespaceAuditor {
       NamespaceDescriptor.create(nsp).addConfiguration(TableNamespaceManager.KEY_MAX_TABLES, "2")
         .addConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "20").build();
     ADMIN.createNamespace(nspDesc);
-    assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(nsp));
+    assertNotNull(ADMIN.getNamespaceDescriptor(nsp), "Namespace descriptor found null.");
     TableName tableName = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1");
     TableName cloneTableName = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table2");
 
@@ -652,16 +646,16 @@ public class TestNamespaceAuditor {
     try (RegionLocator locator = ADMIN.getConnection().getRegionLocator(tableName)) {
       tableLength = locator.getStartKeys().length;
     }
-    assertEquals(tableName.getNameAsString() + " should have four regions.", 4, tableLength);
+    assertEquals(4, tableLength, tableName.getNameAsString() + " should have four regions.");
 
     try (RegionLocator locator = ADMIN.getConnection().getRegionLocator(cloneTableName)) {
       tableLength = locator.getStartKeys().length;
     }
-    assertEquals(cloneTableName.getNameAsString() + " should have four regions.", 4, tableLength);
+    assertEquals(4, tableLength, cloneTableName.getNameAsString() + " should have four regions.");
 
     NamespaceTableAndRegionInfo nstate = getNamespaceState(nsp);
-    assertEquals("Total tables count should be 2.", 2, nstate.getTables().size());
-    assertEquals("Total regions count should be.", 8, nstate.getRegionCount());
+    assertEquals(2, nstate.getTables().size(), "Total tables count should be 2.");
+    assertEquals(8, nstate.getRegionCount(), "Total regions count should be.");
 
     ADMIN.deleteSnapshot(snapshot);
   }
@@ -672,7 +666,7 @@ public class TestNamespaceAuditor {
     NamespaceDescriptor nspDesc = NamespaceDescriptor.create(nsp)
       .addConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "10").build();
     ADMIN.createNamespace(nspDesc);
-    assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(nsp));
+    assertNotNull(ADMIN.getNamespaceDescriptor(nsp), "Namespace descriptor found null.");
     TableName tableName1 = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1");
     HTableDescriptor tableDescOne = new HTableDescriptor(tableName1);
     HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
@@ -680,7 +674,7 @@ public class TestNamespaceAuditor {
     ADMIN.createTable(tableDescOne, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
 
     NamespaceTableAndRegionInfo nstate = getNamespaceState(nsp);
-    assertEquals("Intial region count should be 4.", 4, nstate.getRegionCount());
+    assertEquals(4, nstate.getRegionCount(), "Intial region count should be 4.");
 
     String snapshot = "snapshot_testRestoreSnapshot";
     ADMIN.snapshot(snapshot, tableName1);
@@ -690,12 +684,12 @@ public class TestNamespaceAuditor {
 
     ADMIN.split(tableName1, Bytes.toBytes("JJJ"));
     Thread.sleep(2000);
-    assertEquals("Total regions count should be 5.", 5, nstate.getRegionCount());
+    assertEquals(5, nstate.getRegionCount(), "Total regions count should be 5.");
 
     ADMIN.disableTable(tableName1);
     ADMIN.restoreSnapshot(snapshot);
 
-    assertEquals("Total regions count should be 4 after restore.", 4, nstate.getRegionCount());
+    assertEquals(4, nstate.getRegionCount(), "Total regions count should be 4 after restore.");
 
     ADMIN.enableTable(tableName1);
     ADMIN.deleteSnapshot(snapshot);
@@ -708,7 +702,7 @@ public class TestNamespaceAuditor {
       .addConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "10").build();
     ADMIN.createNamespace(nspDesc);
     NamespaceDescriptor ndesc = ADMIN.getNamespaceDescriptor(nsp);
-    assertNotNull("Namespace descriptor found null.", ndesc);
+    assertNotNull(ndesc, "Namespace descriptor found null.");
     TableName tableName1 = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1");
     HTableDescriptor tableDescOne = new HTableDescriptor(tableName1);
     HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
@@ -717,7 +711,7 @@ public class TestNamespaceAuditor {
     ADMIN.createTable(tableDescOne, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
 
     NamespaceTableAndRegionInfo nstate = getNamespaceState(nsp);
-    assertEquals("Intial region count should be 4.", 4, nstate.getRegionCount());
+    assertEquals(4, nstate.getRegionCount(), "Intial region count should be 4.");
 
     String snapshot = "snapshot_testRestoreSnapshotQuotaExceed";
     // snapshot has 4 regions
