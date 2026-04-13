@@ -17,20 +17,20 @@
  */
 package org.apache.hadoop.hbase.mob;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -47,15 +47,12 @@ import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFac
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,13 +66,10 @@ import org.slf4j.LoggerFactory;
  * Runs Mob cleaner chore 11 Verifies that number of MOB files in a mob directory is 20. 12 Runs
  * scanner and checks all 3 * 1000 rows.
  */
-@RunWith(Parameterized.class)
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: useFileBasedSFT={0}")
 public class TestMobCompactionWithDefaults {
   private static final Logger LOG = LoggerFactory.getLogger(TestMobCompactionWithDefaults.class);
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobCompactionWithDefaults.class);
 
   protected HBaseTestingUtil HTU;
   protected static Configuration conf;
@@ -88,8 +82,7 @@ public class TestMobCompactionWithDefaults {
   protected final static byte[] mobVal = Bytes
     .toBytes("01234567890123456789012345678901234567890123456789012345678901234567890123456789");
 
-  @Rule
-  public TestName test = new TestName();
+  private String testMethodName;
   protected TableDescriptor tableDescriptor;
   private ColumnFamilyDescriptor familyDescriptor;
   protected Admin admin;
@@ -103,10 +96,8 @@ public class TestMobCompactionWithDefaults {
     this.useFileBasedSFT = useFileBasedSFT;
   }
 
-  @Parameterized.Parameters
-  public static Collection<Boolean> data() {
-    Boolean[] data = { false, true };
-    return Arrays.asList(data);
+  public static Stream<Arguments> parameters() {
+    return Stream.of(false, true).map(Arguments::of);
   }
 
   protected void htuStart() throws Exception {
@@ -133,13 +124,15 @@ public class TestMobCompactionWithDefaults {
   protected void additonalConfigSetup() {
   }
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    testMethodName = testInfo.getTestMethod().get().getName()
+      + testInfo.getDisplayName().replaceAll("[:= ]", "_").replaceAll("_+", "_").trim();
     htuStart();
     admin = HTU.getAdmin();
     familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(fam).setMobEnabled(true)
       .setMobThreshold(mobLen).setMaxVersions(1).build();
-    tableDescriptor = HTU.createModifyableTableDescriptor(TestMobUtils.getTableName(test))
+    tableDescriptor = HTU.createModifyableTableDescriptor(TestMobUtils.getTableName(testMethodName))
       .setColumnFamily(familyDescriptor).build();
     RegionSplitter.UniformSplit splitAlgo = new RegionSplitter.UniformSplit();
     byte[][] splitKeys = splitAlgo.split(numRegions);
@@ -164,56 +157,56 @@ public class TestMobCompactionWithDefaults {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     admin.disableTable(tableDescriptor.getTableName());
     admin.deleteTable(tableDescriptor.getTableName());
     HTU.shutdownMiniCluster();
   }
 
-  @Test
+  @TestTemplate
   public void baseTestMobFileCompaction() throws InterruptedException, IOException {
     LOG.info("MOB compaction " + description() + " started");
     loadAndFlushThreeTimes(rows, table, famStr);
     mobCompact(tableDescriptor, familyDescriptor);
-    assertEquals("Should have 4 MOB files per region due to 3xflush + compaction.", numRegions * 4,
-      getNumberOfMobFiles(table, famStr));
+    assertEquals(numRegions * 4, getNumberOfMobFiles(table, famStr),
+      "Should have 4 MOB files per region due to 3xflush + compaction.");
     cleanupAndVerifyCounts(table, famStr, 3 * rows);
     LOG.info("MOB compaction " + description() + " finished OK");
   }
 
-  @Test
+  @TestTemplate
   public void testMobFileCompactionAfterSnapshotClone() throws InterruptedException, IOException {
-    final TableName clone = TableName.valueOf(TestMobUtils.getTableName(test) + "-clone");
+    final TableName clone = TableName.valueOf(TestMobUtils.getTableName(testMethodName) + "-clone");
     LOG.info("MOB compaction of cloned snapshot, " + description() + " started");
     loadAndFlushThreeTimes(rows, table, famStr);
     LOG.debug("Taking snapshot and cloning table {}", table);
-    admin.snapshot(TestMobUtils.getTableName(test), table);
-    admin.cloneSnapshot(TestMobUtils.getTableName(test), clone);
-    assertEquals("Should have 3 hlinks per region in MOB area from snapshot clone", 3 * numRegions,
-      getNumberOfMobFiles(clone, famStr));
+    admin.snapshot(TestMobUtils.getTableName(testMethodName), table);
+    admin.cloneSnapshot(TestMobUtils.getTableName(testMethodName), clone);
+    assertEquals(3 * numRegions, getNumberOfMobFiles(clone, famStr),
+      "Should have 3 hlinks per region in MOB area from snapshot clone");
     mobCompact(admin.getDescriptor(clone), familyDescriptor);
-    assertEquals("Should have 3 hlinks + 1 MOB file per region due to clone + compact",
-      4 * numRegions, getNumberOfMobFiles(clone, famStr));
+    assertEquals(4 * numRegions, getNumberOfMobFiles(clone, famStr),
+      "Should have 3 hlinks + 1 MOB file per region due to clone + compact");
     cleanupAndVerifyCounts(clone, famStr, 3 * rows);
     LOG.info("MOB compaction of cloned snapshot, " + description() + " finished OK");
   }
 
-  @Test
+  @TestTemplate
   public void testMobFileCompactionAfterSnapshotCloneAndFlush()
     throws InterruptedException, IOException {
-    final TableName clone = TableName.valueOf(TestMobUtils.getTableName(test) + "-clone");
+    final TableName clone = TableName.valueOf(TestMobUtils.getTableName(testMethodName) + "-clone");
     LOG.info("MOB compaction of cloned snapshot after flush, " + description() + " started");
     loadAndFlushThreeTimes(rows, table, famStr);
     LOG.debug("Taking snapshot and cloning table {}", table);
-    admin.snapshot(TestMobUtils.getTableName(test), table);
-    admin.cloneSnapshot(TestMobUtils.getTableName(test), clone);
-    assertEquals("Should have 3 hlinks per region in MOB area from snapshot clone", 3 * numRegions,
-      getNumberOfMobFiles(clone, famStr));
+    admin.snapshot(TestMobUtils.getTableName(testMethodName), table);
+    admin.cloneSnapshot(TestMobUtils.getTableName(testMethodName), clone);
+    assertEquals(3 * numRegions, getNumberOfMobFiles(clone, famStr),
+      "Should have 3 hlinks per region in MOB area from snapshot clone");
     loadAndFlushThreeTimes(rows, clone, famStr);
     mobCompact(admin.getDescriptor(clone), familyDescriptor);
-    assertEquals("Should have 7 MOB file per region due to clone + 3xflush + compact",
-      7 * numRegions, getNumberOfMobFiles(clone, famStr));
+    assertEquals(7 * numRegions, getNumberOfMobFiles(clone, famStr),
+      "Should have 7 MOB file per region due to clone + 3xflush + compact");
     cleanupAndVerifyCounts(clone, famStr, 6 * rows);
     LOG.info("MOB compaction of cloned snapshot w flush, " + description() + " finished OK");
   }
@@ -225,8 +218,8 @@ public class TestMobCompactionWithDefaults {
     loadData(table, rows);
     loadData(table, rows);
     loadData(table, rows);
-    assertEquals("Should have 3 more mob files per region from flushing.", start + numRegions * 3,
-      getNumberOfMobFiles(table, family));
+    assertEquals(start + numRegions * 3, getNumberOfMobFiles(table, family),
+      "Should have 3 more mob files per region from flushing.");
   }
 
   protected String description() {
@@ -292,12 +285,12 @@ public class TestMobCompactionWithDefaults {
       HTU.getMiniHBaseCluster().getRegionServer(sn).getRSMobFileCleanerChore().chore();
     }
 
-    assertEquals("After cleaning, we should have 1 MOB file per region based on size.", numRegions,
-      getNumberOfMobFiles(table, family));
+    assertEquals(numRegions, getNumberOfMobFiles(table, family),
+      "After cleaning, we should have 1 MOB file per region based on size.");
 
     LOG.debug("checking count of rows");
     long scanned = scanTable(table);
-    assertEquals("Got the wrong number of rows in table " + table + " cf " + family, rows, scanned);
+    assertEquals(rows, scanned, "Got the wrong number of rows in table " + table + " cf " + family);
 
   }
 
