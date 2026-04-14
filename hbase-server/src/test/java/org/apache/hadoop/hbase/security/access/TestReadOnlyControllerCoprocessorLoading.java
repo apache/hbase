@@ -111,6 +111,9 @@ public class TestReadOnlyControllerCoprocessorLoading {
     newConf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, isReadOnlyEnabled);
     master.getConfigurationManager().notifyAllObservers(newConf);
     regionServer.getConfigurationManager().notifyAllObservers(newConf);
+    if (region != null) {
+      region.getConfigurationManager().notifyAllObservers(newConf);
+    }
     return newConf;
   }
 
