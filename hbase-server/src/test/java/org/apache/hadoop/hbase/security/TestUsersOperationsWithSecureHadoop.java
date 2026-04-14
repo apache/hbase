@@ -22,33 +22,28 @@ import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getClientPrinc
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getKeytabFileForTesting;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getPrincipalForTesting;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getSecuredConfiguration;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ SecurityTests.class, SmallTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestUsersOperationsWithSecureHadoop {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestUsersOperationsWithSecureHadoop.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final File KEYTAB_FILE =
@@ -64,7 +59,7 @@ public class TestUsersOperationsWithSecureHadoop {
 
   private static String OTHER_CLIENT_NAME;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
     PRINCIPAL = "hbase/" + HOST;
@@ -77,7 +72,7 @@ public class TestUsersOperationsWithSecureHadoop {
     HBaseKerberosUtils.setClientKeytabForTesting(KEYTAB_FILE.getAbsolutePath());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     if (KDC != null) {
       KDC.stop();
@@ -110,8 +105,8 @@ public class TestUsersOperationsWithSecureHadoop {
     User.login(conf, HBaseKerberosUtils.KRB_KEYTAB_FILE, HBaseKerberosUtils.KRB_PRINCIPAL,
       "localhost");
     UserGroupInformation successLogin = UserGroupInformation.getLoginUser();
-    assertFalse("ugi should be different in in case success login",
-      defaultLogin.equals(successLogin));
+    assertFalse(defaultLogin.equals(successLogin),
+      "ugi should be different in in case success login");
   }
 
   @Test
@@ -127,7 +122,7 @@ public class TestUsersOperationsWithSecureHadoop {
     UserGroupInformation.setConfiguration(conf);
 
     UserProvider provider = UserProvider.instantiate(conf);
-    assertTrue("Client principal or keytab is empty", provider.shouldLoginFromKeytab());
+    assertTrue(provider.shouldLoginFromKeytab(), "Client principal or keytab is empty");
 
     provider.login(AuthUtil.HBASE_CLIENT_KEYTAB_FILE, AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL);
     User loginUser = provider.getCurrent();

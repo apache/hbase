@@ -17,20 +17,18 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -42,13 +40,11 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,30 +54,12 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 /**
  * Test the reading and writing of access permissions on {@code _acl_} table.
  */
-@Category({ SecurityTests.class, MediumTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestTablePermissions {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTablePermissions.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTablePermissions.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static ZKWatcher ZKW;
-  private final static Abortable ABORTABLE = new Abortable() {
-    private final AtomicBoolean abort = new AtomicBoolean(false);
-
-    @Override
-    public void abort(String why, Throwable e) {
-      LOG.info(why, e);
-      abort.set(true);
-    }
-
-    @Override
-    public boolean isAborted() {
-      return abort.get();
-    }
-  };
 
   private static String TEST_NAMESPACE = "perms_test_ns";
   private static String TEST_NAMESPACE2 = "perms_test_ns2";
@@ -90,7 +68,7 @@ public class TestTablePermissions {
   private static byte[] TEST_FAMILY = Bytes.toBytes("f1");
   private static byte[] TEST_QUALIFIER = Bytes.toBytes("col1");
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     // setup configuration
     Configuration conf = UTIL.getConfiguration();
@@ -101,18 +79,16 @@ public class TestTablePermissions {
     // Wait for the ACL table to become available
     UTIL.waitTableEnabled(PermissionStorage.ACL_TABLE_NAME);
 
-    ZKW = new ZKWatcher(UTIL.getConfiguration(), "TestTablePermissions", ABORTABLE);
-
     UTIL.createTable(TEST_TABLE, TEST_FAMILY);
     UTIL.createTable(TEST_TABLE2, TEST_FAMILY);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     try (Connection connection = ConnectionFactory.createConnection(conf);
@@ -159,12 +135,12 @@ public class TestTablePermissions {
     ListMultimap<String, UserPermission> perms =
       PermissionStorage.getTablePermissions(conf, TEST_TABLE);
     List<UserPermission> userPerms = perms.get("george");
-    assertNotNull("Should have permissions for george", userPerms);
-    assertEquals("Should have 1 permission for george", 1, userPerms.size());
+    assertNotNull(userPerms, "Should have permissions for george");
+    assertEquals(1, userPerms.size(), "Should have 1 permission for george");
     assertEquals(Permission.Scope.TABLE, userPerms.get(0).getAccessScope());
     TablePermission permission = (TablePermission) userPerms.get(0).getPermission();
-    assertEquals("Permission should be for " + TEST_TABLE, TEST_TABLE, permission.getTableName());
-    assertNull("Column family should be empty", permission.getFamily());
+    assertEquals(TEST_TABLE, permission.getTableName(), "Permission should be for " + TEST_TABLE);
+    assertNull(permission.getFamily(), "Column family should be empty");
 
     // check actions
     assertNotNull(permission.getActions());
@@ -174,12 +150,12 @@ public class TestTablePermissions {
     assertTrue(actions.contains(TablePermission.Action.WRITE));
 
     userPerms = perms.get("hubert");
-    assertNotNull("Should have permissions for hubert", userPerms);
-    assertEquals("Should have 1 permission for hubert", 1, userPerms.size());
+    assertNotNull(userPerms, "Should have permissions for hubert");
+    assertEquals(1, userPerms.size(), "Should have 1 permission for hubert");
     assertEquals(Permission.Scope.TABLE, userPerms.get(0).getAccessScope());
     permission = (TablePermission) userPerms.get(0).getPermission();
-    assertEquals("Permission should be for " + TEST_TABLE, TEST_TABLE, permission.getTableName());
-    assertNull("Column family should be empty", permission.getFamily());
+    assertEquals(TEST_TABLE, permission.getTableName(), "Permission should be for " + TEST_TABLE);
+    assertNull(permission.getFamily(), "Column family should be empty");
 
     // check actions
     assertNotNull(permission.getActions());
@@ -189,15 +165,15 @@ public class TestTablePermissions {
     assertFalse(actions.contains(TablePermission.Action.WRITE));
 
     userPerms = perms.get("humphrey");
-    assertNotNull("Should have permissions for humphrey", userPerms);
-    assertEquals("Should have 1 permission for humphrey", 1, userPerms.size());
+    assertNotNull(userPerms, "Should have permissions for humphrey");
+    assertEquals(1, userPerms.size(), "Should have 1 permission for humphrey");
     assertEquals(Permission.Scope.TABLE, userPerms.get(0).getAccessScope());
     permission = (TablePermission) userPerms.get(0).getPermission();
-    assertEquals("Permission should be for " + TEST_TABLE, TEST_TABLE, permission.getTableName());
-    assertTrue("Permission should be for family " + Bytes.toString(TEST_FAMILY),
-      Bytes.equals(TEST_FAMILY, permission.getFamily()));
-    assertTrue("Permission should be for qualifier " + Bytes.toString(TEST_QUALIFIER),
-      Bytes.equals(TEST_QUALIFIER, permission.getQualifier()));
+    assertEquals(TEST_TABLE, permission.getTableName(), "Permission should be for " + TEST_TABLE);
+    assertTrue(Bytes.equals(TEST_FAMILY, permission.getFamily()),
+      "Permission should be for family " + Bytes.toString(TEST_FAMILY));
+    assertTrue(Bytes.equals(TEST_QUALIFIER, permission.getQualifier()),
+      "Permission should be for qualifier " + Bytes.toString(TEST_QUALIFIER));
 
     // check actions
     assertNotNull(permission.getActions());
@@ -216,8 +192,8 @@ public class TestTablePermissions {
     }
     // check full load
     Map<byte[], ListMultimap<String, UserPermission>> allPerms = PermissionStorage.loadAll(conf);
-    assertEquals("Full permission map should have entries for both test tables", 2,
-      allPerms.size());
+    assertEquals(2, allPerms.size(),
+      "Full permission map should have entries for both test tables");
 
     userPerms = allPerms.get(TEST_TABLE.getName()).get("hubert");
     assertNotNull(userPerms);
@@ -331,7 +307,7 @@ public class TestTablePermissions {
       LOG.info("First permissions: " + firstPerms.toString());
       LOG.info("Second permissions: " + secondPerms.toString());
       for (UserPermission p : firstPerms) {
-        assertTrue("Permission " + p.toString() + " not found", secondPerms.contains(p));
+        assertTrue(secondPerms.contains(p), "Permission " + p.toString() + " not found");
       }
     }
   }
@@ -417,23 +393,22 @@ public class TestTablePermissions {
     }
     ListMultimap<String, UserPermission> perms = PermissionStorage.getTablePermissions(conf, null);
     List<UserPermission> user1Perms = perms.get("user1");
-    assertEquals("Should have 1 permission for user1", 1, user1Perms.size());
-    assertEquals("user1 should have WRITE permission",
-      new Permission.Action[] { Permission.Action.READ, Permission.Action.WRITE },
-      user1Perms.get(0).getPermission().getActions());
+    assertEquals(1, user1Perms.size(), "Should have 1 permission for user1");
+    assertArrayEquals(new Permission.Action[] { Permission.Action.READ, Permission.Action.WRITE },
+      user1Perms.get(0).getPermission().getActions(), "user1 should have WRITE permission");
 
     List<UserPermission> user2Perms = perms.get("user2");
-    assertEquals("Should have 1 permission for user2", 1, user2Perms.size());
-    assertEquals("user2 should have CREATE permission",
-      new Permission.Action[] { Permission.Action.CREATE },
-      user2Perms.get(0).getPermission().getActions());
+    assertEquals(1, user2Perms.size(), "Should have 1 permission for user2");
+    assertArrayEquals(new Permission.Action[] { Permission.Action.CREATE },
+      user2Perms.get(0).getPermission().getActions(), "user2 should have CREATE permission");
 
     List<UserPermission> user3Perms = perms.get("user3");
-    assertEquals("Should have 1 permission for user3", 1, user3Perms.size());
-    assertEquals(
-      "user3 should have ADMIN, READ, CREATE permission", new Permission.Action[] {
-        Permission.Action.READ, Permission.Action.CREATE, Permission.Action.ADMIN },
-      user3Perms.get(0).getPermission().getActions());
+    assertEquals(1, user3Perms.size(), "Should have 1 permission for user3");
+    assertArrayEquals(
+      new Permission.Action[] { Permission.Action.READ, Permission.Action.CREATE,
+        Permission.Action.ADMIN },
+      user3Perms.get(0).getPermission().getActions(),
+      "user3 should have ADMIN, READ, CREATE permission");
   }
 
   @Test
@@ -456,8 +431,8 @@ public class TestTablePermissions {
               .build()),
           connection.getTable(PermissionStorage.ACL_TABLE_NAME));
         // make sure the system user still shows as authorized
-        assertTrue("Failed current user auth check on iter " + i,
-          authManager.authorizeUserGlobal(currentUser, Permission.Action.ADMIN));
+        assertTrue(authManager.authorizeUserGlobal(currentUser, Permission.Action.ADMIN),
+          "Failed current user auth check on iter " + i);
       }
     }
   }
