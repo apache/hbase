@@ -23,7 +23,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.io.IOException;
+import com.google.protobuf.ServiceException;
 import java.util.stream.Stream;
 import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
@@ -93,10 +93,10 @@ public class TestGenerateDelegationToken extends SecureTestCluster {
       WhoAmIResponse response = service.whoAmI(null, WhoAmIRequest.getDefaultInstance());
       assertEquals(USERNAME, response.getUsername());
       assertEquals(AuthenticationMethod.TOKEN.name(), response.getAuthMethod());
-      IOException ioe = assertThrows(IOException.class, () -> service.getAuthenticationToken(null,
-        GetAuthenticationTokenRequest.getDefaultInstance()));
-      assertThat(ioe, instanceOf(AccessDeniedException.class));
-      assertThat(ioe.getMessage(),
+      ServiceException se = assertThrows(ServiceException.class, () -> service
+        .getAuthenticationToken(null, GetAuthenticationTokenRequest.getDefaultInstance()));
+      assertThat(se.getCause(), instanceOf(AccessDeniedException.class));
+      assertThat(se.getCause().getMessage(),
         containsString("Token generation only allowed for Kerberos authenticated clients"));
     }
   }
