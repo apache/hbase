@@ -367,7 +367,7 @@ public class RefreshMetaProcedure extends AbstractStateMachineTableProcedure<Ref
     LOG.debug("Scanning namespace {}", namespacePath.getName());
     List<Path> tableDirs = FSUtils.getLocalTableDirs(fs, namespacePath);
 
-    return tableDirs.parallelStream().flatMap(tableDir -> {
+    return tableDirs.stream().flatMap(tableDir -> {
       try {
         List<RegionInfo> tableRegions = scanRegionsInTable(fs, FSUtils.getRegionDirs(fs, tableDir));
         LOG.debug("Found {} regions in table {} in namespace {}", tableRegions.size(),
