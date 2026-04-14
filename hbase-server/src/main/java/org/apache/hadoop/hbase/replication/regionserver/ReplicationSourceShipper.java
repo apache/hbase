@@ -161,14 +161,12 @@ public class ReplicationSourceShipper extends Thread {
           break;
         }
 
-        // Unexpected interruption → restart
+        LOG.warn("Shipper {} interrupted unexpectedly, restarting", walGroupId, e);
         abortAndRestart(e);
         break;
-
       } catch (ReplicationRuntimeException e) {
-        // Already handled upstream (or future safety)
-        LOG.warn("Shipper encountered fatal error", e);
-        Thread.currentThread().interrupt();
+        LOG.error("Shipper {} aborting due to fatal error", walGroupId, e);
+        abortAndRestart(e);
         break;
       }
 
@@ -278,11 +276,8 @@ public class ReplicationSourceShipper extends Thread {
         }
         break;
       } catch (IOException ioe) {
-        // Offset-Persist failure is treated as fatal to this shipper since it might come from
-        // beforePersistingReplicationOffset. So abort and restart the Shipper, and WAL reading
-        // will resume from the last successfully persisted offset
-        abortAndRestart(ioe);
-        return;
+        throw new ReplicationRuntimeException(
+          "Failed to persist replication offset; aborting shipper for restart", ioe);
       } catch (Exception ex) {
         source.getSourceMetrics().incrementFailedBatches();
         LOG.warn("{} threw unknown exception:",
@@ -317,7 +312,9 @@ public class ReplicationSourceShipper extends Thread {
     }
 
     ReplicationEndpoint endpoint = source.getReplicationEndpoint();
-    endpoint.beforePersistingReplicationOffset();
+    if (endpoint != null) {
+      endpoint.beforePersistingReplicationOffset();
+    }
 
     // Clean up hfile references
     for (Entry entry : entriesForCleanUpHFileRefs) {

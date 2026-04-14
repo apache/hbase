@@ -868,22 +868,14 @@ public class ReplicationSource implements ReplicationSourceInterface {
   }
 
   void restartShipper(String walGroupId, ReplicationSourceShipper oldWorker) {
-    workerThreads.compute(walGroupId, (key, current) -> {
-      if (current != oldWorker) {
-        return current; // already replaced
-      }
+    boolean removed = workerThreads.remove(walGroupId, oldWorker);
+    if (!removed) {
+      // Worker was already replaced (e.g. concurrent restart)
+      LOG.debug("Skip restart for walGroupId={} as worker already replaced", walGroupId);
+      return;
+    }
 
-      LOG.warn("Restarting shipper for walGroupId={}", walGroupId);
-
-      try {
-        ReplicationSourceShipper newWorker = createNewShipper(walGroupId);
-        startShipper(newWorker);
-        return newWorker;
-      } catch (Exception e) {
-        LOG.error("Failed to restart shipper for walGroupId={}", walGroupId, e);
-        return current; // retry later
-      }
-    });
+    tryStartNewShipper(walGroupId);
   }
 
 }
