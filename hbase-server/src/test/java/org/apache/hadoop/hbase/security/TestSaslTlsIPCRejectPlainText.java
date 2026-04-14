@@ -22,30 +22,25 @@ import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.setSecuredConf
 
 import java.io.File;
 import java.util.Collections;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.io.crypto.tls.X509KeyType;
 import org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.SecurityTests;
+import org.apache.hadoop.hbase.testclassification.RPCTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 
-@RunWith(Parameterized.class)
-@Category({ SecurityTests.class, MediumTests.class })
+@Tag(RPCTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: caKeyType={0}, certKeyType={1}, keyPassword={2}")
 public class TestSaslTlsIPCRejectPlainText extends AbstractTestTlsRejectPlainText {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSaslTlsIPCRejectPlainText.class);
 
   private static File KEYTAB_FILE;
 
@@ -54,7 +49,12 @@ public class TestSaslTlsIPCRejectPlainText extends AbstractTestTlsRejectPlainTex
   private static String PRINCIPAL;
   private static UserGroupInformation UGI;
 
-  @BeforeClass
+  public TestSaslTlsIPCRejectPlainText(X509KeyType caKeyType, X509KeyType certKeyType,
+    char[] keyPassword) {
+    super(caKeyType, certKeyType, keyPassword);
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     HBaseTestingUtility util = new HBaseTestingUtility();
     UTIL = util;
@@ -72,7 +72,7 @@ public class TestSaslTlsIPCRejectPlainText extends AbstractTestTlsRejectPlainTex
     SecurityInfo.addInfo("TestProtobufRpcProto", securityInfoMock);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() {
     if (KDC != null) {
       KDC.stop();

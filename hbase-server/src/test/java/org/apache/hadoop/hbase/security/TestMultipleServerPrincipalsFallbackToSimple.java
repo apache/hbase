@@ -19,19 +19,18 @@ package org.apache.hadoop.hbase.security;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
-import java.util.Arrays;
-import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -45,20 +44,16 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenIdentifier.Kind;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
@@ -71,13 +66,10 @@ import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProto
  * Test secure client connecting to a non secure server, where we have multiple server principal
  * candidates for a rpc service. See HBASE-28321.
  */
-@RunWith(Parameterized.class)
-@Category({ SecurityTests.class, MediumTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: rpcClientImpl={0}")
 public class TestMultipleServerPrincipalsFallbackToSimple {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultipleServerPrincipalsFallbackToSimple.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -90,18 +82,15 @@ public class TestMultipleServerPrincipalsFallbackToSimple {
   private static String SERVER_PRINCIPAL2;
   private static String CLIENT_PRINCIPAL;
 
-  @Parameter
-  public Class<? extends RpcClient> rpcClientImpl;
+  private Class<? extends RpcClient> rpcClientImpl;
 
   private Configuration clientConf;
   private UserGroupInformation clientUGI;
   private RpcServer rpcServer;
   private RpcClient rpcClient;
 
-  @Parameters(name = "{index}: rpcClientImpl={0}")
-  public static List<Object[]> params() {
-    return Arrays.asList(new Object[] { NettyRpcClient.class },
-      new Object[] { BlockingRpcClient.class });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(NettyRpcClient.class), Arguments.of(BlockingRpcClient.class));
   }
 
   private static void setSecuredConfiguration(Configuration conf) {
@@ -110,7 +99,11 @@ public class TestMultipleServerPrincipalsFallbackToSimple {
     conf.setBoolean(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, true);
   }
 
-  @BeforeClass
+  public TestMultipleServerPrincipalsFallbackToSimple(Class<? extends RpcClient> rpcClientImpl) {
+    this.rpcClientImpl = rpcClientImpl;
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
     SERVER_PRINCIPAL = "server/" + HOST;
@@ -122,7 +115,7 @@ public class TestMultipleServerPrincipalsFallbackToSimple {
     TEST_UTIL.getConfiguration().setInt(RpcClient.FAILED_SERVER_EXPIRY_KEY, 10);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     clientConf = new Configuration(TEST_UTIL.getConfiguration());
     setSecuredConfiguration(clientConf);
@@ -148,7 +141,7 @@ public class TestMultipleServerPrincipalsFallbackToSimple {
     rpcServer.start();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     Closeables.close(rpcClient, true);
     rpcServer.stop();
@@ -170,14 +163,14 @@ public class TestMultipleServerPrincipalsFallbackToSimple {
     });
   }
 
-  @Test
+  @TestTemplate
   public void testAllowFallbackToSimple() throws Exception {
     clientConf.setBoolean(RpcClient.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY, true);
     rpcClient = createClient();
     assertEquals("allow", echo("allow"));
   }
 
-  @Test
+  @TestTemplate
   public void testDisallowFallbackToSimple() throws Exception {
     clientConf.setBoolean(RpcClient.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY, false);
     rpcClient = createClient();
