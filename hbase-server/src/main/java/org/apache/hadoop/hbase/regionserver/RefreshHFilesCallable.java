@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.procedure2.BaseRSProcedureCallable;
@@ -47,7 +46,7 @@ public class RefreshHFilesCallable extends BaseRSProcedureCallable {
     LOG.debug("Starting refreshHfiles operation on region {}", region);
 
     for (Store store : region.getStores()) {
-        store.refreshStoreFiles();
+      store.refreshStoreFiles();
     }
     return null;
   }
