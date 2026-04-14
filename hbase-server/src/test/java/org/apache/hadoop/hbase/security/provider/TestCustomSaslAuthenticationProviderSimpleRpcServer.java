@@ -17,26 +17,24 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.ipc.SimpleRpcServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-@RunWith(Parameterized.class)
-@Category({ MediumTests.class, SecurityTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: rpcClientImpl = {0}")
 public class TestCustomSaslAuthenticationProviderSimpleRpcServer
   extends CustomSaslAuthenticationProviderTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCustomSaslAuthenticationProviderSimpleRpcServer.class);
+  public TestCustomSaslAuthenticationProviderSimpleRpcServer(String rpcClientImpl) {
+    super(rpcClientImpl);
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     startCluster(SimpleRpcServer.class.getName());
   }

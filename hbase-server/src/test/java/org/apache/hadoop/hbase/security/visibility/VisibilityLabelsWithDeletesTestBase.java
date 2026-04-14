@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.security.visibility;
 
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -41,11 +42,10 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Tests visibility labels with deletes
@@ -68,11 +68,9 @@ public abstract class VisibilityLabelsWithDeletesTestBase {
   protected final static byte[] value1 = Bytes.toBytes("value1");
   protected static Configuration conf;
 
-  @Rule
-  public final TestName testName = new TestName();
   protected static User SUPERUSER;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
@@ -88,7 +86,7 @@ public abstract class VisibilityLabelsWithDeletesTestBase {
     addLabels();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -110,7 +108,7 @@ public abstract class VisibilityLabelsWithDeletesTestBase {
     SUPERUSER.runAs(action);
   }
 
-  protected abstract Table createTable(byte[] fam) throws IOException;
+  protected abstract Table createTable(byte[] fam, TestInfo testInfo) throws IOException;
 
   protected final void setAuths() throws IOException, InterruptedException {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
@@ -128,8 +126,9 @@ public abstract class VisibilityLabelsWithDeletesTestBase {
     SUPERUSER.runAs(action);
   }
 
-  private Table createTableAndWriteDataWithLabels(String... labelExps) throws Exception {
-    Table table = createTable(fam);
+  private Table createTableAndWriteDataWithLabels(TestInfo testInfo, String... labelExps)
+    throws Exception {
+    Table table = createTable(fam, testInfo);
     int i = 1;
     List<Put> puts = new ArrayList<>(labelExps.length);
     for (String labelExp : labelExps) {
@@ -144,9 +143,9 @@ public abstract class VisibilityLabelsWithDeletesTestBase {
     return table;
   }
 
-  private Table createTableAndWriteDataWithLabels(long[] timestamp, String... labelExps)
-    throws Exception {
-    Table table = createTable(fam);
+  private Table createTableAndWriteDataWithLabels(long[] timestamp, TestInfo testInfo,
+    String... labelExps) throws Exception {
+    Table table = createTable(fam, testInfo);
     int i = 1;
     List<Put> puts = new ArrayList<>(labelExps.length);
     for (String labelExp : labelExps) {
@@ -162,11 +161,13 @@ public abstract class VisibilityLabelsWithDeletesTestBase {
   }
 
   @Test
-  public void testVisibilityLabelsWithDeleteColumns() throws Throwable {
+  public void testVisibilityLabelsWithDeleteColumns(TestInfo testInfo) throws Throwable {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
 
-    try (Table table = createTableAndWriteDataWithLabels(SECRET + "&" + TOPSECRET, SECRET)) {
+    try (
+      Table table = createTableAndWriteDataWithLabels(testInfo, SECRET + "&" + TOPSECRET, SECRET)) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
@@ -200,10 +201,12 @@ public abstract class VisibilityLabelsWithDeletesTestBase {
   }
 
   @Test
-  public void testVisibilityLabelsWithDeleteFamily() throws Exception {
+  public void testVisibilityLabelsWithDeleteFamily(TestInfo testInfo) throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
-    try (Table table = createTableAndWriteDataWithLabels(SECRET, CONFIDENTIAL + "|" + TOPSECRET)) {
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
+    try (Table table =
+      createTableAndWriteDataWithLabels(testInfo, SECRET, CONFIDENTIAL + "|" + TOPSECRET)) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
@@ -236,12 +239,13 @@ public abstract class VisibilityLabelsWithDeletesTestBase {
   }
 
   @Test
-  public void testVisibilityLabelsWithDeleteFamilyVersion() throws Exception {
+  public void testVisibilityLabelsWithDeleteFamilyVersion(TestInfo testInfo) throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     long[] ts = new long[] { 123L, 125L };
-    try (
-      Table table = createTableAndWriteDataWithLabels(ts, CONFIDENTIAL + "|" + TOPSECRET, SECRET)) {
+    try (Table table =
+      createTableAndWriteDataWithLabels(ts, testInfo, CONFIDENTIAL + "|" + TOPSECRET, SECRET)) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
@@ -274,12 +278,13 @@ public abstract class VisibilityLabelsWithDeletesTestBase {
   }
 
   @Test
-  public void testVisibilityLabelsWithDeleteColumnExactVersion() throws Exception {
+  public void testVisibilityLabelsWithDeleteColumnExactVersion(TestInfo testInfo) throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     long[] ts = new long[] { 123L, 125L };
-    try (
-      Table table = createTableAndWriteDataWithLabels(ts, CONFIDENTIAL + "|" + TOPSECRET, SECRET)) {
+    try (Table table =
+      createTableAndWriteDataWithLabels(ts, testInfo, CONFIDENTIAL + "|" + TOPSECRET, SECRET)) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {

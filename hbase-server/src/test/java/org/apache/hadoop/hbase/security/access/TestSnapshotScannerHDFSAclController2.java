@@ -19,14 +19,13 @@ package org.apache.hadoop.hbase.security.access;
 
 import static org.apache.hadoop.hbase.security.access.Permission.Action.READ;
 import static org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclController.SnapshotScannerHDFSAclStorage.hasUserTableHdfsAcl;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -35,13 +34,11 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,13 +46,9 @@ import org.slf4j.LoggerFactory;
  * Separated from {@link TestSnapshotScannerHDFSAclController}. Uses facility from that class.
  * @see TestSnapshotScannerHDFSAclController
  */
-@Category({ SecurityTests.class, LargeTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSnapshotScannerHDFSAclController2 {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotScannerHDFSAclController2.class);
-  @Rule
-  public TestName name = new TestName();
   private static final Logger LOG =
     LoggerFactory.getLogger(TestSnapshotScannerHDFSAclController2.class);
 
@@ -67,7 +60,7 @@ public class TestSnapshotScannerHDFSAclController2 {
   private static Table aclTable;
   private static FileSystem FS;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     // enable hdfs acl and set umask to 027
     conf.setBoolean("dfs.namenode.acls.enabled", true);
@@ -122,17 +115,17 @@ public class TestSnapshotScannerHDFSAclController2 {
     aclTable = admin.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void testRestoreSnapshot() throws Exception {
-    final String grantUserName = name.getMethodName();
+  public void testRestoreSnapshot(TestInfo testInfo) throws Exception {
+    final String grantUserName = testInfo.getTestMethod().get().getName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
-    String namespace = name.getMethodName();
-    TableName table = TableName.valueOf(namespace, name.getMethodName());
+    String namespace = testInfo.getTestMethod().get().getName();
+    TableName table = TableName.valueOf(namespace, testInfo.getTestMethod().get().getName());
     String snapshot = namespace + "s1";
     String snapshot2 = namespace + "s2";
     String snapshot3 = namespace + "s3";
