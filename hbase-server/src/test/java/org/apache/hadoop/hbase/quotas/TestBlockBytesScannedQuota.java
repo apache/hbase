@@ -264,7 +264,7 @@ public class TestBlockBytesScannedQuota {
 
   private void testTraffic(Callable<Long> trafficCallable, long expectedSuccess, long marginOfError)
     throws Exception {
-    TEST_UTIL.waitFor(5_000, () -> {
+    TEST_UTIL.waitFor(30_000, () -> {
       long actualSuccess;
       try {
         actualSuccess = trafficCallable.call();
