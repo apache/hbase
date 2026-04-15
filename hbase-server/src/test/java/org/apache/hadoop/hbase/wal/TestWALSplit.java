@@ -693,7 +693,8 @@ public class TestWALSplit {
   @Test
   public void testTrailingGarbageCorruptionLogFileSkipErrorsFalseThrows() throws IOException {
     conf.setBoolean(WALSplitter.SPLIT_SKIP_ERRORS_KEY, false);
-    splitCorruptWALs(FaultyProtobufLogReader.FailureType.BEGINNING);
+    assertThrows(IOException.class,
+      () -> splitCorruptWALs(FaultyProtobufLogReader.FailureType.BEGINNING));
   }
 
   @Test
