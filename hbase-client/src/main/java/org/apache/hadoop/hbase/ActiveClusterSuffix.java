@@ -78,14 +78,14 @@ public class ActiveClusterSuffix implements ClusterIdFile {
     }
   }
 
-  public ActiveClusterSuffix(final String ci, final String suffix) {
-    this.cluster_id = ci;
+  public ActiveClusterSuffix(final String clusterId, final String suffix) {
+    this.clusterId = clusterId;
     this.suffix = suffix;
   }
 
   public ActiveClusterSuffix(final String input) {
     String[] parts = input.split(":", 2);
-    this.cluster_id = parts[0];
+    this.clusterId = parts[0];
     if (parts.length > 1) {
       this.suffix = parts[1];
     } else {
@@ -109,7 +109,7 @@ public class ActiveClusterSuffix implements ClusterIdFile {
 
   /** Returns A pb instance to represent this instance. */
   public ActiveClusterSuffixProtos.ActiveClusterSuffix convert() {
-    return ActiveClusterSuffixProtos.ActiveClusterSuffix.newBuilder().setClusterId(cluster_id)
+    return ActiveClusterSuffixProtos.ActiveClusterSuffix.newBuilder().setClusterId(clusterId)
       .setSuffix(suffix).build();
   }
 
@@ -124,7 +124,7 @@ public class ActiveClusterSuffix implements ClusterIdFile {
    */
   @Override
   public String toString() {
-    return String.format("%s:%s", this.cluster_id,
+    return String.format("%s:%s", this.clusterId,
       Strings.isNullOrEmpty(this.suffix) ? "<blank>" : this.suffix);
   }
 
@@ -132,11 +132,11 @@ public class ActiveClusterSuffix implements ClusterIdFile {
   public boolean equals(Object o) {
     if (o == null || getClass() != o.getClass()) return false;
     ActiveClusterSuffix that = (ActiveClusterSuffix) o;
-    return Objects.equals(cluster_id, that.cluster_id) && Objects.equals(suffix, that.suffix);
+    return Objects.equals(clusterId, that.clusterId) && Objects.equals(suffix, that.suffix);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(cluster_id, suffix);
+    return Objects.hash(clusterId, suffix);
   }
 }
