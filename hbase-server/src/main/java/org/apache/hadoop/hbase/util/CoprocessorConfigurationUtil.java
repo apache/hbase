@@ -188,8 +188,7 @@ public final class CoprocessorConfigurationUtil {
    * @param coprocessorConfKey The configuration key name
    */
   public static void syncReadOnlyConfigurations(Configuration conf, String coprocessorConfKey) {
-    boolean isReadOnlyModeEnabled = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+    boolean isReadOnlyModeEnabled = ConfigurationUtil.isReadOnlyModeEnabled(conf);
 
     List<String> cpList = getReadOnlyCoprocessors(coprocessorConfKey);
     if (isReadOnlyModeEnabled) {

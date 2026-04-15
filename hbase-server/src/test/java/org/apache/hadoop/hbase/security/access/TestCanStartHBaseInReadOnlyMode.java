@@ -21,15 +21,14 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_RETRIES_NUMBER;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Tag(SecurityTests.TAG)
-@Tag(LargeTests.TAG)
+@Category({ SecurityTests.class, LargeTests.class })
+@SuppressWarnings("deprecation")
 public class TestCanStartHBaseInReadOnlyMode {
 
   @ClassRule

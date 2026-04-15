@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -118,7 +119,7 @@ public class TestReadOnlyController {
 
   private static void enableReadOnlyMode() {
     // Dynamically enable Read-Only mode if it is not active
-    if (!isReadOnlyModeEnabled()) {
+    if (!ConfigurationUtil.isReadOnlyModeEnabled(conf)) {
       LOG.info("Dynamically enabling Read-Only mode by setting {} to true",
         HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
       conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
@@ -128,17 +129,12 @@ public class TestReadOnlyController {
 
   private static void disableReadOnlyMode() {
     // Dynamically disable Read-Only mode if it is active
-    if (isReadOnlyModeEnabled()) {
+    if (ConfigurationUtil.isReadOnlyModeEnabled(conf)) {
       LOG.info("Dynamically disabling Read-Only mode by setting {} to false",
         HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
       conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, false);
       notifyObservers();
     }
-  }
-
-  private static boolean isReadOnlyModeEnabled() {
-    return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
   }
 
   private static void notifyObservers() {

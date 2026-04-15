@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclHelper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -395,7 +396,7 @@ public class MasterFileSystem {
 
   private void negotiateActiveClusterSuffixFile(long wait) throws IOException {
     this.activeClusterSuffix = ActiveClusterSuffix.fromConfig(conf, getClusterId());
-    if (!isReadOnlyModeEnabled(conf)) {
+    if (!ConfigurationUtil.isReadOnlyModeEnabled(conf)) {
       try {
         // verify the contents against the config set
         ActiveClusterSuffix acs =
@@ -411,7 +412,7 @@ public class MasterFileSystem {
         // Suffix file exists and we're in read/write mode. Content should match.
         if (!this.activeClusterSuffix.equals(acs)) {
           // throw error
-          LOG.info(
+          LOG.error(
             "[Read-replica feature] Another cluster is running in active (read-write) mode on this "
               + "storage location. Active cluster ID: {}, This cluster ID {}. Rootdir location {} ",
             acs, activeClusterSuffix, rootdir);
@@ -437,10 +438,5 @@ public class MasterFileSystem {
 
   public ActiveClusterSuffix getActiveClusterSuffix() {
     return activeClusterSuffix;
-  }
-
-  private boolean isReadOnlyModeEnabled(Configuration conf) {
-    return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
   }
 }

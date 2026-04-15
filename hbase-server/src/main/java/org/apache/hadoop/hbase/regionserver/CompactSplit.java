@@ -36,7 +36,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntSupplier;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
@@ -49,6 +48,7 @@ import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControl
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.StealJobQueue;
 import org.apache.hadoop.ipc.RemoteException;
@@ -346,8 +346,8 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     }
 
     // Should not allow compaction if cluster is in read-only mode
-    if (isReadOnlyEnabled()) {
-      LOG.info("Ignoring compaction request for {} because read-only mode is on.", region);
+    if (ConfigurationUtil.isReadOnlyModeEnabled(conf)) {
+      LOG.info("Ignoring compaction request for " + region + ",because read-only mode is on.");
       return;
     }
 
@@ -451,8 +451,8 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     }
 
     // Should not allow compaction if cluster is in read-only mode
-    if (isReadOnlyEnabled()) {
-      LOG.info("Compaction request skipped as read-only mode is on");
+    if (ConfigurationUtil.isReadOnlyModeEnabled(conf)) {
+      LOG.info(String.format("Compaction request skipped as read-only mode is on"));
       return Optional.empty();
     }
 
@@ -869,11 +869,6 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
 
   public boolean isCompactionsEnabled() {
     return compactionsEnabled;
-  }
-
-  private boolean isReadOnlyEnabled() {
-    return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
   }
 
   public void setCompactionsEnabled(boolean compactionsEnabled) {
