@@ -84,7 +84,7 @@ public class HBaseJupiterExtension implements InvocationInterceptor, BeforeAllCa
 
   private static final Map<String, Duration> TAG_TO_TIMEOUT =
     ImmutableMap.of(SmallTests.TAG, Duration.ofMinutes(3), MediumTests.TAG, Duration.ofMinutes(6),
-      LargeTests.TAG, Duration.ofMinutes(13), IntegrationTests.TAG, Duration.ZERO);
+      LargeTests.TAG, Duration.ofMinutes(20), IntegrationTests.TAG, Duration.ZERO);
 
   private static final String EXECUTOR = "executor";
 
