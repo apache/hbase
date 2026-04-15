@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ActiveClusterSuffixProt
  */
 @InterfaceAudience.Private
 public class ActiveClusterSuffix implements ClusterIdFile {
-  private final String cluster_id;
+  private final String clusterId;
   private final String suffix;
 
   public static class Parser implements ClusterIdFileParser<ActiveClusterSuffix> {
