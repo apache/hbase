@@ -28,8 +28,8 @@ import org.junit.*;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({ SecurityTests.class, LargeTests.class })
-@SuppressWarnings("deprecation")
+@Tag(SecurityTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestCanStartHBaseInReadOnlyMode {
 
   @ClassRule
