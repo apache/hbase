@@ -347,7 +347,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
 
     // Should not allow compaction if cluster is in read-only mode
     if (isReadOnlyEnabled()) {
-      LOG.info("Ignoring compaction request for " + region + ",because read-only mode is on.");
+      LOG.info("Ignoring compaction request for {} because read-only mode is on.", region);
       return;
     }
 
