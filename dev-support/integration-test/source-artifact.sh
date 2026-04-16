@@ -128,7 +128,7 @@ else
 fi
 
 # This is meant to mimic what a release manager will do to create RCs.
-# See http://hbase.apache.org/book.html#maven.release
+# See https://hbase.apache.org/docs/building-and-developing/releasing#making-a-release-candidate
 
 echo "Maven details, in case our JDK doesn't match expectations:"
 ${MVN} --version --offline | tee "${working_dir}/maven_version"

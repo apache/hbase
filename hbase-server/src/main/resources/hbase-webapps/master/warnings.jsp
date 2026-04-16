@@ -35,7 +35,8 @@
 <div class="alert alert-danger" role="alert">
   Your current JVM version <%= System.getProperty("java.version") %> is known to be
   unstable with HBase. Please see the
-  <a href="http://hbase.apache.org/book.html#trouble.log.gc">HBase Reference Guide</a>
+  <a href="https://hbase.apache.org/docs/troubleshooting#jvm-garbage-collection-logs">
+    JVM Garbage Collection Logs section of HBase Reference Guide</a>
   for details.
 </div>
 <% } %>
