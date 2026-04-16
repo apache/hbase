@@ -20,28 +20,24 @@ package org.apache.hadoop.hbase.security.access;
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_RETRIES_NUMBER;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
-import org.junit.*;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ SecurityTests.class, LargeTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(LargeTests.TAG)
 @SuppressWarnings("deprecation")
 public class TestCanStartHBaseInReadOnlyMode {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCanStartHBaseInReadOnlyMode.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
 
@@ -54,7 +50,7 @@ public class TestCanStartHBaseInReadOnlyMode {
     conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }

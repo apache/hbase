@@ -17,42 +17,37 @@
  */
 package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.Collections;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TestRefreshHFilesBase;
-import org.apache.hadoop.hbase.master.procedure.TestRefreshHFilesProcedureWithReadOnlyConf;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestStoreFileTrackerBaseReadOnlyMode extends TestRefreshHFilesBase {
   private DummyStoreFileTrackerForReadOnlyMode tracker;
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRefreshHFilesProcedureWithReadOnlyConf.class);
-
   TableName tableName = TableName.valueOf("TestStoreFileTrackerBaseReadOnlyMode");
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     // When true is passed only setup for readonly property is done.
     // The initial ReadOnly property will be false for table creation
     baseSetup(true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     baseTearDown();
   }
@@ -63,7 +58,7 @@ public class TestStoreFileTrackerBaseReadOnlyMode extends TestRefreshHFilesBase 
       setReadOnlyMode(readOnlyMode);
       tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true, table);
       tracker.load();
-      assertEquals(msg, expectReadOnly, tracker.wasReadOnlyLoad());
+      assertEquals(expectReadOnly, tracker.wasReadOnlyLoad(), msg);
     } finally {
       setReadOnlyMode(false);
     }
@@ -97,12 +92,12 @@ public class TestStoreFileTrackerBaseReadOnlyMode extends TestRefreshHFilesBase 
   }
 
   private void verifyReplaceInReadOnlyMode(boolean readOnlyMode, TableName table,
-    boolean expectCompactionExecuted, String msg) throws Exception {
+    boolean expectCompactionExecuted, String msg) {
     try {
       setReadOnlyMode(readOnlyMode);
       tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true, table);
       tracker.replace(Collections.emptyList(), Collections.emptyList());
-      assertEquals(msg, expectCompactionExecuted, tracker.wasCompactionExecuted());
+      assertEquals(expectCompactionExecuted, tracker.wasCompactionExecuted(), msg);
     } catch (Exception e) {
       throw new RuntimeException(e);
     } finally {
@@ -135,12 +130,12 @@ public class TestStoreFileTrackerBaseReadOnlyMode extends TestRefreshHFilesBase 
   }
 
   private void verifyAddInReadOnlyMode(boolean readOnlyMode, TableName table,
-    boolean expectAddExecuted, String msg) throws Exception {
+    boolean expectAddExecuted, String msg) {
     try {
       setReadOnlyMode(readOnlyMode);
       tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true, table);
       tracker.add(Collections.emptyList());
-      assertEquals(msg, expectAddExecuted, tracker.wasAddExecuted());
+      assertEquals(expectAddExecuted, tracker.wasAddExecuted(), msg);
     } catch (Exception e) {
       throw new RuntimeException(e);
     } finally {
@@ -173,12 +168,12 @@ public class TestStoreFileTrackerBaseReadOnlyMode extends TestRefreshHFilesBase 
   }
 
   private void verifySetInReadOnlyMode(boolean readOnlyMode, TableName table,
-    boolean expectSetExecuted, String msg) throws Exception {
+    boolean expectSetExecuted, String msg) {
     try {
       setReadOnlyMode(readOnlyMode);
       tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true, table);
       tracker.set(Collections.emptyList());
-      assertEquals(msg, expectSetExecuted, tracker.wasSetExecuted());
+      assertEquals(expectSetExecuted, tracker.wasSetExecuted(), msg);
     } catch (Exception e) {
       throw new RuntimeException(e);
     } finally {
@@ -215,18 +210,18 @@ public class TestStoreFileTrackerBaseReadOnlyMode extends TestRefreshHFilesBase 
       .includeMVCCReadpoint(true).includesTag(false).shouldDropBehind(false);
   }
 
-  private void assertIllegalStateThrown(TableName tableName) throws Exception {
+  private void assertIllegalStateThrown(TableName tableName) {
     try {
       setReadOnlyMode(true);
       tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true, tableName);
-      tracker.createWriter(createParams());
-      fail("Expected IllegalStateException");
+      assertThrows(IllegalStateException.class, () -> tracker.createWriter(createParams()),
+        "Expected IllegalStateException");
     } finally {
       setReadOnlyMode(false);
     }
   }
 
-  private void assertNoIllegalStateThrown(TableName tableName) throws Exception {
+  private void assertNoIllegalStateThrown(TableName tableName) {
     try {
       setReadOnlyMode(true);
       tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true, tableName);
@@ -242,7 +237,7 @@ public class TestStoreFileTrackerBaseReadOnlyMode extends TestRefreshHFilesBase 
     }
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testCreateWriterThrowExceptionWhenGlobalReadOnlyEnabled() throws Exception {
     assertIllegalStateThrown(tableName);
   }

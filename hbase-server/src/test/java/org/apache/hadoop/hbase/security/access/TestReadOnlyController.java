@@ -18,12 +18,13 @@
 package org.apache.hadoop.hbase.security.access;
 
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_RETRIES_NUMBER;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
@@ -40,24 +41,17 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConfigurationUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ SecurityTests.class, LargeTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(LargeTests.TAG)
 @SuppressWarnings("deprecation")
 public class TestReadOnlyController {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReadOnlyController.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReadOnlyController.class);
   private final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -70,13 +64,8 @@ public class TestReadOnlyController {
   private static SingleProcessHBaseCluster cluster;
 
   private static Table testTable;
-  @Rule
-  public TestName name = new TestName();
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
-  @Before
+  @BeforeEach
   public void beforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
 
@@ -109,7 +98,7 @@ public class TestReadOnlyController {
     }
   }
 
-  @After
+  @AfterEach
   public void afterClass() throws Exception {
     if (connection != null) {
       connection.close();
@@ -147,14 +136,13 @@ public class TestReadOnlyController {
   // setting up the test class, so we only need a test function for a failed table creation.
   @Test
   public void testCannotCreateTableWithReadOnlyEnabled() throws IOException {
-    // Expect an IOException to result from the createTable attempt since Read-Only mode is enabled
     enableReadOnlyMode();
     TableName newTable = TableName.valueOf("bad_read_only_test_table");
-    exception.expect(IOException.class);
-    exception.expectMessage("Operation not allowed in Read-Only Mode");
 
-    // This should throw the IOException
-    TEST_UTIL.createTable(newTable, TEST_FAMILY);
+    IOException exception = assertThrows(IOException.class, () -> {
+      TEST_UTIL.createTable(newTable, TEST_FAMILY);
+    });
+    assertTrue(exception.getMessage().contains("Operation not allowed in Read-Only Mode"));
   }
 
   @Test
@@ -177,12 +165,10 @@ public class TestReadOnlyController {
     Put put = new Put(row1);
     put.addColumn(TEST_FAMILY, null, value);
 
-    // Expect an IOException to result from the Put attempt
-    exception.expect(IOException.class);
-    exception.expectMessage("Operation not allowed in Read-Only Mode");
-
-    // This should throw the IOException
-    testTable.put(put);
+    IOException exception = assertThrows(IOException.class, () -> {
+      testTable.put(put);
+    });
+    assertTrue(exception.getMessage().contains("Operation not allowed in Read-Only Mode"));
   }
 
   @Test
@@ -203,11 +189,9 @@ public class TestReadOnlyController {
     actions.add(new Put(Bytes.toBytes("row11")).addColumn(TEST_FAMILY, null, Bytes.toBytes("11")));
     actions.add(new Delete(Bytes.toBytes("row11")));
 
-    // Expect an IOException to result from the batch Put attempt
-    exception.expect(IOException.class);
-    exception.expectMessage("Operation not allowed in Read-Only Mode");
-
-    // This should throw the IOException
-    testTable.batch(actions, null);
+    IOException exception = assertThrows(IOException.class, () -> {
+      testTable.batch(actions, null);
+    });
+    assertTrue(exception.getMessage().contains("Operation not allowed in Read-Only Mode"));
   }
 }

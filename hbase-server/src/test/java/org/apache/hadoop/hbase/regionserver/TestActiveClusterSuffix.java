@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -27,7 +28,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ActiveClusterSuffix;
 import org.apache.hadoop.hbase.ClusterId;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -36,33 +36,28 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test Active Cluster Suffix file.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestActiveClusterSuffix {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestActiveClusterSuffix.class);
 
   private final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private JVMClusterUtil.RegionServerThread rst;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(ShutdownHook.RUN_SHUTDOWN_HOOK, false);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
     if (rst != null && rst.getRegionServer() != null) {
@@ -81,8 +76,8 @@ public class TestActiveClusterSuffix {
     FileSystem fs = rootDir.getFileSystem(TEST_UTIL.getConfiguration());
     Path filePath = new Path(rootDir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
 
-    assertTrue(filePath + " should exists ", fs.exists(filePath));
-    assertTrue(filePath + " should not be empty  ", fs.getFileStatus(filePath).getLen() > 0);
+    assertTrue(fs.exists(filePath), filePath + " should exists ");
+    assertTrue(fs.getFileStatus(filePath).getLen() > 0, filePath + " should not be empty  ");
 
     MasterFileSystem mfs = TEST_UTIL.getHBaseCluster().getMaster().getMasterFileSystem();
 
@@ -90,8 +85,8 @@ public class TestActiveClusterSuffix {
       ActiveClusterSuffix suffixFromFile = ActiveClusterSuffix.parseFrom(in.readAllBytes());
       ActiveClusterSuffix suffixFromConfig =
         ActiveClusterSuffix.fromConfig(TEST_UTIL.getConfiguration(), mfs.getClusterId());
-      assertEquals("Active Cluster Suffix file content doesn't match configuration", suffixFromFile,
-        suffixFromConfig);
+      assertEquals(suffixFromFile, suffixFromConfig,
+        "Active Cluster Suffix file content doesn't match configuration");
     }
   }
 
@@ -112,7 +107,7 @@ public class TestActiveClusterSuffix {
     try {
       TEST_UTIL.startMiniHBaseCluster();
     } catch (IOException ioe) {
-      Assert.fail("Can't start mini hbase cluster.");
+      fail("Can't start mini hbase cluster.");
     }
 
     MasterFileSystem mfs = TEST_UTIL.getHBaseCluster().getMaster().getMasterFileSystem();
@@ -142,7 +137,7 @@ public class TestActiveClusterSuffix {
     } catch (IOException ioe) {
       threwIOE = true;
     } finally {
-      assertTrue("The master should have thrown an exception", threwIOE);
+      assertTrue(threwIOE, "The master should have thrown an exception");
     }
   }
 

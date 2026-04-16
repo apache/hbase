@@ -18,31 +18,26 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TestRefreshHFilesBase;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRefreshHFilesProcedureWithReadOnlyConf extends TestRefreshHFilesBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRefreshHFilesProcedureWithReadOnlyConf.class);
-
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     // When true is passed only setup for readonly property is done.
     // The initial ReadOnly property will be false for table creation
     baseSetup(true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     baseTearDown();
   }

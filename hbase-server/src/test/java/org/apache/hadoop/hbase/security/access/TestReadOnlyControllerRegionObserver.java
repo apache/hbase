@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.WriteAttemptedOnReadOnlyClusterException;
 import org.apache.hadoop.hbase.client.Append;
@@ -57,11 +56,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 // Tests methods of Region Observer interface which are implemented in ReadOnlyController,
 // by mocking the coprocessor environment and dependencies.
@@ -69,11 +67,9 @@ import org.junit.experimental.categories.Category;
 // For example, prePut has 2 versions:
 // V1: prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit)
 // V2: prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit, Durability durability)
-@Category({ SecurityTests.class, SmallTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestReadOnlyControllerRegionObserver {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReadOnlyControllerRegionObserver.class);
 
   RegionReadOnlyController regionReadOnlyController;
 
@@ -112,7 +108,7 @@ public class TestReadOnlyControllerRegionObserver {
   List<Pair<Path, Path>> pairs;
   WALKey key;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     regionReadOnlyController = new RegionReadOnlyController();
 
@@ -168,7 +164,7 @@ public class TestReadOnlyControllerRegionObserver {
     when(key.getTableName()).thenReturn(tableName);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
 
   }

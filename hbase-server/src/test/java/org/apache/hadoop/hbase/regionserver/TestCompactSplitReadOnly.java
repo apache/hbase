@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -27,18 +27,19 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTrack
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCompactSplitReadOnly {
 
   private CompactSplit compactSplit;
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     conf = new Configuration();
     // enable read-only mode
@@ -47,7 +48,7 @@ public class TestCompactSplitReadOnly {
     compactSplit = new CompactSplit(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     // ensure thread pools are shutdown to avoid leakage
     compactSplit.interruptIfNecessary();
