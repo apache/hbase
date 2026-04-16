@@ -73,7 +73,7 @@
   <tr>
     <td>IOEngine</td>
     <td><%= bucketCache.getIoEngine() %></td>
-    <td>Supported IOEngine types: offheap, file, files, mmap or pmem. See <a href="https://hbase.apache.org/book.html#hbase.bucketcache.ioengine">hbase.bucketcache.ioengine</a>.</td>
+    <td>Supported IOEngine types: offheap, file, files, mmap or pmem. See <a href="https://hbase.apache.org/docs/configuration/default#hbasebucketcacheioengine-toc">hbase.bucketcache.ioengine</a>.</td>
   </tr>
 <% } %>
   <tr>

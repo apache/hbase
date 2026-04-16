@@ -138,7 +138,7 @@ class ShellTest < Test::Unit::TestCase
     @shell.interactive = true
     output = capture_stdout { @shell.print_banner }
     @shell.interactive = false
-    link_regex = %r{For Reference, please visit: http://hbase.apache.org/2.0/book.html#shell}
+    link_regex = %r{For Reference, please visit: https://hbase.apache.org/docs/shell}
     assert_match(link_regex, output)
   end
 

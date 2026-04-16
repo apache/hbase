@@ -22,7 +22,8 @@ under the License.
 [Apache HBase](https://hbase.apache.org) is an open-source, distributed, versioned, column-oriented store modeled after Google' [Bigtable](https://research.google.com/archive/bigtable.html): A Distributed Storage System for Structured Data by Chang et al. Just as Bigtable leverages the distributed data storage provided by the Google File System, HBase provides Bigtable-like capabilities on top of [Apache Hadoop](https://hadoop.apache.org/).
 
 # Getting Start
-To get started using HBase, the full documentation for this release can be found under the doc/ directory that accompanies this README. Using a browser, open the docs/index.html to view the project home page (or browse https://hbase.apache.org). The hbase '[book](https://hbase.apache.org/book.html)' has a 'quick start' section and is where you should being your exploration of the hbase project.
+To get started using HBase, visit the [project home page](https://hbase.apache.org).
+The HBase [Reference Guide](https://hbase.apache.org/docs) has a 'Quick Start' section and is where you should begin your exploration of the HBase project.
 
 The latest HBase can be downloaded from the [download page](https://hbase.apache.org/downloads/).
 
