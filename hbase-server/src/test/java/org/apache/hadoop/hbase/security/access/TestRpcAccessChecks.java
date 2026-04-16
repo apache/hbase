@@ -18,10 +18,10 @@
 package org.apache.hadoop.hbase.security.access;
 
 import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
@@ -35,7 +35,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -65,12 +64,10 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * This class tests operations in MasterRpcServices which require ADMIN access. It doesn't test all
@@ -87,15 +84,9 @@ import org.junit.rules.TestName;
  * correct user, i.e. FooUser in this case. But this doesn't work for the tests here, so we go
  * around by doing complete RPCs.
  */
-@Category({ SecurityTests.class, MediumTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRpcAccessChecks {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRpcAccessChecks.class);
-
-  @Rule
-  public final TestName TEST_NAME = new TestName();
-
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf;
 
@@ -168,7 +159,7 @@ public class TestRpcAccessChecks {
     SecureTestUtil.configureSuperuser(conf);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     conf = TEST_UTIL.getConfiguration();
 
@@ -221,7 +212,7 @@ public class TestRpcAccessChecks {
       } catch (AccessDeniedException e) {
         accessDenied = true;
       }
-      assertTrue("Expected access to be denied", accessDenied);
+      assertTrue(accessDenied, "Expected access to be denied");
       return null;
     });
   }
@@ -238,7 +229,7 @@ public class TestRpcAccessChecks {
           accessDenied = true;
         }
       }
-      assertTrue("Expected access to be denied", accessDenied);
+      assertTrue(accessDenied, "Expected access to be denied");
       return null;
     });
 
@@ -328,8 +319,8 @@ public class TestRpcAccessChecks {
   }
 
   @Test
-  public void testTableFlush() throws Exception {
-    TableName tn = TableName.valueOf(TEST_NAME.getMethodName());
+  public void testTableFlush(TestInfo testInfo) throws Exception {
+    TableName tn = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tn)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f1")).build();
     Action adminAction = (admin) -> {
@@ -366,8 +357,8 @@ public class TestRpcAccessChecks {
   }
 
   @Test
-  public void testTableFlushAndSnapshot() throws Exception {
-    TableName tn = TableName.valueOf(TEST_NAME.getMethodName());
+  public void testTableFlushAndSnapshot(TestInfo testInfo) throws Exception {
+    TableName tn = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tn)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f1")).build();
     Action adminAction = (admin) -> {
@@ -404,7 +395,7 @@ public class TestRpcAccessChecks {
   }
 
   @Test
-  public void testGrantDeniedOnSuperUsersGroups() {
+  public void testGrantDeniedOnSuperUsersGroups(TestInfo testInfo) {
     /** User */
     try {
       // Global
@@ -416,15 +407,16 @@ public class TestRpcAccessChecks {
     try {
       // Namespace
       SecureTestUtil.grantOnNamespace(USER_ADMIN_NOT_SUPER, TEST_UTIL, USER_ADMIN.getShortName(),
-        TEST_NAME.getMethodName(), Permission.Action.ADMIN, Permission.Action.CREATE);
+        testInfo.getTestMethod().get().getName(), Permission.Action.ADMIN,
+        Permission.Action.CREATE);
       fail("Granting superuser's namespace permissions is not allowed.");
     } catch (Exception e) {
     }
     try {
       // Table
       SecureTestUtil.grantOnTable(USER_ADMIN_NOT_SUPER, TEST_UTIL, USER_ADMIN.getName(),
-        TableName.valueOf(TEST_NAME.getMethodName()), null, null, Permission.Action.ADMIN,
-        Permission.Action.CREATE);
+        TableName.valueOf(testInfo.getTestMethod().get().getName()), null, null,
+        Permission.Action.ADMIN, Permission.Action.CREATE);
       fail("Granting superuser's table permissions is not allowed.");
     } catch (Exception e) {
     }
@@ -439,7 +431,7 @@ public class TestRpcAccessChecks {
   }
 
   @Test
-  public void testRevokeDeniedOnSuperUsersGroups() {
+  public void testRevokeDeniedOnSuperUsersGroups(TestInfo testInfo) {
     /** User */
     try {
       // Global
@@ -451,14 +443,15 @@ public class TestRpcAccessChecks {
     try {
       // Namespace
       SecureTestUtil.revokeFromNamespace(USER_ADMIN_NOT_SUPER, TEST_UTIL, USER_ADMIN.getShortName(),
-        TEST_NAME.getMethodName(), Permission.Action.ADMIN);
+        testInfo.getTestMethod().get().getName(), Permission.Action.ADMIN);
       fail("Revoking superuser's namespace permissions is not allowed.");
     } catch (Exception e) {
     }
     try {
       // Table
       SecureTestUtil.revokeFromTable(USER_ADMIN_NOT_SUPER, TEST_UTIL, USER_ADMIN.getName(),
-        TableName.valueOf(TEST_NAME.getMethodName()), null, null, Permission.Action.ADMIN);
+        TableName.valueOf(testInfo.getTestMethod().get().getName()), null, null,
+        Permission.Action.ADMIN);
       fail("Revoking superuser's table permissions is not allowed.");
     } catch (Exception e) {
     }

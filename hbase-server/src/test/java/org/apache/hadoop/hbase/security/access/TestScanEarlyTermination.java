@@ -17,26 +17,26 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableNameTestRule;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
@@ -44,28 +44,22 @@ import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ SecurityTests.class, MediumTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestScanEarlyTermination extends SecureTestUtil {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestScanEarlyTermination.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestScanEarlyTermination.class);
 
-  @Rule
-  public TableNameTestRule testTable = new TableNameTestRule();
+  private static TableName testTable;
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] TEST_FAMILY1 = Bytes.toBytes("f1");
   private static final byte[] TEST_FAMILY2 = Bytes.toBytes("f2");
@@ -79,8 +73,9 @@ public class TestScanEarlyTermination extends SecureTestUtil {
   private static User USER_OWNER;
   private static User USER_OTHER;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
+    testTable = TableName.valueOf("testTable");
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
     conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
@@ -108,58 +103,52 @@ public class TestScanEarlyTermination extends SecureTestUtil {
     USER_OTHER = User.createUserForTesting(conf, "other", new String[0]);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
-    Admin admin = TEST_UTIL.getAdmin();
-    HTableDescriptor htd = new HTableDescriptor(testTable.getTableName());
-    htd.setOwner(USER_OWNER);
-    HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY1);
-    hcd.setMaxVersions(10);
-    htd.addFamily(hcd);
-    hcd = new HColumnDescriptor(TEST_FAMILY2);
-    hcd.setMaxVersions(10);
-    htd.addFamily(hcd);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(testTable)
+      .setColumnFamily(
+        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY1).setMaxVersions(10).build())
+      .setColumnFamily(
+        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY2).setMaxVersions(10).build())
+      .setOwner(USER_OWNER)
+      // Enable backwards compatible early termination behavior in the HTD. We
+      // want to confirm that the per-table configuration is properly picked up.
+      .setValue(AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT, "true").build();
 
-    // Enable backwards compatible early termination behavior in the HTD. We
-    // want to confirm that the per-table configuration is properly picked up.
-    htd.setConfiguration(AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT, "true");
-
-    admin.createTable(htd);
-    TEST_UTIL.waitUntilAllRegionsAssigned(testTable.getTableName());
+    TEST_UTIL.getAdmin().createTable(tableDescriptor);
+    TEST_UTIL.waitUntilAllRegionsAssigned(testTable);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     // Clean the _acl_ table
     try {
-      TEST_UTIL.deleteTable(testTable.getTableName());
+      TEST_UTIL.deleteTable(testTable);
     } catch (TableNotFoundException ex) {
       // Test deleted the table, no problem
-      LOG.info("Test deleted table " + testTable.getTableName());
+      LOG.info("Test deleted table " + testTable);
     }
-    assertEquals(0, PermissionStorage.getTablePermissions(conf, testTable.getTableName()).size());
+    assertEquals(0, PermissionStorage.getTablePermissions(conf, testTable).size());
   }
 
   @Test
   public void testEarlyScanTermination() throws Exception {
     // Grant USER_OTHER access to TEST_FAMILY1 only
-    grantOnTable(TEST_UTIL, USER_OTHER.getShortName(), testTable.getTableName(), TEST_FAMILY1, null,
-      Action.READ);
+    grantOnTable(TEST_UTIL, USER_OTHER.getShortName(), testTable, TEST_FAMILY1, null, Action.READ);
 
     // Set up test data
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
         // force a new RS connection
-        conf.set("testkey", TEST_UTIL.getRandomUUID().toString());
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(testTable.getTableName());
-        try {
+        conf.set("testkey", HBaseTestingUtility.getRandomUUID().toString());
+        try (Connection connection = ConnectionFactory.createConnection(conf);
+          Table t = connection.getTable(testTable)) {
           Put put = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
           t.put(put);
           // Set a READ cell ACL for USER_OTHER on this value in FAMILY2
@@ -170,9 +159,6 @@ public class TestScanEarlyTermination extends SecureTestUtil {
           put = new Put(TEST_ROW).addColumn(TEST_FAMILY2, TEST_Q2, ZERO);
           put.setACL(USER_OTHER.getShortName(), new Permission());
           t.put(put);
-        } finally {
-          t.close();
-          connection.close();
         }
         return null;
       }
@@ -183,21 +169,17 @@ public class TestScanEarlyTermination extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         // force a new RS connection
-        conf.set("testkey", TEST_UTIL.getRandomUUID().toString());
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(testTable.getTableName());
-        try {
+        conf.set("testkey", HBaseTestingUtility.getRandomUUID().toString());
+        try (Connection connection = ConnectionFactory.createConnection(conf);
+          Table t = connection.getTable(testTable)) {
           Scan scan = new Scan().addFamily(TEST_FAMILY1);
           Result result = t.getScanner(scan).next();
           if (result != null) {
-            assertTrue("Improper exclusion", result.containsColumn(TEST_FAMILY1, TEST_Q1));
-            assertFalse("Improper inclusion", result.containsColumn(TEST_FAMILY2, TEST_Q1));
+            assertTrue(result.containsColumn(TEST_FAMILY1, TEST_Q1), "Improper exclusion");
+            assertFalse(result.containsColumn(TEST_FAMILY2, TEST_Q1), "Improper inclusion");
             return result.listCells();
           }
           return null;
-        } finally {
-          t.close();
-          connection.close();
         }
       }
     }, USER_OTHER);
@@ -209,21 +191,17 @@ public class TestScanEarlyTermination extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         // force a new RS connection
-        conf.set("testkey", TEST_UTIL.getRandomUUID().toString());
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(testTable.getTableName());
-        try {
+        conf.set("testkey", HBaseTestingUtility.getRandomUUID().toString());
+        try (Connection connection = ConnectionFactory.createConnection(conf);
+          Table t = connection.getTable(testTable)) {
           Scan scan = new Scan();
           Result result = t.getScanner(scan).next();
           if (result != null) {
-            assertTrue("Improper exclusion", result.containsColumn(TEST_FAMILY1, TEST_Q1));
-            assertFalse("Improper inclusion", result.containsColumn(TEST_FAMILY2, TEST_Q1));
+            assertTrue(result.containsColumn(TEST_FAMILY1, TEST_Q1), "Improper exclusion");
+            assertFalse(result.containsColumn(TEST_FAMILY2, TEST_Q1), "Improper inclusion");
             return result.listCells();
           }
           return null;
-        } finally {
-          t.close();
-          connection.close();
         }
       }
     }, USER_OTHER);
@@ -233,26 +211,22 @@ public class TestScanEarlyTermination extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         // force a new RS connection
-        conf.set("testkey", TEST_UTIL.getRandomUUID().toString());
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(testTable.getTableName());
-        try {
+        conf.set("testkey", HBaseTestingUtility.getRandomUUID().toString());
+        try (Connection connection = ConnectionFactory.createConnection(conf);
+          Table t = connection.getTable(testTable)) {
           Scan scan = new Scan().addFamily(TEST_FAMILY2);
           Result result = t.getScanner(scan).next();
           if (result != null) {
             return result.listCells();
           }
           return null;
-        } finally {
-          t.close();
-          connection.close();
         }
       }
     }, USER_OTHER);
 
     // Now grant USER_OTHER access to TEST_FAMILY2:TEST_Q2
-    grantOnTable(TEST_UTIL, USER_OTHER.getShortName(), testTable.getTableName(), TEST_FAMILY2,
-      TEST_Q2, Action.READ);
+    grantOnTable(TEST_UTIL, USER_OTHER.getShortName(), testTable, TEST_FAMILY2, TEST_Q2,
+      Action.READ);
 
     // A scan of FAMILY1 and FAMILY2 will produce combined results. In FAMILY2
     // we have access granted to Q2 at the CF level. Because we early out
@@ -261,22 +235,18 @@ public class TestScanEarlyTermination extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         // force a new RS connection
-        conf.set("testkey", TEST_UTIL.getRandomUUID().toString());
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(testTable.getTableName());
-        try {
-          Scan scan = new Scan();
-          Result result = t.getScanner(scan).next();
+        conf.set("testkey", HBaseTestingUtility.getRandomUUID().toString());
+        try (Connection connection = ConnectionFactory.createConnection(conf);
+          Table t = connection.getTable(testTable);
+          ResultScanner scanner = t.getScanner(new Scan())) {
+          Result result = scanner.next();
           if (result != null) {
-            assertTrue("Improper exclusion", result.containsColumn(TEST_FAMILY1, TEST_Q1));
-            assertFalse("Improper inclusion", result.containsColumn(TEST_FAMILY2, TEST_Q1));
-            assertTrue("Improper exclusion", result.containsColumn(TEST_FAMILY2, TEST_Q2));
+            assertTrue(result.containsColumn(TEST_FAMILY1, TEST_Q1), "Improper exclusion");
+            assertFalse(result.containsColumn(TEST_FAMILY2, TEST_Q1), "Improper inclusion");
+            assertTrue(result.containsColumn(TEST_FAMILY2, TEST_Q2), "Improper exclusion");
             return result.listCells();
           }
           return null;
-        } finally {
-          t.close();
-          connection.close();
         }
       }
     }, USER_OTHER);

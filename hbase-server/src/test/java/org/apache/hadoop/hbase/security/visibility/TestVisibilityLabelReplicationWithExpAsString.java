@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.security.visibility;
 
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -28,7 +28,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -50,25 +49,13 @@ import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-@Category({ SecurityTests.class, MediumTests.class })
+@org.junit.jupiter.api.Tag(SecurityTests.TAG)
+@org.junit.jupiter.api.Tag(MediumTests.TAG)
 public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilityLabelsReplication {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVisibilityLabelReplicationWithExpAsString.class);
-
-  private static final Logger LOG =
-    LoggerFactory.getLogger(TestVisibilityLabelReplicationWithExpAsString.class);
-
   @Override
-  @Before
-  public void setup() throws Exception {
+  public void setUpTest() throws Exception {
     expected[0] = 4;
     expected[1] = 6;
     expected[2] = 4;
@@ -154,7 +141,7 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     setAuths(conf1);
   }
 
-  protected static void setVisibilityLabelServiceImpl(Configuration conf, Class clazz) {
+  protected static void setVisibilityLabelServiceImpl(Configuration conf, Class<?> clazz) {
     conf.setClass(VisibilityLabelServiceManager.VISIBILITY_LABEL_SERVICE_CLASS, clazz,
       VisibilityLabelService.class);
   }

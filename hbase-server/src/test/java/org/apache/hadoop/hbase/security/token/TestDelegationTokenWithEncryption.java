@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.security.token;
 
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
-import java.util.Arrays;
-import java.util.Collection;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.stream.Stream;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -40,63 +39,41 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-@RunWith(Parameterized.class)
-@Category({ SecurityTests.class, MediumTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestDelegationTokenWithEncryption extends SecureTestCluster {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDelegationTokenWithEncryption.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     // enable rpc encryption
     TEST_UTIL.getConfiguration().set("hbase.rpc.protection", "privacy");
-    SecureTestCluster.setUp();
+    SecureTestCluster.setUpCluster();
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
       Token<? extends TokenIdentifier> token = ClientTokenUtil.obtainToken(conn);
       UserGroupInformation.getCurrentUser().addToken(token);
     }
   }
 
-  @Parameters(name = "{index}: rpcClientImpl={0}")
-  public static Collection<Object> parameters() {
+  static Stream<String> parameters() {
     // Client connection supports only non-blocking RPCs (due to master registry restriction), hence
     // we only test NettyRpcClient.
-    return Arrays.asList(new Object[] { NettyRpcClient.class.getName() });
+    return Stream.of(NettyRpcClient.class.getName());
   }
 
-  @Parameter
-  public String rpcClientImpl;
-
-  @Rule
-  public TestName testName = new TestName();
-
-  @Before
-  public void setUpBeforeMethod() {
+  @ParameterizedTest(name = "{index}: rpcClientImpl={0}")
+  @MethodSource("parameters")
+  public void testPutGetWithDelegationToken(String rpcClientImpl, TestInfo testInfo)
+    throws Exception {
     TEST_UTIL.getConfiguration().set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY,
       rpcClientImpl);
-  }
-
-  private TableName getTestTableName() {
-    return TableName.valueOf(testName.getMethodName().replaceAll("[^0-9A-Za-z]", "_"));
-  }
-
-  @Test
-  public void testPutGetWithDelegationToken() throws Exception {
-    TableName tableName = getTestTableName();
+    TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     byte[] family = Bytes.toBytes("f");
     byte[] qualifier = Bytes.toBytes("q");
     byte[] row = Bytes.toBytes("row");
