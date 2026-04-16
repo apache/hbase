@@ -18,13 +18,12 @@
 package org.apache.hadoop.hbase.procedure;
 
 import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -38,11 +37,10 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,12 +49,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 /**
  * Check if CompletedProcedureCleaner cleans up failed nonce procedures.
  */
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestFailedProcCleanup {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFailedProcCleanup.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFailedProcCleanup.class);
 
@@ -66,14 +60,14 @@ public class TestFailedProcCleanup {
   private static final byte[] FAMILY = Bytes.toBytesBinary("f");
   private static final int evictionDelay = 10 * 1000;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() {
     conf = TEST_UTIL.getConfiguration();
     conf.setInt("hbase.procedure.cleaner.evict.ttl", evictionDelay);
     conf.setInt("hbase.procedure.cleaner.evict.batch.size", 1);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }

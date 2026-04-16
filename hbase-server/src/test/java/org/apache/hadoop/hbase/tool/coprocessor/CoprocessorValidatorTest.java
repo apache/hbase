@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.tool.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
@@ -34,7 +34,6 @@ import java.util.Optional;
 import java.util.jar.JarOutputStream;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -45,21 +44,16 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.tool.coprocessor.CoprocessorViolation.Severity;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
 
-@Category({ SmallTests.class })
+@Tag(SmallTests.TAG)
 @SuppressWarnings("deprecation")
 public class CoprocessorValidatorTest {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(CoprocessorValidatorTest.class);
-
   private CoprocessorValidator validator;
 
   public CoprocessorValidatorTest() {
@@ -153,7 +147,7 @@ public class CoprocessorValidatorTest {
       + "org.apache.hadoop.hbase.tool.coprocessor.CoprocessorValidatorTest$MissingClass"));
   }
 
-  /*
+  /**
    * ObsoleteMethod coprocessor implements preCreateTable method which has HRegionInfo parameters.
    * In our current implementation, we pass only RegionInfo parameters, so this method won't be
    * called by HBase at all.

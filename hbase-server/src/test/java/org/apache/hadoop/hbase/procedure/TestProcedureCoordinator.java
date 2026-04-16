@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.procedure;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -40,14 +40,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -60,12 +58,9 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * This only works correctly when we do <i>class level parallelization</i> of tests. If we do method
  * level serialization this class will likely throw all kinds of errors.
  */
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestProcedureCoordinator {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcedureCoordinator.class);
 
   // general test constants
   private static final long WAKE_FREQUENCY = 1000;
@@ -84,7 +79,7 @@ public class TestProcedureCoordinator {
   // handle to the coordinator for each test
   private ProcedureCoordinator coordinator;
 
-  @After
+  @AfterEach
   public void resetTest() throws IOException {
     // reset all the mocks used for the tests
     reset(controller, task, monitor);
@@ -116,8 +111,9 @@ public class TestProcedureCoordinator {
 
     coordinator.startProcedure(procSpy.getErrorMonitor(), procName, procData, expected);
     // null here means second procedure failed to start.
-    assertNull("Coordinator successfully ran two tasks at once with a single thread pool.",
-      coordinator.startProcedure(proc2.getErrorMonitor(), "another op", procData, expected));
+    assertNull(
+      coordinator.startProcedure(proc2.getErrorMonitor(), "another op", procData, expected),
+      "Coordinator successfully ran two tasks at once with a single thread pool.");
   }
 
   /**
@@ -296,7 +292,7 @@ public class TestProcedureCoordinator {
     private boolean ran = false;
 
     public void ensureRan() {
-      assertTrue("Prepare mocking didn't actually run!", ran);
+      assertTrue(ran, "Prepare mocking didn't actually run!");
     }
 
     @Override

@@ -17,21 +17,21 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.TreeSet;
+import java.util.stream.Stream;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.filter.MultiRowRangeFilter.RowRange;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
@@ -40,53 +40,50 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassLoaderTestHelper;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.AfterClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 
-@RunWith(Parameterized.class)
-@Category({ FilterTests.class, MediumTests.class })
+@Tag(FilterTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: allowFastReflectionFallthrough={0}")
 public class TestFilterSerialization {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFilterSerialization.class);
-
-  @Parameterized.Parameter(0)
   public boolean allowFastReflectionFallthrough;
 
-  @Parameterized.Parameters(name = "{index}: allowFastReflectionFallthrough={0}")
-  public static Iterable<Object[]> data() {
-    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
+  public TestFilterSerialization(boolean allowFastReflectionFallthrough) {
+    this.allowFastReflectionFallthrough = allowFastReflectionFallthrough;
   }
 
-  @AfterClass
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(true), Arguments.of(false));
+  }
+
+  @AfterAll
   public static void afterClass() throws Exception {
     // set back to true so that it doesn't affect any other tests
     ProtobufUtil.setAllowFastReflectionFallthrough(true);
   }
 
-  @Test
+  @TestTemplate
   public void testColumnCountGetFilter() throws Exception {
     ColumnCountGetFilter columnCountGetFilter = new ColumnCountGetFilter(1);
     assertTrue(columnCountGetFilter.areSerializedFieldsEqual(
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(columnCountGetFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testColumnPaginationFilter() throws Exception {
     ColumnPaginationFilter columnPaginationFilter = new ColumnPaginationFilter(1, 7);
     assertTrue(columnPaginationFilter.areSerializedFieldsEqual(
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(columnPaginationFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testColumnPrefixFilter() throws Exception {
     // empty string
     ColumnPrefixFilter columnPrefixFilter = new ColumnPrefixFilter(Bytes.toBytes(""));
@@ -99,7 +96,7 @@ public class TestFilterSerialization {
       .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(columnPrefixFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testColumnRangeFilter() throws Exception {
     // null columns
     ColumnRangeFilter columnRangeFilter = new ColumnRangeFilter(null, true, null, false);
@@ -112,7 +109,7 @@ public class TestFilterSerialization {
       .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(columnRangeFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testDependentColumnFilter() throws Exception {
     // null column qualifier/family
     DependentColumnFilter dependentColumnFilter = new DependentColumnFilter(null, null);
@@ -127,7 +124,7 @@ public class TestFilterSerialization {
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(dependentColumnFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testFamilyFilter() throws Exception {
     FamilyFilter familyFilter = new FamilyFilter(CompareOperator.EQUAL,
       new BinaryPrefixComparator(Bytes.toBytes("testValueOne")));
@@ -135,7 +132,7 @@ public class TestFilterSerialization {
       .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(familyFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testFilterList() throws Exception {
     // empty filter list
     FilterList filterList = new FilterList(new LinkedList<>());
@@ -150,7 +147,7 @@ public class TestFilterSerialization {
       .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(filterList))));
   }
 
-  @Test
+  @TestTemplate
   public void testFilterWrapper() throws Exception {
     FilterWrapper filterWrapper =
       new FilterWrapper(new ColumnRangeFilter(Bytes.toBytes("e"), false, Bytes.toBytes("f"), true));
@@ -159,7 +156,7 @@ public class TestFilterSerialization {
   }
 
   @SuppressWarnings("deprecation")
-  @Test
+  @TestTemplate
   public void testFirstKeyValueMatchingQualifiersFilter() throws Exception {
     // empty qualifiers set
     TreeSet<byte[]> set = new TreeSet<>(Bytes.BYTES_COMPARATOR);
@@ -176,14 +173,14 @@ public class TestFilterSerialization {
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(firstKeyValueMatchingQualifiersFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testFirstKeyOnlyFilter() throws Exception {
     FirstKeyOnlyFilter firstKeyOnlyFilter = new FirstKeyOnlyFilter();
     assertTrue(firstKeyOnlyFilter
       .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(firstKeyOnlyFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testFuzzyRowFilter() throws Exception {
     LinkedList<Pair<byte[], byte[]>> fuzzyList = new LinkedList<>();
     fuzzyList.add(new Pair<>(Bytes.toBytes("999"), new byte[] { 0, 0, 1 }));
@@ -193,7 +190,7 @@ public class TestFilterSerialization {
       .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(fuzzyRowFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testInclusiveStopFilter() throws Exception {
     // InclusveStopFilter with null stopRowKey
     InclusiveStopFilter inclusiveStopFilter = new InclusiveStopFilter(null);
@@ -206,7 +203,7 @@ public class TestFilterSerialization {
       .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(inclusiveStopFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testKeyOnlyFilter() throws Exception {
     // KeyOnlyFilter with lenAsVal
     KeyOnlyFilter keyOnlyFilter = new KeyOnlyFilter(true);
@@ -219,7 +216,7 @@ public class TestFilterSerialization {
       .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(keyOnlyFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testMultipleColumnPrefixFilter() throws Exception {
     // empty array
     byte[][] prefixes = null;
@@ -237,14 +234,14 @@ public class TestFilterSerialization {
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(multipleColumnPrefixFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testPageFilter() throws Exception {
     PageFilter pageFilter = new PageFilter(6);
     assertTrue(pageFilter
       .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(pageFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testPrefixFilter() throws Exception {
     // null prefix
     PrefixFilter prefixFilter = new PrefixFilter(null);
@@ -257,7 +254,7 @@ public class TestFilterSerialization {
       .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(prefixFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testQualifierFilter() throws Exception {
     QualifierFilter qualifierFilter =
       new QualifierFilter(CompareOperator.EQUAL, new NullComparator());
@@ -265,14 +262,14 @@ public class TestFilterSerialization {
       .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(qualifierFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testRandomRowFilter() throws Exception {
     RandomRowFilter randomRowFilter = new RandomRowFilter((float) 0.1);
     assertTrue(randomRowFilter
       .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(randomRowFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testRowFilter() throws Exception {
     RowFilter rowFilter =
       new RowFilter(CompareOperator.EQUAL, new SubstringComparator("testRowFilter"));
@@ -280,7 +277,7 @@ public class TestFilterSerialization {
       rowFilter.areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(rowFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testSingleColumnValueExcludeFilter() throws Exception {
     // null family/column SingleColumnValueExcludeFilter
     SingleColumnValueExcludeFilter singleColumnValueExcludeFilter =
@@ -296,7 +293,7 @@ public class TestFilterSerialization {
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(singleColumnValueExcludeFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testSingleColumnValueFilter() throws Exception {
     // null family/column SingleColumnValueFilter
     SingleColumnValueFilter singleColumnValueFilter =
@@ -311,14 +308,14 @@ public class TestFilterSerialization {
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(singleColumnValueFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testSkipFilter() throws Exception {
     SkipFilter skipFilter = new SkipFilter(new PageFilter(6));
     assertTrue(skipFilter
       .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(skipFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testTimestampsFilter() throws Exception {
     // Empty timestamp list
     TimestampsFilter timestampsFilter = new TimestampsFilter(new LinkedList<>());
@@ -334,7 +331,7 @@ public class TestFilterSerialization {
       .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(timestampsFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testValueFilter() throws Exception {
     ValueFilter valueFilter =
       new ValueFilter(CompareOperator.NO_OP, new BinaryComparator(Bytes.toBytes("testValueOne")));
@@ -342,7 +339,7 @@ public class TestFilterSerialization {
       .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(valueFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testWhileMatchFilter() throws Exception {
     WhileMatchFilter whileMatchFilter = new WhileMatchFilter(
       new ColumnRangeFilter(Bytes.toBytes("c"), false, Bytes.toBytes("d"), true));
@@ -350,7 +347,7 @@ public class TestFilterSerialization {
       .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(whileMatchFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testMultiRowRangeFilter() throws Exception {
     List<RowRange> ranges = new ArrayList<>();
     ranges.add(new RowRange(Bytes.toBytes(30), true, Bytes.toBytes(40), false));
@@ -362,7 +359,7 @@ public class TestFilterSerialization {
       .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(multiRowRangeFilter))));
   }
 
-  @Test
+  @TestTemplate
   public void testColumnValueFilter() throws Exception {
     ColumnValueFilter columnValueFilter = new ColumnValueFilter(Bytes.toBytes("family"),
       Bytes.toBytes("qualifier"), CompareOperator.EQUAL, Bytes.toBytes("value"));
@@ -374,7 +371,7 @@ public class TestFilterSerialization {
    * Test that we can load and deserialize custom filters. Good to have generally, but also proves
    * that this still works after HBASE-27276 despite not going through our fast function caches.
    */
-  @Test
+  @TestTemplate
   public void testCustomFilter() throws Exception {
     Filter baseFilter = new PrefixFilter("foo".getBytes());
     FilterProtos.Filter filterProto = ProtobufUtil.toFilter(baseFilter);
