@@ -17,37 +17,28 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Throttle;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestQuotaState {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestQuotaState.class);
-
   private static final TableName UNKNOWN_TABLE_NAME = TableName.valueOf("unknownTable");
-
-  @Rule
-  public TestName name = new TestName();
 
   @Test
   public void testQuotaStateBypass() {
@@ -61,8 +52,8 @@ public class TestQuotaState {
   }
 
   @Test
-  public void testSimpleQuotaStateOperation() {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testSimpleQuotaStateOperation(TestInfo testInfo) {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     final int NUM_GLOBAL_THROTTLE = 3;
     final int NUM_TABLE_THROTTLE = 2;
 
@@ -147,10 +138,11 @@ public class TestQuotaState {
   }
 
   @Test
-  public void testQuotaStateUpdateTableThrottle() {
-    final TableName tableNameA = TableName.valueOf(name.getMethodName() + "A");
-    final TableName tableNameB = TableName.valueOf(name.getMethodName() + "B");
-    final TableName tableNameC = TableName.valueOf(name.getMethodName() + "C");
+  public void testQuotaStateUpdateTableThrottle(TestInfo testInfo) {
+    final String methodName = testInfo.getTestMethod().get().getName();
+    final TableName tableNameA = TableName.valueOf(methodName + "A");
+    final TableName tableNameB = TableName.valueOf(methodName + "B");
+    final TableName tableNameC = TableName.valueOf(methodName + "C");
     final int TABLE_A_THROTTLE_1 = 3;
     final int TABLE_A_THROTTLE_2 = 11;
     final int TABLE_B_THROTTLE = 4;
