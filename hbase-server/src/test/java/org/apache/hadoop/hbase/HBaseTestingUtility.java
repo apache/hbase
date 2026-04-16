@@ -489,7 +489,13 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
     String sysValue = System.getProperty(propertyName);
 
-    if (sysValue != null) {
+    // Check if directory sharing should be disabled for this test.
+    // Tests that run with high parallelism and don't need shared directories can set this
+    // to avoid race conditions where one test's tearDown() deletes directories another test
+    // is still using.
+    boolean disableSharing = conf.getBoolean("hbase.test.disable-directory-sharing", false);
+
+    if (sysValue != null && !disableSharing) {
       // There is already a value set. So we do nothing but hope
       // that there will be no conflicts
       LOG.info("System.getProperty(\"" + propertyName + "\") already set to: " + sysValue
@@ -502,7 +508,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       }
       conf.set(propertyName, sysValue);
     } else {
-      // Ok, it's not set, so we create it as a subdirectory
+      // Ok, it's not set (or sharing is disabled), so we create it as a subdirectory
       createSubDir(propertyName, parent, subDirName);
       System.setProperty(propertyName, conf.get(propertyName));
     }
