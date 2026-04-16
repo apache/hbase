@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collections;
 import java.util.List;
@@ -28,7 +28,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -46,35 +45,27 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
-@Category({ MediumTests.class })
+@Tag(MediumTests.TAG)
 public class TestLowLatencySpaceQuotas {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLowLatencySpaceQuotas.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   // Global for all tests in the class
   private static final AtomicLong COUNTER = new AtomicLong(0);
 
-  @Rule
-  public TestName testName = new TestName();
   private SpaceQuotaHelperForTests helper;
   private Connection conn;
   private Admin admin;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     // The default 1s period for QuotaObserverChore is good.
@@ -91,14 +82,15 @@ public class TestLowLatencySpaceQuotas {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void removeAllQuotas() throws Exception {
-    helper = new SpaceQuotaHelperForTests(TEST_UTIL, testName, COUNTER);
+  @BeforeEach
+  public void removeAllQuotas(TestInfo testInfo) throws Exception {
+    helper =
+      new SpaceQuotaHelperForTests(TEST_UTIL, testInfo.getTestMethod().get().getName(), COUNTER);
     conn = TEST_UTIL.getConnection();
     admin = TEST_UTIL.getAdmin();
     helper.waitForQuotaTable(conn);
@@ -215,7 +207,7 @@ public class TestLowLatencySpaceQuotas {
   }
 
   @Test
-  public void testBulkLoading() throws Exception {
+  public void testBulkLoading(TestInfo testInfo) throws Exception {
     TableName tn = helper.createTableWithRegions(1);
     // Set a quota
     QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tn,
@@ -227,13 +219,12 @@ public class TestLowLatencySpaceQuotas {
     ClientServiceCallable<Void> callable = helper.generateFileToLoad(tn, 3, 550);
     // Make sure the files are about as long as we expect
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    FileStatus[] files =
-      fs.listStatus(new Path(fs.getHomeDirectory(), testName.getMethodName() + "_files"));
+    FileStatus[] files = fs.listStatus(
+      new Path(fs.getHomeDirectory(), testInfo.getTestMethod().get().getName() + "_files"));
     long totalSize = 0;
     for (FileStatus file : files) {
-      assertTrue("Expected the file, " + file.getPath()
-        + ",  length to be larger than 25KB, but was " + file.getLen(),
-        file.getLen() > 25 * SpaceQuotaHelperForTests.ONE_KILOBYTE);
+      assertTrue(file.getLen() > 25 * SpaceQuotaHelperForTests.ONE_KILOBYTE, "Expected the file, "
+        + file.getPath() + ",  length to be larger than 25KB, but was " + file.getLen());
       totalSize += file.getLen();
     }
 
@@ -311,16 +302,16 @@ public class TestLowLatencySpaceQuotas {
 
     try (Table quotaTable = conn.getTable(QuotaUtil.QUOTA_TABLE_NAME)) {
       Result r = quotaTable.get(QuotaTableUtil.makeGetForSnapshotSize(tn, snapshot1));
-      assertTrue("Expected a non-null, non-empty Result", r != null && !r.isEmpty());
+      assertTrue(r != null && !r.isEmpty(), "Expected a non-null, non-empty Result");
       assertTrue(r.advance());
-      assertEquals("The snapshot's size should be the same as the origin store file", storeFileSize,
-        QuotaTableUtil.parseSnapshotSize(r.current()));
+      assertEquals(storeFileSize, QuotaTableUtil.parseSnapshotSize(r.current()),
+        "The snapshot's size should be the same as the origin store file");
 
       r = quotaTable.get(QuotaTableUtil.createGetNamespaceSnapshotSize(tn.getNamespaceAsString()));
-      assertTrue("Expected a non-null, non-empty Result", r != null && !r.isEmpty());
+      assertTrue(r != null && !r.isEmpty(), "Expected a non-null, non-empty Result");
       assertTrue(r.advance());
-      assertEquals("The snapshot's size should be the same as the origin store file", storeFileSize,
-        QuotaTableUtil.parseSnapshotSize(r.current()));
+      assertEquals(storeFileSize, QuotaTableUtil.parseSnapshotSize(r.current()),
+        "The snapshot's size should be the same as the origin store file");
     }
   }
 }

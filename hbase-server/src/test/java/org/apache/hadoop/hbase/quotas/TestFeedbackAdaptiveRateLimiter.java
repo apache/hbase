@@ -17,38 +17,33 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Verify the behavior of the FeedbackAdaptiveRateLimiter including adaptive backoff multipliers and
  * over-subscription functionality.
  */
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestFeedbackAdaptiveRateLimiter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFeedbackAdaptiveRateLimiter.class);
 
   private ManualEnvironmentEdge testEdge;
   private FeedbackAdaptiveRateLimiter.FeedbackAdaptiveRateLimiterFactory factory;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     testEdge = new ManualEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(testEdge);
@@ -70,7 +65,7 @@ public class TestFeedbackAdaptiveRateLimiter {
     factory = new FeedbackAdaptiveRateLimiter.FeedbackAdaptiveRateLimiterFactory(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     EnvironmentEdgeManager.reset();
   }
@@ -101,7 +96,7 @@ public class TestFeedbackAdaptiveRateLimiter {
     // Record initial wait interval
     limiter.consume(10);
     long initialWaitInterval = limiter.getWaitInterval(10, 0, 1);
-    assertTrue("Initial wait interval should be positive", initialWaitInterval > 0);
+    assertTrue(initialWaitInterval > 0, "Initial wait interval should be positive");
 
     // Create sustained contention over multiple intervals to increase backoff
     for (int i = 0; i < 5; i++) {
@@ -120,10 +115,9 @@ public class TestFeedbackAdaptiveRateLimiter {
 
     // With backoffMultiplierIncrement=0.1 and 5 intervals of contention,
     // multiplier should be around 1.5, so wait should be significantly higher
-    assertTrue(
+    assertTrue(increasedWaitInterval > initialWaitInterval * 1.3,
       "Wait interval should increase with contention. Initial: " + initialWaitInterval
-        + ", After contention: " + increasedWaitInterval,
-      increasedWaitInterval > initialWaitInterval * 1.3);
+        + ", After contention: " + increasedWaitInterval);
   }
 
   @Test
@@ -162,8 +156,9 @@ public class TestFeedbackAdaptiveRateLimiter {
 
     // After 10 intervals without contention (decrement=0.05 each),
     // multiplier should decrease by ~0.5, making wait interval lower
-    assertTrue("Wait interval should decrease without contention. Elevated: " + elevatedWaitInterval
-      + ", Reduced: " + reducedWaitInterval, reducedWaitInterval < elevatedWaitInterval * 0.9);
+    assertTrue(reducedWaitInterval < elevatedWaitInterval * 0.9,
+      "Wait interval should decrease without contention. Elevated: " + elevatedWaitInterval
+        + ", Reduced: " + reducedWaitInterval);
   }
 
   @Test
@@ -175,7 +170,7 @@ public class TestFeedbackAdaptiveRateLimiter {
 
     // Initial refill to set up the limiter
     long initialRefill = limiter.refill(10);
-    assertEquals("Initial refill should match limit", 10, initialRefill);
+    assertEquals(10, initialRefill, "Initial refill should match limit");
 
     // Create low utilization scenario (consuming much less than available)
     // With error budget of 0.1, min target utilization is 0.9
@@ -202,8 +197,9 @@ public class TestFeedbackAdaptiveRateLimiter {
     // With 3 intervals: refillAmount = 3 * 5 = 15
     // Result = min(12, 15) = 12, which exceeds the base limit of 10
     // Without oversubscription, this would be capped at min(10, 15) = 10
-    assertTrue("With oversubscription from low utilization, refill should exceed base limit. Got: "
-      + multiIntervalRefill, multiIntervalRefill > 10);
+    assertTrue(multiIntervalRefill > 10,
+      "With oversubscription from low utilization, refill should exceed base limit. Got: "
+        + multiIntervalRefill);
   }
 
   @Test
@@ -237,9 +233,8 @@ public class TestFeedbackAdaptiveRateLimiter {
 
     // Oversubscription should have decreased, so refill should be closer to base limit
     // With oversubscriptionDecrement=0.005 over 10 intervals, it should drop by ~0.05
-    assertTrue(
-      "Refill should be closer to base after high utilization. Got: " + refillAfterHighUtil,
-      refillAfterHighUtil <= 6);
+    assertTrue(refillAfterHighUtil <= 6,
+      "Refill should be closer to base after high utilization. Got: " + refillAfterHighUtil);
   }
 
   @Test
@@ -271,10 +266,10 @@ public class TestFeedbackAdaptiveRateLimiter {
 
     // Wait interval should be approximately 3x base (max multiplier)
     assertTrue(
-      "Wait interval should cap at max multiplier. Base: " + baseWaitInterval + ", Max backoff: "
-        + maxBackoffWaitInterval,
       maxBackoffWaitInterval >= baseWaitInterval * 2.5
-        && maxBackoffWaitInterval <= baseWaitInterval * 3.5);
+        && maxBackoffWaitInterval <= baseWaitInterval * 3.5,
+      "Wait interval should cap at max multiplier. Base: " + baseWaitInterval + ", Max backoff: "
+        + maxBackoffWaitInterval);
 
     // Additional contention should not increase wait further
     testEdge.setValue(14500);
@@ -288,10 +283,9 @@ public class TestFeedbackAdaptiveRateLimiter {
     long stillMaxWaitInterval = limiter.getWaitInterval(10, 0, 1);
 
     // Should still be at max, not increasing further
-    assertTrue(
+    assertTrue(Math.abs(stillMaxWaitInterval - maxBackoffWaitInterval) < baseWaitInterval * 0.2,
       "Wait should remain capped. Previous: " + maxBackoffWaitInterval + ", Current: "
-        + stillMaxWaitInterval,
-      Math.abs(stillMaxWaitInterval - maxBackoffWaitInterval) < baseWaitInterval * 0.2);
+        + stillMaxWaitInterval);
   }
 
   @Test
@@ -317,8 +311,8 @@ public class TestFeedbackAdaptiveRateLimiter {
 
     // With max oversubscription of 0.2, refill should be at most 5 * 1.2 = 6
     // (5 is the interval-adjusted limit for 500ms refill interval)
-    assertTrue("Refill should cap at max oversubscription. Got: " + refillWithMaxOversubscription,
-      refillWithMaxOversubscription <= 7);
+    assertTrue(refillWithMaxOversubscription <= 7,
+      "Refill should cap at max oversubscription. Got: " + refillWithMaxOversubscription);
 
     // Further low utilization should not increase refill
     testEdge.setValue(14500);
@@ -329,8 +323,8 @@ public class TestFeedbackAdaptiveRateLimiter {
     long stillMaxRefill = limiter.refill(10);
 
     // Should remain at cap
-    assertEquals("Refill should remain at max oversubscription", refillWithMaxOversubscription,
-      stillMaxRefill);
+    assertEquals(refillWithMaxOversubscription, stillMaxRefill,
+      "Refill should remain at max oversubscription");
   }
 
   @Test
@@ -350,8 +344,9 @@ public class TestFeedbackAdaptiveRateLimiter {
 
     // With 500ms refill interval, each interval gives 5 resources
     // 3 intervals = 15, but capped at limit (no oversubscription yet) = 10
-    assertTrue("Multiple interval refill should provide multiple refill amounts. Got: "
-      + multiIntervalRefill, multiIntervalRefill >= 10);
+    assertTrue(multiIntervalRefill >= 10,
+      "Multiple interval refill should provide multiple refill amounts. Got: "
+        + multiIntervalRefill);
   }
 
   @Test
@@ -363,7 +358,7 @@ public class TestFeedbackAdaptiveRateLimiter {
 
     // First refill should give full limit
     long firstRefill = limiter.refill(10);
-    assertEquals("First refill should give full limit", 10, firstRefill);
+    assertEquals(10, firstRefill, "First refill should give full limit");
 
     limiter.consume(10);
 
@@ -372,7 +367,7 @@ public class TestFeedbackAdaptiveRateLimiter {
     long adjustedRefill = limiter.refill(10);
 
     // 500ms is half of 1000ms time unit, so should get half the limit = 5
-    assertEquals("Refill after one interval should be interval-adjusted", 5, adjustedRefill);
+    assertEquals(5, adjustedRefill, "Refill after one interval should be interval-adjusted");
   }
 
   @Test
@@ -400,8 +395,8 @@ public class TestFeedbackAdaptiveRateLimiter {
     limiter.consume(10);
     long noContentionWait = limiter.getWaitInterval(10, 0, 1);
 
-    assertEquals("Wait interval should not go below baseline (multiplier=1.0)", baselineWait,
-      noContentionWait);
+    assertEquals(baselineWait, noContentionWait,
+      "Wait interval should not go below baseline (multiplier=1.0)");
   }
 
   @Test
@@ -432,7 +427,7 @@ public class TestFeedbackAdaptiveRateLimiter {
     }
 
     // Should complete without exceptions - basic thread safety verification
-    assertTrue("Concurrent access should complete successfully", true);
+    assertTrue(true, "Concurrent access should complete successfully");
   }
 
   @Test
@@ -448,7 +443,7 @@ public class TestFeedbackAdaptiveRateLimiter {
 
     // Should require waiting for multiple intervals (500ms refill interval)
     long waitInterval = limiter.getWaitInterval(10, -10, 1);
-    assertTrue("Should require substantial wait after over-consumption", waitInterval >= 500);
+    assertTrue(waitInterval >= 500, "Should require substantial wait after over-consumption");
   }
 
   @Test
@@ -484,10 +479,9 @@ public class TestFeedbackAdaptiveRateLimiter {
       long lowContentionWait = limiter.getWaitInterval(10, 0, 1);
 
       // After low contention phase, wait should be lower than after high contention
-      assertTrue(
+      assertTrue(lowContentionWait < highContentionWait,
         "Wait should decrease after low contention phase in cycle " + cycle + ". High: "
-          + highContentionWait + ", Low: " + lowContentionWait,
-        lowContentionWait < highContentionWait);
+          + highContentionWait + ", Low: " + lowContentionWait);
     }
   }
 
@@ -524,7 +518,7 @@ public class TestFeedbackAdaptiveRateLimiter {
 
     // The EMA should have adjusted, and refills should be different
     // (though exact values depend on EMA convergence rate)
-    assertTrue("Refill behavior should adapt to utilization patterns", true);
+    assertTrue(true, "Refill behavior should adapt to utilization patterns");
   }
 
   private static final class ManualEnvironmentEdge implements EnvironmentEdge {
