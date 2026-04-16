@@ -19,12 +19,12 @@ package org.apache.hadoop.hbase.wal;
 
 import static org.apache.hadoop.hbase.wal.WALFactory.META_WAL_PROVIDER;
 import static org.apache.hadoop.hbase.wal.WALFactory.WAL_PROVIDER;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -45,7 +45,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -75,27 +74,22 @@ import org.apache.hadoop.hbase.wal.WALFactory.Providers;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * WAL tests that can be reused across providers.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestWALFactory {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALFactory.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWALFactory.class);
 
@@ -110,18 +104,18 @@ public class TestWALFactory {
   protected WALFactory wals;
   private ServerName currentServername;
 
-  @Rule
-  public final TestName currentTest = new TestName();
+  private String currentTestName;
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    currentTestName = testInfo.getTestMethod().get().getName();
     fs = cluster.getFileSystem();
-    dir = new Path(hbaseDir, currentTest.getMethodName());
-    this.currentServername = ServerName.valueOf(currentTest.getMethodName(), 16010, 1);
+    dir = new Path(hbaseDir, currentTestName);
+    this.currentServername = ServerName.valueOf(currentTestName, 16010, 1);
     wals = new WALFactory(conf, this.currentServername.toString());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     // testAppendClose closes the FileSystem, which will prevent us from closing cleanly here.
     try {
@@ -137,7 +131,7 @@ public class TestWALFactory {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     CommonFSUtils.setWALRootDir(TEST_UTIL.getConfiguration(), new Path("file:///tmp/wal"));
     // Make block sizes small.
@@ -165,7 +159,7 @@ public class TestWALFactory {
     hbaseWALDir = TEST_UTIL.createWALRootDir();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -180,7 +174,7 @@ public class TestWALFactory {
    */
   @Test
   public void testSplit() throws IOException {
-    final TableName tableName = TableName.valueOf(currentTest.getMethodName());
+    final TableName tableName = TableName.valueOf(currentTestName);
     final byte[] rowName = tableName.getName();
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
     final int howmany = 3;
@@ -236,10 +230,10 @@ public class TestWALFactory {
    */
   @Test
   public void Broken_testSync() throws Exception {
-    TableName tableName = TableName.valueOf(currentTest.getMethodName());
+    TableName tableName = TableName.valueOf(currentTestName);
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
     // First verify that using streams all works.
-    Path p = new Path(dir, currentTest.getMethodName() + ".fsdos");
+    Path p = new Path(dir, currentTestName + ".fsdos");
     FSDataOutputStream out = fs.create(p);
     out.write(tableName.getName());
     Method syncMethod = null;
@@ -349,7 +343,7 @@ public class TestWALFactory {
    */
   @Test
   public void testAppendClose() throws Exception {
-    TableName tableName = TableName.valueOf(currentTest.getMethodName());
+    TableName tableName = TableName.valueOf(currentTestName);
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
 
     WAL wal = wals.getWAL(regionInfo);
@@ -451,7 +445,7 @@ public class TestWALFactory {
       WAL.Entry entry = new WAL.Entry();
       while (reader.next(entry) != null) {
         count++;
-        assertTrue("Should be one KeyValue per WALEdit", entry.getEdit().getCells().size() == 1);
+        assertTrue(entry.getEdit().getCells().size() == 1, "Should be one KeyValue per WALEdit");
       }
     }
     assertEquals(total, count);
@@ -466,9 +460,8 @@ public class TestWALFactory {
   @Test
   public void testEditAdd() throws IOException {
     int colCount = 10;
-    TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTest.getMethodName()))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("column")).build();
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTestName))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("column")).build();
     NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
     for (byte[] fam : htd.getColumnFamilyNames()) {
       scopes.put(fam, 0);
@@ -518,9 +511,8 @@ public class TestWALFactory {
   @Test
   public void testAppend() throws IOException {
     int colCount = 10;
-    TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTest.getMethodName()))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("column")).build();
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTestName))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("column")).build();
     NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
     for (byte[] fam : htd.getColumnFamilyNames()) {
       scopes.put(fam, 0);
@@ -568,7 +560,7 @@ public class TestWALFactory {
   @Test
   public void testVisitors() throws Exception {
     final int COL_COUNT = 10;
-    final TableName tableName = TableName.valueOf(currentTest.getMethodName());
+    final TableName tableName = TableName.valueOf(currentTestName);
     final byte[] row = Bytes.toBytes("row");
     final DumbWALActionsListener visitor = new DumbWALActionsListener();
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
@@ -630,7 +622,6 @@ public class TestWALFactory {
     Configuration conf = new Configuration();
     conf.set(WAL_PROVIDER, WALFactory.Providers.multiwal.name());
     WALFactory walFactory = new WALFactory(conf, this.currentServername.toString(), null);
-
     assertEquals(WALFactory.Providers.multiwal.clazz, walFactory.getWALProvider().getClass());
     assertEquals(WALFactory.Providers.multiwal.clazz, walFactory.getMetaProvider().getClass());
   }
@@ -640,7 +631,6 @@ public class TestWALFactory {
     Configuration conf = new Configuration();
     conf.set(META_WAL_PROVIDER, WALFactory.Providers.asyncfs.name());
     WALFactory walFactory = new WALFactory(conf, this.currentServername.toString(), null);
-
     assertEquals(WALFactory.Providers.defaultProvider.clazz,
       walFactory.getWALProvider().getClass());
     assertEquals(WALFactory.Providers.asyncfs.clazz, walFactory.getMetaProvider().getClass());
@@ -722,7 +712,7 @@ public class TestWALFactory {
     };
 
     final TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTest.getMethodName()))
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTestName))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of("column")).build();
     final RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
 
@@ -751,14 +741,14 @@ public class TestWALFactory {
     // Now open a reader on the log which will throw an exception when
     // we try to instantiate the custom Codec.
     Path filename = AbstractFSWALProvider.getCurrentFileName(log);
-    assertThrows("Expected to see an exception when creating WAL reader", IOException.class,
-      () -> customFactory.createStreamReader(proxyFs, filename));
+    assertThrows(IOException.class, () -> customFactory.createStreamReader(proxyFs, filename),
+      "Expected to see an exception when creating WAL reader");
     // We should have exactly one reader
     assertEquals(1, openedReaders.size());
     // And that reader should be closed.
     long unclosedReaders =
       openedReaders.stream().filter((r) -> !r.isClosed.get()).collect(Collectors.counting());
-    assertEquals("Should not find any open readers", 0, unclosedReaders);
+    assertEquals(0, unclosedReaders, "Should not find any open readers");
   }
 
   /**

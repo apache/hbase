@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -46,11 +45,10 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * In this test, we write a small WAL file first, and then generate partial WAL file which length is
@@ -66,12 +64,9 @@ import org.junit.experimental.categories.Category;
  * replication will be stuck.</li>
  * </ul>
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestParsePartialWALFile {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestParsePartialWALFile.class);
 
   private static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
 
@@ -84,7 +79,7 @@ public class TestParsePartialWALFile {
   private static byte[] QUAL = Bytes.toBytes("qualifier");
   private static byte[] VALUE = Bytes.toBytes("value");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws IOException {
     UTIL.getConfiguration().setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, false);
     FS = FileSystem.getLocal(UTIL.getConfiguration());
@@ -93,7 +88,7 @@ public class TestParsePartialWALFile {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     UTIL.cleanupTestDir();
   }

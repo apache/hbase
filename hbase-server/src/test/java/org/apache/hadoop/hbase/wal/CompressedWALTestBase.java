@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.wal;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.List;
@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Test;
+import org.junit.jupiter.api.TestTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,12 +71,12 @@ public abstract class CompressedWALTestBase {
     Arrays.fill(VALUE, off, (off += 1597), (byte) 'Q');
   }
 
-  @Test
+  @TestTemplate
   public void test() throws Exception {
     testForSize(1000);
   }
 
-  @Test
+  @TestTemplate
   public void testLarge() throws Exception {
     testForSize(1024 * 1024);
   }
@@ -132,21 +132,21 @@ public abstract class CompressedWALTestBase {
         assertThat("Should be two KVs per WALEdit", cells, hasSize(2));
         Cell putCell = cells.get(0);
         assertEquals(Cell.Type.Put, putCell.getType());
-        assertTrue("Incorrect row", Bytes.equals(putCell.getRowArray(), putCell.getRowOffset(),
-          putCell.getRowLength(), row, 0, row.length));
-        assertTrue("Incorrect family", Bytes.equals(putCell.getFamilyArray(),
-          putCell.getFamilyOffset(), putCell.getFamilyLength(), family, 0, family.length));
-        assertTrue("Incorrect value", Bytes.equals(putCell.getValueArray(),
-          putCell.getValueOffset(), putCell.getValueLength(), value, 0, value.length));
+        assertTrue(Bytes.equals(putCell.getRowArray(), putCell.getRowOffset(),
+          putCell.getRowLength(), row, 0, row.length), "Incorrect row");
+        assertTrue(Bytes.equals(putCell.getFamilyArray(), putCell.getFamilyOffset(),
+          putCell.getFamilyLength(), family, 0, family.length), "Incorrect family");
+        assertTrue(Bytes.equals(putCell.getValueArray(), putCell.getValueOffset(),
+          putCell.getValueLength(), value, 0, value.length), "Incorrect value");
 
         Cell deleteCell = cells.get(1);
         assertEquals(Cell.Type.DeleteFamily, deleteCell.getType());
-        assertTrue("Incorrect row", Bytes.equals(deleteCell.getRowArray(),
-          deleteCell.getRowOffset(), deleteCell.getRowLength(), row, 0, row.length));
-        assertTrue("Incorrect family", Bytes.equals(deleteCell.getFamilyArray(),
-          deleteCell.getFamilyOffset(), deleteCell.getFamilyLength(), family, 0, family.length));
+        assertTrue(Bytes.equals(deleteCell.getRowArray(), deleteCell.getRowOffset(),
+          deleteCell.getRowLength(), row, 0, row.length), "Incorrect row");
+        assertTrue(Bytes.equals(deleteCell.getFamilyArray(), deleteCell.getFamilyOffset(),
+          deleteCell.getFamilyLength(), family, 0, family.length), "Incorrect family");
       }
-      assertEquals("Should have read back as many KVs as written", total, count);
+      assertEquals(total, count, "Should have read back as many KVs as written");
     }
   }
 }
