@@ -17,20 +17,16 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ FilterTests.class, SmallTests.class })
+@Tag(FilterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestNullComparator {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNullComparator.class);
 
   @Test
   public void testNullValue() {
@@ -43,8 +39,8 @@ public class TestNullComparator {
     int comp2 = comparator.compareTo(value, 5, 15);
 
     // then
-    Assert.assertEquals(0, comp1);
-    Assert.assertEquals(0, comp2);
+    assertEquals(0, comp1);
+    assertEquals(0, comp2);
   }
 
   @Test
@@ -58,8 +54,8 @@ public class TestNullComparator {
     int comp2 = comparator.compareTo(value, 1, 3);
 
     // then
-    Assert.assertEquals(1, comp1);
-    Assert.assertEquals(1, comp2);
+    assertEquals(1, comp1);
+    assertEquals(1, comp2);
   }
 
   @Test
@@ -73,8 +69,8 @@ public class TestNullComparator {
     int comp2 = comparator.compareTo(value, 1, 3);
 
     // then
-    Assert.assertEquals(1, comp1);
-    Assert.assertEquals(1, comp2);
+    assertEquals(1, comp1);
+    assertEquals(1, comp2);
   }
 
 }

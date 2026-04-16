@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -30,7 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -47,24 +46,19 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category({ FilterTests.class, MediumTests.class })
+@Tag(FilterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestFuzzyRowFilterEndToEnd {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFuzzyRowFilterEndToEnd.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFuzzyRowFilterEndToEnd.class);
 
@@ -72,10 +66,7 @@ public class TestFuzzyRowFilterEndToEnd {
 
   private static final byte fuzzyValue = (byte) 63;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt("hbase.client.scanner.caching", 1000);
@@ -87,19 +78,19 @@ public class TestFuzzyRowFilterEndToEnd {
     TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   // HBASE-15676 Test that fuzzy info of all fixed bits (0s) finds matching row.
   @Test
-  public void testAllFixedBits() throws IOException {
+  public void testAllFixedBits(TestInfo testInfo) throws IOException {
     String cf = "f";
     String cq = "q";
 
-    Table ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), Bytes.toBytes(cf),
-      Integer.MAX_VALUE);
+    String name = testInfo.getTestMethod().get().getName();
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(name), Bytes.toBytes(cf), Integer.MAX_VALUE);
     // Load data
     String[] rows = new String[] { "\\x9C\\x00\\x044\\x00\\x00\\x00\\x00",
       "\\x9C\\x00\\x044\\x01\\x00\\x00\\x00", "\\x9C\\x00\\x044\\x00\\x01\\x00\\x00",
@@ -118,7 +109,7 @@ public class TestFuzzyRowFilterEndToEnd {
     testAllFixedBitsRunScanWithMask(ht, rows.length, FuzzyRowFilter.V1_PROCESSED_WILDCARD_MASK);
     testAllFixedBitsRunScanWithMask(ht, 2, FuzzyRowFilter.V2_PROCESSED_WILDCARD_MASK);
 
-    TEST_UTIL.deleteTable(TableName.valueOf(name.getMethodName()));
+    TEST_UTIL.deleteTable(TableName.valueOf(testInfo.getTestMethod().get().getName()));
   }
 
   private void testAllFixedBitsRunScanWithMask(Table ht, int expectedRows, byte processedRowMask)
@@ -149,12 +140,12 @@ public class TestFuzzyRowFilterEndToEnd {
   }
 
   @Test
-  public void testHBASE14782() throws IOException {
+  public void testHBASE14782(TestInfo testInfo) throws IOException {
     String cf = "f";
     String cq = "q";
 
-    Table ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), Bytes.toBytes(cf),
-      Integer.MAX_VALUE);
+    String name = testInfo.getTestMethod().get().getName();
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(name), Bytes.toBytes(cf), Integer.MAX_VALUE);
     // Load data
     String[] rows =
       new String[] { "\\x9C\\x00\\x044\\x00\\x00\\x00\\x00", "\\x9C\\x00\\x044\\x01\\x00\\x00\\x00",
@@ -178,7 +169,7 @@ public class TestFuzzyRowFilterEndToEnd {
     testHBASE14782RunScanWithMask(ht, rows.length, FuzzyRowFilter.V1_PROCESSED_WILDCARD_MASK);
     testHBASE14782RunScanWithMask(ht, rows.length, FuzzyRowFilter.V2_PROCESSED_WILDCARD_MASK);
 
-    TEST_UTIL.deleteTable(TableName.valueOf(name.getMethodName()));
+    TEST_UTIL.deleteTable(TableName.valueOf(name));
   }
 
   private void testHBASE14782RunScanWithMask(Table ht, int expectedRows, byte processedRowMask)
@@ -202,10 +193,10 @@ public class TestFuzzyRowFilterEndToEnd {
   }
 
   @Test
-  public void testFilterList() throws Exception {
+  public void testFilterList(TestInfo testInfo) throws Exception {
     String cf = "f";
-    Table ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), Bytes.toBytes(cf),
-      Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(testInfo.getTestMethod().get().getName()),
+      Bytes.toBytes(cf), Integer.MAX_VALUE);
 
     // 10 byte row key - (2 bytes 4 bytes 4 bytes)
     // 4 byte qualifier
@@ -302,7 +293,7 @@ public class TestFuzzyRowFilterEndToEnd {
   }
 
   @Test
-  public void testHBASE26967() throws IOException {
+  public void testHBASE26967(TestInfo testInfo) throws IOException {
     byte[] row1 = Bytes.toBytes("1");
     byte[] row2 = Bytes.toBytes("2");
     String cf1 = "f1";
@@ -310,8 +301,8 @@ public class TestFuzzyRowFilterEndToEnd {
     String cq1 = "col1";
     String cq2 = "col2";
 
-    Table ht =
-      TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), new String[] { cf1, cf2 });
+    String name = testInfo.getTestMethod().get().getName();
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(name), new String[] { cf1, cf2 });
 
     // Put data
     List<Put> puts = Lists.newArrayList();
@@ -351,15 +342,16 @@ public class TestFuzzyRowFilterEndToEnd {
     // Only one row who's rowKey=1
     assertNull(scanner.next());
 
-    TEST_UTIL.deleteTable(TableName.valueOf(name.getMethodName()));
+    TEST_UTIL.deleteTable(TableName.valueOf(name));
   }
 
   @Test
-  public void testHBASE28634() throws IOException {
+  public void testHBASE28634(TestInfo testInfo) throws IOException {
     final String CF = "f";
     final String CQ = "name";
 
-    Table ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), Bytes.toBytes(CF));
+    String name = testInfo.getTestMethod().get().getName();
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(name), Bytes.toBytes(CF));
 
     // Put data
     List<Put> puts = Lists.newArrayList();
@@ -414,6 +406,6 @@ public class TestFuzzyRowFilterEndToEnd {
 
     assertEquals(2, actualRowsList.size());
 
-    TEST_UTIL.deleteTable(TableName.valueOf(name.getMethodName()));
+    TEST_UTIL.deleteTable(TableName.valueOf(name));
   }
 }

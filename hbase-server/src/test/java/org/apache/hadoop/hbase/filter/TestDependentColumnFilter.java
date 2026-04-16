@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,7 +28,6 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -44,20 +43,16 @@ import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ FilterTests.class, SmallTests.class })
+@Tag(FilterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestDependentColumnFilter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDependentColumnFilter.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestDependentColumnFilter.class);
   private static final byte[][] ROWS = { Bytes.toBytes("test1"), Bytes.toBytes("test2") };
@@ -74,7 +69,7 @@ public class TestDependentColumnFilter {
   List<KeyValue> testVals;
   private HRegion region;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     testVals = makeTestVals();
 
@@ -91,7 +86,7 @@ public class TestDependentColumnFilter {
     addData();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     HBaseTestingUtility.closeRegionAndWAL(this.region);
   }
@@ -149,15 +144,15 @@ public class TestDependentColumnFilter {
       LOG.info("counter=" + i + ", " + results);
       if (results.isEmpty()) break;
       cells += results.size();
-      assertTrue("Scanned too many rows! Only expected " + expectedRows
-        + " total but already scanned " + (i + 1), expectedRows > i);
-      assertTrue("Expected " + expectedCells + " cells total but " + "already scanned " + cells,
-        expectedCells >= cells);
+      assertTrue(expectedRows > i, "Scanned too many rows! Only expected " + expectedRows
+        + " total but already scanned " + (i + 1));
+      assertTrue(expectedCells >= cells,
+        "Expected " + expectedCells + " cells total but " + "already scanned " + cells);
       results.clear();
     }
-    assertEquals("Expected " + expectedRows + " rows but scanned " + i + " rows", expectedRows, i);
-    assertEquals("Expected " + expectedCells + " cells but scanned " + cells + " cells",
-      expectedCells, cells);
+    assertEquals(expectedRows, i, "Expected " + expectedRows + " rows but scanned " + i + " rows");
+    assertEquals(expectedCells, cells,
+      "Expected " + expectedCells + " cells but scanned " + cells + " cells");
   }
 
   /**
@@ -222,11 +217,11 @@ public class TestDependentColumnFilter {
         accepted.add(val);
       }
     }
-    assertEquals("check all values accepted from filterCell", 5, accepted.size());
+    assertEquals(5, accepted.size(), "check all values accepted from filterCell");
 
     filter.filterRowCells(accepted);
-    assertEquals("check filterRow(List<KeyValue>) dropped cell without corresponding column entry",
-      4, accepted.size());
+    assertEquals(4, accepted.size(),
+      "check filterRow(List<KeyValue>) dropped cell without corresponding column entry");
 
     // start do it again with dependent column dropping on
     filter = new DependentColumnFilter(FAMILIES[1], QUALIFIER, true);
@@ -236,10 +231,10 @@ public class TestDependentColumnFilter {
         accepted.add(val);
       }
     }
-    assertEquals("check the filtering column cells got dropped", 2, accepted.size());
+    assertEquals(2, accepted.size(), "check the filtering column cells got dropped");
 
     filter.filterRowCells(accepted);
-    assertEquals("check cell retention", 2, accepted.size());
+    assertEquals(2, accepted.size(), "check cell retention");
   }
 
   /**
@@ -250,14 +245,14 @@ public class TestDependentColumnFilter {
     // Test constructor that implicitly sets a null comparator
     Filter filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER);
     assertNotNull(filter.toString());
-    assertTrue("check string contains 'null' as compatator is null",
-      filter.toString().contains("null"));
+    assertTrue(filter.toString().contains("null"),
+      "check string contains 'null' as compatator is null");
 
     // Test constructor with explicit null comparator
     filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER, true, CompareOperator.EQUAL, null);
     assertNotNull(filter.toString());
-    assertTrue("check string contains 'null' as compatator is null",
-      filter.toString().contains("null"));
+    assertTrue(filter.toString().contains("null"),
+      "check string contains 'null' as compatator is null");
   }
 
   @Test
@@ -265,7 +260,7 @@ public class TestDependentColumnFilter {
     Filter filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER, true, CompareOperator.EQUAL,
       new BinaryComparator(MATCH_VAL));
     assertNotNull(filter.toString());
-    assertTrue("check string contains comparator value", filter.toString().contains("match"));
+    assertTrue(filter.toString().contains("match"), "check string contains comparator value");
   }
 
 }
