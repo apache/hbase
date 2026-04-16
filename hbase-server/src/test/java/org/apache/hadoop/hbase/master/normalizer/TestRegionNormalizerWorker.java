@@ -23,7 +23,7 @@ import static org.hamcrest.Matchers.comparesEqualTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -38,10 +38,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -53,18 +51,15 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.StringDescription;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Answers;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -75,20 +70,10 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * simple enough to use directly; for {@link MasterServices}, use a mock because, as of now, the
  * worker only invokes 4 methods.
  */
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
+@ExtendWith(MockitoExtension.class)
 public class TestRegionNormalizerWorker {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionNormalizerWorker.class);
-
-  @Rule
-  public TestName testName = new TestName();
-  @Rule
-  public TableNameTestRule tableName = new TableNameTestRule();
-
-  @Rule
-  public MockitoRule mockitoRule = MockitoJUnit.rule();
 
   @Mock(answer = Answers.RETURNS_DEEP_STUBS)
   private MasterServices masterServices;
@@ -101,33 +86,35 @@ public class TestRegionNormalizerWorker {
 
   private final AtomicReference<Throwable> workerThreadThrowable = new AtomicReference<>();
 
-  @Before
-  public void before() throws Exception {
-    MockitoAnnotations.initMocks(this);
+  private TableName tableName;
+
+  @BeforeEach
+  public void before(TestInfo testInfo) throws Exception {
     when(masterServices.skipRegionManagementAction(any())).thenReturn(false);
     testingUtility = new HBaseCommonTestingUtility();
     queue = new RegionNormalizerWorkQueue<>();
     workerThreadThrowable.set(null);
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
 
-    final String threadNameFmt =
-      TestRegionNormalizerWorker.class.getSimpleName() + "-" + testName.getMethodName() + "-%d";
+    final String threadNameFmt = TestRegionNormalizerWorker.class.getSimpleName() + "-"
+      + testInfo.getTestMethod().get().getName() + "-%d";
     final ThreadFactory threadFactory = new ThreadFactoryBuilder().setNameFormat(threadNameFmt)
       .setDaemon(true).setUncaughtExceptionHandler((t, e) -> workerThreadThrowable.set(e)).build();
     workerPool = Executors.newSingleThreadExecutor(threadFactory);
   }
 
-  @After
+  @AfterEach
   public void after() throws Exception {
     workerPool.shutdownNow(); // shutdownNow to interrupt the worker thread sitting on `take()`
-    assertTrue("timeout waiting for worker thread to terminate",
-      workerPool.awaitTermination(30, TimeUnit.SECONDS));
+    assertTrue(workerPool.awaitTermination(30, TimeUnit.SECONDS),
+      "timeout waiting for worker thread to terminate");
     final Throwable workerThrowable = workerThreadThrowable.get();
     assertThat("worker thread threw unexpected exception", workerThrowable, nullValue());
   }
 
   @Test
   public void testMergeCounter() throws Exception {
-    final TableName tn = tableName.getTableName();
+    final TableName tn = tableName;
     final TableDescriptor tnDescriptor =
       TableDescriptorBuilder.newBuilder(tn).setNormalizationEnabled(true).build();
     when(masterServices.getTableDescriptors().get(tn)).thenReturn(tnDescriptor);
@@ -148,7 +135,7 @@ public class TestRegionNormalizerWorker {
 
   @Test
   public void testSplitCounter() throws Exception {
-    final TableName tn = tableName.getTableName();
+    final TableName tn = tableName;
     final TableDescriptor tnDescriptor =
       TableDescriptorBuilder.newBuilder(tn).setNormalizationEnabled(true).build();
     when(masterServices.getTableDescriptors().get(tn)).thenReturn(tnDescriptor);
@@ -172,7 +159,7 @@ public class TestRegionNormalizerWorker {
    */
   @Test
   public void testRateLimit() throws Exception {
-    final TableName tn = tableName.getTableName();
+    final TableName tn = tableName;
     final TableDescriptor tnDescriptor =
       TableDescriptorBuilder.newBuilder(tn).setNormalizationEnabled(true).build();
     final RegionInfo splitRegionInfo = RegionInfoBuilder.newBuilder(tn).build();
@@ -206,7 +193,7 @@ public class TestRegionNormalizerWorker {
 
   @Test
   public void testPlansSizeLimit() throws Exception {
-    final TableName tn = tableName.getTableName();
+    final TableName tn = tableName;
     final TableDescriptor tnDescriptor =
       TableDescriptorBuilder.newBuilder(tn).setNormalizationEnabled(true).build();
     final RegionInfo splitRegionInfo = RegionInfoBuilder.newBuilder(tn).build();

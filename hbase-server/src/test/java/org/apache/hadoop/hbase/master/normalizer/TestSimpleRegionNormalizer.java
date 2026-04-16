@@ -35,9 +35,9 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
@@ -54,13 +54,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -71,35 +69,30 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 
 /**
  * Tests logic of {@link SimpleRegionNormalizer}.
  */
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestSimpleRegionNormalizer {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSimpleRegionNormalizer.class);
 
   private Configuration conf;
   private SimpleRegionNormalizer normalizer;
   private MasterServices masterServices;
   private TableDescriptor tableDescriptor;
+  private TableName tableName;
 
-  @Rule
-  public TableNameTestRule name = new TableNameTestRule();
-
-  @Before
-  public void before() {
+  @BeforeEach
+  public void before(TestInfo testInfo) {
     conf = HBaseConfiguration.create();
-    tableDescriptor = TableDescriptorBuilder.newBuilder(name.getTableName()).build();
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
+    tableDescriptor = TableDescriptorBuilder.newBuilder(tableName).build();
   }
 
   @Test
@@ -116,7 +109,7 @@ public class TestSimpleRegionNormalizer {
 
   @Test
   public void testNoNormalizationIfTooFewRegions() {
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 2);
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 10, 15);
     setupMocksForNormalizer(regionSizes, regionInfos);
@@ -127,7 +120,7 @@ public class TestSimpleRegionNormalizer {
 
   @Test
   public void testNoNormalizationOnNormalizedCluster() {
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 4);
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 10, 15, 8, 10);
     setupMocksForNormalizer(regionSizes, regionInfos);
@@ -137,7 +130,7 @@ public class TestSimpleRegionNormalizer {
   }
 
   private void noNormalizationOnTransitioningRegions(final RegionState.State state) {
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 3);
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 10, 1, 100);
 
@@ -183,7 +176,7 @@ public class TestSimpleRegionNormalizer {
 
   @Test
   public void testMergeOfSmallRegions() {
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 5);
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 15, 5, 5, 15, 16);
     setupMocksForNormalizer(regionSizes, regionInfos);
@@ -196,7 +189,7 @@ public class TestSimpleRegionNormalizer {
   // Test for situation illustrated in HBASE-14867
   @Test
   public void testMergeOfSecondSmallestRegions() {
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 6);
     final Map<byte[], Integer> regionSizes =
       createRegionSizesMap(regionInfos, 1, 10000, 10000, 10000, 2700, 2700);
@@ -209,7 +202,7 @@ public class TestSimpleRegionNormalizer {
 
   @Test
   public void testMergeOfSmallNonAdjacentRegions() {
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 5);
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 15, 5, 16, 15, 5);
     setupMocksForNormalizer(regionSizes, regionInfos);
@@ -220,7 +213,7 @@ public class TestSimpleRegionNormalizer {
 
   @Test
   public void testSplitOfLargeRegion() {
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 4);
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 8, 6, 10, 30);
     setupMocksForNormalizer(regionSizes, regionInfos);
@@ -231,7 +224,7 @@ public class TestSimpleRegionNormalizer {
 
   @Test
   public void testWithTargetRegionSize() throws Exception {
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 6);
     final Map<byte[], Integer> regionSizes =
       createRegionSizesMap(regionInfos, 20, 40, 60, 80, 100, 120);
@@ -255,7 +248,7 @@ public class TestSimpleRegionNormalizer {
 
   @Test
   public void testSplitWithTargetRegionCount() throws Exception {
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 4);
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 20, 40, 60, 80);
     setupMocksForNormalizer(regionSizes, regionInfos);
@@ -276,7 +269,7 @@ public class TestSimpleRegionNormalizer {
   @Test
   public void testHonorsSplitEnabled() {
     conf.setBoolean(SPLIT_ENABLED_KEY, true);
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 5);
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 5, 5, 20, 5, 5);
     setupMocksForNormalizer(regionSizes, regionInfos);
@@ -291,7 +284,7 @@ public class TestSimpleRegionNormalizer {
   @Test
   public void testHonorsSplitEnabledInTD() {
     conf.setBoolean(SPLIT_ENABLED_KEY, true);
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 5);
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 5, 5, 20, 5, 5);
     setupMocksForNormalizer(regionSizes, regionInfos);
@@ -313,7 +306,7 @@ public class TestSimpleRegionNormalizer {
   @Test
   public void testHonorsMergeEnabled() {
     conf.setBoolean(MERGE_ENABLED_KEY, true);
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 5);
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 20, 5, 5, 20, 20);
     setupMocksForNormalizer(regionSizes, regionInfos);
@@ -328,7 +321,7 @@ public class TestSimpleRegionNormalizer {
   @Test
   public void testHonorsMergeEnabledInTD() {
     conf.setBoolean(MERGE_ENABLED_KEY, true);
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 5);
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 20, 5, 5, 20, 20);
     setupMocksForNormalizer(regionSizes, regionInfos);
@@ -362,7 +355,7 @@ public class TestSimpleRegionNormalizer {
 
   private void honorsMinimumRegionCount(String confKey) {
     conf.setInt(confKey, 1);
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 3);
     // create a table topology that results in both a merge plan and a split plan. Assert that the
     // merge is only created when the when the number of table regions is above the region count
@@ -401,7 +394,7 @@ public class TestSimpleRegionNormalizer {
 
   private void honorsOldMinimumRegionCountInTD(String confKey) {
     conf.setInt(confKey, 1);
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 3);
     // create a table topology that results in both a merge plan and a split plan. Assert that the
     // merge is only created when the when the number of table regions is above the region count
@@ -424,7 +417,7 @@ public class TestSimpleRegionNormalizer {
   @Test
   public void testHonorsMergeMinRegionAge() {
     conf.setInt(MERGE_MIN_REGION_AGE_DAYS_KEY, 7);
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 4);
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 1, 1, 10, 10);
     setupMocksForNormalizer(regionSizes, regionInfos);
@@ -445,7 +438,7 @@ public class TestSimpleRegionNormalizer {
   @Test
   public void testHonorsMergeMinRegionAgeInTD() {
     conf.setInt(MERGE_MIN_REGION_AGE_DAYS_KEY, 7);
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 4);
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 1, 1, 10, 10);
     setupMocksForNormalizer(regionSizes, regionInfos);
@@ -469,7 +462,7 @@ public class TestSimpleRegionNormalizer {
   @Test
   public void testHonorsMergeMinRegionSize() {
     conf.setBoolean(SPLIT_ENABLED_KEY, false);
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 5);
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 1, 2, 0, 10, 10);
     setupMocksForNormalizer(regionSizes, regionInfos);
@@ -489,7 +482,7 @@ public class TestSimpleRegionNormalizer {
   @Test
   public void testHonorsMergeMinRegionSizeInTD() {
     conf.setBoolean(SPLIT_ENABLED_KEY, false);
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 5);
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 1, 2, 0, 10, 10);
     setupMocksForNormalizer(regionSizes, regionInfos);
@@ -510,7 +503,7 @@ public class TestSimpleRegionNormalizer {
     conf.setInt(MERGE_MIN_REGION_COUNT_KEY, 1);
     conf.setInt(MERGE_MIN_REGION_SIZE_MB_KEY, 0);
     conf.setInt(MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT_KEY, 3);
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 5);
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 0, 1, 0, 1, 0);
     setupMocksForNormalizer(regionSizes, regionInfos);
@@ -529,7 +522,7 @@ public class TestSimpleRegionNormalizer {
     conf.setBoolean(SPLIT_ENABLED_KEY, false);
     conf.setInt(MERGE_MIN_REGION_COUNT_KEY, 1);
     conf.setInt(MERGE_MIN_REGION_SIZE_MB_KEY, 0);
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 3);
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 0, 0, 0);
     setupMocksForNormalizer(regionSizes, regionInfos);
@@ -543,7 +536,7 @@ public class TestSimpleRegionNormalizer {
   public void testMergeEmptyRegions0() {
     conf.setBoolean(SPLIT_ENABLED_KEY, false);
     conf.setInt(MERGE_MIN_REGION_SIZE_MB_KEY, 0);
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 7);
     final Map<byte[], Integer> regionSizes =
       createRegionSizesMap(regionInfos, 0, 1, 10, 0, 9, 10, 0);
@@ -565,7 +558,7 @@ public class TestSimpleRegionNormalizer {
   public void testMergeEmptyRegions1() {
     conf.setBoolean(SPLIT_ENABLED_KEY, false);
     conf.setInt(MERGE_MIN_REGION_SIZE_MB_KEY, 0);
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 8);
     final Map<byte[], Integer> regionSizes =
       createRegionSizesMap(regionInfos, 0, 1, 10, 0, 9, 0, 10, 0);
@@ -589,7 +582,7 @@ public class TestSimpleRegionNormalizer {
   public void testMergeEmptyRegions2() {
     conf.setBoolean(SPLIT_ENABLED_KEY, false);
     conf.setInt(MERGE_MIN_REGION_SIZE_MB_KEY, 0);
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 8);
     final Map<byte[], Integer> regionSizes =
       createRegionSizesMap(regionInfos, 0, 10, 1, 0, 9, 0, 10, 0);
@@ -613,7 +606,7 @@ public class TestSimpleRegionNormalizer {
   @Test
   public void testSplitAndMultiMerge() {
     conf.setInt(MERGE_MIN_REGION_SIZE_MB_KEY, 0);
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 8);
     final Map<byte[], Integer> regionSizes =
       createRegionSizesMap(regionInfos, 3, 1, 1, 30, 9, 3, 1, 0);
@@ -633,7 +626,7 @@ public class TestSimpleRegionNormalizer {
   // This test is to make sure that normalizer is only going to merge adjacent regions.
   @Test
   public void testNormalizerCannotMergeNonAdjacentRegions() {
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     // create 5 regions with sizes to trigger merge of small regions. region ranges are:
     // [, "aa"), ["aa", "aa1"), ["aa1", "aa1!"), ["aa1!", "aa2"), ["aa2", )
     // Region ["aa", "aa1") and ["aa1!", "aa2") are not adjacent, they are not supposed to
@@ -652,7 +645,7 @@ public class TestSimpleRegionNormalizer {
   @Test
   public void testSizeLimitShufflesPlans() {
     conf.setLong(CUMULATIVE_SIZE_LIMIT_MB_KEY, 10);
-    final TableName tableName = name.getTableName();
+    final TableName tableName = this.tableName;
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 4);
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 3, 3, 3, 3);
     setupMocksForNormalizer(regionSizes, regionInfos);
@@ -696,7 +689,7 @@ public class TestSimpleRegionNormalizer {
     }
 
     when(masterServices.isSplitOrMergeEnabled(any())).thenReturn(true);
-    when(tableDescriptor.getTableName()).thenReturn(name.getTableName());
+    when(tableDescriptor.getTableName()).thenReturn(tableName);
 
     normalizer = new SimpleRegionNormalizer();
     normalizer.setConf(conf);
