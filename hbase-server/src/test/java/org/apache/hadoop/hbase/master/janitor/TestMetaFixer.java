@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.janitor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -29,7 +29,6 @@ import java.util.Map;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -56,30 +55,24 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMetaFixer {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetaFixer.class);
-  @Rule
-  public TestName name = new TestName();
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -111,12 +104,12 @@ public class TestMetaFixer {
       services.getAssignmentManager().getRegionStates().getRegionStates().size());
     services.getCatalogJanitor().scan();
     report = services.getCatalogJanitor().getLastReport();
-    assertEquals(report.toString(), 3, report.getHoles().size());
+    assertEquals(3, report.getHoles().size(), report.toString());
     MetaFixer fixer = new MetaFixer(services);
     fixer.fixHoles(report);
     services.getCatalogJanitor().scan();
     report = services.getCatalogJanitor().getLastReport();
-    assertTrue(report.toString(), report.isEmpty());
+    assertTrue(report.isEmpty(), report.toString());
     assertEquals(initialSize,
       services.getAssignmentManager().getRegionStates().getRegionStates().size());
 
@@ -130,14 +123,14 @@ public class TestMetaFixer {
   }
 
   @Test
-  public void testPlugsHoles() throws Exception {
-    TableName tn = TableName.valueOf(this.name.getMethodName());
+  public void testPlugsHoles(TestInfo testInfo) throws Exception {
+    TableName tn = TableName.valueOf(testInfo.getTestMethod().get().getName());
     testPlugsHolesWithReadReplicaInternal(tn, 1);
   }
 
   @Test
-  public void testPlugsHolesWithReadReplica() throws Exception {
-    TableName tn = TableName.valueOf(this.name.getMethodName());
+  public void testPlugsHolesWithReadReplica(TestInfo testInfo) throws Exception {
+    TableName tn = TableName.valueOf(testInfo.getTestMethod().get().getName());
     testPlugsHolesWithReadReplicaInternal(tn, 3);
   }
 
@@ -147,8 +140,8 @@ public class TestMetaFixer {
    * (at least from a read of hbase:meta).
    */
   @Test
-  public void testOneRegionTable() throws IOException {
-    TableName tn = TableName.valueOf(this.name.getMethodName());
+  public void testOneRegionTable(TestInfo testInfo) throws IOException {
+    TableName tn = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TEST_UTIL.createTable(tn, HConstants.CATALOG_FAMILY);
     List<RegionInfo> ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
     MasterServices services = TEST_UTIL.getHBaseCluster().getMaster();
@@ -196,8 +189,8 @@ public class TestMetaFixer {
   }
 
   @Test
-  public void testOverlap() throws Exception {
-    TableName tn = TableName.valueOf(this.name.getMethodName());
+  public void testOverlap(TestInfo testInfo) throws Exception {
+    TableName tn = TableName.valueOf(testInfo.getTestMethod().get().getName());
     testOverlapCommon(tn);
     HMaster services = TEST_UTIL.getHBaseCluster().getMaster();
     HbckChore hbckChore = services.getHbckChore();
@@ -272,7 +265,7 @@ public class TestMetaFixer {
 
     services.getCatalogJanitor().scan();
     report = services.getCatalogJanitor().getLastReport();
-    assertEquals("Region overlaps count does not match.", 4, report.getOverlaps().size());
+    assertEquals(4, report.getOverlaps().size(), "Region overlaps count does not match.");
 
     MetaFixer fixer = new MetaFixer(services);
     List<Long> longs = fixer.fixOverlaps(report);
@@ -282,12 +275,12 @@ public class TestMetaFixer {
     // After fix, verify no overlaps are left.
     services.getCatalogJanitor().scan();
     report = services.getCatalogJanitor().getLastReport();
-    assertTrue("After fix there should not have been any overlaps.", report.isEmpty());
+    assertTrue(report.isEmpty(), "After fix there should not have been any overlaps.");
   }
 
   @Test
-  public void testOverlapWithSmallMergeCount() throws Exception {
-    TableName tn = TableName.valueOf(this.name.getMethodName());
+  public void testOverlapWithSmallMergeCount(TestInfo testInfo) throws Exception {
+    TableName tn = TableName.valueOf(testInfo.getTestMethod().get().getName());
     try {
       testOverlapCommon(tn);
       HMaster services = TEST_UTIL.getHBaseCluster().getMaster();
@@ -376,8 +369,8 @@ public class TestMetaFixer {
    * procedure, but no merge will happen.
    */
   @Test
-  public void testMergeWithMergedChildRegion() throws Exception {
-    TableName tn = TableName.valueOf(this.name.getMethodName());
+  public void testMergeWithMergedChildRegion(TestInfo testInfo) throws Exception {
+    TableName tn = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TEST_UTIL.createMultiRegionTable(tn, HConstants.CATALOG_FAMILY);
     List<RegionInfo> ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
     assertTrue(ris.size() > 5);
@@ -438,8 +431,8 @@ public class TestMetaFixer {
    * can fix this condition. HBASE-24247
    */
   @Test
-  public void testOverlapWithMergeOfNonContiguous() throws Exception {
-    TableName tn = TableName.valueOf(this.name.getMethodName());
+  public void testOverlapWithMergeOfNonContiguous(TestInfo testInfo) throws Exception {
+    TableName tn = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TEST_UTIL.createMultiRegionTable(tn, HConstants.CATALOG_FAMILY);
     List<RegionInfo> ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
     assertTrue(ris.size() > 5);

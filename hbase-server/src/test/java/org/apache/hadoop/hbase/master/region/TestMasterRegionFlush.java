@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.region;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -31,7 +31,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -40,18 +39,14 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMasterRegionFlush {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterRegionFlush.class);
 
   private Configuration conf;
 
@@ -65,7 +60,7 @@ public class TestMasterRegionFlush {
 
   private AtomicLong memstoreOffHeapSize;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = HBaseConfiguration.create();
     region = mock(HRegion.class);
@@ -80,15 +75,21 @@ public class TestMasterRegionFlush {
     when(region.getMemStoreHeapSize()).thenAnswer(invocation -> memstoreHeapSize.get());
     when(region.getMemStoreOffHeapSize()).thenAnswer(invocation -> memstoreOffHeapSize.get());
     when(region.flush(anyBoolean())).thenAnswer(invocation -> {
-      assertTrue(invocation.getArgument(0));
+      assertTrue(invocation.getArgument(0, Boolean.class));
       memstoreHeapSize.set(0);
       memstoreOffHeapSize.set(0);
       flushCalled.incrementAndGet();
-      return null;
+      // Return a mock FlushResult since FlushResultImpl constructor is package-private
+      HRegion.FlushResult mockResult = mock(HRegion.FlushResult.class);
+      when(mockResult.getResult())
+        .thenReturn(HRegion.FlushResult.Result.FLUSHED_NO_COMPACTION_NEEDED);
+      when(mockResult.isFlushSucceeded()).thenReturn(true);
+      when(mockResult.isCompactionNeeded()).thenReturn(false);
+      return mockResult;
     });
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (flusher != null) {
       flusher.close();
