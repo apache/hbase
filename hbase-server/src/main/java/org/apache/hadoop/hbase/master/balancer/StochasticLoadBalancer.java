@@ -549,10 +549,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       currentCost / sumMultiplier, functionCost(), computedMaxSteps);
 
     final String initFunctionTotalCosts = totalCostsPerFunc();
-    long searchStartTime = EnvironmentEdgeManager.currentTime();
-    // Budget maxRunningTime for the stochastic walk only; initialization (cluster costs, etc.)
-    // can be substantial on busy hosts and must not consume the search deadline.
-    cluster.setStopRequestedAt(searchStartTime + maxRunningTime);
     // Perform a stochastic walk to see if we can get a good fit.
     long step;
 
