@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.fs.Path;
@@ -119,7 +118,5 @@ public interface RegionScanner extends InternalScanner {
    * Returns the set of store file paths that were successfully read by this scanner. Typically
    * populated only after the scanner is closed.
    */
-  default Set<Path> getFilesRead() {
-    return Collections.emptySet();
-  }
+  Set<Path> getFilesRead();
 }
