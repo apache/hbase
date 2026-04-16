@@ -17,34 +17,30 @@
  */
 package org.apache.hadoop.hbase.quotas.policies;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import org.apache.hadoop.hbase.quotas.SpaceLimitingException;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test class for {@link NoInsertsViolationPolicyEnforcement}.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestNoInsertsViolationPolicyEnforcement extends BaseViolationPolicyEnforcement {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNoInsertsViolationPolicyEnforcement.class);
 
   private NoInsertsViolationPolicyEnforcement enforcement;
 
-  @Before
+  @BeforeEach
   public void setup() {
     enforcement = new NoInsertsViolationPolicyEnforcement();
   }
 
-  @Test(expected = SpaceLimitingException.class)
+  @Test
   public void testCheckAppend() throws Exception {
-    enforcement.check(APPEND);
+    assertThrows(SpaceLimitingException.class, () -> enforcement.check(APPEND));
   }
 
   @Test
@@ -52,13 +48,13 @@ public class TestNoInsertsViolationPolicyEnforcement extends BaseViolationPolicy
     enforcement.check(DELETE);
   }
 
-  @Test(expected = SpaceLimitingException.class)
+  @Test
   public void testCheckIncrement() throws Exception {
-    enforcement.check(INCREMENT);
+    assertThrows(SpaceLimitingException.class, () -> enforcement.check(INCREMENT));
   }
 
-  @Test(expected = SpaceLimitingException.class)
+  @Test
   public void testCheckPut() throws Exception {
-    enforcement.check(PUT);
+    assertThrows(SpaceLimitingException.class, () -> enforcement.check(PUT));
   }
 }

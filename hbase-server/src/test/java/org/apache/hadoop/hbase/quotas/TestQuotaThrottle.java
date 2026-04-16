@@ -25,13 +25,12 @@ import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.triggerRegion
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.triggerTableCacheRefresh;
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.triggerUserCacheRefresh;
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.waitMinuteQuota;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -43,25 +42,21 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 // This tests breaks monotonic WAL numbering after HBASE-20746 because of how it
 // manipulates the EnvironmentEdge.
-@Ignore("See HBASE-27243")
-@Category({ RegionServerTests.class, MediumTests.class })
+@Disabled("See HBASE-27243")
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestQuotaThrottle {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestQuotaThrottle.class);
 
   private final static Logger LOG = LoggerFactory.getLogger(TestQuotaThrottle.class);
 
@@ -77,7 +72,7 @@ public class TestQuotaThrottle {
 
   private static Table[] tables;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
     TEST_UTIL.getConfiguration().setInt(QuotaCache.REFRESH_CONF_KEY, REFRESH_TIME);
@@ -95,7 +90,7 @@ public class TestQuotaThrottle {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     EnvironmentEdgeManager.reset();
     for (int i = 0; i < tables.length; ++i) {
@@ -108,7 +103,7 @@ public class TestQuotaThrottle {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     ThrottleQuotaTestUtil.clearQuotaCache(TEST_UTIL);
   }
@@ -685,7 +680,7 @@ public class TestQuotaThrottle {
       }
     }
 
-    assertTrue("Expected to find " + throttleType.name() + " quota for user " + userName, found);
+    assertTrue(found, "Expected to find " + throttleType.name() + " quota for user " + userName);
     admin.setQuota(QuotaSettingsFactory.unthrottleUserByThrottleType(userName, throttleType));
   }
 

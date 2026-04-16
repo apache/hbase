@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -39,25 +38,19 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test class which verifies that region sizes are reported to the master.
  */
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestRegionSizeUse {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionSizeUse.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionSizeUse.class);
   private static final int SIZE_PER_VALUE = 256;
@@ -67,10 +60,7 @@ public class TestRegionSizeUse {
 
   private MiniHBaseCluster cluster;
 
-  @Rule
-  public TestName testName = new TestName();
-
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     // Increase the frequency of some of the chores for responsiveness of the test
@@ -78,15 +68,15 @@ public class TestRegionSizeUse {
     cluster = TEST_UTIL.startMiniCluster(2);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void testBasicRegionSizeReports() throws Exception {
+  public void testBasicRegionSizeReports(TestInfo testInfo) throws Exception {
     final long bytesWritten = 5L * 1024L * 1024L; // 5MB
-    final TableName tn = writeData(bytesWritten);
+    final TableName tn = writeData(bytesWritten, testInfo);
     LOG.debug("Data was written to HBase");
     final Admin admin = TEST_UTIL.getAdmin();
     // Push the data to disk.
@@ -115,8 +105,8 @@ public class TestRegionSizeUse {
     for (Long regionSize : regionSizes.values()) {
       totalRegionSize += regionSize;
     }
-    assertTrue("Expected region size report to exceed " + bytesWritten + ", but was "
-      + totalRegionSize + ". RegionSizes=" + regionSizes, bytesWritten < totalRegionSize);
+    assertTrue(bytesWritten < totalRegionSize, "Expected region size report to exceed "
+      + bytesWritten + ", but was " + totalRegionSize + ". RegionSizes=" + regionSizes);
   }
 
   /**
@@ -124,10 +114,10 @@ public class TestRegionSizeUse {
    * @param sizeInBytes The amount of data to write in bytes.
    * @return The table the data was written to
    */
-  private TableName writeData(long sizeInBytes) throws IOException {
+  private TableName writeData(long sizeInBytes, TestInfo testInfo) throws IOException {
     final Connection conn = TEST_UTIL.getConnection();
     final Admin admin = TEST_UTIL.getAdmin();
-    final TableName tn = TableName.valueOf(testName.getMethodName());
+    final TableName tn = TableName.valueOf(testInfo.getTestMethod().get().getName());
 
     // Delete the old table
     if (admin.tableExists(tn)) {

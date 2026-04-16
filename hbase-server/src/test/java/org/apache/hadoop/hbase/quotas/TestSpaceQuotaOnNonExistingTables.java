@@ -19,49 +19,41 @@ package org.apache.hadoop.hbase.quotas;
 
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestSpaceQuotaOnNonExistingTables {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSpaceQuotaOnNonExistingTables.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private final TableName NON_EXISTENT_TABLE = TableName.valueOf("NON_EXISTENT_TABLE");
 
-  @Rule
-  public TestName testName = new TestName();
   private SpaceQuotaHelperForTests helper;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     SpaceQuotaHelperForTests.updateConfigForQuotas(conf);
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void removeAllQuotas() throws Exception {
-    helper = new SpaceQuotaHelperForTests(TEST_UTIL, testName, new AtomicLong(0));
+  @BeforeEach
+  public void removeAllQuotas(TestInfo testInfo) throws Exception {
+    helper = new SpaceQuotaHelperForTests(TEST_UTIL, testInfo.getTestMethod().get().getName(),
+      new AtomicLong(0));
     helper.removeAllQuotas();
   }
 

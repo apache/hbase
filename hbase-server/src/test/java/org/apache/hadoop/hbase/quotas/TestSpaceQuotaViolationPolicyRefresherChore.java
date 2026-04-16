@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.quotas;
 
 import static org.apache.hadoop.hbase.util.Bytes.toBytes;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
@@ -35,7 +35,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -47,20 +46,15 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test class for {@link SpaceQuotaRefresherChore}.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestSpaceQuotaViolationPolicyRefresherChore {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSpaceQuotaViolationPolicyRefresherChore.class);
 
   private RegionServerSpaceQuotaManager manager;
   private RegionServerServices rss;
@@ -68,7 +62,7 @@ public class TestSpaceQuotaViolationPolicyRefresherChore {
   private Configuration conf;
   private Connection conn;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     conf = HBaseConfiguration.create();
     rss = mock(RegionServerServices.class);
