@@ -22,16 +22,15 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ConnectionRule;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.ConnectionExtension;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniClusterRule;
+import org.apache.hadoop.hbase.MiniClusterExtension;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
@@ -45,11 +44,13 @@ import org.apache.hadoop.hbase.master.http.api_v1.cluster_metrics.resource.Clust
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.ExternalResource;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.apache.hbase.thirdparty.javax.ws.rs.NotAcceptableException;
 import org.apache.hbase.thirdparty.javax.ws.rs.client.Client;
@@ -60,14 +61,13 @@ import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 /**
  * Tests for the master api_v1 {@link ClusterMetricsResource}.
  */
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestApiV1ClusterMetricsResource {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestApiV1ClusterMetricsResource.class);
-
-  private static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder()
+  @Order(1)
+  @RegisterExtension
+  private static final MiniClusterExtension miniClusterExtension = MiniClusterExtension.newBuilder()
     .setMiniClusterOption(
       StartMiniClusterOption.builder().numZkServers(3).numMasters(3).numDataNodes(3).build())
     .setConfiguration(() -> {
@@ -77,18 +77,25 @@ public class TestApiV1ClusterMetricsResource {
       conf.set("hbase.http.jersey.tracing.type", "ON_DEMAND");
       return conf;
     }).build();
-  private static final ConnectionRule connectionRule =
-    ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
-  private static final ClassSetup classRule = new ClassSetup(connectionRule::getAsyncConnection);
 
-  private static final class ClassSetup extends ExternalResource {
+  @Order(2)
+  @RegisterExtension
+  private static final ConnectionExtension connectionExtension =
+    ConnectionExtension.createAsyncConnectionExtension(miniClusterExtension::createAsyncConnection);
 
-    private final Supplier<AsyncConnection> connectionSupplier;
+  @Order(3)
+  @RegisterExtension
+  private static final ClassSetupExtension classRule =
+    new ClassSetupExtension(connectionExtension::getAsyncConnection);
+
+  private static final class ClassSetupExtension implements BeforeAllCallback, AfterAllCallback {
+
     private final TableName tableName;
     private AsyncAdmin admin;
     private WebTarget target;
+    private final Supplier<AsyncConnection> connectionSupplier;
 
-    public ClassSetup(final Supplier<AsyncConnection> connectionSupplier) {
+    public ClassSetupExtension(final Supplier<AsyncConnection> connectionSupplier) {
       this.connectionSupplier = connectionSupplier;
       tableName = TableName.valueOf(TestApiV1ClusterMetricsResource.class.getSimpleName());
     }
@@ -98,12 +105,13 @@ public class TestApiV1ClusterMetricsResource {
     }
 
     @Override
-    protected void before() throws Throwable {
+    public void beforeAll(ExtensionContext context) throws Exception {
       final AsyncConnection conn = connectionSupplier.get();
       admin = conn.getAdmin();
+      final ColumnFamilyDescriptorBuilder cfBuilder =
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("c"));
       final TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("c")).build())
-        .setDurability(Durability.SKIP_WAL).build();
+        .setColumnFamily(cfBuilder.build()).setDurability(Durability.SKIP_WAL).build();
       admin.createTable(tableDescriptor).get();
 
       final String baseUrl =
@@ -114,8 +122,7 @@ public class TestApiV1ClusterMetricsResource {
     }
 
     @Override
-    protected void after() {
-      final TableName tableName = TableName.valueOf("test");
+    public void afterAll(ExtensionContext context) {
       try {
         admin.tableExists(tableName).thenCompose(val -> {
           if (val) {
@@ -130,10 +137,6 @@ public class TestApiV1ClusterMetricsResource {
       }
     }
   }
-
-  @ClassRule
-  public static RuleChain ruleChain =
-    RuleChain.outerRule(miniClusterRule).around(connectionRule).around(classRule);
 
   @Test
   public void testGetRoot() {

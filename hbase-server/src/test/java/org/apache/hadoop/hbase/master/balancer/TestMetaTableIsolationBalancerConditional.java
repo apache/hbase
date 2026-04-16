@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -41,22 +40,17 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestMetaTableIsolationBalancerConditional {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetaTableIsolationBalancerConditional.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestMetaTableIsolationBalancerConditional.class);
@@ -64,7 +58,7 @@ public class TestMetaTableIsolationBalancerConditional {
 
   private static final int NUM_SERVERS = 3;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(BalancerConditionals.ISOLATE_META_TABLE_KEY, true);
     TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true); // for another table
@@ -74,7 +68,7 @@ public class TestMetaTableIsolationBalancerConditional {
     TEST_UTIL.startMiniCluster(NUM_SERVERS);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -153,16 +147,16 @@ public class TestMetaTableIsolationBalancerConditional {
     Set<ServerName> productServers = tableToServers.get(productTableName);
 
     if (shouldBeBalanced) {
-      assertNotEquals("Meta table and quota table should not share a server", metaServer,
-        quotaServer);
+      assertNotEquals(metaServer, quotaServer,
+        "Meta table and quota table should not share a server");
       for (ServerName productServer : productServers) {
-        assertNotEquals("Meta table and product table should not share servers", productServer,
-          metaServer);
+        assertNotEquals(productServer, metaServer,
+          "Meta table and product table should not share servers");
       }
     } else {
-      assertEquals("Quota table and product table must share servers", metaServer, quotaServer);
+      assertEquals(metaServer, quotaServer, "Quota table and product table must share servers");
       for (ServerName server : productServers) {
-        assertEquals("Meta table and product table must share servers", server, metaServer);
+        assertEquals(server, metaServer, "Meta table and product table must share servers");
       }
     }
   }

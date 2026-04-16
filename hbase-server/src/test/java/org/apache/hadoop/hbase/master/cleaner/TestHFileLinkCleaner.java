@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -43,25 +42,20 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Test the HFileLink Cleaner. HFiles with links cannot be deleted until a link is present.
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestHFileLinkCleaner {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHFileLinkCleaner.class);
 
   private Configuration conf;
   private Path rootDir;
@@ -86,29 +80,26 @@ public class TestHFileLinkCleaner {
   private static DirScanPool POOL;
   private static final long TTL = 1000;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUp() {
     POOL = DirScanPool.getHFileCleanerScanPool(TEST_UTIL.getConfiguration());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     POOL.shutdownNow();
   }
 
-  @Before
-  public void configureDirectoriesAndLinks() throws IOException {
+  @BeforeEach
+  public void configureDirectoriesAndLinks(TestInfo testInfo) throws IOException {
     conf = TEST_UTIL.getConfiguration();
     CommonFSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
     conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, HFileLinkCleaner.class.getName());
     rootDir = CommonFSUtils.getRootDir(conf);
     fs = FileSystem.get(conf);
 
-    tableName = TableName.valueOf(name.getMethodName());
-    tableLinkName = TableName.valueOf(name.getMethodName() + "-link");
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
+    tableLinkName = TableName.valueOf(testInfo.getTestMethod().get().getName() + "-link");
     hfileName = "1234567890";
     familyName = "cf";
 
@@ -145,21 +136,21 @@ public class TestHFileLinkCleaner {
     linkBackRef = backRefs[0].getPath();
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws IOException, InterruptedException {
     // HFile can be removed
     Thread.sleep(TTL * 2);
     cleaner.chore();
-    assertFalse("HFile should be deleted", fs.exists(hfilePath));
+    assertFalse(fs.exists(hfilePath), "HFile should be deleted");
     // Remove everything
     for (int i = 0; i < 4; ++i) {
       Thread.sleep(TTL * 2);
       cleaner.chore();
     }
-    assertFalse("HFile should be deleted",
-      fs.exists(CommonFSUtils.getTableDir(archiveDir, tableName)));
-    assertFalse("Link should be deleted",
-      fs.exists(CommonFSUtils.getTableDir(archiveDir, tableLinkName)));
+    assertFalse(fs.exists(CommonFSUtils.getTableDir(archiveDir, tableName)),
+      "HFile should be deleted");
+    assertFalse(fs.exists(CommonFSUtils.getTableDir(archiveDir, tableLinkName)),
+      "Link should be deleted");
   }
 
   @Test
@@ -173,7 +164,7 @@ public class TestHFileLinkCleaner {
     fs.rename(CommonFSUtils.getTableDir(rootDir, tableLinkName),
       CommonFSUtils.getTableDir(archiveDir, tableLinkName));
     cleaner.chore();
-    assertFalse("Link should be deleted", fs.exists(linkBackRef));
+    assertFalse(fs.exists(linkBackRef), "Link should be deleted");
   }
 
   @Test
@@ -186,16 +177,16 @@ public class TestHFileLinkCleaner {
     // simulate after removing the reference in data directory, the Link backref can be removed
     fs.delete(new Path(familyLinkPath, hfileLinkName), false);
     cleaner.chore();
-    assertFalse("Link should be deleted", fs.exists(linkBackRef));
+    assertFalse(fs.exists(linkBackRef), "Link should be deleted");
   }
 
   @Test
   public void testHFileLinkEmptyBackReferenceDirectory() throws Exception {
     // simulate and remove the back reference
     fs.delete(linkBackRef, false);
-    assertTrue("back reference directory still exists", fs.exists(linkBackRefDir));
+    assertTrue(fs.exists(linkBackRefDir), "back reference directory still exists");
     cleaner.chore();
-    assertFalse("back reference directory should be deleted", fs.exists(linkBackRefDir));
+    assertFalse(fs.exists(linkBackRefDir), "back reference directory should be deleted");
   }
 
   private static Path getFamilyDirPath(final Path rootDir, final TableName table,
