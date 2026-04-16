@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,7 +27,6 @@ import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
@@ -37,27 +36,21 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestFiltersWithBinaryComponentComparator {
 
   /**
    * See https://issues.apache.org/jira/browse/HBASE-22969 - for need of BinaryComponentComparator
    * The descrption on jira should also help you in understanding tests implemented in this class
    */
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFiltersWithBinaryComponentComparator.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Logger LOG =
@@ -70,23 +63,20 @@ public class TestFiltersWithBinaryComponentComparator {
   private int cOffset = 8;
   private int dOffset = 12;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void testRowFilterWithBinaryComponentComparator() throws IOException {
+  public void testRowFilterWithBinaryComponentComparator(TestInfo testInfo) throws IOException {
     // SELECT * from table where a=1 and b > 10 and b < 20 and c > 90 and c < 100 and d=1
-    tableName = TableName.valueOf(name.getMethodName());
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(ht, family, qf);
     FilterList filterList = new FilterList(FilterList.Operator.MUST_PASS_ALL);
@@ -105,9 +95,9 @@ public class TestFiltersWithBinaryComponentComparator {
   }
 
   @Test
-  public void testValueFilterWithBinaryComponentComparator() throws IOException {
+  public void testValueFilterWithBinaryComponentComparator(TestInfo testInfo) throws IOException {
     // SELECT * from table where value has 'y' at position 1
-    tableName = TableName.valueOf(name.getMethodName());
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(ht, family, qf);
     FilterList filterList = new FilterList(FilterList.Operator.MUST_PASS_ALL);
@@ -123,10 +113,11 @@ public class TestFiltersWithBinaryComponentComparator {
   }
 
   @Test
-  public void testRowAndValueFilterWithBinaryComponentComparator() throws IOException {
+  public void testRowAndValueFilterWithBinaryComponentComparator(TestInfo testInfo)
+    throws IOException {
     // SELECT * from table where a=1 and b > 10 and b < 20 and c > 90 and c < 100 and d=1
     // and value has 'y' at position 1"
-    tableName = TableName.valueOf(name.getMethodName());
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(ht, family, qf);
     FilterList filterList = new FilterList(FilterList.Operator.MUST_PASS_ALL);

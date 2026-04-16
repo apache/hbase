@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -43,28 +42,21 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ FilterTests.class, MediumTests.class })
+@Tag(FilterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMultipleColumnPrefixFilter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultipleColumnPrefixFilter.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  @Rule
-  public TestName name = new TestName();
-
   @Test
-  public void testMultipleColumnPrefixFilter() throws IOException {
+  public void testMultipleColumnPrefixFilter(TestInfo testInfo) throws IOException {
     String family = "Family";
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HTableDescriptor htd =
+      new HTableDescriptor(TableName.valueOf(testInfo.getTestMethod().get().getName()));
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     hcd.setMaxVersions(3);
     htd.addFamily(hcd);
@@ -124,10 +116,11 @@ public class TestMultipleColumnPrefixFilter {
   }
 
   @Test
-  public void testMultipleColumnPrefixFilterWithManyFamilies() throws IOException {
+  public void testMultipleColumnPrefixFilterWithManyFamilies(TestInfo testInfo) throws IOException {
     String family1 = "Family1";
     String family2 = "Family2";
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HTableDescriptor htd =
+      new HTableDescriptor(TableName.valueOf(testInfo.getTestMethod().get().getName()));
     HColumnDescriptor hcd1 = new HColumnDescriptor(family1);
     hcd1.setMaxVersions(3);
     htd.addFamily(hcd1);
@@ -195,9 +188,11 @@ public class TestMultipleColumnPrefixFilter {
   }
 
   @Test
-  public void testMultipleColumnPrefixFilterWithColumnPrefixFilter() throws IOException {
+  public void testMultipleColumnPrefixFilterWithColumnPrefixFilter(TestInfo testInfo)
+    throws IOException {
     String family = "Family";
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HTableDescriptor htd =
+      new HTableDescriptor(TableName.valueOf(testInfo.getTestMethod().get().getName()));
     htd.addFamily(new HColumnDescriptor(family));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
