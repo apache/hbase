@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -122,8 +125,8 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase {
       String groupName = getMockedGroupInfoManager().getRSGroupOfTable(tableName);
       assertTrue(StringUtils.isNotEmpty(groupName));
       RSGroupInfo gInfo = getMockedGroupInfoManager().getRSGroup(groupName);
-      assertTrue("Region is not correctly assigned to group servers.",
-        gInfo.containsServer(server.getAddress()));
+      assertTrue(gInfo.containsServer(server.getAddress()),
+        "Region is not correctly assigned to group servers.");
     }
   }
 
@@ -144,8 +147,8 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase {
     Set<ServerName> onlineServerSet = new TreeSet<>(servers);
     Set<RegionInfo> assignedRegions = new TreeSet<>(RegionInfo.COMPARATOR);
     for (Map.Entry<ServerName, List<RegionInfo>> a : assignment.entrySet()) {
-      assertTrue("Region assigned to server that was not listed as online",
-        onlineServerSet.contains(a.getKey()));
+      assertTrue(onlineServerSet.contains(a.getKey()),
+        "Region assigned to server that was not listed as online");
       for (RegionInfo r : a.getValue()) {
         assignedRegions.add(r);
       }
@@ -166,8 +169,8 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase {
         String groupName = getMockedGroupInfoManager().getRSGroupOfTable(tableName);
         assertTrue(StringUtils.isNotEmpty(groupName));
         RSGroupInfo gInfo = getMockedGroupInfoManager().getRSGroup(groupName);
-        assertTrue("Region is not correctly assigned to group servers.",
-          gInfo.containsServer(currentServer.getAddress()));
+        assertTrue(gInfo.containsServer(currentServer.getAddress()),
+          "Region is not correctly assigned to group servers.");
         if (
           oldAssignedServer != null && onlineHostNames.contains(oldAssignedServer.getHostname())
         ) {
@@ -225,7 +228,7 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase {
           }
         }
         List<RegionInfo> regions = serversMap.get(actual);
-        assertTrue("No load for " + actual, regions != null);
+        assertTrue(regions != null, "No load for " + actual);
         loadMap.put(gInfo.getName(), new ServerAndLoad(actual, regions.size()));
       }
     }
@@ -397,12 +400,9 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase {
   }
 
   protected static RSGroupInfoManager getMockedGroupInfoManager() throws IOException {
-    RSGroupInfoManager gm = Mockito.mock(RSGroupInfoManager.class);
-    Mockito.when(gm.getRSGroup(Mockito.any())).thenAnswer(new Answer<RSGroupInfo>() {
-      @Override
-      public RSGroupInfo answer(InvocationOnMock invocation) throws Throwable {
-        return groupMap.get(invocation.getArgument(0));
-      }
+    RSGroupInfoManager gm = mock(RSGroupInfoManager.class);
+    when(gm.getRSGroup(any())).thenAnswer(invocation -> {
+      return groupMap.get(invocation.getArgument(0));
     });
     Mockito.when(gm.listRSGroups()).thenReturn(Lists.newLinkedList(groupMap.values()));
     Mockito.when(gm.isOnline()).thenReturn(true);

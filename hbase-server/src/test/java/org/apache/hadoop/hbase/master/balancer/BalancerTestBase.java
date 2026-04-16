@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -52,8 +53,7 @@ import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.net.DNSToSwitchMapping;
-import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,7 +70,7 @@ public class BalancerTestBase {
   protected static DummyMetricsStochasticBalancer dummyMetricsStochasticBalancer =
     new DummyMetricsStochasticBalancer();
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeAllTests() throws Exception {
     conf = HBaseConfiguration.create();
     conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
@@ -195,11 +195,11 @@ public class BalancerTestBase {
     int max = numRegions % numServers == 0 ? min : min + 1;
 
     for (ServerAndLoad server : servers) {
-      assertTrue("All servers should have a positive load. " + server, server.getLoad() >= 0);
-      assertTrue("All servers should have load no more than " + max + ". " + server,
-        server.getLoad() <= max);
-      assertTrue("All servers should have load no less than " + min + ". " + server,
-        server.getLoad() >= min);
+      assertTrue(server.getLoad() >= 0, "All servers should have a positive load. " + server);
+      assertTrue(server.getLoad() <= max,
+        "All servers should have load no more than " + max + ". " + server);
+      assertTrue(server.getLoad() >= min,
+        "All servers should have load no less than " + min + ". " + server);
     }
   }
 
@@ -261,7 +261,7 @@ public class BalancerTestBase {
       for (RegionInfo info : entry.getValue()) {
         RegionInfo primaryInfo = RegionReplicaUtil.getRegionInfoForDefaultReplica(info);
         if (!infos.add(primaryInfo)) {
-          Assert.fail("Two or more region replicas are hosted on the same host after balance");
+          fail("Two or more region replicas are hosted on the same host after balance");
         }
       }
     }
@@ -281,7 +281,7 @@ public class BalancerTestBase {
       for (RegionInfo info : entry.getValue()) {
         RegionInfo primaryInfo = RegionReplicaUtil.getRegionInfoForDefaultReplica(info);
         if (!infos.add(primaryInfo)) {
-          Assert.fail("Two or more region replicas are hosted on the same rack after balance");
+          fail("Two or more region replicas are hosted on the same rack after balance");
         }
       }
     }
@@ -572,7 +572,7 @@ public class BalancerTestBase {
     Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
       (Map) mockClusterServersWithTables(serverMap);
     List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
-    assertNotNull("Initial cluster balance should produce plans.", plans);
+    assertNotNull(plans, "Initial cluster balance should produce plans.");
 
     // Check to see that this actually got to a stable place.
     if (assertFullyBalanced || assertFullyBalancedForReplicas) {
@@ -586,8 +586,8 @@ public class BalancerTestBase {
         assertClusterAsBalanced(balancedCluster);
         LoadOfAllTable = (Map) mockClusterServersWithTables(serverMap);
         List<RegionPlan> secondPlans = loadBalancer.balanceCluster(LoadOfAllTable);
-        assertNull("Given a requirement to be fully balanced, second attempt at plans should "
-          + "produce none.", secondPlans);
+        assertNull(secondPlans, "Given a requirement to be fully balanced, second attempt at plans "
+          + "should produce none.");
       }
 
       if (assertFullyBalancedForReplicas) {
@@ -606,7 +606,7 @@ public class BalancerTestBase {
     Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
       (Map) mockClusterServersWithTables(serverMap);
     List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
-    assertNotNull("Initial cluster balance should produce plans.", plans);
+    assertNotNull(plans, "Initial cluster balance should produce plans.");
 
     List<ServerAndLoad> balancedCluster = null;
     // Run through iteration until done. Otherwise will be killed as test time out
@@ -625,8 +625,8 @@ public class BalancerTestBase {
     LOG.info("Mock Final balance: " + printMock(balancedCluster));
 
     if (assertFullyBalanced) {
-      assertNull("Given a requirement to be fully balanced, second attempt at plans should "
-        + "produce none.", plans);
+      assertNull(plans, "Given a requirement to be fully balanced, second attempt at plans should "
+        + "produce none.");
     }
     if (assertFullyBalancedForReplicas) {
       assertRegionReplicaPlacement(serverMap, rackManager);

@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -38,34 +37,30 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCleanerChore {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCleanerChore.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCleanerChore.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static DirScanPool POOL;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() {
     POOL = DirScanPool.getHFileCleanerScanPool(UTIL.getConfiguration());
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws Exception {
     // delete and recreate the test directory, ensuring a clean test dir between tests
     UTIL.cleanupTestDir();
@@ -90,14 +85,14 @@ public class TestCleanerChore {
     fs.mkdirs(parent);
     // touch a new file
     fs.create(file).close();
-    assertTrue("Test file didn't get created.", fs.exists(file));
+    assertTrue(fs.exists(file), "Test file didn't get created.");
 
     // run the chore
     chore.chore();
 
     // verify all the files were preserved
-    assertTrue("File shouldn't have been deleted", fs.exists(file));
-    assertTrue("directory shouldn't have been deleted", fs.exists(parent));
+    assertTrue(fs.exists(file), "File shouldn't have been deleted");
+    assertTrue(fs.exists(parent), "directory shouldn't have been deleted");
   }
 
   @Test
@@ -112,7 +107,7 @@ public class TestCleanerChore {
     Path file = new Path(child, "file");
     fs.mkdirs(child);
     fs.create(file).close();
-    assertTrue("test file didn't get created.", fs.exists(file));
+    assertTrue(fs.exists(file), "test file didn't get created.");
     final AtomicBoolean fails = new AtomicBoolean(true);
 
     FilterFileSystem filtered = new FilterFileSystem(fs) {
@@ -131,20 +126,20 @@ public class TestCleanerChore {
     Boolean result = chore.runCleaner();
 
     // verify that it couldn't clean the files.
-    assertTrue("test rig failed to inject failure.", fs.exists(file));
-    assertTrue("test rig failed to inject failure.", fs.exists(child));
+    assertTrue(fs.exists(file), "test rig failed to inject failure.");
+    assertTrue(fs.exists(child), "test rig failed to inject failure.");
     // and verify that it accurately reported the failure.
-    assertFalse("chore should report that it failed.", result);
+    assertFalse(result, "chore should report that it failed.");
 
     // filesystem is back
     fails.set(false);
     result = chore.runCleaner();
 
     // verify everything is gone.
-    assertFalse("file should have been destroyed.", fs.exists(file));
-    assertFalse("directory should have been destroyed.", fs.exists(child));
+    assertFalse(fs.exists(file), "file should have been destroyed.");
+    assertFalse(fs.exists(child), "directory should have been destroyed.");
     // and verify that it accurately reported success.
-    assertTrue("chore should claim it succeeded.", result);
+    assertTrue(result, "chore should claim it succeeded.");
   }
 
   @Test
@@ -171,17 +166,17 @@ public class TestCleanerChore {
     // also create a file in the top level directory
     Path topFile = new Path(testDir, "topFile");
     fs.create(topFile).close();
-    assertTrue("Test file didn't get created.", fs.exists(file));
-    assertTrue("Test file didn't get created.", fs.exists(topFile));
+    assertTrue(fs.exists(file), "Test file didn't get created.");
+    assertTrue(fs.exists(topFile), "Test file didn't get created.");
 
     // run the chore
     chore.chore();
 
     // verify all the files got deleted
-    assertFalse("File didn't get deleted", fs.exists(topFile));
-    assertFalse("File didn't get deleted", fs.exists(file));
-    assertFalse("Empty directory didn't get deleted", fs.exists(child));
-    assertFalse("Empty directory didn't get deleted", fs.exists(parent));
+    assertFalse(fs.exists(topFile), "File didn't get deleted");
+    assertFalse(fs.exists(file), "File didn't get deleted");
+    assertFalse(fs.exists(child), "Empty directory didn't get deleted");
+    assertFalse(fs.exists(parent), "Empty directory didn't get deleted");
   }
 
   /**
@@ -209,10 +204,10 @@ public class TestCleanerChore {
     Path parent = new Path(testDir, "parent");
     Path file = new Path(parent, "someFile");
     fs.mkdirs(parent);
-    assertTrue("Test parent didn't get created.", fs.exists(parent));
+    assertTrue(fs.exists(parent), "Test parent didn't get created.");
     // touch a new file
     fs.create(file).close();
-    assertTrue("Test file didn't get created.", fs.exists(file));
+    assertTrue(fs.exists(file), "Test file didn't get created.");
 
     FileStatus fStat = fs.getFileStatus(parent);
     chore.chore();
@@ -236,7 +231,7 @@ public class TestCleanerChore {
     // also create a file in the top level directory
     Path topFile = new Path(testDir, "topFile");
     fs.create(topFile).close();
-    assertTrue("Test file didn't get created.", fs.exists(topFile));
+    assertTrue(fs.exists(topFile), "Test file didn't get created.");
 
     // stop the chore
     stop.stop("testing stop");
@@ -245,7 +240,7 @@ public class TestCleanerChore {
     chore.chore();
 
     // test that the file still exists
-    assertTrue("File got deleted while chore was stopped", fs.exists(topFile));
+    assertTrue(fs.exists(topFile), "File got deleted while chore was stopped");
   }
 
   /**
@@ -275,7 +270,7 @@ public class TestCleanerChore {
     fs.mkdirs(parent);
     // touch a new file
     fs.create(file).close();
-    assertTrue("Test file didn't get created.", fs.exists(file));
+    assertTrue(fs.exists(file), "Test file didn't get created.");
     final Path addedFile = new Path(parent, "addedFile");
 
     // when we attempt to delete the original file, add another file in the same directory
@@ -292,9 +287,9 @@ public class TestCleanerChore {
     chore.chore();
 
     // make sure all the directories + added file exist, but the original file is deleted
-    assertTrue("Added file unexpectedly deleted", fs.exists(addedFile));
-    assertTrue("Parent directory deleted unexpectedly", fs.exists(parent));
-    assertFalse("Original file unexpectedly retained", fs.exists(file));
+    assertTrue(fs.exists(addedFile), "Added file unexpectedly deleted");
+    assertTrue(fs.exists(parent), "Parent directory deleted unexpectedly");
+    assertFalse(fs.exists(file), "Original file unexpectedly retained");
     Mockito.verify(spy, Mockito.times(1)).isFileDeletable(Mockito.any());
     Mockito.reset(spy);
   }
@@ -335,7 +330,7 @@ public class TestCleanerChore {
     fs.mkdirs(parent);
     // touch a new file
     fs.create(file).close();
-    assertTrue("Test file didn't get created.", fs.exists(file));
+    assertTrue(fs.exists(file), "Test file didn't get created.");
     final Path racyFile = new Path(parent, "addedFile");
 
     // when we attempt to delete the original file, add another file in the same directory
@@ -352,9 +347,9 @@ public class TestCleanerChore {
     chore.chore();
 
     // make sure all the directories + added file exist, but the original file is deleted
-    assertTrue("Added file unexpectedly deleted", fs.exists(racyFile));
-    assertTrue("Parent directory deleted unexpectedly", fs.exists(parent));
-    assertFalse("Original file unexpectedly retained", fs.exists(file));
+    assertTrue(fs.exists(racyFile), "Added file unexpectedly deleted");
+    assertTrue(fs.exists(parent), "Parent directory deleted unexpectedly");
+    assertFalse(fs.exists(file), "Original file unexpectedly retained");
     Mockito.verify(spy, Mockito.times(1)).isFileDeletable(Mockito.any());
   }
 
@@ -381,15 +376,15 @@ public class TestCleanerChore {
 
     // touch a new file
     fs.create(file).close();
-    assertTrue("Test file didn't get created.", fs.exists(file));
+    assertTrue(fs.exists(file), "Test file didn't get created.");
 
     // run the chore
     chore.chore();
 
     // verify all the files got deleted
-    assertFalse("File didn't get deleted", fs.exists(file));
-    assertFalse("Empty directory didn't get deleted", fs.exists(child));
-    assertFalse("Empty directory didn't get deleted", fs.exists(parent));
+    assertFalse(fs.exists(file), "File didn't get deleted");
+    assertFalse(fs.exists(child), "Empty directory didn't get deleted");
+    assertFalse(fs.exists(parent), "Empty directory didn't get deleted");
   }
 
   @Test
@@ -415,15 +410,15 @@ public class TestCleanerChore {
 
     // touch a new file
     fs.create(file).close();
-    assertTrue("Test file didn't get created.", fs.exists(file));
+    assertTrue(fs.exists(file), "Test file didn't get created.");
 
     // run the chore
     chore.chore();
 
     // verify all the files exist
-    assertTrue("File got deleted with cleaner disabled", fs.exists(file));
-    assertTrue("Directory got deleted", fs.exists(child));
-    assertTrue("Directory got deleted", fs.exists(parent));
+    assertTrue(fs.exists(file), "File got deleted with cleaner disabled");
+    assertTrue(fs.exists(child), "Directory got deleted");
+    assertTrue(fs.exists(parent), "Directory got deleted");
   }
 
   @Test
@@ -561,7 +556,7 @@ public class TestCleanerChore {
     protected boolean validate(Path file) {
       return true;
     }
-  };
+  }
 
   public static class AlwaysDelete extends BaseHFileCleanerDelegate {
     @Override
