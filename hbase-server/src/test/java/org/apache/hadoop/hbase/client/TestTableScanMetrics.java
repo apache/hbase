@@ -65,6 +65,8 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.params.provider.Arguments;
 
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
 @Tag(ClientTests.TAG)
 @Tag(LargeTests.TAG)
 @HBaseParameterizedTestTemplate(name = "{index}: scanner={0}")
@@ -115,6 +117,7 @@ public class TestTableScanMetrics {
 
   @AfterAll
   public static void tearDown() throws Exception {
+    Closeables.close(CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 

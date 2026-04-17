@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestTemplate;
@@ -69,6 +70,7 @@ public class TestConnectionReconnect {
     UTIL.waitTableAvailable(NAME);
   }
 
+  @AfterAll
   public static void tearDownAfterAll() throws Exception {
     UTIL.shutdownMiniCluster();
   }
