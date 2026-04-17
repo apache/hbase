@@ -339,9 +339,9 @@ function author_patchfile
     done
 
     # Filter the patchfile: skip diff sections belonging to ignored files
-    "${AWK}" -v ignore_list="${ignore_csv}" '
+    "${AWK}" -v ignore_list="${ignore_csv}" "
     BEGIN {
-      n = split(ignore_list, files, ",")
+      n = split(ignore_list, files, \",\")
       skip = 0
     }
     /^diff --git / {
@@ -354,7 +354,7 @@ function author_patchfile
       }
     }
     !skip { print }
-    ' "${patchfile}" > "${PATCH_DIR}/author-filtered-patch.txt"
+    " "${patchfile}" > "${PATCH_DIR}/author-filtered-patch.txt"
 
     "${GREP}" -i -n '^[^-].*@author' "${PATCH_DIR}/author-filtered-patch.txt" \
       >> "${PATCH_DIR}/${AUTHOR_LOGNAME}"
