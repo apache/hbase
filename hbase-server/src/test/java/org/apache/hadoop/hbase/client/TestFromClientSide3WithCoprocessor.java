@@ -17,17 +17,26 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
+import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
+import org.apache.hadoop.hbase.regionserver.NoOpScanPolicyObserver;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 
-@Tag(MediumTests.TAG)
+@Tag(LargeTests.TAG)
 @Tag(ClientTests.TAG)
-public class TestFromClientSideScanExcpetion extends FromClientSideScanExcpetionTestBase {
+@HBaseParameterizedTestTemplate(name = "{index}: registryImpl={0}, numHedgedReqs={1}")
+public class TestFromClientSide3WithCoprocessor extends FromClientSideTest3 {
+
+  public TestFromClientSide3WithCoprocessor(Class<? extends ConnectionRegistry> registryImpl,
+    int numHedgedReqs) {
+    super(registryImpl, numHedgedReqs);
+  }
 
   @BeforeAll
-  public static void setUpBeforeClass() throws Exception {
-    startCluster();
+  public static void setUpBeforeAll() throws Exception {
+    startCluster(NoOpScanPolicyObserver.class, MultiRowMutationEndpoint.class);
   }
 }

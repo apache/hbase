@@ -20,7 +20,10 @@ package org.apache.hadoop.hbase.util;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mockStatic;
 
-import org.apache.hadoop.hbase.client.FromClientSide3TestBase;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
+import org.apache.hadoop.hbase.client.ConnectionRegistry;
+import org.apache.hadoop.hbase.client.FromClientSideTest3;
+import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
@@ -30,7 +33,13 @@ import org.mockito.MockedStatic;
 
 @Tag(LargeTests.TAG)
 @Tag(ClientTests.TAG)
-public class TestFromClientSide3WoUnsafe extends FromClientSide3TestBase {
+@HBaseParameterizedTestTemplate(name = "{index}: registryImpl={0}, numHedgedReqs={1}")
+public class TestFromClientSide3WoUnsafe extends FromClientSideTest3 {
+
+  public TestFromClientSide3WoUnsafe(Class<? extends ConnectionRegistry> registryImpl,
+    int numHedgedReqs) {
+    super(registryImpl, numHedgedReqs);
+  }
 
   @BeforeAll
   public static void setUpBeforeAll() throws Exception {
@@ -40,6 +49,6 @@ public class TestFromClientSide3WoUnsafe extends FromClientSide3TestBase {
       assertFalse(ByteBufferUtils.UNSAFE_AVAIL);
       assertFalse(ByteBufferUtils.UNSAFE_UNALIGNED);
     }
-    startCluster();
+    startCluster(MultiRowMutationEndpoint.class);
   }
 }

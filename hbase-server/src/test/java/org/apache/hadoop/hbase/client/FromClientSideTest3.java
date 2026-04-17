@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -41,7 +44,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionMetrics;
@@ -63,66 +65,39 @@ import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos;
 
-public class FromClientSide3TestBase {
+public class FromClientSideTest3 extends FromClientSideTestBase {
 
-  private static final Logger LOG = LoggerFactory.getLogger(FromClientSide3TestBase.class);
-  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  protected FromClientSideTest3(Class<? extends ConnectionRegistry> registryImpl,
+    int numHedgedReqs) {
+    super(registryImpl, numHedgedReqs);
+  }
+
+  private static final Logger LOG = LoggerFactory.getLogger(FromClientSideTest3.class);
 
   private static int WAITTABLE_MILLIS;
-  private static byte[] FAMILY;
-  private static int SLAVES;
-  private static byte[] ROW;
   private static byte[] ANOTHERROW;
-  private static byte[] QUALIFIER;
-  private static byte[] VALUE;
   private static byte[] COL_QUAL;
   private static byte[] VAL_BYTES;
   private static byte[] ROW_BYTES;
 
-  private TableName tableName;
-
-  protected static void startCluster() throws Exception {
+  protected static void startCluster(Class<?>... cps) throws Exception {
     WAITTABLE_MILLIS = 10000;
-    FAMILY = Bytes.toBytes("testFamily");
     SLAVES = 3;
-    ROW = Bytes.toBytes("testRow");
     ANOTHERROW = Bytes.toBytes("anotherrow");
-    QUALIFIER = Bytes.toBytes("testQualifier");
-    VALUE = Bytes.toBytes("testValue");
     COL_QUAL = Bytes.toBytes("f1");
     VAL_BYTES = Bytes.toBytes("v1");
     ROW_BYTES = Bytes.toBytes("r1");
-    TEST_UTIL.startMiniCluster(SLAVES);
-  }
-
-  @AfterAll
-  public static void shutdownCluster() throws Exception {
-    TEST_UTIL.shutdownMiniCluster();
-  }
-
-  @BeforeEach
-  public void setUp(TestInfo testInfo) throws Exception {
-    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
-  }
-
-  @AfterEach
-  public void tearDown() throws Exception {
-    for (TableDescriptor htd : TEST_UTIL.getAdmin().listTableDescriptors()) {
-      LOG.info("Tear down, remove table=" + htd.getTableName());
-      TEST_UTIL.deleteTable(htd.getTableName());
-    }
+    initialize(cps);
   }
 
   private void randomCFPuts(Table table, byte[] row, byte[] family, int nPuts) throws Exception {
@@ -156,9 +131,11 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testScanAfterDeletingSpecifiedRow() throws IOException, InterruptedException {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
       byte[] row = Bytes.toBytes("SpecifiedRow");
       byte[] value0 = Bytes.toBytes("value_0");
@@ -199,10 +176,11 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testScanAfterDeletingSpecifiedRowV2() throws IOException, InterruptedException {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       byte[] row = Bytes.toBytes("SpecifiedRow");
       byte[] qual0 = Bytes.toBytes("qual0");
       byte[] qual1 = Bytes.toBytes("qual1");
@@ -248,7 +226,7 @@ public class FromClientSide3TestBase {
   }
 
   // override the config settings at the CF level and ensure priority
-  @Test
+  @TestTemplate
   public void testAdvancedConfigOverride() throws Exception {
     /*
      * Overall idea: (1) create 3 store files and issue a compaction. config's compaction.min == 3,
@@ -258,11 +236,10 @@ public class FromClientSide3TestBase {
      * table. The CF schema should override the Table schema and now cause a minor compaction.
      */
     TEST_UTIL.getConfiguration().setInt("hbase.hstore.compaction.min", 3);
-
-    try (Table table = TEST_UTIL.createTable(tableName, FAMILY, 10)) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-      Admin admin = TEST_UTIL.getAdmin();
-
+    TEST_UTIL.createTable(tableName, FAMILY, 10);
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName);
+      Admin admin = conn.getAdmin()) {
       // Create 3 store files.
       byte[] row = Bytes.toBytes(ThreadLocalRandom.current().nextInt());
       performMultiplePutAndFlush(admin, table, row, FAMILY, 3, 100);
@@ -352,10 +329,11 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testHTableBatchWithEmptyPut() throws IOException, InterruptedException {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       List<Put> actions = new ArrayList<>();
       Object[] results = new Object[2];
       // create an empty Put
@@ -374,15 +352,15 @@ public class FromClientSide3TestBase {
 
   // Test Table.batch with large amount of mutations against the same key.
   // It used to trigger read lock's "Maximum lock count exceeded" Error.
-  @Test
+  @TestTemplate
   public void testHTableWithLargeBatch() throws IOException, InterruptedException {
     int sixtyFourK = 64 * 1024;
     List<Put> actions = new ArrayList<>();
     Object[] results = new Object[(sixtyFourK + 1) * 2];
 
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       for (int i = 0; i < sixtyFourK + 1; i++) {
         Put put1 = new Put(ROW);
         put1.addColumn(FAMILY, QUALIFIER, VALUE);
@@ -397,13 +375,13 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testBatchWithRowMutation() throws Exception {
     LOG.info("Starting testBatchWithRowMutation");
     byte[][] QUALIFIERS = new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b") };
-
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
 
       RowMutations arm = RowMutations
         .of(Collections.singletonList(new Put(ROW).addColumn(FAMILY, QUALIFIERS[0], VALUE)));
@@ -422,21 +400,20 @@ public class FromClientSide3TestBase {
       assertNull(r.getValue(FAMILY, QUALIFIERS[0]));
 
       // Test that we get the correct remote exception for RowMutations from batch()
-      try {
-        arm = RowMutations.of(Collections.singletonList(
+      RetriesExhaustedException e = assertThrows(RetriesExhaustedException.class, () -> {
+        RowMutations m = RowMutations.of(Collections.singletonList(
           new Put(ROW).addColumn(new byte[] { 'b', 'o', 'g', 'u', 's' }, QUALIFIERS[0], VALUE)));
-        table.batch(Arrays.asList(arm), batchResult);
-        fail("Expected RetriesExhaustedWithDetailsException with NoSuchColumnFamilyException");
-      } catch (RetriesExhaustedException e) {
-        String msg = e.getMessage();
-        assertTrue(msg.contains("NoSuchColumnFamilyException"));
-      }
+        table.batch(Arrays.asList(m), batchResult);
+      }, "Expected RetriesExhaustedWithDetailsException with NoSuchColumnFamilyException");
+      assertThat(e.getMessage(), containsString("NoSuchColumnFamilyException"));
     }
   }
 
-  @Test
+  @TestTemplate
   public void testBatchWithCheckAndMutate() throws Exception {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       byte[] row1 = Bytes.toBytes("row1");
       byte[] row2 = Bytes.toBytes("row2");
       byte[] row3 = Bytes.toBytes("row3");
@@ -540,12 +517,12 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testHTableExistsMethodSingleRegionSingleGet()
     throws IOException, InterruptedException {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       // Test with a single region table.
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, VALUE);
@@ -562,12 +539,12 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testHTableExistsMethodSingleRegionMultipleGets()
     throws IOException, InterruptedException {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, VALUE);
       table.put(put);
@@ -582,11 +559,11 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testHTableExistsBeforeGet() throws IOException, InterruptedException {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, VALUE);
       table.put(put);
@@ -602,11 +579,11 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testHTableExistsAllBeforeGet() throws IOException, InterruptedException {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       final byte[] ROW2 = Bytes.add(ROW, Bytes.toBytes("2"));
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, VALUE);
@@ -633,12 +610,12 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testHTableExistsMethodMultipleRegionsSingleGet() throws Exception {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, 1,
-      new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255)) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, 1, new byte[] { 0x00 },
+      new byte[] { (byte) 0xff }, 255);
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, VALUE);
 
@@ -654,12 +631,12 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testHTableExistsMethodMultipleRegionsMultipleGets() throws Exception {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, 1,
-      new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255)) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, 1, new byte[] { 0x00 },
+      new byte[] { (byte) 0xff }, 255);
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, VALUE);
       table.put(put);
@@ -705,12 +682,12 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testGetEmptyRow() throws Exception {
     // Create a table and put in 1 row
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       Put put = new Put(ROW_BYTES);
       put.addColumn(FAMILY, COL_QUAL, VAL_BYTES);
       table.put(put);
@@ -731,7 +708,7 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testConnectionDefaultUsesCodec() throws Exception {
     try (
       RpcClient client = RpcClientFactory.createClient(TEST_UTIL.getConfiguration(), "cluster")) {
@@ -739,10 +716,10 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testPutWithPreBatchMutate() throws Exception {
     testPreBatchMutate(tableName, () -> {
-      try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
+      try (Connection conn = getConnection(); Table t = conn.getTable(tableName)) {
         Put put = new Put(ROW);
         put.addColumn(FAMILY, QUALIFIER, VALUE);
         t.put(put);
@@ -752,10 +729,10 @@ public class FromClientSide3TestBase {
     });
   }
 
-  @Test
+  @TestTemplate
   public void testRowMutationsWithPreBatchMutate() throws Exception {
     testPreBatchMutate(tableName, () -> {
-      try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
+      try (Connection conn = getConnection(); Table t = conn.getTable(tableName)) {
         RowMutations rm = new RowMutations(ROW, 1);
         Put put = new Put(ROW);
         put.addColumn(FAMILY, QUALIFIER, VALUE);
@@ -771,36 +748,37 @@ public class FromClientSide3TestBase {
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
       .setCoprocessor(WaitingForScanObserver.class.getName()).build();
-    TEST_UTIL.getAdmin().createTable(tableDescriptor);
-    // Don't use waitTableAvailable(), because the scanner will mess up the co-processor
+    try (Connection conn = getConnection(); Admin admin = conn.getAdmin()) {
+      admin.createTable(tableDescriptor);
+      // Don't use waitTableAvailable(), because the scanner will mess up the co-processor
 
-    ExecutorService service = Executors.newFixedThreadPool(2);
-    service.execute(rn);
-    final List<Cell> cells = new ArrayList<>();
-    service.execute(() -> {
-      try {
-        // waiting for update.
-        TimeUnit.SECONDS.sleep(3);
-        try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
-          Scan scan = new Scan();
-          try (ResultScanner scanner = t.getScanner(scan)) {
-            for (Result r : scanner) {
-              cells.addAll(Arrays.asList(r.rawCells()));
+      ExecutorService service = Executors.newFixedThreadPool(2);
+      service.execute(rn);
+      final List<Cell> cells = new ArrayList<>();
+      service.execute(() -> {
+        try {
+          // waiting for update.
+          TimeUnit.SECONDS.sleep(3);
+          try (Table t = conn.getTable(tableName)) {
+            Scan scan = new Scan();
+            try (ResultScanner scanner = t.getScanner(scan)) {
+              for (Result r : scanner) {
+                cells.addAll(Arrays.asList(r.rawCells()));
+              }
             }
           }
+        } catch (IOException | InterruptedException ex) {
+          throw new RuntimeException(ex);
         }
-      } catch (IOException | InterruptedException ex) {
-        throw new RuntimeException(ex);
-      }
-    });
-    service.shutdown();
-    service.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
-    assertEquals(0, cells.size(), "The write is blocking by RegionObserver#postBatchMutate"
-      + ", so the data is invisible to reader");
-    TEST_UTIL.deleteTable(tableName);
+      });
+      service.shutdown();
+      service.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+      assertEquals(0, cells.size(), "The write is blocking by RegionObserver#postBatchMutate"
+        + ", so the data is invisible to reader");
+    }
   }
 
-  @Test
+  @TestTemplate
   public void testLockLeakWithDelta() throws Exception, Throwable {
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
@@ -810,7 +788,7 @@ public class FromClientSide3TestBase {
     TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
 
     // new a connection for lower retry number.
-    Configuration copy = new Configuration(TEST_UTIL.getConfiguration());
+    Configuration copy = getClientConf();
     copy.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     try (Connection con = ConnectionFactory.createConnection(copy)) {
       HRegion region = (HRegion) find(tableName);
@@ -855,7 +833,7 @@ public class FromClientSide3TestBase {
     assertEquals(0, readLockCount);
   }
 
-  @Test
+  @TestTemplate
   public void testMultiRowMutations() throws Exception, Throwable {
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
@@ -866,7 +844,7 @@ public class FromClientSide3TestBase {
     TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
 
     // new a connection for lower retry number.
-    Configuration copy = new Configuration(TEST_UTIL.getConfiguration());
+    Configuration copy = getClientConf();
     copy.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     try (Connection con = ConnectionFactory.createConnection(copy)) {
       byte[] row = Bytes.toBytes("ROW-0");
@@ -953,10 +931,11 @@ public class FromClientSide3TestBase {
    * disobey the multi version concurrency control rules. This test case is to reproduce this
    * scenario.
    */
-  @Test
+  @TestTemplate
   public void testMVCCUsingMVCCPreAssign() throws IOException, InterruptedException {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       // put two row first to init the scanner
       Put put = new Put(Bytes.toBytes("0"));
       put.addColumn(FAMILY, Bytes.toBytes(""), Bytes.toBytes("0"));
@@ -967,40 +946,38 @@ public class FromClientSide3TestBase {
       Scan scan = new Scan();
       scan.setTimeRange(0, Long.MAX_VALUE);
       scan.setCaching(1);
-      ResultScanner scanner = table.getScanner(scan);
-      int rowNum = scanner.next() != null ? 1 : 0;
-      // the started scanner shouldn't see the rows put below
-      for (int i = 1; i < 1000; i++) {
-        put = new Put(Bytes.toBytes(String.valueOf(i)));
-        put.setDurability(Durability.ASYNC_WAL);
-        put.addColumn(FAMILY, Bytes.toBytes(""), Bytes.toBytes(i));
-        table.put(put);
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        int rowNum = scanner.next() != null ? 1 : 0;
+        // the started scanner shouldn't see the rows put below
+        for (int i = 1; i < 1000; i++) {
+          put = new Put(Bytes.toBytes(String.valueOf(i)));
+          put.setDurability(Durability.ASYNC_WAL);
+          put.addColumn(FAMILY, Bytes.toBytes(""), Bytes.toBytes(i));
+          table.put(put);
+        }
+        rowNum += Iterables.size(scanner);
+        // scanner should only see two rows
+        assertEquals(2, rowNum);
       }
-      for (Result result : scanner) {
-        rowNum++;
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        int rowNum = Iterables.size(scanner);
+        // the new scanner should see all rows
+        assertEquals(1001, rowNum);
       }
-      // scanner should only see two rows
-      assertEquals(2, rowNum);
-      scanner = table.getScanner(scan);
-      rowNum = 0;
-      for (Result result : scanner) {
-        rowNum++;
-      }
-      // the new scanner should see all rows
-      assertEquals(1001, rowNum);
     }
+
   }
 
-  @Test
+  @TestTemplate
   public void testPutThenGetWithMultipleThreads() throws Exception {
     final int THREAD_NUM = 20;
     final int ROUND_NUM = 10;
     for (int round = 0; round < ROUND_NUM; round++) {
       ArrayList<Thread> threads = new ArrayList<>(THREAD_NUM);
       final AtomicInteger successCnt = new AtomicInteger(0);
-      try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
-        TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-
+      TEST_UTIL.createTable(tableName, FAMILY);
+      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+      try (Connection conn = getConnection(); Table ht = conn.getTable(tableName)) {
         for (int i = 0; i < THREAD_NUM; i++) {
           final int index = i;
           Thread t = new Thread(new Runnable() {
@@ -1037,8 +1014,9 @@ public class FromClientSide3TestBase {
           t.join();
         }
         assertEquals(THREAD_NUM, successCnt.get(), "Not equal in round " + round);
+      } finally {
+        TEST_UTIL.deleteTable(tableName);
       }
-      TEST_UTIL.deleteTable(tableName);
     }
   }
 
@@ -1121,7 +1099,7 @@ public class FromClientSide3TestBase {
     return value;
   }
 
-  @Test
+  @TestTemplate
   public void testScanWithBatchSizeReturnIncompleteCells()
     throws IOException, InterruptedException {
     TableDescriptor hd = TableDescriptorBuilder.newBuilder(tableName)

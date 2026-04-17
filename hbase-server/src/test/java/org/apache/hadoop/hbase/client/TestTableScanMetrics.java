@@ -24,7 +24,12 @@ import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.RPC_RETRIES_MET
 import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.RPC_SCAN_PROCESSING_TIME_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.RPC_SCAN_QUEUE_WAIT_TIME_METRIC_NAME;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -40,8 +45,9 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -53,20 +59,16 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FutureUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
-@Category({ ClientTests.class, LargeTests.class })
-public class TestTableScanMetrics extends FromClientSideBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableScanMetrics.class);
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: scanner={0}")
+public class TestTableScanMetrics {
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -85,19 +87,18 @@ public class TestTableScanMetrics extends FromClientSideBase {
 
   private static Connection CONN;
 
-  @Parameters(name = "{index}: scanner={0}")
-  public static List<Object[]> params() {
-    return Arrays.asList(new Object[] { "ForwardScanner", new Scan() },
-      new Object[] { "ReverseScanner", new Scan().setReversed(true) });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of("ForwardScanner", new Scan()),
+      Arguments.of("ReverseScanner", new Scan().setReversed(true)));
   }
 
-  @Parameter(0)
-  public String scannerName;
+  private Scan originalScan;
 
-  @Parameter(1)
-  public Scan originalScan;
+  public TestTableScanMetrics(String scannerName, Scan originalScan) {
+    this.originalScan = originalScan;
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     // Start the minicluster
     TEST_UTIL.startMiniCluster(2);
@@ -112,7 +113,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
     NUM_REGIONS = TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).size();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -135,150 +136,147 @@ public class TestTableScanMetrics extends FromClientSideBase {
     ScanMetrics scanMetrics;
     try (Table table = CONN.getTable(TABLE_NAME); ResultScanner scanner = table.getScanner(scan)) {
       for (Result result : scanner) {
-        Assert.assertFalse(result.isEmpty());
+        assertFalse(result.isEmpty());
         countOfRows++;
       }
       scanMetrics = scanner.getScanMetrics();
     }
-    Assert.assertEquals(expectedCount, countOfRows);
+    assertEquals(expectedCount, countOfRows);
     return scanMetrics;
   }
 
-  @Test
+  @TestTemplate
   public void testScanMetricsDisabled() throws Exception {
     Scan scan = generateScan(Bytes.toBytes("xxx1"), Bytes.toBytes("zzz1"));
     ScanMetrics scanMetrics = assertScannedRowsAndGetScanMetrics(scan, 3);
-    Assert.assertNull(scanMetrics);
+    assertNull(scanMetrics);
   }
 
-  @Test
+  @TestTemplate
   public void testScanMetricsWithScanMetricByRegionDisabled() throws Exception {
     Scan scan = generateScan(Bytes.toBytes("xxx1"), Bytes.toBytes("zzz1"));
     scan.setScanMetricsEnabled(true);
     int expectedRowsScanned = 3;
     ScanMetrics scanMetrics = assertScannedRowsAndGetScanMetrics(scan, expectedRowsScanned);
-    Assert.assertNotNull(scanMetrics);
+    assertNotNull(scanMetrics);
     Map<String, Long> metricsMap = scanMetrics.getMetricsMap(false);
     // The test setup is such that we have 1 row per region in the scan range
-    Assert.assertEquals(expectedRowsScanned, scanMetrics.countOfRegions.get());
-    Assert.assertEquals(expectedRowsScanned,
-      (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
-    Assert.assertTrue(scanMetrics.collectMetricsByRegion().isEmpty());
+    assertEquals(expectedRowsScanned, scanMetrics.countOfRegions.get());
+    assertEquals(expectedRowsScanned, (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
+    assertTrue(scanMetrics.collectMetricsByRegion().isEmpty());
   }
 
-  @Test
+  @TestTemplate
   public void testScanMetricsResetWithScanMetricsByRegionDisabled() throws Exception {
     Scan scan = generateScan(Bytes.toBytes("xxx1"), Bytes.toBytes("zzz1"));
     scan.setScanMetricsEnabled(true);
     int expectedRowsScanned = 3;
     ScanMetrics scanMetrics = assertScannedRowsAndGetScanMetrics(scan, expectedRowsScanned);
-    Assert.assertNotNull(scanMetrics);
+    assertNotNull(scanMetrics);
     // By default counters are collected with reset as true
     Map<String, Long> metricsMap = scanMetrics.getMetricsMap();
-    Assert.assertEquals(expectedRowsScanned, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
-    Assert.assertEquals(expectedRowsScanned,
-      (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
+    assertEquals(expectedRowsScanned, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
+    assertEquals(expectedRowsScanned, (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
     // Subsequent call to get scan metrics map should show all counters as 0
-    Assert.assertEquals(0, scanMetrics.countOfRegions.get());
-    Assert.assertEquals(0, scanMetrics.countOfRowsScanned.get());
+    assertEquals(0, scanMetrics.countOfRegions.get());
+    assertEquals(0, scanMetrics.countOfRowsScanned.get());
   }
 
-  @Test
+  @TestTemplate
   public void testScanMetricsByRegionForSingleRegionScan() throws Exception {
     Scan scan = generateScan(Bytes.toBytes("xxx1"), Bytes.toBytes("xxx1"));
     scan.setEnableScanMetricsByRegion(true);
     int expectedRowsScanned = 1;
     ScanMetrics scanMetrics = assertScannedRowsAndGetScanMetrics(scan, expectedRowsScanned);
-    Assert.assertNotNull(scanMetrics);
+    assertNotNull(scanMetrics);
     Map<String, Long> metricsMap = scanMetrics.getMetricsMap(false);
-    Assert.assertEquals(expectedRowsScanned, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
-    Assert.assertEquals(expectedRowsScanned,
-      (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
+    assertEquals(expectedRowsScanned, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
+    assertEquals(expectedRowsScanned, (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
       scanMetrics.collectMetricsByRegion(false);
-    Assert.assertEquals(expectedRowsScanned, scanMetricsByRegion.size());
+    assertEquals(expectedRowsScanned, scanMetricsByRegion.size());
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
       .entrySet()) {
       ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
       metricsMap = entry.getValue();
-      Assert.assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
-      Assert.assertNotNull(scanMetricsRegionInfo.getServerName());
+      assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
+      assertNotNull(scanMetricsRegionInfo.getServerName());
       // As we are scanning single row so, overall scan metrics will match per region scan metrics
-      Assert.assertEquals(expectedRowsScanned, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
-      Assert.assertEquals(expectedRowsScanned,
+      assertEquals(expectedRowsScanned, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
+      assertEquals(expectedRowsScanned,
         (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
     }
   }
 
-  @Test
+  @TestTemplate
   public void testScanMetricsByRegionForMultiRegionScan() throws Exception {
     Scan scan = generateScan(EMPTY_BYTE_ARRAY, EMPTY_BYTE_ARRAY);
     scan.setEnableScanMetricsByRegion(true);
     int expectedRowsScanned = 3;
     ScanMetrics scanMetrics = assertScannedRowsAndGetScanMetrics(scan, expectedRowsScanned);
-    Assert.assertNotNull(scanMetrics);
-    Assert.assertEquals(NUM_REGIONS, scanMetrics.countOfRegions.get());
-    Assert.assertEquals(expectedRowsScanned, scanMetrics.countOfRowsScanned.get());
+    assertNotNull(scanMetrics);
+    assertEquals(NUM_REGIONS, scanMetrics.countOfRegions.get());
+    assertEquals(expectedRowsScanned, scanMetrics.countOfRowsScanned.get());
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
       scanMetrics.collectMetricsByRegion(false);
-    Assert.assertEquals(NUM_REGIONS, scanMetricsByRegion.size());
+    assertEquals(NUM_REGIONS, scanMetricsByRegion.size());
     int rowsScannedAcrossAllRegions = 0;
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
       .entrySet()) {
       ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
       Map<String, Long> metricsMap = entry.getValue();
-      Assert.assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
-      Assert.assertNotNull(scanMetricsRegionInfo.getServerName());
-      Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
+      assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
+      assertNotNull(scanMetricsRegionInfo.getServerName());
+      assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
       if (metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME) == 1) {
         rowsScannedAcrossAllRegions++;
       } else {
         assertEquals(0, (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
       }
     }
-    Assert.assertEquals(expectedRowsScanned, rowsScannedAcrossAllRegions);
+    assertEquals(expectedRowsScanned, rowsScannedAcrossAllRegions);
   }
 
-  @Test
+  @TestTemplate
   public void testScanMetricsByRegionReset() throws Exception {
     Scan scan = generateScan(Bytes.toBytes("xxx1"), Bytes.toBytes("zzz1"));
     scan.setEnableScanMetricsByRegion(true);
     int expectedRowsScanned = 3;
     ScanMetrics scanMetrics = assertScannedRowsAndGetScanMetrics(scan, expectedRowsScanned);
-    Assert.assertNotNull(scanMetrics);
+    assertNotNull(scanMetrics);
 
     // Retrieve scan metrics by region as a map and reset
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
       scanMetrics.collectMetricsByRegion();
     // We scan 1 row per region
-    Assert.assertEquals(expectedRowsScanned, scanMetricsByRegion.size());
+    assertEquals(expectedRowsScanned, scanMetricsByRegion.size());
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
       .entrySet()) {
       ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
       Map<String, Long> metricsMap = entry.getValue();
-      Assert.assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
-      Assert.assertNotNull(scanMetricsRegionInfo.getServerName());
-      Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
-      Assert.assertEquals(1, (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
+      assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
+      assertNotNull(scanMetricsRegionInfo.getServerName());
+      assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
+      assertEquals(1, (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
     }
 
     // Scan metrics have already been reset and now all counters should be 0
     scanMetricsByRegion = scanMetrics.collectMetricsByRegion(false);
     // Size of map should be same as earlier
-    Assert.assertEquals(expectedRowsScanned, scanMetricsByRegion.size());
+    assertEquals(expectedRowsScanned, scanMetricsByRegion.size());
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
       .entrySet()) {
       ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
       Map<String, Long> metricsMap = entry.getValue();
-      Assert.assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
-      Assert.assertNotNull(scanMetricsRegionInfo.getServerName());
+      assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
+      assertNotNull(scanMetricsRegionInfo.getServerName());
       // Counters should have been reset to 0
-      Assert.assertEquals(0, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
-      Assert.assertEquals(0, (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
+      assertEquals(0, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
+      assertEquals(0, (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
     }
   }
 
-  @Test
+  @TestTemplate
   public void testConcurrentUpdatesAndResetOfScanMetricsByRegion() throws Exception {
     ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
     TableName tableName = TableName.valueOf(TestTableScanMetrics.class.getSimpleName()
@@ -300,7 +298,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
         Runnable tableScanner = new Runnable() {
           public void run() {
             for (Result r : rs) {
-              Assert.assertFalse(r.isEmpty());
+              assertFalse(r.isEmpty());
               rowsScanned.incrementAndGet();
             }
             latch.countDown();
@@ -314,7 +312,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
         // Merge leftover scan metrics
         mergeScanMetricsByRegion(scanMetrics.collectMetricsByRegion(),
           concurrentScanMetricsByRegion);
-        Assert.assertEquals(HBaseTestingUtil.ROWS.length, rowsScanned.get());
+        assertEquals(HBaseTestingUtil.ROWS.length, rowsScanned.get());
       }
 
       Map<ScanMetricsRegionInfo, Map<String, Long>> expectedScanMetricsByRegion;
@@ -328,10 +326,10 @@ public class TestTableScanMetrics extends FromClientSideBase {
         ScanMetrics scanMetrics = rs.getScanMetrics();
         int rowsScanned = 0;
         for (Result r : rs) {
-          Assert.assertFalse(r.isEmpty());
+          assertFalse(r.isEmpty());
           rowsScanned++;
         }
-        Assert.assertEquals(HBaseTestingUtil.ROWS.length, rowsScanned);
+        assertEquals(HBaseTestingUtil.ROWS.length, rowsScanned);
         expectedScanMetricsByRegion = scanMetrics.collectMetricsByRegion();
         for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : expectedScanMetricsByRegion
           .entrySet()) {
@@ -341,24 +339,23 @@ public class TestTableScanMetrics extends FromClientSideBase {
           metricsMap.remove(MILLIS_BETWEEN_NEXTS_METRIC_NAME);
           metricsMap.remove(RPC_SCAN_PROCESSING_TIME_METRIC_NAME);
           metricsMap.remove(RPC_SCAN_QUEUE_WAIT_TIME_METRIC_NAME);
-          Assert.assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
-          Assert.assertNotNull(scanMetricsRegionInfo.getServerName());
-          Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
+          assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
+          assertNotNull(scanMetricsRegionInfo.getServerName());
+          assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
           // Each region will have 26 * 26 + 26 + 1 rows except last region which will have 1 row
           long rowsScannedFromMetrics = metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME);
-          Assert.assertTrue(
-            rowsScannedFromMetrics == 1 || rowsScannedFromMetrics == (26 * 26 + 26 + 1));
+          assertTrue(rowsScannedFromMetrics == 1 || rowsScannedFromMetrics == (26 * 26 + 26 + 1));
         }
       }
 
       // Assert on scan metrics by region
-      Assert.assertEquals(expectedScanMetricsByRegion, concurrentScanMetricsByRegion);
+      assertEquals(expectedScanMetricsByRegion, concurrentScanMetricsByRegion);
     } finally {
       TEST_UTIL.deleteTable(tableName);
     }
   }
 
-  @Test
+  @TestTemplate
   public void testRPCCallProcessingAndQueueWaitTimeMetrics() throws Exception {
     final int numThreads = 20;
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -367,7 +364,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
       HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
     // Keep the number of threads to be high enough for RPC calls to queue up. For now going with 6
     // times the handler count.
-    Assert.assertTrue(numThreads > 6 * handlerCount);
+    assertTrue(numThreads > 6 * handlerCount);
     ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(numThreads);
     TableName tableName = TableName.valueOf(
       TestTableScanMetrics.class.getSimpleName() + "_testRPCCallProcessingAndQueueWaitTimeMetrics");
@@ -387,7 +384,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
               try (ResultScanner rs = table.getScanner(scan)) {
                 Result r;
                 while ((r = rs.next()) != null) {
-                  Assert.assertFalse(r.isEmpty());
+                  assertFalse(r.isEmpty());
                 }
                 ScanMetrics scanMetrics = rs.getScanMetrics();
                 Map<String, Long> metricsMap = scanMetrics.getMetricsMap();
@@ -404,14 +401,14 @@ public class TestTableScanMetrics extends FromClientSideBase {
       latch.await();
       executor.shutdown();
       executor.awaitTermination(10, TimeUnit.SECONDS);
-      Assert.assertTrue(totalScanRpcTime.get() > 0);
-      Assert.assertTrue(totalQueueWaitTime.get() > 0);
+      assertTrue(totalScanRpcTime.get() > 0);
+      assertTrue(totalQueueWaitTime.get() > 0);
     } finally {
       TEST_UTIL.deleteTable(tableName);
     }
   }
 
-  @Test
+  @TestTemplate
   public void testScanMetricsByRegionWithRegionMove() throws Exception {
     TableName tableName = TableName.valueOf(
       TestTableScanMetrics.class.getSimpleName() + "testScanMetricsByRegionWithRegionMove");
@@ -446,7 +443,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
             isFirstScanOfRegion = false;
           }
         }
-        Assert.assertNotNull(movedRegion);
+        assertNotNull(movedRegion);
 
         scanMetrics = rs.getScanMetrics();
         Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
@@ -455,7 +452,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
         Set<ServerName> serversForMovedRegion = new HashSet<>();
 
         // 2 regions scanned with two entries for first region as it moved in b/w scan
-        Assert.assertEquals(3, scanMetricsByRegion.size());
+        assertEquals(3, scanMetricsByRegion.size());
         for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
           .entrySet()) {
           ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
@@ -465,20 +462,20 @@ public class TestTableScanMetrics extends FromClientSideBase {
             actualCountOfRowsScannedInMovedRegion += rowsScanned;
             serversForMovedRegion.add(scanMetricsRegionInfo.getServerName());
 
-            Assert.assertEquals(1, (long) metricsMap.get(RPC_RETRIES_METRIC_NAME));
+            assertEquals(1, (long) metricsMap.get(RPC_RETRIES_METRIC_NAME));
           }
-          Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
+          assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
         }
-        Assert.assertEquals(expectedCountOfRowsScannedInMovedRegion,
+        assertEquals(expectedCountOfRowsScannedInMovedRegion,
           actualCountOfRowsScannedInMovedRegion);
-        Assert.assertEquals(2, serversForMovedRegion.size());
+        assertEquals(2, serversForMovedRegion.size());
       }
     } finally {
       TEST_UTIL.deleteTable(tableName);
     }
   }
 
-  @Test
+  @TestTemplate
   public void testScanMetricsByRegionWithRegionSplit() throws Exception {
     TableName tableName = TableName.valueOf(
       TestTableScanMetrics.class.getSimpleName() + "testScanMetricsByRegionWithRegionSplit");
@@ -506,7 +503,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
 
       try (ResultScanner rs = table.getScanner(scan)) {
         boolean isFirstScanOfRegion = true;
-        for (Result r : rs) {
+        while (rs.next() != null) {
           if (isFirstScanOfRegion) {
             splitRegion(tableName, bbb, bmw)
               .forEach(region -> expectedSplitRegionRes.add(Bytes.toString(region)));
@@ -523,7 +520,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
         Set<String> splitRegionRes = new HashSet<>();
 
         // 1 entry each for parent and two child regions
-        Assert.assertEquals(3, scanMetricsByRegion.size());
+        assertEquals(3, scanMetricsByRegion.size());
         for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
           .entrySet()) {
           ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
@@ -536,18 +533,18 @@ public class TestTableScanMetrics extends FromClientSideBase {
             rpcRetiesCount++;
           }
 
-          Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
+          assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
         }
-        Assert.assertEquals(expectedCountOfRowsScannedInRegion, actualCountOfRowsScannedInRegion);
-        Assert.assertEquals(2, rpcRetiesCount);
-        Assert.assertEquals(expectedSplitRegionRes, splitRegionRes);
+        assertEquals(expectedCountOfRowsScannedInRegion, actualCountOfRowsScannedInRegion);
+        assertEquals(2, rpcRetiesCount);
+        assertEquals(expectedSplitRegionRes, splitRegionRes);
       }
     } finally {
       TEST_UTIL.deleteTable(tableName);
     }
   }
 
-  @Test
+  @TestTemplate
   public void testScanMetricsByRegionWithRegionMerge() throws Exception {
     TableName tableName = TableName.valueOf(
       TestTableScanMetrics.class.getSimpleName() + "testScanMetricsByRegionWithRegionMerge");
@@ -576,7 +573,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
 
       try (ResultScanner rs = table.getScanner(scan)) {
         boolean isFirstScanOfRegion = true;
-        for (Result r : rs) {
+        while (rs.next() != null) {
           if (isFirstScanOfRegion) {
             List<byte[]> out = mergeRegions(tableName, bbb, ccc);
             // Entry with index 2 is the encoded region name of merged region
@@ -594,7 +591,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
         boolean containsMergedRegionInScanMetrics = false;
 
         // 1 entry each for old region from which first row was scanned and new merged region
-        Assert.assertEquals(2, scanMetricsByRegion.size());
+        assertEquals(2, scanMetricsByRegion.size());
         for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
           .entrySet()) {
           ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
@@ -606,12 +603,12 @@ public class TestTableScanMetrics extends FromClientSideBase {
             containsMergedRegionInScanMetrics = true;
           }
 
-          Assert.assertEquals(1, (long) metricsMap.get(RPC_RETRIES_METRIC_NAME));
-          Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
+          assertEquals(1, (long) metricsMap.get(RPC_RETRIES_METRIC_NAME));
+          assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
         }
-        Assert.assertEquals(expectedCountOfRowsScannedInRegions, actualCountOfRowsScannedInRegions);
-        Assert.assertTrue(expectedMergeRegionsRes.containsAll(mergeRegionsRes));
-        Assert.assertTrue(containsMergedRegionInScanMetrics);
+        assertEquals(expectedCountOfRowsScannedInRegions, actualCountOfRowsScannedInRegions);
+        assertTrue(expectedMergeRegionsRes.containsAll(mergeRegionsRes));
+        assertTrue(containsMergedRegionInScanMetrics);
       }
     } finally {
       TEST_UTIL.deleteTable(tableName);
@@ -679,7 +676,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
     ServerName finalServerName = regionLocator.getRegionLocation(startRow, true).getServerName();
 
     // Assert that region actually moved
-    Assert.assertNotEquals(initialServerName, finalServerName);
+    assertNotEquals(initialServerName, finalServerName);
     return encodedRegionName;
   }
 
@@ -703,8 +700,8 @@ public class TestTableScanMetrics extends FromClientSideBase {
     ServerName initialBottomServerName = bottomLoc.getServerName();
 
     // Assert region is ready for split
-    Assert.assertEquals(initialTopServerName, initialBottomServerName);
-    Assert.assertEquals(initialEncodedTopRegionName, initialEncodedBottomRegionName);
+    assertEquals(initialTopServerName, initialBottomServerName);
+    assertEquals(initialEncodedTopRegionName, initialEncodedBottomRegionName);
 
     FutureUtils.get(admin.splitRegionAsync(initialEncodedTopRegionName, splitKey));
 
@@ -714,9 +711,9 @@ public class TestTableScanMetrics extends FromClientSideBase {
     byte[] finalEncodedBottomRegionName = bottomLoc.getRegion().getEncodedNameAsBytes();
 
     // Assert that region split is complete
-    Assert.assertNotEquals(finalEncodedTopRegionName, finalEncodedBottomRegionName);
-    Assert.assertNotEquals(initialEncodedTopRegionName, finalEncodedBottomRegionName);
-    Assert.assertNotEquals(initialEncodedBottomRegionName, finalEncodedTopRegionName);
+    assertNotEquals(finalEncodedTopRegionName, finalEncodedBottomRegionName);
+    assertNotEquals(initialEncodedTopRegionName, finalEncodedBottomRegionName);
+    assertNotEquals(initialEncodedBottomRegionName, finalEncodedTopRegionName);
 
     return Arrays.asList(initialEncodedTopRegionName, finalEncodedTopRegionName,
       finalEncodedBottomRegionName);
@@ -743,8 +740,8 @@ public class TestTableScanMetrics extends FromClientSideBase {
     String initialBottomRegionStartKey = Bytes.toString(bottomLoc.getRegion().getStartKey());
 
     // Assert that regions are ready to be merged
-    Assert.assertNotEquals(initialEncodedTopRegionName, initialEncodedBottomRegionName);
-    Assert.assertEquals(initialBottomRegionStartKey, initialTopRegionEndKey);
+    assertNotEquals(initialEncodedTopRegionName, initialEncodedBottomRegionName);
+    assertEquals(initialBottomRegionStartKey, initialTopRegionEndKey);
 
     FutureUtils.get(admin.mergeRegionsAsync(
       new byte[][] { initialEncodedTopRegionName, initialEncodedBottomRegionName }, false));
@@ -755,9 +752,9 @@ public class TestTableScanMetrics extends FromClientSideBase {
     byte[] finalEncodedBottomRegionName = bottomLoc.getRegion().getEncodedNameAsBytes();
 
     // Assert regions have been merges successfully
-    Assert.assertEquals(finalEncodedTopRegionName, finalEncodedBottomRegionName);
-    Assert.assertNotEquals(initialEncodedTopRegionName, finalEncodedTopRegionName);
-    Assert.assertNotEquals(initialEncodedBottomRegionName, finalEncodedTopRegionName);
+    assertEquals(finalEncodedTopRegionName, finalEncodedBottomRegionName);
+    assertNotEquals(initialEncodedTopRegionName, finalEncodedTopRegionName);
+    assertNotEquals(initialEncodedBottomRegionName, finalEncodedTopRegionName);
 
     return Arrays.asList(initialEncodedTopRegionName, initialEncodedBottomRegionName,
       finalEncodedTopRegionName);
