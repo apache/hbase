@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
@@ -36,25 +36,20 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test {@link org.apache.hadoop.hbase.TestMetaTableForReplica}.
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 @SuppressWarnings("deprecation")
 public class TestMetaTableForReplica {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetaTableForReplica.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaTableForReplica.class);
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -62,10 +57,7 @@ public class TestMetaTableForReplica {
   private static Field metaTableName;
   private static Object originalMetaTableName;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     Configuration c = UTIL.getConfiguration();
     // quicker heartbeat interval for faster DN death notification
@@ -79,7 +71,7 @@ public class TestMetaTableForReplica {
     originalMetaTableName = metaTableName.get(null);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     connection.close();
     UTIL.shutdownMiniCluster();
@@ -109,16 +101,15 @@ public class TestMetaTableForReplica {
   }
 
   private void testGetNonExistentRegionFromMetaFromReplica() throws IOException {
-    final String name = this.name.getMethodName();
-    LOG.info("Started " + name);
+    LOG.info("Started testGetNonExistentRegionFromMetaFromReplica");
     Pair<RegionInfo, ServerName> pair =
       MetaTableAccessor.getRegion(connection, Bytes.toBytes("nonexistent-region"));
     assertNull(pair);
-    LOG.info("Finished " + name);
+    LOG.info("Finished testGetNonExistentRegionFromMetaFromReplica");
   }
 
   private void testGetExistentRegionFromMetaFromReplica() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf("testMetaTableNameForReplicaWithoutSuffix");
     LOG.info("Started " + tableName);
     UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
     assertEquals(1, MetaTableAccessor.getTableRegions(connection, tableName).size());
@@ -139,12 +130,12 @@ public class TestMetaTableForReplica {
     TableName defaultMetaName = TableName.getDefaultNameOfMetaForReplica();
 
     // The current meta table name is not the default one.
-    assertNotEquals("META_TABLE_NAME should not be the default. ", defaultMetaName,
-      currentMetaName);
+    assertNotEquals(defaultMetaName, currentMetaName,
+      "META_TABLE_NAME should not be the default. ");
 
     // The current meta table name has the configured suffix.
-    assertEquals("META_TABLE_NAME should have the configured suffix", expectedMetaTableName,
-      currentMetaName);
+    assertEquals(expectedMetaTableName, currentMetaName,
+      "META_TABLE_NAME should have the configured suffix");
 
     // restore default value of META_TABLE_NAME
     setDefaultMetaTableName();

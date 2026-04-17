@@ -17,21 +17,19 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.WriteAttemptedOnReadOnlyClusterException;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 
@@ -40,11 +38,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
 // Tests methods of Region Server Observer which are implemented in ReadOnlyController,
 // by mocking the coprocessor environment and dependencies
-@Category({ SecurityTests.class, SmallTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestReadOnlyControllerRegionServerObserver {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReadOnlyControllerRegionServerObserver.class);
 
   RegionServerReadOnlyController regionServerReadOnlyController;
 
@@ -53,7 +49,7 @@ public class TestReadOnlyControllerRegionServerObserver {
   AdminProtos.WALEntry walEntry;
   Mutation mutation;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     regionServerReadOnlyController = new RegionServerReadOnlyController();
 
@@ -67,7 +63,7 @@ public class TestReadOnlyControllerRegionServerObserver {
     mutation = mock(Mutation.class);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
 
   }
