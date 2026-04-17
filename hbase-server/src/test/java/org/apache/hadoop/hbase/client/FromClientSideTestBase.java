@@ -58,7 +58,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class FromClientSideTestBase {
-  private static final Logger LOG = LoggerFactory.getLogger(FromClientSideBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FromClientSideTestBase.class);
   protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   static byte[] ROW = Bytes.toBytes("testRow");
   static byte[] FAMILY = Bytes.toBytes("testFamily");
