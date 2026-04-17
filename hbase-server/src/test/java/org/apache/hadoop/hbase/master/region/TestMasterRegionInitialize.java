@@ -116,15 +116,15 @@ public class TestMasterRegionInitialize extends MasterRegionTestBase {
   @Test
   public void testMasterRegionDirSuffix() {
     String currentMasterRegionDirName = MasterRegionFactory.getMasterRegionDirName();
-    assertEquals("Default master region directory should be MasterData", "MasterData",
-      currentMasterRegionDirName);
+    assertEquals("MasterData", currentMasterRegionDirName,
+      "Default master region directory should be MasterData");
 
     Configuration confWithSuffix = HBaseConfiguration.create();
     String suffix = "replica1";
     confWithSuffix.set(HConstants.HBASE_META_TABLE_SUFFIX, suffix);
     String dirNameWithSuffix = MasterRegionFactory.initMasterRegionDirName(confWithSuffix);
     String expectedDirName = "MasterData_" + suffix;
-    assertEquals("Directory name should have suffix when configured", expectedDirName,
-      dirNameWithSuffix);
+    assertEquals(expectedDirName, dirNameWithSuffix,
+      "Directory name should have suffix when configured");
   }
 }

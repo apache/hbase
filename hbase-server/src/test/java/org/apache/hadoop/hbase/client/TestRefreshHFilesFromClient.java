@@ -17,38 +17,35 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.TestRefreshHFilesBase;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestRefreshHFilesFromClient extends TestRefreshHFilesBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRefreshHFilesFromClient.class);
 
   private static final TableName TEST_NONEXISTENT_TABLE =
     TableName.valueOf("testRefreshHFilesNonExistentTable");
   private static final String TEST_NONEXISTENT_NAMESPACE = "testRefreshHFilesNonExistentNamespace";
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     baseSetup(false);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     baseTearDown();
   }
@@ -63,7 +60,7 @@ public class TestRefreshHFilesFromClient extends TestRefreshHFilesBase {
       Long procId = admin.refreshHFiles(TEST_TABLE);
       assertTrue(procId >= 0);
     } catch (Exception e) {
-      Assert.fail("RefreshHFilesForTable Should Not Throw Exception: " + e);
+      fail("RefreshHFilesForTable Should Not Throw Exception: " + e);
       throw new RuntimeException(e);
     } finally {
       // Delete table name post test execution
@@ -72,14 +69,13 @@ public class TestRefreshHFilesFromClient extends TestRefreshHFilesBase {
   }
 
   // Not creating table hence refresh should throw exception
-  @Test(expected = TableNotFoundException.class)
-  public void testRefreshHFilesForNonExistentTable() throws Exception {
-    // RefreshHFiles for table
-    admin.refreshHFiles(TEST_NONEXISTENT_TABLE);
+  @Test
+  public void testRefreshHFilesForNonExistentTable() {
+    assertThrows(TableNotFoundException.class, () -> admin.refreshHFiles(TEST_NONEXISTENT_TABLE));
   }
 
   @Test
-  public void testRefreshHFilesForNamespace() throws Exception {
+  public void testRefreshHFilesForNamespace() {
     try {
       createNamespace(TEST_NAMESPACE);
 
@@ -91,7 +87,7 @@ public class TestRefreshHFilesFromClient extends TestRefreshHFilesBase {
       assertTrue(procId >= 0);
 
     } catch (Exception e) {
-      Assert.fail("RefreshHFilesForAllNamespace Should Not Throw Exception: " + e);
+      fail("RefreshHFilesForAllNamespace Should Not Throw Exception: " + e);
       throw new RuntimeException(e);
     } finally {
       // Delete namespace post test execution
@@ -101,10 +97,11 @@ public class TestRefreshHFilesFromClient extends TestRefreshHFilesBase {
     }
   }
 
-  @Test(expected = NamespaceNotFoundException.class)
-  public void testRefreshHFilesForNonExistentNamespace() throws Exception {
+  @Test
+  public void testRefreshHFilesForNonExistentNamespace() {
     // RefreshHFiles for namespace
-    admin.refreshHFiles(TEST_NONEXISTENT_NAMESPACE);
+    assertThrows(NamespaceNotFoundException.class,
+      () -> admin.refreshHFiles(TEST_NONEXISTENT_NAMESPACE));
   }
 
   @Test
@@ -124,7 +121,7 @@ public class TestRefreshHFilesFromClient extends TestRefreshHFilesBase {
       assertTrue(procId >= 0);
 
     } catch (Exception e) {
-      Assert.fail("RefreshHFilesForAllTables Should Not Throw Exception: " + e);
+      fail("RefreshHFilesForAllTables Should Not Throw Exception: " + e);
       throw new RuntimeException(e);
     } finally {
       // Delete table name post test execution

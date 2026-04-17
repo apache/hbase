@@ -18,11 +18,10 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.assertProcNotFailed;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -32,25 +31,21 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRefreshMetaProcedure {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRefreshMetaProcedure.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private ProcedureExecutor<MasterProcedureEnv> procExecutor;
   List<RegionInfo> activeRegions;
   TableName tableName = TableName.valueOf("testRefreshMeta");
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     TEST_UTIL.getConfiguration().set("USE_META_REPLICAS", "false");
     TEST_UTIL.startMiniCluster();
@@ -64,7 +59,7 @@ public class TestRefreshMetaProcedure {
     assertFalse(activeRegions.isEmpty());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -81,9 +76,10 @@ public class TestRefreshMetaProcedure {
   public void testGetCurrentRegions() throws Exception {
     RefreshMetaProcedure procedure = new RefreshMetaProcedure(procExecutor.getEnvironment());
     List<RegionInfo> regions = procedure.getCurrentRegions(TEST_UTIL.getConnection());
-    assertFalse("Should have found regions in meta", regions.isEmpty());
-    assertTrue("Should include test table region",
-      regions.stream().anyMatch(r -> r.getTable().getNameAsString().equals("testRefreshMeta")));
+    assertFalse(regions.isEmpty(), "Should have found regions in meta");
+    assertTrue(
+      regions.stream().anyMatch(r -> r.getTable().getNameAsString().equals("testRefreshMeta")),
+      "Should include test table region");
   }
 
   @Test
@@ -92,13 +88,15 @@ public class TestRefreshMetaProcedure {
 
     List<RegionInfo> fsRegions = procedure.scanBackingStorage(TEST_UTIL.getConnection());
 
-    assertTrue("All regions from meta should be found in the storage",
-      activeRegions.stream().allMatch(reg -> fsRegions.stream()
-        .anyMatch(r -> r.getRegionNameAsString().equals(reg.getRegionNameAsString()))));
+    assertTrue(
+      activeRegions.stream()
+        .allMatch(reg -> fsRegions.stream()
+          .anyMatch(r -> r.getRegionNameAsString().equals(reg.getRegionNameAsString()))),
+      "All regions from meta should be found in the storage");
   }
 
   @Test
-  public void testHasBoundaryChanged() throws Exception {
+  public void testHasBoundaryChanged() {
     RefreshMetaProcedure procedure = new RefreshMetaProcedure(procExecutor.getEnvironment());
     RegionInfo region1 = RegionInfoBuilder.newBuilder(tableName)
       .setStartKey(Bytes.toBytes("start1")).setEndKey(Bytes.toBytes("end1")).build();
@@ -109,13 +107,13 @@ public class TestRefreshMetaProcedure {
     RegionInfo region3 = RegionInfoBuilder.newBuilder(tableName)
       .setStartKey(Bytes.toBytes("start1")).setEndKey(Bytes.toBytes("end2")).build();
 
-    assertTrue("Different start keys should have been detected",
-      procedure.hasBoundaryChanged(region1, region2));
+    assertTrue(procedure.hasBoundaryChanged(region1, region2),
+      "Different start keys should have been detected");
 
-    assertTrue("Different end keys should have been detected",
-      procedure.hasBoundaryChanged(region1, region3));
+    assertTrue(procedure.hasBoundaryChanged(region1, region3),
+      "Different end keys should have been detected");
 
-    assertFalse("Identical boundaries should not have been identified",
-      procedure.hasBoundaryChanged(region1, region1));
+    assertFalse(procedure.hasBoundaryChanged(region1, region1),
+      "Identical boundaries should not have been identified");
   }
 }

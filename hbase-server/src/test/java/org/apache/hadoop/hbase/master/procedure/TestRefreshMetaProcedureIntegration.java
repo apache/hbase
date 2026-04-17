@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.assertProcNotFailed;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -29,7 +29,6 @@ import java.util.stream.Stream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -50,18 +49,14 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRefreshMetaProcedureIntegration {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRefreshMetaProcedureIntegration.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private Admin admin;
@@ -69,7 +64,7 @@ public class TestRefreshMetaProcedureIntegration {
   private HMaster master;
   private HRegionServer regionServer;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     // Start in active mode
     TEST_UTIL.getConfiguration().setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, false);
@@ -81,7 +76,7 @@ public class TestRefreshMetaProcedureIntegration {
     regionServer = TEST_UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (admin != null) {
       admin.close();
@@ -97,7 +92,7 @@ public class TestRefreshMetaProcedureIntegration {
     createTableWithData(tableName);
 
     List<RegionInfo> activeRegions = admin.getRegions(tableName);
-    assertTrue("Should have at least 2 regions after split", activeRegions.size() >= 2);
+    assertTrue(activeRegions.size() >= 2, "Should have at least 2 regions after split");
 
     Table metaTable = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
     RegionInfo regionToRemove = activeRegions.get(0);
@@ -110,8 +105,8 @@ public class TestRefreshMetaProcedureIntegration {
     metaTable.close();
 
     List<RegionInfo> regionsAfterDrift = admin.getRegions(tableName);
-    assertEquals("Should have one less region in meta after simulating drift",
-      activeRegions.size() - 1, regionsAfterDrift.size());
+    assertEquals(activeRegions.size() - 1, regionsAfterDrift.size(),
+      "Should have one less region in meta after simulating drift");
 
     setReadOnlyMode(true);
 
@@ -127,19 +122,19 @@ public class TestRefreshMetaProcedureIntegration {
         writeBlocked = true;
       }
     }
-    assertTrue("Write operations should be blocked in read-only mode", writeBlocked);
+    assertTrue(writeBlocked, "Write operations should be blocked in read-only mode");
 
     Long procId = admin.refreshMeta();
 
     waitForProcedureCompletion(procId);
 
     List<RegionInfo> regionsAfterRefresh = admin.getRegions(tableName);
-    assertEquals("Missing regions should be restored by refresh_meta", activeRegions.size(),
-      regionsAfterRefresh.size());
+    assertEquals(activeRegions.size(), regionsAfterRefresh.size(),
+      "Missing regions should be restored by refresh_meta");
 
     boolean regionRestored = regionsAfterRefresh.stream()
       .anyMatch(r -> r.getRegionNameAsString().equals(regionToRemove.getRegionNameAsString()));
-    assertTrue("Missing region should be restored by refresh_meta", regionRestored);
+    assertTrue(regionRestored, "Missing region should be restored by refresh_meta");
 
     setReadOnlyMode(false);
 
@@ -158,15 +153,15 @@ public class TestRefreshMetaProcedureIntegration {
     createTableWithData(table1);
     createTableWithData(phantomTable);
 
-    assertTrue("Table1 should have multiple regions", admin.getRegions(table1).size() >= 2);
-    assertTrue("phantomTable should have multiple regions",
-      admin.getRegions(phantomTable).size() >= 2);
+    assertTrue(admin.getRegions(table1).size() >= 2, "Table1 should have multiple regions");
+    assertTrue(admin.getRegions(phantomTable).size() >= 2,
+      "phantomTable should have multiple regions");
 
     deleteTableFromFilesystem(phantomTable);
     List<TableName> tablesBeforeRefresh = Arrays.asList(admin.listTableNames());
-    assertTrue("phantomTable should still be listed before refresh_meta",
-      tablesBeforeRefresh.contains(phantomTable));
-    assertTrue("Table1 should still be listed", tablesBeforeRefresh.contains(table1));
+    assertTrue(tablesBeforeRefresh.contains(phantomTable),
+      "phantomTable should still be listed before refresh_meta");
+    assertTrue(tablesBeforeRefresh.contains(table1), "Table1 should still be listed");
 
     setReadOnlyMode(true);
     Long procId = admin.refreshMeta();
@@ -174,11 +169,11 @@ public class TestRefreshMetaProcedureIntegration {
 
     List<TableName> tablesAfterRefresh = Arrays.asList(admin.listTableNames());
 
-    assertFalse("phantomTable should be removed after refresh_meta",
-      tablesAfterRefresh.contains(phantomTable));
-    assertTrue("Table1 should still be listed", tablesAfterRefresh.contains(table1));
-    assertTrue("phantomTable should have no regions after refresh_meta",
-      admin.getRegions(phantomTable).isEmpty());
+    assertFalse(tablesAfterRefresh.contains(phantomTable),
+      "phantomTable should be removed after refresh_meta");
+    assertTrue(tablesAfterRefresh.contains(table1), "Table1 should still be listed");
+    assertTrue(admin.getRegions(phantomTable).isEmpty(),
+      "phantomTable should have no regions after refresh_meta");
     setReadOnlyMode(false);
   }
 
@@ -187,8 +182,8 @@ public class TestRefreshMetaProcedureIntegration {
     TableName tableName = TableName.valueOf("t1");
     createTableInFilesystem(tableName);
 
-    assertEquals("No tables should exist", 0,
-      Stream.of(admin.listTableNames()).filter(tn -> tn.equals(tableName)).count());
+    assertEquals(0, Stream.of(admin.listTableNames()).filter(tn -> tn.equals(tableName)).count(),
+      "No tables should exist");
 
     setReadOnlyMode(true);
     Long procId = admin.refreshMeta();
@@ -196,10 +191,10 @@ public class TestRefreshMetaProcedureIntegration {
 
     TableState tableState = MetaTableAccessor.getTableState(admin.getConnection(), tableName);
     assert tableState != null;
-    assertEquals("Table state should be ENABLED", TableState.State.ENABLED, tableState.getState());
-    assertEquals("The list should show the new table from the FS", 1,
-      Stream.of(admin.listTableNames()).filter(tn -> tn.equals(tableName)).count());
-    assertFalse("Should have at least 1 region", admin.getRegions(tableName).isEmpty());
+    assertEquals(TableState.State.ENABLED, tableState.getState(), "Table state should be ENABLED");
+    assertEquals(1, Stream.of(admin.listTableNames()).filter(tn -> tn.equals(tableName)).count(),
+      "The list should show the new table from the FS");
+    assertFalse(admin.getRegions(tableName).isEmpty(), "Should have at least 1 region");
     setReadOnlyMode(false);
   }
 
@@ -251,7 +246,7 @@ public class TestRefreshMetaProcedureIntegration {
   }
 
   private void waitForProcedureCompletion(Long procId) {
-    assertTrue("Procedure ID should be positive", procId > 0);
+    assertTrue(procId > 0, "Procedure ID should be positive");
     TEST_UTIL.waitFor(1000, () -> {
       try {
         return procExecutor.isFinished(procId);

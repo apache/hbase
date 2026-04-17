@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.WriteAttemptedOnReadOnlyClusterException;
@@ -41,20 +40,17 @@ import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 // Tests methods of Master Observer which are implemented in ReadOnlyController,
 // by mocking the coprocessor environment and dependencies
 
-@Category({ SecurityTests.class, SmallTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestReadOnlyControllerMasterObserver {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReadOnlyControllerMasterObserver.class);
 
   MasterReadOnlyController MasterReadOnlyController;
 
@@ -92,7 +88,7 @@ public class TestReadOnlyControllerMasterObserver {
   UserPermission userPermission;
   boolean mergeExistingPermissions;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     MasterReadOnlyController = new MasterReadOnlyController();
 
@@ -140,7 +136,7 @@ public class TestReadOnlyControllerMasterObserver {
     // Linking the mocks:
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
 
   }

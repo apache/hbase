@@ -17,31 +17,27 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.WriteAttemptedOnReadOnlyClusterException;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
 // Tests methods of Endpoint Observer which are implemented in ReadOnlyController,
 // by mocking the coprocessor environment and dependencies.
-@Category({ SecurityTests.class, SmallTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestReadOnlyControllerEndpointObserver {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReadOnlyControllerEndpointObserver.class);
 
   EndpointReadOnlyController endpointReadOnlyController;
   // Region Server Coprocessor mocking variables.
@@ -50,7 +46,7 @@ public class TestReadOnlyControllerEndpointObserver {
   String methodName;
   Message request;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     endpointReadOnlyController = new EndpointReadOnlyController();
 
@@ -63,7 +59,7 @@ public class TestReadOnlyControllerEndpointObserver {
     // Linking the mocks
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
 
   }

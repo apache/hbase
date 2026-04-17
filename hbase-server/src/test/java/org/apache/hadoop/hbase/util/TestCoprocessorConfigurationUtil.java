@@ -18,11 +18,11 @@
 package org.apache.hadoop.hbase.util;
 
 import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.List;
@@ -35,17 +35,18 @@ import org.apache.hadoop.hbase.security.access.RegionReadOnlyController;
 import org.apache.hadoop.hbase.security.access.RegionServerReadOnlyController;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ CoprocessorTests.class, SmallTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCoprocessorConfigurationUtil {
 
   private Configuration conf;
   private String key;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     conf = new Configuration();
     key = "test.key";
