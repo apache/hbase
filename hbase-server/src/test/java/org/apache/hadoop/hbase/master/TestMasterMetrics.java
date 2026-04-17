@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -218,10 +218,10 @@ public class TestMasterMetrics {
     try {
       Map<TableName, RegionStatesCount> tableRegionStatesCount = getTableRegionStatesCount();
 
-      assertFalse("Foreign meta table should not be present",
-        tableRegionStatesCount.containsKey(replicaMetaTable));
-      assertTrue("Local meta should be present",
-        tableRegionStatesCount.containsKey(TableName.META_TABLE_NAME));
+      assertFalse(tableRegionStatesCount.containsKey(replicaMetaTable),
+        "Foreign meta table should not be present");
+      assertTrue(tableRegionStatesCount.containsKey(TableName.META_TABLE_NAME),
+        "Local meta should be present");
 
     } finally {
       master.getTableDescriptors().remove(replicaMetaTable);
@@ -284,11 +284,11 @@ public class TestMasterMetrics {
           tableName.equals(TableName.META_TABLE_NAME)
             || tableName.getQualifierAsString().startsWith("familiar")
         ) {
-          assertTrue("Expected this table's state to exist: " + tableName,
-            tableRegionStatesCount.containsKey(tableName));
+          assertTrue(tableRegionStatesCount.containsKey(tableName),
+            "Expected this table's state to exist: " + tableName);
         } else {
-          assertFalse("This foreign table's state should not exist: " + tableName,
-            tableRegionStatesCount.containsKey(tableName));
+          assertFalse(tableRegionStatesCount.containsKey(tableName),
+            "This foreign table's state should not exist: " + tableName);
         }
       } finally {
         if (!TableName.META_TABLE_NAME.equals(tableName) && familiarTables.contains(tableName)) {
@@ -329,8 +329,10 @@ public class TestMasterMetrics {
     Map<String, TableDescriptor> tableDescriptorMap = master.getTableDescriptors().getAll();
     assertEquals(4, tableDescriptorMap.size());
     for (TableName tableName : familiarTables) {
-      assertTrue("Expected table descriptor map to contain table: " + tableName, tableDescriptorMap
-        .containsKey(tableName.getNamespaceAsString() + ":" + tableName.getQualifierAsString()));
+      assertTrue(
+        tableDescriptorMap
+          .containsKey(tableName.getNamespaceAsString() + ":" + tableName.getQualifierAsString()),
+        "Expected table descriptor map to contain table: " + tableName);
     }
 
     createTableDescriptorOnFileSystem("hbase", "meta_replica", foreignTables);
@@ -342,8 +344,8 @@ public class TestMasterMetrics {
       Path tableDescPath = new Path(testDir,
         "data" + Path.SEPARATOR + tableName.getNamespaceAsString() + Path.SEPARATOR
           + tableName.getQualifierAsString() + Path.SEPARATOR + FSTableDescriptors.TABLEINFO_DIR);
-      assertTrue("Expected table descriptor directory to exist: " + tableDescPath,
-        fs.exists(tableDescPath));
+      assertTrue(fs.exists(tableDescPath),
+        "Expected table descriptor directory to exist: " + tableDescPath);
     }
 
     Map<TableName, RegionStatesCount> tableRegionStatesCount = getTableRegionStatesCount();
@@ -351,8 +353,8 @@ public class TestMasterMetrics {
     // The foreign tables should not be in the table state
     assertEquals(4, tableRegionStatesCount.size());
     for (TableName tableName : familiarTables) {
-      assertTrue("Expected table regions state count to contain: " + tableName,
-        tableRegionStatesCount.containsKey(tableName));
+      assertTrue(tableRegionStatesCount.containsKey(tableName),
+        "Expected table regions state count to contain: " + tableName);
       // Delete unneeded tables
       if (!TableName.META_TABLE_NAME.equals(tableName)) {
         LOG.debug("Deleting table: {}", tableName);
@@ -360,8 +362,8 @@ public class TestMasterMetrics {
       }
     }
     for (TableName tableName : foreignTables) {
-      assertFalse("Expected table regions state count to NOT contain: " + tableName,
-        tableRegionStatesCount.containsKey(tableName));
+      assertFalse(tableRegionStatesCount.containsKey(tableName),
+        "Expected table regions state count to NOT contain: " + tableName);
       // Remove unneeded table descriptors
       LOG.debug("Removing table descriptor for foreign table: {}", tableName);
       master.getTableDescriptors().remove(tableName);
