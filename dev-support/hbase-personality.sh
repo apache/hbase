@@ -307,10 +307,6 @@ function author_patchfile
   declare -r appname=$(basename "${BASH_SOURCE-$0}")
   declare i
 
-  big_console_header "*** HBase Monkey-Patch: author_patchfile ***"
-
-  yetus_debug "HBase Monkey-Patch: author_patchfile"
-
   if [[ "${BUILDMODE}" != patch ]]; then
     return
   fi
@@ -375,10 +371,6 @@ function author_postcompile
   declare -r appname=$(basename "${BASH_SOURCE-$0}")
   declare -a globalignore
 
-  big_console_header "*** HBase Monkey-Patch: author_postcompile ***"
-
-  yetus_debug "HBase Monkey-Patch: author_postcompile"
-
   if [[ "${BUILDMODE}" != full ]]; then
     return
   fi
@@ -407,9 +399,6 @@ function author_postcompile
       | "${SED}" 's/[][\\.^$*+?{}()|]/\\&/g' \
       | "${SED}" 's/^/^/' \
       > "${PATCH_DIR}/author-tags-filter.txt"
-
-    cat "${PATCH_DIR}/author-tags-filter.txt"
-
     "${GREP}" -v -E \
       -f "${PATCH_DIR}/author-tags-filter.txt" \
       "${PATCH_DIR}/author-tags-git.txt" \
