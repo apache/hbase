@@ -106,7 +106,7 @@ public class FromClientSideTest5 extends FromClientSideTestBase {
     super(registryImpl, numHedgedReqs);
   }
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestFromClientSide5.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FromClientSideTest5.class);
 
   @TestTemplate
   public void testGetClosestRowBefore() throws IOException, InterruptedException {
