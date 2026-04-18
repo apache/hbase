@@ -20,15 +20,18 @@ package org.apache.hadoop.hbase.util;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mockStatic;
 
+import java.util.stream.Stream;
 import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.client.ConnectionRegistry;
 import org.apache.hadoop.hbase.client.FromClientSideTest3;
+import org.apache.hadoop.hbase.client.RpcConnectionRegistry;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.provider.Arguments;
 import org.mockito.MockedStatic;
 
 @Tag(LargeTests.TAG)
@@ -50,5 +53,14 @@ public class TestFromClientSide3WoUnsafe extends FromClientSideTest3 {
       assertFalse(ByteBufferUtils.UNSAFE_UNALIGNED);
     }
     startCluster(MultiRowMutationEndpoint.class);
+  }
+
+  // Override the parameters in parent class as we will find the parameters method from the current
+  // class first in HBaseParameterizedTemplateProvider.
+  // Tests will run much slower without Unsafe, and since this test is just to confirm that our code
+  // is still OK without Unsafe, and ZKConnectionRegistry does not use our Unsafe classes, so just
+  // run with RpcConnectionRegistry to speed up the tests.
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(RpcConnectionRegistry.class, 2));
   }
 }
