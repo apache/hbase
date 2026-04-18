@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
@@ -28,12 +30,17 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.Test;
+import org.junit.jupiter.api.TestTemplate;
 
 public class CloneSnapshotFromClientAfterSplittingRegionTestBase
   extends CloneSnapshotFromClientTestBase {
 
+  protected CloneSnapshotFromClientAfterSplittingRegionTestBase(int numReplicas) {
+    super(numReplicas);
+  }
+
   private void splitRegion() throws IOException {
+    int numRegions = admin.getRegions(tableName).size();
     try (Table k = TEST_UTIL.getConnection().getTable(tableName);
       ResultScanner scanner = k.getScanner(new Scan())) {
       // Split on the second row to make sure that the snapshot contains reference files.
@@ -41,13 +48,17 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
       scanner.next();
       admin.split(tableName, scanner.next().getRow());
     }
+    await().atMost(Duration.ofSeconds(30))
+      .untilAsserted(() -> assertEquals(numRegions + 1, admin.getRegions(tableName).size()));
   }
 
-  @Test
+  @TestTemplate
   public void testCloneSnapshotAfterSplittingRegion() throws IOException, InterruptedException {
     // Turn off the CatalogJanitor
     admin.catalogJanitorSwitch(false);
 
+    TableName clonedTableName =
+      TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
     try {
       List<RegionInfo> regionInfos = admin.getRegions(tableName);
       RegionReplicaUtil.removeNonDefaultRegions(regionInfos);
@@ -59,8 +70,6 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
       admin.snapshot(snapshotName2, tableName);
 
       // Clone the snapshot to another table
-      TableName clonedTableName =
-        TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
       admin.cloneSnapshot(snapshotName2, clonedTableName);
       SnapshotTestingUtils.waitForTableToBeOnline(TEST_UTIL, clonedTableName);
 
@@ -90,26 +99,26 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
           assertNotNull(daughter);
         }
       }
-
-      TEST_UTIL.deleteTable(clonedTableName);
     } finally {
+      if (admin.tableExists(clonedTableName)) {
+        TEST_UTIL.deleteTable(clonedTableName);
+      }
       admin.catalogJanitorSwitch(true);
     }
   }
 
-  @Test
+  @TestTemplate
   public void testCloneSnapshotBeforeSplittingRegionAndDroppingTable()
     throws IOException, InterruptedException {
     // Turn off the CatalogJanitor
     admin.catalogJanitorSwitch(false);
-
+    TableName clonedTableName =
+      TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
     try {
       // Take a snapshot
       admin.snapshot(snapshotName2, tableName);
 
       // Clone the snapshot to another table
-      TableName clonedTableName =
-        TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
       admin.cloneSnapshot(snapshotName2, clonedTableName);
       SnapshotTestingUtils.waitForTableToBeOnline(TEST_UTIL, clonedTableName);
 
@@ -129,6 +138,9 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
 
       verifyRowCount(TEST_UTIL, clonedTableName, snapshot1Rows);
     } finally {
+      if (admin.tableExists(clonedTableName)) {
+        TEST_UTIL.deleteTable(clonedTableName);
+      }
       admin.catalogJanitorSwitch(true);
     }
   }
