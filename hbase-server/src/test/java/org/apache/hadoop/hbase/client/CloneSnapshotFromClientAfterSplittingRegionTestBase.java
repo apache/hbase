@@ -48,8 +48,8 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
       scanner.next();
       admin.split(tableName, scanner.next().getRow());
     }
-    await().atMost(Duration.ofSeconds(30))
-      .untilAsserted(() -> assertEquals(numRegions + 1, admin.getRegions(tableName).size()));
+    await().atMost(Duration.ofSeconds(30)).untilAsserted(
+      () -> assertEquals(numRegions + numReplicas, admin.getRegions(tableName).size()));
   }
 
   @TestTemplate
