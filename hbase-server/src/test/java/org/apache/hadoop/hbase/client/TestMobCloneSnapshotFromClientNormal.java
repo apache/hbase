@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
@@ -27,16 +27,17 @@ import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: regionReplication={0}")
 public class TestMobCloneSnapshotFromClientNormal extends CloneSnapshotFromClientNormalTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobCloneSnapshotFromClientNormal.class);
+  public TestMobCloneSnapshotFromClientNormal(int numReplicas) {
+    super(numReplicas);
+  }
 
   protected static void setupConfiguration() {
     CloneSnapshotFromClientTestBase.setupConfiguration();
@@ -44,7 +45,7 @@ public class TestMobCloneSnapshotFromClientNormal extends CloneSnapshotFromClien
     TEST_UTIL.getConfiguration().setInt(MobConstants.MOB_FILE_CACHE_SIZE_KEY, 0);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     setupConfiguration();
     TEST_UTIL.startMiniCluster(3);
@@ -53,7 +54,7 @@ public class TestMobCloneSnapshotFromClientNormal extends CloneSnapshotFromClien
   @Override
   protected void createTable() throws IOException, InterruptedException {
     MobSnapshotTestingUtils.createMobTable(TEST_UTIL, tableName,
-      SnapshotTestingUtils.getSplitKeys(), getNumReplicas(), FAMILY);
+      SnapshotTestingUtils.getSplitKeys(), numReplicas, FAMILY);
   }
 
   @Override
