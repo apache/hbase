@@ -87,10 +87,6 @@ public class TestConnection {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     ResourceLeakDetector.setLevel(Level.PARANOID);
-    // Disable directory sharing to prevent race conditions when tests run in parallel.
-    // Each test instance gets its own isolated directories to avoid one test's tearDown()
-    // deleting directories another parallel test is still using.
-    TEST_UTIL.getConfiguration().setBoolean("hbase.test.disable-directory-sharing", true);
     TEST_UTIL.getConfiguration().setBoolean(HConstants.STATUS_PUBLISHED, true);
     // Up the handlers; this test needs more than usual.
     TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
