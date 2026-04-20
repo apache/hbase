@@ -77,6 +77,7 @@ public class TestZooKeeper {
     conf.setInt(HConstants.ZK_SESSION_TIMEOUT, 1000);
     conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, MockLoadBalancer.class,
       LoadBalancer.class);
+    TEST_UTIL.startMiniDFSCluster(2);
   }
 
   @AfterAll

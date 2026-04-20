@@ -183,10 +183,6 @@ public class TestReplicationBase {
   protected static void setupConfig(HBaseTestingUtility util, String znodeParent) {
     Configuration conf = util.getConfiguration();
     conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, znodeParent);
-    // Disable directory sharing to prevent race conditions when tests run in parallel.
-    // Each test instance gets its own isolated directories to avoid one test's tearDown()
-    // deleting directories another parallel test is still using.
-    conf.setBoolean("hbase.test.disable-directory-sharing", true);
     // We don't want too many edits per batch sent to the ReplicationEndpoint to trigger
     // sufficient number of events. But we don't want to go too low because
     // HBaseInterClusterReplicationEndpoint partitions entries into batches and we want
