@@ -19,15 +19,19 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.TestTemplate;
 
 public class RestoreSnapshotFromClientAfterTruncateTestBase
   extends RestoreSnapshotFromClientTestBase {
 
-  @Test
+  protected RestoreSnapshotFromClientAfterTruncateTestBase(int numReplicas) {
+    super(numReplicas);
+  }
+
+  @TestTemplate
   public void testRestoreSnapshotAfterTruncate() throws Exception {
     TableName tableName = TableName.valueOf(getValidMethodName());
-    SnapshotTestingUtils.createTable(TEST_UTIL, tableName, getNumReplicas(), FAMILY);
+    SnapshotTestingUtils.createTable(TEST_UTIL, tableName, numReplicas, FAMILY);
     SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
     int numOfRows = 0;
 
@@ -43,6 +47,6 @@ public class RestoreSnapshotFromClientAfterTruncateTestBase
 
     admin.enableTable(tableName);
     verifyRowCount(TEST_UTIL, tableName, numOfRows);
-    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
+    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, numReplicas);
   }
 }
