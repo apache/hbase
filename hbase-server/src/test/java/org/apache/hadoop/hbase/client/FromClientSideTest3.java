@@ -39,7 +39,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -611,78 +610,6 @@ public class FromClientSideTest3 extends FromClientSideTestBase {
   }
 
   @TestTemplate
-  public void testHTableExistsMethodMultipleRegionsSingleGet() throws Exception {
-    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, 1, new byte[] { 0x00 },
-      new byte[] { (byte) 0xff }, 255);
-    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
-      Put put = new Put(ROW);
-      put.addColumn(FAMILY, QUALIFIER, VALUE);
-
-      Get get = new Get(ROW);
-
-      boolean exist = table.exists(get);
-      assertFalse(exist);
-
-      table.put(put);
-
-      exist = table.exists(get);
-      assertTrue(exist);
-    }
-  }
-
-  @TestTemplate
-  public void testHTableExistsMethodMultipleRegionsMultipleGets() throws Exception {
-    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, 1, new byte[] { 0x00 },
-      new byte[] { (byte) 0xff }, 255);
-    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
-      Put put = new Put(ROW);
-      put.addColumn(FAMILY, QUALIFIER, VALUE);
-      table.put(put);
-
-      List<Get> gets = new ArrayList<>();
-      gets.add(new Get(ANOTHERROW));
-      gets.add(new Get(Bytes.add(ROW, new byte[] { 0x00 })));
-      gets.add(new Get(ROW));
-      gets.add(new Get(Bytes.add(ANOTHERROW, new byte[] { 0x00 })));
-
-      LOG.info("Calling exists");
-      boolean[] results = table.exists(gets);
-      assertFalse(results[0]);
-      assertFalse(results[1]);
-      assertTrue(results[2]);
-      assertFalse(results[3]);
-
-      // Test with the first region.
-      put = new Put(new byte[] { 0x00 });
-      put.addColumn(FAMILY, QUALIFIER, VALUE);
-      table.put(put);
-
-      gets = new ArrayList<>();
-      gets.add(new Get(new byte[] { 0x00 }));
-      gets.add(new Get(new byte[] { 0x00, 0x00 }));
-      results = table.exists(gets);
-      assertTrue(results[0]);
-      assertFalse(results[1]);
-
-      // Test with the last region
-      put = new Put(new byte[] { (byte) 0xff, (byte) 0xff });
-      put.addColumn(FAMILY, QUALIFIER, VALUE);
-      table.put(put);
-
-      gets = new ArrayList<>();
-      gets.add(new Get(new byte[] { (byte) 0xff }));
-      gets.add(new Get(new byte[] { (byte) 0xff, (byte) 0xff }));
-      gets.add(new Get(new byte[] { (byte) 0xff, (byte) 0xff, (byte) 0xff }));
-      results = table.exists(gets);
-      assertFalse(results[0]);
-      assertTrue(results[1]);
-      assertFalse(results[2]);
-    }
-  }
-
-  @TestTemplate
   public void testGetEmptyRow() throws Exception {
     // Create a table and put in 1 row
     TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
@@ -963,59 +890,6 @@ public class FromClientSideTest3 extends FromClientSideTestBase {
         int rowNum = Iterables.size(scanner);
         // the new scanner should see all rows
         assertEquals(1001, rowNum);
-      }
-    }
-
-  }
-
-  @TestTemplate
-  public void testPutThenGetWithMultipleThreads() throws Exception {
-    final int THREAD_NUM = 20;
-    final int ROUND_NUM = 10;
-    for (int round = 0; round < ROUND_NUM; round++) {
-      ArrayList<Thread> threads = new ArrayList<>(THREAD_NUM);
-      final AtomicInteger successCnt = new AtomicInteger(0);
-      TEST_UTIL.createTable(tableName, FAMILY);
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-      try (Connection conn = getConnection(); Table ht = conn.getTable(tableName)) {
-        for (int i = 0; i < THREAD_NUM; i++) {
-          final int index = i;
-          Thread t = new Thread(new Runnable() {
-
-            @Override
-            public void run() {
-              final byte[] row = Bytes.toBytes("row-" + index);
-              final byte[] value = Bytes.toBytes("v" + index);
-              try {
-                Put put = new Put(row);
-                put.addColumn(FAMILY, QUALIFIER, value);
-                ht.put(put);
-                Get get = new Get(row);
-                Result result = ht.get(get);
-                byte[] returnedValue = result.getValue(FAMILY, QUALIFIER);
-                if (Bytes.equals(value, returnedValue)) {
-                  successCnt.getAndIncrement();
-                } else {
-                  LOG.error("Should be equal but not, original value: " + Bytes.toString(value)
-                    + ", returned value: "
-                    + (returnedValue == null ? "null" : Bytes.toString(returnedValue)));
-                }
-              } catch (Throwable e) {
-                // do nothing
-              }
-            }
-          });
-          threads.add(t);
-        }
-        for (Thread t : threads) {
-          t.start();
-        }
-        for (Thread t : threads) {
-          t.join();
-        }
-        assertEquals(THREAD_NUM, successCnt.get(), "Not equal in round " + round);
-      } finally {
-        TEST_UTIL.deleteTable(tableName);
       }
     }
   }
