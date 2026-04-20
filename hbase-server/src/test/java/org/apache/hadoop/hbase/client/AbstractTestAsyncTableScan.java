@@ -46,7 +46,6 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ConnectionRule;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MatcherPredicate;
 import org.apache.hadoop.hbase.MiniClusterRule;
@@ -74,21 +73,8 @@ import org.junit.rules.TestRule;
 public abstract class AbstractTestAsyncTableScan {
 
   protected static final OpenTelemetryClassRule OTEL_CLASS_RULE = OpenTelemetryClassRule.create();
-
-  private static Configuration createConfiguration() {
-    // Use HBaseConfiguration.create() instead of new Configuration() to properly load
-    // hbase-default.xml which contains required default values (e.g. for log cleaner plugins)
-    Configuration conf = HBaseConfiguration.create();
-    // Disable directory sharing to prevent race conditions when tests run in parallel.
-    // Each test instance gets its own isolated directories to avoid one test's tearDown()
-    // deleting directories another parallel test is still using.
-    conf.setBoolean("hbase.test.disable-directory-sharing", true);
-    return conf;
-  }
-
-  protected static final MiniClusterRule MINI_CLUSTER_RULE =
-    MiniClusterRule.newBuilder().setConfiguration(createConfiguration())
-      .setMiniClusterOption(StartMiniClusterOption.builder().numWorkers(3).build()).build();
+  protected static final MiniClusterRule MINI_CLUSTER_RULE = MiniClusterRule.newBuilder()
+    .setMiniClusterOption(StartMiniClusterOption.builder().numWorkers(3).build()).build();
 
   protected static final ConnectionRule CONN_RULE =
     ConnectionRule.createAsyncConnectionRule(MINI_CLUSTER_RULE::createAsyncConnection);
