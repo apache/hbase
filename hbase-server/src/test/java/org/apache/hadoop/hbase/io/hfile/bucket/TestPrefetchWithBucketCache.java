@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
 import static org.apache.hadoop.hbase.io.hfile.BlockCacheFactory.BUCKET_CACHE_BUCKETS_KEY;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.QUEUE_ADDITION_WAIT_TIME;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -327,8 +328,7 @@ public class TestPrefetchWithBucketCache {
     conf.setLong(QUEUE_ADDITION_WAIT_TIME, 0);
     blockCache = BlockCacheFactory.createBlockCache(conf);
     cacheConf = new CacheConfig(conf, blockCache);
-    // Use 15000 KVs to ensure file reliably exceeds 1MB cache capacity even with size variance
-    Path storeFile = writeStoreFile("testPrefetchRunTriggersEvictions", 15000);
+    Path storeFile = writeStoreFile("testPrefetchInterruptOnCapacity", 10000);
     // Prefetches the file blocks
     createReaderAndWaitForPrefetchInterruption(storeFile);
     Waiter.waitFor(conf, (PrefetchExecutor.getPrefetchDelay() + 1000),
@@ -343,16 +343,14 @@ public class TestPrefetchWithBucketCache {
       }
       return true;
     });
-    // With no wait time configuration, prefetch will either trigger evictions when reaching
-    // cache capacity, or have failed inserts when the writer queue fills faster than it drains.
-    // Both outcomes are valid - test should only fail if NEITHER happens, which would indicate
-    // a problem with the capacity management logic.
-    long evictions = bc.getStats().getEvictedCount();
-    long failedInserts = bc.getStats().getFailedInserts();
-    assertTrue(
-      "Expected either evictions or failed inserts to demonstrate capacity management, "
-        + "but got evictions=" + evictions + ", failedInserts=" + failedInserts,
-      evictions > 0 || failedInserts > 0);
+    if (bc.getStats().getFailedInserts() == 0) {
+      // With no wait time configuration, prefetch should trigger evictions once it reaches
+      // cache capacity
+      assertNotEquals(0, bc.getStats().getEvictedCount());
+    } else {
+      LOG.info("We had {} cache insert failures, which may cause cache usage "
+        + "to never reach capacity.", bc.getStats().getFailedInserts());
+    }
   }
 
   @Test

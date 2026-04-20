@@ -263,10 +263,6 @@ public class TestHRegion {
     TEST_UTIL = HBaseTestingUtility.createLocalHTU();
     FILESYSTEM = TEST_UTIL.getTestFileSystem();
     CONF = TEST_UTIL.getConfiguration();
-    // Disable directory sharing to prevent race conditions when tests run in parallel.
-    // Each test instance gets its own isolated directories to avoid one test's tearDown()
-    // deleting directories another parallel test is still using.
-    CONF.setBoolean("hbase.test.disable-directory-sharing", true);
     NettyAsyncFSWALConfigHelper.setEventLoopConfig(CONF, GROUP, NioSocketChannel.class);
     dir = TEST_UTIL.getDataTestDir("TestHRegion").toString();
     method = name.getMethodName();
@@ -1353,23 +1349,18 @@ public class TestHRegion {
         threads[i].start();
       }
     } finally {
-      done.set(true);
-      for (GetTillDoneOrException t : threads) {
-        if (t != null) {
-          try {
-            t.join(5000);
-          } catch (InterruptedException e) {
-            e.printStackTrace();
-          }
-        }
-      }
       if (this.region != null) {
         HBaseTestingUtility.closeRegionAndWAL(this.region);
         this.region = null;
       }
     }
-    // Check for errors after threads have been stopped
+    done.set(true);
     for (GetTillDoneOrException t : threads) {
+      try {
+        t.join();
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
       if (t.e != null) {
         LOG.info("Exception=" + t.e);
         assertFalse("Found a NPE in " + t.getName(), t.e instanceof NullPointerException);
@@ -1397,7 +1388,7 @@ public class TestHRegion {
 
     @Override
     public void run() {
-      while (!this.done.get() && !Thread.currentThread().isInterrupted()) {
+      while (!this.done.get()) {
         try {
           assertTrue(region.get(g).size() > 0);
           this.count.incrementAndGet();
@@ -4577,7 +4568,7 @@ public class TestHRegion {
     @Override
     public void run() {
       done = false;
-      while (!done && !Thread.currentThread().isInterrupted()) {
+      while (!done) {
         synchronized (this) {
           try {
             wait();
@@ -4790,7 +4781,7 @@ public class TestHRegion {
     @Override
     public void run() {
       done = false;
-      while (!done && !Thread.currentThread().isInterrupted()) {
+      while (!done) {
         try {
           for (int r = 0; r < numRows; r++) {
             byte[] row = Bytes.toBytes("row" + r);
@@ -5324,7 +5315,7 @@ public class TestHRegion {
     Runnable flusher = new Runnable() {
       @Override
       public void run() {
-        while (!incrementDone.get() && !Thread.currentThread().isInterrupted()) {
+        while (!incrementDone.get()) {
           try {
             region.flush(true);
           } catch (Exception e) {
@@ -5340,38 +5331,13 @@ public class TestHRegion {
     long expected = (long) threadNum * incCounter;
     Thread[] incrementers = new Thread[threadNum];
     Thread flushThread = new Thread(flusher);
-    flushThread.setName("FlushThread-" + method);
     for (int i = 0; i < threadNum; i++) {
       incrementers[i] = new Thread(new Incrementer(this.region, incCounter));
       incrementers[i].start();
     }
     flushThread.start();
-    try {
-      for (int i = 0; i < threadNum; i++) {
-        incrementers[i].join();
-      }
-
-      incrementDone.set(true);
-      flushThread.join();
-
-      Get get = new Get(Incrementer.incRow);
-      get.addColumn(Incrementer.family, Incrementer.qualifier);
-      get.readVersions(1);
-      Result res = this.region.get(get);
-      List<Cell> kvs = res.getColumnCells(Incrementer.family, Incrementer.qualifier);
-
-      // we just got the latest version
-      assertEquals(1, kvs.size());
-      Cell kv = kvs.get(0);
-      assertEquals(expected, Bytes.toLong(kv.getValueArray(), kv.getValueOffset()));
-    } finally {
-      // Ensure flush thread is stopped even if test fails or times out
-      incrementDone.set(true);
-      flushThread.interrupt();
-      flushThread.join(5000); // Wait up to 5 seconds for thread to stop
-      if (flushThread.isAlive()) {
-        LOG.warn("Flush thread did not stop within timeout for test " + method);
-      }
+    for (int i = 0; i < threadNum; i++) {
+      incrementers[i].join();
     }
 
     incrementDone.set(true);
@@ -5434,7 +5400,7 @@ public class TestHRegion {
     Runnable flusher = new Runnable() {
       @Override
       public void run() {
-        while (!appendDone.get() && !Thread.currentThread().isInterrupted()) {
+        while (!appendDone.get()) {
           try {
             region.flush(true);
           } catch (Exception e) {
@@ -5454,41 +5420,13 @@ public class TestHRegion {
     }
     Thread[] appenders = new Thread[threadNum];
     Thread flushThread = new Thread(flusher);
-    flushThread.setName("FlushThread-" + method);
     for (int i = 0; i < threadNum; i++) {
       appenders[i] = new Thread(new Appender(this.region, appendCounter));
       appenders[i].start();
     }
     flushThread.start();
-    try {
-      for (int i = 0; i < threadNum; i++) {
-        appenders[i].join();
-      }
-
-      appendDone.set(true);
-      flushThread.join();
-
-      Get get = new Get(Appender.appendRow);
-      get.addColumn(Appender.family, Appender.qualifier);
-      get.readVersions(1);
-      Result res = this.region.get(get);
-      List<Cell> kvs = res.getColumnCells(Appender.family, Appender.qualifier);
-
-      // we just got the latest version
-      assertEquals(1, kvs.size());
-      Cell kv = kvs.get(0);
-      byte[] appendResult = new byte[kv.getValueLength()];
-      System.arraycopy(kv.getValueArray(), kv.getValueOffset(), appendResult, 0,
-        kv.getValueLength());
-      assertArrayEquals(expected, appendResult);
-    } finally {
-      // Ensure flush thread is stopped even if test fails or times out
-      appendDone.set(true);
-      flushThread.interrupt();
-      flushThread.join(5000); // Wait up to 5 seconds for thread to stop
-      if (flushThread.isAlive()) {
-        LOG.warn("Flush thread did not stop within timeout for test " + method);
-      }
+    for (int i = 0; i < threadNum; i++) {
+      appenders[i].join();
     }
 
     appendDone.set(true);
@@ -7525,7 +7463,7 @@ public class TestHRegion {
     // Writer thread
     Thread writerThread = new Thread(() -> {
       try {
-        while (!Thread.currentThread().isInterrupted()) {
+        while (true) {
           // If all the reader threads finish, then stop the writer thread
           if (latch.await(0, TimeUnit.MILLISECONDS)) {
             return;
@@ -7550,19 +7488,15 @@ public class TestHRegion {
             .addColumn(fam1, q3, tsIncrement + 1, Bytes.toBytes(1L))
             .addColumn(fam1, q4, tsAppend + 1, Bytes.toBytes("a")) });
         }
-      } catch (InterruptedException e) {
-        // Test interrupted, exit gracefully
-        Thread.currentThread().interrupt();
       } catch (Exception e) {
         assertionError.set(new AssertionError(e));
       }
     });
-    writerThread.setName("WriterThread-" + method);
     writerThread.start();
 
     // Reader threads
     for (int i = 0; i < numReaderThreads; i++) {
-      Thread readerThread = new Thread(() -> {
+      new Thread(() -> {
         try {
           for (int j = 0; j < 10000; j++) {
             // Verify the values
@@ -7591,24 +7525,13 @@ public class TestHRegion {
         }
 
         latch.countDown();
-      });
-      readerThread.setName("ReaderThread-" + i + "-" + method);
-      readerThread.start();
+      }).start();
     }
 
-    try {
-      writerThread.join();
+    writerThread.join();
 
-      if (assertionError.get() != null) {
-        throw assertionError.get();
-      }
-    } finally {
-      // Ensure writer thread is stopped on test timeout
-      writerThread.interrupt();
-      writerThread.join(5000);
-      if (writerThread.isAlive()) {
-        LOG.warn("Writer thread did not stop within timeout for test " + method);
-      }
+    if (assertionError.get() != null) {
+      throw assertionError.get();
     }
   }
 
