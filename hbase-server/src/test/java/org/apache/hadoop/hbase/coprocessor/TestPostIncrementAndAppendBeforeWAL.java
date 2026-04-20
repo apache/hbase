@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.client.TestFromClientSide;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -83,7 +82,8 @@ public class TestPostIncrementAndAppendBeforeWAL {
   @Rule
   public TestName name = new TestName();
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestFromClientSide.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestPostIncrementAndAppendBeforeWAL.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 

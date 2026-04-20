@@ -17,53 +17,38 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
-import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
+import org.apache.hadoop.hbase.client.HConnectionTestingUtility.SleepAtFirstRpcCall;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder.ModifyableTableDescriptor;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.LongComparator;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.TestTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,96 +61,75 @@ import org.slf4j.LoggerFactory;
  * @see TestFromClientSide5
  */
 // NOTE: Increment tests were moved to their own class, TestIncrementsFromClientSide.
-@Category({ LargeTests.class, ClientTests.class })
-@SuppressWarnings("deprecation")
-@RunWith(Parameterized.class)
-public class TestFromClientSide extends FromClientSideBase {
-  private static final Logger LOG = LoggerFactory.getLogger(TestFromClientSide.class);
+public class FromClientSideTest1 extends FromClientSideTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFromClientSide.class);
-  @Rule
-  public TableNameTestRule name = new TableNameTestRule();
+  private static final Logger LOG = LoggerFactory.getLogger(FromClientSideTest1.class);
 
-  // To keep the child classes happy.
-  TestFromClientSide() {
-  }
-
-  public TestFromClientSide(Class registry, int numHedgedReqs) throws Exception {
-    initialize(registry, numHedgedReqs, MultiRowMutationEndpoint.class);
-  }
-
-  @Parameterized.Parameters
-  public static Collection parameters() {
-    return Arrays.asList(new Object[][] { { MasterRegistry.class, 1 }, { MasterRegistry.class, 2 },
-      { ZKConnectionRegistry.class, 1 } });
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    afterClass();
+  protected FromClientSideTest1(Class<? extends ConnectionRegistry> registryImpl,
+    int numHedgedReqs) {
+    super(registryImpl, numHedgedReqs);
   }
 
   /**
    * Test append result when there are duplicate rpc request.
    */
-  @Test
+  @TestTemplate
   public void testDuplicateAppend() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(name.getTableName());
+    ModifyableTableDescriptor mtd = TEST_UTIL.createModifyableTableDescriptor(tableName,
+      ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     Map<String, String> kvs = new HashMap<>();
-    kvs.put(HConnectionTestingUtility.SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
-    hdt.addCoprocessor(HConnectionTestingUtility.SleepAtFirstRpcCall.class.getName(), null, 1, kvs);
-    TEST_UTIL.createTable(hdt, new byte[][] { ROW }).close();
+    kvs.put(SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
+    mtd.setCoprocessor(CoprocessorDescriptorBuilder.newBuilder(SleepAtFirstRpcCall.class.getName())
+      .setPriority(1).setProperties(kvs).build());
+    TEST_UTIL.createTable(mtd, new byte[][] { ROW }).close();
 
-    Configuration c = new Configuration(TEST_UTIL.getConfiguration());
+    Configuration c = getClientConf();
     c.setInt(HConstants.HBASE_CLIENT_PAUSE, 50);
     // Client will retry because rpc timeout is small than the sleep time of first rpc call
     c.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 1500);
 
-    try (Connection connection = ConnectionFactory.createConnection(c)) {
-      try (Table t = connection.getTable(name.getTableName())) {
-        if (t instanceof HTable) {
-          HTable table = (HTable) t;
-          table.setOperationTimeout(3 * 1000);
+    try (Connection connection = ConnectionFactory.createConnection(c); Table table =
+      connection.getTableBuilder(tableName, null).setOperationTimeout(3 * 1000).build()) {
 
-          Append append = new Append(ROW);
-          append.addColumn(HBaseTestingUtility.fam1, QUALIFIER, VALUE);
-          Result result = table.append(append);
+      Append append = new Append(ROW);
+      append.addColumn(HBaseTestingUtility.fam1, QUALIFIER, VALUE);
+      Result result = table.append(append);
 
-          // Verify expected result
-          Cell[] cells = result.rawCells();
-          assertEquals(1, cells.length);
-          assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
+      // Verify expected result
+      Cell[] cells = result.rawCells();
+      assertEquals(1, cells.length);
+      assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
 
-          // Verify expected result again
-          Result readResult = table.get(new Get(ROW));
-          cells = readResult.rawCells();
-          assertEquals(1, cells.length);
-          assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
-        }
-      }
+      // Verify expected result again
+      Result readResult = table.get(new Get(ROW));
+      cells = readResult.rawCells();
+      assertEquals(1, cells.length);
+      assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
     }
   }
 
   /**
    * Test batch append result when there are duplicate rpc request.
    */
-  @Test
+  @TestTemplate
   public void testDuplicateBatchAppend() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(name.getTableName());
+    ModifyableTableDescriptor mtd = TEST_UTIL.createModifyableTableDescriptor(tableName,
+      ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     Map<String, String> kvs = new HashMap<>();
-    kvs.put(HConnectionTestingUtility.SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
-    hdt.addCoprocessor(HConnectionTestingUtility.SleepAtFirstRpcCall.class.getName(), null, 1, kvs);
-    TEST_UTIL.createTable(hdt, new byte[][] { ROW }).close();
+    kvs.put(SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
+    mtd.setCoprocessor(CoprocessorDescriptorBuilder.newBuilder(SleepAtFirstRpcCall.class.getName())
+      .setPriority(1).setProperties(kvs).build());
+    TEST_UTIL.createTable(mtd, new byte[][] { ROW }).close();
 
-    Configuration c = new Configuration(TEST_UTIL.getConfiguration());
+    Configuration c = getClientConf();
     c.setInt(HConstants.HBASE_CLIENT_PAUSE, 50);
     // Client will retry because rpc timeout is small than the sleep time of first rpc call
     c.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 1500);
 
     try (Connection connection = ConnectionFactory.createConnection(c); Table table =
-      connection.getTableBuilder(name.getTableName(), null).setOperationTimeout(3 * 1000).build()) {
+      connection.getTableBuilder(tableName, null).setOperationTimeout(3 * 1000).build()) {
       Append append = new Append(ROW);
       append.addColumn(HBaseTestingUtility.fam1, QUALIFIER, VALUE);
 
@@ -189,9 +153,8 @@ public class TestFromClientSide extends FromClientSideBase {
   /**
    * Basic client side validation of HBASE-4536
    */
-  @Test
+  @TestTemplate
   public void testKeepDeletedCells() throws Exception {
-    final TableName tableName = name.getTableName();
     final byte[] FAMILY = Bytes.toBytes("family");
     final byte[] C0 = Bytes.toBytes("c0");
 
@@ -201,10 +164,12 @@ public class TestFromClientSide extends FromClientSideBase {
     HColumnDescriptor hcd =
       new HColumnDescriptor(FAMILY).setKeepDeletedCells(KeepDeletedCells.TRUE).setMaxVersions(3);
 
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(hcd);
-    TEST_UTIL.getAdmin().createTable(desc);
-    try (Table h = TEST_UTIL.getConnection().getTable(tableName)) {
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY)
+        .setKeepDeletedCells(KeepDeletedCells.TRUE).setMaxVersions(3).build())
+      .build();
+    TEST_UTIL.getAdmin().createTable(tableDescriptor);
+    try (Connection conn = getConnection(); Table h = conn.getTable(tableName)) {
       long ts = EnvironmentEdgeManager.currentTime();
       Put p = new Put(T1, ts);
       p.addColumn(FAMILY, C0, T1);
@@ -255,15 +220,16 @@ public class TestFromClientSide extends FromClientSideBase {
   /**
    * Basic client side validation of HBASE-10118
    */
-  @Test
+  @TestTemplate
   public void testPurgeFutureDeletes() throws Exception {
-    final TableName tableName = name.getTableName();
+
     final byte[] ROW = Bytes.toBytes("row");
     final byte[] FAMILY = Bytes.toBytes("family");
     final byte[] COLUMN = Bytes.toBytes("column");
     final byte[] VALUE = Bytes.toBytes("value");
+    TEST_UTIL.createTable(tableName, FAMILY);
 
-    try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       // future timestamp
       long ts = EnvironmentEdgeManager.currentTime() * 2;
       Put put = new Put(ROW, ts);
@@ -304,12 +270,13 @@ public class TestFromClientSide extends FromClientSideBase {
    * Verifies that getConfiguration returns the same Configuration object used to create the HTable
    * instance.
    */
-  @Test
+  @TestTemplate
   public void testGetConfiguration() throws Exception {
-    final TableName tableName = name.getTableName();
     byte[][] FAMILIES = new byte[][] { Bytes.toBytes("foo") };
-    Configuration conf = TEST_UTIL.getConfiguration();
-    try (Table table = TEST_UTIL.createTable(tableName, FAMILIES)) {
+    TEST_UTIL.createTable(tableName, FAMILIES);
+    Configuration conf = getClientConf();
+    try (Connection conn = ConnectionFactory.createConnection(conf);
+      Table table = conn.getTable(tableName)) {
       assertSame(conf, table.getConfiguration());
     }
   }
@@ -317,12 +284,12 @@ public class TestFromClientSide extends FromClientSideBase {
   /**
    * Test from client side of an involved filter against a multi family that involves deletes.
    */
-  @Test
+  @TestTemplate
   public void testWeirdCacheBehaviour() throws Exception {
-    final TableName tableName = name.getTableName();
     byte[][] FAMILIES = new byte[][] { Bytes.toBytes("trans-blob"), Bytes.toBytes("trans-type"),
       Bytes.toBytes("trans-date"), Bytes.toBytes("trans-tags"), Bytes.toBytes("trans-group") };
-    try (Table ht = TEST_UTIL.createTable(tableName, FAMILIES)) {
+    TEST_UTIL.createTable(tableName, FAMILIES);
+    try (Connection conn = getConnection(); Table ht = conn.getTable(tableName)) {
       String value = "this is the value";
       String value2 = "this is some other value";
       String keyPrefix1 = HBaseTestingUtility.getRandomUUID().toString();
@@ -334,92 +301,32 @@ public class TestFromClientSide extends FromClientSideBase {
       putRows(ht, 3, value2, keyPrefix1);
       putRows(ht, 3, value2, keyPrefix2);
       putRows(ht, 3, value2, keyPrefix3);
-      try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
-        System.out.println("Checking values for key: " + keyPrefix1);
-        assertEquals("Got back incorrect number of rows from scan", 3,
-          getNumberOfRows(keyPrefix1, value2, table));
-        System.out.println("Checking values for key: " + keyPrefix2);
-        assertEquals("Got back incorrect number of rows from scan", 3,
-          getNumberOfRows(keyPrefix2, value2, table));
-        System.out.println("Checking values for key: " + keyPrefix3);
-        assertEquals("Got back incorrect number of rows from scan", 3,
-          getNumberOfRows(keyPrefix3, value2, table));
-        deleteColumns(ht, value2, keyPrefix1);
-        deleteColumns(ht, value2, keyPrefix2);
-        deleteColumns(ht, value2, keyPrefix3);
-        System.out.println("Starting important checks.....");
-        assertEquals("Got back incorrect number of rows from scan: " + keyPrefix1, 0,
-          getNumberOfRows(keyPrefix1, value2, table));
-        assertEquals("Got back incorrect number of rows from scan: " + keyPrefix2, 0,
-          getNumberOfRows(keyPrefix2, value2, table));
-        assertEquals("Got back incorrect number of rows from scan: " + keyPrefix3, 0,
-          getNumberOfRows(keyPrefix3, value2, table));
-      }
+      LOG.info("Checking values for key: " + keyPrefix1);
+      assertEquals(3, getNumberOfRows(keyPrefix1, value2, ht),
+        "Got back incorrect number of rows from scan");
+      LOG.info("Checking values for key: " + keyPrefix2);
+      assertEquals(3, getNumberOfRows(keyPrefix2, value2, ht),
+        "Got back incorrect number of rows from scan");
+      LOG.info("Checking values for key: " + keyPrefix3);
+      assertEquals(3, getNumberOfRows(keyPrefix3, value2, ht),
+        "Got back incorrect number of rows from scan");
+      deleteColumns(ht, value2, keyPrefix1);
+      deleteColumns(ht, value2, keyPrefix2);
+      deleteColumns(ht, value2, keyPrefix3);
+      LOG.info("Starting important checks.....");
+      assertEquals(0, getNumberOfRows(keyPrefix1, value2, ht),
+        "Got back incorrect number of rows from scan: " + keyPrefix1);
+      assertEquals(0, getNumberOfRows(keyPrefix2, value2, ht),
+        "Got back incorrect number of rows from scan: " + keyPrefix2);
+      assertEquals(0, getNumberOfRows(keyPrefix3, value2, ht),
+        "Got back incorrect number of rows from scan: " + keyPrefix3);
     }
   }
 
-  /**
-   * Test filters when multiple regions. It does counts. Needs eye-balling of logs to ensure that
-   * we're not scanning more regions that we're supposed to. Related to the TestFilterAcrossRegions
-   * over in the o.a.h.h.filter package.
-   */
-  @Test
-  public void testFilterAcrossMultipleRegions() throws IOException {
-    final TableName tableName = name.getTableName();
-    try (Table t = TEST_UTIL.createTable(tableName, FAMILY)) {
-      int rowCount = TEST_UTIL.loadTable(t, FAMILY, false);
-      assertRowCount(t, rowCount);
-      // Split the table. Should split on a reasonable key; 'lqj'
-      List<HRegionLocation> regions = splitTable(t);
-      assertRowCount(t, rowCount);
-      // Get end key of first region.
-      byte[] endKey = regions.get(0).getRegionInfo().getEndKey();
-      // Count rows with a filter that stops us before passed 'endKey'.
-      // Should be count of rows in first region.
-      int endKeyCount = TEST_UTIL.countRows(t, createScanWithRowFilter(endKey));
-      assertTrue(endKeyCount < rowCount);
-
-      // How do I know I did not got to second region? Thats tough. Can't really
-      // do that in client-side region test. I verified by tracing in debugger.
-      // I changed the messages that come out when set to DEBUG so should see
-      // when scanner is done. Says "Finished with scanning..." with region name.
-      // Check that its finished in right region.
-
-      // New test. Make it so scan goes into next region by one and then two.
-      // Make sure count comes out right.
-      byte[] key = new byte[] { endKey[0], endKey[1], (byte) (endKey[2] + 1) };
-      int plusOneCount = TEST_UTIL.countRows(t, createScanWithRowFilter(key));
-      assertEquals(endKeyCount + 1, plusOneCount);
-      key = new byte[] { endKey[0], endKey[1], (byte) (endKey[2] + 2) };
-      int plusTwoCount = TEST_UTIL.countRows(t, createScanWithRowFilter(key));
-      assertEquals(endKeyCount + 2, plusTwoCount);
-
-      // New test. Make it so I scan one less than endkey.
-      key = new byte[] { endKey[0], endKey[1], (byte) (endKey[2] - 1) };
-      int minusOneCount = TEST_UTIL.countRows(t, createScanWithRowFilter(key));
-      assertEquals(endKeyCount - 1, minusOneCount);
-      // For above test... study logs. Make sure we do "Finished with scanning.."
-      // in first region and that we do not fall into the next region.
-
-      key = new byte[] { 'a', 'a', 'a' };
-      int countBBB =
-        TEST_UTIL.countRows(t, createScanWithRowFilter(key, null, CompareOperator.EQUAL));
-      assertEquals(1, countBBB);
-
-      int countGreater = TEST_UTIL.countRows(t,
-        createScanWithRowFilter(endKey, null, CompareOperator.GREATER_OR_EQUAL));
-      // Because started at start of table.
-      assertEquals(0, countGreater);
-      countGreater = TEST_UTIL.countRows(t,
-        createScanWithRowFilter(endKey, endKey, CompareOperator.GREATER_OR_EQUAL));
-      assertEquals(rowCount - endKeyCount, countGreater);
-    }
-  }
-
-  @Test
+  @TestTemplate
   public void testSuperSimple() throws Exception {
-    final TableName tableName = name.getTableName();
-    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
+    TEST_UTIL.createTable(tableName, FAMILY);
+    try (Connection conn = getConnection(); Table ht = conn.getTable(tableName)) {
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, VALUE);
       ht.put(put);
@@ -427,45 +334,37 @@ public class TestFromClientSide extends FromClientSideBase {
       scan.addColumn(FAMILY, tableName.toBytes());
       try (ResultScanner scanner = ht.getScanner(scan)) {
         Result result = scanner.next();
-        assertNull("Expected null result", result);
+        assertNull(result, "Expected null result");
       }
     }
   }
 
-  @Test
+  @TestTemplate
   public void testMaxKeyValueSize() throws Exception {
-    final TableName tableName = name.getTableName();
-    Configuration conf = TEST_UTIL.getConfiguration();
-    String oldMaxSize = conf.get(ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY);
-    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
-      byte[] value = new byte[4 * 1024 * 1024];
-      Put put = new Put(ROW);
-      put.addColumn(FAMILY, QUALIFIER, value);
-      ht.put(put);
-
-      try {
-        TEST_UTIL.getConfiguration().setInt(ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY,
-          2 * 1024 * 1024);
-        // Create new table so we pick up the change in Configuration.
-        try (Connection connection =
-          ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
-          try (Table t = connection.getTable(TableName.valueOf(FAMILY))) {
-            put = new Put(ROW);
-            put.addColumn(FAMILY, QUALIFIER, value);
-            t.put(put);
-          }
-        }
-        fail("Inserting a too large KeyValue worked, should throw exception");
-      } catch (Exception ignored) {
-      }
+    TEST_UTIL.createTable(tableName, FAMILY);
+    byte[] value = new byte[4 * 1024 * 1024];
+    Put put = new Put(ROW);
+    put.addColumn(FAMILY, QUALIFIER, value);
+    Configuration conf = getClientConf();
+    // no problem
+    try (Connection connection = ConnectionFactory.createConnection(conf);
+      Table t = connection.getTable(tableName)) {
+      t.put(put);
     }
-    conf.set(ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY, oldMaxSize);
+
+    // set max kv size limit
+    conf.setInt(ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY, 2 * 1024 * 1024);
+    try (Connection connection = ConnectionFactory.createConnection(conf);
+      Table t = connection.getTable(tableName)) {
+      assertThrows(IllegalArgumentException.class, () -> t.put(put),
+        "Inserting a too large KeyValue worked, should throw exception");
+    }
   }
 
-  @Test
+  @TestTemplate
   public void testFilters() throws Exception {
-    final TableName tableName = name.getTableName();
-    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
+    TEST_UTIL.createTable(tableName, FAMILY);
+    try (Connection conn = getConnection(); Table ht = conn.getTable(tableName)) {
       byte[][] ROWS = makeN(ROW, 10);
       byte[][] QUALIFIERS =
         { Bytes.toBytes("col0-<d2v1>-<d3v2>"), Bytes.toBytes("col1-<d2v1>-<d3v2>"),
@@ -498,10 +397,10 @@ public class TestFromClientSide extends FromClientSideBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testFilterWithLongCompartor() throws Exception {
-    final TableName tableName = name.getTableName();
-    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
+    TEST_UTIL.createTable(tableName, FAMILY);
+    try (Connection conn = getConnection(); Table ht = conn.getTable(tableName)) {
       byte[][] ROWS = makeN(ROW, 10);
       byte[][] values = new byte[10][];
       for (int i = 0; i < 10; i++) {
@@ -530,10 +429,10 @@ public class TestFromClientSide extends FromClientSideBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testKeyOnlyFilter() throws Exception {
-    final TableName tableName = name.getTableName();
-    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
+    TEST_UTIL.createTable(tableName, FAMILY);
+    try (Connection conn = getConnection(); Table ht = conn.getTable(tableName)) {
       byte[][] ROWS = makeN(ROW, 10);
       byte[][] QUALIFIERS =
         { Bytes.toBytes("col0-<d2v1>-<d3v2>"), Bytes.toBytes("col1-<d2v1>-<d3v2>"),
@@ -567,10 +466,10 @@ public class TestFromClientSide extends FromClientSideBase {
   /**
    * Test simple table and non-existent row cases.
    */
-  @Test
+  @TestTemplate
   public void testSimpleMissing() throws Exception {
-    final TableName tableName = name.getTableName();
-    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
+    TEST_UTIL.createTable(tableName, FAMILY);
+    try (Connection conn = getConnection(); Table ht = conn.getTable(tableName)) {
       byte[][] ROWS = makeN(ROW, 4);
 
       // Try to get a row on an empty table
@@ -678,15 +577,14 @@ public class TestFromClientSide extends FromClientSideBase {
    * Test basic puts, gets, scans, and deletes for a single row in a multiple family table.
    */
   @SuppressWarnings("checkstyle:MethodLength")
-  @Test
+  @TestTemplate
   public void testSingleRowMultipleFamily() throws Exception {
-    final TableName tableName = name.getTableName();
     byte[][] ROWS = makeN(ROW, 3);
     byte[][] FAMILIES = makeNAscii(FAMILY, 10);
     byte[][] QUALIFIERS = makeN(QUALIFIER, 10);
     byte[][] VALUES = makeN(VALUE, 10);
-
-    try (Table ht = TEST_UTIL.createTable(tableName, FAMILIES)) {
+    TEST_UTIL.createTable(tableName, FAMILIES);
+    try (Connection conn = getConnection(); Table ht = conn.getTable(tableName)) {
       ////////////////////////////////////////////////////////////////////////////
       // Insert one column to one family
       ////////////////////////////////////////////////////////////////////////////
@@ -946,136 +844,113 @@ public class TestFromClientSide extends FromClientSideBase {
     }
   }
 
-  @Test(expected = NullPointerException.class)
+  @TestTemplate
   public void testNullTableName() throws IOException {
     // Null table name (should NOT work)
-    TEST_UTIL.createTable(null, FAMILY);
-    fail("Creating a table with null name passed, should have failed");
+    assertThrows(NullPointerException.class, () -> TEST_UTIL.createTable(null, FAMILY),
+      "Creating a table with null name passed, should have failed");
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @TestTemplate
   public void testNullFamilyName() throws IOException {
-    final TableName tableName = name.getTableName();
-
     // Null family (should NOT work)
-    TEST_UTIL.createTable(tableName, new byte[][] { null });
-    fail("Creating a table with a null family passed, should fail");
+    assertThrows(IllegalArgumentException.class,
+      () -> TEST_UTIL.createTable(tableName, new byte[][] { null }),
+      "Creating a table with a null family passed, should fail");
   }
 
-  @Test
+  @TestTemplate
   public void testNullRowAndQualifier() throws Exception {
-    final TableName tableName = name.getTableName();
-
-    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
-
+    TEST_UTIL.createTable(tableName, FAMILY);
+    try (Connection conn = getConnection(); Table ht = conn.getTable(tableName)) {
       // Null row (should NOT work)
-      try {
+      assertThrows(RuntimeException.class, () -> {
         Put put = new Put((byte[]) null);
         put.addColumn(FAMILY, QUALIFIER, VALUE);
         ht.put(put);
-        fail("Inserting a null row worked, should throw exception");
-      } catch (Exception ignored) {
-      }
+      }, "Inserting a null row worked, should throw exception");
 
       // Null qualifier (should work)
-      {
-        Put put = new Put(ROW);
-        put.addColumn(FAMILY, null, VALUE);
-        ht.put(put);
+      ht.put(new Put(ROW).addColumn(FAMILY, null, VALUE));
 
-        getTestNull(ht, ROW, FAMILY, VALUE);
+      getTestNull(ht, ROW, FAMILY, VALUE);
 
-        scanTestNull(ht, ROW, FAMILY, VALUE);
+      scanTestNull(ht, ROW, FAMILY, VALUE);
 
-        Delete delete = new Delete(ROW);
-        delete.addColumns(FAMILY, null);
-        ht.delete(delete);
+      Delete delete = new Delete(ROW);
+      delete.addColumns(FAMILY, null);
+      ht.delete(delete);
 
-        Get get = new Get(ROW);
-        Result result = ht.get(get);
-        assertEmptyResult(result);
-      }
+      Get get = new Get(ROW);
+      Result result = ht.get(get);
+      assertEmptyResult(result);
     }
   }
 
-  @Test
+  @TestTemplate
   public void testNullEmptyQualifier() throws Exception {
-    final TableName tableName = name.getTableName();
-
-    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
-
+    TEST_UTIL.createTable(tableName, FAMILY);
+    try (Connection conn = getConnection(); Table ht = conn.getTable(tableName)) {
       // Empty qualifier, byte[0] instead of null (should work)
-      try {
-        Put put = new Put(ROW);
-        put.addColumn(FAMILY, HConstants.EMPTY_BYTE_ARRAY, VALUE);
-        ht.put(put);
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, HConstants.EMPTY_BYTE_ARRAY, VALUE);
+      ht.put(put);
 
-        getTestNull(ht, ROW, FAMILY, VALUE);
+      getTestNull(ht, ROW, FAMILY, VALUE);
 
-        scanTestNull(ht, ROW, FAMILY, VALUE);
+      scanTestNull(ht, ROW, FAMILY, VALUE);
 
-        // Flush and try again
+      // Flush and try again
 
-        TEST_UTIL.flush();
+      TEST_UTIL.flush();
 
-        getTestNull(ht, ROW, FAMILY, VALUE);
+      getTestNull(ht, ROW, FAMILY, VALUE);
 
-        scanTestNull(ht, ROW, FAMILY, VALUE);
+      scanTestNull(ht, ROW, FAMILY, VALUE);
 
-        Delete delete = new Delete(ROW);
-        delete.addColumns(FAMILY, HConstants.EMPTY_BYTE_ARRAY);
-        ht.delete(delete);
+      Delete delete = new Delete(ROW);
+      delete.addColumns(FAMILY, HConstants.EMPTY_BYTE_ARRAY);
+      ht.delete(delete);
 
-        Get get = new Get(ROW);
-        Result result = ht.get(get);
-        assertEmptyResult(result);
-
-      } catch (Exception e) {
-        throw new IOException("Using a row with null qualifier should not throw exception");
-      }
+      Get get = new Get(ROW);
+      Result result = ht.get(get);
+      assertEmptyResult(result);
     }
   }
 
-  @Test
-  public void testNullValue() throws IOException {
-    final TableName tableName = name.getTableName();
-
-    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
+  @TestTemplate
+  public void testNullValue() throws Exception {
+    TEST_UTIL.createTable(tableName, FAMILY);
+    try (Connection conn = getConnection(); Table ht = conn.getTable(tableName)) {
       // Null value
-      try {
-        Put put = new Put(ROW);
-        put.addColumn(FAMILY, QUALIFIER, null);
-        ht.put(put);
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, null);
+      ht.put(put);
 
-        Get get = new Get(ROW);
-        get.addColumn(FAMILY, QUALIFIER);
-        Result result = ht.get(get);
-        assertSingleResult(result, ROW, FAMILY, QUALIFIER, null);
+      Get get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      Result result = ht.get(get);
+      assertSingleResult(result, ROW, FAMILY, QUALIFIER, null);
 
-        Scan scan = new Scan();
-        scan.addColumn(FAMILY, QUALIFIER);
-        result = getSingleScanResult(ht, scan);
-        assertSingleResult(result, ROW, FAMILY, QUALIFIER, null);
+      Scan scan = new Scan();
+      scan.addColumn(FAMILY, QUALIFIER);
+      result = getSingleScanResult(ht, scan);
+      assertSingleResult(result, ROW, FAMILY, QUALIFIER, null);
 
-        Delete delete = new Delete(ROW);
-        delete.addColumns(FAMILY, QUALIFIER);
-        ht.delete(delete);
+      Delete delete = new Delete(ROW);
+      delete.addColumns(FAMILY, QUALIFIER);
+      ht.delete(delete);
 
-        get = new Get(ROW);
-        result = ht.get(get);
-        assertEmptyResult(result);
-
-      } catch (Exception e) {
-        throw new IOException("Null values should be allowed, but threw exception");
-      }
+      get = new Get(ROW);
+      result = ht.get(get);
+      assertEmptyResult(result);
     }
   }
 
-  @Test
+  @TestTemplate
   public void testNullQualifier() throws Exception {
-    final TableName tableName = name.getTableName();
-    try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
-
+    TEST_UTIL.createTable(tableName, FAMILY);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       // Work for Put
       Put put = new Put(ROW);
       put.addColumn(FAMILY, null, VALUE);
@@ -1116,29 +991,27 @@ public class TestFromClientSide extends FromClientSideBase {
       put = new Put(ROW);
       put.addColumn(FAMILY, null, Bytes.toBytes("checkAndPut"));
       table.put(put);
-      table.checkAndMutate(ROW, FAMILY).ifEquals(VALUE).thenPut(put);
+      table.checkAndMutate(CheckAndMutate.newBuilder(ROW).ifEquals(FAMILY, null, VALUE).build(put));
 
       RowMutations mutate = new RowMutations(ROW);
       mutate.add(new Put(ROW).addColumn(FAMILY, null, Bytes.toBytes("checkAndMutate")));
-      table.checkAndMutate(ROW, FAMILY).ifEquals(Bytes.toBytes("checkAndPut")).thenMutate(mutate);
+      table.checkAndMutate(CheckAndMutate.newBuilder(ROW)
+        .ifEquals(FAMILY, null, Bytes.toBytes("checkAndPut")).build(mutate));
 
       delete = new Delete(ROW);
       delete.addColumns(FAMILY, null);
-      table.checkAndMutate(ROW, FAMILY).ifEquals(Bytes.toBytes("checkAndMutate"))
-        .thenDelete(delete);
+      table.checkAndMutate(CheckAndMutate.newBuilder(ROW)
+        .ifEquals(FAMILY, null, Bytes.toBytes("checkAndMutate")).build(delete));
     }
   }
 
-  @Test
+  @TestTemplate
   @SuppressWarnings("checkstyle:MethodLength")
   public void testVersions() throws Exception {
-    final TableName tableName = name.getTableName();
-
     long[] STAMPS = makeStamps(20);
     byte[][] VALUES = makeNAscii(VALUE, 20);
-
-    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10)) {
-
+    TEST_UTIL.createTable(tableName, FAMILY, 10);
+    try (Connection conn = getConnection(); Table ht = conn.getTable(tableName)) {
       // Insert 4 versions of same column
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
@@ -1351,16 +1224,15 @@ public class TestFromClientSide extends FromClientSideBase {
     }
   }
 
-  @Test
+  @TestTemplate
   @SuppressWarnings("checkstyle:MethodLength")
   public void testVersionLimits() throws Exception {
-    final TableName tableName = name.getTableName();
     byte[][] FAMILIES = makeNAscii(FAMILY, 3);
     int[] LIMITS = { 1, 3, 5 };
     long[] STAMPS = makeStamps(10);
     byte[][] VALUES = makeNAscii(VALUE, 10);
-    try (Table ht = TEST_UTIL.createTable(tableName, FAMILIES, LIMITS)) {
-
+    TEST_UTIL.createTable(tableName, FAMILIES, LIMITS);
+    try (Connection conn = getConnection(); Table ht = conn.getTable(tableName)) {
       // Insert limit + 1 on each family
       Put put = new Put(ROW);
       put.addColumn(FAMILIES[0], QUALIFIER, STAMPS[0], VALUES[0]);
@@ -1483,7 +1355,7 @@ public class TestFromClientSide extends FromClientSideBase {
       get = new Get(ROW);
       get.setMaxVersions(Integer.MAX_VALUE);
       result = ht.get(get);
-      assertEquals("Expected 9 keys but received " + result.size(), 9, result.size());
+      assertEquals(9, result.size(), "Expected 9 keys but received " + result.size());
 
       get = new Get(ROW);
       get.addFamily(FAMILIES[0]);
@@ -1491,7 +1363,7 @@ public class TestFromClientSide extends FromClientSideBase {
       get.addFamily(FAMILIES[2]);
       get.setMaxVersions(Integer.MAX_VALUE);
       result = ht.get(get);
-      assertEquals("Expected 9 keys but received " + result.size(), 9, result.size());
+      assertEquals(9, result.size(), "Expected 9 keys but received " + result.size());
 
       get = new Get(ROW);
       get.addColumn(FAMILIES[0], QUALIFIER);
@@ -1499,12 +1371,12 @@ public class TestFromClientSide extends FromClientSideBase {
       get.addColumn(FAMILIES[2], QUALIFIER);
       get.setMaxVersions(Integer.MAX_VALUE);
       result = ht.get(get);
-      assertEquals("Expected 9 keys but received " + result.size(), 9, result.size());
+      assertEquals(9, result.size(), "Expected 9 keys but received " + result.size());
 
       scan = new Scan(ROW);
       scan.setMaxVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
-      assertEquals("Expected 9 keys but received " + result.size(), 9, result.size());
+      assertEquals(9, result.size(), "Expected 9 keys but received " + result.size());
 
       scan = new Scan(ROW);
       scan.setMaxVersions(Integer.MAX_VALUE);
@@ -1512,7 +1384,7 @@ public class TestFromClientSide extends FromClientSideBase {
       scan.addFamily(FAMILIES[1]);
       scan.addFamily(FAMILIES[2]);
       result = getSingleScanResult(ht, scan);
-      assertEquals("Expected 9 keys but received " + result.size(), 9, result.size());
+      assertEquals(9, result.size(), "Expected 9 keys but received " + result.size());
 
       scan = new Scan(ROW);
       scan.setMaxVersions(Integer.MAX_VALUE);
@@ -1520,59 +1392,54 @@ public class TestFromClientSide extends FromClientSideBase {
       scan.addColumn(FAMILIES[1], QUALIFIER);
       scan.addColumn(FAMILIES[2], QUALIFIER);
       result = getSingleScanResult(ht, scan);
-      assertEquals("Expected 9 keys but received " + result.size(), 9, result.size());
+      assertEquals(9, result.size(), "Expected 9 keys but received " + result.size());
     }
   }
 
-  @Test
+  @TestTemplate
   public void testDeleteFamilyVersion() throws Exception {
-    try (Admin admin = TEST_UTIL.getAdmin()) {
-      final TableName tableName = name.getTableName();
-
-      byte[][] QUALIFIERS = makeNAscii(QUALIFIER, 1);
-      byte[][] VALUES = makeN(VALUE, 5);
-      long[] ts = { 1000, 2000, 3000, 4000, 5000 };
-
-      try (Table ht = TEST_UTIL.createTable(tableName, FAMILY, 5)) {
-
-        Put put = new Put(ROW);
-        for (int q = 0; q < 1; q++) {
-          for (int t = 0; t < 5; t++) {
-            put.addColumn(FAMILY, QUALIFIERS[q], ts[t], VALUES[t]);
-          }
+    TEST_UTIL.createTable(tableName, FAMILY, 5);
+    byte[][] QUALIFIERS = makeNAscii(QUALIFIER, 1);
+    byte[][] VALUES = makeN(VALUE, 5);
+    long[] ts = { 1000, 2000, 3000, 4000, 5000 };
+    try (Connection conn = getConnection(); Admin admin = conn.getAdmin();
+      Table ht = conn.getTable(tableName)) {
+      Put put = new Put(ROW);
+      for (int q = 0; q < 1; q++) {
+        for (int t = 0; t < 5; t++) {
+          put.addColumn(FAMILY, QUALIFIERS[q], ts[t], VALUES[t]);
         }
-        ht.put(put);
-        admin.flush(tableName);
+      }
+      ht.put(put);
+      admin.flush(tableName);
 
-        Delete delete = new Delete(ROW);
-        delete.addFamilyVersion(FAMILY, ts[1]); // delete version '2000'
-        delete.addFamilyVersion(FAMILY, ts[3]); // delete version '4000'
-        ht.delete(delete);
-        admin.flush(tableName);
+      Delete delete = new Delete(ROW);
+      delete.addFamilyVersion(FAMILY, ts[1]); // delete version '2000'
+      delete.addFamilyVersion(FAMILY, ts[3]); // delete version '4000'
+      ht.delete(delete);
+      admin.flush(tableName);
 
-        for (int i = 0; i < 1; i++) {
-          Get get = new Get(ROW);
-          get.addColumn(FAMILY, QUALIFIERS[i]);
-          get.setMaxVersions(Integer.MAX_VALUE);
-          Result result = ht.get(get);
-          // verify version '1000'/'3000'/'5000' remains for all columns
-          assertNResult(result, ROW, FAMILY, QUALIFIERS[i], new long[] { ts[0], ts[2], ts[4] },
-            new byte[][] { VALUES[0], VALUES[2], VALUES[4] }, 0, 2);
-        }
+      for (int i = 0; i < 1; i++) {
+        Get get = new Get(ROW);
+        get.addColumn(FAMILY, QUALIFIERS[i]);
+        get.readVersions(Integer.MAX_VALUE);
+        Result result = ht.get(get);
+        // verify version '1000'/'3000'/'5000' remains for all columns
+        assertNResult(result, ROW, FAMILY, QUALIFIERS[i], new long[] { ts[0], ts[2], ts[4] },
+          new byte[][] { VALUES[0], VALUES[2], VALUES[4] }, 0, 2);
       }
     }
   }
 
-  @Test
+  @TestTemplate
   public void testDeleteFamilyVersionWithOtherDeletes() throws Exception {
-    final TableName tableName = name.getTableName();
-
+    TEST_UTIL.createTable(tableName, FAMILY, 5);
     byte[][] QUALIFIERS = makeNAscii(QUALIFIER, 5);
     byte[][] VALUES = makeN(VALUE, 5);
     long[] ts = { 1000, 2000, 3000, 4000, 5000 };
 
-    try (Admin admin = TEST_UTIL.getAdmin();
-      Table ht = TEST_UTIL.createTable(tableName, FAMILY, 5)) {
+    try (Connection conn = getConnection(); Admin admin = conn.getAdmin();
+      Table ht = conn.getTable(tableName)) {
       Put put;
       Result result = null;
       Get get = null;
@@ -1671,15 +1538,13 @@ public class TestFromClientSide extends FromClientSideBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testDeleteWithFailed() throws Exception {
-    final TableName tableName = name.getTableName();
-
     byte[][] FAMILIES = makeNAscii(FAMILY, 3);
     byte[][] VALUES = makeN(VALUE, 5);
     long[] ts = { 1000, 2000, 3000, 4000, 5000 };
-
-    try (Table ht = TEST_UTIL.createTable(tableName, FAMILIES, 3)) {
+    TEST_UTIL.createTable(tableName, FAMILIES, 3);
+    try (Connection conn = getConnection(); Table ht = conn.getTable(tableName)) {
       Put put = new Put(ROW);
       put.addColumn(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
       ht.put(put);
@@ -1697,18 +1562,15 @@ public class TestFromClientSide extends FromClientSideBase {
     }
   }
 
-  @Test
+  @TestTemplate
   @SuppressWarnings("checkstyle:MethodLength")
   public void testDeletes() throws Exception {
-    final TableName tableName = name.getTableName();
-
     byte[][] ROWS = makeNAscii(ROW, 6);
     byte[][] FAMILIES = makeNAscii(FAMILY, 3);
     byte[][] VALUES = makeN(VALUE, 5);
     long[] ts = { 1000, 2000, 3000, 4000, 5000 };
-
-    try (Table ht = TEST_UTIL.createTable(tableName, FAMILIES, 3)) {
-
+    TEST_UTIL.createTable(tableName, FAMILIES, 3);
+    try (Connection conn = getConnection(); Table ht = conn.getTable(tableName)) {
       Put put = new Put(ROW);
       put.addColumn(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
       put.addColumn(FAMILIES[0], QUALIFIER, ts[1], VALUES[1]);
@@ -1826,8 +1688,8 @@ public class TestFromClientSide extends FromClientSideBase {
       get.addFamily(FAMILIES[2]);
       get.setMaxVersions(Integer.MAX_VALUE);
       result = ht.get(get);
-      assertEquals("Expected 4 key but received " + result.size() + ": " + result, 4,
-        result.size());
+      assertEquals(4, result.size(),
+        "Expected 4 key but received " + result.size() + ": " + result);
 
       delete = new Delete(ROWS[0]);
       delete.addFamily(FAMILIES[2]);
@@ -1848,7 +1710,7 @@ public class TestFromClientSide extends FromClientSideBase {
       get.addFamily(FAMILIES[2]);
       get.setMaxVersions(Integer.MAX_VALUE);
       result = ht.get(get);
-      assertEquals("Expected 2 keys but received " + result.size(), 2, result.size());
+      assertEquals(2, result.size(), "Expected 2 keys but received " + result.size());
       assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER, new long[] { ts[0], ts[1] },
         new byte[][] { VALUES[0], VALUES[1] }, 0, 1);
 
@@ -1857,7 +1719,7 @@ public class TestFromClientSide extends FromClientSideBase {
       scan.addFamily(FAMILIES[2]);
       scan.setMaxVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
-      assertEquals("Expected 2 keys but received " + result.size(), 2, result.size());
+      assertEquals(2, result.size(), "Expected 2 keys but received " + result.size());
       assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER, new long[] { ts[0], ts[1] },
         new byte[][] { VALUES[0], VALUES[1] }, 0, 1);
 
@@ -1866,14 +1728,14 @@ public class TestFromClientSide extends FromClientSideBase {
       get.addFamily(FAMILIES[2]);
       get.setMaxVersions(Integer.MAX_VALUE);
       result = ht.get(get);
-      assertEquals("Expected 2 keys but received " + result.size(), 2, result.size());
+      assertEquals(2, result.size(), "Expected 2 keys but received " + result.size());
 
       scan = new Scan(ROWS[1]);
       scan.addFamily(FAMILIES[1]);
       scan.addFamily(FAMILIES[2]);
       scan.setMaxVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
-      assertEquals("Expected 2 keys but received " + result.size(), 2, result.size());
+      assertEquals(2, result.size(), "Expected 2 keys but received " + result.size());
 
       get = new Get(ROWS[2]);
       get.addFamily(FAMILIES[1]);
@@ -1913,26 +1775,26 @@ public class TestFromClientSide extends FromClientSideBase {
       get.addFamily(FAMILIES[2]);
       get.setMaxVersions(Integer.MAX_VALUE);
       result = ht.get(get);
-      assertEquals("Expected 1 key but received " + result.size(), 1, result.size());
+      assertEquals(1, result.size(), "Expected 1 key but received " + result.size());
 
       get = new Get(ROWS[4]);
       get.addFamily(FAMILIES[1]);
       get.addFamily(FAMILIES[2]);
       get.setMaxVersions(Integer.MAX_VALUE);
       result = ht.get(get);
-      assertEquals("Expected 2 keys but received " + result.size(), 2, result.size());
+      assertEquals(2, result.size(), "Expected 2 keys but received " + result.size());
 
       scan = new Scan(ROWS[3]);
       scan.addFamily(FAMILIES[1]);
       scan.addFamily(FAMILIES[2]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       try (ResultScanner scanner = ht.getScanner(scan)) {
         result = scanner.next();
-        assertEquals("Expected 1 key but received " + result.size(), 1, result.size());
+        assertEquals(1, result.size(), "Expected 1 key but received " + result.size());
         assertTrue(Bytes.equals(CellUtil.cloneRow(result.rawCells()[0]), ROWS[3]));
         assertTrue(Bytes.equals(CellUtil.cloneValue(result.rawCells()[0]), VALUES[0]));
         result = scanner.next();
-        assertEquals("Expected 2 keys but received " + result.size(), 2, result.size());
+        assertEquals(2, result.size(), "Expected 2 keys but received " + result.size());
         assertTrue(Bytes.equals(CellUtil.cloneRow(result.rawCells()[0]), ROWS[4]));
         assertTrue(Bytes.equals(CellUtil.cloneRow(result.rawCells()[1]), ROWS[4]));
         assertTrue(Bytes.equals(CellUtil.cloneValue(result.rawCells()[0]), VALUES[1]));
