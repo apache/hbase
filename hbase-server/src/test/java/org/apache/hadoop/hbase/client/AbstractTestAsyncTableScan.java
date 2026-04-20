@@ -73,19 +73,8 @@ import org.junit.rules.TestRule;
 public abstract class AbstractTestAsyncTableScan {
 
   protected static final OpenTelemetryClassRule OTEL_CLASS_RULE = OpenTelemetryClassRule.create();
-
-  private static Configuration createConfiguration() {
-    Configuration conf = new Configuration();
-    // Disable directory sharing to prevent race conditions when tests run in parallel.
-    // Each test instance gets its own isolated directories to avoid one test's tearDown()
-    // deleting directories another parallel test is still using.
-    conf.setBoolean("hbase.test.disable-directory-sharing", true);
-    return conf;
-  }
-
-  protected static final MiniClusterRule MINI_CLUSTER_RULE =
-    MiniClusterRule.newBuilder().setConfiguration(createConfiguration())
-      .setMiniClusterOption(StartTestingClusterOption.builder().numWorkers(3).build()).build();
+  protected static final MiniClusterRule MINI_CLUSTER_RULE = MiniClusterRule.newBuilder()
+    .setMiniClusterOption(StartTestingClusterOption.builder().numWorkers(3).build()).build();
 
   protected static final ConnectionRule CONN_RULE =
     ConnectionRule.createAsyncConnectionRule(MINI_CLUSTER_RULE::createAsyncConnection);
