@@ -32,21 +32,25 @@ public class RestoreSnapshotFromClientAfterTruncateTestBase
   public void testRestoreSnapshotAfterTruncate() throws Exception {
     TableName tableName = TableName.valueOf(getValidMethodName());
     SnapshotTestingUtils.createTable(TEST_UTIL, tableName, numReplicas, FAMILY);
-    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
-    int numOfRows = 0;
+    try {
+      SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
+      int numOfRows = 0;
 
-    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
-      numOfRows = countRows(table);
+      try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+        numOfRows = countRows(table);
+      }
+      // take snapshot
+      admin.snapshot("snap", tableName);
+      admin.disableTable(tableName);
+      admin.truncateTable(tableName, false);
+      admin.disableTable(tableName);
+      admin.restoreSnapshot("snap");
+
+      admin.enableTable(tableName);
+      verifyRowCount(TEST_UTIL, tableName, numOfRows);
+      SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, numReplicas);
+    } finally {
+      TEST_UTIL.deleteTable(tableName);
     }
-    // take snapshot
-    admin.snapshot("snap", tableName);
-    admin.disableTable(tableName);
-    admin.truncateTable(tableName, false);
-    admin.disableTable(tableName);
-    admin.restoreSnapshot("snap");
-
-    admin.enableTable(tableName);
-    verifyRowCount(TEST_UTIL, tableName, numOfRows);
-    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, numReplicas);
   }
 }
