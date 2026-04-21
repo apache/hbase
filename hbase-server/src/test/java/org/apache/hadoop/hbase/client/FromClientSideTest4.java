@@ -87,7 +87,12 @@ public class FromClientSideTest4 extends FromClientSideTestBase {
 
       RetriesExhaustedException ree =
         assertThrows(RetriesExhaustedException.class, () -> foo.put(puts));
-      assertThat(ree.getCause(), instanceOf(NoSuchColumnFamilyException.class));
+      if (ree instanceof RetriesExhaustedWithDetailsException) {
+        assertThat(((RetriesExhaustedWithDetailsException) ree).exceptions.get(0),
+          instanceOf(NoSuchColumnFamilyException.class));
+      } else {
+        assertThat(ree.getCause(), instanceOf(NoSuchColumnFamilyException.class));
+      }
 
       // 2.1 Get non-existent rows
       List<Get> gets = new ArrayList<>(NUM_OPS);
@@ -115,7 +120,12 @@ public class FromClientSideTest4 extends FromClientSideTestBase {
         gets.add(get);
       }
       ree = assertThrows(RetriesExhaustedException.class, () -> foo.get(gets));
-      assertThat(ree.getCause(), instanceOf(NoSuchColumnFamilyException.class));
+      if (ree instanceof RetriesExhaustedWithDetailsException) {
+        assertThat(((RetriesExhaustedWithDetailsException) ree).exceptions.get(0),
+          instanceOf(NoSuchColumnFamilyException.class));
+      } else {
+        assertThat(ree.getCause(), instanceOf(NoSuchColumnFamilyException.class));
+      }
 
       // 3.1 Delete with invalid column family
       List<Delete> deletes = new ArrayList<>(NUM_OPS);
@@ -125,7 +135,12 @@ public class FromClientSideTest4 extends FromClientSideTestBase {
         deletes.add(delete);
       }
       ree = assertThrows(RetriesExhaustedException.class, () -> foo.delete(deletes));
-      assertThat(ree.getCause(), instanceOf(NoSuchColumnFamilyException.class));
+      if (ree instanceof RetriesExhaustedWithDetailsException) {
+        assertThat(((RetriesExhaustedWithDetailsException) ree).exceptions.get(0),
+          instanceOf(NoSuchColumnFamilyException.class));
+      } else {
+        assertThat(ree.getCause(), instanceOf(NoSuchColumnFamilyException.class));
+      }
 
       // all valid rows should have been deleted
       gets.clear();
