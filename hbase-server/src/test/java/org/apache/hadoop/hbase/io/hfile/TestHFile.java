@@ -38,8 +38,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -76,6 +78,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -92,6 +95,8 @@ import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
 
 /**
  * test hfile features.
@@ -200,6 +205,60 @@ public class TestHFile {
     Assert.assertEquals(bufCount, alloc.getFreeBufferCount());
     alloc.clean();
     lru.shutdown();
+  }
+
+  @Test
+  public void testWriterCacheOnWriteSkipDoesNotLeak() throws Exception {
+    int bufCount = 32;
+    int blockSize = 4 * 1024;
+    ByteBuffAllocator alloc = initAllocator(true, blockSize, bufCount, 0);
+    fillByteBuffAllocator(alloc, bufCount);
+    ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+    Configuration myConf = HBaseConfiguration.create(conf);
+    myConf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, true);
+    myConf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, false);
+    myConf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, false);
+    final AtomicInteger counter = new AtomicInteger();
+    RefCnt.detector.setLeakListener(new ResourceLeakDetector.LeakListener() {
+      @Override
+      public void onLeak(String s, String s1) {
+        counter.incrementAndGet();
+      }
+    });
+    BlockCache cache = Mockito.mock(BlockCache.class);
+    Mockito.when(cache.shouldCacheBlock(Mockito.any(), Mockito.anyLong(), Mockito.any()))
+      .thenReturn(Optional.of(false));
+    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), "testWriterCacheOnWriteSkipDoesNotLeak");
+    HFileContext context = new HFileContextBuilder().withBlockSize(blockSize).build();
+
+    try {
+      Writer writer = new HFile.WriterFactory(myConf, new CacheConfig(myConf, null, cache, alloc))
+        .withPath(fs, hfilePath).withFileContext(context).create();
+      try {
+        writer.append(new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("q"),
+          HConstants.LATEST_TIMESTAMP, Bytes.toBytes("value")));
+      } finally {
+        writer.close();
+      }
+
+      Mockito.verify(cache).shouldCacheBlock(Mockito.any(), Mockito.anyLong(), Mockito.any());
+      Mockito.verify(cache, Mockito.never()).cacheBlock(Mockito.any(), Mockito.any(),
+        Mockito.anyBoolean(), Mockito.anyBoolean());
+      for (int i = 0; i < 30 && counter.get() == 0; i++) {
+        System.gc();
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+        alloc.allocate(128 * 1024).release();
+      }
+      assertEquals(0, counter.get());
+    } finally {
+      fs.delete(hfilePath, false);
+      alloc.clean();
+    }
   }
 
   private void assertBytesReadFromCache(boolean isScanMetricsEnabled) throws Exception {
