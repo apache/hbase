@@ -205,13 +205,78 @@ public class TestHFileBlockIndex {
       new HFileBlockIndex.BlockIndexWriter(hbw, cacheConfig, path.getName(), null);
 
     writeDataBlocksAndCreateIndex(hbw, outputStream, biw);
-
-    System.gc();
-    Thread.sleep(1000);
-
-    allocator.allocate(128 * 1024).release();
-
+    for (int i = 0; i < 30 && counter.get() == 0; i++) {
+      System.gc();
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        break;
+      }
+      allocator.allocate(128 * 1024).release();
+    }
     assertEquals(0, counter.get());
+  }
+
+  @Test
+  public void testIntermediateIndexCacheOnWriteDoesNotLeak() throws Exception {
+    Configuration localConf = new Configuration(TEST_UTIL.getConfiguration());
+    localConf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
+    localConf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, true);
+    localConf.setInt(ByteBuffAllocator.BUFFER_SIZE_KEY, 4096);
+    localConf.setInt(ByteBuffAllocator.MAX_BUFFER_COUNT_KEY, 32);
+    localConf.setInt(ByteBuffAllocator.MIN_ALLOCATE_SIZE_KEY, 0);
+    ByteBuffAllocator allocator = ByteBuffAllocator.create(localConf, true);
+    List<ByteBuff> buffers = new ArrayList<>();
+    for (int i = 0; i < allocator.getTotalBufferCount(); i++) {
+      buffers.add(allocator.allocateOneBuffer());
+      assertEquals(0, allocator.getFreeBufferCount());
+    }
+    buffers.forEach(ByteBuff::release);
+    assertEquals(allocator.getTotalBufferCount(), allocator.getFreeBufferCount());
+    ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+    final AtomicInteger counter = new AtomicInteger();
+    RefCnt.detector.setLeakListener(new ResourceLeakDetector.LeakListener() {
+      @Override
+      public void onLeak(String s, String s1) {
+        counter.incrementAndGet();
+      }
+    });
+
+    Path localPath = new Path(TEST_UTIL.getDataTestDir(),
+      "block_index_testIntermediateIndexCacheOnWriteDoesNotLeak_" + compr);
+    HFileContext meta = new HFileContextBuilder().withHBaseCheckSum(true)
+      .withIncludesMvcc(includesMemstoreTS).withIncludesTags(true).withCompression(compr)
+      .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM).build();
+    HFileBlock.Writer hbw =
+      new HFileBlock.Writer(localConf, null, meta, allocator, meta.getBlocksize());
+    FSDataOutputStream outputStream = fs.create(localPath);
+    LruBlockCache cache = new LruBlockCache(8 * 1024 * 1024, 1024, true, localConf);
+    CacheConfig cacheConfig = new CacheConfig(localConf, null, cache, allocator);
+    HFileBlockIndex.BlockIndexWriter biw =
+      new HFileBlockIndex.BlockIndexWriter(hbw, cacheConfig, localPath.getName(), null);
+    biw.setMaxChunkSize(512);
+
+    try {
+      writeDataBlocksAndCreateIndex(hbw, outputStream, biw);
+      assertTrue(biw.getNumLevels() >= 3);
+      for (int i = 0; i < 30 && counter.get() == 0; i++) {
+        System.gc();
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+        allocator.allocate(128 * 1024).release();
+      }
+      assertEquals(0, counter.get());
+    } finally {
+      hbw.release();
+      cache.shutdown();
+      allocator.clean();
+      fs.delete(localPath, false);
+    }
   }
 
   private void clear() throws IOException {
