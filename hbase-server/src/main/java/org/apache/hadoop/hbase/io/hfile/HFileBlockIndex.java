@@ -1171,9 +1171,13 @@ public class HFileBlockIndex {
       if (getCacheOnWrite()) {
         cacheConf.getBlockCache().ifPresent(cache -> {
           HFileBlock blockForCaching = blockWriter.getBlockForCaching(cacheConf);
-          cache.cacheBlock(
-            new BlockCacheKey(nameForCaching, beginOffset, true, blockForCaching.getBlockType()),
-            blockForCaching);
+          try {
+            cache.cacheBlock(
+              new BlockCacheKey(nameForCaching, beginOffset, true, blockForCaching.getBlockType()),
+              blockForCaching);
+          } finally {
+            blockForCaching.release();
+          }
         });
       }
 
