@@ -156,7 +156,9 @@ public class NettyRpcServer extends RpcServer {
     EventLoopGroup eventLoopGroup = config.group();
     Class<? extends ServerChannel> channelClass = config.serverChannelClass();
     ServerBootstrap bootstrap = new ServerBootstrap().group(eventLoopGroup).channel(channelClass)
-      .childOption(ChannelOption.TCP_NODELAY, tcpNoDelay)
+      // Do not accept connections until start() completes auth setup. Without this, a client can
+      // connect between bind() and start() and reach UGI before login is done.
+      .option(ChannelOption.AUTO_READ, false).childOption(ChannelOption.TCP_NODELAY, tcpNoDelay)
       .childOption(ChannelOption.SO_KEEPALIVE, tcpKeepAlive)
       .childOption(ChannelOption.SO_REUSEADDR, true)
       .childHandler(new ChannelInitializer<Channel>() {
@@ -335,6 +337,7 @@ public class NettyRpcServer extends RpcServer {
     HBasePolicyProvider.init(conf, authManager);
     scheduler.start();
     started = true;
+    serverChannel.config().setAutoRead(true);
   }
 
   @Override
