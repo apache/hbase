@@ -321,6 +321,15 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   // instance into a web context !! AND OTHER PLACES !!
   public static final String MASTER = "master";
 
+  // for meta/namespace region, if SCP is scheduled by master, num of retries to perform
+  // before giving up.
+  private static final String HBASE_MASTER_REGION_SCHEDULE_RECOVERY_WAIT_RETRIES =
+    "hbase.master.region.schedule.recovery.wait.retries";
+  // for meta/namespace region, if SCP is scheduled by master, retry interval in ms to wait
+  // for before retrying again.
+  private static final String HBASE_MASTER_REGION_SCHEDULE_RECOVERY_WAIT_INTERVAL_MS =
+    "hbase.master.region.schedule.recovery.wait.interval.ms";
+
   // Manager and zk listener for master election
   private final ActiveMasterManager activeMasterManager;
   // Region server tracker
@@ -1456,23 +1465,75 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
    * Check hbase:meta is up and ready for reading. For use during Master startup only.
    * @return True if meta is UP and online and startup can progress. Otherwise, meta is not online
    *         and we will hold here until operator intervention.
+   * @throws IOException If the master restart is required.
    */
   @InterfaceAudience.Private
-  public boolean waitForMetaOnline() {
+  public boolean waitForMetaOnline() throws IOException {
     return isRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO);
   }
 
   /**
+   * Wait until the region is reported online on a live regionserver.
+   * @param ri Region info.
    * @return True if region is online and scannable else false if an error or shutdown (Otherwise we
    *         just block in here holding up all forward-progess).
+   * @throws IOException If the master restart is required.
    */
-  private boolean isRegionOnline(RegionInfo ri) {
+  private boolean isRegionOnline(RegionInfo ri) throws IOException {
     RetryCounter rc = null;
     while (!isStopped()) {
       RegionState rs = this.assignmentManager.getRegionStates().getRegionState(ri);
       if (rs != null && rs.isOpened()) {
         if (this.getServerManager().isServerOnline(rs.getServerName())) {
           return true;
+        } else {
+          ServerName serverNameForRegion = rs.getServerName();
+          Optional<Procedure<MasterProcedureEnv>> scpForServer =
+            this.procedureExecutor.getProcedures().stream()
+              .filter(p -> p instanceof ServerCrashProcedure
+                && serverNameForRegion.equals(((ServerCrashProcedure) p).getServerName()))
+              .findFirst();
+          if (!scpForServer.isPresent()) {
+            LOG.info("{} has state {} but the server {} is not online, scheduling recovery.",
+              ri.getRegionNameAsString(), rs, rs.getServerName());
+            this.getServerManager().expireServer(rs.getServerName(), true);
+            int numRetries = this.getConfiguration()
+              .getInt(HBASE_MASTER_REGION_SCHEDULE_RECOVERY_WAIT_RETRIES, 20);
+            int sleepInterval = this.getConfiguration()
+              .getInt(HBASE_MASTER_REGION_SCHEDULE_RECOVERY_WAIT_INTERVAL_MS, 2000);
+            while (numRetries > 0) {
+              scpForServer = this.procedureExecutor.getProcedures().stream()
+                .filter(p -> p instanceof ServerCrashProcedure
+                  && serverNameForRegion.equals(((ServerCrashProcedure) p).getServerName()))
+                .findFirst();
+              if (scpForServer.isPresent()) {
+                ServerCrashProcedure proc = (ServerCrashProcedure) scpForServer.get();
+                if (proc.isFinished() || proc.isSuccess()) {
+                  rs = this.assignmentManager.getRegionStates().getRegionState(ri);
+                  if (rs != null && rs.isOpened()) {
+                    if (this.getServerManager().isServerOnline(rs.getServerName())) {
+                      return true;
+                    }
+                  }
+                }
+              }
+              Threads.sleep(sleepInterval);
+              numRetries--;
+            }
+            if (numRetries == 0) {
+              rs = this.assignmentManager.getRegionStates().getRegionState(ri);
+              if (rs != null && rs.isOpened()) {
+                if (this.getServerManager().isServerOnline(rs.getServerName())) {
+                  return true;
+                }
+              }
+              throw new PleaseRestartMasterException("Scheduled SCP for old server for region "
+                + ri.getRegionNameAsString() + " could not be completed");
+            }
+          } else {
+            LOG.info("{} has state {} but the server {} is not online. Wait for SCP {} to complete",
+              ri.getRegionNameAsString(), rs, rs.getServerName(), scpForServer.get());
+          }
         }
       }
       // Region is not OPEN.
