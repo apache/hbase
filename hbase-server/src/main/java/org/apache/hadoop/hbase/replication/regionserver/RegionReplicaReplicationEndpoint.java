@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.wal.EntryBuffers;
 import org.apache.hadoop.hbase.wal.EntryBuffers.RegionEntryBuffer;
 import org.apache.hadoop.hbase.wal.OutputSink;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitter.PipelineController;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -228,6 +229,9 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     while (this.isRunning()) {
       try {
         for (Entry entry : replicateContext.getEntries()) {
+          if (entry.getKey() instanceof WALKeyImpl) {
+            ((WALKeyImpl) entry.getKey()).removeExtendedAttributesWithPrefix("cell.");
+          }
           entryBuffers.appendEntry(entry);
         }
         outputSink.flush(); // make sure everything is flushed
@@ -647,5 +651,6 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       }
       return ReplicateWALEntryResponse.newBuilder().build();
     }
+
   }
 }

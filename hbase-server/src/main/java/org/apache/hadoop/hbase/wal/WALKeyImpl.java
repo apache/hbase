@@ -450,6 +450,12 @@ public class WALKeyImpl implements WALKey {
       : new HashMap<String, byte[]>();
   }
 
+  public void removeExtendedAttributesWithPrefix(String prefix) {
+    if (extendedAttributes != null) {
+      extendedAttributes.entrySet().removeIf(e -> e.getKey().startsWith(prefix));
+    }
+  }
+
   @Override
   public String toString() {
     return tablename + "/" + Bytes.toString(encodedRegionName) + "/" + sequenceId;
