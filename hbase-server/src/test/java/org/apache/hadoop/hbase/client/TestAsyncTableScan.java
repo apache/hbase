@@ -124,17 +124,17 @@ public class TestAsyncTableScan extends AbstractTestAsyncTableScan {
       .max((a, b) -> Long.compare(a.getEndEpochNanos(), b.getEndEpochNanos()))
       .map(SpanData::getSpanId).get();
 
-    final Matcher<SpanData> onNextMatcher = hasName("TracedScanResultConsumer#onNext");
+    final Matcher<SpanData> onNextMatcher =
+      allOf(hasName("TracedScanResultConsumer#onNext"), hasParentSpanId(scanOperationSpanId));
     waitForSpan(onNextMatcher);
-    spanStream().filter(onNextMatcher::matches)
-      .forEach(span -> assertThat(span, allOf(onNextMatcher, hasParentSpanId(scanOperationSpanId),
-        hasStatusWithCode(StatusCode.OK), hasEnded())));
+    spanStream().filter(onNextMatcher::matches).forEach(
+      span -> assertThat(span, allOf(onNextMatcher, hasStatusWithCode(StatusCode.OK), hasEnded())));
 
-    final Matcher<SpanData> onCompleteMatcher = hasName("TracedScanResultConsumer#onComplete");
+    final Matcher<SpanData> onCompleteMatcher =
+      allOf(hasName("TracedScanResultConsumer#onComplete"), hasParentSpanId(scanOperationSpanId));
     waitForSpan(onCompleteMatcher);
-    spanStream().filter(onCompleteMatcher::matches)
-      .forEach(span -> assertThat(span, allOf(onCompleteMatcher,
-        hasParentSpanId(scanOperationSpanId), hasStatusWithCode(StatusCode.OK), hasEnded())));
+    spanStream().filter(onCompleteMatcher::matches).forEach(span -> assertThat(span,
+      allOf(onCompleteMatcher, hasStatusWithCode(StatusCode.OK), hasEnded())));
   }
 
   @Override
@@ -163,10 +163,10 @@ public class TestAsyncTableScan extends AbstractTestAsyncTableScan {
       .max((a, b) -> Long.compare(a.getEndEpochNanos(), b.getEndEpochNanos()))
       .map(SpanData::getSpanId).get();
 
-    final Matcher<SpanData> onErrorMatcher = hasName("TracedScanResultConsumer#onError");
+    final Matcher<SpanData> onErrorMatcher =
+      allOf(hasName("TracedScanResultConsumer#onError"), hasParentSpanId(scanOperationSpanId));
     waitForSpan(onErrorMatcher);
-    spanStream().filter(onErrorMatcher::matches)
-      .forEach(span -> assertThat(span, allOf(onErrorMatcher, hasParentSpanId(scanOperationSpanId),
-        hasStatusWithCode(StatusCode.OK), hasEnded())));
+    spanStream().filter(onErrorMatcher::matches).forEach(span -> assertThat(span,
+      allOf(onErrorMatcher, hasStatusWithCode(StatusCode.OK), hasEnded())));
   }
 }
