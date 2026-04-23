@@ -94,7 +94,7 @@ public class TestModifyTableWhileMerging {
     long proc = executor.submitProcedure(mergeTableRegionsProcedure);
     UTIL.waitFor(3000000, () -> UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor()
       .isFinished(procModify));
-    assertEquals(modifyTableProcedure.getState(), ProcedureProtos.ProcedureState.SUCCESS,
+    assertEquals(ProcedureProtos.ProcedureState.SUCCESS, modifyTableProcedure.getState(),
       "Modify Table procedure should success!");
   }
 

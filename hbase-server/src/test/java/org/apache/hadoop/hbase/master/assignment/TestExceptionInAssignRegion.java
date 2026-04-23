@@ -95,7 +95,7 @@ public class TestExceptionInAssignRegion {
     long prodId = procedureExecutor.submitProcedure(assignRegionProcedure);
     ProcedureTestingUtility.waitProcedure(procedureExecutor, prodId);
 
-    assertEquals(UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size(), 2,
+    assertEquals(2, UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size(),
       "Should be two RS since other is aborted");
     assertNull(getRegionServer(0).getRegionsInTransitionInRS().get(hri.getEncodedNameAsBytes()),
       "RIT Map doesn't have correct value");
