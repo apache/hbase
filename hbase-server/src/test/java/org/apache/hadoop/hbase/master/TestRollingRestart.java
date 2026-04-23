@@ -70,9 +70,8 @@ public class TestRollingRestart {
 
   @BeforeEach
   public void setTestMethod(TestInfo testInfo) {
-    testMethodName =
-      (testInfo.getTestMethod().get().getName() + "_" + testInfo.getDisplayName())
-        .replaceAll("[^0-9A-Za-z_]", "_");
+    testMethodName = (testInfo.getTestMethod().get().getName() + "_" + testInfo.getDisplayName())
+      .replaceAll("[^0-9A-Za-z_]", "_");
   }
 
   private final boolean splitWALCoordinatedByZK;

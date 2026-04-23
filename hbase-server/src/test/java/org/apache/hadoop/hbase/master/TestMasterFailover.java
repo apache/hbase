@@ -34,10 +34,8 @@ import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,12 +44,6 @@ import org.slf4j.LoggerFactory;
 public class TestMasterFailover {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterFailover.class);
-  private String testMethodName;
-
-  @BeforeEach
-  public void setTestMethod(TestInfo testInfo) {
-    testMethodName = testInfo.getTestMethod().get().getName();
-  }
 
   /**
    * Simple test of master failover.
