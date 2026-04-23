@@ -57,7 +57,7 @@ public class TestMasterQosFunction extends QosTestHelper {
     conf = HBaseConfiguration.create();
     rpcServices = Mockito.mock(MasterRpcServices.class);
     when(rpcServices.getConfiguration()).thenReturn(conf);
-    qosFunction = new MasterAnnotationReadingPriorityFunction(rpcServices);
+    qosFunction = new MasterAnnotationReadingPriorityFunction(rpcServices, MasterRpcServices.class);
   }
 
   @Test

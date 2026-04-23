@@ -70,7 +70,9 @@ public class TestRollingRestart {
 
   @BeforeEach
   public void setTestMethod(TestInfo testInfo) {
-    testMethodName = testInfo.getTestMethod().get().getName();
+    testMethodName =
+      (testInfo.getTestMethod().get().getName() + "_" + testInfo.getDisplayName())
+        .replaceAll("[^0-9A-Za-z_]", "_");
   }
 
   private final boolean splitWALCoordinatedByZK;
@@ -102,7 +104,7 @@ public class TestRollingRestart {
     cluster.waitForActiveAndReadyMaster();
 
     // Create a table with regions
-    final TableName tableName = TableName.valueOf(testMethodName.replaceAll("[\\[|\\]]", "-"));
+    final TableName tableName = TableName.valueOf(testMethodName);
     byte[] family = Bytes.toBytes("family");
     log("Creating table with " + NUM_REGIONS_TO_CREATE + " regions");
     Table ht = TEST_UTIL.createMultiRegionTable(tableName, family, NUM_REGIONS_TO_CREATE);
