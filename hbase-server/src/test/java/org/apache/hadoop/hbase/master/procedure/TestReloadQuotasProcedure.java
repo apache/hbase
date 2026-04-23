@@ -35,20 +35,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Tag(MasterTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestReloadQuotasProcedure {
-  private static final Logger LOG = LoggerFactory.getLogger(TestReloadQuotasProcedure.class);
-  private String testMethodName;
-
-  @BeforeEach
-  public void setTestMethod(TestInfo testInfo) {
-    testMethodName = testInfo.getTestMethod().get().getName();
-  }
 
   private HBaseTestingUtility util;
   private MockMasterServices master;
