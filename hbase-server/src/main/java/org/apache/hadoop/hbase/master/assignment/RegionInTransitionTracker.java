@@ -147,8 +147,10 @@ public class RegionInTransitionTracker {
   }
 
   private boolean addRegionInTransition(final RegionStateNode regionStateNode) {
+    // Preserve the original transition timestamp already tracked on the node, which may predate
+    // when we first observe the region in the tracker during crash or startup recovery.
     return regionInTransition.putIfAbsent(regionStateNode.getRegionInfo(),
-      Pair.newPair(regionStateNode, EnvironmentEdgeManager.currentTime())) == null;
+      Pair.newPair(regionStateNode, regionStateNode.getLastUpdate())) == null;
   }
 
   private boolean removeRegionInTransition(final RegionInfo regionInfo) {

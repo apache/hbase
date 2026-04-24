@@ -104,4 +104,23 @@ public class TestRegionInTransitionTracker {
     assertTrue(ritDuration.get() >= 0);
     assertEquals(300L, ritDuration.get());
   }
+
+  @Test
+  public void testRegionCrashUsesCrashTimestampAsRitStart() {
+    regionStateNode.setState(RegionState.State.OPEN);
+
+    edge.incValue(100L);
+    regionStateNode.crashed(edge.currentTime());
+
+    edge.incValue(100L);
+    tracker.regionCrashed(regionStateNode);
+    assertTrue(tracker.isRegionInTransition(regionInfo));
+
+    edge.incValue(200L);
+    tracker.handleRegionStateNodeOperation(regionStateNode);
+
+    assertFalse(tracker.isRegionInTransition(regionInfo));
+    assertEquals(1, ritDurationCalls.get());
+    assertEquals(300L, ritDuration.get());
+  }
 }
