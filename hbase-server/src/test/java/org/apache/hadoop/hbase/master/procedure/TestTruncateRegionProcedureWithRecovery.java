@@ -18,11 +18,10 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil.insertData;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -35,54 +34,49 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TruncateRegionState;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestTruncateRegionProcedureWithRecovery extends TestTableDDLProcedureBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTruncateRegionProcedureWithRecovery.class);
   private static final Logger LOG =
     LoggerFactory.getLogger(TestTruncateRegionProcedureWithRecovery.class);
+  private String testMethodName;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
-  private static void setupConf(Configuration conf) {
+  protected static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
     conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 0);
     conf.setBoolean(HConstants.SNAPSHOT_BEFORE_DESTRUCTIVE_ACTION_ENABLED_KEY, true);
     conf.setInt("hbase.client.sync.wait.timeout.msec", 60000);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(3);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
-    try {
-      UTIL.shutdownMiniCluster();
-    } catch (Exception e) {
-      LOG.warn("failure shutting down cluster", e);
-    }
+    TestTableDDLProcedureBase.cleanupTest();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
 
@@ -92,7 +86,7 @@ public class TestTruncateRegionProcedureWithRecovery extends TestTableDDLProcedu
     UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(false);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
     for (TableDescriptor htd : UTIL.getAdmin().listTableDescriptors()) {
@@ -102,7 +96,7 @@ public class TestTruncateRegionProcedureWithRecovery extends TestTableDDLProcedu
 
   @Test
   public void testRecoverySnapshotRollback() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final String[] families = new String[] { "f1", "f2" };
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
@@ -130,7 +124,7 @@ public class TestTruncateRegionProcedureWithRecovery extends TestTableDDLProcedu
     // Wait for procedure to complete (should fail)
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     Procedure<MasterProcedureEnv> result = procExec.getResult(procId);
-    assertTrue("Procedure should have failed", result.isFailed());
+    assertTrue(result.isFailed(), "Procedure should have failed");
 
     // Verify no recovery snapshots remain after rollback
     boolean snapshotFound = false;
@@ -140,13 +134,13 @@ public class TestTruncateRegionProcedureWithRecovery extends TestTableDDLProcedu
         break;
       }
     }
-    assertTrue("Recovery snapshot should have been cleaned up during rollback", !snapshotFound);
+    assertTrue(!snapshotFound, "Recovery snapshot should have been cleaned up during rollback");
   }
 
   @Test
   public void testRecoverySnapshotAndRestore() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    final TableName restoredTableName = TableName.valueOf(name.getMethodName() + "_restored");
+    final TableName tableName = TableName.valueOf(testMethodName);
+    final TableName restoredTableName = TableName.valueOf(testMethodName + "_restored");
     final String[] families = new String[] { "f1", "f2" };
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
@@ -174,7 +168,7 @@ public class TestTruncateRegionProcedureWithRecovery extends TestTableDDLProcedu
 
     // Verify region is truncated (should have fewer rows)
     int rowsAfterTruncate = UTIL.countRows(tableName);
-    assertTrue("Should have fewer rows after truncate", rowsAfterTruncate < initialRowCount);
+    assertTrue(rowsAfterTruncate < initialRowCount, "Should have fewer rows after truncate");
 
     // Find the recovery snapshot
     String recoverySnapshotName = null;
@@ -184,15 +178,15 @@ public class TestTruncateRegionProcedureWithRecovery extends TestTableDDLProcedu
         break;
       }
     }
-    assertTrue("Recovery snapshot should exist", recoverySnapshotName != null);
+    assertTrue(recoverySnapshotName != null, "Recovery snapshot should exist");
 
     // Restore from snapshot by cloning to a new table
     UTIL.getAdmin().cloneSnapshot(recoverySnapshotName, restoredTableName);
     UTIL.waitUntilAllRegionsAssigned(restoredTableName);
 
     // Verify restored table has original data
-    assertEquals("Restored table should have original data", initialRowCount,
-      UTIL.countRows(restoredTableName));
+    assertEquals(initialRowCount, UTIL.countRows(restoredTableName),
+      "Restored table should have original data");
 
     // Clean up the cloned table
     UTIL.getAdmin().disableTable(restoredTableName);
