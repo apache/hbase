@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -57,8 +57,7 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.net.Address;
-import org.junit.Rule;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,9 +86,20 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
   public final static int NUM_SLAVES_BASE = 4; // number of slaves for the smallest cluster
   public static int NUM_DEAD_SERVERS = 0;
 
+  protected static final class MethodName {
+    private String methodName;
+
+    public String getMethodName() {
+      return methodName;
+    }
+
+    void setMethodName(String methodName) {
+      this.methodName = methodName;
+    }
+  }
+
   // Per test variables
-  @Rule
-  public TestName name = new TestName();
+  protected final MethodName name = new MethodName();
   protected TableName tableName;
 
   public static void setUpTestBeforeClass() throws Exception {
@@ -131,7 +141,8 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  public void setUpBeforeMethod() throws Exception {
+  public void setUpBeforeMethod(TestInfo testInfo) throws Exception {
+    name.setMethodName(testInfo.getTestMethod().get().getName());
     LOG.info(name.getMethodName());
     tableName = TableName.valueOf(tablePrefix + "_" + name.getMethodName());
     if (!INIT) {
@@ -487,5 +498,4 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
       postGetRSGroupInfoOfServerCalled = true;
     }
   }
-
 }
