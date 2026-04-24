@@ -23,7 +23,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -38,45 +37,44 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Testcase for HBASE-22632
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestIgnoreUnknownFamily {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIgnoreUnknownFamily.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static final byte[] FAMILY = Bytes.toBytes("cf");
 
   private static final byte[] UNKNOWN_FAMILY = Bytes.toBytes("wrong_cf");
+  private String testMethodName;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDownAfterTest() throws IOException {
     Admin admin = UTIL.getAdmin();
     for (TableName tableName : admin.listTableNames()) {
@@ -99,7 +97,7 @@ public class TestIgnoreUnknownFamily {
   @Test
   public void testSplit()
     throws IOException, InterruptedException, ExecutionException, TimeoutException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(testMethodName);
     Admin admin = UTIL.getAdmin();
     admin.createTable(TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build());
@@ -111,7 +109,7 @@ public class TestIgnoreUnknownFamily {
   @Test
   public void testMerge()
     throws IOException, InterruptedException, ExecutionException, TimeoutException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(testMethodName);
     Admin admin = UTIL.getAdmin();
     admin.createTable(
       TableDescriptorBuilder.newBuilder(tableName)
