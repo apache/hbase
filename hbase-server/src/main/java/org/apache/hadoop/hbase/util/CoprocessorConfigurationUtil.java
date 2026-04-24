@@ -37,6 +37,8 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Strings;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 /**
  * Helper class for coprocessor host when configuration changes.
@@ -45,13 +47,14 @@ import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 public final class CoprocessorConfigurationUtil {
   private static final Logger LOG = LoggerFactory.getLogger(CoprocessorConfigurationUtil.class);
 
-  public static List<String> MASTER_READONLY_CONTROLLER_COPROCESSORS =
-    List.of(MasterReadOnlyController.class.getName());
-  public static List<String> REGIONSERVER_READONLY_CONTROLLER_COPROCESSORS =
-    List.of(RegionServerReadOnlyController.class.getName());
-  public static List<String> REGION_READONLY_CONTROLLER_COPROCESSORS =
-    List.of(RegionReadOnlyController.class.getName(), BulkLoadReadOnlyController.class.getName(),
-      EndpointReadOnlyController.class.getName());
+  public static ImmutableMap<String, List<String>> READONLY_COPROCESSORS =
+    ImmutableMap.of(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      ImmutableList.of(MasterReadOnlyController.class.getName()),
+      CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
+      ImmutableList.of(RegionServerReadOnlyController.class.getName()),
+      CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+      ImmutableList.of(RegionReadOnlyController.class.getName(),
+        BulkLoadReadOnlyController.class.getName(), EndpointReadOnlyController.class.getName()));
 
   private CoprocessorConfigurationUtil() {
   }
@@ -171,13 +174,7 @@ public final class CoprocessorConfigurationUtil {
   }
 
   private static List<String> getReadOnlyCoprocessors(String configurationKey) {
-    return switch (configurationKey) {
-      case CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY -> MASTER_READONLY_CONTROLLER_COPROCESSORS;
-      case CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY -> REGIONSERVER_READONLY_CONTROLLER_COPROCESSORS;
-      case CoprocessorHost.REGION_COPROCESSOR_CONF_KEY -> REGION_READONLY_CONTROLLER_COPROCESSORS;
-      default -> throw new IllegalArgumentException(
-        "Unsupported coprocessor configuration key: " + configurationKey);
-    };
+    return READONLY_COPROCESSORS.get(configurationKey);
   }
 
   /**
