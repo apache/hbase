@@ -45,6 +45,14 @@ import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 public final class CoprocessorConfigurationUtil {
   private static final Logger LOG = LoggerFactory.getLogger(CoprocessorConfigurationUtil.class);
 
+  public static List<String> MASTER_READONLY_CONTROLLER_COPROCESSORS =
+    List.of(MasterReadOnlyController.class.getName());
+  public static List<String> REGIONSERVER_READONLY_CONTROLLER_COPROCESSORS =
+    List.of(RegionServerReadOnlyController.class.getName());
+  public static List<String> REGION_READONLY_CONTROLLER_COPROCESSORS =
+    List.of(RegionReadOnlyController.class.getName(), BulkLoadReadOnlyController.class.getName(),
+      EndpointReadOnlyController.class.getName());
+
   private CoprocessorConfigurationUtil() {
   }
 
@@ -164,16 +172,9 @@ public final class CoprocessorConfigurationUtil {
 
   private static List<String> getReadOnlyCoprocessors(String configurationKey) {
     return switch (configurationKey) {
-      case CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY -> List
-        .of(MasterReadOnlyController.class.getName());
-
-      case CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY -> List
-        .of(RegionServerReadOnlyController.class.getName());
-
-      case CoprocessorHost.REGION_COPROCESSOR_CONF_KEY -> List.of(
-        RegionReadOnlyController.class.getName(), BulkLoadReadOnlyController.class.getName(),
-        EndpointReadOnlyController.class.getName());
-
+      case CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY -> MASTER_READONLY_CONTROLLER_COPROCESSORS;
+      case CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY -> REGIONSERVER_READONLY_CONTROLLER_COPROCESSORS;
+      case CoprocessorHost.REGION_COPROCESSOR_CONF_KEY -> REGION_READONLY_CONTROLLER_COPROCESSORS;
       default -> throw new IllegalArgumentException(
         "Unsupported coprocessor configuration key: " + configurationKey);
     };
@@ -187,8 +188,7 @@ public final class CoprocessorConfigurationUtil {
    * @param coprocessorConfKey The configuration key name
    */
   public static void syncReadOnlyConfigurations(Configuration conf, String coprocessorConfKey) {
-    boolean isReadOnlyModeEnabled = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+    boolean isReadOnlyModeEnabled = ConfigurationUtil.isReadOnlyModeEnabledInConf(conf);
 
     List<String> cpList = getReadOnlyCoprocessors(coprocessorConfKey);
     if (isReadOnlyModeEnabled) {
