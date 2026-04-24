@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -66,6 +67,7 @@ public class TableRecordReaderImpl {
   private int rowcount;
   private boolean logScannerActivity = false;
   private int logPerRowCount = 100;
+  private RowKeyProgress rowKeyProgress = null;
 
   /**
    * Restart from survivable exceptions by creating a new scanner.
@@ -141,7 +143,59 @@ public class TableRecordReaderImpl {
     if (context != null) {
       this.context = context;
     }
+    initProgressBounds();
     restart(scan.getStartRow());
+  }
+
+  /**
+   * Resolve the start/stop row keys used for progress estimation. The TableInputFormat splitter
+   * sets start and stop row keys from region boundaries, so they are only empty for the table's
+   * very first region (empty start) or last region (empty stop). In those cases, probe the table to
+   * discover the actual first or last row key as an approximation.
+   */
+  private void initProgressBounds() {
+    byte[] startRow = scan.getStartRow();
+    byte[] stopRow = scan.getStopRow();
+    if (startRow == null || startRow.length == 0) {
+      startRow = probeFirstRow();
+    }
+    if (stopRow == null || stopRow.length == 0) {
+      stopRow = probeLastRow();
+    }
+    Configuration conf = context.getConfiguration();
+    Class<? extends RowKeyProgress> progressClass = conf.getClass(RowKeyProgress.PROGRESS_CLASS_KEY,
+      ByteBasedRowKeyProgress.class, RowKeyProgress.class);
+    rowKeyProgress = ReflectionUtils.newInstance(progressClass, conf);
+    rowKeyProgress.setStartStopRows(startRow, stopRow);
+  }
+
+  private byte[] probeFirstRow() {
+    try {
+      Scan probeScan = new Scan(scan);
+      probeScan.setOneRowLimit();
+      try (ResultScanner probeScanner = htable.getScanner(probeScan)) {
+        Result result = probeScanner.next();
+        return result != null ? result.getRow() : null;
+      }
+    } catch (IOException e) {
+      LOG.warn("Failed to probe first row for progress estimation", e);
+      return null;
+    }
+  }
+
+  private byte[] probeLastRow() {
+    try {
+      Scan probeScan = new Scan(scan);
+      probeScan.setReversed(true);
+      probeScan.setOneRowLimit();
+      try (ResultScanner probeScanner = htable.getScanner(probeScan)) {
+        Result result = probeScanner.next();
+        return result != null ? result.getRow() : null;
+      }
+    } catch (IOException e) {
+      LOG.warn("Failed to probe last row for progress estimation", e);
+      return null;
+    }
   }
 
   /**
@@ -318,8 +372,10 @@ public class TableRecordReaderImpl {
    * @return A number between 0.0 and 1.0, the fraction of the data read.
    */
   public float getProgress() {
-    // Depends on the total number of tuples
-    return 0;
+    if (rowKeyProgress == null) {
+      return 0;
+    }
+    return rowKeyProgress.getProgress(lastSuccessfulRow);
   }
 
 }
