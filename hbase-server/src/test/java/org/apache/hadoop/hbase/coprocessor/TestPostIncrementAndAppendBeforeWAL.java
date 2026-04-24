@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -56,13 +55,11 @@ import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,15 +70,11 @@ import org.slf4j.LoggerFactory;
  * change the cells which will be applied to memstore and WAL. So add unit test for the case which
  * change the cell's column family and tags.
  */
-@Category({ CoprocessorTests.class, MediumTests.class })
+@org.junit.jupiter.api.Tag(CoprocessorTests.TAG)
+@org.junit.jupiter.api.Tag(MediumTests.TAG)
 public class TestPostIncrementAndAppendBeforeWAL {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPostIncrementAndAppendBeforeWAL.class);
-
-  @Rule
-  public TestName name = new TestName();
+  private String currentTestName;
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFromClientSide.class);
 
@@ -99,18 +92,24 @@ public class TestPostIncrementAndAppendBeforeWAL {
   private static final byte[] CQ1 = Bytes.toBytes("cq1");
   private static final byte[] CQ2 = Bytes.toBytes("cq2");
   private static final byte[] VALUE = Bytes.toBytes("value");
+
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    currentTestName = testInfo.getTestMethod().get().getName();
+  }
+
   private static final byte[] VALUE2 = Bytes.toBytes("valuevalue");
   private static final String USER = "User";
   private static final Permission PERMS =
     Permission.newBuilder().withActions(Permission.Action.READ).build();
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     UTIL.startMiniCluster();
     connection = UTIL.getConnection();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     connection.close();
     UTIL.shutdownMiniCluster();
@@ -127,7 +126,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
 
   @Test
   public void testChangeCellWithDifferntColumnFamily() throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(currentTestName);
     createTableWithCoprocessor(tableName,
       ChangeCellWithDifferntColumnFamilyObserver.class.getName());
 
@@ -150,7 +149,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
 
   @Test
   public void testChangeCellWithNotExistColumnFamily() throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(currentTestName);
     createTableWithCoprocessor(tableName,
       ChangeCellWithNotExistColumnFamilyObserver.class.getName());
 
@@ -174,7 +173,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
 
   @Test
   public void testIncrementTTLWithACLTag() throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(currentTestName);
     createTableWithCoprocessor(tableName, ChangeCellWithACLTagObserver.class.getName());
     try (Table table = connection.getTable(tableName)) {
       // Increment without TTL
@@ -212,7 +211,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
 
   @Test
   public void testAppendTTLWithACLTag() throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(currentTestName);
     createTableWithCoprocessor(tableName, ChangeCellWithACLTagObserver.class.getName());
     try (Table table = connection.getTable(tableName)) {
       // Append without TTL

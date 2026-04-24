@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.google.protobuf.ServiceException;
 import java.io.IOException;
@@ -69,7 +70,6 @@ import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,7 +97,7 @@ public final class SnapshotTestingUtils {
    * Assert that we don't have any snapshots lists if the admin operation fails
    */
   public static void assertNoSnapshots(Admin admin) throws IOException {
-    assertEquals("Have some previous snapshots", 0, admin.listSnapshots().size());
+    assertEquals(0, admin.listSnapshots().size(), "Have some previous snapshots");
   }
 
   /**
@@ -116,7 +116,7 @@ public final class SnapshotTestingUtils {
       }
     }
 
-    Assert.assertTrue("No matching snapshots found.", returnedSnapshots.size() > 0);
+    assertTrue(returnedSnapshots.size() > 0, "No matching snapshots found.");
     return returnedSnapshots;
   }
 
@@ -137,7 +137,7 @@ public final class SnapshotTestingUtils {
     // list the snapshot
     List<SnapshotDescription> snapshots = admin.listSnapshots();
 
-    assertEquals("Should only have 1 snapshot", 1, snapshots.size());
+    assertEquals(1, snapshots.size(), "Should only have 1 snapshot");
     assertEquals(snapshotName, snapshots.get(0).getName());
     assertEquals(tableName, snapshots.get(0).getTableName());
 
@@ -199,8 +199,8 @@ public final class SnapshotTestingUtils {
     // check snapshot dir
     Path snapshotDir =
       SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotDescriptor, rootDir);
-    assertTrue("target snapshot directory, '" + snapshotDir + "', doesn't exist.",
-      fs.exists(snapshotDir));
+    assertTrue(fs.exists(snapshotDir),
+      "target snapshot directory, '" + snapshotDir + "', doesn't exist.");
 
     SnapshotProtos.SnapshotDescription desc =
       SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
@@ -223,16 +223,17 @@ public final class SnapshotTestingUtils {
     // Verify that there are store files in the specified families
     if (nonEmptyTestFamilies != null) {
       for (final byte[] familyName : nonEmptyTestFamilies) {
-        assertTrue("Expected snapshot to contain family '" + Bytes.toString(familyName)
-          + "', but it does not.", snapshotFamilies.contains(familyName));
+        assertTrue(snapshotFamilies.contains(familyName), "Expected snapshot to contain family '"
+          + Bytes.toString(familyName) + "', but it does not.");
       }
     }
 
     // Verify that there are no store files in the specified families
     if (emptyTestFamilies != null) {
       for (final byte[] familyName : emptyTestFamilies) {
-        assertFalse("Expected snapshot to skip empty family '" + Bytes.toString(familyName)
-          + "', but it is present.", snapshotFamilies.contains(familyName));
+        assertFalse(snapshotFamilies.contains(familyName),
+          "Expected snapshot to skip empty family '" + Bytes.toString(familyName)
+            + "', but it is present.");
       }
     }
 
@@ -243,7 +244,7 @@ public final class SnapshotTestingUtils {
     boolean hasMob =
       regionManifests.containsKey(MobUtils.getMobRegionInfo(tableName).getEncodedName());
     if (hasMob) {
-      assertEquals("Wrong number of regions.", regions.size(), regionManifests.size() - 1);
+      assertEquals(regions.size(), regionManifests.size() - 1, "Wrong number of regions.");
     } else {
       // if create snapshot when table splitting, parent region will be included to the snapshot
       // region manifest. we should exclude the parent regions.
@@ -255,14 +256,14 @@ public final class SnapshotTestingUtils {
         }
         regionCountExclusiveSplitParent++;
       }
-      assertEquals("Wrong number of regions.", regions.size(), regionCountExclusiveSplitParent);
+      assertEquals(regions.size(), regionCountExclusiveSplitParent, "Wrong number of regions.");
     }
 
     // Verify Regions (redundant check, see MasterSnapshotVerifier)
     for (RegionInfo info : regions) {
       String regionName = info.getEncodedName();
-      assertTrue("Missing region name: '" + regionName + "'",
-        regionManifests.containsKey(regionName));
+      assertTrue(regionManifests.containsKey(regionName),
+        "Missing region name: '" + regionName + "'");
     }
   }
 
@@ -341,14 +342,14 @@ public final class SnapshotTestingUtils {
     Class<? extends HBaseSnapshotException> clazz) {
     try {
       master.getMasterRpcServices().isSnapshotDone(null, snapshot);
-      Assert.fail("didn't fail to lookup a snapshot");
+      fail("didn't fail to lookup a snapshot");
     } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException se) {
       try {
         throw ProtobufUtil.handleRemoteException(se);
       } catch (HBaseSnapshotException e) {
-        assertEquals("Threw wrong snapshot exception!", clazz, e.getClass());
+        assertEquals(clazz, e.getClass(), "Threw wrong snapshot exception!");
       } catch (Throwable t) {
-        Assert.fail("Threw an unexpected exception:" + t);
+        fail("Threw an unexpected exception:" + t);
       }
     }
   }
@@ -410,7 +411,7 @@ public final class SnapshotTestingUtils {
     List<SnapshotDescription> snapshots =
       SnapshotTestingUtils.assertExistsMatchingSnapshot(admin, snapshotNameString, tableName);
     if (snapshots == null || snapshots.size() != 1) {
-      Assert.fail("Incorrect number of snapshots for table " + tableName);
+      fail("Incorrect number of snapshots for table " + tableName);
     }
 
     LOG.info("validating snapshot.");
@@ -899,7 +900,7 @@ public final class SnapshotTestingUtils {
       for (int i = 0; i < regionReplication; i++) {
         RegionInfo replica = RegionReplicaUtil.getRegionInfoForReplica(hri, i);
         if (!regions.contains(replica)) {
-          Assert.fail(replica + " is not contained in the list of online regions");
+          fail(replica + " is not contained in the list of online regions");
         }
       }
     }
