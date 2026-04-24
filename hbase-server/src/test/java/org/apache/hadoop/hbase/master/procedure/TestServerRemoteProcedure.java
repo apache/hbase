@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.apache.hadoop.hbase.master.procedure.ServerProcedureInterface.ServerOperationType.SWITCH_RPC_THROTTLE;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -29,7 +31,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -47,14 +48,10 @@ import org.apache.hadoop.hbase.procedure2.RemoteProcedureException;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,14 +59,11 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestServerRemoteProcedure {
   private static final Logger LOG = LoggerFactory.getLogger(TestServerRemoteProcedure.class);
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestServerRemoteProcedure.class);
-  @Rule
-  public TestName name = new TestName();
+
   private HBaseTestingUtility util;
   private MockRSProcedureDispatcher rsDispatcher;
   private MockMasterServices master;
@@ -77,7 +71,7 @@ public class TestServerRemoteProcedure {
   // Simple executor to run some simple tasks.
   private ScheduledExecutorService executor;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     util = new HBaseTestingUtility();
     this.executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
@@ -91,7 +85,7 @@ public class TestServerRemoteProcedure {
       .forEach(serverName -> am.getRegionStates().getOrCreateServer(serverName));
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     master.stop("tearDown");
     this.executor.shutdownNow();
@@ -108,7 +102,7 @@ public class TestServerRemoteProcedure {
     master.getServerManager().expireServer(worker);
     // if remoteCallFailed is called for this procedure, this procedure should be finished.
     future.get(5000, TimeUnit.MILLISECONDS);
-    Assert.assertTrue(splitWALRemoteProcedure.isSuccess());
+    assertTrue(splitWALRemoteProcedure.isSuccess());
   }
 
   @Test
@@ -124,7 +118,7 @@ public class TestServerRemoteProcedure {
     threadPool.execute(() -> noopServerRemoteProcedure.remoteCallFailed(
       master.getMasterProcedureExecutor().getEnvironment(), worker, new IOException()));
     future.get(2000, TimeUnit.MILLISECONDS);
-    Assert.assertTrue(noopServerRemoteProcedure.isSuccess());
+    assertTrue(noopServerRemoteProcedure.isSuccess());
   }
 
   @Test
@@ -146,7 +140,7 @@ public class TestServerRemoteProcedure {
     } catch (TimeoutException e) {
       LOG.info("timeout is expected");
     }
-    Assert.assertFalse(openRegionProcedure.isFinished());
+    assertFalse(openRegionProcedure.isFinished());
   }
 
   private Future<byte[]> submitProcedure(final Procedure<MasterProcedureEnv> proc) {
