@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
@@ -37,18 +36,14 @@ import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRetainAssignmentOnRestart.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRetainAssignmentOnRestart.class);
 
@@ -149,7 +144,7 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
       ServerName currentServer = entry.getValue();
       LOG.info(
         "Key=" + entry.getKey() + " oldServer=" + oldServer + ", currentServer=" + currentServer);
-      assertEquals(entry.getKey().toString(), oldServer.getAddress(), currentServer.getAddress());
+      assertEquals(oldServer.getAddress(), currentServer.getAddress(), entry.getKey().toString());
       assertNotEquals(oldServer.getStartcode(), currentServer.getStartcode());
     }
   }
@@ -217,7 +212,7 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
       ServerName currentServer = entry.getValue();
       LOG.info(
         "Key=" + entry.getKey() + " oldServer=" + oldServer + ", currentServer=" + currentServer);
-      assertEquals(entry.getKey().toString(), oldServer.getAddress(), currentServer.getAddress());
+      assertEquals(oldServer.getAddress(), currentServer.getAddress(), entry.getKey().toString());
 
       if (deadRS.getPort() == oldServer.getPort()) {
         // Restarted RS start code wont be same

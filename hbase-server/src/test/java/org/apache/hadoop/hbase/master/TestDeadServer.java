@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Set;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -35,19 +35,14 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestDeadServer {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDeadServer.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -56,12 +51,12 @@ public class TestDeadServer {
   final ServerName hostname1234 = ServerName.valueOf("127.0.0.2", 1234, 4L);
   final ServerName hostname12345 = ServerName.valueOf("127.0.0.2", 12345, 4L);
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -131,13 +126,13 @@ public class TestDeadServer {
     d.putIfAbsent(hostname12345);
 
     List<Pair<ServerName, Long>> copy = d.copyDeadServersSince(2L);
-    Assert.assertEquals(2, copy.size());
+    assertEquals(2, copy.size());
 
-    Assert.assertEquals(hostname1234, copy.get(0).getFirst());
-    Assert.assertEquals(Long.valueOf(2L), copy.get(0).getSecond());
+    assertEquals(hostname1234, copy.get(0).getFirst());
+    assertEquals(Long.valueOf(2L), copy.get(0).getSecond());
 
-    Assert.assertEquals(hostname12345, copy.get(1).getFirst());
-    Assert.assertEquals(Long.valueOf(3L), copy.get(1).getSecond());
+    assertEquals(hostname12345, copy.get(1).getFirst());
+    assertEquals(Long.valueOf(3L), copy.get(1).getSecond());
 
     EnvironmentEdgeManager.reset();
   }
@@ -148,13 +143,13 @@ public class TestDeadServer {
     d.putIfAbsent(hostname123);
 
     d.cleanPreviousInstance(hostname12345);
-    Assert.assertFalse(d.isEmpty());
+    assertFalse(d.isEmpty());
 
     d.cleanPreviousInstance(hostname1234);
-    Assert.assertFalse(d.isEmpty());
+    assertFalse(d.isEmpty());
 
     d.cleanPreviousInstance(hostname123_2);
-    Assert.assertTrue(d.isEmpty());
+    assertTrue(d.isEmpty());
   }
 
   @Test
@@ -162,20 +157,20 @@ public class TestDeadServer {
     DeadServer d = new DeadServer();
     d.putIfAbsent(hostname123);
     d.putIfAbsent(hostname1234);
-    Assert.assertEquals(2, d.size());
+    assertEquals(2, d.size());
 
     d.finish(hostname123);
     d.removeDeadServer(hostname123);
-    Assert.assertEquals(1, d.size());
+    assertEquals(1, d.size());
     d.finish(hostname1234);
     d.removeDeadServer(hostname1234);
-    Assert.assertTrue(d.isEmpty());
+    assertTrue(d.isEmpty());
 
     d.putIfAbsent(hostname1234);
-    Assert.assertFalse(d.removeDeadServer(hostname123_2));
-    Assert.assertEquals(1, d.size());
+    assertFalse(d.removeDeadServer(hostname123_2));
+    assertEquals(1, d.size());
     d.finish(hostname1234);
-    Assert.assertTrue(d.removeDeadServer(hostname1234));
-    Assert.assertTrue(d.isEmpty());
+    assertTrue(d.removeDeadServer(hostname1234));
+    assertTrue(d.isEmpty());
   }
 }

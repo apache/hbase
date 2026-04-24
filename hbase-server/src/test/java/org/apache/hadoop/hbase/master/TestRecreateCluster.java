@@ -17,16 +17,16 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -44,33 +44,24 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test reuse storefiles within data directory when cluster failover with a set of new region
  * servers with different hostnames with or without WALs and Zookeeper ZNodes, the master and
  * cluster should fail respectively if there is any situation considered as not supported.
  */
-@Category({ LargeTests.class })
+@Tag(LargeTests.TAG)
 public class TestRecreateCluster {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRecreateCluster.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final int NUM_RS = 3;
   private static final long TIMEOUT_MS = Duration.ofMinutes(1).toMillis();
   private static final long MASTER_INIT_TIMEOUT_MS = Duration.ofSeconds(45).toMillis();
 
-  @Before
+  @BeforeEach
   public void setup() {
     TEST_UTIL.getConfiguration().setLong("hbase.master.init.timeout.localHBaseCluster",
       MASTER_INIT_TIMEOUT_MS);
@@ -93,11 +84,11 @@ public class TestRecreateCluster {
     validateRecreateClusterWithUserTableEnabled(false, true);
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testRecreateCluster_UserTableEnabled_CleanupWALAndZNodes() throws Exception {
     // master fails with InitMetaProcedure because it cannot delete existing meta table directory,
     // region server cannot join and time-out the cluster starts.
-    validateRecreateClusterWithUserTableEnabled(true, true);
+    assertThrows(IOException.class, () -> validateRecreateClusterWithUserTableEnabled(true, false));
   }
 
   private void validateRecreateClusterWithUserDisabled(boolean cleanupWALs, boolean cleanUpZNodes)
@@ -194,8 +185,8 @@ public class TestRecreateCluster {
   private void ensureTableNotColocatedWithSystemTable(TableName userTable, TableName systemTable)
     throws IOException, InterruptedException {
     MiniHBaseCluster hbaseCluster = TEST_UTIL.getHBaseCluster();
-    assertTrue("Please start more than 1 regionserver",
-      hbaseCluster.getRegionServerThreads().size() > 1);
+    assertTrue(hbaseCluster.getRegionServerThreads().size() > 1,
+      "Please start more than 1 regionserver");
 
     int userTableServerNum = getServerNumForTableWithOnlyOneRegion(userTable);
     int systemTableServerNum = getServerNumForTableWithOnlyOneRegion(systemTable);
@@ -237,5 +228,4 @@ public class TestRecreateCluster {
       Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
     assertFalse(result.advance());
   }
-
 }

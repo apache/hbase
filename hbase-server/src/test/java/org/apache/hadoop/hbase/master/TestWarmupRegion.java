@@ -18,11 +18,10 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.regionserver.HRegion.warmupHRegion;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -39,13 +38,12 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,13 +52,10 @@ import org.slf4j.LoggerFactory;
  * up the HBase mini cluster once at start and runs through all client tests. Each creates a table
  * named for the method and does its stuff against that.
  */
-@Category({ MasterTests.class, LargeTests.class })
 @SuppressWarnings("deprecation")
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestWarmupRegion {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWarmupRegion.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWarmupRegion.class);
   protected TableName TABLENAME = TableName.valueOf("testPurgeFutureDeletes");
@@ -78,7 +73,7 @@ public class TestWarmupRegion {
   /**
    * @throws java.lang.Exception
    */
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniCluster(SLAVES);
@@ -87,7 +82,7 @@ public class TestWarmupRegion {
   /**
    * @throws java.lang.Exception
    */
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -95,7 +90,7 @@ public class TestWarmupRegion {
   /**
    * @throws java.lang.Exception
    */
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     table = TEST_UTIL.createTable(TABLENAME, FAMILY);
 
@@ -125,7 +120,7 @@ public class TestWarmupRegion {
   /**
    * @throws java.lang.Exception
    */
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.deleteTable(TABLENAME);
   }
@@ -143,7 +138,6 @@ public class TestWarmupRegion {
           for (int i = 0; i < 10; i++) {
             warmupHRegion(info, htd, rs.getWAL(info), rs.getConfiguration(), rs, null);
           }
-
         } catch (IOException ie) {
           LOG.error("Failed warming up region " + info.getRegionNameAsString(), ie);
         }
