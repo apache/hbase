@@ -1375,7 +1375,7 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public Long refreshMeta() throws IOException {
+  public long refreshMeta() throws IOException {
     throw new NotImplementedException("refreshMeta not supported in ThriftAdmin");
   }
 
@@ -1393,17 +1393,17 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public Long refreshHFiles(final TableName tableName) throws IOException {
+  public long refreshHFiles(final TableName tableName) throws IOException {
     throw new NotImplementedException("refreshHFiles not supported in ThriftAdmin");
   }
 
   @Override
-  public Long refreshHFiles(final String namespace) throws IOException {
+  public long refreshHFiles(final String namespace) throws IOException {
     throw new NotImplementedException("refreshHFiles not supported in ThriftAdmin");
   }
 
   @Override
-  public Long refreshHFiles() throws IOException {
+  public long refreshHFiles() throws IOException {
     throw new NotImplementedException("refreshHFiles not supported in ThriftAdmin");
   }
 }

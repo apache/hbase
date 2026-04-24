@@ -2706,7 +2706,7 @@ public interface Admin extends Abortable, Closeable {
   /**
    * Perform hbase:meta table refresh
    */
-  Long refreshMeta() throws IOException;
+  long refreshMeta() throws IOException;
 
   /**
    * Refresh HFiles for the table
@@ -2714,7 +2714,7 @@ public interface Admin extends Abortable, Closeable {
    * @return ID of the procedure started for refreshing HFiles
    * @throws IOException if a remote or network exception occurs
    */
-  Long refreshHFiles(final TableName tableName) throws IOException;
+  long refreshHFiles(final TableName tableName) throws IOException;
 
   /**
    * Refresh HFiles for all the tables under given namespace
@@ -2722,14 +2722,14 @@ public interface Admin extends Abortable, Closeable {
    * @return ID of the procedure started for refreshing HFiles
    * @throws IOException if a remote or network exception occurs
    */
-  Long refreshHFiles(final String namespace) throws IOException;
+  long refreshHFiles(final String namespace) throws IOException;
 
   /**
    * Refresh HFiles for all the tables
    * @return ID of the procedure started for refreshing HFiles
    * @throws IOException if a remote or network exception occurs
    */
-  Long refreshHFiles() throws IOException;
+  long refreshHFiles() throws IOException;
 
   @InterfaceAudience.Private
   void restoreBackupSystemTable(String snapshotName) throws IOException;
