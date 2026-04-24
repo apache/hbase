@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -35,7 +35,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -60,24 +59,20 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMasterOperationsForRegionReplicas {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterOperationsForRegionReplicas.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionPlacement.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -87,11 +82,14 @@ public class TestMasterOperationsForRegionReplicas {
   private final static StartMiniClusterOption option = StartMiniClusterOption.builder()
     .numRegionServers(numSlaves).numMasters(1).numAlwaysStandByMasters(1).build();
   private static Configuration conf;
+  private String testMethodName;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     conf.setBoolean("hbase.tests.use.shortcircuit.reads", false);
@@ -113,7 +111,7 @@ public class TestMasterOperationsForRegionReplicas {
     ADMIN = CONNECTION.getAdmin();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     Closeables.close(ADMIN, true);
     Closeables.close(CONNECTION, true);
@@ -124,7 +122,7 @@ public class TestMasterOperationsForRegionReplicas {
   public void testCreateTableWithSingleReplica() throws Exception {
     final int numRegions = 3;
     final int numReplica = 1;
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     try {
       TableDescriptor desc =
         TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(numReplica)
@@ -144,7 +142,7 @@ public class TestMasterOperationsForRegionReplicas {
 
   @Test
   public void testCreateTableWithMultipleReplicas() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final int numRegions = 3;
     final int numReplica = 2;
     try {
@@ -236,8 +234,8 @@ public class TestMasterOperationsForRegionReplicas {
       TEST_UTIL.waitUntilNoRegionsInTransition();
       List<RegionInfo> regions = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
         .getRegionStates().getRegionsOfTable(tableName);
-      assertTrue("regions.size=" + regions.size() + ", numRegions=" + numRegions + ", numReplica="
-        + numReplica, regions.size() == numRegions * (numReplica + 1));
+      assertTrue(regions.size() == numRegions * (numReplica + 1), "regions.size=" + regions.size()
+        + ", numRegions=" + numRegions + ", numReplica=" + numReplica);
 
       // decrease the replica(earlier, table was modified to have a replica count of numReplica + 1)
       ADMIN.disableTable(tableName);
@@ -286,7 +284,7 @@ public class TestMasterOperationsForRegionReplicas {
 
   @Test
   public void testIncompleteMetaTableReplicaInformation() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final int numRegions = 3;
     final int numReplica = 2;
     try {
@@ -383,7 +381,7 @@ public class TestMasterOperationsForRegionReplicas {
     Map<RegionInfo, ServerName> regionToServerMap = snapshot.getRegionToRegionServerMap();
     assertEquals(regionToServerMap.size(), numRegions * numReplica + 1);
     Map<ServerName, List<RegionInfo>> serverToRegionMap = snapshot.getRegionServerToRegionMap();
-    assertEquals("One Region Only", 1, serverToRegionMap.keySet().size());
+    assertEquals(1, serverToRegionMap.keySet().size(), "One Region Only");
     for (Map.Entry<ServerName, List<RegionInfo>> entry : serverToRegionMap.entrySet()) {
       if (entry.getKey().equals(TEST_UTIL.getHBaseCluster().getMaster().getServerName())) {
         continue;

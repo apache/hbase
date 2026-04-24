@@ -17,40 +17,35 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the master filesystem in a local cluster
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMasterFileSystemWithWALDir {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterFileSystemWithWALDir.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  @BeforeClass
+  @BeforeAll
   public static void setupTest() throws Exception {
     // Set createWALDir to true and use default values for other options.
     UTIL.startMiniCluster(StartMiniClusterOption.builder().createWALDir(true).build());
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownTest() throws Exception {
     UTIL.shutdownMiniCluster();
   }

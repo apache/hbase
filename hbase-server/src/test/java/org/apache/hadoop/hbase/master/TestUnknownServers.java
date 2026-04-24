@@ -17,34 +17,31 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MediumTests.TAG)
+@Tag(MasterTests.TAG)
 public class TestUnknownServers {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestUnknownServers.class);
 
   private static HBaseTestingUtility UTIL;
   private static Admin ADMIN;
   private final static int SLAVES = 1;
   private static boolean IS_UNKNOWN_SERVER = true;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     UTIL = new HBaseTestingUtility();
     UTIL.getConfiguration().setClass(HConstants.MASTER_IMPL,
@@ -55,12 +52,12 @@ public class TestUnknownServers {
 
   @Test
   public void testListUnknownServers() throws Exception {
-    Assert.assertEquals(ADMIN.listUnknownServers().size(), SLAVES);
+    assertEquals(ADMIN.listUnknownServers().size(), SLAVES);
     IS_UNKNOWN_SERVER = false;
-    Assert.assertEquals(ADMIN.listUnknownServers().size(), 0);
+    assertEquals(ADMIN.listUnknownServers().size(), 0);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     if (ADMIN != null) {
       ADMIN.close();
