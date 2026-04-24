@@ -600,7 +600,9 @@ public class TestNamespaceAuditor {
       new HTableDescriptor(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table2"));
     tableDescTwo.addFamily(fam1);
     ADMIN.createTable(tableDescOne);
-    ADMIN.createTable(tableDescTwo, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
+    assertThrows(QuotaExceededException.class, () -> {
+      ADMIN.createTable(tableDescTwo, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
+    });
   }
 
   @Test
