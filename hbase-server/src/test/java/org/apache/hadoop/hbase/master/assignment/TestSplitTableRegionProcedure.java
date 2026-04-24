@@ -18,10 +18,10 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil.insertData;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.List;
@@ -29,7 +29,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -55,24 +54,19 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSplitTableRegionProcedure {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSplitTableRegionProcedure.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSplitTableRegionProcedure.class);
 
@@ -96,9 +90,12 @@ public class TestSplitTableRegionProcedure {
   private long assignFailedCount = 0;
   private long unassignSubmittedCount = 0;
   private long unassignFailedCount = 0;
+  private String testMethodName;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
@@ -107,13 +104,13 @@ public class TestSplitTableRegionProcedure {
       RegionServerHostingReplicaSlowOpenCoprocessor.class.getName());
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(3);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
     try {
       UTIL.shutdownMiniCluster();
@@ -122,7 +119,7 @@ public class TestSplitTableRegionProcedure {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
 
@@ -136,7 +133,7 @@ public class TestSplitTableRegionProcedure {
     unassignProcMetrics = am.getAssignmentManagerMetrics().getUnassignProcMetrics();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
     for (TableDescriptor htd : UTIL.getAdmin().listTableDescriptors()) {
@@ -146,7 +143,7 @@ public class TestSplitTableRegionProcedure {
 
   @Test
   public void testRollbackForSplitTableRegionWithReplica() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     RegionServerHostingReplicaSlowOpenCoprocessor.slowDownReplicaOpen = true;
@@ -212,7 +209,7 @@ public class TestSplitTableRegionProcedure {
 
   @Test
   public void testSplitTableRegion() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     RegionInfo[] regions = MasterProcedureTestingUtility.createTable(procExec, tableName, null,
@@ -221,8 +218,8 @@ public class TestSplitTableRegionProcedure {
     int splitRowNum = startRowNum + rowCount / 2;
     byte[] splitKey = Bytes.toBytes("" + splitRowNum);
 
-    assertTrue("not able to find a splittable region", regions != null);
-    assertTrue("not able to find a splittable region", regions.length == 1);
+    assertTrue(regions != null, "not able to find a splittable region");
+    assertTrue(regions.length == 1, "not able to find a splittable region");
 
     // collect AM metrics before test
     collectAssignmentManagerMetrics();
@@ -246,7 +243,7 @@ public class TestSplitTableRegionProcedure {
 
   @Test
   public void testSplitTableRegionNoStoreFile() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     RegionInfo[] regions = MasterProcedureTestingUtility.createTable(procExec, tableName, null,
@@ -254,8 +251,8 @@ public class TestSplitTableRegionProcedure {
     int splitRowNum = startRowNum + rowCount / 2;
     byte[] splitKey = Bytes.toBytes("" + splitRowNum);
 
-    assertTrue("not able to find a splittable region", regions != null);
-    assertTrue("not able to find a splittable region", regions.length == 1);
+    assertTrue(regions != null, "not able to find a splittable region");
+    assertTrue(regions.length == 1, "not able to find a splittable region");
 
     // collect AM metrics before test
     collectAssignmentManagerMetrics();
@@ -276,7 +273,7 @@ public class TestSplitTableRegionProcedure {
 
   @Test
   public void testSplitTableRegionUnevenDaughter() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     RegionInfo[] regions = MasterProcedureTestingUtility.createTable(procExec, tableName, null,
@@ -286,8 +283,8 @@ public class TestSplitTableRegionProcedure {
     int splitRowNum = startRowNum + rowCount / 4;
     byte[] splitKey = Bytes.toBytes("" + splitRowNum);
 
-    assertTrue("not able to find a splittable region", regions != null);
-    assertTrue("not able to find a splittable region", regions.length == 1);
+    assertTrue(regions != null, "not able to find a splittable region");
+    assertTrue(regions.length == 1, "not able to find a splittable region");
 
     // collect AM metrics before test
     collectAssignmentManagerMetrics();
@@ -307,7 +304,7 @@ public class TestSplitTableRegionProcedure {
 
   @Test
   public void testSplitTableRegionEmptyDaughter() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     RegionInfo[] regions = MasterProcedureTestingUtility.createTable(procExec, tableName, null,
@@ -317,8 +314,8 @@ public class TestSplitTableRegionProcedure {
     int splitRowNum = startRowNum + rowCount;
     byte[] splitKey = Bytes.toBytes("" + splitRowNum);
 
-    assertTrue("not able to find a splittable region", regions != null);
-    assertTrue("not able to find a splittable region", regions.length == 1);
+    assertTrue(regions != null, "not able to find a splittable region");
+    assertTrue(regions.length == 1, "not able to find a splittable region");
 
     // collect AM metrics before test
     collectAssignmentManagerMetrics();
@@ -342,7 +339,7 @@ public class TestSplitTableRegionProcedure {
 
   @Test
   public void testSplitTableRegionDeletedRowsDaughter() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     RegionInfo[] regions = MasterProcedureTestingUtility.createTable(procExec, tableName, null,
@@ -353,8 +350,8 @@ public class TestSplitTableRegionProcedure {
     deleteData(tableName, splitRowNum);
     byte[] splitKey = Bytes.toBytes("" + splitRowNum);
 
-    assertTrue("not able to find a splittable region", regions != null);
-    assertTrue("not able to find a splittable region", regions.length == 1);
+    assertTrue(regions != null, "not able to find a splittable region");
+    assertTrue(regions.length == 1, "not able to find a splittable region");
 
     // collect AM metrics before test
     collectAssignmentManagerMetrics();
@@ -388,15 +385,15 @@ public class TestSplitTableRegionProcedure {
 
   @Test
   public void testInvalidSplitKey() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     RegionInfo[] regions = MasterProcedureTestingUtility.createTable(procExec, tableName, null,
       columnFamilyName1, columnFamilyName2);
     insertData(UTIL, tableName, rowCount, startRowNum, columnFamilyName1, columnFamilyName2);
 
-    assertTrue("not able to find a splittable region", regions != null);
-    assertTrue("not able to find a splittable region", regions.length == 1);
+    assertTrue(regions != null, "not able to find a splittable region");
+    assertTrue(regions.length == 1, "not able to find a splittable region");
 
     // collect AM metrics before test
     collectAssignmentManagerMetrics();
@@ -417,7 +414,7 @@ public class TestSplitTableRegionProcedure {
 
   @Test
   public void testRollbackAndDoubleExecution() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     RegionInfo[] regions = MasterProcedureTestingUtility.createTable(procExec, tableName, null,
@@ -426,8 +423,8 @@ public class TestSplitTableRegionProcedure {
     int splitRowNum = startRowNum + rowCount / 2;
     byte[] splitKey = Bytes.toBytes("" + splitRowNum);
 
-    assertTrue("not able to find a splittable region", regions != null);
-    assertTrue("not able to find a splittable region", regions.length == 1);
+    assertTrue(regions != null, "not able to find a splittable region");
+    assertTrue(regions.length == 1, "not able to find a splittable region");
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
@@ -458,7 +455,7 @@ public class TestSplitTableRegionProcedure {
 
   @Test
   public void testRecoveryAndDoubleExecution() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     RegionInfo[] regions = MasterProcedureTestingUtility.createTable(procExec, tableName, null,
@@ -467,8 +464,8 @@ public class TestSplitTableRegionProcedure {
     int splitRowNum = startRowNum + rowCount / 2;
     byte[] splitKey = Bytes.toBytes("" + splitRowNum);
 
-    assertTrue("not able to find a splittable region", regions != null);
-    assertTrue("not able to find a splittable region", regions.length == 1);
+    assertTrue(regions != null, "not able to find a splittable region");
+    assertTrue(regions.length == 1, "not able to find a splittable region");
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillIfHasParent(procExec, false);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
@@ -492,7 +489,7 @@ public class TestSplitTableRegionProcedure {
 
   @Test
   public void testSplitWithoutPONR() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     RegionInfo[] regions = MasterProcedureTestingUtility.createTable(procExec, tableName, null,
@@ -501,8 +498,8 @@ public class TestSplitTableRegionProcedure {
     int splitRowNum = startRowNum + rowCount / 2;
     byte[] splitKey = Bytes.toBytes("" + splitRowNum);
 
-    assertTrue("not able to find a splittable region", regions != null);
-    assertTrue("not able to find a splittable region", regions.length == 1);
+    assertTrue(regions != null, "not able to find a splittable region");
+    assertTrue(regions.length == 1, "not able to find a splittable region");
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
@@ -525,7 +522,7 @@ public class TestSplitTableRegionProcedure {
 
   @Test
   public void testSplitDetectsModifyTableProcedure() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     RegionInfo[] regions =

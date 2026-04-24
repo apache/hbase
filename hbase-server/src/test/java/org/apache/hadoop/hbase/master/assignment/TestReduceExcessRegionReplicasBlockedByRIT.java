@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.CompletableFuture;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncConnection;
@@ -36,11 +35,10 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
@@ -48,12 +46,9 @@ import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
  * A test to make sure that we will wait for RIT to finish while closing excess region replicas. See
  * HBASE-28582 and related issues for more details.
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestReduceExcessRegionReplicasBlockedByRIT {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReduceExcessRegionReplicasBlockedByRIT.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -63,7 +58,7 @@ public class TestReduceExcessRegionReplicasBlockedByRIT {
     TableDescriptorBuilder.newBuilder(TableName.valueOf("CloseExcessRegionReplicas"))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).setRegionReplication(4).build();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(1);
     UTIL.getAdmin().createTable(TD);
@@ -72,7 +67,7 @@ public class TestReduceExcessRegionReplicasBlockedByRIT {
     CONN = ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     Closeables.close(CONN, true);
     UTIL.shutdownMiniCluster();
