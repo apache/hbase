@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
@@ -1900,11 +1900,11 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postGetClusterMetrics(ClusterMetrics status) throws IOException {
+  public void postGetClusterMetrics(ClusterMetricsBuilder metricsBuilder) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postGetClusterMetrics(this, status);
+        observer.postGetClusterMetrics(this, metricsBuilder);
       }
     });
   }
