@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -57,7 +58,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.S
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
 @Tag(MasterTests.TAG)
-@Tag(MediumTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSnapshotProcedure {
   protected static final Logger LOG = LoggerFactory.getLogger(TestSnapshotProcedure.class);
 

@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -36,7 +37,7 @@ import org.junit.jupiter.api.Test;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotState;
 
 @Tag(MasterTests.TAG)
-@Tag(MediumTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSnapshotProcedureSnapshotCorrupted extends TestSnapshotProcedure {
 
   @Test

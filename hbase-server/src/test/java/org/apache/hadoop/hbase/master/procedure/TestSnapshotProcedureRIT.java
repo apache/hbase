@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.master.assignment.MergeTableRegionsProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.jupiter.api.Tag;
@@ -32,7 +33,7 @@ import org.junit.jupiter.api.Test;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
 @Tag(MasterTests.TAG)
-@Tag(MediumTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSnapshotProcedureRIT extends TestSnapshotProcedure {
 
   @Test
