@@ -1012,22 +1012,22 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   @Override
-  public Long refreshMeta() throws IOException {
+  public long refreshMeta() throws IOException {
     return admin.refreshMeta();
   }
 
   @Override
-  public Long refreshHFiles(final TableName tableName) throws IOException {
+  public long refreshHFiles(final TableName tableName) throws IOException {
     return admin.refreshHFiles(tableName);
   }
 
   @Override
-  public Long refreshHFiles(final String namespace) throws IOException {
+  public long refreshHFiles(final String namespace) throws IOException {
     return admin.refreshHFiles(namespace);
   }
 
   @Override
-  public Long refreshHFiles() throws IOException {
+  public long refreshHFiles() throws IOException {
     return admin.refreshHFiles();
   }
 }
