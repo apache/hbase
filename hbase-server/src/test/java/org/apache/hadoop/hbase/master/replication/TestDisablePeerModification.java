@@ -19,18 +19,18 @@ package org.apache.hadoop.hbase.master.replication;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ForkJoinPool;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.client.AsyncConnection;
@@ -43,26 +43,19 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@RunWith(Parameterized.class)
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: async={0}")
 public class TestDisablePeerModification {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDisablePeerModification.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -91,15 +84,17 @@ public class TestDisablePeerModification {
 
   private static AsyncConnection CONN;
 
-  @Parameter
-  public boolean async;
+  private final boolean async;
 
-  @Parameters(name = "{index}: async={0}")
-  public static List<Object[]> params() {
-    return Arrays.asList(new Object[] { true }, new Object[] { false });
+  public TestDisablePeerModification(boolean async) {
+    this.async = async;
   }
 
-  @BeforeClass
+  public static Stream<Arguments> parameters() {
+    return Arrays.asList(true, false).stream().map(Arguments::of);
+  }
+
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setClass(ReplicationStorageFactory.REPLICATION_PEER_STORAGE_IMPL,
       MockPeerStorage.class, ReplicationPeerStorage.class);
@@ -107,18 +102,18 @@ public class TestDisablePeerModification {
     CONN = ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     Closeables.close(CONN, true);
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUpBeforeTest() throws IOException {
     UTIL.getAdmin().replicationPeerModificationSwitch(true, true);
   }
 
-  @Test
+  @TestTemplate
   public void testDrainProcs() throws Exception {
     ARRIVE = new CountDownLatch(1);
     RESUME = new CountDownLatch(1);

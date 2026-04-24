@@ -18,15 +18,14 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionStateTransitionState.REGION_STATE_TRANSITION_OPEN;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -39,14 +38,12 @@ import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,33 +52,26 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.R
 /**
  * Tests bypass on a region assign/unassign
  */
-@Category({ LargeTests.class })
+@Tag(LargeTests.TAG)
 public class TestRegionBypass {
   private final static Logger LOG = LoggerFactory.getLogger(TestRegionBypass.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionBypass.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private TableName tableName;
 
-  @BeforeClass
+  @BeforeAll
   public static void startCluster() throws Exception {
     TEST_UTIL.startMiniCluster(2);
   }
 
-  @AfterClass
+  @AfterAll
   public static void stopCluster() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void before() throws IOException {
-    this.tableName = TableName.valueOf(this.name.getMethodName());
+  @BeforeEach
+  public void before(TestInfo testInfo) throws IOException {
+    this.tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     // Create a table. Has one region at least.
     TEST_UTIL.createTable(this.tableName, Bytes.toBytes("cf"));
 
@@ -130,8 +120,8 @@ public class TestRegionBypass {
     TEST_UTIL.waitFor(60000, () -> TEST_UTIL.getHBaseCluster().getMaster()
       .getMasterProcedureExecutor().getActiveProcIds().isEmpty());
     for (RegionInfo ri : regions) {
-      assertTrue(ri.toString(), TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
-        .getRegionStates().isRegionOnline(ri));
+      assertTrue(TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
+        .getRegionStates().isRegionOnline(ri), ri.toString());
     }
   }
 
