@@ -47,7 +47,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 public final class CoprocessorConfigurationUtil {
   private static final Logger LOG = LoggerFactory.getLogger(CoprocessorConfigurationUtil.class);
 
-  public static ImmutableMap<String, List<String>> READONLY_COPROCESSORS =
+  private static final ImmutableMap<String, List<String>> READONLY_COPROCESSORS =
     ImmutableMap.of(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       ImmutableList.of(MasterReadOnlyController.class.getName()),
       CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
