@@ -22,11 +22,15 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.Test;
+import org.junit.jupiter.api.TestTemplate;
 
 public class CloneSnapshotFromClientNormalTestBase extends CloneSnapshotFromClientTestBase {
 
-  @Test
+  protected CloneSnapshotFromClientNormalTestBase(int numReplicas) {
+    super(numReplicas);
+  }
+
+  @TestTemplate
   public void testCloneSnapshot() throws IOException, InterruptedException {
     TableName clonedTableName =
       TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
@@ -35,7 +39,7 @@ public class CloneSnapshotFromClientNormalTestBase extends CloneSnapshotFromClie
     testCloneSnapshot(clonedTableName, emptySnapshot, 0);
   }
 
-  private void testCloneSnapshot(TableName tableName, byte[] snapshotName, int snapshotRows)
+  private void testCloneSnapshot(TableName tableName, String snapshotName, int snapshotRows)
     throws IOException, InterruptedException {
     // create a new table from snapshot
     admin.cloneSnapshot(snapshotName, tableName);
@@ -46,10 +50,10 @@ public class CloneSnapshotFromClientNormalTestBase extends CloneSnapshotFromClie
   }
 
   private void verifyReplicasCameOnline(TableName tableName) throws IOException {
-    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
+    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, numReplicas);
   }
 
-  @Test
+  @TestTemplate
   public void testCloneSnapshotCrossNamespace() throws IOException, InterruptedException {
     String nsName = getValidMethodName() + "_ns_" + EnvironmentEdgeManager.currentTime();
     admin.createNamespace(NamespaceDescriptor.create(nsName).build());
