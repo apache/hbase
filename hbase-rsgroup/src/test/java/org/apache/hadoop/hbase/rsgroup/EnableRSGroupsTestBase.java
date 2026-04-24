@@ -18,46 +18,34 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import static java.lang.Thread.sleep;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Test enable RSGroup
- */
-@Category({ MediumTests.class })
-public class TestEnableRSGroups {
+public abstract class EnableRSGroupsTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestEnableRSGroups.class);
-
-  protected static final Logger LOG = LoggerFactory.getLogger(TestEnableRSGroups.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(EnableRSGroupsTestBase.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     final Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(CoprocessorHost.COPROCESSORS_ENABLED_CONF_KEY, true);
     TEST_UTIL.startMiniCluster(5);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     LOG.info("to stop miniCluster");
     TEST_UTIL.shutdownMiniCluster();
@@ -91,5 +79,4 @@ public class TestEnableRSGroups {
 
     assertTrue(loadBalancer.isOnline());
   }
-
 }

@@ -20,9 +20,6 @@ package org.apache.hadoop.hbase.ipc;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Arrays;
-import java.util.stream.Stream;
-import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
@@ -32,21 +29,12 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestInfo;
-import org.junit.jupiter.api.TestTemplate;
-import org.junit.jupiter.params.provider.Arguments;
 
-@Tag(RPCTests.TAG)
-@Tag(MediumTests.TAG)
-@HBaseParameterizedTestTemplate(name = "{index}: allocatorType={0}")
-public class TestNettyRpcServer {
+public abstract class AbstractTestRpcServer {
 
   private static final byte[] FAMILY = Bytes.toBytes("f");
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
@@ -56,47 +44,10 @@ public class TestNettyRpcServer {
   protected static final LoadTestKVGenerator GENERATOR = new LoadTestKVGenerator(MIN_LEN, MAX_LEN);
   protected static HBaseTestingUtility TEST_UTIL;
   protected TableName tableName;
-  protected final String allocatorType;
-
-  public TestNettyRpcServer(String allocatorType) {
-    this.allocatorType = allocatorType;
-  }
-
-  public static Stream<Arguments> parameters() {
-    return Arrays
-      .stream(
-        new Object[] { NettyRpcServer.POOLED_ALLOCATOR_TYPE, NettyRpcServer.UNPOOLED_ALLOCATOR_TYPE,
-          NettyRpcServer.HEAP_ALLOCATOR_TYPE, SimpleByteBufAllocator.class.getName() })
-      .map(Arguments::of);
-  }
 
   @BeforeEach
-  public void setUpTable(TestInfo testInfo) {
-    String sanitizedAllocatorType = allocatorType.replaceAll("[^a-zA-Z0-9_.-]", "_");
-    tableName =
-      TableName.valueOf(testInfo.getTestMethod().get().getName() + "_" + sanitizedAllocatorType);
-  }
-
-  @BeforeEach
-  public void setup() throws Exception {
-    // A subclass may have already created TEST_UTIL and is now upcalling to us
-    if (TEST_UTIL == null) {
-      TEST_UTIL = new HBaseTestingUtility();
-    }
-    TEST_UTIL.getConfiguration().set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
-      NettyRpcServer.class.getName());
-    TEST_UTIL.getConfiguration().set(NettyRpcServer.HBASE_NETTY_ALLOCATOR_KEY, allocatorType);
-    TEST_UTIL.startMiniCluster();
-  }
-
-  @AfterEach
-  public void tearDown() throws Exception {
-    TEST_UTIL.shutdownMiniCluster();
-  }
-
-  @TestTemplate
-  public void testNettyRpcServer() throws Exception {
-    doTest(tableName);
+  public void setUpTest(TestInfo testInfo) {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
   }
 
   protected void doTest(TableName tableName) throws Exception {
@@ -122,5 +73,4 @@ public class TestNettyRpcServer {
       }
     }
   }
-
 }

@@ -17,17 +17,16 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -38,40 +37,37 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Category({ LargeTests.class })
+@Tag(LargeTests.TAG)
 public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableDescriptorWithRSGroup.class);
   private final byte[] familyNameBytes = Bytes.toBytes("f1");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     setUpTestBeforeClass();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     tearDownAfterClass();
   }
 
-  @Before
-  public void beforeMethod() throws Exception {
-    setUpBeforeMethod();
+  @BeforeEach
+  public void beforeMethod(TestInfo testInfo) throws Exception {
+    setUpBeforeMethod(testInfo);
   }
 
-  @After
+  @AfterEach
   public void afterMethod() throws Exception {
     tearDownAfterMethod();
   }
@@ -116,8 +112,8 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     });
     TableDescriptor descriptor = admin.getConnection().getTable(tableName).getDescriptor();
     Optional<String> regionServerGroup = descriptor.getRegionServerGroup();
-    assertTrue("RSGroup info is not updated into TableDescriptor when table is created.",
-      regionServerGroup.isPresent());
+    assertTrue(regionServerGroup.isPresent(),
+      "RSGroup info is not updated into TableDescriptor when table is created.");
     assertEquals(newGroup, regionServerGroup.get());
   }
 
@@ -130,8 +126,8 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     createTableWithRSGroupDetail(rsGroup1.getName());
     TableDescriptor descriptor = admin.getConnection().getTable(tableName).getDescriptor();
     Optional<String> regionServerGroup = descriptor.getRegionServerGroup();
-    assertTrue("RSGroup info is not updated into TableDescriptor when table created",
-      regionServerGroup.isPresent());
+    assertTrue(regionServerGroup.isPresent(),
+      "RSGroup info is not updated into TableDescriptor when table created");
     assertEquals(rsGroup1.getName(), regionServerGroup.get());
 
     // moveTables
@@ -139,8 +135,8 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     rsGroupAdmin.moveTables(Sets.newHashSet(tableName), rsGroup2.getName());
     descriptor = admin.getConnection().getTable(tableName).getDescriptor();
     regionServerGroup = descriptor.getRegionServerGroup();
-    assertTrue("RSGroup info is not updated into TableDescriptor when table moved",
-      regionServerGroup.isPresent());
+    assertTrue(regionServerGroup.isPresent(),
+      "RSGroup info is not updated into TableDescriptor when table moved");
     assertEquals(rsGroup2.getName(), regionServerGroup.get());
   }
 
@@ -153,8 +149,8 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     createTableWithRSGroupDetail(rsGroup1.getName());
     TableDescriptor descriptor = admin.getConnection().getTable(tableName).getDescriptor();
     Optional<String> regionServerGroup = descriptor.getRegionServerGroup();
-    assertTrue("RSGroup info is not updated into TableDescriptor when table created",
-      regionServerGroup.isPresent());
+    assertTrue(regionServerGroup.isPresent(),
+      "RSGroup info is not updated into TableDescriptor when table created");
     assertEquals(rsGroup1.getName(), regionServerGroup.get());
 
     // moveServersAndTables
@@ -163,8 +159,8 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
 
     descriptor = admin.getConnection().getTable(tableName).getDescriptor();
     regionServerGroup = descriptor.getRegionServerGroup();
-    assertTrue("RSGroup info is not updated into TableDescriptor when table moved",
-      regionServerGroup.isPresent());
+    assertTrue(regionServerGroup.isPresent(),
+      "RSGroup info is not updated into TableDescriptor when table moved");
     assertEquals(RSGroupInfo.DEFAULT_GROUP, regionServerGroup.get());
 
   }
@@ -180,8 +176,8 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     rsGroupAdmin.renameRSGroup(oldGroup.getName(), newGroupName);
     TableDescriptor descriptor = admin.getConnection().getTable(tableName).getDescriptor();
     Optional<String> regionServerGroup = descriptor.getRegionServerGroup();
-    assertTrue("RSGroup info is not updated into TableDescriptor when rs group renamed",
-      regionServerGroup.isPresent());
+    assertTrue(regionServerGroup.isPresent(),
+      "RSGroup info is not updated into TableDescriptor when rs group renamed");
     assertEquals(newGroupName, regionServerGroup.get());
   }
 
@@ -216,8 +212,8 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     assertEquals(rsGroup1.getName(), rsGroupInfoOfTable.getName());
     TableDescriptor descriptor = admin.getConnection().getTable(clonedTable1).getDescriptor();
     Optional<String> regionServerGroup = descriptor.getRegionServerGroup();
-    assertTrue("RSGroup info is not updated into TableDescriptor when table is cloned.",
-      regionServerGroup.isPresent());
+    assertTrue(regionServerGroup.isPresent(),
+      "RSGroup info is not updated into TableDescriptor when table is cloned.");
     assertEquals(rsGroup1.getName(), regionServerGroup.get());
 
     // Delete table's original rs group, clone should fail.
@@ -244,8 +240,8 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     createTableWithRSGroupDetail(rsGroup1.getName());
     TableDescriptor descriptor = admin.getConnection().getTable(tableName).getDescriptor();
     Optional<String> regionServerGroup = descriptor.getRegionServerGroup();
-    assertTrue("RSGroup info is not updated into TableDescriptor when table created",
-      regionServerGroup.isPresent());
+    assertTrue(regionServerGroup.isPresent(),
+      "RSGroup info is not updated into TableDescriptor when table created");
     assertEquals(rsGroup1.getName(), regionServerGroup.get());
 
     final TableDescriptor newTableDescriptor =
@@ -272,8 +268,8 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     assertEquals(1, rsGroup2.getTables().size());
     descriptor = admin.getConnection().getTable(tableName).getDescriptor();
     regionServerGroup = descriptor.getRegionServerGroup();
-    assertTrue("RSGroup info is not updated into TableDescriptor when table is modified.",
-      regionServerGroup.isPresent());
+    assertTrue(regionServerGroup.isPresent(),
+      "RSGroup info is not updated into TableDescriptor when table is modified.");
     assertEquals("rsGroup2", regionServerGroup.get());
   }
 
@@ -298,8 +294,8 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
         e.getCause().getMessage().contains("Table should have at least one column family"));
     }
     rsGroup2 = rsGroupAdmin.getRSGroupInfo(rsGroup2.getName());
-    assertEquals("Table must not have moved to RSGroup as table modify failed", 0,
-      rsGroup2.getTables().size());
+    assertEquals(0, rsGroup2.getTables().size(),
+      "Table must not have moved to RSGroup as table modify failed");
   }
 
   @Test
@@ -318,8 +314,8 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
         e.getCause().getMessage().contains("Table should have at least one column family"));
     }
     rsGroup1 = rsGroupAdmin.getRSGroupInfo(rsGroup1.getName());
-    assertEquals("Table must not have moved to RSGroup as table create operation failed", 0,
-      rsGroup1.getTables().size());
+    assertEquals(0, rsGroup1.getTables().size(),
+      "Table must not have moved to RSGroup as table create operation failed");
   }
 
   @Test
@@ -346,21 +342,22 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     // create table with no rs group info
     createTable(table2, null);
     rsGroupAdmin.moveTables(Sets.newHashSet(tableName), rsGroup1.getName());
-    assertTrue("RSGroup info is not updated into TableDescriptor when table created",
-      admin.getConnection().getTable(tableName).getDescriptor().getRegionServerGroup().isPresent());
+    assertTrue(
+      admin.getConnection().getTable(tableName).getDescriptor().getRegionServerGroup().isPresent(),
+      "RSGroup info is not updated into TableDescriptor when table created");
     assertFalse(
+      admin.getConnection().getTable(table2).getDescriptor().getRegionServerGroup().isPresent(),
       "Table descriptor should not have been updated "
-        + "as rs group info was not stored in table descriptor.",
-      admin.getConnection().getTable(table2).getDescriptor().getRegionServerGroup().isPresent());
+        + "as rs group info was not stored in table descriptor.");
 
     final String rsGroup2 = "rsGroup2";
     rsGroupAdmin.renameRSGroup(rsGroup1.getName(), rsGroup2);
     assertEquals(rsGroup2,
       admin.getConnection().getTable(tableName).getDescriptor().getRegionServerGroup().get());
     assertFalse(
+      admin.getConnection().getTable(table2).getDescriptor().getRegionServerGroup().isPresent(),
       "Table descriptor should not have been updated "
-        + "as rs group info was not stored in table descriptor.",
-      admin.getConnection().getTable(table2).getDescriptor().getRegionServerGroup().isPresent());
+        + "as rs group info was not stored in table descriptor.");
   }
 
   @Test
@@ -377,7 +374,7 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     RSGroupInfo rsGroup2 = addGroup("rsGroup2", 1);
     rsGroupAdmin.moveTables(Sets.newHashSet(tableName, table2), rsGroup2.getName());
     rsGroup2 = rsGroupAdmin.getRSGroupInfo(rsGroup2.getName());
-    assertEquals("Table movement failed.", 2, rsGroup2.getTables().size());
+    assertEquals(2, rsGroup2.getTables().size(), "Table movement failed.");
   }
 
   private void createTable(TableName tName, String rsGroupName) throws Exception {

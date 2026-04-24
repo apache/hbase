@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Map;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
@@ -39,43 +38,39 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Category({ MediumTests.class })
+@Tag(MediumTests.TAG)
 public class TestRSGroupsBalance extends TestRSGroupsBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupsBalance.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsBalance.class);
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     setUpTestBeforeClass();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     tearDownAfterClass();
   }
 
-  @Before
-  public void beforeMethod() throws Exception {
-    setUpBeforeMethod();
+  @BeforeEach
+  public void beforeMethod(TestInfo testInfo) throws Exception {
+    setUpBeforeMethod(testInfo);
   }
 
-  @After
+  @AfterEach
   public void afterMethod() throws Exception {
     tearDownAfterMethod();
   }

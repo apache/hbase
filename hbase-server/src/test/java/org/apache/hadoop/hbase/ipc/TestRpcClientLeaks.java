@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -27,7 +27,6 @@ import java.net.SocketAddress;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -39,25 +38,17 @@ import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestRpcClientLeaks {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRpcClientLeaks.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private static BlockingQueue<Socket> SAVED_SOCKETS = new LinkedBlockingQueue<>();
 
@@ -96,29 +87,35 @@ public class TestRpcClientLeaks {
   }
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private String testMethodName;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
   public static final Logger LOG = LoggerFactory.getLogger(TestRpcClientLeaks.class);
 
+  @BeforeEach
+  public void setUpTest(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
+
   @Test
   public void testSocketClosed() throws IOException, InterruptedException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(testMethodName);
     UTIL.createTable(tableName, fam1).close();
 
     Configuration conf = new Configuration(UTIL.getConfiguration());
     conf.set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, MyRpcClientImpl.class.getName());
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     try (Connection connection = ConnectionFactory.createConnection(conf);
-      Table table = connection.getTable(TableName.valueOf(name.getMethodName()))) {
+      Table table = connection.getTable(TableName.valueOf(testMethodName))) {
       MyRpcClientImpl.enableThrowExceptions();
       table.get(new Get(Bytes.toBytes("asd")));
       fail("Should fail because the injected error");
@@ -126,7 +123,7 @@ public class TestRpcClientLeaks {
       // expected
     }
     for (Socket socket : SAVED_SOCKETS) {
-      assertTrue("Socket " + socket + " is not closed", socket.isClosed());
+      assertTrue(socket.isClosed(), "Socket " + socket + " is not closed");
     }
   }
 }
