@@ -18,112 +18,66 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.TableDescriptorChecker;
+import org.apache.hadoop.metrics2.AbstractMetric;
+import org.apache.hadoop.metrics2.MetricsRecord;
+import org.apache.hadoop.metrics2.MetricsSource;
+import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Tag(MasterTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestAssignmentManagerRitDurationMetrics {
 
-  private static final Logger LOG =
-    LoggerFactory.getLogger(TestAssignmentManagerRitDurationMetrics.class);
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private static final byte[] FAMILY = Bytes.toBytes("family");
+  private static final long WAIT_TIMEOUT_MS = 10_000L;
 
-  private static final MetricsAssertHelper METRICS_HELPER =
-    CompatibilityFactory.getInstance(MetricsAssertHelper.class);
-
-  private static SingleProcessHBaseCluster CLUSTER;
   private static HMaster MASTER;
-  private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private static final int MSG_INTERVAL = 1000;
-
-  private String methodName;
+  private static final String RIT_DURATION_NUM_OPS_METRIC = "RitDuration_num_ops";
+  private static final String RIT_DURATION_MAX_METRIC = "RitDuration_max";
 
   @BeforeAll
   public static void startCluster() throws Exception {
-    LOG.info("Starting cluster");
-    Configuration conf = TEST_UTIL.getConfiguration();
-
-    // Enable sanity check for coprocessor, so that region reopen fails on the RS
-    conf.setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, true);
-    // set RIT stuck warning threshold to a small value
-    conf.setInt(HConstants.METRICS_RIT_STUCK_WARNING_THRESHOLD, 20);
-    // set msgInterval to 1 second
-    conf.setInt("hbase.regionserver.msginterval", MSG_INTERVAL);
-    // set tablesOnMaster to none
-    conf.set("hbase.balancer.tablesOnMaster", "none");
-    // set client sync wait timeout to 5sec
-    conf.setInt("hbase.client.sync.wait.timeout.msec", 5000);
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
-    conf.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 2500);
-    // set a small interval for updating rit metrics
-    conf.setInt(AssignmentManager.RIT_CHORE_INTERVAL_MSEC_CONF_KEY, MSG_INTERVAL);
-    // set a small assign attempts for avoiding assert when retrying. (HBASE-20533)
-    conf.setInt(AssignmentManager.ASSIGN_MAX_ATTEMPTS, 3);
-    // keep rs online so it can report the failed opens.
-    conf.setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
-
     TEST_UTIL.startMiniCluster(2);
-    CLUSTER = TEST_UTIL.getHBaseCluster();
-    MASTER = CLUSTER.getMaster();
-    // Disable sanity check for coprocessor, so that modify table runs on the HMaster
-    MASTER.getConfiguration().setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, false);
+    MASTER = TEST_UTIL.getMiniHBaseCluster().getMaster();
   }
 
   @AfterAll
   public static void after() throws Exception {
-    LOG.info("AFTER {} <= IS THIS NULL?", TEST_UTIL);
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @BeforeEach
-  public void setUp(TestInfo testInfo) throws Exception {
-    methodName = testInfo.getTestMethod().get().getName();
-  }
-
   @Test
-  public void testRitDurationHistogramMetric() throws Exception {
-    final TableName tableName = TableName.valueOf(methodName);
-    final byte[] family = Bytes.toBytes("family");
-    try (Table table = TEST_UTIL.createTable(tableName, family)) {
-      final byte[] row = Bytes.toBytes("row");
-      final byte[] qualifier = Bytes.toBytes("qualifier");
-      final byte[] value = Bytes.toBytes("value");
-
-      Put put = new Put(row);
-      put.addColumn(family, qualifier, value);
-      table.put(put);
-      Thread.sleep(MSG_INTERVAL * 2);
+  public void testRitDurationHistogramMetric(TestInfo testInfo) throws Exception {
+    TableName tableName = TableName.valueOf(testInfo.getTestMethod().orElseThrow().getName());
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
+      RegionInfo regionInfo =
+        MASTER.getAssignmentManager().getRegionStates().getRegionsOfTable(tableName).get(0);
+      TEST_UTIL.waitFor(WAIT_TIMEOUT_MS,
+        () -> !MASTER.getAssignmentManager().isRegionInTransition(regionInfo)
+          && MASTER.getAssignmentManager().getRegionStates().getRegionServerOfRegion(regionInfo)
+              != null);
 
       MetricsAssignmentManagerSource amSource =
         MASTER.getAssignmentManager().getAssignmentManagerMetrics().getMetricsProcSource();
-      long ritDurationNumOps = getRitCountFromRegionStates(amSource);
+      long ritDurationNumOps =
+        getMetricValue(snapshotMetrics(amSource), RIT_DURATION_NUM_OPS_METRIC);
 
-      RegionInfo regionInfo = MASTER.getAssignmentManager().getRegionStates()
-        .getRegionsOfTable(tableName).iterator().next();
       ServerName current =
         MASTER.getAssignmentManager().getRegionStates().getRegionServerOfRegion(regionInfo);
       ServerName target = MASTER.getServerManager().getOnlineServersList().stream()
@@ -131,14 +85,34 @@ public class TestAssignmentManagerRitDurationMetrics {
         .orElseThrow(() -> new IllegalStateException("Need at least two regionservers"));
 
       TEST_UTIL.getAdmin().move(regionInfo.getEncodedNameAsBytes(), target);
-      TEST_UTIL.waitFor(10_000, () -> getRitCountFromRegionStates(amSource) > ritDurationNumOps);
-      TEST_UTIL.waitUntilNoRegionTransitScheduled();
-      Thread.sleep(MSG_INTERVAL * 5);
-      assertEquals(ritDurationNumOps + 1, getRitCountFromRegionStates(amSource));
+      TEST_UTIL.waitFor(WAIT_TIMEOUT_MS,
+        () -> target.equals(
+          MASTER.getAssignmentManager().getRegionStates().getRegionServerOfRegion(regionInfo))
+          && !MASTER.getAssignmentManager().isRegionInTransition(regionInfo));
+
+      MetricsRecord metricsRecord = snapshotMetrics(amSource);
+      assertEquals(ritDurationNumOps + 1,
+        getMetricValue(metricsRecord, RIT_DURATION_NUM_OPS_METRIC));
+      assertTrue(getMetricValue(metricsRecord, RIT_DURATION_MAX_METRIC) > 0,
+        "ritDuration histogram should export a positive max value");
     }
   }
 
-  private long getRitCountFromRegionStates(MetricsAssignmentManagerSource amSource) {
-    return METRICS_HELPER.getCounter("ritDurationNumOps", amSource);
+  private MetricsRecord snapshotMetrics(MetricsAssignmentManagerSource amSource) {
+    MetricsCollectorImpl collector = new MetricsCollectorImpl();
+    assertInstanceOf(MetricsSource.class, amSource,
+      "MetricsAssignmentManagerSource should also implement MetricsSource");
+    ((MetricsSource) amSource).getMetrics(collector, true);
+    assertEquals(1, collector.getRecords().size());
+    return collector.getRecords().get(0);
+  }
+
+  private long getMetricValue(MetricsRecord record, String metricName) {
+    for (AbstractMetric metric : record.metrics()) {
+      if (metricName.equals(metric.name())) {
+        return metric.value().longValue();
+      }
+    }
+    throw new AssertionError("Metric not found: " + metricName);
   }
 }

@@ -235,8 +235,7 @@ public class AssignmentManager {
 
   private final int forceRegionRetainmentRetries;
 
-  private final RegionInTransitionTracker regionInTransitionTracker =
-    new RegionInTransitionTracker();
+  private final RegionInTransitionTracker regionInTransitionTracker;
 
   public AssignmentManager(MasterServices master, MasterRegion masterRegion) {
     this(master, masterRegion, new RegionStateStore(master, masterRegion));
@@ -246,6 +245,7 @@ public class AssignmentManager {
     this.master = master;
     this.regionStateStore = stateStore;
     this.metrics = new MetricsAssignmentManager();
+    this.regionInTransitionTracker = new RegionInTransitionTracker(metrics::updateRitDuration);
     this.masterRegion = masterRegion;
 
     final Configuration conf = master.getConfiguration();
@@ -284,8 +284,6 @@ public class AssignmentManager {
       DEFAULT_FORCE_REGION_RETAINMENT_WAIT_INTERVAL);
     forceRegionRetainmentRetries =
       conf.getInt(FORCE_REGION_RETAINMENT_RETRIES, DEFAULT_FORCE_REGION_RETAINMENT_RETRIES);
-
-    this.setRitDurationConsumer();
   }
 
   private void mirrorMetaLocations() throws IOException, KeeperException {
@@ -759,10 +757,6 @@ public class AssignmentManager {
       return Collections.emptyList();
     }
     return serverNode.getSystemRegionInfoList();
-  }
-
-  private void setRitDurationConsumer() {
-    regionInTransitionTracker.setRitDurationConsumer(metrics::updateRitDuration);
   }
 
   private void preTransitCheck(RegionStateNode regionNode, RegionState.State[] expectedStates)
