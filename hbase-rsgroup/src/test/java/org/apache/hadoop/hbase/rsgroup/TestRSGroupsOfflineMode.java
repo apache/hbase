@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -36,14 +35,11 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,12 +52,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 // table isn't available. It then kills the active master and waits for backup master to come
 // online. In new master, RSGroupInfoManagerImpl gets the data from zk and waits for the expected
 // assignment with a timeout.
-@Category(MediumTests.class)
-public class TestRSGroupsOfflineMode {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupsOfflineMode.class);
+@Tag(MediumTests.TAG)
+public class TestRSGroupsOfflineMode extends TestRSGroupsBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsOfflineMode.class);
   private static HMaster master;
@@ -70,10 +62,7 @@ public class TestRSGroupsOfflineMode {
   private static HBaseCluster cluster;
   private final static long WAIT_TIMEOUT = 60000 * 5;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
     TEST_UTIL.getConfiguration().set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
@@ -99,15 +88,15 @@ public class TestRSGroupsOfflineMode {
     });
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void testOffline() throws Exception, InterruptedException {
+  public void testOffline(TestInfo testInfo) throws Exception, InterruptedException {
     // Table should be after group table name so it gets assigned later.
-    final TableName failoverTable = TableName.valueOf(name.getMethodName());
+    final TableName failoverTable = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TEST_UTIL.createTable(failoverTable, Bytes.toBytes("f"));
     final HRegionServer killRS = ((MiniHBaseCluster) cluster).getRegionServer(0);
     final HRegionServer groupRS = ((MiniHBaseCluster) cluster).getRegionServer(1);
@@ -185,7 +174,7 @@ public class TestRSGroupsOfflineMode {
         return failoverRS.getRegions(failoverTable).size() >= 1;
       }
     });
-    Assert.assertEquals(0, failoverRS.getRegions(RSGroupInfoManager.RSGROUP_TABLE_NAME).size());
+    assertEquals(0, failoverRS.getRegions(RSGroupInfoManager.RSGROUP_TABLE_NAME).size());
 
     // Need this for minicluster to shutdown cleanly.
     master.stopMaster();

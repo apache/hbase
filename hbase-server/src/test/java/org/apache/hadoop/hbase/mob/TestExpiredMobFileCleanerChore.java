@@ -19,12 +19,11 @@ package org.apache.hadoop.hbase.mob;
 
 import static org.apache.hadoop.hbase.mob.MobConstants.MOB_CLEANER_BATCH_SIZE_UPPER_BOUND;
 import static org.apache.hadoop.hbase.mob.MobConstants.MOB_CLEANER_THREAD_COUNT;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -38,20 +37,16 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MediumTests.class, MasterTests.class })
+@Tag(MediumTests.TAG)
+@Tag(MasterTests.TAG)
 public class TestExpiredMobFileCleanerChore {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestExpiredMobFileCleanerChore.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static TableName tableName = TableName.valueOf("TestExpiredMobFileCleaner");
   private final static TableName tableName2 = TableName.valueOf("TestExpiredMobFileCleaner2");
@@ -66,7 +61,7 @@ public class TestExpiredMobFileCleanerChore {
   private static BufferedMutator table2;
   private static MobFileCleanerChore mobFileCleanerChore;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
     TEST_UTIL.getConfiguration().setInt(MOB_CLEANER_BATCH_SIZE_UPPER_BOUND, 2);
@@ -74,7 +69,7 @@ public class TestExpiredMobFileCleanerChore {
     mobFileCleanerChore = TEST_UTIL.getMiniHBaseCluster().getMaster().getMobFileCleanerChore();
   }
 
-  @After
+  @AfterEach
   public void cleanUp() throws IOException {
     admin.disableTable(tableName);
     admin.deleteTable(tableName);
@@ -83,7 +78,7 @@ public class TestExpiredMobFileCleanerChore {
     admin.close();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
     TEST_UTIL.getTestFileSystem().delete(TEST_UTIL.getDataTestDir(), true);
@@ -94,7 +89,7 @@ public class TestExpiredMobFileCleanerChore {
     TEST_UTIL.getConfiguration().setInt(MOB_CLEANER_THREAD_COUNT, 1);
     mobFileCleanerChore.onConfigurationChange(TEST_UTIL.getConfiguration());
     int corePoolSize = mobFileCleanerChore.getExecutor().getCorePoolSize();
-    Assert.assertEquals(1, corePoolSize);
+    assertEquals(1, corePoolSize);
     testCleanerInternal();
   }
 
@@ -103,7 +98,7 @@ public class TestExpiredMobFileCleanerChore {
     TEST_UTIL.getConfiguration().setInt(MOB_CLEANER_THREAD_COUNT, 2);
     mobFileCleanerChore.onConfigurationChange(TEST_UTIL.getConfiguration());
     int corePoolSize = mobFileCleanerChore.getExecutor().getCorePoolSize();
-    Assert.assertEquals(2, corePoolSize);
+    assertEquals(2, corePoolSize);
     testCleanerInternal();
   }
 
@@ -174,7 +169,7 @@ public class TestExpiredMobFileCleanerChore {
     putKVAndFlush(table, row1, dummyData, ts, tableName);
     FileStatus[] firstFiles = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath);
     // the first mob file
-    assertEquals("Before cleanup without delay 1", 1, firstFiles.length);
+    assertEquals(1, firstFiles.length, "Before cleanup without delay 1");
     String firstFile = firstFiles[0].getPath().getName();
 
     // 1.5 day before
@@ -182,7 +177,7 @@ public class TestExpiredMobFileCleanerChore {
     putKVAndFlush(table, row2, dummyData, ts, tableName);
     FileStatus[] secondFiles = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath);
     // now there are 2 mob files
-    assertEquals("Before cleanup without delay 2", 2, secondFiles.length);
+    assertEquals(2, secondFiles.length, "Before cleanup without delay 2");
     String f1 = secondFiles[0].getPath().getName();
     String f2 = secondFiles[1].getPath().getName();
     String secondFile = f1.equals(firstFile) ? f2 : f1;
@@ -193,7 +188,7 @@ public class TestExpiredMobFileCleanerChore {
     putKVAndFlush(table, row3, dummyData, ts, tableName);
     FileStatus[] thirdFiles = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath);
     // now there are 4 mob files
-    assertEquals("Before cleanup without delay 3", 4, thirdFiles.length);
+    assertEquals(4, thirdFiles.length, "Before cleanup without delay 3");
 
     // modifyColumnExpiryDays(2); // ttl = 2, make the first row expired
 
@@ -205,7 +200,7 @@ public class TestExpiredMobFileCleanerChore {
     putKVAndFlush(table2, row1, dummyData2, ts, tableName2);
     FileStatus[] firstFiles2 = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath2);
     // the first mob file
-    assertEquals("Before cleanup without delay 1", 1, firstFiles2.length);
+    assertEquals(1, firstFiles2.length, "Before cleanup without delay 1");
     String firstFile2 = firstFiles2[0].getPath().getName();
 
     // 1.5 day before
@@ -213,7 +208,7 @@ public class TestExpiredMobFileCleanerChore {
     putKVAndFlush(table2, row2, dummyData2, ts, tableName2);
     FileStatus[] secondFiles2 = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath2);
     // now there are 2 mob files
-    assertEquals("Before cleanup without delay 2", 2, secondFiles2.length);
+    assertEquals(2, secondFiles2.length, "Before cleanup without delay 2");
     String f1Second = secondFiles2[0].getPath().getName();
     String f2Second = secondFiles2[1].getPath().getName();
     String secondFile2 = f1Second.equals(firstFile2) ? f2Second : f1Second;
@@ -223,7 +218,7 @@ public class TestExpiredMobFileCleanerChore {
     putKVAndFlush(table2, row3, dummyData2, ts, tableName2);
     FileStatus[] thirdFiles2 = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath2);
     // now there are 4 mob files
-    assertEquals("Before cleanup without delay 3", 4, thirdFiles2.length);
+    assertEquals(4, thirdFiles2.length, "Before cleanup without delay 3");
 
     modifyColumnExpiryDays(2); // ttl = 2, make the first row expired
 
@@ -233,14 +228,14 @@ public class TestExpiredMobFileCleanerChore {
     FileStatus[] filesAfterClean = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath);
     String lastFile = filesAfterClean[0].getPath().getName();
     // there are 4 mob files in total, but only 3 need to be cleaned
-    assertEquals("After cleanup without delay 1", 1, filesAfterClean.length);
-    assertEquals("After cleanup without delay 2", secondFile, lastFile);
+    assertEquals(1, filesAfterClean.length, "After cleanup without delay 1");
+    assertEquals(secondFile, lastFile, "After cleanup without delay 2");
 
     filesAfterClean = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath2);
     lastFile = filesAfterClean[0].getPath().getName();
     // there are 4 mob files in total, but only 3 need to be cleaned
-    assertEquals("After cleanup without delay 1", 1, filesAfterClean.length);
-    assertEquals("After cleanup without delay 2", secondFile2, lastFile);
+    assertEquals(1, filesAfterClean.length, "After cleanup without delay 1");
+    assertEquals(secondFile2, lastFile, "After cleanup without delay 2");
   }
 
   private static int secondsOfDay() {
