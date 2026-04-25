@@ -186,7 +186,7 @@ public class TestMasterFailover {
       // meta should remain where it was
       RegionState metaState = MetaTableLocator.getMetaRegionState(hrs.getZooKeeper());
       assertEquals(metaServerName, metaState.getServerName(), "hbase:meta should be online on RS");
-      assertEquals(metaState.getState(), State.OPEN, "hbase:meta should be online on RS");
+      assertEquals(State.OPEN, metaState.getState(), "hbase:meta should be online on RS");
 
       // Start up a new master
       LOG.info("Starting up a new master");
@@ -198,7 +198,7 @@ public class TestMasterFailover {
       // ensure meta is still deployed on RS
       metaState = MetaTableLocator.getMetaRegionState(activeMaster.getZooKeeper());
       assertEquals(metaServerName, metaState.getServerName(), "hbase:meta should be online on RS");
-      assertEquals(metaState.getState(), State.OPEN, "hbase:meta should be online on RS");
+      assertEquals(State.OPEN, metaState.getState(), "hbase:meta should be online on RS");
 
       // Done, shutdown the cluster
     } finally {

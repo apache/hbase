@@ -52,9 +52,9 @@ public class TestUnknownServers {
 
   @Test
   public void testListUnknownServers() throws Exception {
-    assertEquals(ADMIN.listUnknownServers().size(), SLAVES);
+    assertEquals(SLAVES, ADMIN.listUnknownServers().size());
     IS_UNKNOWN_SERVER = false;
-    assertEquals(ADMIN.listUnknownServers().size(), 0);
+    assertEquals(0, ADMIN.listUnknownServers().size());
   }
 
   @AfterAll
