@@ -17,45 +17,41 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManagerImpl.RSGroupMappingScript;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ SmallTests.class })
+@Tag(SmallTests.TAG)
 public class TestRSGroupMappingScript {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRSGroupMappingScript.class);
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupMappingScript.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private File script;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupScript() throws Exception {
     String currentDir = new File("").getAbsolutePath();
     UTIL.getConfiguration().set(RSGroupMappingScript.RS_GROUP_MAPPING_SCRIPT,
       currentDir + "/rsgroup_table_mapping.sh");
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     script = new File(UTIL.getConfiguration().get(RSGroupMappingScript.RS_GROUP_MAPPING_SCRIPT));
     if (!script.createNewFile()) {
@@ -97,19 +93,19 @@ public class TestRSGroupMappingScript {
     TableName testNamespace = TableName.valueOf("test", "should_be_in_test");
     String rsgroup =
       script.getRSGroup(testNamespace.getNamespaceAsString(), testNamespace.getQualifierAsString());
-    Assert.assertEquals("test", rsgroup);
+    assertEquals("test", rsgroup);
 
     TableName otherName = TableName.valueOf("whatever", "oh_foo_should_be_in_other");
     rsgroup = script.getRSGroup(otherName.getNamespaceAsString(), otherName.getQualifierAsString());
-    Assert.assertEquals("other", rsgroup);
+    assertEquals("other", rsgroup);
 
     TableName defaultName = TableName.valueOf("nono", "should_be_in_default");
     rsgroup =
       script.getRSGroup(defaultName.getNamespaceAsString(), defaultName.getQualifierAsString());
-    Assert.assertEquals("default", rsgroup);
+    assertEquals("default", rsgroup);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     if (script.exists()) {
       script.delete();
