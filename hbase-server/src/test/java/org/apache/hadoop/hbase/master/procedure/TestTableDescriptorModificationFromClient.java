@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Set;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -37,29 +37,21 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Verify that the HTableDescriptor is updated after addColumn(), deleteColumn() and modifyTable()
  * operations.
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestTableDescriptorModificationFromClient {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableDescriptorModificationFromClient.class);
-
-  @Rule
-  public TestName name = new TestName();
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static TableName TABLE_NAME = null;
   private static final byte[] FAMILY_0 = Bytes.toBytes("cf0");
@@ -68,18 +60,17 @@ public class TestTableDescriptorModificationFromClient {
   /**
    * Start up a mini cluster and put a small table of empty regions into it.
    */
-  @BeforeClass
+  @BeforeAll
   public static void beforeAllTests() throws Exception {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @Before
-  public void setup() {
-    TABLE_NAME = TableName.valueOf(name.getMethodName());
-
+  @BeforeEach
+  public void setup(TestInfo testInfo) {
+    TABLE_NAME = TableName.valueOf(testInfo.getTestMethod().get().getName());
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterAllTests() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -146,7 +137,7 @@ public class TestTableDescriptorModificationFromClient {
       try {
         // Add same column family again - expect failure
         admin.addColumnFamily(TABLE_NAME, new HColumnDescriptor(FAMILY_1));
-        Assert.fail("Delete a non-exist column family should fail");
+        fail("Delete a non-exist column family should fail");
       } catch (InvalidFamilyOperationException e) {
         // Expected.
       }
@@ -206,7 +197,7 @@ public class TestTableDescriptorModificationFromClient {
       // Modify a column family that is not in the table.
       try {
         admin.modifyColumnFamily(TABLE_NAME, cfDescriptor);
-        Assert.fail("Modify a non-exist column family should fail");
+        fail("Modify a non-exist column family should fail");
       } catch (InvalidFamilyOperationException e) {
         // Expected.
       }
@@ -257,7 +248,7 @@ public class TestTableDescriptorModificationFromClient {
       try {
         // Delete again - expect failure
         admin.deleteColumnFamily(TABLE_NAME, FAMILY_1);
-        Assert.fail("Delete a non-exist column family should fail");
+        fail("Delete a non-exist column family should fail");
       } catch (Exception e) {
         // Expected.
       }
@@ -287,7 +278,7 @@ public class TestTableDescriptorModificationFromClient {
     assertEquals(tableName, htd.getTableName());
     assertEquals(families.length, htdFamilies.size());
     for (byte[] familyName : families) {
-      assertTrue("Expected family " + Bytes.toString(familyName), htdFamilies.contains(familyName));
+      assertTrue(htdFamilies.contains(familyName), "Expected family " + Bytes.toString(familyName));
     }
   }
 }
