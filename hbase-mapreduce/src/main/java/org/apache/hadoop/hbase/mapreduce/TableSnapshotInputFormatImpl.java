@@ -182,7 +182,10 @@ public class TableSnapshotInputFormatImpl {
 
     public long getLength() {
       // TODO: We can obtain the file sizes of the snapshot here.
-      return 0;
+      // returns a valid positive length instead of 0 to avoid
+      // Spark's empty-partition filtering which was introduced via SPARK-22233
+      // and enabled by default in SPARK-34809
+      return 1L;
     }
 
     public String[] getLocations() {
