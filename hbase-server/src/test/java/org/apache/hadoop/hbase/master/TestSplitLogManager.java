@@ -336,7 +336,7 @@ public class TestSplitLogManager {
         return (tot_mgr_resubmit.sum() + tot_mgr_resubmit_failed.sum());
       }
     }, 0, 1, 5 * 60000); // wait long enough
-    assertEquals(tot_mgr_resubmit_failed.sum(), 0, "Could not run test. Lost ZK connection?");
+    assertEquals(0, tot_mgr_resubmit_failed.sum(), "Could not run test. Lost ZK connection?");
     int version1 = ZKUtil.checkExists(zkw, tasknode);
     assertTrue(version1 > version);
     byte[] taskstate = ZKUtil.getData(zkw, tasknode);

@@ -94,7 +94,7 @@ public class TestMetaShutdownHandler {
       metaServerName = regionStates.getRegionServerOfRegion(HRegionInfo.FIRST_META_REGIONINFO);
     }
     RegionState metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper());
-    assertEquals(metaState.getState(), RegionState.State.OPEN, "Wrong state for meta!");
+    assertEquals(RegionState.State.OPEN, metaState.getState(), "Wrong state for meta!");
     assertNotEquals(master.getServerName(), metaServerName, "Meta is on master!");
     HRegionServer metaRegionServer = cluster.getRegionServer(metaServerName);
 

@@ -19,34 +19,22 @@ package org.apache.hadoop.hbase.master;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
-import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.hbck.HbckReport;
-import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.OperationStatus;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -161,42 +149,5 @@ public abstract class AbstractTestMasterRegionMutation {
         && report.getOrphanRegionsOnRS().isEmpty();
     });
 
-  }
-
-  public static class TestRegion extends HRegion {
-
-    public TestRegion(Path tableDir, WAL wal, FileSystem fs, Configuration confParam,
-      RegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
-      super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
-    }
-
-    public TestRegion(HRegionFileSystem fs, WAL wal, Configuration confParam, TableDescriptor htd,
-      RegionServerServices rsServices) {
-      super(fs, wal, confParam, htd, rsServices);
-    }
-
-    @Override
-    public OperationStatus[] batchMutate(Mutation[] mutations, boolean atomic, long nonceGroup,
-      long nonce) throws IOException {
-      if (
-        MasterRegionFactory.TABLE_NAME.equals(getTableDescriptor().getTableName())
-          && ERROR_OUT.get()
-      ) {
-        // First time errors are recovered with enough retries
-        if (FIRST_TIME_ERROR.get() && ERROR_COUNTER.getAndIncrement() == 5) {
-          ERROR_OUT.set(false);
-          ERROR_COUNTER.set(0);
-          FIRST_TIME_ERROR.set(false);
-          return super.batchMutate(mutations, atomic, nonceGroup, nonce);
-        }
-        // Second time errors are not recovered with enough retries, leading to master abort
-        if (!FIRST_TIME_ERROR.get() && ERROR_COUNTER.getAndIncrement() == 8) {
-          ERROR_OUT.set(false);
-          ERROR_COUNTER.set(0);
-        }
-        throw new RegionTooBusyException("test error...");
-      }
-      return super.batchMutate(mutations, atomic, nonceGroup, nonce);
-    }
   }
 }
