@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -194,13 +194,13 @@ public class MasterProcedureTestingUtility {
     List<Path> unwantedRegionDirs = FSUtils.getRegionDirs(fs, tableDir);
     for (int i = 0; i < regions.length; ++i) {
       Path regionDir = new Path(tableDir, regions[i].getEncodedName());
-      assertTrue(regions[i] + " region dir does not exist", fs.exists(regionDir));
+      assertTrue(fs.exists(regionDir), regions[i] + " region dir does not exist");
       assertTrue(unwantedRegionDirs.remove(regionDir));
       List<Path> allFamilyDirs = FSUtils.getFamilyDirs(fs, regionDir);
       for (int j = 0; j < family.length; ++j) {
         final Path familyDir = new Path(regionDir, family[j]);
         if (hasFamilyDirs) {
-          assertTrue(family[j] + " family dir does not exist", fs.exists(familyDir));
+          assertTrue(fs.exists(familyDir), family[j] + " family dir does not exist");
           assertTrue(allFamilyDirs.remove(familyDir));
         } else {
           // TODO: WARN: Modify Table/Families does not create a family dir
@@ -210,9 +210,9 @@ public class MasterProcedureTestingUtility {
           allFamilyDirs.remove(familyDir);
         }
       }
-      assertTrue("found extraneous families: " + allFamilyDirs, allFamilyDirs.isEmpty());
+      assertTrue(allFamilyDirs.isEmpty(), "found extraneous families: " + allFamilyDirs);
     }
-    assertTrue("found extraneous regions: " + unwantedRegionDirs, unwantedRegionDirs.isEmpty());
+    assertTrue(unwantedRegionDirs.isEmpty(), "found extraneous regions: " + unwantedRegionDirs);
     LOG.debug("Table directory layout is as expected.");
 
     // check meta
@@ -221,10 +221,10 @@ public class MasterProcedureTestingUtility {
 
     // check htd
     TableDescriptor htd = master.getTableDescriptors().get(tableName);
-    assertTrue("table descriptor not found", htd != null);
+    assertTrue(htd != null, "table descriptor not found");
     for (int i = 0; i < family.length; ++i) {
-      assertTrue("family not found " + family[i],
-        htd.getColumnFamily(Bytes.toBytes(family[i])) != null);
+      assertTrue(htd.getColumnFamily(Bytes.toBytes(family[i])) != null,
+        "family not found " + family[i]);
     }
     assertEquals(family.length, htd.getColumnFamilyCount());
 
@@ -247,7 +247,7 @@ public class MasterProcedureTestingUtility {
     assertEquals(0, countMetaRegions(master, tableName));
 
     // check htd
-    assertTrue("found htd of deleted table", master.getTableDescriptors().get(tableName) == null);
+    assertTrue(master.getTableDescriptors().get(tableName) == null, "found htd of deleted table");
   }
 
   private static int countMetaRegions(final HMaster master, final TableName tableName)
@@ -318,7 +318,7 @@ public class MasterProcedureTestingUtility {
       CommonFSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
     for (Path regionDir : FSUtils.getRegionDirs(fs, tableDir)) {
       final Path familyDir = new Path(regionDir, family);
-      assertFalse(family + " family dir should not exist", fs.exists(familyDir));
+      assertFalse(fs.exists(familyDir), family + " family dir should not exist");
     }
   }
 
