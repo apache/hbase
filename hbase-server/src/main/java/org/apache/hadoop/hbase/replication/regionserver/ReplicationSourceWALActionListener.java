@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import static org.apache.hadoop.hbase.HConstants.REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED;
+import static org.apache.hadoop.hbase.HConstants.REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED_DEFAULT;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
@@ -38,14 +42,24 @@ class ReplicationSourceWALActionListener implements WALActionsListener {
 
   private final ReplicationSourceManager manager;
 
+  private final boolean filterWALByReplicationScope;
+
   public ReplicationSourceWALActionListener(Configuration conf, ReplicationSourceManager manager) {
     this.conf = conf;
     this.manager = manager;
+    this.filterWALByReplicationScope = conf.getBoolean(REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED,
+      REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED_DEFAULT);
   }
 
   @Override
   public void postLogRoll(Path oldPath, Path newPath) throws IOException {
-    manager.postLogRoll(newPath);
+    if (filterWALByReplicationScope) {
+      if (AbstractFSWALProvider.isFileInReplicationScope(newPath)) {
+        manager.postLogRoll(newPath);
+      }
+    } else {
+      manager.postLogRoll(newPath);
+    }
   }
 
   @Override
