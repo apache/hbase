@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.mob;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -31,18 +30,13 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestMobDataBlockEncoding {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobDataBlockEncoding.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static byte[] row1 = Bytes.toBytes("row1");
@@ -56,12 +50,12 @@ public class TestMobDataBlockEncoding {
   private static HTableDescriptor desc;
   private static long defaultThreshold = 10;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }

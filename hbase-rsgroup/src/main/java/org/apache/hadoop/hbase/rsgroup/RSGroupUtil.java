@@ -35,5 +35,4 @@ public final class RSGroupUtil {
     }
     return false;
   }
-
 }

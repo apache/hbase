@@ -17,34 +17,29 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Charsets;
 import org.apache.hbase.thirdparty.com.google.common.io.Files;
 
-@Category({ RPCTests.class, SmallTests.class })
+@Tag(RPCTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestBufferChain {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBufferChain.class);
 
   private File tmpFile;
 
@@ -52,12 +47,12 @@ public class TestBufferChain {
     new byte[][] { "hello".getBytes(Charsets.UTF_8), " ".getBytes(Charsets.UTF_8),
       "world".getBytes(Charsets.UTF_8) };
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     tmpFile = File.createTempFile("TestBufferChain", "txt");
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     tmpFile.delete();
   }
