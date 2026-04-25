@@ -17,37 +17,25 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.Arrays;
-import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-@RunWith(Parameterized.class)
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: regionReplication={0}")
 public class TestRestoreSnapshotFromClientAfterSplittingRegions
   extends RestoreSnapshotFromClientAfterSplittingRegionsTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRestoreSnapshotFromClientAfterSplittingRegions.class);
-
-  @Parameter
-  public int numReplicas;
-
-  @Parameters(name = "{index}: regionReplication={0}")
-  public static List<Object[]> params() {
-    return Arrays.asList(new Object[] { 1 }, new Object[] { 3 });
+  public TestRestoreSnapshotFromClientAfterSplittingRegions(int numReplicas) {
+    super(numReplicas);
   }
 
-  @Override
-  protected int getNumReplicas() {
-    return numReplicas;
+  @BeforeAll
+  public static void setUpBeforeClass() throws Exception {
+    setupConf(TEST_UTIL.getConfiguration());
+    TEST_UTIL.startMiniCluster(3);
   }
 }
