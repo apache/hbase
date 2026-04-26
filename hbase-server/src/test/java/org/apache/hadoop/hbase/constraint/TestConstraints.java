@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.constraint;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
@@ -33,29 +32,25 @@ import org.apache.hadoop.hbase.constraint.WorksConstraint.NameConstraint;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Test reading/writing the constraints into the {@link HTableDescriptor}
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestConstraints {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestConstraints.class);
-
-  @Rule
-  public TestName name = new TestName();
+  private TableName getTableName(TestInfo testInfo) {
+    return TableName.valueOf(testInfo.getTestMethod().get().getName());
+  }
 
   @SuppressWarnings("unchecked")
   @Test
-  public void testSimpleReadWrite() throws Throwable {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+  public void testSimpleReadWrite(TestInfo testInfo) throws Throwable {
+    HTableDescriptor desc = new HTableDescriptor(getTableName(testInfo));
     Constraints.add(desc, WorksConstraint.class);
 
     List<? extends Constraint> constraints =
@@ -78,8 +73,8 @@ public class TestConstraints {
 
   @SuppressWarnings("unchecked")
   @Test
-  public void testReadWriteWithConf() throws Throwable {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+  public void testReadWriteWithConf(TestInfo testInfo) throws Throwable {
+    HTableDescriptor desc = new HTableDescriptor(getTableName(testInfo));
     Constraints.add(desc, new Pair<>(CheckConfigurationConstraint.class,
       CheckConfigurationConstraint.getConfiguration()));
 
@@ -105,8 +100,8 @@ public class TestConstraints {
    */
   @SuppressWarnings("unchecked")
   @Test
-  public void testEnableDisableRemove() throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+  public void testEnableDisableRemove(TestInfo testInfo) throws Exception {
+    HTableDescriptor desc = new HTableDescriptor(getTableName(testInfo));
     // check general enabling/disabling of constraints
     // first add a constraint
     Constraints.add(desc, AllPassConstraint.class);
@@ -139,8 +134,8 @@ public class TestConstraints {
    */
   @SuppressWarnings("unchecked")
   @Test
-  public void testUpdateConstraint() throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+  public void testUpdateConstraint(TestInfo testInfo) throws Exception {
+    HTableDescriptor desc = new HTableDescriptor(getTableName(testInfo));
     Constraints.add(desc, CheckConfigurationConstraint.class, CheckWasRunConstraint.class);
     Constraints.setConfiguration(desc, CheckConfigurationConstraint.class,
       CheckConfigurationConstraint.getConfiguration());
@@ -160,18 +155,18 @@ public class TestConstraints {
    * it. on failure.
    */
   @Test
-  public void testRemoveUnsetConstraint() throws Throwable {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+  public void testRemoveUnsetConstraint(TestInfo testInfo) throws Throwable {
+    HTableDescriptor desc = new HTableDescriptor(getTableName(testInfo));
     Constraints.remove(desc);
     Constraints.remove(desc, AlsoWorks.class);
   }
 
   @Test
-  public void testConfigurationPreserved() throws Throwable {
+  public void testConfigurationPreserved(TestInfo testInfo) throws Throwable {
     Configuration conf = new Configuration();
     conf.setBoolean("_ENABLED", false);
     conf.setLong("_PRIORITY", 10);
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HTableDescriptor desc = new HTableDescriptor(getTableName(testInfo));
     Constraints.add(desc, AlsoWorks.class, conf);
     Constraints.add(desc, WorksConstraint.class);
     assertFalse(Constraints.enabled(desc, AlsoWorks.class));
@@ -184,7 +179,6 @@ public class TestConstraints {
       else assertEquals(2, storedConf.getLong("_PRIORITY", -1));
 
     }
-
   }
 
   // ---------- Constraints just used for testing

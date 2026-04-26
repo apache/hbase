@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.lang.management.ManagementFactory;
@@ -30,7 +30,6 @@ import javax.management.ObjectName;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
@@ -62,25 +61,19 @@ import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Testing info servers for admin acl.
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestInfoServersACL {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestInfoServersACL.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestInfoServersACL.class);
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -94,16 +87,13 @@ public class TestInfoServersACL {
   private static String PRINCIPAL;
   private static String HTTP_PRINCIPAL;
 
-  @Rule
-  public TestName name = new TestName();
-
   // user/group present in hbase.admin.acl
   private static final String USER_ADMIN_STR = "admin";
 
   // user with no permissions
   private static final String USER_NONE_STR = "none";
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     conf = UTIL.getConfiguration();
     KDC = UTIL.setupMiniKdc(KEYTAB_FILE);
@@ -147,7 +137,7 @@ public class TestInfoServersACL {
   /**
    * Helper method to shut down the cluster (if running)
    */
-  @AfterClass
+  @AfterAll
   public static void shutDownMiniCluster() throws Exception {
     if (CLUSTER != null) {
       CLUSTER.shutdown();
@@ -170,8 +160,8 @@ public class TestInfoServersACL {
         String expectedContent = "Get Log Level";
         Pair<Integer, String> pair = getLogLevelPage();
         assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
-        assertTrue("expected=" + expectedContent + ", content=" + pair.getSecond(),
-          pair.getSecond().contains(expectedContent));
+        assertTrue(pair.getSecond().contains(expectedContent),
+          "expected=" + expectedContent + ", content=" + pair.getSecond());
         return null;
       }
     });
@@ -202,8 +192,8 @@ public class TestInfoServersACL {
         // Check the expected content is present in the http response
         Pair<Integer, String> pair = getTablePage(TableName.META_TABLE_NAME);
         assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
-        assertTrue("expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),
-          pair.getSecond().contains(expectedAuthorizedContent));
+        assertTrue(pair.getSecond().contains(expectedAuthorizedContent),
+          "expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond());
         return null;
       }
     });
@@ -215,9 +205,8 @@ public class TestInfoServersACL {
       public Void run() throws Exception {
         Pair<Integer, String> pair = getTablePage(TableName.META_TABLE_NAME);
         assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
-        assertFalse(
-          "should not find=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),
-          pair.getSecond().contains(expectedAuthorizedContent));
+        assertFalse(pair.getSecond().contains(expectedAuthorizedContent),
+          "should not find=" + expectedAuthorizedContent + ", content=" + pair.getSecond());
         return null;
       }
     });
@@ -234,8 +223,8 @@ public class TestInfoServersACL {
         // Check the expected content is present in the http response
         Pair<Integer, String> pair = getLogsPage();
         assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
-        assertTrue("expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),
-          pair.getSecond().contains(expectedAuthorizedContent));
+        assertTrue(pair.getSecond().contains(expectedAuthorizedContent),
+          "expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond());
         return null;
       }
     });
@@ -263,8 +252,8 @@ public class TestInfoServersACL {
         // Check the expected content is present in the http response
         Pair<Integer, String> pair = getMasterDumpPage();
         assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
-        assertTrue("expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),
-          pair.getSecond().contains(expectedAuthorizedContent));
+        assertTrue(pair.getSecond().contains(expectedAuthorizedContent),
+          "expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond());
         return null;
       }
     });
@@ -292,8 +281,8 @@ public class TestInfoServersACL {
         // Check the expected content is present in the http response
         Pair<Integer, String> pair = getStacksPage();
         assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
-        assertTrue("expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),
-          pair.getSecond().contains(expectedAuthorizedContent));
+        assertTrue(pair.getSecond().contains(expectedAuthorizedContent),
+          "expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond());
         return null;
       }
     });
@@ -334,8 +323,8 @@ public class TestInfoServersACL {
         // Check the expected content is present in the http response
         Pair<Integer, String> pair = getJmxPage();
         assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
-        assertTrue("expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),
-          pair.getSecond().contains(expectedAuthorizedContent));
+        assertTrue(pair.getSecond().contains(expectedAuthorizedContent),
+          "expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond());
         return null;
       }
     });
@@ -369,8 +358,8 @@ public class TestInfoServersACL {
           return null;
         }
         assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
-        assertTrue("expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),
-          pair.getSecond().contains(expectedAuthorizedContent));
+        assertTrue(pair.getSecond().contains(expectedAuthorizedContent),
+          "expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond());
         return null;
       }
     });
