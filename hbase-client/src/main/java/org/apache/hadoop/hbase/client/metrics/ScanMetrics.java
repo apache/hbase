@@ -47,7 +47,14 @@ public class ScanMetrics extends ServerSideScanMetrics {
   public static final String REGIONS_SCANNED_METRIC_NAME = "REGIONS_SCANNED";
   public static final String RPC_RETRIES_METRIC_NAME = "RPC_RETRIES";
   public static final String REMOTE_RPC_RETRIES_METRIC_NAME = "REMOTE_RPC_RETRIES";
-
+  public static final String THREAD_POOL_WAIT_TIME_MS_METRIC_NAME = "THREAD_POOL_WAIT_TIME_MS";
+  public static final String THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME =
+    "THREAD_POOL_EXECUTION_TIME_MS";
+  public static final String META_LOOKUP_TIME_MS_METRIC_NAME = "META_LOOKUP_TIME_MS";
+  public static final String SCANNER_CLOSE_TIME_MS_METRIC_NAME = "SCANNER_CLOSE_TIME_MS";
+  public static final String SCAN_EXECUTION_TIME_MS_METRIC_NAME = "SCAN_EXECUTION_TIME_MS";
+  public static final String RPC_ROUND_TRIP_TIME_MS_METRIC_NAME = "RPC_ROUND_TRIP_TIME_MS";
+  public static final String CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME = "CACHE_LOAD_WAIT_TIME_MS";
   /**
    * number of RPC calls
    */
@@ -96,6 +103,43 @@ public class ScanMetrics extends ServerSideScanMetrics {
   public final AtomicLong countOfRemoteRPCRetries = createCounter(REMOTE_RPC_RETRIES_METRIC_NAME);
 
   /**
+   * time spent waiting in the thread pool queue before execution started
+   */
+  public final AtomicLong threadPoolWaitTimeMs =
+    createCounter(THREAD_POOL_WAIT_TIME_MS_METRIC_NAME);
+
+  /**
+   * time spent executing in the thread pool, including retry overhead
+   */
+  public final AtomicLong threadPoolExecutionTimeMs =
+    createCounter(THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME);
+
+  /**
+   * time spent looking up region locations from the meta table
+   */
+  public final AtomicLong metaLookupTimeMs = createCounter(META_LOOKUP_TIME_MS_METRIC_NAME);
+
+  /**
+   * time spent closing the server-side scanner via a close RPC
+   */
+  public final AtomicLong scannerCloseTimeMs = createCounter(SCANNER_CLOSE_TIME_MS_METRIC_NAME);
+
+  /**
+   * time spent inside ScannerCallable.call() executing the scan RPC logic
+   */
+  public final AtomicLong scanExecutionTimeMs = createCounter(SCAN_EXECUTION_TIME_MS_METRIC_NAME);
+
+  /**
+   * time for the raw RPC round trip on the wire
+   */
+  public final AtomicLong rpcRoundTripTimeMs = createCounter(RPC_ROUND_TRIP_TIME_MS_METRIC_NAME);
+
+  /**
+   * total wall-clock time for a loadCache() call in ClientScanner
+   */
+  public final AtomicLong cacheLoadWaitTimeMs = createCounter(CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME);
+
+  /**
    * Constructor
    */
   public ScanMetrics() {
@@ -113,5 +157,12 @@ public class ScanMetrics extends ServerSideScanMetrics {
     currentRegionScanMetricsData.createCounter(REGIONS_SCANNED_METRIC_NAME);
     currentRegionScanMetricsData.createCounter(RPC_RETRIES_METRIC_NAME);
     currentRegionScanMetricsData.createCounter(REMOTE_RPC_RETRIES_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(THREAD_POOL_WAIT_TIME_MS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(META_LOOKUP_TIME_MS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(SCANNER_CLOSE_TIME_MS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(SCAN_EXECUTION_TIME_MS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(RPC_ROUND_TRIP_TIME_MS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME);
   }
 }

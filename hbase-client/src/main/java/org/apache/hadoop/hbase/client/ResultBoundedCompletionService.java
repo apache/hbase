@@ -57,6 +57,9 @@ public class ResultBoundedCompletionService<V> {
     private final RpcRetryingCaller<T> retryingCaller;
     private boolean resultObtained = false;
     private final int replicaId; // replica id
+    private long submitTimeMs;
+    private long queueWaitTimeMs = 0;
+    private long executionTimeMs = 0;
 
     public QueueingFuture(RetryingCallable<T> future, int rpcTimeout, int operationTimeout,
       int id) {
@@ -64,11 +67,14 @@ public class ResultBoundedCompletionService<V> {
       this.operationTimeout = operationTimeout;
       this.retryingCaller = retryingCallerFactory.<T> newCaller(rpcTimeout);
       this.replicaId = id;
+      this.submitTimeMs = EnvironmentEdgeManager.currentTime();
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public void run() {
+      long executionStartTimeMs = EnvironmentEdgeManager.currentTime();
+      queueWaitTimeMs += (executionStartTimeMs - submitTimeMs);
       try {
         if (!cancelled) {
           result = this.retryingCaller.callWithRetries(future, operationTimeout);
@@ -77,6 +83,7 @@ public class ResultBoundedCompletionService<V> {
       } catch (Throwable t) {
         exeEx = new ExecutionException(t);
       } finally {
+        executionTimeMs += (EnvironmentEdgeManager.currentTime() - executionStartTimeMs);
         synchronized (tasks) {
           // If this wasn't canceled then store the result.
           if (!cancelled) {
@@ -146,6 +153,14 @@ public class ResultBoundedCompletionService<V> {
 
     public ExecutionException getExeEx() {
       return exeEx;
+    }
+
+    public long getQueueWaitTimeMs() {
+      return queueWaitTimeMs;
+    }
+
+    public long getExecutionTimeMs() {
+      return executionTimeMs;
     }
   }
 

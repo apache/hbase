@@ -62,6 +62,8 @@ class Call {
   private final RpcCallback<Call> callback;
   final Span span;
   Timeout timeoutTask;
+  long requestSendTimestampInMs = 0;
+  long responseReceiveTimestampInMs = 0;
 
   Call(int id, final Descriptors.MethodDescriptor md, Message param, final CellScanner cells,
     final Message responseDefaultType, int timeout, int priority, Map<String, byte[]> attributes,
@@ -158,5 +160,21 @@ class Call {
 
   public boolean isConnectionRegistryCall() {
     return md.getService().equals(ConnectionRegistryService.getDescriptor());
+  }
+
+  public void setRequestSendTimestampInMs(long timestamp) {
+    this.requestSendTimestampInMs = timestamp;
+  }
+
+  public void setResponseReceiveTimestampInMs(long timestamp) {
+    this.responseReceiveTimestampInMs = timestamp;
+  }
+
+  public long getRequestSendTimestampInMs() {
+    return requestSendTimestampInMs;
+  }
+
+  public long getResponseReceiveTimestampInMs() {
+    return responseReceiveTimestampInMs;
   }
 }

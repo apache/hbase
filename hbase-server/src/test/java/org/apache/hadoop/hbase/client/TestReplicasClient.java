@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.codahale.metrics.Counter;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.client.metrics.ScanMetricsRegionInfo;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
@@ -109,6 +111,7 @@ public class TestReplicasClient {
     static final AtomicInteger primaryCountOfScan = new AtomicInteger(0);
     static final AtomicInteger secondaryCountOfScan = new AtomicInteger(0);
     static final AtomicLong sleepTime = new AtomicLong(0);
+    static final AtomicLong secondarySleepTime = new AtomicLong(0);
     static final AtomicBoolean slowDownNext = new AtomicBoolean(false);
     static final AtomicInteger countOfNext = new AtomicInteger(0);
     private static final AtomicReference<CountDownLatch> primaryCdl =
@@ -186,6 +189,11 @@ public class TestReplicasClient {
         LOG.info("We're not the primary replicas.");
         CountDownLatch latch = getSecondaryCdl().get();
         try {
+          if (secondarySleepTime.get() > 0) {
+            LOG.info(
+              "Sleeping for " + secondarySleepTime.get() + " ms while fetching secondary replica");
+            Thread.sleep(secondarySleepTime.get());
+          }
           if (latch.getCount() > 0) {
             LOG.info("Waiting for the secondary counterCountDownLatch");
             latch.await(2, TimeUnit.MINUTES); // To help the tests to finish.
@@ -262,6 +270,7 @@ public class TestReplicasClient {
     }
     SlowMeCopro.slowDownNext.set(false);
     SlowMeCopro.sleepTime.set(0);
+    SlowMeCopro.secondarySleepTime.set(0);
     SlowMeCopro.getPrimaryCdl().set(new CountDownLatch(0));
     SlowMeCopro.getSecondaryCdl().set(new CountDownLatch(0));
     table = HTU.getConnection().getTable(TABLE_NAME);
@@ -827,6 +836,169 @@ public class TestReplicasClient {
       SlowMeCopro.getPrimaryCdl().get().countDown();
       Delete d = new Delete(b1);
       table.delete(d);
+      closeRegion(hriSecondary);
+    }
+  }
+
+  @Test
+  public void testClientScanTimingMetricsFromSecondaryReplica() throws Exception {
+    byte[] b1 = Bytes.toBytes("testScanTimingMetrics");
+    long secondaryReplicaSleepTime = 20;
+    openRegion(hriSecondary);
+
+    try {
+      Put p = new Put(b1);
+      p.addColumn(f, b1, b1);
+      table.put(p);
+      flushRegion(hriPrimary);
+      Thread.sleep(2 * REFRESH_PERIOD);
+
+      SlowMeCopro.getPrimaryCdl().set(new CountDownLatch(1));
+      SlowMeCopro.secondarySleepTime.set(secondaryReplicaSleepTime);
+
+      Scan scan = new Scan();
+      scan.setScanMetricsEnabled(true);
+      scan.withStartRow(b1, true);
+      scan.withStopRow(b1, true);
+      scan.setConsistency(Consistency.TIMELINE);
+
+      ScanMetrics scanMetrics;
+      try (ResultScanner rs = table.getScanner(scan)) {
+        for (Result r : rs) {
+          Assert.assertTrue(r.isStale());
+          Assert.assertFalse(r.isEmpty());
+        }
+        scanMetrics = rs.getScanMetrics();
+      }
+      Assert.assertNotNull(scanMetrics);
+      Map<String, Long> metricsMap = scanMetrics.getMetricsMap(false);
+
+      long regionsScanned = metricsMap.get(ScanMetrics.REGIONS_SCANNED_METRIC_NAME);
+      Assert.assertEquals("regionsScanned should be 1", 1, regionsScanned);
+
+      long rpcCalls = metricsMap.get(ScanMetrics.RPC_CALLS_METRIC_NAME);
+      // 1 for primary replica and 1 for secondary replica
+      Assert.assertEquals("rpcCalls should be 2", 2, rpcCalls);
+
+      long cacheLoad = metricsMap.get(ScanMetrics.CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME);
+      long threadPoolExec = metricsMap.get(ScanMetrics.THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME);
+      long scanExec = metricsMap.get(ScanMetrics.SCAN_EXECUTION_TIME_MS_METRIC_NAME);
+      long rpcRoundTrip = metricsMap.get(ScanMetrics.RPC_ROUND_TRIP_TIME_MS_METRIC_NAME);
+
+      Assert.assertTrue(
+        "cacheLoadWaitTimeMs should be >= " + secondaryReplicaSleepTime + ", got " + cacheLoad,
+        cacheLoad >= secondaryReplicaSleepTime);
+      Assert.assertTrue("threadPoolExecutionTimeMs should be >= " + secondaryReplicaSleepTime
+        + ", got " + threadPoolExec, threadPoolExec >= secondaryReplicaSleepTime);
+      Assert.assertTrue(
+        "scanExecutionTimeMs should be >= " + secondaryReplicaSleepTime + ", got " + scanExec,
+        scanExec >= secondaryReplicaSleepTime);
+      Assert.assertTrue(
+        "rpcRoundTripTimeMs should be >= " + secondaryReplicaSleepTime + ", got " + rpcRoundTrip,
+        rpcRoundTrip >= secondaryReplicaSleepTime);
+
+      Assert.assertTrue(
+        "rpcRoundTrip (" + rpcRoundTrip + ") should be <= scanExecution (" + scanExec + ")",
+        rpcRoundTrip <= scanExec);
+      Assert.assertTrue("scanExecution (" + scanExec + ") should be <= threadPoolExecution ("
+        + threadPoolExec + ")", scanExec <= threadPoolExec);
+      Assert.assertTrue(
+        "threadPoolExecution (" + threadPoolExec + ") should be <= cacheLoad (" + cacheLoad + ")",
+        threadPoolExec <= cacheLoad);
+    } finally {
+      SlowMeCopro.getPrimaryCdl().get().countDown();
+      SlowMeCopro.secondarySleepTime.set(0);
+      Delete d = new Delete(b1);
+      table.delete(d);
+      closeRegion(hriSecondary);
+    }
+  }
+
+  @Test
+  public void testClientScanTimingMetricsWithReplicaSwitchMidScan() throws Exception {
+    byte[] b1 = Bytes.toBytes("testScanTimingPriSec");
+    byte[] b2 = Bytes.toBytes("testScanTimingPriSed");
+    byte[] b3 = Bytes.toBytes("testScanTimingPriSee");
+    long replicaSleepTime = 50;
+    openRegion(hriSecondary);
+
+    try {
+      table.put(Arrays.asList(new Put(b1).addColumn(f, b1, b1), new Put(b2).addColumn(f, b2, b2),
+        new Put(b3).addColumn(f, b3, b3)));
+      flushRegion(hriPrimary);
+      Thread.sleep(2 * REFRESH_PERIOD);
+
+      SlowMeCopro.sleepTime.set(replicaSleepTime);
+      SlowMeCopro.slowDownNext.set(true);
+      SlowMeCopro.getSecondaryCdl().set(new CountDownLatch(1));
+
+      Scan scan = new Scan();
+      scan.setScanMetricsEnabled(true);
+      scan.withStartRow(b1, true);
+      scan.withStopRow(b3, true);
+      scan.setCaching(1);
+      scan.setConsistency(Consistency.TIMELINE);
+
+      ScanMetrics scanMetrics;
+      try (ResultScanner rs = table.getScanner(scan)) {
+        Result r1 = rs.next();
+        Assert.assertNotNull(r1);
+        Assert.assertFalse(r1.isStale());
+
+        SlowMeCopro.sleepTime.set(0);
+        SlowMeCopro.secondarySleepTime.set(replicaSleepTime);
+        SlowMeCopro.getSecondaryCdl().get().countDown();
+
+        Result r2 = rs.next();
+        Assert.assertNotNull(r2);
+        Assert.assertTrue(r2.isStale());
+
+        scanMetrics = rs.getScanMetrics();
+      }
+      Assert.assertNotNull(scanMetrics);
+      Map<String, Long> metricsMap = scanMetrics.getMetricsMap(false);
+
+      long regionsScanned = metricsMap.get(ScanMetrics.REGIONS_SCANNED_METRIC_NAME);
+      Assert.assertEquals("regionsScanned should be 1", 1, regionsScanned);
+
+      long rpcCalls = metricsMap.get(ScanMetrics.RPC_CALLS_METRIC_NAME);
+
+      Assert.assertEquals("rpcCalls should be 5", 5, rpcCalls);
+
+      long cacheLoad = metricsMap.get(ScanMetrics.CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME);
+      long threadPoolExec = metricsMap.get(ScanMetrics.THREAD_POOL_EXECUTION_TIME_MS_METRIC_NAME);
+      long scanExec = metricsMap.get(ScanMetrics.SCAN_EXECUTION_TIME_MS_METRIC_NAME);
+      long rpcRoundTrip = metricsMap.get(ScanMetrics.RPC_ROUND_TRIP_TIME_MS_METRIC_NAME);
+
+      long minExpected = 2 * replicaSleepTime;
+      Assert.assertTrue("cacheLoadWaitTimeMs should be >= " + minExpected + ", got " + cacheLoad,
+        cacheLoad >= minExpected);
+      Assert.assertTrue(
+        "threadPoolExecutionTimeMs should be >= " + minExpected + ", got " + threadPoolExec,
+        threadPoolExec >= minExpected);
+      Assert.assertTrue("scanExecutionTimeMs should be >= " + minExpected + ", got " + scanExec,
+        scanExec >= minExpected);
+      Assert.assertTrue("rpcRoundTripTimeMs should be >= " + minExpected + ", got " + rpcRoundTrip,
+        rpcRoundTrip >= minExpected);
+
+      Assert.assertTrue(
+        "rpcRoundTrip (" + rpcRoundTrip + ") should be <= scanExecution (" + scanExec + ")",
+        rpcRoundTrip <= scanExec);
+      Assert.assertTrue("scanExecution (" + scanExec + ") should be <= threadPoolExecution ("
+        + threadPoolExec + ")", scanExec <= threadPoolExec);
+      Assert.assertTrue(
+        "threadPoolExecution (" + threadPoolExec + ") should be <= cacheLoad (" + cacheLoad + ")",
+        threadPoolExec <= cacheLoad);
+    } finally {
+      SlowMeCopro.getPrimaryCdl().get().countDown();
+      SlowMeCopro.getSecondaryCdl().get().countDown();
+      SlowMeCopro.sleepTime.set(0);
+      SlowMeCopro.secondarySleepTime.set(0);
+      SlowMeCopro.slowDownNext.set(false);
+      SlowMeCopro.countOfNext.set(0);
+      table.delete(new Delete(b1));
+      table.delete(new Delete(b2));
+      table.delete(new Delete(b3));
       closeRegion(hriSecondary);
     }
   }

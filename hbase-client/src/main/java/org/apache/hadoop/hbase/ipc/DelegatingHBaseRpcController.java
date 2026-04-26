@@ -153,4 +153,24 @@ public class DelegatingHBaseRpcController implements HBaseRpcController {
   public TableName getTableName() {
     return delegate.getTableName();
   }
+
+  @Override
+  public void setRequestSendTimestampInMs(long timestamp) {
+    delegate.setRequestSendTimestampInMs(timestamp);
+  }
+
+  @Override
+  public long getRequestSendTimestampInMs() {
+    return delegate.getRequestSendTimestampInMs();
+  }
+
+  @Override
+  public void setResponseReceiveTimestampInMs(long timestamp) {
+    delegate.setResponseReceiveTimestampInMs(timestamp);
+  }
+
+  @Override
+  public long getResponseReceiveTimestampInMs() {
+    return delegate.getResponseReceiveTimestampInMs();
+  }
 }

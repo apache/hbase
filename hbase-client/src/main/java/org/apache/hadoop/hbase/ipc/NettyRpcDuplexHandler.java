@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -113,6 +114,8 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
     if (msg instanceof Call) {
       Call call = (Call) msg;
       try (Scope scope = call.span.makeCurrent()) {
+        long currentTime = EnvironmentEdgeManager.currentTime();
+        call.setRequestSendTimestampInMs(currentTime);
         writeRequest(ctx, call, promise);
       }
     } else {

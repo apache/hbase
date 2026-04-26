@@ -293,6 +293,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
       currentRegion = callable.getHRegionInfo();
       initScanMetricsRegionInfo();
     }
+    callable.populateScanMetrics(scanMetrics);
     return rrs;
   }
 
@@ -332,7 +333,15 @@ public abstract class ClientScanner extends AbstractClientScanner {
       return null;
     }
 
-    loadCache();
+    long cacheLoadStartTimeMs = EnvironmentEdgeManager.currentTime();
+    try {
+      loadCache();
+    } finally {
+      if (scanMetrics != null) {
+        scanMetrics.addToCounter(ScanMetrics.CACHE_LOAD_WAIT_TIME_MS_METRIC_NAME,
+          EnvironmentEdgeManager.currentTime() - cacheLoadStartTimeMs);
+      }
+    }
 
     // try again to load from cache
     result = cache.poll();

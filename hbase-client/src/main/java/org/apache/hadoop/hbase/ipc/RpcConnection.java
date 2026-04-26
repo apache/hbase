@@ -366,30 +366,36 @@ abstract class RpcConnection {
   private <T extends InputStream & DataInput> void finishCall(ResponseHeader responseHeader, T in,
     Call call) throws IOException {
     Message value;
-    if (call.responseDefaultType != null) {
-      Message.Builder builder = call.responseDefaultType.newBuilderForType();
-      if (!builder.mergeDelimitedFrom(in)) {
-        // The javadoc of mergeDelimitedFrom says returning false means the stream reaches EOF
-        // before reading any bytes out, so here we need to manually finish create the EOFException
-        // and finish the call
-        call.setException(new EOFException("EOF while reading response with type: "
-          + call.responseDefaultType.getClass().getName()));
-        return;
-      }
-      value = builder.build();
-    } else {
-      value = null;
-    }
     CellScanner cellBlockScanner;
-    if (responseHeader.hasCellBlockMeta()) {
-      int size = responseHeader.getCellBlockMeta().getLength();
-      // Maybe we could read directly from the ByteBuf.
-      // The problem here is that we do not know when to release it.
-      byte[] cellBlock = new byte[size];
-      in.readFully(cellBlock);
-      cellBlockScanner = cellBlockBuilder.createCellScanner(this.codec, this.compressor, cellBlock);
-    } else {
-      cellBlockScanner = null;
+    try {
+      if (call.responseDefaultType != null) {
+        Message.Builder builder = call.responseDefaultType.newBuilderForType();
+        if (!builder.mergeDelimitedFrom(in)) {
+          // The javadoc of mergeDelimitedFrom says returning false means the stream reaches EOF
+          // before reading any bytes out, so here we need to manually finish create the
+          // EOFException
+          // and finish the call
+          call.setException(new EOFException("EOF while reading response with type: "
+            + call.responseDefaultType.getClass().getName()));
+          return;
+        }
+        value = builder.build();
+      } else {
+        value = null;
+      }
+      if (responseHeader.hasCellBlockMeta()) {
+        int size = responseHeader.getCellBlockMeta().getLength();
+        // Maybe we could read directly from the ByteBuf.
+        // The problem here is that we do not know when to release it.
+        byte[] cellBlock = new byte[size];
+        in.readFully(cellBlock);
+        cellBlockScanner =
+          cellBlockBuilder.createCellScanner(this.codec, this.compressor, cellBlock);
+      } else {
+        cellBlockScanner = null;
+      }
+    } finally {
+      setResponseReceiveTimestampInMs(call);
     }
     call.setResponse(value, cellBlockScanner);
   }
@@ -452,6 +458,7 @@ abstract class RpcConnection {
     }
     call.callStats.setResponseSizeBytes(totalSize);
     if (remoteExc != null) {
+      setResponseReceiveTimestampInMs(call);
       call.setException(remoteExc);
       return;
     }
@@ -466,5 +473,9 @@ abstract class RpcConnection {
       // problem
       throw e;
     }
+  }
+
+  private void setResponseReceiveTimestampInMs(Call call) {
+    call.setResponseReceiveTimestampInMs(EnvironmentEdgeManager.currentTime());
   }
 }
