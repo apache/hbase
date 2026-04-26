@@ -18,6 +18,10 @@
 package org.apache.hadoop.hbase.fs;
 
 import static org.apache.hadoop.hbase.util.LocatedBlockHelper.getLocatedBlockLocations;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -29,7 +33,6 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -54,14 +57,11 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.ipc.RemoteException;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,12 +71,9 @@ import org.slf4j.LoggerFactory;
  * cleared in hadoop's ShutdownHookManager in hadoop 3. This leads to 'Failed suppression of fs
  * shutdown hook' error in region server.
  */
-@Category({ MiscTests.class, LargeTests.class })
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestBlockReorderMultiBlocks {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBlockReorderMultiBlocks.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBlockReorderMultiBlocks.class);
 
@@ -88,10 +85,7 @@ public class TestBlockReorderMultiBlocks {
   private static final String host2 = "host2";
   private static final String host3 = "host3";
 
-  @Rule
-  public TestName name = new TestName();
-
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     htu = new HBaseTestingUtility();
     htu.getConfiguration().setInt("dfs.blocksize", 1024);// For the test with multiple blocks
@@ -104,7 +98,7 @@ public class TestBlockReorderMultiBlocks {
     dfs = (DistributedFileSystem) FileSystem.get(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDownAfterClass() throws Exception {
     htu.shutdownMiniCluster();
   }
@@ -113,7 +107,7 @@ public class TestBlockReorderMultiBlocks {
    * Test that the hook works within HBase, including when there are multiple blocks.
    */
   @Test()
-  public void testHBaseCluster() throws Exception {
+  public void testHBaseCluster(TestInfo testInfo) throws Exception {
     byte[] sb = Bytes.toBytes("sb");
     htu.startMiniZKCluster();
 
@@ -135,7 +129,7 @@ public class TestBlockReorderMultiBlocks {
     // We use the regionserver file system & conf as we expect it to have the hook.
     conf = targetRs.getConfiguration();
     HFileSystem rfs = (HFileSystem) targetRs.getFileSystem();
-    Table h = htu.createTable(TableName.valueOf(name.getMethodName()), sb);
+    Table h = htu.createTable(TableName.valueOf(testInfo.getTestMethod().get().getName()), sb);
 
     // Now, we have 4 datanodes and a replication count of 3. So we don't know if the datanode
     // with the same node will be used. We can't really stop an existing datanode, this would
@@ -191,7 +185,7 @@ public class TestBlockReorderMultiBlocks {
       HdfsFileStatus[] hfs = dl.getPartialListing();
 
       // As we wrote a put, we should have at least one log file.
-      Assert.assertTrue(hfs.length >= 1);
+      assertTrue(hfs.length >= 1);
       for (HdfsFileStatus hf : hfs) {
         // Because this is a live cluster, log files might get archived while we're processing
         try {
@@ -211,7 +205,7 @@ public class TestBlockReorderMultiBlocks {
             LOG.info(bl.getHosts().length + " replicas for block 0 in " + logFile + " ");
             for (int i = 0; i < bl.getHosts().length - 1; i++) {
               LOG.info(bl.getHosts()[i] + "    " + logFile);
-              Assert.assertNotSame(bl.getHosts()[i], host4);
+              assertNotSame(bl.getHosts()[i], host4);
             }
             String last = bl.getHosts()[bl.getHosts().length - 1];
             LOG.info(last + "    " + logFile);
@@ -254,11 +248,11 @@ public class TestBlockReorderMultiBlocks {
       final long max = EnvironmentEdgeManager.currentTime() + 10000;
       boolean done;
       do {
-        Assert.assertTrue("Can't get enouth replica", EnvironmentEdgeManager.currentTime() < max);
+        assertTrue(EnvironmentEdgeManager.currentTime() < max, "Can't get enough replica");
         lbs = getNamenode(dfs.getClient()).getBlockLocations(src, 0, 1);
-        Assert.assertNotNull("Can't get block locations for " + src, lbs);
-        Assert.assertNotNull(lbs.getLocatedBlocks());
-        Assert.assertTrue(lbs.getLocatedBlocks().size() > 0);
+        assertNotNull(lbs, "Can't get block locations for " + src);
+        assertNotNull(lbs.getLocatedBlocks());
+        assertTrue(lbs.getLocatedBlocks().size() > 0);
 
         done = true;
         for (int y = 0; y < lbs.getLocatedBlocks().size() && done; y++) {
@@ -267,8 +261,7 @@ public class TestBlockReorderMultiBlocks {
       } while (!done);
 
       for (int y = 0; y < lbs.getLocatedBlocks().size() && done; y++) {
-        Assert.assertEquals(localhost,
-          getLocatedBlockLocations(lbs.get(y))[repCount - 1].getHostName());
+        assertEquals(localhost, getLocatedBlockLocations(lbs.get(y))[repCount - 1].getHostName());
       }
     }
   }
