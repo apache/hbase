@@ -1294,7 +1294,13 @@ module Hbase
       end
 
       set_user_metadata(cfdb, arg.delete(METADATA)) if arg[METADATA]
-      set_descriptor_config(cfdb, arg.delete(CONFIGURATION)) if arg[CONFIGURATION]
+      if arg[CONFIGURATION]
+        raise(ArgumentError, "#{CONFIGURATION} must be a Hash type") unless arg[CONFIGURATION].is_a?(Hash)
+        for k, v in arg.delete(CONFIGURATION)
+          v = v.to_s unless v.nil?
+          cfdb.setConfiguration(k, v)
+        end
+      end
       if arg.include?(ColumnFamilyDescriptorBuilder::DFS_REPLICATION)
         cfdb.setDFSReplication(JInteger.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::DFS_REPLICATION)))
       end
