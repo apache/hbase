@@ -21,8 +21,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +39,7 @@ public abstract class AbstractTestRestartCluster {
 
   protected abstract boolean splitWALCoordinatedByZk();
 
-  @Before
+  @BeforeEach
   public void setUp() {
     boolean splitWALCoordinatedByZk = splitWALCoordinatedByZk();
     LOG.info("WAL splitting coordinated by zk {}", splitWALCoordinatedByZk);
@@ -47,7 +47,7 @@ public abstract class AbstractTestRestartCluster {
       splitWALCoordinatedByZk);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
