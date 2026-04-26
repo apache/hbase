@@ -18,14 +18,15 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.HConstants.ZOOKEEPER_QUORUM;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -48,16 +49,13 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.zookeeper.KeeperException;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,20 +70,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * cluster context. TODO: Speed up the zk connection by Master. It pauses 5 seconds establishing
  * session.
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMasterNoCluster {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterNoCluster.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterNoCluster.class);
   private static final HBaseTestingUtility TESTUTIL = new HBaseTestingUtility();
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration c = TESTUTIL.getConfiguration();
     // We use local filesystem. Set it so it writes into the testdir.
@@ -95,15 +87,15 @@ public class TestMasterNoCluster {
     TESTUTIL.startMiniZKCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TESTUTIL.shutdownMiniZKCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws KeeperException, ZooKeeperConnectionException, IOException {
     // Make sure zk is clean before we run the next test.
-    ZKWatcher zkw = new ZKWatcher(TESTUTIL.getConfiguration(), "@Before", new Abortable() {
+    ZKWatcher zkw = new ZKWatcher(TESTUTIL.getConfiguration(), "@BeforeEach", new Abortable() {
       @Override
       public void abort(String why, Throwable e) {
         throw new RuntimeException(why, e);
@@ -150,9 +142,9 @@ public class TestMasterNoCluster {
    * Test master failover. Start up three fake regionservers and a master.
    * @throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException
    */
-  @Ignore
+  @Disabled
   @Test // Disabled since HBASE-18511. Reenable when master can carry regions.
-  public void testFailover() throws Exception {
+  public void testFailover(TestInfo testInfo) throws Exception {
     final long now = EnvironmentEdgeManager.currentTime();
     // Names for our three servers. Make the port numbers match hostname.
     // Will come in use down in the server when we need to figure how to respond.
@@ -169,7 +161,7 @@ public class TestMasterNoCluster {
     // Put data into sn2 so it looks like it has a few regions for a table named 't'.
     MetaTableLocator.setMetaLocation(rs0.getZooKeeper(), rs0.getServerName(),
       RegionState.State.OPEN);
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Result[] results = new Result[] {
       MetaMockingUtil.getMetaTableRowResult(
         new HRegionInfo(tableName, HConstants.EMPTY_START_ROW, HBaseTestingUtility.KEYS[1]),
@@ -271,7 +263,7 @@ public class TestMasterNoCluster {
   @Test
   public void testMasterInitWithObserverModeClientZKQuorum() throws Exception {
     Configuration conf = new Configuration(TESTUTIL.getConfiguration());
-    Assert.assertFalse(Boolean.getBoolean(HConstants.CLIENT_ZOOKEEPER_OBSERVER_MODE));
+    assertFalse(Boolean.getBoolean(HConstants.CLIENT_ZOOKEEPER_OBSERVER_MODE));
     // set client ZK to some non-existing address and make sure server won't access client ZK
     // (server start should not be affected)
     conf.set(HConstants.CLIENT_ZOOKEEPER_QUORUM, HConstants.LOCALHOST);
@@ -287,8 +279,8 @@ public class TestMasterNoCluster {
     while (!master.isInitialized()) {
       Threads.sleep(200);
     }
-    Assert.assertNull(master.getMetaLocationSyncer());
-    Assert.assertNull(master.masterAddressSyncer);
+    assertNull(master.getMetaLocationSyncer());
+    assertNull(master.masterAddressSyncer);
     master.stopMaster();
     master.join();
   }
