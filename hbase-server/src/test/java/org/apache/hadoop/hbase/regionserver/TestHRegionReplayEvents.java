@@ -121,7 +121,7 @@ public class TestHRegionReplayEvents {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestHRegionReplayEvents.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestHRegion.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHRegionReplayEvents.class);
   @Rule
   public TestName name = new TestName();
 

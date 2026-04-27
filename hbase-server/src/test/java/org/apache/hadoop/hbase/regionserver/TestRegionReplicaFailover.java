@@ -63,7 +63,7 @@ public class TestRegionReplicaFailover {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRegionReplicaFailover.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestRegionReplicaReplication.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionReplicaFailover.class);
 
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
 

@@ -29,7 +29,8 @@ import org.slf4j.LoggerFactory;
 @Tag(ClientTests.TAG)
 @Tag(LargeTests.TAG)
 public class TestConcurrentFlushSnapshotFromClient extends TestFlushSnapshotFromClient {
-  private static final Logger LOG = LoggerFactory.getLogger(TestFlushSnapshotFromClient.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestConcurrentFlushSnapshotFromClient.class);
 
   @BeforeAll
   public static void setupCluster() throws Exception {
