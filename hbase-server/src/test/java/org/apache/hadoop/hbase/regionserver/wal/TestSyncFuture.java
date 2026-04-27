@@ -35,11 +35,11 @@ public class TestSyncFuture {
     assertThrows(TimeoutIOException.class, () -> {
       long timeout = 5000;
       long txid = 100000;
-      SyncFuture syncFulture = new SyncFuture().reset(txid, false);
-      syncFulture.done(txid, null);
-      assertEquals(txid, syncFulture.get(timeout));
+      SyncFuture syncFuture = new SyncFuture().reset(txid, false);
+      syncFuture.done(txid, null);
+      assertEquals(txid, syncFuture.get(timeout));
 
-      syncFulture.reset(txid, false).get(timeout);
+      syncFuture.reset(txid, false).get(timeout);
     });
   }
 }

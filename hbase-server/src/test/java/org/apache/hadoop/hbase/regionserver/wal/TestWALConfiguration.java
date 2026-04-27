@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -34,7 +33,6 @@ import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
@@ -51,8 +49,6 @@ public class TestWALConfiguration {
   private static final Logger LOG = LoggerFactory.getLogger(TestWALConfiguration.class);
   static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  private String name;
-
   private final String walProvider;
 
   public static Stream<Arguments> parameters() {
@@ -64,8 +60,7 @@ public class TestWALConfiguration {
   }
 
   @BeforeEach
-  public void before(TestInfo testInfo) {
-    name = testInfo.getTestMethod().get().getName();
+  public void before() {
     TEST_UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, walProvider);
   }
 
@@ -76,7 +71,6 @@ public class TestWALConfiguration {
    */
   @TestTemplate
   public void testBlocksizeDefaultsToTwiceHDFSBlockSize() throws IOException {
-    TableName tableName = TableName.valueOf("test");
     final WALFactory walFactory = new WALFactory(TEST_UTIL.getConfiguration(), this.walProvider);
     Configuration conf = TEST_UTIL.getConfiguration();
     WALProvider provider = walFactory.getWALProvider();
