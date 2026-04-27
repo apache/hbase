@@ -17,33 +17,25 @@
  */
 package org.apache.hadoop.hbase.io.crypto.aes;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Properties;
-import javax.crypto.spec.IvParameterSpec;
-import org.apache.commons.crypto.stream.CryptoInputStream;
-import org.apache.hadoop.hbase.io.crypto.Decryptor;
+import javax.crypto.spec.GCMParameterSpec;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class CommonsCryptoAESDecryptor extends CommonsCryptoAESCodecBase implements Decryptor {
+public class AES256GCMDecryptor extends AESDecryptor {
 
-  public CommonsCryptoAESDecryptor(String cipherMode, Properties properties) {
-    super(cipherMode, properties);
+  public AES256GCMDecryptor(javax.crypto.Cipher cipher) {
+    super(cipher);
   }
 
   @Override
-  public InputStream createDecryptionStream(InputStream in) {
-    try {
-      return new CryptoInputStream(cipherMode, properties, in, key, new IvParameterSpec(iv));
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+  public int getIvLength() {
+    return AES256GCM.NONCE_LENGTH;
   }
 
   @Override
-  public void reset() {
+  protected void initAlgorithmParameter() {
+    algorithmParameter = new GCMParameterSpec(AES256GCM.TAG_LENGTH_BITS, getIv());
   }
 }

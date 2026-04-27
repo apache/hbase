@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.security.KeyException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
@@ -26,8 +29,10 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.KeymetaTestUtils;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyStoreKeyProvider;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyTestBase;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
@@ -132,6 +137,28 @@ public class TestKeymetaAdminShell extends ManagedKeyTestBase implements RubyShe
   @Override
   protected Class<? extends ManagedKeyProvider> getKeyProviderClass() {
     return ManagedKeyStoreKeyProvider.class;
+  }
+
+  /**
+   * Returns the key metadata for the key matching the given partial identity. The partial identity
+   * (KEY-IDENTITY column in shell output) uniquely identifies a key within a custodian+namespace.
+   * Called from Ruby shell tests via $TEST.getKeyMetadata(...) to obtain the metadata string needed
+   * for disable_managed_key, since raw metadata is never returned to clients over RPC.
+   */
+  public String getKeyMetadata(String custodianEncoded, String namespace, String keyIdentityEncoded)
+    throws IOException, KeyException {
+    byte[] custBytes = ManagedKeyProvider.decodeToBytes(custodianEncoded);
+    KeymetaAdmin admin = TEST_UTIL.getMiniHBaseCluster().getMaster().getKeymetaAdmin();
+    List<ManagedKeyData> keys = admin.getManagedKeys(custBytes, namespace);
+    for (ManagedKeyData key : keys) {
+      if (
+        keyIdentityEncoded.equals(key.getPartialIdentityEncoded()) && key.getKeyMetadata() != null
+      ) {
+        return key.getKeyMetadata();
+      }
+    }
+    throw new IOException("No key with metadata found for identity: " + keyIdentityEncoded
+      + " custodian: " + custodianEncoded + " namespace: " + namespace);
   }
 
   public static void addCustodianRubyEnvVars(ScriptingContainer jruby, String custId,

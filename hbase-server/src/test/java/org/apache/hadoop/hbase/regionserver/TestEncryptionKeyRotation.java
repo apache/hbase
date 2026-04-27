@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.io.crypto.MockAesKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -108,7 +108,7 @@ public class TestEncryptionKeyRotation {
     String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     columnFamilyDescriptorBuilder.setEncryptionType(algorithm);
     columnFamilyDescriptorBuilder
-      .setEncryptionKey(EncryptionUtil.wrapKey(conf, "hbase", initialCFKey));
+      .setEncryptionKey(SecurityUtil.wrapKey(conf, "hbase", initialCFKey));
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptorBuilder.build());
     TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
 
@@ -124,7 +124,7 @@ public class TestEncryptionKeyRotation {
     }
 
     // Update the schema with a new encryption key
-    columnFamilyDescriptorBuilder.setEncryptionKey(EncryptionUtil.wrapKey(conf,
+    columnFamilyDescriptorBuilder.setEncryptionKey(SecurityUtil.wrapKey(conf,
       conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()),
       secondCFKey));
     TEST_UTIL.getAdmin().modifyColumnFamily(tableDescriptor.getTableName(),
@@ -165,7 +165,7 @@ public class TestEncryptionKeyRotation {
     String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     columnFamilyDescriptorBuilder.setEncryptionType(algorithm);
     columnFamilyDescriptorBuilder
-      .setEncryptionKey(EncryptionUtil.wrapKey(conf, "hbase", initialCFKey));
+      .setEncryptionKey(SecurityUtil.wrapKey(conf, "hbase", initialCFKey));
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptorBuilder.build());
     TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
 

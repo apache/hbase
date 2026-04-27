@@ -774,13 +774,13 @@ public class TestKeymetaAdminImpl {
     public void testDisableManagedKey() throws Exception {
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMasterServices, mockAccessor);
 
+      String keyMetadata = "metadata1";
       ManagedKeyData disabledKey = keyData(CUST_BYTES, KEY_SPACE_GLOBAL_BYTES.copyBytes(),
-        ManagedKeyState.DISABLED, "metadata1", 123L);
+        ManagedKeyState.DISABLED, keyMetadata, 123L);
       when(mockAccessor.getKey(disabledKey.getKeyIdentity())).thenReturn(disabledKey);
 
-      byte[] keyMetadataHash = disabledKey.getPartialIdentity();
       IOException exception = assertThrows(IOException.class,
-        () -> admin.disableManagedKey(CUST_BYTES, KEY_SPACE_GLOBAL, keyMetadataHash));
+        () -> admin.disableManagedKey(CUST_BYTES, KEY_SPACE_GLOBAL, keyMetadata));
       assertTrue(exception.getMessage(),
         exception.getMessage().contains("Key is already disabled"));
       verify(mockAccessor, never()).disableKey(any(ManagedKeyData.class));
@@ -791,14 +791,15 @@ public class TestKeymetaAdminImpl {
     public void testDisableManagedKeyNotFound() throws Exception {
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMasterServices, mockAccessor);
 
+      String keyMetadata = "metadata1";
       ManagedKeyIdentity id = ManagedKeyIdentityUtils
-        .fullKeyIdentityFromMetadata(new Bytes(CUST_BYTES), KEY_SPACE_GLOBAL_BYTES, "metadata1");
+        .fullKeyIdentityFromMetadata(new Bytes(CUST_BYTES), KEY_SPACE_GLOBAL_BYTES, keyMetadata);
       byte[] keyMetadataHash = id.getPartialIdentityView().copyBytesIfNecessary();
       // Return null to simulate key not found
       when(mockAccessor.getKey(id)).thenReturn(null);
 
       IOException exception = assertThrows(IOException.class,
-        () -> admin.disableManagedKey(CUST_BYTES, KEY_SPACE_GLOBAL, keyMetadataHash));
+        () -> admin.disableManagedKey(CUST_BYTES, KEY_SPACE_GLOBAL, keyMetadata));
       assertTrue(exception.getMessage(),
         exception.getMessage()
           .contains("Key not found for (custodian: Y3VzdDE=, namespace: *) with metadata hash: "

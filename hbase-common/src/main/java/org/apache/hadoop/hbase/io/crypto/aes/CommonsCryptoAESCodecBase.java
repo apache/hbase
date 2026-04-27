@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.io.crypto.aes;
 
-import java.io.OutputStream;
-import java.security.SecureRandom;
-import org.apache.hadoop.hbase.io.crypto.Encryptor;
+import java.security.Key;
+import java.security.spec.AlgorithmParameterSpec;
+import java.util.Properties;
+import org.apache.hadoop.hbase.io.crypto.CipherOperator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -27,41 +28,48 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class AESEncryptor extends AESCodecBase implements Encryptor {
+public abstract class CommonsCryptoAESCodecBase implements CipherOperator {
 
-  private SecureRandom rng;
+  protected String cipherMode;
+  protected Properties properties;
+  protected Key key;
+  protected byte[] iv;
 
-  public AESEncryptor(javax.crypto.Cipher cipher, SecureRandom rng) {
-    super(cipher);
-    this.rng = rng;
+  public CommonsCryptoAESCodecBase(String cipherMode, Properties properties) {
+    this.cipherMode = cipherMode;
+    this.properties = properties;
+  }
+
+  @Override
+  public void setKey(Key key) {
+    Preconditions.checkNotNull(key, "Key cannot be null");
+    this.key = key;
+  }
+
+  @Override
+  public int getIvLength() {
+    return CommonsCryptoAES.IV_LENGTH;
+  }
+
+  @Override
+  public int getBlockSize() {
+    return CommonsCryptoAES.BLOCK_SIZE;
+  }
+
+  @Override
+  public byte[] getIv() {
+    return iv;
   }
 
   @Override
   public void setIv(byte[] iv) {
-    if (iv != null) {
-      Preconditions.checkArgument(iv.length == getIvLength(), "Invalid IV length");
-    }
+    Preconditions.checkNotNull(iv, "IV cannot be null");
+    Preconditions.checkArgument(iv.length == CommonsCryptoAES.IV_LENGTH, "Invalid IV length");
     this.iv = iv;
   }
 
   @Override
-  public OutputStream createEncryptionStream(OutputStream out) {
-    if (!initialized) {
-      init();
-    }
-    return new javax.crypto.CipherOutputStream(out, getCipher());
-  }
-
-  @Override
-  protected void initIv() {
-    if (iv == null) {
-      iv = new byte[getIvLength()];
-      rng.nextBytes(iv);
-    }
-  }
-
-  @Override
-  protected int getOperationMode() {
-    return javax.crypto.Cipher.ENCRYPT_MODE;
+  public void setAlgorithmParameter(AlgorithmParameterSpec algorithmParameter) {
+    // Do nothing
   }
 }

@@ -24,11 +24,14 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.security.Key;
 import java.security.KeyException;
@@ -36,7 +39,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -53,6 +55,7 @@ import org.apache.hadoop.hbase.io.crypto.MockAesKeyProvider;
 import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
 import org.apache.hadoop.hbase.keymeta.KeyIdentitySingleArrayBacked;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyIdentity;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyIdentityUtils;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -68,11 +71,19 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Suite;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.EncryptionProtos;
+
 @RunWith(Suite.class)
 @Suite.SuiteClasses({ TestSecurityUtil.TestBasic.class,
   TestSecurityUtil.TestCreateEncryptionContext_ForWrites.class,
-  TestSecurityUtil.TestCreateEncryptionContext_ForReads.class,
-  TestSecurityUtil.TestCreateEncryptionContext_WithoutKeyManagement_UnwrapKeyException.class, })
+  TestSecurityUtil.TestDeserializeEncryptionContext.class,
+  TestSecurityUtil.TestDeserialize_WithoutKeyManagement_UnwrapKeyException.class,
+  TestSecurityUtil.TestKeyWrapping.class, TestSecurityUtil.TestKeyWrappingWithHashAlgorithms.class,
+  TestSecurityUtil.TestHashAlgorithmMismatch.class,
+  TestSecurityUtil.TestCipherNamePropagation.class,
+  TestSecurityUtil.TestEncryptDecryptRoundTrip.class, })
 @Category({ SecurityTests.class, SmallTests.class })
 public class TestSecurityUtil {
 
@@ -92,7 +103,6 @@ public class TestSecurityUtil {
   protected static final String TEST_KEK_METADATA = "test-kek-metadata";
   protected static final byte[] TEST_KEK_IDENTITY = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
   protected static final String TEST_KEY_16_BYTE = "test-key-16-byte";
-  protected static final String TEST_DEK_16_BYTE = "test-dek-16-byte";
   protected static final String INVALID_KEY_DATA = "invalid-key-data";
   protected static final String INVALID_WRAPPED_KEY_DATA = "invalid-wrapped-key-data";
   protected static final String INVALID_SYSTEM_KEY_DATA = "invalid-system-key-data";
@@ -102,7 +112,6 @@ public class TestSecurityUtil {
 
   protected Configuration conf;
   protected HBaseTestingUtil testUtil;
-  protected Path testPath;
   protected ColumnFamilyDescriptor mockFamily;
   protected TableDescriptor mockTableDescriptor;
   protected ManagedKeyDataCache mockManagedKeyDataCache;
@@ -112,6 +121,7 @@ public class TestSecurityUtil {
   protected Key testKey;
   protected byte[] testWrappedKey;
   protected Key kekKey;
+  protected ManagedKeyData kekData;
 
   /**
    * Configuration builder for setting up different encryption test scenarios.
@@ -199,10 +209,65 @@ public class TestSecurityUtil {
 
   protected void setupTrailerMocks(byte[] keyBytes, String metadata, byte[] kekIdentity,
     String namespace) {
-    when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
-    when(mockTrailer.getKEKMetadata()).thenReturn(metadata);
-    if (kekIdentity != null && kekIdentity.length > 0) {
-      when(mockTrailer.getKekIdentity()).thenReturn(kekIdentity);
+    byte[] enrichedKeyBytes = enrichWrappedKeyWithMetadata(keyBytes, kekIdentity, metadata);
+    when(mockTrailer.getEncryptionKey()).thenReturn(enrichedKeyBytes);
+  }
+
+  /**
+   * Re-serialize a WrappedKey protobuf with additional kek_identity and kek_metadata fields. Since
+   * KEK metadata moved from the trailer to the WrappedKey protobuf, tests that need
+   * identity/metadata must embed them in the serialized bytes.
+   */
+  private static byte[] enrichWrappedKeyWithMetadata(byte[] keyBytes, byte[] kekIdentity,
+    String kekMetadata) {
+    boolean hasIdentity = kekIdentity != null && kekIdentity.length > 0;
+    if (!hasIdentity && kekMetadata == null) {
+      return keyBytes;
+    }
+    try {
+      EncryptionProtos.WrappedKey original =
+        EncryptionProtos.WrappedKey.parser().parseDelimitedFrom(new ByteArrayInputStream(keyBytes));
+      EncryptionProtos.WrappedKey.Builder builder = original.toBuilder();
+      if (hasIdentity) {
+        builder.setKekIdentity(UnsafeByteOperations.unsafeWrap(kekIdentity));
+      }
+      if (kekMetadata != null) {
+        builder.setKekMetadata(kekMetadata);
+      }
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      builder.build().writeDelimitedTo(out);
+      return out.toByteArray();
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to enrich wrapped key with metadata", e);
+    }
+  }
+
+  /**
+   * Create a syntactically valid WrappedKey protobuf with garbage encrypted data and the given
+   * kek_identity. Used to test unwrap failure paths when KEK identity is present.
+   */
+  private static byte[] createCorruptWrappedKeyWithIdentity(Configuration conf,
+    byte[] kekIdentity) {
+    try {
+      String hashAlgorithm = Encryption.getConfiguredHashAlgorithm(conf);
+      Cipher cipher = Encryption.getCipher(conf, "AES");
+      EncryptionProtos.WrappedKey.Builder builder = EncryptionProtos.WrappedKey.newBuilder();
+      builder.setAlgorithm("AES");
+      builder.setLength(16);
+      builder.setHashAlgorithm(hashAlgorithm);
+      builder.setHash(UnsafeByteOperations.unsafeWrap(new byte[32]));
+      builder.setData(UnsafeByteOperations.unsafeWrap(new byte[16]));
+      if (cipher.getIvLength() > 0) {
+        builder.setIv(UnsafeByteOperations.unsafeWrap(new byte[cipher.getIvLength()]));
+      }
+      if (kekIdentity != null && kekIdentity.length > 0) {
+        builder.setKekIdentity(UnsafeByteOperations.unsafeWrap(kekIdentity));
+      }
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      builder.build().writeDelimitedTo(out);
+      return out.toByteArray();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 
@@ -264,8 +329,8 @@ public class TestSecurityUtil {
   protected void assertEncryptionContextThrowsForReads(Class<? extends Exception> expectedType,
     String expectedMessage) {
     Exception exception = assertThrows(Exception.class, () -> {
-      SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
-        mockSystemKeyCache);
+      SecurityUtil.deserializeEncryptionContext(conf, null, mockTrailer.getEncryptionKey(),
+        mockSystemKeyCache, mockManagedKeyDataCache);
     });
     assertTrue("Expected exception type: " + expectedType.getName() + ", but got: "
       + exception.getClass().getName(), expectedType.isInstance(exception));
@@ -277,7 +342,6 @@ public class TestSecurityUtil {
   public void setUp() throws Exception {
     conf = HBaseConfiguration.create();
     testUtil = new HBaseTestingUtil(conf);
-    testPath = testUtil.getDataTestDir("test-file");
 
     // Setup mocks (only for objects that don't have encryption logic)
     mockFamily = mock(ColumnFamilyDescriptor.class);
@@ -305,14 +369,27 @@ public class TestSecurityUtil {
     // Create test wrapped key
     KeyProvider keyProvider = Encryption.getKeyProvider(conf);
     kekKey = keyProvider.getKey(HBASE_KEY);
-    Key key = keyProvider.getKey(TEST_DEK_16_BYTE);
-    testWrappedKey = EncryptionUtil.wrapKey(conf, null, key, kekKey);
+    kekData = createManagedKeyDataMock(kekKey, TEST_KEK_IDENTITY, TEST_KEK_METADATA);
+    testWrappedKey = SecurityUtil.wrapKey(conf, testKey, kekData);
+  }
+
+  private static ManagedKeyData createManagedKeyDataMock(Key kekKey, byte[] kekIdentity,
+    String kekMetadata) {
+    ManagedKeyData kekData = mock(ManagedKeyData.class);
+    when(kekData.getTheKey()).thenReturn(kekKey);
+    ManagedKeyIdentity keyIdentity = mock(ManagedKeyIdentity.class);
+    when(kekData.getKeyIdentity()).thenReturn(keyIdentity);
+    when(keyIdentity.getFullIdentityView()).thenReturn(new Bytes(kekIdentity));
+    if (kekMetadata != null) {
+      when(kekData.getKeyMetadata()).thenReturn(kekMetadata);
+    }
+    return kekData;
   }
 
   private static byte[] createRandomWrappedKey(Configuration conf) throws IOException {
     Cipher cipher = Encryption.getCipher(conf, "AES");
     Key key = cipher.getRandomKey();
-    return EncryptionUtil.wrapKey(conf, HBASE_KEY, key);
+    return SecurityUtil.wrapKey(conf, HBASE_KEY, key);
   }
 
   @RunWith(BlockJUnit4ClassRunner.class)
@@ -458,8 +535,8 @@ public class TestSecurityUtil {
       configBuilder().withKeyManagement(true).apply(conf);
       setupManagedKeyDataCache(TEST_NAMESPACE_BYTES, mockManagedKeyData);
       assertEncryptionContextThrowsForWrites(IllegalStateException.class,
-        "Encryption for family 'test-family' configured with type 'AES' but key specifies "
-          + "algorithm 'DES'");
+        "Encryption for family 'test-family' is configured with cipher type 'AES' but the cipher algorithm 'AES' "
+          + "doesn't match the key algorithm 'DES'");
     }
 
     @Test
@@ -503,12 +580,12 @@ public class TestSecurityUtil {
     public void testWithoutKeyManagement_KeyAlgorithmMismatch() throws Exception {
       // Create a key with different algorithm and wrap it
       Key differentKey = new SecretKeySpec(TEST_KEY_16_BYTE.getBytes(), DES_CIPHER);
-      byte[] wrappedDESKey = EncryptionUtil.wrapKey(conf, HBASE_KEY, differentKey);
+      byte[] wrappedDESKey = SecurityUtil.wrapKey(conf, HBASE_KEY, differentKey);
       when(mockFamily.getEncryptionKey()).thenReturn(wrappedDESKey);
 
       assertEncryptionContextThrowsForWrites(IllegalStateException.class,
-        "Encryption for family 'test-family' configured with type 'AES' but key specifies "
-          + "algorithm 'DES'");
+        "Encryption for family 'test-family' is configured with cipher type 'AES' but the cipher algorithm 'AES' "
+          + "doesn't match the key algorithm 'DES'");
     }
 
     @Test
@@ -692,8 +769,9 @@ public class TestSecurityUtil {
 
       // Create a properly wrapped key first, then corrupt it to cause unwrapping failure
       Key wrongKek = new SecretKeySpec("bad-kek-16-bytes".getBytes(), AES_CIPHER); // Exactly 16
-                                                                                   // bytes
-      byte[] validWrappedKey = EncryptionUtil.wrapKey(conf, null, testKey, wrongKek);
+      ManagedKeyData wrongKekData =
+        createManagedKeyDataMock(wrongKek, TEST_KEK_IDENTITY, TEST_KEK_METADATA);
+      byte[] validWrappedKey = SecurityUtil.wrapKey(conf, testKey, wrongKekData);
 
       when(mockFamily.getEncryptionKey()).thenReturn(validWrappedKey);
       configBuilder().withKeyManagement(false).apply(conf);
@@ -711,26 +789,23 @@ public class TestSecurityUtil {
         exception.getCause() instanceof KeyException);
     }
 
-    // Tests for the second createEncryptionContext method (for reading files)
+  }
+
+  // Tests for deserializeEncryptionContext (deserialization of WrappedKey protobuf)
+  @RunWith(BlockJUnit4ClassRunner.class)
+  @Category({ SecurityTests.class, SmallTests.class })
+  public static class TestDeserializeEncryptionContext extends TestSecurityUtil {
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDeserializeEncryptionContext.class);
 
     @Test
-    public void testWithNoKeyMaterial() throws IOException {
-      when(mockTrailer.getEncryptionKey()).thenReturn(null);
-
-      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-        mockManagedKeyDataCache, mockSystemKeyCache);
+    public void testWithNullValue() throws IOException {
+      Encryption.Context result = SecurityUtil.deserializeEncryptionContext(conf, null, null,
+        mockSystemKeyCache, mockManagedKeyDataCache);
 
       assertEquals(Encryption.Context.NONE, result);
     }
-  }
-
-  // Tests for the second createEncryptionContext method (for reading files)
-  @RunWith(BlockJUnit4ClassRunner.class)
-  @Category({ SecurityTests.class, SmallTests.class })
-  public static class TestCreateEncryptionContext_ForReads extends TestSecurityUtil {
-    @ClassRule
-    public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCreateEncryptionContext_ForReads.class);
 
     @Test
     public void testWithKEKMetadata_STKLookupFirstThenManagedKey() throws Exception {
@@ -743,14 +818,15 @@ public class TestSecurityUtil {
       ManagedKeyData stkKeyData = mock(ManagedKeyData.class);
       when(stkKeyData.getTheKey()).thenReturn(kekKey);
       setupSystemKeyCache(TEST_KEK_IDENTITY, stkKeyData);
+      setupSystemKeyCache(stkKeyData);
 
       // Also set up managed key cache (but it shouldn't be used since STK succeeds)
       setupManagedKeyDataCacheEntry(TEST_KEK_IDENTITY, TEST_KEK_METADATA, mockManagedKeyData);
       when(mockManagedKeyData.getTheKey())
         .thenThrow(new RuntimeException("This should not be called"));
 
-      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-        mockManagedKeyDataCache, mockSystemKeyCache);
+      Encryption.Context result = SecurityUtil.deserializeEncryptionContext(conf, null,
+        mockTrailer.getEncryptionKey(), mockSystemKeyCache, mockManagedKeyDataCache);
 
       verifyContext(result);
       // Should use STK data, not managed key data
@@ -772,8 +848,8 @@ public class TestSecurityUtil {
         READ_PATH_TEST_NAMESPACE_BYTES, partialIdentity, TEST_KEK_METADATA, mockManagedKeyData);
       when(mockManagedKeyData.getTheKey()).thenReturn(kekKey);
 
-      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-        mockManagedKeyDataCache, mockSystemKeyCache);
+      Encryption.Context result = SecurityUtil.deserializeEncryptionContext(conf, null,
+        mockTrailer.getEncryptionKey(), mockSystemKeyCache, mockManagedKeyDataCache);
 
       verifyContext(result);
       assertEquals(mockManagedKeyData, result.getKEKData());
@@ -786,64 +862,35 @@ public class TestSecurityUtil {
       byte[] keyBytes = "test-encrypted-key".getBytes();
       String kekMetadata = "test-kek-metadata";
       byte[] partialIdentity = ManagedKeyIdentityUtils.constructMetadataHash(kekMetadata);
-      byte[] kekIdentity = ManagedKeyIdentityUtils.constructRowKeyForIdentity(
-        ManagedKeyData.KEY_SPACE_GLOBAL_BYTES.get(), Bytes.toBytes("test-namespace"),
-        partialIdentity);
       configBuilder().withKeyManagement(true).apply(conf);
 
       when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
-      when(mockTrailer.getKEKMetadata()).thenReturn(kekMetadata);
-      when(mockTrailer.getKekIdentity()).thenReturn(kekIdentity);
 
-      when(mockSystemKeyCache.getSystemKeyByIdentity(kekIdentity)).thenReturn(null);
-      when(mockManagedKeyDataCache.getEntry(
-        argThat(identity -> new KeyIdentitySingleArrayBacked(kekIdentity).equals(identity)),
-        eq(kekMetadata), eq(null))).thenReturn(null);
+      when(mockSystemKeyCache.getSystemKeyByIdentity(any())).thenReturn(null);
       when(mockSystemKeyCache.getLatestSystemKey()).thenReturn(null);
 
-      IOException exception = assertThrows(IOException.class, () -> {
-        SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
-          mockSystemKeyCache);
+      assertThrows(Exception.class, () -> {
+        SecurityUtil.deserializeEncryptionContext(conf, null, mockTrailer.getEncryptionKey(),
+          mockSystemKeyCache, mockManagedKeyDataCache);
       });
-
-      assertTrue(exception.getMessage().contains("Failed to get latest system key"));
     }
 
     @Test
-    public void testWithKeyManagement_UseSystemKey() throws IOException {
-      // Test STK lookup by identity (first priority in new logic)
-      setupTrailerMocks(testWrappedKey, null, TEST_KEK_IDENTITY, null);
+    public void testBackwardsCompatibility_WithKeyManagement_FallbackToLatestSTK()
+      throws IOException {
+      // Test when no KEK identity in WrappedKey — should fall back to latest STK for unwrapping
+      setupTrailerMocks(testWrappedKey, null, new byte[0], null);
       configBuilder().withKeyManagement(false).apply(conf);
-      setupSystemKeyCache(TEST_KEK_IDENTITY, mockManagedKeyData);
-      when(mockManagedKeyData.getTheKey()).thenReturn(kekKey);
 
-      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-        mockManagedKeyDataCache, mockSystemKeyCache);
+      ManagedKeyData latestStk = mock(ManagedKeyData.class);
+      when(latestStk.getTheKey()).thenReturn(kekKey);
+      when(mockSystemKeyCache.getLatestSystemKey()).thenReturn(latestStk);
+
+      Encryption.Context result = SecurityUtil.deserializeEncryptionContext(conf, null,
+        mockTrailer.getEncryptionKey(), mockSystemKeyCache, mockManagedKeyDataCache);
 
       verifyContext(result);
-      assertEquals(mockManagedKeyData, result.getKEKData());
-    }
-
-    @Test
-    public void testBackwardsCompatibility_WithKeyManagement_LatestSystemKeyNotFound()
-      throws IOException {
-      // Test when both STK lookup by checksum fails and latest system key is null
-      byte[] keyBytes = "test-encrypted-key".getBytes();
-
-      when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
-
-      // Enable key management
-      conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
-
-      // Both checksum lookup and latest system key lookup should fail
-      when(mockSystemKeyCache.getLatestSystemKey()).thenReturn(null);
-
-      IOException exception = assertThrows(IOException.class, () -> {
-        SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
-          mockSystemKeyCache);
-      });
-
-      assertTrue(exception.getMessage().contains("Failed to get latest system key"));
+      assertEquals("Context should use latest STK as KEK", latestStk, result.getKEKData());
     }
 
     @Test
@@ -857,8 +904,8 @@ public class TestSecurityUtil {
       when(latestSystemKey.getTheKey()).thenReturn(kekKey);
       when(mockSystemKeyCache.getLatestSystemKey()).thenReturn(latestSystemKey);
 
-      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-        mockManagedKeyDataCache, mockSystemKeyCache);
+      Encryption.Context result = SecurityUtil.deserializeEncryptionContext(conf, null,
+        mockTrailer.getEncryptionKey(), mockSystemKeyCache, mockManagedKeyDataCache);
 
       verifyContext(result);
       assertEquals(latestSystemKey, result.getKEKData());
@@ -868,10 +915,9 @@ public class TestSecurityUtil {
     public void testWithoutKeyManagemntEnabled() throws IOException {
       byte[] wrappedKey = createRandomWrappedKey(conf);
       when(mockTrailer.getEncryptionKey()).thenReturn(wrappedKey);
-      when(mockTrailer.getKEKMetadata()).thenReturn(null);
 
-      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-        mockManagedKeyDataCache, mockSystemKeyCache);
+      Encryption.Context result = SecurityUtil.deserializeEncryptionContext(conf, null,
+        mockTrailer.getEncryptionKey(), mockSystemKeyCache, mockManagedKeyDataCache);
 
       verifyContext(result, false);
     }
@@ -883,8 +929,8 @@ public class TestSecurityUtil {
       when(mockManagedKeyData.getTheKey()).thenReturn(kekKey);
       configBuilder().withKeyManagement(false).apply(conf);
 
-      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-        mockManagedKeyDataCache, mockSystemKeyCache);
+      Encryption.Context result = SecurityUtil.deserializeEncryptionContext(conf, null,
+        mockTrailer.getEncryptionKey(), mockSystemKeyCache, mockManagedKeyDataCache);
 
       verifyContext(result, true);
     }
@@ -893,11 +939,10 @@ public class TestSecurityUtil {
     public void testWithoutKeyManagement_UnwrapFailure() throws IOException {
       byte[] invalidKeyBytes = INVALID_KEY_DATA.getBytes();
       when(mockTrailer.getEncryptionKey()).thenReturn(invalidKeyBytes);
-      when(mockTrailer.getKEKMetadata()).thenReturn(null);
 
       Exception exception = assertThrows(Exception.class, () -> {
-        SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
-          mockSystemKeyCache);
+        SecurityUtil.deserializeEncryptionContext(conf, null, mockTrailer.getEncryptionKey(),
+          mockSystemKeyCache, mockManagedKeyDataCache);
       });
 
       // The exception should indicate that unwrapping failed - could be IOException or
@@ -906,65 +951,50 @@ public class TestSecurityUtil {
     }
 
     @Test
-    public void testCreateEncryptionContext_WithoutKeyManagement_UnavailableCipher()
-      throws Exception {
+    public void testWithoutKeyManagement_UnavailableCipher() throws Exception {
       // Create a DES key and wrap it first with working configuration
       Key desKey = new SecretKeySpec("test-key-16-byte".getBytes(), "DES");
-      byte[] wrappedDESKey = EncryptionUtil.wrapKey(conf, HBASE_KEY, desKey);
+      byte[] wrappedDESKey = SecurityUtil.wrapKey(conf, HBASE_KEY, desKey);
 
       when(mockTrailer.getEncryptionKey()).thenReturn(wrappedDESKey);
-      when(mockTrailer.getKEKMetadata()).thenReturn(null);
 
       // Disable key management and use null cipher provider
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, false);
       setUpEncryptionConfigWithNullCipher();
 
-      RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-        SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
-          mockSystemKeyCache);
+      IOException exception = assertThrows(IOException.class, () -> {
+        SecurityUtil.deserializeEncryptionContext(conf, null, mockTrailer.getEncryptionKey(),
+          mockSystemKeyCache, mockManagedKeyDataCache);
       });
 
-      assertTrue(exception.getMessage().contains("Cipher 'AES' not available"));
+      assertTrue(exception.getMessage().contains("not available"));
     }
 
     @Test
-    public void testCreateEncryptionContext_WithKeyManagement_NullKeyManagementCache()
-      throws IOException {
+    public void testWithKeyManagement_NullKeyManagementCache() throws IOException {
       byte[] keyBytes = "test-encrypted-key".getBytes();
-      String kekMetadata = "test-kek-metadata";
-      byte[] partialIdentity = ManagedKeyIdentityUtils.constructMetadataHash(kekMetadata);
-      byte[] kekIdentity = ManagedKeyIdentityUtils.constructRowKeyForIdentity(
-        ManagedKeyData.KEY_SPACE_GLOBAL_BYTES.get(), Bytes.toBytes("test-namespace"),
-        partialIdentity);
 
       when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
-      when(mockTrailer.getKEKMetadata()).thenReturn(kekMetadata);
-      when(mockTrailer.getKekIdentity()).thenReturn(kekIdentity);
-      when(mockSystemKeyCache.getSystemKeyByIdentity(kekIdentity)).thenReturn(null);
 
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
 
-      IOException exception = assertThrows(IOException.class, () -> {
-        SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, null, mockSystemKeyCache);
+      assertThrows(Exception.class, () -> {
+        SecurityUtil.deserializeEncryptionContext(conf, null, mockTrailer.getEncryptionKey(),
+          mockSystemKeyCache, null);
       });
-
-      assertTrue(exception.getMessage().contains("ManagedKeyDataCache is null"));
     }
 
     @Test
-    public void testCreateEncryptionContext_WithKeyManagement_NullSystemKeyCache()
-      throws IOException {
-      byte[] keyBytes = "test-encrypted-key".getBytes();
-
-      when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
-      when(mockTrailer.getKEKMetadata()).thenReturn(null);
+    public void testWithKeyManagement_NullSystemKeyCache() throws IOException {
+      byte[] wrappedKey = createRandomWrappedKey(conf);
+      when(mockTrailer.getEncryptionKey()).thenReturn(wrappedKey);
 
       // Enable key management
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
 
       IOException exception = assertThrows(IOException.class, () -> {
-        SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
-          null);
+        SecurityUtil.deserializeEncryptionContext(conf, null, mockTrailer.getEncryptionKey(), null,
+          mockManagedKeyDataCache);
       });
 
       assertTrue(exception.getMessage()
@@ -974,11 +1004,11 @@ public class TestSecurityUtil {
 
   @RunWith(Parameterized.class)
   @Category({ SecurityTests.class, SmallTests.class })
-  public static class TestCreateEncryptionContext_WithoutKeyManagement_UnwrapKeyException
+  public static class TestDeserialize_WithoutKeyManagement_UnwrapKeyException
     extends TestSecurityUtil {
     @ClassRule
-    public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule
-      .forClass(TestCreateEncryptionContext_WithoutKeyManagement_UnwrapKeyException.class);
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDeserialize_WithoutKeyManagement_UnwrapKeyException.class);
 
     @Parameter(0)
     public boolean isKeyException;
@@ -998,33 +1028,33 @@ public class TestSecurityUtil {
       setupTrailerMocks(wrappedKey, null, new byte[0], null);
 
       IOException exception = assertThrows(IOException.class, () -> {
-        SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
-          mockSystemKeyCache);
+        SecurityUtil.deserializeEncryptionContext(conf, null, mockTrailer.getEncryptionKey(),
+          mockSystemKeyCache, mockManagedKeyDataCache);
       });
 
-      assertTrue(exception.getMessage().contains("Key was not successfully unwrapped"));
-      // The root cause should be some kind of parsing/unwrapping exception
       assertNotNull(exception.getCause());
+      assertTrue("Root cause should indicate key unwrap failure",
+        exception.getCause().getMessage().contains("Key was not successfully unwrapped"));
     }
 
     @Test
     public void testWithSystemKey() throws IOException {
-      // Use invalid key bytes to trigger unwrapping failure
-      byte[] invalidKeyBytes = INVALID_SYSTEM_KEY_DATA.getBytes();
-
-      setupTrailerMocks(invalidKeyBytes, null, TEST_KEK_IDENTITY, null);
+      // Create a valid WrappedKey protobuf with garbage data and embedded KEK identity
+      byte[] corruptKeyBytes = createCorruptWrappedKeyWithIdentity(conf, TEST_KEK_IDENTITY);
+      when(mockTrailer.getEncryptionKey()).thenReturn(corruptKeyBytes);
       configBuilder().withKeyManagement(false).apply(conf);
       setupSystemKeyCache(TEST_KEK_IDENTITY, mockManagedKeyData);
+      setupSystemKeyCache(mockManagedKeyData);
 
       IOException exception = assertThrows(IOException.class, () -> {
-        SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
-          mockSystemKeyCache);
+        SecurityUtil.deserializeEncryptionContext(conf, null, mockTrailer.getEncryptionKey(),
+          mockSystemKeyCache, mockManagedKeyDataCache);
       });
 
-      assertTrue(
-        exception.getMessage().contains("Failed to unwrap key with KEK identity (length: 8)"));
-      // The root cause should be some kind of parsing/unwrapping exception
       assertNotNull(exception.getCause());
+      assertTrue("Root cause should indicate key unwrap failure",
+        exception.getCause().getMessage().contains("Key was not successfully unwrapped"));
+      // The root cause should be some kind of parsing/unwrapping exception
     }
   }
 
@@ -1074,6 +1104,420 @@ public class TestSecurityUtil {
     @Override
     public Cipher getCipher(String name) {
       return null; // Always return null to simulate unavailable cipher
+    }
+  }
+
+  /**
+   * Tests for key wrapping/unwrapping methods moved from EncryptionUtil.
+   */
+  @RunWith(BlockJUnit4ClassRunner.class)
+  @Category({ SecurityTests.class, SmallTests.class })
+  public static class TestKeyWrapping extends TestSecurityUtil {
+
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestKeyWrapping.class);
+
+    @Test
+    public void testKeyWrappingRoundTrip() throws Exception {
+      byte[] keyBytes = new byte[16];
+      Bytes.secureRandom(keyBytes);
+      String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+      Key key = new SecretKeySpec(keyBytes, algorithm);
+
+      byte[] wrappedKeyBytes = SecurityUtil.wrapKey(conf, HBASE_KEY, key);
+      assertNotNull(wrappedKeyBytes);
+
+      Key unwrappedKey = SecurityUtil.unwrapKey(conf, HBASE_KEY, wrappedKeyBytes);
+      assertNotNull(unwrappedKey);
+      assertTrue(unwrappedKey instanceof SecretKeySpec);
+      assertTrue("Unwrapped key bytes do not match original",
+        Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
+    }
+
+    @Test(expected = KeyException.class)
+    public void testUnwrapWithIncorrectKeyFails() throws Exception {
+      byte[] keyBytes = new byte[16];
+      Bytes.secureRandom(keyBytes);
+      Key key = new SecretKeySpec(keyBytes, HConstants.CIPHER_AES);
+
+      byte[] wrappedKeyBytes = SecurityUtil.wrapKey(conf, HBASE_KEY, key);
+      SecurityUtil.unwrapKey(conf, "other", wrappedKeyBytes);
+    }
+
+    @Test
+    public void testWALKeyWrappingRoundTrip() throws Exception {
+      byte[] keyBytes = new byte[16];
+      Bytes.secureRandom(keyBytes);
+      String algorithm = conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+      Key key = new SecretKeySpec(keyBytes, algorithm);
+
+      byte[] wrappedKeyBytes = SecurityUtil.wrapKey(conf, HBASE_KEY, key);
+      assertNotNull(wrappedKeyBytes);
+
+      Key unwrappedKey = SecurityUtil.unwrapKey(conf, HBASE_KEY, wrappedKeyBytes);
+      assertNotNull(unwrappedKey);
+      assertTrue("Unwrapped WAL key bytes do not match original",
+        Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
+    }
+
+    @Test
+    public void testUnwrapKeyIgnoresGlobalAlgorithmConfig() throws Exception {
+      byte[] keyBytes = new byte[16];
+      Bytes.secureRandom(keyBytes);
+      Key key = new SecretKeySpec(keyBytes, HConstants.CIPHER_AES);
+
+      byte[] wrappedKeyBytes = SecurityUtil.wrapKey(conf, HBASE_KEY, key);
+      assertNotNull(wrappedKeyBytes);
+
+      // Change global, WAL, and alternate algorithm configs to a non-existent cipher.
+      // Unwrap should still succeed because the cipher is read from the WrappedKey protobuf.
+      conf.set(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, "NO_SUCH_CIPHER");
+      conf.set(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, "NO_SUCH_CIPHER");
+      conf.set(HConstants.CRYPTO_ALTERNATE_KEY_ALGORITHM_CONF_KEY, "NO_SUCH_CIPHER");
+
+      Key unwrappedKey = SecurityUtil.unwrapKey(conf, HBASE_KEY, wrappedKeyBytes);
+      assertNotNull(unwrappedKey);
+      assertTrue("Unwrapped key bytes do not match original",
+        Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
+    }
+
+    @Test
+    public void testUnwrapKeyWithKekIgnoresGlobalAlgorithmConfig() throws Exception {
+      byte[] keyBytes = new byte[16];
+      Bytes.secureRandom(keyBytes);
+      Key key = new SecretKeySpec(keyBytes, HConstants.CIPHER_AES);
+
+      byte[] wrappedKeyBytes = SecurityUtil.wrapKey(conf, key, kekData);
+      assertNotNull(wrappedKeyBytes);
+
+      conf.set(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, "NO_SUCH_CIPHER");
+      conf.set(HConstants.CRYPTO_ALTERNATE_KEY_ALGORITHM_CONF_KEY, "NO_SUCH_CIPHER");
+
+      Key unwrappedKey = SecurityUtil.unwrapKey(conf, null, wrappedKeyBytes, kekKey);
+      assertNotNull(unwrappedKey);
+      assertTrue("Unwrapped key bytes do not match original",
+        Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
+    }
+
+    @Test
+    public void testUnwrapKeyAutoMasterKeyIgnoresGlobalAlgorithmConfig() throws Exception {
+      byte[] keyBytes = new byte[16];
+      Bytes.secureRandom(keyBytes);
+      Key key = new SecretKeySpec(keyBytes, HConstants.CIPHER_AES);
+
+      byte[] wrappedKeyBytes = SecurityUtil.wrapKey(conf, HBASE_KEY, key);
+      assertNotNull(wrappedKeyBytes);
+
+      conf.set(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, "NO_SUCH_CIPHER");
+      conf.set(HConstants.CRYPTO_ALTERNATE_KEY_ALGORITHM_CONF_KEY, "NO_SUCH_CIPHER");
+
+      Key unwrappedKey = SecurityUtil.unwrapKey(conf, wrappedKeyBytes);
+      assertNotNull(unwrappedKey);
+      assertTrue("Unwrapped key bytes do not match original",
+        Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
+    }
+
+    @Test
+    public void testUnwrapKeyAutoMasterKey() throws Exception {
+      byte[] keyBytes = new byte[16];
+      Bytes.secureRandom(keyBytes);
+      Key key = new SecretKeySpec(keyBytes, HConstants.CIPHER_AES);
+
+      byte[] wrappedKeyBytes = SecurityUtil.wrapKey(conf, HBASE_KEY, key);
+      Key unwrappedKey = SecurityUtil.unwrapKey(conf, wrappedKeyBytes);
+      assertNotNull(unwrappedKey);
+      assertTrue("Unwrapped key bytes do not match original",
+        Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
+    }
+
+    @Test
+    public void testKeyWrappingWithInvalidHashAlg() throws Exception {
+      conf.set(Encryption.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY,
+        "this-hash-algorithm-not-exists hopefully... :)");
+      byte[] keyBytes = new byte[16];
+      Bytes.secureRandom(keyBytes);
+      String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+      Key key = new SecretKeySpec(keyBytes, algorithm);
+
+      assertThrows(RuntimeException.class, () -> SecurityUtil.wrapKey(conf, HBASE_KEY, key));
+    }
+  }
+
+  /**
+   * Parameterized tests that exercise key wrapping/unwrapping with different hash algorithms. Each
+   * parameter specifies the hash algorithm to use (MD5, SHA-256, SHA-384), or "use-default" for the
+   * default. Both the standard key algorithm (CRYPTO_KEY_ALGORITHM_CONF_KEY) and WAL key algorithm
+   * (CRYPTO_WAL_ALGORITHM_CONF_KEY) paths are tested for each hash algorithm.
+   */
+  @RunWith(Parameterized.class)
+  @Category({ SecurityTests.class, SmallTests.class })
+  public static class TestKeyWrappingWithHashAlgorithms extends TestSecurityUtil {
+
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestKeyWrappingWithHashAlgorithms.class);
+
+    private static final String USE_DEFAULT = "use-default";
+
+    @Parameter(0)
+    public String hashAlgorithm;
+
+    @Parameterized.Parameters(name = "hashAlgorithm={0}")
+    public static Collection<Object[]> data() {
+      return Arrays
+        .asList(new Object[][] { { USE_DEFAULT }, { "MD5" }, { "SHA-256" }, { "SHA-384" }, });
+    }
+
+    @Override
+    public void setUp() throws Exception {
+      super.setUp();
+      if (!hashAlgorithm.equals(USE_DEFAULT)) {
+        conf.set(Encryption.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, hashAlgorithm);
+      }
+    }
+
+    @Test
+    public void testKeyWrappingRoundTrip() throws Exception {
+      byte[] keyBytes = new byte[Cipher.KEY_LENGTH];
+      Bytes.secureRandom(keyBytes);
+      String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+      Key key = new SecretKeySpec(keyBytes, algorithm);
+
+      byte[] wrappedKeyBytes = SecurityUtil.wrapKey(conf, HBASE_KEY, key);
+      assertNotNull(wrappedKeyBytes);
+
+      Key unwrappedKey = SecurityUtil.unwrapKey(conf, HBASE_KEY, wrappedKeyBytes);
+      assertNotNull(unwrappedKey);
+      assertTrue(unwrappedKey instanceof SecretKeySpec);
+      assertTrue("Unwrapped key bytes do not match original",
+        Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
+    }
+
+    @Test(expected = KeyException.class)
+    public void testUnwrapWithIncorrectKeyFails() throws Exception {
+      byte[] keyBytes = new byte[Cipher.KEY_LENGTH];
+      Bytes.secureRandom(keyBytes);
+      String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+      Key key = new SecretKeySpec(keyBytes, algorithm);
+
+      byte[] wrappedKeyBytes = SecurityUtil.wrapKey(conf, HBASE_KEY, key);
+      SecurityUtil.unwrapKey(conf, "other", wrappedKeyBytes);
+    }
+
+    @Test
+    public void testWALKeyWrappingRoundTrip() throws Exception {
+      byte[] keyBytes = new byte[Cipher.KEY_LENGTH];
+      Bytes.secureRandom(keyBytes);
+      String algorithm = conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+      Key key = new SecretKeySpec(keyBytes, algorithm);
+
+      byte[] wrappedKeyBytes = SecurityUtil.wrapKey(conf, HBASE_KEY, key);
+      assertNotNull(wrappedKeyBytes);
+
+      Key unwrappedKey = SecurityUtil.unwrapKey(conf, HBASE_KEY, wrappedKeyBytes);
+      assertNotNull(unwrappedKey);
+      assertTrue(unwrappedKey instanceof SecretKeySpec);
+      assertTrue("Unwrapped WAL key bytes do not match original",
+        Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
+    }
+  }
+
+  /**
+   * Tests for hash algorithm mismatch behavior during key unwrapping. Verifies that the
+   * CRYPTO_KEY_FAIL_ON_ALGORITHM_MISMATCH_CONF_KEY configuration flag correctly controls whether
+   * reading data encrypted with a different hash algorithm fails or succeeds.
+   */
+  @RunWith(BlockJUnit4ClassRunner.class)
+  @Category({ SecurityTests.class, SmallTests.class })
+  public static class TestHashAlgorithmMismatch extends TestSecurityUtil {
+
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHashAlgorithmMismatch.class);
+
+    private byte[] wrapKeyWithMD5() throws Exception {
+      conf.set(Encryption.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, "MD5");
+      byte[] keyBytes = new byte[Cipher.KEY_LENGTH];
+      Bytes.secureRandom(keyBytes);
+      String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+      Key key = new SecretKeySpec(keyBytes, algorithm);
+      return SecurityUtil.wrapKey(conf, HBASE_KEY, key);
+    }
+
+    @Test(expected = KeyException.class)
+    public void testHashAlgorithmMismatchWhenFailExpected() throws Exception {
+      byte[] wrappedKeyBytes = wrapKeyWithMD5();
+      conf.set(Encryption.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, "SHA-384");
+      conf.setBoolean(Encryption.CRYPTO_KEY_FAIL_ON_ALGORITHM_MISMATCH_CONF_KEY, true);
+      SecurityUtil.unwrapKey(conf, HBASE_KEY, wrappedKeyBytes);
+    }
+
+    @Test
+    public void testHashAlgorithmMismatchWhenFailNotExpected() throws Exception {
+      byte[] wrappedKeyBytes = wrapKeyWithMD5();
+      conf.set(Encryption.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, "SHA-384");
+      conf.setBoolean(Encryption.CRYPTO_KEY_FAIL_ON_ALGORITHM_MISMATCH_CONF_KEY, false);
+      Key unwrappedKey = SecurityUtil.unwrapKey(conf, HBASE_KEY, wrappedKeyBytes);
+      assertNotNull(unwrappedKey);
+    }
+
+    @Test
+    public void testHashAlgorithmMismatchShouldNotFailWithDefaultConfig() throws Exception {
+      byte[] wrappedKeyBytes = wrapKeyWithMD5();
+      conf.set(Encryption.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, "SHA-384");
+      Key unwrappedKey = SecurityUtil.unwrapKey(conf, HBASE_KEY, wrappedKeyBytes);
+      assertNotNull(unwrappedKey);
+    }
+  }
+
+  /**
+   * Tests for cipher name propagation in serialize/deserializeEncryptionContext.
+   */
+  @RunWith(BlockJUnit4ClassRunner.class)
+  @Category({ SecurityTests.class, SmallTests.class })
+  public static class TestCipherNamePropagation extends TestSecurityUtil {
+
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCipherNamePropagation.class);
+
+    @Test
+    public void testSerializeEncryptionContextStoresCipherName() throws Exception {
+      Cipher cipher = Encryption.getCipher(conf, HConstants.CIPHER_AES);
+      assertNotNull(cipher);
+      Key key = cipher.getRandomKey();
+
+      Encryption.Context context = Encryption.newContext(conf);
+      context.setCipher(cipher);
+      context.setKey(key);
+
+      byte[] wrappedBytes = SecurityUtil.serializeEncryptionContext(context);
+      assertNotNull(wrappedBytes);
+
+      // Deserialize and verify cipher_name is set
+      java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(wrappedBytes);
+      org.apache.hadoop.hbase.shaded.protobuf.generated.EncryptionProtos.WrappedKey wrappedKey =
+        org.apache.hadoop.hbase.shaded.protobuf.generated.EncryptionProtos.WrappedKey.parser()
+          .parseDelimitedFrom(bais);
+      assertTrue("cipher_name should be set", wrappedKey.hasCipherName());
+      assertEquals("AES", wrappedKey.getCipherName());
+    }
+
+    @Test
+    public void testDeserializeEncryptionContextPopulatesContext() throws Exception {
+      Cipher cipher = Encryption.getCipher(conf, HConstants.CIPHER_AES);
+      assertNotNull(cipher);
+      Key key = cipher.getRandomKey();
+
+      Encryption.Context wrapCtx = Encryption.newContext(conf);
+      wrapCtx.setCipher(cipher);
+      wrapCtx.setKey(key);
+
+      byte[] wrappedBytes = SecurityUtil.serializeEncryptionContext(wrapCtx);
+
+      Encryption.Context readCtx =
+        SecurityUtil.deserializeEncryptionContext(conf, null, wrappedBytes, null, null);
+
+      assertNotNull("Cipher should be populated on context", readCtx.getCipher());
+      assertEquals("AES", readCtx.getCipher().getName());
+      assertNotNull("Key should be populated on context", readCtx.getKey());
+      assertTrue("Key bytes should match",
+        Bytes.equals(key.getEncoded(), readCtx.getKey().getEncoded()));
+    }
+
+    @Test
+    public void testBackwardCompatWithoutCipherName() throws Exception {
+      // Old WrappedKey without cipher_name should fall back to algorithm field
+      byte[] keyBytes = new byte[16];
+      Bytes.secureRandom(keyBytes);
+      Key key = new SecretKeySpec(keyBytes, HConstants.CIPHER_AES);
+
+      byte[] wrappedBytes = SecurityUtil.wrapKey(conf, HBASE_KEY, key);
+
+      Encryption.Context readCtx =
+        SecurityUtil.deserializeEncryptionContext(conf, null, wrappedBytes, null, null);
+
+      assertNotNull("Cipher should be populated from algorithm fallback", readCtx.getCipher());
+      assertEquals("AES", readCtx.getCipher().getName());
+    }
+  }
+
+  /**
+   * Parameterized integration tests that exercise the full
+   * createEncryptionContext-encrypt-serialize-deserialize-decrypt round trip, verifying that
+   * changing the global cipher config after writing does not break reads. Each parameter pair
+   * specifies the cipher used at write time and the global cipher config at read time.
+   */
+  @RunWith(Parameterized.class)
+  @Category({ SecurityTests.class, SmallTests.class })
+  public static class TestEncryptDecryptRoundTrip extends TestSecurityUtil {
+
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestEncryptDecryptRoundTrip.class);
+
+    @Parameter(0)
+    public String writeCipher;
+
+    @Parameter(1)
+    public String globalCipherAtReadTime;
+
+    @Parameterized.Parameters(name = "write={0},globalAtRead={1}")
+    public static Collection<Object[]> data() {
+      return Arrays.asList(new Object[][] { { HConstants.CIPHER_AES, "NO_SUCH_CIPHER" },
+        { HConstants.CIPHER_AES_256_GCM, "NO_SUCH_CIPHER" }, });
+    }
+
+    private byte[] encryptData(Encryption.Context ctx, byte[] plaintext) throws IOException {
+      byte[] iv = new byte[ctx.getCipher().getIvLength()];
+      Bytes.secureRandom(iv);
+      ByteArrayOutputStream cipherOut = new ByteArrayOutputStream();
+      cipherOut.write(iv.length);
+      cipherOut.write(iv);
+      Encryption.encrypt(cipherOut, plaintext, 0, plaintext.length, ctx, iv);
+      return cipherOut.toByteArray();
+    }
+
+    private byte[] decryptData(Encryption.Context ctx, byte[] encrypted, int plaintextLength)
+      throws IOException {
+      ByteArrayInputStream in = new ByteArrayInputStream(encrypted);
+      int ivLen = in.read();
+      byte[] iv = new byte[ivLen];
+      in.read(iv);
+      byte[] decrypted = new byte[plaintextLength];
+      Encryption.decrypt(decrypted, 0, in, plaintextLength, ctx, iv);
+      return decrypted;
+    }
+
+    @Test
+    public void testDecryptAfterGlobalCipherChange() throws Exception {
+      // Write path: create context, encrypt, serialize
+      when(mockFamily.getEncryptionType()).thenReturn(writeCipher);
+      when(mockFamily.getEncryptionKey()).thenReturn(null);
+      Encryption.Context writeCtx =
+        SecurityUtil.createEncryptionContext(conf, mockTableDescriptor, mockFamily, null, null);
+      assertEquals(writeCipher, writeCtx.getCipher().getName());
+
+      byte[] plaintext = Bytes.toBytes("Round-trip test data for cipher migration");
+      byte[] encrypted = encryptData(writeCtx, plaintext);
+      byte[] serialized = SecurityUtil.serializeEncryptionContext(writeCtx);
+
+      // Simulate cipher config change between write and read
+      conf.set(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, globalCipherAtReadTime);
+
+      // Read path: deserialize should resolve the original cipher from the protobuf
+      Encryption.Context readCtx =
+        SecurityUtil.deserializeEncryptionContext(conf, null, serialized, null, null);
+
+      assertEquals("Deserialized cipher should match the write cipher, not the global config",
+        writeCipher, readCtx.getCipher().getName());
+      assertTrue("Deserialized key should match original",
+        Bytes.equals(writeCtx.getKeyBytes(), readCtx.getKeyBytes()));
+
+      byte[] decrypted = decryptData(readCtx, encrypted, plaintext.length);
+      assertTrue("Decrypted data should match original plaintext",
+        Bytes.equals(plaintext, decrypted));
     }
   }
 }

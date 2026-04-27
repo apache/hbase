@@ -42,11 +42,10 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BooleanMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.GetManagedKeysResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyMetadataRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SetManagedKeyRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos.ManagedKeysService;
 
@@ -203,19 +202,20 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
      * @param done       The callback to be invoked with the response.
      */
     @Override
-    public void disableManagedKey(RpcController controller, ManagedKeyEntryRequest request,
+    public void disableManagedKey(RpcController controller, ManagedKeyMetadataRequest request,
       RpcCallback<ManagedKeyResponse> done) {
       ManagedKeyResponse response = null;
       ManagedKeyResponse.Builder builder = ManagedKeyResponse.newBuilder();
       try {
         initManagedKeyResponseBuilder(controller, request.getKeyCustNs(), builder);
-        // Convert partial identity to key lookup
-        byte[] partialIdentity = request.getKeyMetadataHash().toByteArray();
+        if (request.getKeyMetadata().isEmpty()) {
+          throw new IOException("key_metadata must not be empty");
+        }
         byte[] keyCust = request.getKeyCustNs().getKeyCust().toByteArray();
         String keyNamespace = request.getKeyCustNs().getKeyNamespace();
 
-        ManagedKeyData managedKeyState =
-          master.getKeymetaAdmin().disableManagedKey(keyCust, keyNamespace, partialIdentity);
+        ManagedKeyData managedKeyState = master.getKeymetaAdmin().disableManagedKey(keyCust,
+          keyNamespace, request.getKeyMetadata());
         response = generateKeyStateResponse(managedKeyState, builder);
       } catch (IOException | KeyException | RuntimeException e) {
         CoprocessorRpcUtils.setControllerException(controller,
@@ -285,7 +285,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
      * Unwraps key metadata from the provider and persists it for the given custodian and namespace.
      */
     @Override
-    public void setManagedKey(RpcController controller, SetManagedKeyRequest request,
+    public void setManagedKey(RpcController controller, ManagedKeyMetadataRequest request,
       RpcCallback<ManagedKeyResponse> done) {
       ManagedKeyResponse response = null;
       ManagedKeyResponse.Builder builder = ManagedKeyResponse.newBuilder();

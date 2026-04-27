@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
-import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -418,8 +418,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     ManagedKeyData latestSystemKey =
       getKeyManagementService().getSystemKeyCache().getLatestSystemKey();
     if (keyData.getTheKey() != null) {
-      byte[] dekWrappedBySTK = EncryptionUtil.wrapKey(getConfiguration(), null, keyData.getTheKey(),
-        latestSystemKey.getTheKey());
+      byte[] dekWrappedBySTK =
+        SecurityUtil.wrapKey(getConfiguration(), keyData.getTheKey(), latestSystemKey);
       put
         .addColumn(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES,
           Bytes.toBytes(keyData.getKeyChecksum()))
@@ -475,7 +475,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
           originalFullKeyIdentity.getNamespaceString());
         return null;
       }
-      dek = EncryptionUtil.unwrapKey(keyManagementService.getConfiguration(), null, dekWrappedByStk,
+      dek = SecurityUtil.unwrapKey(keyManagementService.getConfiguration(), null, dekWrappedByStk,
         clusterKey.getTheKey());
     }
     long refreshedTimestamp =

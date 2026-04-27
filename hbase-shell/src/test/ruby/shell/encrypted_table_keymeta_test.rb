@@ -40,8 +40,10 @@ java_import org.apache.hadoop.hbase.io.hfile.HFile
 java_import org.apache.hadoop.hbase.io.hfile.CacheConfig
 java_import org.apache.hadoop.hbase.keymeta.KeyIdentitySingleArrayBacked
 java_import org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor
-
+java_import org.apache.hadoop.hbase.shaded.protobuf.generated.EncryptionProtos
 java_import org.apache.hadoop.hbase.util.Bytes
+java_import java.io.ByteArrayInputStream
+
 
 module Hbase
   # Test class for encrypted table keymeta functionality
@@ -135,7 +137,9 @@ module Hbase
         Bytes.new(ManagedKeyProvider.decodeToBytes($GLOB_CUST_ENCODED)),
         Bytes.new(Bytes.toBytes(expected_ns))))
       assert_not_nil(dek_data)
-      parsed_namespace = parse_namespace_from_kek_identity(live_trailer.getKekIdentity)
+      live_key = EncryptionProtos::WrappedKey::parser()
+        .parseDelimitedFrom(ByteArrayInputStream.new(live_trailer.getEncryptionKey));
+      parsed_namespace = parse_namespace_from_kek_identity(live_key.getKekIdentity)
       # When active key is the CEK (scenario 2a), validate key bytes in context match
       # provider. For scenario 2b (local key gen), CEK is generated per file so key bytes differ.
       if local_key_gen_scenario
@@ -208,26 +212,30 @@ module Hbase
     def assert_trailer(offline_trailer, live_trailer = nil)
       assert_not_nil(offline_trailer)
       assert_not_nil(offline_trailer.getEncryptionKey)
-      assert_not_nil(offline_trailer.getKEKMetadata)
-      assert_not_nil(offline_trailer.getKekIdentity)
-      assert_true(offline_trailer.getKekIdentity.length > 0)
-      parsed_namespace = parse_namespace_from_kek_identity(offline_trailer.getKekIdentity)
+      offline_key = EncryptionProtos::WrappedKey::parser()
+        .parseDelimitedFrom(ByteArrayInputStream.new(offline_trailer.getEncryptionKey));
+      assert_not_nil(offline_key.getKekMetadata)
+      assert_not_nil(offline_key.getKekIdentity)
+      assert_true(offline_key.getKekIdentity.size > 0)
+      parsed_namespace = parse_namespace_from_kek_identity(offline_key.getKekIdentity)
       assert_not_nil(parsed_namespace)
 
       return unless live_trailer
 
       assert_equal(live_trailer.getEncryptionKey, offline_trailer.getEncryptionKey)
-      assert_equal(live_trailer.getKEKMetadata, offline_trailer.getKEKMetadata)
-      assert_equal(live_trailer.getKekIdentity.to_a, offline_trailer.getKekIdentity.to_a)
-      assert_equal(parse_namespace_from_kek_identity(live_trailer.getKekIdentity),
-                  parse_namespace_from_kek_identity(offline_trailer.getKekIdentity))
+      live_key = EncryptionProtos::WrappedKey::parser()
+        .parseDelimitedFrom(ByteArrayInputStream.new(live_trailer.getEncryptionKey));
+      assert_equal(live_key.getKekMetadata, offline_key.getKekMetadata)
+      assert_equal(live_key.getKekIdentity.toByteArray, offline_key.getKekIdentity.toByteArray)
+      assert_equal(parse_namespace_from_kek_identity(live_key.getKekIdentity),
+                  parse_namespace_from_kek_identity(offline_key.getKekIdentity))
     end
 
     # Returns the key namespace string parsed from KEK identity bytes, or nil if not present.
     def parse_namespace_from_kek_identity(kek_identity)
-      return nil if kek_identity.nil? || kek_identity.length == 0
+      return nil if kek_identity.nil? || kek_identity.size == 0
 
-      KeyIdentitySingleArrayBacked.new(kek_identity).getNamespaceView().copyBytes()
+      KeyIdentitySingleArrayBacked.new(kek_identity.toByteArray).getNamespaceView().copyBytes()
     end
   end
 end

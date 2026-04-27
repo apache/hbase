@@ -304,10 +304,16 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
   @Test
   public void testDisableManagedKeyOverRPC() throws Exception {
     KeymetaAdmin adminClient = new KeymetaAdminClient(TEST_UTIL.getConnection());
-    doTestDisableManagedKey(adminClient);
+    KeymetaAdmin serverAdmin = TEST_UTIL.getHBaseCluster().getMaster().getKeymetaAdmin();
+    doTestDisableManagedKey(adminClient, serverAdmin);
   }
 
   private void doTestDisableManagedKey(KeymetaAdmin adminClient) throws IOException, KeyException {
+    doTestDisableManagedKey(adminClient, null);
+  }
+
+  private void doTestDisableManagedKey(KeymetaAdmin adminClient, KeymetaAdmin serverAdmin)
+    throws IOException, KeyException {
     String cust = "cust3";
     byte[] custBytes = cust.getBytes();
 
@@ -316,11 +322,19 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
       adminClient.enableKeyManagement(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
     assertNotNull(managedKey);
     assertKeyDataSingleKey(managedKey, ManagedKeyState.ACTIVE);
-    byte[] partialIdentity = managedKey.getPartialIdentity();
+
+    // Raw metadata is not returned over RPC, so look it up from the server-side admin
+    String keyMetadata = managedKey.getKeyMetadata();
+    if (keyMetadata == null) {
+      assertNotNull("serverAdmin required when metadata is not available over RPC", serverAdmin);
+      keyMetadata = serverAdmin.getManagedKeys(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL).stream()
+        .filter(k -> k.getKeyMetadata() != null).map(ManagedKeyData::getKeyMetadata).findFirst()
+        .orElseThrow(() -> new IOException("No key with metadata found"));
+    }
 
     // Now disable the specific key
     ManagedKeyData disabledKey =
-      adminClient.disableManagedKey(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL, partialIdentity);
+      adminClient.disableManagedKey(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL, keyMetadata);
     assertNotNull(disabledKey);
     assertEquals(ManagedKeyState.DISABLED, disabledKey.getKeyState().getExternalState());
   }
@@ -330,7 +344,7 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     doTestWithClientSideServiceException(
       (mockStub, networkError) -> when(mockStub.disableManagedKey(any(), any()))
         .thenThrow(networkError),
-      (client) -> client.disableManagedKey(new byte[0], "namespace", new byte[0]));
+      (client) -> client.disableManagedKey(new byte[0], "namespace", "metadata"));
   }
 
   @Test

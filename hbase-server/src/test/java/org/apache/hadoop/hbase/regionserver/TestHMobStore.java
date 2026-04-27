@@ -68,7 +68,7 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
-import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -578,7 +578,7 @@ public class TestHMobStore {
 
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(family)
       .setMobEnabled(true).setMobThreshold(100).setMaxVersions(4).setEncryptionType(algorithm)
-      .setEncryptionKey(EncryptionUtil.wrapKey(conf,
+      .setEncryptionKey(SecurityUtil.wrapKey(conf,
         conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()),
         cfKey))
       .build();

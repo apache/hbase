@@ -17,33 +17,29 @@
  */
 package org.apache.hadoop.hbase.io.crypto.aes;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Properties;
-import javax.crypto.spec.IvParameterSpec;
-import org.apache.commons.crypto.stream.CryptoInputStream;
-import org.apache.hadoop.hbase.io.crypto.Decryptor;
+import java.security.SecureRandom;
+import org.apache.hadoop.hbase.io.crypto.Cipher;
+import org.apache.hadoop.hbase.io.crypto.CipherProvider;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
+/**
+ * Base class for all AES cipher variants (AES-128-CTR, AES-256-GCM, etc.). Provides the common JCE
+ * key algorithm name shared by all AES modes.
+ */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
-public class CommonsCryptoAESDecryptor extends CommonsCryptoAESCodecBase implements Decryptor {
+public abstract class AESCipher extends Cipher {
 
-  public CommonsCryptoAESDecryptor(String cipherMode, Properties properties) {
-    super(cipherMode, properties);
+  public AESCipher(CipherProvider provider) {
+    super(provider);
   }
 
   @Override
-  public InputStream createDecryptionStream(InputStream in) {
-    try {
-      return new CryptoInputStream(cipherMode, properties, in, key, new IvParameterSpec(iv));
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+  public String getKeyAlgorithm() {
+    return "AES";
   }
 
   @Override
-  public void reset() {
+  protected SecureRandom getRNG() {
+    return super.getRNG();
   }
 }

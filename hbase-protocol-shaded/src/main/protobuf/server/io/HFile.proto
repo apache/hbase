@@ -51,6 +51,4 @@ message FileTrailerProto {
   optional string comparator_class_name = 11;
   optional uint32 compression_codec = 12;
   optional bytes encryption_key = 13;
-  optional bytes kek_identity = 14;
-  optional string kek_metadata = 15;
 }

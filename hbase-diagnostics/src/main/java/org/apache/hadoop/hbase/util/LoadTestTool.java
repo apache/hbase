@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlClient;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -295,7 +295,7 @@ public class LoadTestTool extends AbstractHBaseTool {
           byte[] keyBytes = new byte[cipher.getKeyLength()];
           Bytes.secureRandom(keyBytes);
           columnDescBuilder.setEncryptionType(cipher.getName());
-          columnDescBuilder.setEncryptionKey(EncryptionUtil.wrapKey(conf,
+          columnDescBuilder.setEncryptionKey(SecurityUtil.wrapKey(conf,
             User.getCurrent().getShortName(), new SecretKeySpec(keyBytes, cipher.getName())));
         }
         if (mobThreshold >= 0) {

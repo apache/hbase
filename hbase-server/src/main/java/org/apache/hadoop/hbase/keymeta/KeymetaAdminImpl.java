@@ -219,11 +219,14 @@ public class KeymetaAdminImpl extends KeyManagementBase implements KeymetaAdmin 
   }
 
   @Override
-  public ManagedKeyData disableManagedKey(byte[] keyCust, String keyNamespace,
-    byte[] keyMetadataHash) throws IOException, KeyException {
+  public ManagedKeyData disableManagedKey(byte[] keyCust, String keyNamespace, String keyMetadata)
+    throws IOException, KeyException {
     assertKeyManagementEnabled();
-    ManagedKeyIdentity fullKeyIdentity = new KeyIdentityBytesBacked(new Bytes(keyCust),
-      new Bytes(Bytes.toBytes(keyNamespace)), new Bytes(keyMetadataHash));
+    if (keyMetadata == null || keyMetadata.isEmpty()) {
+      throw new IOException("key_metadata must not be empty");
+    }
+    ManagedKeyIdentity fullKeyIdentity = ManagedKeyIdentityUtils.fullKeyIdentityFromMetadata(
+      new Bytes(keyCust), new Bytes(Bytes.toBytes(keyNamespace)), keyMetadata);
     String encodedCust = LOG.isInfoEnabled() ? fullKeyIdentity.getCustodianEncoded() : null;
     String encodedHash = LOG.isInfoEnabled() ? fullKeyIdentity.getPartialIdentityEncoded() : null;
     LOG.info("Disabling managed key with metadata hash: {} for custodian: {} under namespace: {}",
@@ -241,8 +244,7 @@ public class KeymetaAdminImpl extends KeyManagementBase implements KeymetaAdmin 
     }
 
     accessor.disableKey(existingKey);
-    // Eject from cache on all region servers (requires full metadata)
-    ejectManagedKeyDataCacheEntry(keyCust, keyNamespace, existingKey.getKeyMetadata());
+    ejectManagedKeyDataCacheEntry(keyCust, keyNamespace, keyMetadata);
 
     LOG.info("Successfully disabled managed key with metadata hash: {} for custodian: {} under "
       + "namespace: {}", encodedHash, encodedCust, keyNamespace);

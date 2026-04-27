@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.InnerStoreCellComparator;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -132,16 +131,6 @@ public class FixedFileTrailer {
   private byte[] encryptionKey;
 
   /**
-   * The KEK identity (full identity bytes for system/managed key lookup).
-   */
-  private byte[] kekIdentity;
-
-  /**
-   * The KEK metadata
-   */
-  private String kekMetadata;
-
-  /**
    * The {@link HFile} format major version.
    */
   private final int majorVersion;
@@ -221,12 +210,6 @@ public class FixedFileTrailer {
       .setCompressionCodec(compressionCodec.ordinal());
     if (encryptionKey != null) {
       builder.setEncryptionKey(UnsafeByteOperations.unsafeWrap(encryptionKey));
-    }
-    if (kekMetadata != null) {
-      builder.setKekMetadata(kekMetadata);
-    }
-    if (kekIdentity != null && kekIdentity.length > 0) {
-      builder.setKekIdentity(UnsafeByteOperations.unsafeWrap(kekIdentity));
     }
     return builder.build();
   }
@@ -330,12 +313,6 @@ public class FixedFileTrailer {
     if (trailerProto.hasEncryptionKey()) {
       encryptionKey = trailerProto.getEncryptionKey().toByteArray();
     }
-    if (trailerProto.hasKekMetadata()) {
-      kekMetadata = trailerProto.getKekMetadata();
-    }
-    if (trailerProto.hasKekIdentity()) {
-      kekIdentity = trailerProto.getKekIdentity().toByteArray();
-    }
   }
 
   /**
@@ -384,11 +361,6 @@ public class FixedFileTrailer {
     append(sb, "comparatorClassName=" + comparatorClassName);
     if (majorVersion >= 3) {
       append(sb, "encryptionKey=" + (encryptionKey != null ? "PRESENT" : "NONE"));
-      append(sb,
-        "kekIdentity=" + (kekIdentity != null
-          ? ManagedKeyProvider.encodeToStr(kekIdentity, 0, kekIdentity.length)
-          : "NONE"));
-      append(sb, "kekMetadata=" + (kekMetadata != null ? "PRESENT" : "NONE"));
     }
     append(sb, "majorVersion=" + majorVersion);
     append(sb, "minorVersion=" + minorVersion);
@@ -671,22 +643,6 @@ public class FixedFileTrailer {
 
   public void setEncryptionKey(byte[] keyBytes) {
     this.encryptionKey = keyBytes;
-  }
-
-  public String getKEKMetadata() {
-    return kekMetadata;
-  }
-
-  public void setKEKMetadata(String kekMetadata) {
-    this.kekMetadata = kekMetadata;
-  }
-
-  public byte[] getKekIdentity() {
-    return kekIdentity;
-  }
-
-  public void setKekIdentity(byte[] kekIdentity) {
-    this.kekIdentity = kekIdentity;
   }
 
   /**

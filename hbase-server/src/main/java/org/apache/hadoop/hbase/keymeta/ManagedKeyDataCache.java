@@ -86,11 +86,9 @@ public class ManagedKeyDataCache extends KeyManagementBase {
    * @param keyMetadata     the key metadata string, or null if partialIdentity is provided
    * @param wrappedKey      the DEK key material encrypted with the corresponding KEK, if available
    * @return the corresponding ManagedKeyData entry, or null if not found
-   * @throws IOException  if an error occurs while loading from KeymetaTableAccessor
-   * @throws KeyException if an error occurs while loading from KeymetaTableAccessor
    */
   public ManagedKeyData getEntry(ManagedKeyIdentity fullKeyIdentity, String keyMetadata,
-    byte[] wrappedKey) throws IOException, KeyException {
+    byte[] wrappedKey) {
     Preconditions.checkArgument(
       fullKeyIdentity.getPartialIdentityLength() > 0 || keyMetadata != null,
       "Exactly one of partialIdentity or keyMetadata must be non-empty");

@@ -119,7 +119,7 @@ public final class Encryption {
     }
 
     public Context setKey(byte[] key) {
-      super.setKey(new SecretKeySpec(key, getCipher().getName()));
+      super.setKey(new SecretKeySpec(key, getCipher().getKeyAlgorithm()));
       return this;
     }
   }

@@ -32,4 +32,7 @@ message WrappedKey {
   optional bytes iv = 4;
   optional bytes hash = 5;
   optional string hash_algorithm = 6 [default = "MD5"];
+  optional string cipher_name = 7;
+  optional bytes kek_identity = 8;
+  optional string kek_metadata = 9;
 }

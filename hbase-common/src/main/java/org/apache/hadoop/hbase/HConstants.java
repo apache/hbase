@@ -1278,6 +1278,9 @@ public final class HConstants {
   /** Default cipher for encryption */
   public static final String CIPHER_AES = "AES";
 
+  /** AES-256-GCM cipher for authenticated encryption */
+  public static final String CIPHER_AES_256_GCM = "AES_256_GCM";
+
   /** Configuration key for the crypto algorithm provider, a class name */
   public static final String CRYPTO_CIPHERPROVIDER_CONF_KEY = "hbase.crypto.cipherprovider";
 

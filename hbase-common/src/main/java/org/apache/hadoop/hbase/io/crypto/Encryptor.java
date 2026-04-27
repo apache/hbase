@@ -18,49 +18,27 @@
 package org.apache.hadoop.hbase.io.crypto;
 
 import java.io.OutputStream;
-import java.security.Key;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Encryptors apply a cipher to an OutputStream to produce ciphertext.
  */
 @InterfaceAudience.Public
-public interface Encryptor {
-
-  /**
-   * Set the secret key
-   */
-  public void setKey(Key key);
-
-  /**
-   * Get the expected length for the initialization vector
-   * @return the expected length for the initialization vector
-   */
-  public int getIvLength();
-
-  /**
-   * Get the cipher's internal block size
-   * @return the cipher's internal block size
-   */
-  public int getBlockSize();
-
-  /**
-   * Get the initialization vector
-   */
-  public byte[] getIv();
-
-  /**
-   * Set the initialization vector
-   */
-  public void setIv(byte[] iv);
+public interface Encryptor extends CipherOperator {
 
   /**
    * Create a stream for encryption
    */
-  public OutputStream createEncryptionStream(OutputStream out);
+  OutputStream createEncryptionStream(OutputStream out);
 
   /**
-   * Reset state, reinitialize with the key and iv
+   * Return the number of IV increments to apply after encrypting data of the given ciphertext size.
+   * For CTR mode, this is based on the number of blocks; for GCM mode, each encrypt operation uses
+   * a single nonce so the increment is always 1.
+   * @param ciphertextSize the size of the ciphertext produced
+   * @return the IV increment value
    */
-  void reset();
+  default int getIvIncrement(int ciphertextSize) {
+    return 1 + (ciphertextSize / getBlockSize());
+  }
 }

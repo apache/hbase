@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.io.crypto.DefaultCipherProvider;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyStoreKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyStoreKeyProvider;
-import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -130,7 +129,7 @@ public class EncryptionTest {
           context.setKey(context.getCipher().getRandomKey());
         } else {
           // This will be a wrapped key from schema
-          context.setKey(EncryptionUtil.unwrapKey(conf,
+          context.setKey(SecurityUtil.unwrapKey(conf,
             conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase"), key));
         }
         byte[] iv = null;

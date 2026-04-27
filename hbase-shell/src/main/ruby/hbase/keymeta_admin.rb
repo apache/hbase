@@ -52,10 +52,9 @@ module Hbase
       @admin.disableKeyManagement(cust, namespace)
     end
 
-    def disable_managed_key(key_info, key_metadata_hash_base64)
+    def disable_managed_key(key_info, key_metadata)
       cust, namespace = extract_cust_info(key_info)
-      key_metadata_hash_bytes = decode_to_bytes(key_metadata_hash_base64)
-      @admin.disableManagedKey(cust, namespace, key_metadata_hash_bytes)
+      @admin.disableManagedKey(cust, namespace, key_metadata)
     end
 
     def rotate_managed_key(key_info)

@@ -45,10 +45,12 @@ java_import org.apache.hadoop.hbase.util.Bytes
 java_import org.apache.hadoop.hbase.keymeta.KeymetaServiceEndpoint
 java_import org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor
 java_import org.apache.hadoop.hbase.keymeta.KeyIdentitySingleArrayBacked
-java_import org.apache.hadoop.hbase.security.EncryptionUtil
+java_import org.apache.hadoop.hbase.security.SecurityUtil
+java_import org.apache.hadoop.hbase.shaded.protobuf.generated.EncryptionProtos
 java_import java.security.KeyStore
 java_import java.security.MessageDigest
 java_import javax.crypto.spec.SecretKeySpec
+java_import java.io.ByteArrayInputStream
 java_import java.io.FileOutputStream
 java_import java.net.URLEncoder
 java_import java.util.Base64
@@ -426,12 +428,13 @@ module Hbase
         # Remove ENCRYPTION_KEY and set ENCRYPTION_KEY_NAMESPACE so server resolves key via CF attribute
         command(:alter, table_name,
                 { 'NAME' => cf_name,
-                  'CONFIGURATION' => { 'ENCRYPTION_KEY' => '',
+                  'CONFIGURATION' => { 'ENCRYPTION' => 'AES_256_GCM', 'ENCRYPTION_KEY' => '',
                                        'ENCRYPTION_KEY_NAMESPACE' => namespace } })
       else
         # Remove ENCRYPTION_KEY only (server would resolve via global namespace only)
         command(:alter, table_name,
-                { 'NAME' => cf_name, 'CONFIGURATION' => { 'ENCRYPTION_KEY' => '' } })
+                { 'NAME' => cf_name, 'CONFIGURATION' => { 'ENCRYPTION' => 'AES_256_GCM',
+                                                          'ENCRYPTION_KEY' => '' } })
       end
 
       puts "      >> Altered #{table_name} CF #{cf_name} to use namespace #{namespace}"
@@ -512,17 +515,19 @@ module Hbase
 
             assert_not_nil(trailer.getEncryptionKey)
 
+            wrapped_key = EncryptionProtos::WrappedKey::parser()
+              .parseDelimitedFrom(ByteArrayInputStream.new(trailer.getEncryptionKey));
             if is_key_management_enabled
-              assert_not_nil(trailer.getKEKMetadata)
-              assert_not_nil(trailer.getKekIdentity)
-              assert_true(trailer.getKekIdentity.length > 0)
+              assert_not_nil(wrapped_key.getKekMetadata)
+              assert_not_nil(wrapped_key.getKekIdentity)
+              assert_true(wrapped_key.getKekIdentity.size > 0)
             else
-              assert_nil(trailer.getKEKMetadata)
-              assert_true(trailer.getKekIdentity.nil? || trailer.getKekIdentity.length == 0)
+              assert_false(wrapped_key.hasKekMetadata)
+              assert_false(wrapped_key.hasKekIdentity)
             end
 
             if is_post_migration
-              parsed = KeyIdentitySingleArrayBacked.new(trailer.getKekIdentity)
+              parsed = KeyIdentitySingleArrayBacked.new(wrapped_key.getKekIdentity.toByteArray)
               parsed_namespace = parsed.getNamespaceView().copyBytes()
               assert_equal(expected_namespace.bytes, parsed_namespace) if expected_namespace
               puts "        >> Trailer validation passed - namespace: #{parsed_namespace}"
@@ -631,8 +636,8 @@ module Hbase
       # Get the wrapped key bytes from ENCRYPTION_KEY attribute
       wrapped_key_bytes = cf_descriptor.getEncryptionKey
 
-      # Use EncryptionUtil.unwrapKey with master key alias as subject
-      unwrapped_key = EncryptionUtil.unwrapKey($TEST_CLUSTER.getConfiguration,
+      # Use SecurityUtil.unwrapKey with master key alias as subject
+      unwrapped_key = SecurityUtil.unwrapKey($TEST_CLUSTER.getConfiguration,
                                                @master_key_alias, wrapped_key_bytes)
 
       unwrapped_key.getEncoded

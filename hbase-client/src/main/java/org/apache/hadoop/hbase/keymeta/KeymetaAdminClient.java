@@ -35,10 +35,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BooleanMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.GetManagedKeysResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyMetadataRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SetManagedKeyRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos;
 
 @InterfaceAudience.Public
@@ -111,14 +110,14 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   }
 
   @Override
-  public ManagedKeyData disableManagedKey(byte[] keyCust, String keyNamespace,
-    byte[] keyMetadataHash) throws IOException, KeyException {
+  public ManagedKeyData disableManagedKey(byte[] keyCust, String keyNamespace, String keyMetadata)
+    throws IOException, KeyException {
     try {
       ManagedKeyResponse response = stub.disableManagedKey(null,
-        ManagedKeyEntryRequest.newBuilder()
-          .setKeyCustNs(ManagedKeyRequest.newBuilder().setKeyCust(ByteString.copyFrom(keyCust))
-            .setKeyNamespace(keyNamespace).build())
-          .setKeyMetadataHash(ByteString.copyFrom(keyMetadataHash)).build());
+        ManagedKeyMetadataRequest
+          .newBuilder().setKeyCustNs(ManagedKeyRequest.newBuilder()
+            .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build())
+          .setKeyMetadata(keyMetadata).build());
       return generateKeyData(response);
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
@@ -153,7 +152,7 @@ public class KeymetaAdminClient implements KeymetaAdmin {
     throws IOException, KeyException {
     try {
       ManagedKeyResponse response = stub.setManagedKey(null,
-        SetManagedKeyRequest
+        ManagedKeyMetadataRequest
           .newBuilder().setKeyCustNs(ManagedKeyRequest.newBuilder()
             .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build())
           .setKeyMetadata(keyMetadata).build());

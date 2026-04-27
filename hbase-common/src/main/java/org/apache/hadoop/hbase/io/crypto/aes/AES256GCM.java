@@ -25,30 +25,27 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * AES-128, provided by the JCE
- * <p>
- * Algorithm instances are pooled for reuse, so the cipher provider and mode are configurable but
- * fixed at instantiation.
+ * AES-256-GCM authenticated encryption, provided by the JCE.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class AES extends AESCipher {
+public class AES256GCM extends AESCipher {
 
-  public static final String CIPHER_MODE_KEY = "hbase.crypto.algorithm.aes.mode";
-  public static final String CIPHER_PROVIDER_KEY = "hbase.crypto.algorithm.aes.provider";
+  public static final int KEY_LENGTH = 32;
+  public static final int KEY_LENGTH_BITS = KEY_LENGTH * 8;
+  /** GCM nonce length in bytes (96 bits as recommended by NIST SP 800-38D). */
+  public static final int NONCE_LENGTH = 12;
+  public static final int TAG_LENGTH_BITS = 128;
 
-  private final String cipherMode;
-  private final String cipherProvider;
+  private static final String CIPHER_MODE = "AES/GCM/NoPadding";
 
-  public AES(CipherProvider provider) {
+  public AES256GCM(CipherProvider provider) {
     super(provider);
-    cipherMode = provider.getConf().get(CIPHER_MODE_KEY, "AES/CTR/NoPadding");
-    cipherProvider = provider.getConf().get(CIPHER_PROVIDER_KEY);
   }
 
   @Override
   public String getName() {
-    return "AES";
+    return "AES_256_GCM";
   }
 
   @Override
@@ -58,28 +55,29 @@ public class AES extends AESCipher {
 
   @Override
   public int getIvLength() {
-    return IV_LENGTH;
+    return NONCE_LENGTH;
+  }
+
+  @Override
+  public int getAuthTagLength() {
+    return TAG_LENGTH_BITS / Byte.SIZE;
   }
 
   @Override
   public Encryptor getEncryptor() {
-    return new AESEncryptor(getJCECipherInstance(), getRNG());
+    return new AES256GCMEncryptor(getJCECipherInstance(), getRNG());
   }
 
   @Override
   public Decryptor getDecryptor() {
-    return new AESDecryptor(getJCECipherInstance());
+    return new AES256GCMDecryptor(getJCECipherInstance());
   }
 
   private javax.crypto.Cipher getJCECipherInstance() {
     try {
-      if (cipherProvider != null) {
-        return javax.crypto.Cipher.getInstance(cipherMode, cipherProvider);
-      }
-      return javax.crypto.Cipher.getInstance(cipherMode);
+      return javax.crypto.Cipher.getInstance(CIPHER_MODE);
     } catch (GeneralSecurityException e) {
       throw new RuntimeException(e);
     }
   }
-
 }

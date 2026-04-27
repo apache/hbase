@@ -413,8 +413,9 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
       .withDecompressionContext(
         trailer.getCompressionCodec().getHFileDecompressionContextForConfiguration(conf))
       .withCellComparator(FixedFileTrailer.createComparator(trailer.getComparatorClassName()))
-      .withEncryptionContext(SecurityUtil.createEncryptionContext(conf, path, trailer,
-        readerContext.getManagedKeyDataCache(), readerContext.getSystemKeyCache()))
+      .withEncryptionContext(
+        SecurityUtil.deserializeEncryptionContext(conf, path, trailer.getEncryptionKey(),
+          readerContext.getSystemKeyCache(), readerContext.getManagedKeyDataCache()))
       .build();
   }
 

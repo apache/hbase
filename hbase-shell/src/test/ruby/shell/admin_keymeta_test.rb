@@ -25,6 +25,8 @@ require 'hbase_constants'
 require 'hbase/hbase'
 require 'hbase/table'
 
+java_import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException
+
 module Hbase
   # Test class for keymeta admin functionality
   class KeymetaAdminTest < Test::Unit::TestCase
@@ -90,17 +92,20 @@ module Hbase
       assert(output.include?("#{cust} #{namespace} ACTIVE"),
              "Expected ACTIVE key after enable, got: #{output}")
 
-      # 2. Get the initial KEY-IDENTITY (partial identity encoded) for use in disable_managed_key test
+      # 2. Extract KEY-IDENTITY from show_key_status output, then look up the metadata
+      #    from the server-side admin (raw metadata is never returned to clients over RPC).
       output = capture_stdout { @shell.command('show_key_status', cust_and_namespace) }
       puts "show_key_status output: #{output}"
-      # Output format: ENCODED-KEY NAMESPACE STATUS KEY-IDENTITY REFRESH-TIMESTAMP
       lines = output.split("\n")
       key_line = lines.find { |line| line.include?(cust) && line.include?(namespace) }
       assert_not_nil(key_line, "Could not find key line in output")
-      # KEY-IDENTITY is the 4th column (index 3)
+      # KEY-IDENTITY is the 4th column (ENCODED-KEY NAMESPACE STATUS KEY-IDENTITY REFRESH-TIMESTAMP)
       key_identity_encoded = key_line.split[3]
-      assert_not_nil(key_identity_encoded, "Could not extract KEY-IDENTITY column value")
-      puts "Extracted KEY-IDENTITY (partial identity encoded): #{key_identity_encoded}"
+      assert_not_nil(key_identity_encoded, "Could not extract KEY-IDENTITY from output")
+      puts "Extracted KEY-IDENTITY: #{key_identity_encoded}"
+      key_metadata = $TEST.getKeyMetadata(cust, namespace, key_identity_encoded)
+      assert_not_nil(key_metadata, "Could not retrieve key metadata from server")
+      puts "Retrieved key metadata from server: #{key_metadata}"
 
       # 3. Refresh managed keys
       output = capture_stdout { @shell.command('refresh_managed_keys', cust_and_namespace) }
@@ -112,9 +117,9 @@ module Hbase
       puts "show_key_status after refresh: #{output}"
       assert(output.include?('ACTIVE'), "Expected ACTIVE key after refresh, got: #{output}")
 
-      # 4. Disable a specific managed key (use KEY-IDENTITY column value)
+      # 4. Disable a specific managed key (use KEY-METADATA column value)
       output = capture_stdout do
-        @shell.command('disable_managed_key', cust_and_namespace, key_identity_encoded)
+        @shell.command('disable_managed_key', cust_and_namespace, key_metadata)
       end
       puts "disable_managed_key output: #{output}"
       assert(output.include?("#{cust} #{namespace} DISABLED"),
@@ -178,12 +183,13 @@ module Hbase
     end
 
     define_test 'Test disable operations error handling' do
-      # Test disable_managed_key with invalid KEY-IDENTITY (partial identity encoded)
+      # Test disable_managed_key with non-existent metadata (should fail with Key not found)
       cust_and_namespace = "#{$CUST1_ENCODED}:*"
-      error = assert_raises(ArgumentError) do
-        @shell.command('disable_managed_key', cust_and_namespace, '!!!invalid!!!')
+      error = assert_raises(RemoteWithExtrasException) do
+        @shell.command('disable_managed_key', cust_and_namespace, 'nonexistent_metadata')
       end
-      assert_match(/Failed to decode Base64 encoded string '!!!invalid!!!'/, error.message)
+      assert_true(error.is_do_not_retry)
+      assert_match(/Key not found/, error.message)
 
       # Test disable_key_management on non-existent namespace (should succeed, no-op)
       cust_and_namespace = "#{$CUST1_ENCODED}:nonexistent_for_disable"

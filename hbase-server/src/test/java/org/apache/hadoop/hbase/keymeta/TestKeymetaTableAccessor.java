@@ -74,7 +74,7 @@ import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -505,8 +505,7 @@ public class TestKeymetaTableAccessor {
 
     private ManagedKeyData setupActiveKey(byte[] custId, Result result) throws Exception {
       ManagedKeyData keyData = managedKeyProvider.getManagedKey(KEY_IDENTITY_PREFIX);
-      byte[] dekWrappedBySTK =
-        EncryptionUtil.wrapKey(conf, null, keyData.getTheKey(), latestSystemKey.getTheKey());
+      byte[] dekWrappedBySTK = SecurityUtil.wrapKey(conf, keyData.getTheKey(), latestSystemKey);
       when(result.getValue(eq(KEY_META_INFO_FAMILY), eq(DEK_WRAPPED_BY_STK_QUAL_BYTES)))
         .thenReturn(dekWrappedBySTK);
       when(result.getValue(eq(KEY_META_INFO_FAMILY), eq(DEK_CHECKSUM_QUAL_BYTES)))

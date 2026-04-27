@@ -80,7 +80,7 @@ public interface KeymetaAdmin {
    * Disables key management for the specified custodian and namespace. First adds a DISABLED state
    * marker for the (custodian, namespace) so no new ACTIVE key is retrieved; then enumerates all
    * managed keys for that scope and disables each via the same semantics as
-   * {@link #disableManagedKey(byte[], String, byte[])}. New data written for this scope will not be
+   * {@link #disableManagedKey(byte[], String, String)}. New data written for this scope will not be
    * encrypted.
    * @param keyCust      The key custodian identifier.
    * @param keyNamespace The namespace for the key management.
@@ -94,15 +94,15 @@ public interface KeymetaAdmin {
 
   /**
    * Disables the specific managed key identified by the specified custodian, namespace, and
-   * metadata hash.
-   * @param keyCust         The key custodian identifier.
-   * @param keyNamespace    The namespace for the key management.
-   * @param keyMetadataHash The key metadata hash.
+   * metadata.
+   * @param keyCust      The key custodian identifier.
+   * @param keyNamespace The namespace for the key management.
+   * @param keyMetadata  The key metadata.
    * @return A {@link ManagedKeyData} object identifying the key and its current status.
    * @throws IOException  if an error occurs while disabling the managed key.
    * @throws KeyException if an error occurs while disabling the managed key.
    */
-  ManagedKeyData disableManagedKey(byte[] keyCust, String keyNamespace, byte[] keyMetadataHash)
+  ManagedKeyData disableManagedKey(byte[] keyCust, String keyNamespace, String keyMetadata)
     throws IOException, KeyException;
 
   /**

@@ -27,17 +27,17 @@ module Shell
     class DisableManagedKey < KeymetaCommandBase
       def help
         <<-EOF
-Disable a managed key for a given cust:namespace (cust in Base64 encoded) and key metadata hash
-(Base64 encoded). If no namespace is specified, the global namespace (*) is used.
+Disable a managed key for a given cust:namespace (cust in Base64 encoded) and key metadata.
+If no namespace is specified, the global namespace (*) is used.
 
 Example:
-  hbase> disable_managed_key 'cust:namespace key_metadata_hash_base64'
-  hbase> disable_managed_key 'cust key_metadata_hash_base64'
+  hbase> disable_managed_key 'cust:namespace', 'key_metadata'
+  hbase> disable_managed_key 'cust', 'key_metadata'
         EOF
       end
 
-      def command(key_info, key_metadata_hash_base64)
-        statuses = [keymeta_admin.disable_managed_key(key_info, key_metadata_hash_base64)]
+      def command(key_info, key_metadata)
+        statuses = [keymeta_admin.disable_managed_key(key_info, key_metadata)]
         print_key_statuses(statuses)
       end
     end
