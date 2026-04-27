@@ -22,33 +22,28 @@ import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getClientPrinc
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getKeytabFileForTesting;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getPrincipalForTesting;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getSecuredConfiguration;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ SecurityTests.class, SmallTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestUsersOperationsWithSecureHadoop {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestUsersOperationsWithSecureHadoop.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final File KEYTAB_FILE =
@@ -62,19 +57,22 @@ public class TestUsersOperationsWithSecureHadoop {
 
   private static String CLIENT_NAME;
 
-  @BeforeClass
+  private static String OTHER_CLIENT_NAME;
+
+  @BeforeAll
   public static void setUp() throws Exception {
     KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
     PRINCIPAL = "hbase/" + HOST;
     CLIENT_NAME = "foo";
-    KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL, CLIENT_NAME);
+    OTHER_CLIENT_NAME = "bar";
+    KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL, CLIENT_NAME, OTHER_CLIENT_NAME);
     HBaseKerberosUtils.setPrincipalForTesting(PRINCIPAL + "@" + KDC.getRealm());
     HBaseKerberosUtils.setKeytabFileForTesting(KEYTAB_FILE.getAbsolutePath());
     HBaseKerberosUtils.setClientPrincipalForTesting(CLIENT_NAME + "@" + KDC.getRealm());
     HBaseKerberosUtils.setClientKeytabForTesting(KEYTAB_FILE.getAbsolutePath());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     if (KDC != null) {
       KDC.stop();
@@ -107,8 +105,8 @@ public class TestUsersOperationsWithSecureHadoop {
     User.login(conf, HBaseKerberosUtils.KRB_KEYTAB_FILE, HBaseKerberosUtils.KRB_PRINCIPAL,
       "localhost");
     UserGroupInformation successLogin = UserGroupInformation.getLoginUser();
-    assertFalse("ugi should be different in in case success login",
-      defaultLogin.equals(successLogin));
+    assertFalse(defaultLogin.equals(successLogin),
+      "ugi should be different in in case success login");
   }
 
   @Test
@@ -124,7 +122,7 @@ public class TestUsersOperationsWithSecureHadoop {
     UserGroupInformation.setConfiguration(conf);
 
     UserProvider provider = UserProvider.instantiate(conf);
-    assertTrue("Client principal or keytab is empty", provider.shouldLoginFromKeytab());
+    assertTrue(provider.shouldLoginFromKeytab(), "Client principal or keytab is empty");
 
     provider.login(AuthUtil.HBASE_CLIENT_KEYTAB_FILE, AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL);
     User loginUser = provider.getCurrent();
@@ -133,7 +131,7 @@ public class TestUsersOperationsWithSecureHadoop {
   }
 
   @Test
-  public void testAuthUtilLogin() throws Exception {
+  public void testAuthUtilLoginWithExistingLoginUser() throws Exception {
     String clientKeytab = getClientKeytabForTesting();
     String clientPrincipal = getClientPrincipalForTesting();
     Configuration conf = getSecuredConfiguration();
@@ -141,9 +139,41 @@ public class TestUsersOperationsWithSecureHadoop {
     conf.set(AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL, clientPrincipal);
     UserGroupInformation.setConfiguration(conf);
 
+    UserGroupInformation.loginUserFromKeytab(CLIENT_NAME, clientKeytab);
+
     User user = AuthUtil.loginClient(conf);
     assertTrue(user.isLoginFromKeytab());
     assertEquals(CLIENT_NAME, user.getShortName());
     assertEquals(getClientPrincipalForTesting(), user.getName());
+  }
+
+  @Test
+  public void testAuthUtilLoginWithDifferentExistingUser() throws Exception {
+    String clientKeytab = getClientKeytabForTesting();
+    String clientPrincipal = getClientPrincipalForTesting();
+    Configuration conf = getSecuredConfiguration();
+    conf.set(AuthUtil.HBASE_CLIENT_KEYTAB_FILE, clientKeytab);
+    conf.set(AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL, clientPrincipal);
+    UserGroupInformation.setConfiguration(conf);
+
+    // Login with other principal first
+    String otherPrincipal = OTHER_CLIENT_NAME + "@" + KDC.getRealm();
+    UserGroupInformation.loginUserFromKeytab(otherPrincipal, clientKeytab);
+
+    User user = AuthUtil.loginClient(conf);
+    assertTrue(user.isLoginFromKeytab());
+    // The existing login user (bar) doesn't match the principal configured in
+    // HBASE_CLIENT_KERBEROS_PRINCIPAL (foo), so loginClient should re-login
+    // with the configured principal.
+    assertEquals(CLIENT_NAME, user.getShortName());
+    assertEquals(getClientPrincipalForTesting(), user.getName());
+
+    conf.set(AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL, otherPrincipal);
+
+    user = AuthUtil.loginClient(conf);
+    assertTrue(user.isLoginFromKeytab());
+    // After updating HBASE_CLIENT_KERBEROS_PRINCIPAL to bar, loginClient should re-login with bar.
+    assertEquals(OTHER_CLIENT_NAME, user.getShortName());
+    assertEquals(otherPrincipal, user.getName());
   }
 }

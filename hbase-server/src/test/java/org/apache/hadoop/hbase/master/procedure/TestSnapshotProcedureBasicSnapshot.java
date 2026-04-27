@@ -17,25 +17,21 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSnapshotProcedureBasicSnapshot extends TestSnapshotProcedure {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotProcedureBasicSnapshot.class);
 
   @Test
   public void testSimpleSnapshotTable() throws Exception {
@@ -44,7 +40,7 @@ public class TestSnapshotProcedureBasicSnapshot extends TestSnapshotProcedure {
     SnapshotTestingUtils.confirmSnapshotValid(TEST_UTIL, snapshotProto, TABLE_NAME, CF);
   }
 
-  @Test(expected = org.apache.hadoop.hbase.snapshot.SnapshotCreationException.class)
+  @Test
   public void testClientTakingTwoSnapshotOnSameTable() throws Exception {
     Thread first = new Thread("first-client") {
       @Override
@@ -62,10 +58,11 @@ public class TestSnapshotProcedureBasicSnapshot extends TestSnapshotProcedure {
     // we don't allow different snapshot with same name
     SnapshotDescription snapshotWithSameName =
       new SnapshotDescription(SNAPSHOT_NAME, TABLE_NAME, SnapshotType.SKIPFLUSH);
-    TEST_UTIL.getAdmin().snapshot(snapshotWithSameName);
+    assertThrows(org.apache.hadoop.hbase.snapshot.SnapshotCreationException.class,
+      () -> TEST_UTIL.getAdmin().snapshot(snapshotWithSameName));
   }
 
-  @Test(expected = org.apache.hadoop.hbase.snapshot.SnapshotCreationException.class)
+  @Test
   public void testClientTakeSameSnapshotTwice() throws IOException, InterruptedException {
     Thread first = new Thread("first-client") {
       @Override
@@ -80,6 +77,7 @@ public class TestSnapshotProcedureBasicSnapshot extends TestSnapshotProcedure {
     };
     first.start();
     Thread.sleep(1000);
-    TEST_UTIL.getAdmin().snapshot(snapshot);
+    assertThrows(org.apache.hadoop.hbase.snapshot.SnapshotCreationException.class,
+      () -> TEST_UTIL.getAdmin().snapshot(snapshot));
   }
 }

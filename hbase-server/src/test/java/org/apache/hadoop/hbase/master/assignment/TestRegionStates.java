@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -25,7 +25,6 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -36,24 +35,20 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionStates {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionStates.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionStates.class);
 
@@ -62,7 +57,7 @@ public class TestRegionStates {
   private static ThreadPoolExecutor threadPool;
   private static ExecutorCompletionService<Object> executorService;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     threadPool = Threads.getBoundedCachedThreadPool(32, 60L, TimeUnit.SECONDS,
       new ThreadFactoryBuilder().setNameFormat("ProcedureDispatcher-pool-%d").setDaemon(true)
@@ -71,16 +66,16 @@ public class TestRegionStates {
     executorService = new ExecutorCompletionService<>(threadPool);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     threadPool.shutdown();
   }
 
-  @Before
+  @BeforeEach
   public void testSetup() {
   }
 
-  @After
+  @AfterEach
   public void testTearDown() throws Exception {
     while (true) {
       Future<Object> f = executorService.poll();

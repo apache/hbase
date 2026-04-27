@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #
 #
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -25,89 +27,92 @@
 # the hirb.rb HBase Shell script; they don't make much sense elsewhere.
 # For example, the exists method on Admin class prints to the formatter
 # whether the table exists and returns nil regardless.
-include Java
 
-java_import('java.lang.Integer') { |_package, name| "J#{name}" }
-java_import('java.lang.Long') { |_package, name| "J#{name}" }
-java_import('java.lang.Boolean') { |_package, name| "J#{name}" }
-
+# HBase constants module providing access to HBase Java constants and
+# dynamically loading column family and table descriptor constants
 module HBaseConstants
-  ALLOW_PARTIAL_RESULTS = 'ALLOW_PARTIAL_RESULTS'.freeze
-  ALL_METRICS = 'ALL_METRICS'.freeze
-  ATTRIBUTES = 'ATTRIBUTES'.freeze
-  AUTHORIZATIONS = 'AUTHORIZATIONS'.freeze
-  BATCH = 'BATCH'.freeze
-  CACHE = 'CACHE'.freeze
-  CACHE_BLOCKS = 'CACHE_BLOCKS'.freeze
-  CLASSNAME = 'CLASSNAME'.freeze
-  CLONE_SFT = 'CLONE_SFT'.freeze
-  CLUSTER_KEY = 'CLUSTER_KEY'.freeze
-  COLUMN = 'COLUMN'.freeze
-  COLUMNS = 'COLUMNS'.freeze
-  CONFIG = 'CONFIG'.freeze
+  include Java
+
+  java_import('java.lang.Integer') { |_package, name| "J#{name}" }
+  java_import('java.lang.Long') { |_package, name| "J#{name}" }
+  java_import('java.lang.Boolean') { |_package, name| "J#{name}" }
+
+  ALLOW_PARTIAL_RESULTS = 'ALLOW_PARTIAL_RESULTS'
+  ALL_METRICS = 'ALL_METRICS'
+  ATTRIBUTES = 'ATTRIBUTES'
+  AUTHORIZATIONS = 'AUTHORIZATIONS'
+  BATCH = 'BATCH'
+  CACHE = 'CACHE'
+  CACHE_BLOCKS = 'CACHE_BLOCKS'
+  CLASSNAME = 'CLASSNAME'
+  CLONE_SFT = 'CLONE_SFT'
+  CLUSTER_KEY = 'CLUSTER_KEY'
+  COLUMN = 'COLUMN'
+  COLUMNS = 'COLUMNS'
+  CONFIG = 'CONFIG'
   CONFIGURATION = org.apache.hadoop.hbase.HConstants::CONFIGURATION
-  CONSISTENCY = 'CONSISTENCY'.freeze
-  COPROCESSOR = 'COPROCESSOR'.freeze
-  DATA = 'DATA'.freeze
-  ENDPOINT_CLASSNAME = 'ENDPOINT_CLASSNAME'.freeze
-  FILTER = 'FILTER'.freeze
+  CONSISTENCY = 'CONSISTENCY'
+  COPROCESSOR = 'COPROCESSOR'
+  DATA = 'DATA'
+  ENDPOINT_CLASSNAME = 'ENDPOINT_CLASSNAME'
+  FILTER = 'FILTER'
   FOREVER = org.apache.hadoop.hbase.HConstants::FOREVER
-  FORMATTER = 'FORMATTER'.freeze
-  FORMATTER_CLASS = 'FORMATTER_CLASS'.freeze
-  INTERVAL = 'INTERVAL'.freeze
+  FORMATTER = 'FORMATTER'
+  FORMATTER_CLASS = 'FORMATTER_CLASS'
+  INTERVAL = 'INTERVAL'
   IN_MEMORY = org.apache.hadoop.hbase.HConstants::IN_MEMORY
   IN_MEMORY_COMPACTION = org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder::IN_MEMORY_COMPACTION
-  ISOLATION_LEVEL = 'ISOLATION_LEVEL'.freeze
-  IS_ROOT = 'IS_ROOT'.freeze
-  JAR_PATH = 'JAR_PATH'.freeze
-  LIMIT = 'LIMIT'.freeze
-  LOCALITY_THRESHOLD = 'LOCALITY_THRESHOLD'.freeze
-  MAXLENGTH = 'MAXLENGTH'.freeze
-  MAX_RESULT_SIZE = 'MAX_RESULT_SIZE'.freeze
+  ISOLATION_LEVEL = 'ISOLATION_LEVEL'
+  IS_ROOT = 'IS_ROOT'
+  JAR_PATH = 'JAR_PATH'
+  LIMIT = 'LIMIT'
+  LOCALITY_THRESHOLD = 'LOCALITY_THRESHOLD'
+  MAXLENGTH = 'MAXLENGTH'
+  MAX_RESULT_SIZE = 'MAX_RESULT_SIZE'
   METADATA = org.apache.hadoop.hbase.HConstants::METADATA
-  METHOD = 'METHOD'.freeze
-  METRICS = 'METRICS'.freeze
+  METHOD = 'METHOD'
+  METRICS = 'METRICS'
   NAME = org.apache.hadoop.hbase.HConstants::NAME
-  NAMESPACE = 'NAMESPACE'.freeze
-  NAMESPACES = 'NAMESPACES'.freeze
-  NONE = 'NONE'.freeze
-  NUMREGIONS = 'NUMREGIONS'.freeze
-  POLICY = 'POLICY'.freeze
-  PRIORITY = 'PRIORITY'.freeze
-  PROPERTIES = 'PROPERTIES'.freeze
-  RAW = 'RAW'.freeze
-  READ_TYPE = 'READ_TYPE'.freeze
-  REGEX = 'REGEX'.freeze
-  REGIONSERVER = 'REGIONSERVER'.freeze
-  REGION_REPLICATION = 'REGION_REPLICATION'.freeze
-  REGION_REPLICA_ID = 'REGION_REPLICA_ID'.freeze
-  REMOTE_WAL_DIR = 'REMOTE_WAL_DIR'.freeze
-  REPLICATION_SCOPE = 'REPLICATION_SCOPE'.freeze
+  NAMESPACE = 'NAMESPACE'
+  NAMESPACES = 'NAMESPACES'
+  NONE = 'NONE'
+  NUMREGIONS = 'NUMREGIONS'
+  POLICY = 'POLICY'
+  PRIORITY = 'PRIORITY'
+  PROPERTIES = 'PROPERTIES'
+  RAW = 'RAW'
+  READ_TYPE = 'READ_TYPE'
+  REGEX = 'REGEX'
+  REGIONSERVER = 'REGIONSERVER'
+  REGION_REPLICATION = 'REGION_REPLICATION'
+  REGION_REPLICA_ID = 'REGION_REPLICA_ID'
+  REMOTE_WAL_DIR = 'REMOTE_WAL_DIR'
+  REPLICATION_SCOPE = 'REPLICATION_SCOPE'
   REPLICATION_SCOPE_BYTES = org.apache.hadoop.hbase.client.ColumnFamilyDescriptor::REPLICATION_SCOPE_BYTES
-  RESTORE_ACL = 'RESTORE_ACL'.freeze
-  REVERSED = 'REVERSED'.freeze
-  ROWPREFIXFILTER = 'ROWPREFIXFILTER'.freeze
-  SERIAL = 'SERIAL'.freeze
-  SERVER_NAME = 'SERVER_NAME'.freeze
-  SKIP_FLUSH = 'SKIP_FLUSH'.freeze
-  SPLITALGO = 'SPLITALGO'.freeze
-  SPLITS = 'SPLITS'.freeze
-  SPLITS_FILE = 'SPLITS_FILE'.freeze
-  STARTROW = 'STARTROW'.freeze
-  STATE = 'STATE'.freeze
-  STOPROW = 'STOPROW'.freeze
-  TABLE = 'TABLE'.freeze
-  TABLE_CFS = 'TABLE_CFS'.freeze
-  TABLE_NAME = 'TABLE_NAME'.freeze
-  TABLE_NAMES = 'TABLE_NAMES'.freeze
-  TIMERANGE = 'TIMERANGE'.freeze
-  TIMESTAMP = 'TIMESTAMP'.freeze
-  TYPE = 'TYPE'.freeze
-  USER = 'USER'.freeze
-  VALUE = 'VALUE'.freeze
+  RESTORE_ACL = 'RESTORE_ACL'
+  REVERSED = 'REVERSED'
+  ROWPREFIXFILTER = 'ROWPREFIXFILTER'
+  SERIAL = 'SERIAL'
+  SERVER_NAME = 'SERVER_NAME'
+  SKIP_FLUSH = 'SKIP_FLUSH'
+  SPLITALGO = 'SPLITALGO'
+  SPLITS = 'SPLITS'
+  SPLITS_FILE = 'SPLITS_FILE'
+  STARTROW = 'STARTROW'
+  STATE = 'STATE'
+  STOPROW = 'STOPROW'
+  TABLE = 'TABLE'
+  TABLE_CFS = 'TABLE_CFS'
+  TABLE_NAME = 'TABLE_NAME'
+  TABLE_NAMES = 'TABLE_NAMES'
+  TIMERANGE = 'TIMERANGE'
+  TIMESTAMP = 'TIMESTAMP'
+  TYPE = 'TYPE'
+  USER = 'USER'
+  VALUE = 'VALUE'
   VERSIONS = org.apache.hadoop.hbase.HConstants::VERSIONS
-  VISIBILITY = 'VISIBILITY'.freeze
-  REOPEN_REGIONS = 'REOPEN_REGIONS'.freeze
+  VISIBILITY = 'VISIBILITY'
+  REOPEN_REGIONS = 'REOPEN_REGIONS'
 
   # aliases
   ENDKEY = STOPROW
@@ -119,8 +124,9 @@ module HBaseConstants
     # The constants to import are all in uppercase
     constants.each do |c|
       next if c =~ /DEFAULT_.*/ || c != c.upcase
-      next if eval("defined?(#{c})")
-      eval("#{c} = '#{c}'")
+      next if const_defined?(c)
+
+      const_set(c, c.to_s)
     end
   end
 

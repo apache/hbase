@@ -177,8 +177,15 @@ public class TestStoreFileWriter {
       stores[0].getStorefilesCount());
 
     regions[1].compact(false);
-    assertEquals(flushCount - stores[1].getCompactedFiles().size() + 2,
-      stores[1].getStorefilesCount());
+    // HBASE-30036 skips redundant delete markers during minor compaction, so the historical
+    // file may end up empty and not be created. The count can be +1 or +2.
+    int minorCompactedCount = stores[1].getStorefilesCount();
+    int expectedMin = flushCount - stores[1].getCompactedFiles().size() + 1;
+    int expectedMax = flushCount - stores[1].getCompactedFiles().size() + 2;
+    assertTrue(
+      "Expected store file count between " + expectedMin + " and " + expectedMax + " but was "
+        + minorCompactedCount,
+      minorCompactedCount >= expectedMin && minorCompactedCount <= expectedMax);
 
     verifyCells();
 

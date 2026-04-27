@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -37,47 +36,39 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestTransitRegionStateProcedure {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTransitRegionStateProcedure.class);
 
   private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static byte[] CF = Bytes.toBytes("cf");
 
-  @Rule
-  public TestName name = new TestName();
-
   private TableName tableName;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     UTIL.getConfiguration().setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
     UTIL.startMiniCluster(3);
     UTIL.getAdmin().balancerSwitch(false, true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws IOException, InterruptedException {
-    tableName = TableName.valueOf(name.getMethodName());
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException, InterruptedException {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     UTIL.createTable(tableName, CF);
     UTIL.waitTableAvailable(tableName);
   }
@@ -86,10 +77,10 @@ public class TestTransitRegionStateProcedure {
     ProcedureExecutor<MasterProcedureEnv> procExec =
       UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
-    assertTrue("expected executor to be running", procExec.isRunning());
+    assertTrue(procExec.isRunning(), "expected executor to be running");
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     resetProcExecutorTestingKillFlag();
     UTIL.deleteTable(tableName);

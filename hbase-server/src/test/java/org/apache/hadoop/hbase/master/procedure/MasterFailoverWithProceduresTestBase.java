@@ -23,8 +23,8 @@ import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +35,7 @@ public abstract class MasterFailoverWithProceduresTestBase {
 
   protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
     StartTestingClusterOption option = StartTestingClusterOption.builder().numMasters(2).build();
@@ -46,7 +46,7 @@ public abstract class MasterFailoverWithProceduresTestBase {
     ProcedureTestingUtility.setKillBeforeStoreUpdate(procExec, false);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }

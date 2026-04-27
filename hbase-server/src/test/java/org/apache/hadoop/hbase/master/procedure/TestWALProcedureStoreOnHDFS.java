@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -37,19 +37,15 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestWALProcedureStoreOnHDFS {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALProcedureStoreOnHDFS.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWALProcedureStoreOnHDFS.class);
 
@@ -70,7 +66,7 @@ public class TestWALProcedureStoreOnHDFS {
       }
     };
 
-  @Before
+  @BeforeEach
   public void initConfig() {
     Configuration conf = UTIL.getConfiguration();
 
@@ -83,7 +79,7 @@ public class TestWALProcedureStoreOnHDFS {
     conf.setInt(WALProcedureStore.MAX_SYNC_FAILURE_ROLL_CONF_KEY, 10);
   }
 
-  // No @Before because some tests need to do additional config first
+  // No @BeforeEach because some tests need to do additional config first
   private void setupDFS() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     MiniDFSCluster dfs = UTIL.startMiniDFSCluster(3);
@@ -96,7 +92,7 @@ public class TestWALProcedureStoreOnHDFS {
     store.recoverLease();
   }
 
-  // No @After
+  // No @AfterEach
   @SuppressWarnings("JUnit4TearDownNotRun")
   public void tearDown() throws Exception {
     store.stop(false);
@@ -109,7 +105,7 @@ public class TestWALProcedureStoreOnHDFS {
     }
   }
 
-  @Test(expected = RuntimeException.class)
+  @Test
   public void testWalAbortOnLowReplication() throws Exception {
     setupDFS();
 
@@ -119,13 +115,15 @@ public class TestWALProcedureStoreOnHDFS {
     UTIL.getDFSCluster().stopDataNode(0);
     assertEquals(2, UTIL.getDFSCluster().getDataNodes().size());
 
-    store.insert(new TestProcedure(1, -1), null);
-    for (long i = 2; store.isRunning(); ++i) {
-      assertEquals(2, UTIL.getDFSCluster().getDataNodes().size());
-      store.insert(new TestProcedure(i, -1), null);
-      Thread.sleep(100);
-    }
-    assertFalse(store.isRunning());
+    assertThrows(RuntimeException.class, () -> {
+      store.insert(new TestProcedure(1, -1), null);
+      for (long i = 2; store.isRunning(); ++i) {
+        assertEquals(2, UTIL.getDFSCluster().getDataNodes().size());
+        store.insert(new TestProcedure(i, -1), null);
+        Thread.sleep(100);
+      }
+      assertFalse(store.isRunning());
+    });
   }
 
   @Test
@@ -171,8 +169,8 @@ public class TestWALProcedureStoreOnHDFS {
     }
 
     assertFalse(store.isRunning());
-    assertTrue(reCount.toString(),
-      reCount.get() >= store.getNumThreads() && reCount.get() < thread.length);
+    assertTrue(reCount.get() >= store.getNumThreads() && reCount.get() < thread.length,
+      reCount.toString());
   }
 
   @Test

@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
@@ -38,26 +37,22 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.zookeeper.ReadOnlyZKClient;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMasterShutdown {
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterShutdown.class);
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterShutdown.class);
-
   private HBaseTestingUtil htu;
 
-  @Before
+  @BeforeEach
   public void shutdownCluster() throws IOException {
     if (htu != null) {
       // an extra check in case the test cluster was not terminated after HBaseClassTestRule's
@@ -155,8 +150,9 @@ public class TestMasterShutdown {
       // manager is usually init'ed in time for the RPC to be made. For now, adding an explicit
       // wait() in the test, waiting for the server manager to become available.
       final long timeout = TimeUnit.MINUTES.toMillis(10);
-      assertNotEquals("timeout waiting for server manager to become available.", -1,
-        htu.waitFor(timeout, () -> masterThread.getMaster().getServerManager() != null));
+      assertNotEquals(-1,
+        htu.waitFor(timeout, () -> masterThread.getMaster().getServerManager() != null),
+        "timeout waiting for server manager to become available.");
 
       // Master has come up far enough that we can terminate it without creating a zombie.
       try {

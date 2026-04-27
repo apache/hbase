@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -31,7 +31,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -39,27 +38,22 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore.TablesWithQuotas;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 
 /**
  * Non-HBase cluster unit tests for {@link TablesWithQuotas}.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestTablesWithQuotas {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTablesWithQuotas.class);
 
   private Connection conn;
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conn = mock(Connection.class);
     conf = HBaseConfiguration.create();
@@ -162,13 +156,16 @@ public class TestTablesWithQuotas {
     Multimap<String, TableName> tablesByNamespace = tables.getTablesByNamespace();
     Collection<TableName> tablesInNs = tablesByNamespace.get("ns1");
     assertEquals(3, tablesInNs.size());
-    assertTrue("Unexpected results for ns1: " + tablesInNs,
+    assertTrue(
       tablesInNs.containsAll(Arrays.asList(TableName.valueOf("ns1", "t1"),
-        TableName.valueOf("ns1", "t2"), TableName.valueOf("ns1", "t3"))));
+        TableName.valueOf("ns1", "t2"), TableName.valueOf("ns1", "t3"))),
+      "Unexpected results for ns1: " + tablesInNs);
     tablesInNs = tablesByNamespace.get("ns2");
     assertEquals(2, tablesInNs.size());
-    assertTrue("Unexpected results for ns2: " + tablesInNs, tablesInNs
-      .containsAll(Arrays.asList(TableName.valueOf("ns2", "t1"), TableName.valueOf("ns2", "t2"))));
+    assertTrue(
+      tablesInNs
+        .containsAll(Arrays.asList(TableName.valueOf("ns2", "t1"), TableName.valueOf("ns2", "t2"))),
+      "Unexpected results for ns2: " + tablesInNs);
   }
 
   @Test
@@ -196,7 +193,7 @@ public class TestTablesWithQuotas {
     tables.filterInsufficientlyReportedTables(store);
 
     final Set<TableName> tablesWithQuotas = tables.getTableQuotaTables();
-    assertTrue("Expected to find no tables, but found " + tablesWithQuotas,
-      tablesWithQuotas.isEmpty());
+    assertTrue(tablesWithQuotas.isEmpty(),
+      "Expected to find no tables, but found " + tablesWithQuotas);
   }
 }

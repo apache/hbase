@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.stream.Stream;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -25,12 +26,11 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * Base class for testing clone snapsot
@@ -50,8 +50,17 @@ public class CloneSnapshotFromClientTestBase {
   protected int snapshot1Rows;
   protected Admin admin;
 
-  @Rule
-  public TestName name = new TestName();
+  protected int numReplicas;
+
+  private String testName;
+
+  protected CloneSnapshotFromClientTestBase(int numReplicas) {
+    this.numReplicas = numReplicas;
+  }
+
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(1), Arguments.of(3));
+  }
 
   protected static void setupConfiguration() {
     TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
@@ -63,19 +72,13 @@ public class CloneSnapshotFromClientTestBase {
     TEST_UTIL.getConfiguration().setBoolean("hbase.regionserver.compaction.enabled", false);
   }
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    setupConfiguration();
-    TEST_UTIL.startMiniCluster(3);
-  }
-
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   protected final String getValidMethodName() {
-    return name.getMethodName().replaceAll("[^0-9A-Za-z_]", "_");
+    return testName;
   }
 
   /**
@@ -83,10 +86,12 @@ public class CloneSnapshotFromClientTestBase {
    * snapshotName1) of different states. The tableName, snapshotNames and the number of rows in the
    * snapshot are initialized.
    */
-  @Before
-  public void setup() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
     this.admin = TEST_UTIL.getAdmin();
     long tid = EnvironmentEdgeManager.currentTime();
+    testName = testInfo.getTestMethod().get().getName()
+      + testInfo.getDisplayName().replaceAll("[^0-9A-Za-z_]", "_");
     tableName = TableName.valueOf(getValidMethodName() + tid);
     emptySnapshot = "emptySnaptb-" + tid;
     snapshotName0 = "snaptb0-" + tid;
@@ -97,7 +102,7 @@ public class CloneSnapshotFromClientTestBase {
   }
 
   protected void createTable() throws IOException, InterruptedException {
-    SnapshotTestingUtils.createTable(TEST_UTIL, tableName, getNumReplicas(), FAMILY);
+    SnapshotTestingUtils.createTable(TEST_UTIL, tableName, numReplicas, FAMILY);
   }
 
   protected int numRowsToLoad() {
@@ -105,7 +110,7 @@ public class CloneSnapshotFromClientTestBase {
   }
 
   protected int countRows(Table table) throws IOException {
-    return TEST_UTIL.countRows(table);
+    return HBaseTestingUtil.countRows(table);
   }
 
   private void createTableAndSnapshots() throws Exception {
@@ -142,16 +147,12 @@ public class CloneSnapshotFromClientTestBase {
     admin.enableTable(tableName);
   }
 
-  protected int getNumReplicas() {
-    return 1;
-  }
-
   protected void verifyRowCount(final HBaseTestingUtil util, final TableName tableName,
     long expectedRows) throws IOException {
     SnapshotTestingUtils.verifyRowCount(util, tableName, expectedRows);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (admin.tableExists(tableName)) {
       TEST_UTIL.deleteTable(tableName);

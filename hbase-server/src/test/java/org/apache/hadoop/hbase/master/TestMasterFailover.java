@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -37,29 +37,20 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.Suite;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ FlakeyTests.class, LargeTests.class })
 @RunWith(Suite.class)
 @Suite.SuiteClasses({ TestMasterFailover.TestMasterFailoverDefaultConfig.class,
   TestMasterFailover.TestSimpleMasterFailoverWithKeymeta.class })
 public class TestMasterFailover {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterFailover.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterFailover.class);
-  @Rule
-  public TestName name = new TestName();
 
   protected static void doTestSimpleMasterFailover(HBaseTestingUtil TEST_UTIL) throws Exception {
     final int NUM_MASTERS = 3;
@@ -212,9 +203,9 @@ public class TestMasterFailover {
 
         // meta should remain where it was
         RegionState metaState = MetaTableLocator.getMetaRegionState(hrs.getZooKeeper());
-        assertEquals("hbase:meta should be online on RS", metaState.getServerName(),
-          metaServerName);
-        assertEquals("hbase:meta should be online on RS", State.OPEN, metaState.getState());
+        assertEquals(metaServerName, metaState.getServerName(),
+          "hbase:meta should be online on RS");
+        assertEquals(State.OPEN, metaState.getState(), "hbase:meta should be online on RS");
 
         // Start up a new master
         LOG.info("Starting up a new master");
@@ -225,9 +216,9 @@ public class TestMasterFailover {
 
         // ensure meta is still deployed on RS
         metaState = MetaTableLocator.getMetaRegionState(activeMaster.getZooKeeper());
-        assertEquals("hbase:meta should be online on RS", metaState.getServerName(),
-          metaServerName);
-        assertEquals("hbase:meta should be online on RS", State.OPEN, metaState.getState());
+        assertEquals(metaServerName, metaState.getServerName(),
+          "hbase:meta should be online on RS");
+        assertEquals(State.OPEN, metaState.getState(), "hbase:meta should be online on RS");
 
         // Done, shutdown the cluster
       } finally {

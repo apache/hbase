@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.constraint;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -32,24 +31,20 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Do the complex testing of constraints against a minicluster
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestConstraint {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestConstraint.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestConstraint.class);
 
@@ -59,7 +54,7 @@ public class TestConstraint {
   private static final byte[] row1 = Bytes.toBytes("r1");
   private static final byte[] test = Bytes.toBytes("test");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     util = new HBaseTestingUtil();
     util.getConfiguration().setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
@@ -234,7 +229,7 @@ public class TestConstraint {
     table.close();
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws Exception {
     // cleanup
     CheckWasRunConstraint.wasRun = false;
@@ -242,7 +237,7 @@ public class TestConstraint {
     util.getAdmin().deleteTable(tableName);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     util.shutdownMiniCluster();
   }

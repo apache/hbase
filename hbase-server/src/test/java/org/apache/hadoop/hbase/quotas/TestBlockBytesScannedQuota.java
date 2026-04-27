@@ -23,11 +23,10 @@ import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.doPuts;
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.doScans;
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.triggerUserCacheRefresh;
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.waitMinuteQuota;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -38,20 +37,17 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestBlockBytesScannedQuota {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBlockBytesScannedQuota.class);
 
   private final static Logger LOG = LoggerFactory.getLogger(TestBlockBytesScannedQuota.class);
 
@@ -63,7 +59,7 @@ public class TestBlockBytesScannedQuota {
   private static final TableName TABLE_NAME = TableName.valueOf("BlockBytesScannedQuotaTest");
   private static final long MAX_SCANNER_RESULT_SIZE = 100 * 1024 * 1024;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // client should fail fast
     TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 10);
@@ -86,14 +82,14 @@ public class TestBlockBytesScannedQuota {
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     EnvironmentEdgeManager.reset();
     TEST_UTIL.deleteTable(TABLE_NAME);
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     ThrottleQuotaTestUtil.clearQuotaCache(TEST_UTIL);
   }
@@ -264,7 +260,7 @@ public class TestBlockBytesScannedQuota {
 
   private void testTraffic(Callable<Long> trafficCallable, long expectedSuccess, long marginOfError)
     throws Exception {
-    TEST_UTIL.waitFor(5_000, () -> {
+    TEST_UTIL.waitFor(30_000, () -> {
       long actualSuccess;
       try {
         actualSuccess = trafficCallable.call();

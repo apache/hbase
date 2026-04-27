@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Callable;
@@ -33,26 +32,22 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool.ReferenceType;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@RunWith(Parameterized.class)
-@Category({ MiscTests.class, MediumTests.class })
+@HBaseParameterizedTestTemplate
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 // Medium as it creates 100 threads; seems better to run it isolated
 public class TestIdReadWriteLockWithObjectPool {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIdReadWriteLockWithObjectPool.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestIdReadWriteLockWithObjectPool.class);
@@ -61,14 +56,15 @@ public class TestIdReadWriteLockWithObjectPool {
   private static final int NUM_THREADS = 128;
   private static final int NUM_SECONDS = 15;
 
-  @Parameterized.Parameter
-  public IdReadWriteLockWithObjectPool<Long> idLock;
+  private IdReadWriteLockWithObjectPool<Long> idLock;
 
-  @Parameterized.Parameters
-  public static Iterable<Object[]> data() {
-    return Arrays
-      .asList(new Object[][] { { new IdReadWriteLockWithObjectPool<Long>(ReferenceType.WEAK) },
-        { new IdReadWriteLockWithObjectPool<Long>(ReferenceType.SOFT) } });
+  public TestIdReadWriteLockWithObjectPool(IdReadWriteLockWithObjectPool<Long> idLock) {
+    this.idLock = idLock;
+  }
+
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(new IdReadWriteLockWithObjectPool<Long>(ReferenceType.WEAK)),
+      Arguments.of(new IdReadWriteLockWithObjectPool<Long>(ReferenceType.SOFT)));
   }
 
   private Map<Long, String> idOwner = new ConcurrentHashMap<>();
@@ -118,7 +114,7 @@ public class TestIdReadWriteLockWithObjectPool {
 
   }
 
-  @Test
+  @TestTemplate
   public void testMultipleClients() throws Exception {
     ExecutorService exec = Executors.newFixedThreadPool(NUM_THREADS);
     try {
