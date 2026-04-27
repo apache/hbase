@@ -21,7 +21,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -32,8 +35,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -255,5 +260,49 @@ public class TestStoreFileListFile {
 
     StoreFileList list = storeFileListFile.load(true);
     assertEquals(1, list.getStoreFileCount());
+  }
+
+  @Test
+  public void testReadReferenceFallbackForOldStoreFileEntry() throws IOException {
+    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
+    HRegionFileSystem hfs = mock(HRegionFileSystem.class);
+    when(hfs.getFileSystem()).thenReturn(fs);
+    StoreContext ctx = StoreContext.getBuilder().withFamilyStoreDirectoryPath(testDir)
+      .withRegionFileSystem(hfs).build();
+    FileBasedStoreFileTracker tracker =
+      new FileBasedStoreFileTracker(UTIL.getConfiguration(), true, ctx);
+
+    String referenceFileName = "abcdef0123456789.parentRegion";
+    assertTrue(StoreFileInfo.isReference(referenceFileName));
+    Reference expected = Reference.createTopReference(Bytes.toBytes("split-row"));
+    Path referenceFile = new Path(testDir, referenceFileName);
+    expected.write(fs, referenceFile);
+
+    // Simulate older StoreFileListFile where StoreFileEntry does not contain reference field.
+    StoreFileListFile oldFormatStoreFileListFile = new StoreFileListFile(ctx);
+    oldFormatStoreFileListFile.update(StoreFileList.newBuilder()
+      .addStoreFile(StoreFileEntry.newBuilder().setName(referenceFileName).setSize(1)));
+
+    org.apache.logging.log4j.core.Appender mockAppender =
+      mock(org.apache.logging.log4j.core.Appender.class);
+    when(mockAppender.getName()).thenReturn("mockAppender");
+    when(mockAppender.isStarted()).thenReturn(true);
+    org.apache.logging.log4j.core.Logger logger =
+      (org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
+        .getLogger(FileBasedStoreFileTracker.class);
+    org.apache.logging.log4j.Level oldLevel = logger.getLevel();
+    logger.setLevel(org.apache.logging.log4j.Level.DEBUG);
+    logger.addAppender(mockAppender);
+    try {
+      Reference actual = tracker.readReference(referenceFile);
+      assertEquals(expected, actual);
+      verify(mockAppender, atLeastOnce()).append(
+        argThat(event -> event.getMessage() != null && event.getMessage().getFormattedMessage()
+          .contains("Fallback to reading reference from FS as it is not part of StoreFileEntry. "
+            + "This is when FSFT is reading older version of StoreFileListFile")));
+    } finally {
+      logger.removeAppender(mockAppender);
+      logger.setLevel(oldLevel);
+    }
   }
 }

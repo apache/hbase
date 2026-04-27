@@ -68,7 +68,6 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
 
       // Take a snapshot
       admin.snapshot(snapshotName2, tableName);
-
       // Clone the snapshot to another table
       admin.cloneSnapshot(snapshotName2, clonedTableName);
       SnapshotTestingUtils.waitForTableToBeOnline(TEST_UTIL, clonedTableName);
