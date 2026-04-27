@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_SLOW_LOG_SYS_TABLE_CHORE_DURATION;
-import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT;
-import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.master.waleventtracker.WALEventTrackerTableCreator.WAL_EVENT_TRACKER_ENABLED_DEFAULT;
@@ -545,9 +543,6 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
       uncaughtExceptionHandler =
         (t, e) -> abort("Uncaught exception in executorService thread " + t.getName(), e);
-
-      this.isGlobalReadOnlyEnabled =
-        conf.getBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
 
       // If no master in cluster, skip trying to track one or look for a cluster status.
       if (!this.masterless) {
@@ -2167,12 +2162,6 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     configurationManager.registerObserver(this.rpcServices);
     configurationManager.registerObserver(this.prefetchExecutorNotifier);
     configurationManager.registerObserver(this);
-    if (rsHost != null) {
-      rsHost.registerConfigurationObservers(configurationManager);
-    } else {
-      LOG.warn("Could not register HRegionServer coprocessors to the ConfigurationManager because "
-        + "RegionServerCoprocessorHost is null");
-    }
   }
 
   /*
@@ -3501,10 +3490,16 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       LOG.warn("Failed to initialize SuperUsers on reloading of the configuration");
     }
 
-    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(newConf, this.isGlobalReadOnlyEnabled,
+    boolean originalIsReadOnlyEnabled = CoprocessorConfigurationUtil
+      .areReadOnlyCoprocessorsLoaded(this.conf, CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
+
+    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(newConf, originalIsReadOnlyEnabled,
       this.rsHost, CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, false, this.toString(),
-      val -> this.isGlobalReadOnlyEnabled = val,
-      conf -> this.rsHost = new RegionServerCoprocessorHost(this, newConf));
+      conf -> {
+        this.rsHost = new RegionServerCoprocessorHost(this, conf);
+        CoprocessorConfigurationUtil.updateCoprocessorListInConf(this.conf, conf,
+          CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
+      });
   }
 
   @Override

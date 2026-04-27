@@ -22,7 +22,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -38,6 +37,8 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Strings;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 /**
  * Helper class for coprocessor host when configuration changes.
@@ -46,13 +47,22 @@ import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 public final class CoprocessorConfigurationUtil {
   private static final Logger LOG = LoggerFactory.getLogger(CoprocessorConfigurationUtil.class);
 
+  private static final ImmutableMap<String, List<String>> READONLY_COPROCESSORS =
+    ImmutableMap.of(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      ImmutableList.of(MasterReadOnlyController.class.getName()),
+      CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
+      ImmutableList.of(RegionServerReadOnlyController.class.getName()),
+      CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+      ImmutableList.of(RegionReadOnlyController.class.getName(),
+        BulkLoadReadOnlyController.class.getName(), EndpointReadOnlyController.class.getName()));
+
   private CoprocessorConfigurationUtil() {
   }
 
   /**
    * Check configuration change by comparing current loaded coprocessors with configuration values.
-   * This method is useful when the configuration object has been updated but we need to determine
-   * if coprocessor configuration has actually changed compared to what's currently loaded.
+   * This method is useful when the configuration object has been updated, but we need to determine
+   * if the coprocessor configuration has actually changed compared to what's currently loaded.
    * <p>
    * <b>Note:</b> This method only detects changes in the set of coprocessor class names. It does
    * <b>not</b> detect changes to priority or path for coprocessors that are already loaded with the
@@ -164,31 +174,18 @@ public final class CoprocessorConfigurationUtil {
   }
 
   private static List<String> getReadOnlyCoprocessors(String configurationKey) {
-    return switch (configurationKey) {
-      case CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY -> List
-        .of(MasterReadOnlyController.class.getName());
-
-      case CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY -> List
-        .of(RegionServerReadOnlyController.class.getName());
-
-      case CoprocessorHost.REGION_COPROCESSOR_CONF_KEY -> List.of(
-        RegionReadOnlyController.class.getName(), BulkLoadReadOnlyController.class.getName(),
-        EndpointReadOnlyController.class.getName());
-
-      default -> throw new IllegalArgumentException(
-        "Unsupported coprocessor configuration key: " + configurationKey);
-    };
+    return READONLY_COPROCESSORS.get(configurationKey);
   }
 
   /**
    * This method adds or removes relevant ReadOnlyController coprocessors to the provided
-   * configuration based on whether read-only mode is enabled.
+   * configuration based on whether read-only mode is enabled in the provided Configuration.
    * @param conf               The up-to-date configuration used to determine how to handle
    *                           coprocessors
    * @param coprocessorConfKey The configuration key name
    */
   public static void syncReadOnlyConfigurations(Configuration conf, String coprocessorConfKey) {
-    boolean isReadOnlyModeEnabled = ConfigurationUtil.isReadOnlyModeEnabled(conf);
+    boolean isReadOnlyModeEnabled = ConfigurationUtil.isReadOnlyModeEnabledInConf(conf);
 
     List<String> cpList = getReadOnlyCoprocessors(coprocessorConfKey);
     if (isReadOnlyModeEnabled) {
@@ -196,6 +193,58 @@ public final class CoprocessorConfigurationUtil {
     } else {
       CoprocessorConfigurationUtil.removeCoprocessors(conf, coprocessorConfKey, cpList);
     }
+  }
+
+  /**
+   * Check whether ReadOnlyController coprocessors have been loaded in the provided configuration.
+   * @param conf               the configuration we are checking
+   * @param coprocessorConfKey configuration key used for setting master, region server, or region
+   *                           coprocessors
+   * @return true if the ReadOnlyCoprocessors are loaded in the configuration; false otherwise
+   */
+  public static boolean areReadOnlyCoprocessorsLoaded(Configuration conf,
+    String coprocessorConfKey) {
+    // Using a HashSet will improve performance when searching for read-only coprocessors
+    HashSet<String> allCoprocessors =
+      new HashSet<>(getCoprocessorsFromConfig(conf, coprocessorConfKey));
+    List<String> readOnlyCoprocessors = getReadOnlyCoprocessors(coprocessorConfKey);
+    return allCoprocessors.containsAll(readOnlyCoprocessors);
+  }
+
+  /**
+   * Takes an updated configuration and updates the coprocessors for that configuration key in the
+   * current configuration.
+   * @param currentConf        the configuration currently used by the master, region server, or
+   *                           region
+   * @param updatedConf        the updated version of the configuration whose coprocessors we want
+   *                           to copy
+   * @param coprocessorConfKey configuration key used for setting master, region server, or region
+   *                           coprocessors
+   */
+  public static void updateCoprocessorListInConf(Configuration currentConf,
+    Configuration updatedConf, String coprocessorConfKey) {
+    String[] updatedCoprocessorList = updatedConf.getStrings(coprocessorConfKey);
+    if (updatedCoprocessorList != null) {
+      currentConf.setStrings(coprocessorConfKey, updatedCoprocessorList);
+    } else {
+      currentConf.unset(coprocessorConfKey);
+    }
+  }
+
+  /**
+   * Gets the name of a component based on the provided coprocessor configuration key.
+   * @param coprocessorConfKey configuration key used for setting master, region server, or region
+   *                           coprocessors
+   * @return the component type - Master, Region Server, or Region
+   */
+  public static String getComponentName(String coprocessorConfKey) {
+    return switch (coprocessorConfKey) {
+      case CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY -> "Master";
+      case CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY -> "Region Server";
+      case CoprocessorHost.REGION_COPROCESSOR_CONF_KEY -> "Region";
+      default -> throw new IllegalArgumentException(
+        "Unsupported coprocessor configuration key: " + coprocessorConfKey);
+    };
   }
 
   /**
@@ -212,32 +261,31 @@ public final class CoprocessorConfigurationUtil {
    * @param isMaintenanceMode         whether maintenance mode is active (mainly for HMaster)
    * @param instance                  string value of the instance calling this method (mainly helps
    *                                  with tracking region logging)
-   * @param stateSetter               lambda function that sets the read-only instance variable with
-   *                                  an updated value from the config
    * @param reloadTask                lambda function that reloads coprocessors on the master,
    *                                  region server, or region
    */
   public static void maybeUpdateCoprocessors(Configuration newConf,
     boolean originalIsReadOnlyEnabled, CoprocessorHost<?, ?> coprocessorHost,
     String coprocessorConfKey, boolean isMaintenanceMode, String instance,
-    Consumer<Boolean> stateSetter, CoprocessorReloadTask reloadTask) {
+    CoprocessorReloadTask reloadTask) {
 
-    boolean maybeUpdatedReadOnlyMode = ConfigurationUtil.isReadOnlyModeEnabled(newConf);
+    boolean maybeUpdatedReadOnlyMode = ConfigurationUtil.isReadOnlyModeEnabledInConf(newConf);
     boolean hasReadOnlyModeChanged = originalIsReadOnlyEnabled != maybeUpdatedReadOnlyMode;
     boolean hasCoprocessorConfigChanged = CoprocessorConfigurationUtil
       .checkConfigurationChange(coprocessorHost, newConf, coprocessorConfKey);
 
     // update region server coprocessor if the configuration has changed.
     if ((hasCoprocessorConfigChanged || hasReadOnlyModeChanged) && !isMaintenanceMode) {
-      LOG.info("Updating coprocessors for {} because the configuration has changed", instance);
+      LOG.info("Updating coprocessors for {} {} because the configuration has changed",
+        getComponentName(coprocessorConfKey), instance);
       CoprocessorConfigurationUtil.syncReadOnlyConfigurations(newConf, coprocessorConfKey);
       reloadTask.reload(newConf);
     }
 
     if (hasReadOnlyModeChanged) {
-      stateSetter.accept(maybeUpdatedReadOnlyMode);
-      LOG.info("Config {} has been dynamically changed to {} for {}",
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, maybeUpdatedReadOnlyMode, instance);
+      LOG.info("Config {} has been dynamically changed to {} for {} {}",
+        HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, maybeUpdatedReadOnlyMode,
+        getComponentName(coprocessorConfKey), instance);
     }
   }
 }
