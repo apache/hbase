@@ -27,14 +27,14 @@ import org.junit.jupiter.api.Tag;
 @Tag(LargeTests.TAG)
 @Tag(ClientTests.TAG)
 @HBaseParameterizedTestTemplate(name = "{index}: registryImpl={0}, numHedgedReqs={1}")
-public class TestFromClientSide3 extends FromClientSideTest3 {
+public class TestFromClientSide1 extends FromClientSideTest1 {
 
-  public TestFromClientSide3(Class<? extends ConnectionRegistry> registryImpl, int numHedgedReqs) {
+  public TestFromClientSide1(Class<? extends ConnectionRegistry> registryImpl, int numHedgedReqs) {
     super(registryImpl, numHedgedReqs);
   }
 
   @BeforeAll
-  public static void setUpBeforeAll() throws Exception {
-    startCluster(MultiRowMutationEndpoint.class);
+  public static void setUpBeforeClass() throws Exception {
+    initialize(MultiRowMutationEndpoint.class);
   }
 }
