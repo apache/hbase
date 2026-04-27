@@ -396,7 +396,7 @@ public class MasterFileSystem {
 
   private void negotiateActiveClusterSuffixFile(long wait) throws IOException {
     this.activeClusterSuffix = ActiveClusterSuffix.fromConfig(conf, getClusterId());
-    if (!ConfigurationUtil.isReadOnlyModeEnabled(conf)) {
+    if (!ConfigurationUtil.isReadOnlyModeEnabledInConf(conf)) {
       try {
         // verify the contents against the config set
         ActiveClusterSuffix acs =

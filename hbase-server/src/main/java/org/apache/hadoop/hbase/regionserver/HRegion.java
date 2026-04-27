@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT;
-import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY;
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_LOCAL;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.REGION_NAMES_KEY;
@@ -391,8 +389,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private Path regionWalDir;
   private FileSystem walFS;
-
-  private volatile boolean isGlobalReadOnlyEnabled;
 
   // set to true if the region is restored from snapshot for reading by ClientSideRegionScanner
   private boolean isRestoredRegion = false;
@@ -944,8 +940,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     decorateRegionConfiguration(conf);
 
-    this.isGlobalReadOnlyEnabled =
-      conf.getBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
     CoprocessorConfigurationUtil.syncReadOnlyConfigurations(this.conf,
       CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
 
@@ -8993,11 +8987,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public void onConfigurationChange(Configuration newConf) {
     this.storeHotnessProtector.update(newConf);
 
-    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(newConf, this.isGlobalReadOnlyEnabled,
+    boolean originalIsReadOnlyEnabled = CoprocessorConfigurationUtil
+      .areReadOnlyCoprocessorsLoaded(this.conf, CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
+
+    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(newConf, originalIsReadOnlyEnabled,
       this.coprocessorHost, CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, false, this.toString(),
-      val -> this.isGlobalReadOnlyEnabled = val, conf -> {
+      conf -> {
         decorateRegionConfiguration(conf);
-        this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, newConf);
+        this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
+        CoprocessorConfigurationUtil.updateCoprocessorListInConf(this.conf, conf,
+          CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
       });
   }
 
@@ -9008,12 +9007,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public void registerChildren(ConfigurationManager manager) {
     configurationManager = manager;
     stores.values().forEach(manager::registerObserver);
-    if (coprocessorHost != null) {
-      coprocessorHost.registerConfigurationObservers(manager);
-    } else {
-      LOG.warn("Could not register HRegion coprocessors to the ConfigurationManager because "
-        + "RegionCoprocessorHost is null");
-    }
   }
 
   /**
@@ -9022,12 +9015,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public void deregisterChildren(ConfigurationManager manager) {
     stores.values().forEach(configurationManager::deregisterObserver);
-    if (coprocessorHost != null) {
-      coprocessorHost.deregisterConfigurationObservers(manager);
-    } else {
-      LOG.warn("Could not deregister HRegion coprocessors from the ConfigurationManager because "
-        + "RegionCoprocessorHost is null");
-    }
   }
 
   @Override

@@ -108,7 +108,7 @@ public class TestReadOnlyController {
 
   private static void enableReadOnlyMode() {
     // Dynamically enable Read-Only mode if it is not active
-    if (!ConfigurationUtil.isReadOnlyModeEnabled(conf)) {
+    if (!ConfigurationUtil.isReadOnlyModeEnabledInConf(conf)) {
       LOG.info("Dynamically enabling Read-Only mode by setting {} to true",
         HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
       conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
@@ -118,7 +118,7 @@ public class TestReadOnlyController {
 
   private static void disableReadOnlyMode() {
     // Dynamically disable Read-Only mode if it is active
-    if (ConfigurationUtil.isReadOnlyModeEnabled(conf)) {
+    if (ConfigurationUtil.isReadOnlyModeEnabledInConf(conf)) {
       LOG.info("Dynamically disabling Read-Only mode by setting {} to false",
         HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
       conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, false);

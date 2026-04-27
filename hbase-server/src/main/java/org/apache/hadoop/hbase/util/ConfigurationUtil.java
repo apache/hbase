@@ -116,7 +116,7 @@ public final class ConfigurationUtil {
     return rtn;
   }
 
-  public static boolean isReadOnlyModeEnabled(Configuration conf) {
+  public static boolean isReadOnlyModeEnabledInConf(Configuration conf) {
     return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
       HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
   }
