@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
@@ -27,20 +28,15 @@ import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Basic test for {@link ByteBufferIOEngine}
  */
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestByteBufferIOEngine {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestByteBufferIOEngine.class);
 
   /**
    * Override the {@link BucketEntry} so that we can set an arbitrary offset.
@@ -114,10 +110,10 @@ public class TestByteBufferIOEngine {
       BucketEntry be = createBucketEntry(offset, blockSize);
       ioEngine.read(be);
       ByteBuff dst = getByteBuff(be);
-      Assert.assertEquals(src.remaining(), blockSize);
-      Assert.assertEquals(dst.remaining(), blockSize);
-      Assert.assertEquals(0, ByteBuff.compareTo(src, src.position(), src.remaining(), dst,
-        dst.position(), dst.remaining()));
+      assertEquals(src.remaining(), blockSize);
+      assertEquals(dst.remaining(), blockSize);
+      assertEquals(0, ByteBuff.compareTo(src, src.position(), src.remaining(), dst, dst.position(),
+        dst.remaining()));
     }
     assert testOffsetAtStartNum == 0;
     assert testOffsetAtEndNum == 0;
@@ -189,10 +185,10 @@ public class TestByteBufferIOEngine {
       BucketEntry be = createBucketEntry(offset, blockSize);
       ioEngine.read(be);
       ByteBuff dst = getByteBuff(be);
-      Assert.assertEquals(src.remaining(), blockSize);
-      Assert.assertEquals(dst.remaining(), blockSize);
-      Assert.assertEquals(0, ByteBuff.compareTo(src, src.position(), src.remaining(), dst,
-        dst.position(), dst.remaining()));
+      assertEquals(src.remaining(), blockSize);
+      assertEquals(dst.remaining(), blockSize);
+      assertEquals(0, ByteBuff.compareTo(src, src.position(), src.remaining(), dst, dst.position(),
+        dst.remaining()));
     }
     assert testOffsetAtStartNum == 0;
     assert testOffsetAtEndNum == 0;
