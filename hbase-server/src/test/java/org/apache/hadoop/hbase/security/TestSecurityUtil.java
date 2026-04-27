@@ -1135,14 +1135,14 @@ public class TestSecurityUtil {
         Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
     }
 
-    @Test(expected = KeyException.class)
+    @Test
     public void testUnwrapWithIncorrectKeyFails() throws Exception {
       byte[] keyBytes = new byte[16];
       Bytes.secureRandom(keyBytes);
       Key key = new SecretKeySpec(keyBytes, HConstants.CIPHER_AES);
 
       byte[] wrappedKeyBytes = SecurityUtil.wrapKey(conf, HBASE_KEY, key);
-      SecurityUtil.unwrapKey(conf, "other", wrappedKeyBytes);
+      assertThrows(KeyException.class, () -> SecurityUtil.unwrapKey(conf, "other", wrappedKeyBytes));
     }
 
     @Test
@@ -1294,7 +1294,7 @@ public class TestSecurityUtil {
         Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
     }
 
-    @Test(expected = KeyException.class)
+    @Test
     public void testUnwrapWithIncorrectKeyFails() throws Exception {
       byte[] keyBytes = new byte[Cipher.KEY_LENGTH];
       Bytes.secureRandom(keyBytes);
@@ -1302,7 +1302,8 @@ public class TestSecurityUtil {
       Key key = new SecretKeySpec(keyBytes, algorithm);
 
       byte[] wrappedKeyBytes = SecurityUtil.wrapKey(conf, HBASE_KEY, key);
-      SecurityUtil.unwrapKey(conf, "other", wrappedKeyBytes);
+      assertThrows(KeyException.class,
+        () -> SecurityUtil.unwrapKey(conf, "other", wrappedKeyBytes));
     }
 
     @Test
@@ -1345,12 +1346,13 @@ public class TestSecurityUtil {
       return SecurityUtil.wrapKey(conf, HBASE_KEY, key);
     }
 
-    @Test(expected = KeyException.class)
+    @Test
     public void testHashAlgorithmMismatchWhenFailExpected() throws Exception {
       byte[] wrappedKeyBytes = wrapKeyWithMD5();
       conf.set(Encryption.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, "SHA-384");
       conf.setBoolean(Encryption.CRYPTO_KEY_FAIL_ON_ALGORITHM_MISMATCH_CONF_KEY, true);
-      SecurityUtil.unwrapKey(conf, HBASE_KEY, wrappedKeyBytes);
+      assertThrows(KeyException.class,
+        () -> SecurityUtil.unwrapKey(conf, HBASE_KEY, wrappedKeyBytes));
     }
 
     @Test

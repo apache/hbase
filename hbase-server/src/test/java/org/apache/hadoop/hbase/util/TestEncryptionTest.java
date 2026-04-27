@@ -147,18 +147,18 @@ public class TestEncryptionTest {
   public void testManagedKeyProvider() throws Exception {
     Configuration conf = createManagedKeyProviderConfig();
     EncryptionTest.testKeyProvider(conf);
-    assertTrue("Managed provider should be cached", EncryptionTest.keyProviderResults
-      .containsKey(conf.get(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY)));
+    assertTrue(EncryptionTest.keyProviderResults
+      .containsKey(conf.get(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY)),
+      "Managed provider should be cached");
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testBadManagedKeyProvider() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
     conf.set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY,
       FailingManagedKeyProvider.class.getName());
-    EncryptionTest.testKeyProvider(conf);
-    fail("Instantiation of bad managed key provider should have failed check");
+    assertThrows(IOException.class, () -> EncryptionTest.testKeyProvider(conf));
   }
 
   @Test
@@ -166,28 +166,26 @@ public class TestEncryptionTest {
     Configuration conf = createManagedKeyProviderConfig();
     String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     EncryptionTest.testEncryption(conf, algorithm, null);
-    assertTrue("Managed provider should be cached", EncryptionTest.keyProviderResults
-      .containsKey(conf.get(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY)));
+    assertTrue(EncryptionTest.keyProviderResults
+      .containsKey(conf.get(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY)),
+      "Managed provider should be cached");
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testUnknownCipherWithManagedKeyProvider() throws Exception {
     Configuration conf = createManagedKeyProviderConfig();
-    EncryptionTest.testEncryption(conf, "foobar", null);
-    fail("Test for bogus cipher should have failed with managed key provider");
+    assertThrows(IOException.class, () -> EncryptionTest.testEncryption(conf, "foobar", null));
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testManagedKeyProviderWhenCryptoIsExplicitlyDisabled() throws Exception {
     Configuration conf = createManagedKeyProviderConfig();
     String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     conf.setBoolean(Encryption.CRYPTO_ENABLED_CONF_KEY, false);
-    EncryptionTest.testEncryption(conf, algorithm, null);
-    assertTrue("Managed provider should be cached", EncryptionTest.keyProviderResults
-      .containsKey(conf.get(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY)));
+    assertThrows(IOException.class, () -> EncryptionTest.testEncryption(conf, algorithm, null));
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testManagedKeyProviderWithKeyManagementDisabled() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, false);
@@ -195,8 +193,7 @@ public class TestEncryptionTest {
     // management
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, ManagedKeyStoreKeyProvider.class.getName());
 
-    EncryptionTest.testKeyProvider(conf);
-    fail("Should have failed when using managed provider with key management disabled");
+    assertThrows(IOException.class, () -> EncryptionTest.testKeyProvider(conf));
   }
 
   public static class FailingKeyProvider implements KeyProvider {
