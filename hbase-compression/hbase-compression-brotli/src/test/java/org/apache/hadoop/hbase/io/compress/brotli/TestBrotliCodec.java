@@ -17,20 +17,13 @@
  */
 package org.apache.hadoop.hbase.io.compress.brotli;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.compress.CompressionTestBase;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestBrotliCodec extends CompressionTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBrotliCodec.class);
-
   @Test
   public void testBrotliCodecSmall() throws Exception {
     codecSmallTest(new BrotliCodec());
@@ -47,5 +40,4 @@ public class TestBrotliCodec extends CompressionTestBase {
   public void testBrotliCodecVeryLarge() throws Exception {
     codecVeryLargeTest(new BrotliCodec(), 3); // like text
   }
-
 }

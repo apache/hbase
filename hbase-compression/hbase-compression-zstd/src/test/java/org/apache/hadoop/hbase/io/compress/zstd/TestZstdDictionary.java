@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.compress.zstd;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -26,36 +26,28 @@ import java.io.IOException;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.compress.CompressionTestBase;
 import org.apache.hadoop.hbase.io.compress.DictionaryCache;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.RandomDistribution;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestZstdDictionary extends CompressionTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZstdDictionary.class);
-
   private static final String DICTIONARY_PATH = DictionaryCache.RESOURCE_SCHEME + "zstd.test.dict";
   // zstd.test.data compressed with zstd.test.dict at level 3 with a default buffer size of 262144
   // will produce a result of 359909 bytes
   private static final int EXPECTED_COMPRESSED_SIZE = 359909;
-
   private static byte[] TEST_DATA;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = new Configuration();
     TEST_DATA = DictionaryCache.loadFromResource(conf,
       DictionaryCache.RESOURCE_SCHEME + "zstd.test.data", /* maxSize */ 1024 * 1024);
-    assertNotNull("Failed to load test data", TEST_DATA);
+    assertNotNull(TEST_DATA, "Failed to load test data");
   }
 
   @Test
@@ -67,13 +59,12 @@ public class TestZstdDictionary extends CompressionTestBase {
     codec.setConf(conf);
     codecTest(codec, new byte[][] { TEST_DATA }, EXPECTED_COMPRESSED_SIZE);
     // Assert that the dictionary was actually loaded
-    assertTrue("Dictionary was not loaded by codec", DictionaryCache.contains(DICTIONARY_PATH));
+    assertTrue(DictionaryCache.contains(DICTIONARY_PATH), "Dictionary was not loaded by codec");
   }
 
   //
   // For generating the test data in src/test/resources/
   //
-
   public static void main(String[] args) throws IOException {
     // Write 1000 1k blocks for training to the specified file
     // Train with:
@@ -95,5 +86,4 @@ public class TestZstdDictionary extends CompressionTestBase {
     }
     System.out.println("Done");
   }
-
 }

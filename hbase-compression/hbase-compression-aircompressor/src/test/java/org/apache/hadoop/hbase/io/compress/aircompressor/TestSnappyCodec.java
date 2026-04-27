@@ -17,20 +17,13 @@
  */
 package org.apache.hadoop.hbase.io.compress.aircompressor;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.compress.CompressionTestBase;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestSnappyCodec extends CompressionTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnappyCodec.class);
-
   @Test
   public void testSnappyCodecSmall() throws Exception {
     codecSmallTest(new SnappyCodec());
@@ -47,5 +40,4 @@ public class TestSnappyCodec extends CompressionTestBase {
   public void testSnappyCodecVeryLarge() throws Exception {
     codecVeryLargeTest(new SnappyCodec(), 3); // like text
   }
-
 }

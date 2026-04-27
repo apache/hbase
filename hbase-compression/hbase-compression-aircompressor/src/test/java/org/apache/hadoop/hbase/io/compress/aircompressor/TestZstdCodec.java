@@ -17,20 +17,13 @@
  */
 package org.apache.hadoop.hbase.io.compress.aircompressor;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.compress.CompressionTestBase;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestZstdCodec extends CompressionTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZstdCodec.class);
-
   @Test
   public void testZstdCodecSmall() throws Exception {
     codecSmallTest(new ZstdCodec());
@@ -47,5 +40,4 @@ public class TestZstdCodec extends CompressionTestBase {
   public void testZstdCodecVeryLarge() throws Exception {
     codecVeryLargeTest(new ZstdCodec(), 3); // like text
   }
-
 }
