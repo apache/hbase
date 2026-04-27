@@ -30,43 +30,35 @@ import io.opentelemetry.sdk.trace.data.SpanData;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.client.trace.StringTraceRenderer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.hamcrest.Matcher;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@RunWith(Parameterized.class)
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: table={0}, scan={2}")
 public class TestAsyncTableScanAll extends AbstractTestAsyncTableScan {
   private static final Logger logger = LoggerFactory.getLogger(TestAsyncTableScanAll.class);
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableScanAll.class);
+  private Supplier<AsyncTable<?>> getTable;
 
-  @Parameter(0)
-  public String tableType;
+  private Supplier<Scan> scanCreator;
 
-  @Parameter(1)
-  public Supplier<AsyncTable<?>> getTable;
+  // tableType and scanType are only for displaying
+  public TestAsyncTableScanAll(String tableType, Supplier<AsyncTable<?>> getTable, String scanType,
+    Supplier<Scan> scanCreator) {
+    this.getTable = getTable;
+    this.scanCreator = scanCreator;
+  }
 
-  @Parameter(2)
-  public String scanType;
-
-  @Parameter(3)
-  public Supplier<Scan> scanCreator;
-
-  @Parameters(name = "{index}: table={0}, scan={2}")
-  public static List<Object[]> params() {
+  public static Stream<Arguments> parameters() {
     return getTableAndScanCreatorParams();
   }
 
@@ -91,7 +83,7 @@ public class TestAsyncTableScanAll extends AbstractTestAsyncTableScan {
 
   @Override
   protected void assertTraceContinuity() {
-    final String parentSpanName = testName.getMethodName();
+    final String parentSpanName = methodName;
     final Matcher<SpanData> parentSpanMatcher =
       allOf(hasName(parentSpanName), hasStatusWithCode(StatusCode.OK), hasEnded());
     waitForSpan(parentSpanMatcher);
@@ -115,7 +107,7 @@ public class TestAsyncTableScanAll extends AbstractTestAsyncTableScan {
   @Override
   protected void
     assertTraceError(Matcher<io.opentelemetry.api.common.Attributes> exceptionMatcher) {
-    final String parentSpanName = testName.getMethodName();
+    final String parentSpanName = methodName;
     final Matcher<SpanData> parentSpanMatcher = allOf(hasName(parentSpanName), hasEnded());
     waitForSpan(parentSpanMatcher);
 
