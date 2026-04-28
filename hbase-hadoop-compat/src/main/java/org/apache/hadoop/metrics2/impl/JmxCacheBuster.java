@@ -38,9 +38,9 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public final class JmxCacheBuster {
   private static final Logger LOG = LoggerFactory.getLogger(JmxCacheBuster.class);
-  private static AtomicReference<ScheduledFuture> fut = new AtomicReference<>(null);
-  private static MetricsExecutor executor = new MetricsExecutorImpl();
-  private static AtomicBoolean stopped = new AtomicBoolean(false);
+  private static final AtomicReference<ScheduledFuture<?>> FUT = new AtomicReference<>(null);
+  private static final MetricsExecutor EXECUTOR = new MetricsExecutorImpl();
+  private static final AtomicBoolean STOPPED = new AtomicBoolean(false);
 
   private JmxCacheBuster() {
     // Static only cache.
@@ -54,16 +54,16 @@ public final class JmxCacheBuster {
       LOG.trace("clearing JMX Cache" + StringUtils.stringifyException(new Exception()));
     }
     // If there are more then 100 ms before the executor will run then everything should be merged.
-    ScheduledFuture future = fut.get();
+    ScheduledFuture<?> future = FUT.get();
     if ((future != null && (!future.isDone() && future.getDelay(TimeUnit.MILLISECONDS) > 100))) {
       // BAIL OUT
       return;
     }
-    if (stopped.get()) {
+    if (STOPPED.get()) {
       return;
     }
-    future = executor.getExecutor().schedule(new JmxCacheBusterRunnable(), 5, TimeUnit.SECONDS);
-    fut.set(future);
+    future = EXECUTOR.getExecutor().schedule(new JmxCacheBusterRunnable(), 5, TimeUnit.SECONDS);
+    FUT.set(future);
   }
 
   /**
@@ -71,9 +71,11 @@ public final class JmxCacheBuster {
    * some test environments where we manually inject sources or sinks dynamically.
    */
   public static void stop() {
-    stopped.set(true);
-    ScheduledFuture future = fut.get();
-    future.cancel(false);
+    STOPPED.set(true);
+    ScheduledFuture<?> future = FUT.get();
+    if (future != null) {
+      future.cancel(false);
+    }
   }
 
   /**
@@ -81,7 +83,7 @@ public final class JmxCacheBuster {
    * @see #stop()
    */
   public static void restart() {
-    stopped.set(false);
+    STOPPED.set(false);
   }
 
   final static class JmxCacheBusterRunnable implements Runnable {
