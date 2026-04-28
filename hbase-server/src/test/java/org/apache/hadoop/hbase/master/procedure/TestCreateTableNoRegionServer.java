@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.metrics2.impl.JmxCacheBuster;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
@@ -112,13 +111,6 @@ public class TestCreateTableNoRegionServer {
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(
       StartTestingClusterOption.builder().masterClass(HMasterForTest.class).build());
-    // this may cause dead lock if there is no live region server and want to start a new server.
-    // In JmxCacheBuster we will reinitialize the metrics system so it will get some metrics which
-    // will need to access meta, since there is no region server, the request will hang there for a
-    // long time while holding the lock of MetricsSystemImpl, but when start a new region server, we
-    // also need to update metrics in handleReportForDutyResponse, since we are all in the same
-    // process and uses the same metrics instance, we hit dead lock.
-    JmxCacheBuster.stop();
   }
 
   @AfterAll
