@@ -21,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import org.apache.hadoop.hbase.metrics.MetricRegistries;
@@ -56,7 +55,7 @@ public class TestGlobalMetricRegistriesAdapter {
     DefaultMetricsSystem.shutdown();
     DefaultMetricsSystem.initialize("globalMetricRegistriesAdapterTest");
     DefaultMetricsSystem.instance().start();
-    adapter = createAdapter();
+    adapter = GlobalMetricRegistriesAdapter.init();
   }
 
   @AfterEach
@@ -86,17 +85,6 @@ public class TestGlobalMetricRegistriesAdapter {
     runAdapter();
 
     assertEquals(2, getExportedCounterValue());
-  }
-
-  private GlobalMetricRegistriesAdapter createAdapter() {
-    try {
-      Constructor<GlobalMetricRegistriesAdapter> constructor =
-        GlobalMetricRegistriesAdapter.class.getDeclaredConstructor();
-      constructor.setAccessible(true);
-      return constructor.newInstance();
-    } catch (ReflectiveOperationException e) {
-      throw new AssertionError("Failed to create GlobalMetricRegistriesAdapter", e);
-    }
   }
 
   private void runAdapter() {
