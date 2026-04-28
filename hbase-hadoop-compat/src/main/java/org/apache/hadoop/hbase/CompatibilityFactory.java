@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class CompatibilityFactory {
 
-  private static final Logger LOG = LoggerFactory.getLogger(CompatibilitySingletonFactory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CompatibilityFactory.class);
   public static final String EXCEPTION_START = "Could not create  ";
   public static final String EXCEPTION_END = " Is the hadoop compatibility jar on the classpath?";
 

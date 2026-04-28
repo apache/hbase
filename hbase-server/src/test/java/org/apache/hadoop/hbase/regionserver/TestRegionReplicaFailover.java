@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.replication.regionserver.TestRegionReplicaReplicationEndpoint;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -61,8 +60,7 @@ public class TestRegionReplicaFailover {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRegionReplicaFailover.class);
 
-  private static final Logger LOG =
-    LoggerFactory.getLogger(TestRegionReplicaReplicationEndpoint.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionReplicaFailover.class);
 
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
 
