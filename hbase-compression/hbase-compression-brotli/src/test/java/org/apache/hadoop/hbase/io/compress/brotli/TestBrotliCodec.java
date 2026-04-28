@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 
 @Tag(SmallTests.TAG)
 public class TestBrotliCodec extends CompressionTestBase {
+
   @Test
   public void testBrotliCodecSmall() throws Exception {
     codecSmallTest(new BrotliCodec());

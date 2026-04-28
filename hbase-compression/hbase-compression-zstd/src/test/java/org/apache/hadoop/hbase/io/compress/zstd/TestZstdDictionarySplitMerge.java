@@ -49,6 +49,7 @@ import org.junit.jupiter.api.Test;
 @Tag(RegionServerTests.TAG)
 @Tag(LargeTests.TAG)
 public class TestZstdDictionarySplitMerge {
+
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf;
 

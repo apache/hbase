@@ -33,6 +33,7 @@ import org.junit.jupiter.api.Tag;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestWALCompressionSnappy extends CompressedWALTestBase {
+
   @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     assumeTrue(SnappyCodec.isLoaded());

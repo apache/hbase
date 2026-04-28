@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 
 @Tag(SmallTests.TAG)
 public class TestSnappyCodec extends CompressionTestBase {
+
   @Test
   public void testSnappyCodecSmall() throws Exception {
     codecSmallTest(new SnappyCodec());

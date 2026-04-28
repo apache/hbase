@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 @Tag(IOTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestHFileCompressionBrotli extends HFileTestBase {
+
   private static Configuration conf;
 
   @BeforeAll

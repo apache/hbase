@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 
 @Tag(SmallTests.TAG)
 public class TestZstdCodec extends CompressionTestBase {
+
   @Test
   public void testZstdCodecSmall() throws Exception {
     codecSmallTest(new ZstdCodec());

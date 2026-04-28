@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 @Tag(IOTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestHFileCompressionSnappy extends HFileTestBase {
+
   private static Configuration conf;
 
   @BeforeAll

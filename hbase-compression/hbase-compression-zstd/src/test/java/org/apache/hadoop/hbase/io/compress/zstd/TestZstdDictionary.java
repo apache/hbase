@@ -36,6 +36,7 @@ import org.junit.jupiter.api.Test;
 
 @Tag(SmallTests.TAG)
 public class TestZstdDictionary extends CompressionTestBase {
+
   private static final String DICTIONARY_PATH = DictionaryCache.RESOURCE_SCHEME + "zstd.test.dict";
   // zstd.test.data compressed with zstd.test.dict at level 3 with a default buffer size of 262144
   // will produce a result of 359909 bytes

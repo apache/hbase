@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Tag;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestWALCompressionZstd extends CompressedWALTestBase {
+
   @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
