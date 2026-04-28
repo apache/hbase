@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -42,29 +44,24 @@ import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonRepeatedEnvironmentEdge;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Base for TestFromClientSide* classes. Has common defines and utility used by all.
  */
-@Category({ LargeTests.class, ClientTests.class })
-@SuppressWarnings("deprecation")
-@RunWith(Parameterized.class)
-class FromClientSideBase {
-  private static final Logger LOG = LoggerFactory.getLogger(FromClientSideBase.class);
-  static HBaseTestingUtility TEST_UTIL;
+public class FromClientSideTestBase {
+  private static final Logger LOG = LoggerFactory.getLogger(FromClientSideTestBase.class);
+  protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   static byte[] ROW = Bytes.toBytes("testRow");
   static byte[] FAMILY = Bytes.toBytes("testFamily");
   static final byte[] INVALID_FAMILY = Bytes.toBytes("invalidTestFamily");
@@ -72,38 +69,39 @@ class FromClientSideBase {
   static byte[] VALUE = Bytes.toBytes("testValue");
   static int SLAVES = 1;
 
-  // To keep the child classes happy.
-  FromClientSideBase() {
+  protected Class<? extends ConnectionRegistry> registryImpl;
+  protected int numHedgedReqs;
+
+  protected TableName tableName;
+
+  protected FromClientSideTestBase(Class<? extends ConnectionRegistry> registryImpl,
+    int numHedgedReqs) {
+    this.registryImpl = registryImpl;
+    this.numHedgedReqs = numHedgedReqs;
   }
 
-  /**
-   * JUnit does not provide an easy way to run a hook after each parameterized run. Without that
-   * there is no easy way to restart the test cluster after each parameterized run. Annotation
-   * BeforeParam does not work either because it runs before parameterization and hence does not
-   * have access to the test parameters (which is weird). This *hack* checks if the current instance
-   * of test cluster configuration has the passed parameterized configs. In such a case, we can just
-   * reuse the cluster for test and do not need to initialize from scratch. While this is a hack, it
-   * saves a ton of time for the full test and de-flakes it.
-   */
-  protected static boolean isSameParameterizedCluster(Class<?> registryImpl, int numHedgedReqs) {
-    if (TEST_UTIL == null) {
-      return false;
-    }
-    Configuration conf = TEST_UTIL.getConfiguration();
-    Class<?> confClass = conf.getClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
-      ZKConnectionRegistry.class);
-    int hedgedReqConfig = conf.getInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY,
-      AbstractRpcBasedConnectionRegistry.HEDGED_REQS_FANOUT_DEFAULT);
-    return confClass.getName().equals(registryImpl.getName()) && numHedgedReqs == hedgedReqConfig;
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName()
+      + testInfo.getDisplayName().replaceAll("[^A-Za-z0-9_]", "_"));
   }
 
-  protected static final void initialize(Class<? extends ConnectionRegistry> registryImpl,
-    int numHedgedReqs, Class<?>... cps) throws Exception {
-    // initialize() is called for every unit test, however we only want to reset the cluster state
-    // at the end of every parameterized run.
-    if (isSameParameterizedCluster(registryImpl, numHedgedReqs)) {
-      return;
+  @AfterEach
+  public void tearDown() throws Exception {
+    for (TableDescriptor htd : TEST_UTIL.getAdmin().listTableDescriptors()) {
+      LOG.info("Tear down, remove table=" + htd.getTableName());
+      TEST_UTIL.deleteTable(htd.getTableName());
     }
+  }
+
+  @SuppressWarnings("deprecation")
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(RpcConnectionRegistry.class, 1),
+      Arguments.of(RpcConnectionRegistry.class, 2), Arguments.of(MasterRegistry.class, 1),
+      Arguments.of(MasterRegistry.class, 2), Arguments.of(ZKConnectionRegistry.class, 1));
+  }
+
+  protected static final void initialize(Class<?>... cps) throws Exception {
     // Uncomment the following lines if more verbosity is needed for
     // debugging (see HBASE-12285 for details).
     // ((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
@@ -111,29 +109,32 @@ class FromClientSideBase {
     // ((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
     // make sure that we do not get the same ts twice, see HBASE-19731 for more details.
     EnvironmentEdgeManager.injectEdge(new NonRepeatedEnvironmentEdge());
-    if (TEST_UTIL != null) {
-      // We reached end of a parameterized run, clean up.
-      TEST_UTIL.shutdownMiniCluster();
-    }
-    TEST_UTIL = new HBaseTestingUtility();
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       Arrays.stream(cps).map(Class::getName).toArray(String[]::new));
     conf.setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, true); // enable for below tests
-    conf.setClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, registryImpl,
-      ConnectionRegistry.class);
-    Preconditions.checkArgument(numHedgedReqs > 0);
-    conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, numHedgedReqs);
-    StartMiniClusterOption.Builder builder = StartMiniClusterOption.builder();
-    // Multiple masters needed only when hedged reads for master registry are enabled.
-    builder.numMasters(numHedgedReqs > 1 ? 3 : 1).numRegionServers(SLAVES);
-    TEST_UTIL.startMiniCluster(builder.build());
+    // Use multiple masters for support hedged reads in registry
+    TEST_UTIL.startMiniCluster(
+      StartMiniClusterOption.builder().numMasters(3).numRegionServers(SLAVES).build());
   }
 
-  protected static void afterClass() throws Exception {
-    if (TEST_UTIL != null) {
-      TEST_UTIL.shutdownMiniCluster();
-    }
+  @AfterAll
+  public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @SuppressWarnings("deprecation")
+  protected final Configuration getClientConf() {
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.setClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, registryImpl,
+      ConnectionRegistry.class);
+    conf.setInt(RpcConnectionRegistry.HEDGED_REQS_FANOUT_KEY, numHedgedReqs);
+    conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, numHedgedReqs);
+    return conf;
+  }
+
+  protected final Connection getConnection() throws IOException {
+    return ConnectionFactory.createConnection(getClientConf());
   }
 
   protected void deleteColumns(Table ht, String value, String keyPrefix) throws IOException {
@@ -285,10 +286,9 @@ class FromClientSideBase {
   }
 
   protected Result getSingleScanResult(Table ht, Scan scan) throws IOException {
-    ResultScanner scanner = ht.getScanner(scan);
-    Result result = scanner.next();
-    scanner.close();
-    return result;
+    try (ResultScanner scanner = ht.getScanner(scan)) {
+      return scanner.next();
+    }
   }
 
   protected byte[][] makeNAscii(byte[] base, int n) {

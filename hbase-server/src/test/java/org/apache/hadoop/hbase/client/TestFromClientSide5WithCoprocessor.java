@@ -24,17 +24,23 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 
+/**
+ * Run tests that use the HBase clients; {@link Table}. Sets up the HBase mini cluster once at start
+ * and runs through all client tests. Each creates a table named for the method and does its stuff
+ * against that. Parameterized to run with different registry implementations.
+ */
 @Tag(LargeTests.TAG)
 @Tag(ClientTests.TAG)
 @HBaseParameterizedTestTemplate(name = "{index}: registryImpl={0}, numHedgedReqs={1}")
-public class TestFromClientSide3 extends FromClientSideTest3 {
+public class TestFromClientSide5WithCoprocessor extends FromClientSideTest5 {
 
-  public TestFromClientSide3(Class<? extends ConnectionRegistry> registryImpl, int numHedgedReqs) {
+  public TestFromClientSide5WithCoprocessor(Class<? extends ConnectionRegistry> registryImpl,
+    int numHedgedReqs) {
     super(registryImpl, numHedgedReqs);
   }
 
   @BeforeAll
-  public static void setUpBeforeAll() throws Exception {
-    startCluster(MultiRowMutationEndpoint.class);
+  public static void setUpBeforeClass() throws Exception {
+    initialize(MultiRowMutationEndpoint.class);
   }
 }
