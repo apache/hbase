@@ -25,9 +25,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -36,24 +37,19 @@ import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * This is not a unit test. It is not run as part of the general unit test suite. It is for
  * comparing compaction policies. You must run it explicitly; e.g. mvn test
  * -Dtest=PerfTestCompactionPolicies
  */
-@Category({ RegionServerTests.class, MediumTests.class })
-@RunWith(Parameterized.class)
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate
 public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(PerfTestCompactionPolicies.class);
 
   private final RatioBasedCompactionPolicy cp;
   private final StoreFileListGenerator generator;
@@ -64,8 +60,7 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
   private final float ratio;
   private long written = 0;
 
-  @Parameterized.Parameters
-  public static Collection<Object[]> data() {
+  public static Stream<Arguments> parameters() {
 
     Class<?>[] policyClasses = new Class[] { EverythingPolicy.class,
       RatioBasedCompactionPolicy.class, ExploringCompactionPolicy.class, };
@@ -79,7 +74,7 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
     int[] minFilesValues = new int[] { 3 };
     float[] ratioValues = new float[] { 1.2f };
 
-    List<Object[]> params = new ArrayList<>(maxFileValues.length * minFilesValues.length
+    List<Arguments> params = new ArrayList<>(maxFileValues.length * minFilesValues.length
       * fileListGenClasses.length * policyClasses.length);
 
     for (Class<?> policyClass : policyClasses) {
@@ -87,14 +82,14 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
         for (int maxFile : maxFileValues) {
           for (int minFile : minFilesValues) {
             for (float ratio : ratioValues) {
-              params.add(new Object[] { policyClass, genClass, maxFile, minFile, ratio });
+              params.add(Arguments.of(policyClass, genClass, maxFile, minFile, ratio));
             }
           }
         }
       }
     }
 
-    return params;
+    return params.stream();
   }
 
   /**
@@ -134,7 +129,7 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
     // Used for making paths
   }
 
-  @Test
+  @TestTemplate
   public final void testSelection() throws Exception {
     long fileDiff = 0;
     for (List<HStoreFile> storeFileList : generator) {

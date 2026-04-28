@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import org.apache.hadoop.fs.FileStatus;
@@ -29,13 +29,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
 
@@ -49,17 +48,17 @@ public abstract class AbstractTestProtobufLog {
   protected Path dir;
   protected WALFactory wals;
 
-  @Rule
-  public final TestName currentTest = new TestName();
+  private String currentTest;
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    currentTest = testInfo.getTestMethod().get().getName();
     fs = TEST_UTIL.getDFSCluster().getFileSystem();
-    dir = new Path(TEST_UTIL.createRootDir(), currentTest.getMethodName());
-    wals = new WALFactory(TEST_UTIL.getConfiguration(), currentTest.getMethodName());
+    dir = new Path(TEST_UTIL.createRootDir(), currentTest);
+    wals = new WALFactory(TEST_UTIL.getConfiguration(), currentTest);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     wals.close();
     FileStatus[] entries = fs.listStatus(new Path("/"));
@@ -68,7 +67,7 @@ public abstract class AbstractTestProtobufLog {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // Make block sizes small.
     TEST_UTIL.getConfiguration().setInt("dfs.blocksize", 1024 * 1024);
@@ -83,7 +82,7 @@ public abstract class AbstractTestProtobufLog {
     TEST_UTIL.startMiniDFSCluster(3);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }

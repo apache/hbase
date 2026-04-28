@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -58,11 +57,10 @@ import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider.AsyncWriter;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
@@ -73,18 +71,15 @@ import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 /**
  * Provides AsyncFSWAL test cases.
  */
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestAsyncFSWAL extends AbstractTestFSWAL {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncFSWAL.class);
 
   private static EventLoopGroup GROUP;
 
   private static Class<? extends Channel> CHANNEL_CLASS;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     GROUP =
       new NioEventLoopGroup(1, new ThreadFactoryBuilder().setNameFormat("TestAsyncFSWAL-pool-%d")
@@ -93,7 +88,7 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
     AbstractTestFSWAL.setUpBeforeClass();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     AbstractTestFSWAL.tearDownAfterClass();
     GROUP.shutdownGracefully();
@@ -142,7 +137,7 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
       scopes.put(fam, 0);
     }
     long timestamp = EnvironmentEdgeManager.currentTime();
-    String testName = currentTest.getMethodName();
+    String testName = currentTest;
     AtomicInteger failedCount = new AtomicInteger(0);
     try (LogRoller roller = new LogRoller(services);
       AsyncFSWAL wal = new AsyncFSWAL(FS, null, CommonFSUtils.getWALRootDir(CONF), DIR.toString(),

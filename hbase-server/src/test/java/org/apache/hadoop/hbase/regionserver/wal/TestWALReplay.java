@@ -21,24 +21,26 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestWALReplay extends AbstractTestWALReplay {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALReplay.class);
+  @BeforeAll
+  public static void setUpBeforeClass(TestInfo testInfo) throws Exception {
+    if (testInfo.getTestClass().get() == TestWALReplay.class) {
+      setUpBeforeClass();
+    }
+  }
 
-  @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = AbstractTestWALReplay.TEST_UTIL.getConfiguration();
     conf.set(WALFactory.WAL_PROVIDER, "filesystem");
@@ -47,6 +49,10 @@ public class TestWALReplay extends AbstractTestWALReplay {
 
   @Override
   protected WAL createWAL(Configuration c, Path hbaseRootDir, String logName) throws IOException {
+    return createFSHLog(c, hbaseRootDir, logName);
+  }
+
+  static WAL createFSHLog(Configuration c, Path hbaseRootDir, String logName) throws IOException {
     FileSystem fs = hbaseRootDir.getFileSystem(c);
     fs.mkdirs(new Path(hbaseRootDir, logName));
     FSHLog wal = new FSHLog(fs, hbaseRootDir, logName, c);

@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -32,14 +32,11 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,28 +44,28 @@ import org.slf4j.LoggerFactory;
  * Ensure configuration changes are having an effect on WAL. There is a lot of reflection around WAL
  * setup; could be skipping Configuration changes.
  */
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: provider={0}")
 public class TestWALConfiguration {
   private static final Logger LOG = LoggerFactory.getLogger(TestWALConfiguration.class);
   static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALConfiguration.class);
 
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
-  @Parameterized.Parameter
-  public String walProvider;
+  private final String walProvider;
 
-  @Parameterized.Parameters(name = "{index}: provider={0}")
-  public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[] { "filesystem" }, new Object[] { "asyncfs" });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of("filesystem"), Arguments.of("asyncfs"));
   }
 
-  @Before
-  public void before() {
+  public TestWALConfiguration(String walProvider) {
+    this.walProvider = walProvider;
+  }
+
+  @BeforeEach
+  public void before(TestInfo testInfo) {
+    name = testInfo.getTestMethod().get().getName();
     TEST_UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, walProvider);
   }
 
@@ -77,7 +74,7 @@ public class TestWALConfiguration {
    * verify more than this given the blocksize is passed down to HDFS on create -- not kept local to
    * the streams themselves.
    */
-  @Test
+  @TestTemplate
   public void testBlocksizeDefaultsToTwiceHDFSBlockSize() throws IOException {
     TableName tableName = TableName.valueOf("test");
     final WALFactory walFactory = new WALFactory(TEST_UTIL.getConfiguration(), this.walProvider);
