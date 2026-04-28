@@ -25,6 +25,7 @@ import java.util.OptionalInt;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -50,7 +51,8 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
 
   public List<HStoreFile> preSelectCompactionForCoprocessor(Collection<HStoreFile> candidates,
     List<HStoreFile> filesCompacting) {
-    return getCurrentEligibleFiles(new ArrayList<>(candidates), filesCompacting);
+    return filterNullReaderFiles(getCurrentEligibleFiles(new ArrayList<>(candidates),
+      filesCompacting), "pre-selecting compaction");
   }
 
   /**
@@ -72,6 +74,7 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
         >= storeConfigInfo.getBlockingFileCount();
 
     candidateSelection = getCurrentEligibleFiles(candidateSelection, filesCompacting);
+    candidateSelection = filterNullReaderFiles(candidateSelection, "selecting compaction");
     LOG.debug("Selecting compaction from " + candidateFiles.size() + " store files, "
       + filesCompacting.size() + " compacting, " + candidateSelection.size() + " eligible, "
       + storeConfigInfo.getBlockingFileCount() + " blocking");
@@ -173,6 +176,20 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
       candidateFiles.subList(0, idx + 1).clear();
     }
     return candidateFiles;
+  }
+
+  protected ArrayList<HStoreFile> filterNullReaderFiles(ArrayList<HStoreFile> candidates,
+    String context) {
+    candidates.removeIf(candidate -> {
+      StoreFileReader reader = candidate.getReader();
+      if (reader != null) {
+        return false;
+      }
+      LOG.debug("Skipping store file {} with sequenceId {} while {} because its reader is null",
+        candidate.getPath(), candidate.getMaxSequenceId(), context);
+      return true;
+    });
+    return candidates;
   }
 
   /**
