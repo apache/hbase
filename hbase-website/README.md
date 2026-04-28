@@ -476,16 +476,18 @@ When you run `mvn site`, the website module automatically:
    - `npm run extract-hbase-config` - Extract data from `hbase-default.xml` to `app/pages/_docs/docs/_mdx/(multi-page)/configuration/hbase-default.md`
    - `npm run extract-hbase-version` - Extract version from root `pom.xml` to `app/lib/export-pdf/hbase-version.json`
    - `npm run test:unit:run` - Vitest unit tests
-   - `npm run test:e2e` - Playwright e2e tests
    - `npm run build` - Production build
+   - `npm run generate-sitemap` - Generates `public/sitemap.xml` and `build/client/sitemap.xml`
+   - `npm run test:e2e` - Playwright e2e tests
 
    `npm run ci-skip-tests` executes:
    - `npm run extract-developers` - Extract developers from parent pom.xml
    - `npm run extract-hbase-config` - Extract data from `hbase-default.xml` to `app/pages/_docs/docs/_mdx/(multi-page)/configuration/hbase-default.md`
    - `npm run extract-hbase-version` - Extract version from root `pom.xml` to `app/lib/export-pdf/hbase-version.json`
+   - `npm run build` - Production build
+   - `npm run generate-sitemap` - Generates `public/sitemap.xml` and `build/client/sitemap.xml`
    - `npx playwright install` - Installs Playwright browsers
    - `npm run export-pdf` - Generates docs PDF assets through Playwright
-   - `npm run build` - Production build
 
 6. **Build Output**: Generated files are in `build/` directory
 
