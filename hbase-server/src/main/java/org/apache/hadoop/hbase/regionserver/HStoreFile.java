@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.io.crypto.ManagedKeyData.KEY_SPACE_GLOBAL;
-
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -48,6 +46,7 @@ import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -217,8 +216,6 @@ public class HStoreFile implements StoreFile {
    */
   private final BloomType cfBloomType;
 
-  private String keyNamespace;
-
   private SystemKeyCache systemKeyCache;
 
   private final ManagedKeyDataCache managedKeyDataCache;
@@ -240,8 +237,9 @@ public class HStoreFile implements StoreFile {
    */
   public HStoreFile(FileSystem fs, Path p, Configuration conf, CacheConfig cacheConf,
     BloomType cfBloomType, boolean primaryReplica, StoreFileTracker sft) throws IOException {
-    // Key management not yet implemented - always null
-    this(sft.getStoreFileInfo(p, primaryReplica), cfBloomType, cacheConf, null, null, null, null);
+    this(sft.getStoreFileInfo(p, primaryReplica), cfBloomType, cacheConf, null,
+      SecurityUtil.isKeyManagementEnabled(conf) ? SystemKeyCache.createCache(conf, fs) : null,
+      SecurityUtil.isKeyManagementEnabled(conf) ? new ManagedKeyDataCache(conf, null) : null);
   }
 
   /**
@@ -257,9 +255,13 @@ public class HStoreFile implements StoreFile {
    */
   public HStoreFile(StoreFileInfo fileInfo, BloomType cfBloomType, CacheConfig cacheConf)
     throws IOException {
-    // Key management not yet implemented - always null
-    this(fileInfo, cfBloomType, cacheConf, null, null, // keyNamespace - not yet implemented
-      null, null);
+    this(fileInfo, cfBloomType, cacheConf, null,
+      SecurityUtil.isKeyManagementEnabled(fileInfo.getConf())
+        ? SystemKeyCache.createCache(fileInfo.getConf(), fileInfo.getFileSystem())
+        : null,
+      SecurityUtil.isKeyManagementEnabled(fileInfo.getConf())
+        ? new ManagedKeyDataCache(fileInfo.getConf(), null)
+        : null);
   }
 
   /**
@@ -275,12 +277,11 @@ public class HStoreFile implements StoreFile {
    * @param metrics     Tracks bloom filter requests and results. May be null.
    */
   public HStoreFile(StoreFileInfo fileInfo, BloomType cfBloomType, CacheConfig cacheConf,
-    BloomFilterMetrics metrics, String keyNamespace, SystemKeyCache systemKeyCache,
+    BloomFilterMetrics metrics, SystemKeyCache systemKeyCache,
     ManagedKeyDataCache managedKeyDataCache) {
     this.fileInfo = fileInfo;
     this.cacheConf = cacheConf;
     this.metrics = metrics;
-    this.keyNamespace = keyNamespace != null ? keyNamespace : KEY_SPACE_GLOBAL;
     this.systemKeyCache = systemKeyCache;
     this.managedKeyDataCache = managedKeyDataCache;
     if (BloomFilterFactory.isGeneralBloomEnabled(fileInfo.getConf())) {
@@ -412,7 +413,7 @@ public class HStoreFile implements StoreFile {
     fileInfo.initHDFSBlocksDistribution();
     long readahead = fileInfo.isNoReadahead() ? 0L : -1L;
     ReaderContext context = fileInfo.createReaderContext(false, readahead, ReaderType.PREAD,
-      keyNamespace, systemKeyCache, managedKeyDataCache);
+      systemKeyCache, managedKeyDataCache);
     fileInfo.initHFileInfo(context);
     StoreFileReader reader = fileInfo.preStoreFileReaderOpen(context, cacheConf);
     if (reader == null) {
@@ -561,7 +562,7 @@ public class HStoreFile implements StoreFile {
     initReader();
     final boolean doDropBehind = canUseDropBehind && cacheConf.shouldDropBehindCompaction();
     ReaderContext context = fileInfo.createReaderContext(doDropBehind, -1, ReaderType.STREAM,
-      keyNamespace, systemKeyCache, managedKeyDataCache);
+      systemKeyCache, managedKeyDataCache);
     StoreFileReader reader = fileInfo.preStoreFileReaderOpen(context, cacheConf);
     if (reader == null) {
       reader = fileInfo.createReader(context, cacheConf);

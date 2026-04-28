@@ -78,6 +78,8 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceStability.Evolving
 public class KeyStoreKeyProvider implements KeyProvider {
 
+  private static final char[] NO_PASSWORD = new char[0];
+
   protected KeyStore store;
   protected char[] password; // can be null if no password
   protected Properties passwordFile; // can be null if no file provided
@@ -174,9 +176,15 @@ public class KeyStoreKeyProvider implements KeyProvider {
 
   @Override
   public Key getKey(String alias) {
+    // First try with no password, as it is more common to have a password only for the store.
     try {
-      return store.getKey(alias, getAliasPassword(alias));
+      return store.getKey(alias, NO_PASSWORD);
     } catch (UnrecoverableKeyException e) {
+      try {
+        return store.getKey(alias, getAliasPassword(alias));
+      } catch (UnrecoverableKeyException | NoSuchAlgorithmException | KeyStoreException e2) {
+        // Ignore.
+      }
       throw new RuntimeException(e);
     } catch (KeyStoreException e) {
       throw new RuntimeException(e);

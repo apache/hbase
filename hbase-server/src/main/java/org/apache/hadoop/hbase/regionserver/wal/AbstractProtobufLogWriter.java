@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
-import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
@@ -101,7 +101,7 @@ public abstract class AbstractProtobufLogWriter {
 
     // Generate a random encryption key for this WAL
     Key key = cipher.getRandomKey();
-    builder.setEncryptionKey(UnsafeByteOperations.unsafeWrap(EncryptionUtil.wrapKey(conf,
+    builder.setEncryptionKey(UnsafeByteOperations.unsafeWrap(SecurityUtil.wrapKey(conf,
       conf.get(HConstants.CRYPTO_WAL_KEY_NAME_CONF_KEY,
         conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName())),
       key)));

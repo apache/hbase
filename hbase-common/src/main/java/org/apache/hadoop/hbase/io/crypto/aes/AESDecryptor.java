@@ -18,54 +18,16 @@
 package org.apache.hadoop.hbase.io.crypto.aes;
 
 import java.io.InputStream;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.Key;
-import javax.crypto.spec.IvParameterSpec;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class AESDecryptor implements Decryptor {
-
-  private javax.crypto.Cipher cipher;
-  private Key key;
-  private byte[] iv;
-  private boolean initialized = false;
+public class AESDecryptor extends AESCodecBase implements Decryptor {
 
   public AESDecryptor(javax.crypto.Cipher cipher) {
-    this.cipher = cipher;
-  }
-
-  javax.crypto.Cipher getCipher() {
-    return cipher;
-  }
-
-  @Override
-  public void setKey(Key key) {
-    Preconditions.checkNotNull(key, "Key cannot be null");
-    this.key = key;
-  }
-
-  @Override
-  public int getIvLength() {
-    return AES.IV_LENGTH;
-  }
-
-  @Override
-  public int getBlockSize() {
-    return AES.BLOCK_SIZE;
-  }
-
-  @Override
-  public void setIv(byte[] iv) {
-    Preconditions.checkNotNull(iv, "IV cannot be null");
-    Preconditions.checkArgument(iv.length == AES.IV_LENGTH, "Invalid IV length");
-    this.iv = iv;
+    super(cipher);
   }
 
   @Override
@@ -73,24 +35,18 @@ public class AESDecryptor implements Decryptor {
     if (!initialized) {
       init();
     }
-    return new javax.crypto.CipherInputStream(in, cipher);
+    return new javax.crypto.CipherInputStream(in, getCipher());
   }
 
   @Override
-  public void reset() {
-    init();
-  }
-
-  protected void init() {
-    Preconditions.checkState(iv != null, "IV is null");
-    try {
-      cipher.init(javax.crypto.Cipher.DECRYPT_MODE, key, new IvParameterSpec(iv));
-    } catch (InvalidKeyException e) {
-      throw new RuntimeException(e);
-    } catch (InvalidAlgorithmParameterException e) {
-      throw new RuntimeException(e);
+  protected void initIv() {
+    if (iv == null) {
+      throw new NullPointerException("IV is null");
     }
-    initialized = true;
   }
 
+  @Override
+  protected int getOperationMode() {
+    return javax.crypto.Cipher.DECRYPT_MODE;
+  }
 }

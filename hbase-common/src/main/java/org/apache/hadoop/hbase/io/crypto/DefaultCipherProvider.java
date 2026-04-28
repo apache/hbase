@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.crypto;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
+import org.apache.hadoop.hbase.io.crypto.aes.AES256GCM;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -66,13 +67,16 @@ public final class DefaultCipherProvider implements CipherProvider {
     if (name.equalsIgnoreCase("AES")) {
       return new AES(this);
     }
+    if (name.equalsIgnoreCase("AES_256_GCM")) {
+      return new AES256GCM(this);
+    }
     throw new RuntimeException(
       "Cipher '" + name + "' is not supported by provider '" + getName() + "'");
   }
 
   @Override
   public String[] getSupportedCiphers() {
-    return new String[] { "AES" };
+    return new String[] { "AES", "AES_256_GCM" };
   }
 
 }

@@ -973,6 +973,7 @@
     <aircompressor.version>2.0.3</aircompressor.version>
     <brotli4j.version>1.11.0</brotli4j.version>
     <lz4.version>1.10.4</lz4.version>
+    <zero-allocation-hashing.version>0.16</zero-allocation-hashing.version>
     <snappy.version>1.1.10.4</snappy.version>
     <zstd-jni.version>1.5.7-2</zstd-jni.version>
     <!--
@@ -1733,6 +1734,11 @@
         <scope>import</scope>
       </dependency>
       <dependency>
+        <groupId>io.opentelemetry</groupId>
+        <artifactId>opentelemetry-api</artifactId>
+        <version>${opentelemetry.version}</version>
+      </dependency>
+      <dependency>
         <groupId>io.opentelemetry.semconv</groupId>
         <artifactId>opentelemetry-semconv</artifactId>
         <version>${opentelemetry-semconv.version}</version>
@@ -1807,6 +1813,11 @@
         <groupId>at.yawk.lz4</groupId>
         <artifactId>lz4-java</artifactId>
         <version>${lz4.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>net.openhft</groupId>
+        <artifactId>zero-allocation-hashing</artifactId>
+        <version>${zero-allocation-hashing.version}</version>
       </dependency>
       <dependency>
         <groupId>org.xerial.snappy</groupId>

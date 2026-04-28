@@ -35,10 +35,12 @@ service ManagedKeysService {
     returns (BooleanMsg);
   rpc DisableKeyManagement(ManagedKeyRequest)
     returns (ManagedKeyResponse);
-  rpc DisableManagedKey(ManagedKeyEntryRequest)
+  rpc DisableManagedKey(ManagedKeyMetadataRequest)
     returns (ManagedKeyResponse);
   rpc RotateManagedKey(ManagedKeyRequest)
     returns (ManagedKeyResponse);
   rpc RefreshManagedKeys(ManagedKeyRequest)
     returns (EmptyMsg);
+    rpc SetManagedKey(ManagedKeyMetadataRequest)
+    returns (ManagedKeyResponse);
 }

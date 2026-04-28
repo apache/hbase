@@ -77,6 +77,11 @@ public class TestCipherProvider {
           }
 
           @Override
+          public String getKeyAlgorithm() {
+            return "TEST";
+          }
+
+          @Override
           public int getKeyLength() {
             return 0;
           }

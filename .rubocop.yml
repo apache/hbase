@@ -9,3 +9,12 @@ Layout/LineLength:
 
 Metrics/MethodLength:
   Max: 75
+
+GlobalVars:
+  AllowedVariables:
+    - $CUST1_ENCODED
+    - $CUST1_ALIAS
+    - $CUST1_ENCODED
+    - $GLOB_CUST_ENCODED
+    - $TEST
+    - $TEST_CLUSTER

@@ -1248,7 +1248,7 @@ module Hbase
           key = org.apache.hadoop.hbase.io.crypto.Encryption.generateSecretKey(
             @conf, algorithm, arg.delete(ColumnFamilyDescriptorBuilder::ENCRYPTION_KEY)
           )
-          cfdb.setEncryptionKey(org.apache.hadoop.hbase.security.EncryptionUtil.wrapKey(@conf, key,
+          cfdb.setEncryptionKey(org.apache.hadoop.hbase.security.SecurityUtil.wrapKey(@conf, key,
                                                                                           algorithm))
         end
         if arg.include?(ColumnFamilyDescriptorBuilder::ENCRYPTION_KEY_NAMESPACE)

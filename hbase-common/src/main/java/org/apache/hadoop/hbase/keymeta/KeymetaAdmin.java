@@ -21,15 +21,14 @@ import java.io.IOException;
 import java.security.KeyException;
 import java.util.List;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * KeymetaAdmin is an interface for administrative functions related to managed keys. It handles the
  * following methods:
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public interface KeymetaAdmin {
   /**
    * Enables key management for the specified custodian and namespace.
@@ -78,13 +77,15 @@ public interface KeymetaAdmin {
   void clearManagedKeyDataCache() throws IOException;
 
   /**
-   * Disables key management for the specified custodian and namespace. This marks any ACTIVE keys
-   * as INACTIVE and adds a DISABLED state marker such that no new ACTIVE key is retrieved, so the
-   * new data written will not be encrypted.
+   * Disables key management for the specified custodian and namespace. First adds a DISABLED state
+   * marker for the (custodian, namespace) so no new ACTIVE key is retrieved; then enumerates all
+   * managed keys for that scope and disables each via the same semantics as
+   * {@link #disableManagedKey(byte[], String, String)}. New data written for this scope will not be
+   * encrypted.
    * @param keyCust      The key custodian identifier.
    * @param keyNamespace The namespace for the key management.
-   * @return The {@link ManagedKeyData} object identifying the previously active key and its current
-   *         state.
+   * @return The {@link ManagedKeyData} object for the DISABLED state marker (or a synthetic marker
+   *         if read-back is null).
    * @throws IOException  if an error occurs while disabling key management.
    * @throws KeyException if an error occurs while disabling key management.
    */
@@ -93,15 +94,15 @@ public interface KeymetaAdmin {
 
   /**
    * Disables the specific managed key identified by the specified custodian, namespace, and
-   * metadata hash.
-   * @param keyCust         The key custodian identifier.
-   * @param keyNamespace    The namespace for the key management.
-   * @param keyMetadataHash The key metadata hash.
+   * metadata.
+   * @param keyCust      The key custodian identifier.
+   * @param keyNamespace The namespace for the key management.
+   * @param keyMetadata  The key metadata.
    * @return A {@link ManagedKeyData} object identifying the key and its current status.
    * @throws IOException  if an error occurs while disabling the managed key.
    * @throws KeyException if an error occurs while disabling the managed key.
    */
-  ManagedKeyData disableManagedKey(byte[] keyCust, String keyNamespace, byte[] keyMetadataHash)
+  ManagedKeyData disableManagedKey(byte[] keyCust, String keyNamespace, String keyMetadata)
     throws IOException, KeyException;
 
   /**
@@ -123,4 +124,19 @@ public interface KeymetaAdmin {
    * @throws KeyException if an error occurs while refreshing managed keys.
    */
   void refreshManagedKeys(byte[] keyCust, String keyNamespace) throws IOException, KeyException;
+
+  /**
+   * Resolves {@code keyMetadata} through the configured managed key provider (no wrapped key
+   * bytes), then persists via {@code addKey}. An {@code ACTIVE} key is recorded for encryption of
+   * new writes like other admin flows.
+   * @param keyCust      key custodian; must match the unwrapped key's custodian
+   * @param keyNamespace key namespace; must match the unwrapped key's namespace
+   * @param keyMetadata  argument to
+   *                     {@link ManagedKeyProvider#unwrapKey(ManagedKeyIdentity, String, byte[])}
+   * @return persisted key data
+   * @throws IOException  if metadata is empty, persistence fails, or an I/O error occurs
+   * @throws KeyException if the provider returns an invalid key or scope mismatches the request
+   */
+  ManagedKeyData setManagedKey(byte[] keyCust, String keyNamespace, String keyMetadata)
+    throws IOException, KeyException;
 }

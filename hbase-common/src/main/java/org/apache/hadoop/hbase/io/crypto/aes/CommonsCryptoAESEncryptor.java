@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.io.crypto.aes;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.security.Key;
 import java.security.SecureRandom;
 import java.util.Properties;
 import javax.crypto.spec.IvParameterSpec;
@@ -28,50 +27,16 @@ import org.apache.hadoop.hbase.io.crypto.Encryptor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class CommonsCryptoAESEncryptor implements Encryptor {
+public class CommonsCryptoAESEncryptor extends CommonsCryptoAESCodecBase implements Encryptor {
 
-  private String cipherMode;
-  private Properties properties;
-  private Key key;
-  private byte[] iv;
   private boolean initialized = false;
   private SecureRandom rng;
 
   public CommonsCryptoAESEncryptor(String cipherMode, Properties properties, SecureRandom rng) {
-    this.cipherMode = cipherMode;
-    this.properties = properties;
+    super(cipherMode, properties);
     this.rng = rng;
-  }
-
-  @Override
-  public void setKey(Key key) {
-    this.key = key;
-  }
-
-  @Override
-  public int getIvLength() {
-    return CommonsCryptoAES.IV_LENGTH;
-  }
-
-  @Override
-  public int getBlockSize() {
-    return CommonsCryptoAES.BLOCK_SIZE;
-  }
-
-  @Override
-  public byte[] getIv() {
-    return iv;
-  }
-
-  @Override
-  public void setIv(byte[] iv) {
-    Preconditions.checkNotNull(iv, "IV cannot be null");
-    Preconditions.checkArgument(iv.length == CommonsCryptoAES.IV_LENGTH, "Invalid IV length");
-    this.iv = iv;
   }
 
   @Override

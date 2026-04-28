@@ -27,7 +27,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.security.Key;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -53,8 +52,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
-import org.apache.hadoop.hbase.security.EncryptionUtil;
-import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -877,24 +875,9 @@ public class HFileWriterImpl implements HFile.Writer {
   protected void finishClose(FixedFileTrailer trailer) throws IOException {
     // Write out encryption metadata before finalizing if we have a valid crypto context
     Encryption.Context cryptoContext = hFileContext.getEncryptionContext();
-    if (cryptoContext != Encryption.Context.NONE) {
-      // key management is not yet implemented, so kekData is always null
-      // Use traditional encryption with master key
-      String wrapperSubject = cryptoContext.getConf().get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
-        User.getCurrent().getShortName());
-      Key encKey = cryptoContext.getKey();
-
-      // Wrap the context's key and write it as the encryption metadata
-      if (encKey != null) {
-        byte[] wrappedKey =
-          EncryptionUtil.wrapKey(cryptoContext.getConf(), wrapperSubject, encKey, null);
-        trailer.setEncryptionKey(wrappedKey);
-      }
-
-      // Key management fields - not yet implemented, set to defaults
-      trailer.setKeyNamespace(null);
-      trailer.setKEKMetadata(null);
-      trailer.setKEKChecksum(0);
+    if (cryptoContext != Encryption.Context.NONE && cryptoContext.getKey() != null) {
+      byte[] wrappedKey = SecurityUtil.serializeEncryptionContext(cryptoContext);
+      trailer.setEncryptionKey(wrappedKey);
     }
     // Now we can finish the close
     trailer.setMetaIndexCount(metaNames.size());

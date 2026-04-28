@@ -192,7 +192,7 @@ public class HFileBlockDefaultEncodingContext implements HFileBlockEncodingConte
         Encryption.encrypt(cryptoByteStream, in, encryptor);
 
         // Increment the IV given the final block size
-        Encryption.incrementIv(iv, 1 + (cryptoByteStream.size() / encryptor.getBlockSize()));
+        Encryption.incrementIv(iv, encryptor.getIvIncrement(cryptoByteStream.size()));
         return new Bytes(cryptoByteStream.getBuffer(), 0, cryptoByteStream.size());
       } else {
 

@@ -20,14 +20,21 @@ package org.apache.hadoop.hbase.io.crypto;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.security.GeneralSecurityException;
 import java.security.Key;
+import java.security.SecureRandom;
+import javax.crypto.spec.SecretKeySpec;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A common interface for a cryptographic algorithm.
  */
 @InterfaceAudience.Public
 public abstract class Cipher {
+
+  private static final Logger LOG = LoggerFactory.getLogger(Cipher.class);
 
   public static final int KEY_LENGTH = 16;
   public static final int KEY_LENGTH_BITS = KEY_LENGTH * 8;
@@ -38,9 +45,22 @@ public abstract class Cipher {
   public static final String RNG_PROVIDER_KEY = "hbase.crypto.algorithm.rng.provider";
 
   private final CipherProvider provider;
+  private final SecureRandom rng;
 
   public Cipher(CipherProvider provider) {
     this.provider = provider;
+    String rngAlgorithm = provider.getConf().get(RNG_ALGORITHM_KEY, "SHA1PRNG");
+    String rngProvider = provider.getConf().get(RNG_PROVIDER_KEY);
+    SecureRandom instance;
+    try {
+      instance = (rngProvider != null)
+        ? SecureRandom.getInstance(rngAlgorithm, rngProvider)
+        : SecureRandom.getInstance(rngAlgorithm);
+    } catch (GeneralSecurityException e) {
+      LOG.warn("Could not instantiate specified RNG, falling back to default", e);
+      instance = new SecureRandom();
+    }
+    this.rng = instance;
   }
 
   /**
@@ -50,10 +70,21 @@ public abstract class Cipher {
     return provider;
   }
 
+  /** Return the {@link SecureRandom} instance used by this cipher. */
+  protected SecureRandom getRNG() {
+    return rng;
+  }
+
   /**
    * Return this Cipher's name
    */
   public abstract String getName();
+
+  /**
+   * Return the JCE algorithm name to use when constructing a
+   * {@link javax.crypto.spec.SecretKeySpec} for this cipher (e.g. "AES").
+   */
+  public abstract String getKeyAlgorithm();
 
   /**
    * Return the key length required by this cipher, in bytes
@@ -66,10 +97,25 @@ public abstract class Cipher {
   public abstract int getIvLength();
 
   /**
-   * Create a random symmetric key
+   * Return the authentication tag length in bytes for authenticated encryption modes (e.g. GCM).
+   * The tag is appended to ciphertext by the encryptor but consumed internally by the decryptor, so
+   * callers that size buffers for the decrypted output must subtract this overhead. Defaults to 0
+   * for non-authenticated modes like CTR.
+   */
+  public int getAuthTagLength() {
+    return 0;
+  }
+
+  /**
+   * Create a random symmetric key. Generates {@link #getKeyLength()} random bytes and wraps them in
+   * a {@link SecretKeySpec} using {@link #getKeyAlgorithm()}.
    * @return the random symmetric key
    */
-  public abstract Key getRandomKey();
+  public Key getRandomKey() {
+    byte[] keyBytes = new byte[getKeyLength()];
+    rng.nextBytes(keyBytes);
+    return new SecretKeySpec(keyBytes, getKeyAlgorithm());
+  }
 
   /**
    * Get an encryptor for encrypting data.
@@ -88,8 +134,13 @@ public abstract class Cipher {
    * @param iv      initialization vector
    * @return the encrypting wrapper
    */
-  public abstract OutputStream createEncryptionStream(OutputStream out, Context context, byte[] iv)
-    throws IOException;
+  public OutputStream createEncryptionStream(OutputStream out, Context context, byte[] iv)
+    throws IOException {
+    Encryptor e = getEncryptor();
+    e.setKey(context.getKey());
+    e.setIv(iv);
+    return e.createEncryptionStream(out);
+  }
 
   /**
    * Create an encrypting output stream given an initialized encryptor
@@ -97,8 +148,10 @@ public abstract class Cipher {
    * @param encryptor the encryptor
    * @return the encrypting wrapper
    */
-  public abstract OutputStream createEncryptionStream(OutputStream out, Encryptor encryptor)
-    throws IOException;
+  public OutputStream createEncryptionStream(OutputStream out, Encryptor encryptor)
+    throws IOException {
+    return encryptor.createEncryptionStream(out);
+  }
 
   /**
    * Create a decrypting input stream given a context and IV
@@ -107,8 +160,13 @@ public abstract class Cipher {
    * @param iv      initialization vector
    * @return the decrypting wrapper
    */
-  public abstract InputStream createDecryptionStream(InputStream in, Context context, byte[] iv)
-    throws IOException;
+  public InputStream createDecryptionStream(InputStream in, Context context, byte[] iv)
+    throws IOException {
+    Decryptor d = getDecryptor();
+    d.setKey(context.getKey());
+    d.setIv(iv);
+    return d.createDecryptionStream(in);
+  }
 
   /**
    * Create a decrypting output stream given an initialized decryptor
@@ -116,7 +174,9 @@ public abstract class Cipher {
    * @param decryptor the decryptor
    * @return the decrypting wrapper
    */
-  public abstract InputStream createDecryptionStream(InputStream in, Decryptor decryptor)
-    throws IOException;
+  public InputStream createDecryptionStream(InputStream in, Decryptor decryptor)
+    throws IOException {
+    return decryptor.createDecryptionStream(in);
+  }
 
 }
