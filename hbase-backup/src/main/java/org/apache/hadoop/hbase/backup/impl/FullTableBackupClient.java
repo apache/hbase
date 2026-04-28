@@ -178,12 +178,12 @@ public class FullTableBackupClient extends TableBackupClient {
       Map<TableName, Map<String, Long>> newTableSetTimestampMap =
         backupManager.readLogTimestampMap();
 
-      backupManager
-        .deleteBulkLoadedRows(bulkLoadsToDelete.stream().map(BulkLoad::getRowKey).toList());
-
       // backup complete
       backupInfo.setTableSetTimestampMap(newTableSetTimestampMap);
       completeBackup(conn, backupInfo, BackupType.FULL, conf);
+
+      backupManager
+        .deleteBulkLoadedRows(bulkLoadsToDelete.stream().map(BulkLoad::getRowKey).toList());
     } catch (Exception e) {
       failBackup(conn, backupInfo, backupManager, e, "Unexpected BackupException : ",
         BackupType.FULL, conf);
