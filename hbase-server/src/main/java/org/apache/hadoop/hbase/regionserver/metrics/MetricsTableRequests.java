@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver.metrics;
 
-import com.google.errorprone.annotations.RestrictedApi;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.metrics.Counter;
@@ -343,15 +342,11 @@ public class MetricsTableRequests {
     }
   }
 
-  @RestrictedApi(explanation = "Should only be called in TestMetricsTableRequests", link = "",
-      allowedOnPath = ".*/TestMetricsTableRequests.java")
-  public MetricRegistryInfo getMetricRegistryInfo() {
+  MetricRegistryInfo getMetricRegistryInfo() {
     return registryInfo;
   }
 
-  @RestrictedApi(explanation = "Should only be called in TestMetricsTableRequests", link = "",
-      allowedOnPath = ".*/TestMetricsTableRequests.java")
-  public MetricRegistry getMetricRegistry() {
+  MetricRegistry getMetricRegistry() {
     return registry;
   }
 }
