@@ -77,7 +77,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
  * Base class for testing distributed log splitting.
  */
 public abstract class AbstractTestDLS {
-  private static final Logger LOG = LoggerFactory.getLogger(TestSplitLogManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractTestDLS.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
