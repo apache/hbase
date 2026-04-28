@@ -23,7 +23,7 @@ import static org.mockito.Mockito.mockStatic;
 import java.util.stream.Stream;
 import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.client.ConnectionRegistry;
-import org.apache.hadoop.hbase.client.FromClientSideTest3;
+import org.apache.hadoop.hbase.client.FromClientSideTest1;
 import org.apache.hadoop.hbase.client.RpcConnectionRegistry;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -37,9 +37,9 @@ import org.mockito.MockedStatic;
 @Tag(LargeTests.TAG)
 @Tag(ClientTests.TAG)
 @HBaseParameterizedTestTemplate(name = "{index}: registryImpl={0}, numHedgedReqs={1}")
-public class TestFromClientSide3WoUnsafe extends FromClientSideTest3 {
+public class TestFromClientSide1WoUnsafe extends FromClientSideTest1 {
 
-  public TestFromClientSide3WoUnsafe(Class<? extends ConnectionRegistry> registryImpl,
+  public TestFromClientSide1WoUnsafe(Class<? extends ConnectionRegistry> registryImpl,
     int numHedgedReqs) {
     super(registryImpl, numHedgedReqs);
   }
@@ -52,7 +52,7 @@ public class TestFromClientSide3WoUnsafe extends FromClientSideTest3 {
       assertFalse(ByteBufferUtils.UNSAFE_AVAIL);
       assertFalse(ByteBufferUtils.UNSAFE_UNALIGNED);
     }
-    startCluster(MultiRowMutationEndpoint.class);
+    initialize(MultiRowMutationEndpoint.class);
   }
 
   // Override the parameters in parent class as we will find the parameters method from the current

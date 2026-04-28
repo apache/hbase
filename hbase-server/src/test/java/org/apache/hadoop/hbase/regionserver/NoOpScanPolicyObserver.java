@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Optional;
-import org.apache.hadoop.hbase.client.TestFromClientSideWithCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -30,7 +29,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 /**
  * RegionObserver that just reimplements the default behavior, in order to validate that all the
  * necessary APIs for this are public This observer is also used in
- * {@link TestFromClientSideWithCoprocessor} and {@link TestCompactionWithCoprocessor} to make sure
+ * {@code TestFromClientSideWithCoprocessor} and {@link TestCompactionWithCoprocessor} to make sure
  * that a wide range of functionality still behaves as expected.
  */
 public class NoOpScanPolicyObserver implements RegionCoprocessor, RegionObserver {

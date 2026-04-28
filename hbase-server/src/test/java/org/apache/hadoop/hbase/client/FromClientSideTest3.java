@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -35,12 +38,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -61,65 +62,38 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
-public class FromClientSide3TestBase {
+public class FromClientSideTest3 extends FromClientSideTestBase {
 
-  private static final Logger LOG = LoggerFactory.getLogger(FromClientSide3TestBase.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected FromClientSideTest3(Class<? extends ConnectionRegistry> registryImpl,
+    int numHedgedReqs) {
+    super(registryImpl, numHedgedReqs);
+  }
+
+  private static final Logger LOG = LoggerFactory.getLogger(FromClientSideTest3.class);
 
   private static int WAITTABLE_MILLIS;
-  private static byte[] FAMILY;
-  private static int SLAVES;
-  private static byte[] ROW;
   private static byte[] ANOTHERROW;
-  private static byte[] QUALIFIER;
-  private static byte[] VALUE;
   private static byte[] COL_QUAL;
   private static byte[] VAL_BYTES;
   private static byte[] ROW_BYTES;
 
-  private TableName tableName;
-
-  protected static void startCluster() throws Exception {
+  protected static void startCluster(Class<?>... cps) throws Exception {
     WAITTABLE_MILLIS = 10000;
-    FAMILY = Bytes.toBytes("testFamily");
     SLAVES = 3;
-    ROW = Bytes.toBytes("testRow");
     ANOTHERROW = Bytes.toBytes("anotherrow");
-    QUALIFIER = Bytes.toBytes("testQualifier");
-    VALUE = Bytes.toBytes("testValue");
     COL_QUAL = Bytes.toBytes("f1");
     VAL_BYTES = Bytes.toBytes("v1");
     ROW_BYTES = Bytes.toBytes("r1");
-    TEST_UTIL.startMiniCluster(SLAVES);
-  }
-
-  @AfterAll
-  public static void shutdownCluster() throws Exception {
-    TEST_UTIL.shutdownMiniCluster();
-  }
-
-  @BeforeEach
-  public void setUp(TestInfo testInfo) throws Exception {
-    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
-  }
-
-  @AfterEach
-  public void tearDown() throws Exception {
-    for (TableDescriptor htd : TEST_UTIL.getAdmin().listTableDescriptors()) {
-      LOG.info("Tear down, remove table=" + htd.getTableName());
-      TEST_UTIL.deleteTable(htd.getTableName());
-    }
+    initialize(cps);
   }
 
   private void randomCFPuts(Table table, byte[] row, byte[] family, int nPuts) throws Exception {
@@ -135,7 +109,6 @@ public class FromClientSide3TestBase {
 
   private void performMultiplePutAndFlush(HBaseAdmin admin, Table table, byte[] row, byte[] family,
     int nFlushes, int nPuts) throws Exception {
-
     try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(table.getName())) {
       // connection needed for poll-wait
       HRegionLocation loc = locator.getRegionLocation(row, true);
@@ -165,9 +138,11 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testScanAfterDeletingSpecifiedRow() throws IOException, InterruptedException {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
       byte[] row = Bytes.toBytes("SpecifiedRow");
       byte[] value0 = Bytes.toBytes("value_0");
@@ -208,10 +183,11 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testScanAfterDeletingSpecifiedRowV2() throws IOException, InterruptedException {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       byte[] row = Bytes.toBytes("SpecifiedRow");
       byte[] qual0 = Bytes.toBytes("qual0");
       byte[] qual1 = Bytes.toBytes("qual1");
@@ -247,7 +223,7 @@ public class FromClientSide3TestBase {
   }
 
   // override the config settings at the CF level and ensure priority
-  @Test
+  @TestTemplate
   public void testAdvancedConfigOverride() throws Exception {
     /*
      * Overall idea: (1) create 3 store files and issue a compaction. config's compaction.min == 3,
@@ -257,131 +233,130 @@ public class FromClientSide3TestBase {
      * table. The CF schema should override the Table schema and now cause a minor compaction.
      */
     TEST_UTIL.getConfiguration().setInt("hbase.hstore.compaction.min", 3);
+    TEST_UTIL.createTable(tableName, FAMILY, 10);
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName);
+      Admin admin = conn.getAdmin()) {
+      ClusterConnection connection = (ClusterConnection) conn;
+      // Create 3 store files.
+      byte[] row = Bytes.toBytes(ThreadLocalRandom.current().nextInt());
+      performMultiplePutAndFlush((HBaseAdmin) admin, table, row, FAMILY, 3, 100);
 
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-      try (Admin admin = TEST_UTIL.getAdmin()) {
-        ClusterConnection connection = (ClusterConnection) TEST_UTIL.getConnection();
+      try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+        // Verify we have multiple store files.
+        HRegionLocation loc = locator.getRegionLocation(row, true);
+        byte[] regionName = loc.getRegionInfo().getRegionName();
+        AdminProtos.AdminService.BlockingInterface server =
+          connection.getAdmin(loc.getServerName());
+        assertTrue(ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() > 1);
 
-        // Create 3 store files.
-        byte[] row = Bytes.toBytes(ThreadLocalRandom.current().nextInt());
-        performMultiplePutAndFlush((HBaseAdmin) admin, table, row, FAMILY, 3, 100);
+        // Issue a compaction request
+        admin.compact(tableName);
 
-        try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
-          // Verify we have multiple store files.
-          HRegionLocation loc = locator.getRegionLocation(row, true);
-          byte[] regionName = loc.getRegionInfo().getRegionName();
-          AdminProtos.AdminService.BlockingInterface server =
-            connection.getAdmin(loc.getServerName());
-          assertTrue(ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() > 1);
-
-          // Issue a compaction request
-          admin.compact(tableName);
-
-          // poll wait for the compactions to happen
-          for (int i = 0; i < 10 * 1000 / 40; ++i) {
-            // The number of store files after compaction should be lesser.
-            loc = locator.getRegionLocation(row, true);
-            if (!loc.getRegionInfo().isOffline()) {
-              regionName = loc.getRegionInfo().getRegionName();
-              server = connection.getAdmin(loc.getServerName());
-              if (ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() <= 1) {
-                break;
-              }
+        // poll wait for the compactions to happen
+        for (int i = 0; i < 10 * 1000 / 40; ++i) {
+          // The number of store files after compaction should be lesser.
+          loc = locator.getRegionLocation(row, true);
+          if (!loc.getRegionInfo().isOffline()) {
+            regionName = loc.getRegionInfo().getRegionName();
+            server = connection.getAdmin(loc.getServerName());
+            if (ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() <= 1) {
+              break;
             }
-            Thread.sleep(40);
           }
-          // verify the compactions took place and that we didn't just time out
-          assertTrue(ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() <= 1);
+          Thread.sleep(40);
+        }
+        // verify the compactions took place and that we didn't just time out
+        assertTrue(ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() <= 1);
 
-          // change the compaction.min config option for this table to 5
-          LOG.info("hbase.hstore.compaction.min should now be 5");
-          HTableDescriptor htd = new HTableDescriptor(table.getTableDescriptor());
-          htd.setValue("hbase.hstore.compaction.min", String.valueOf(5));
-          admin.modifyTable(tableName, htd);
-          Pair<Integer, Integer> st = admin.getAlterStatus(tableName);
-          while (null != st && st.getFirst() > 0) {
-            LOG.debug(st.getFirst() + " regions left to update");
-            Thread.sleep(40);
-            st = admin.getAlterStatus(tableName);
-          }
-          LOG.info("alter status finished");
+        // change the compaction.min config option for this table to 5
+        LOG.info("hbase.hstore.compaction.min should now be 5");
+        HTableDescriptor htd = new HTableDescriptor(table.getTableDescriptor());
+        htd.setValue("hbase.hstore.compaction.min", String.valueOf(5));
+        admin.modifyTable(tableName, htd);
+        Pair<Integer, Integer> st = admin.getAlterStatus(tableName);
+        while (null != st && st.getFirst() > 0) {
+          LOG.debug(st.getFirst() + " regions left to update");
+          Thread.sleep(40);
+          st = admin.getAlterStatus(tableName);
+        }
+        LOG.info("alter status finished");
 
-          // Create 3 more store files.
-          performMultiplePutAndFlush((HBaseAdmin) admin, table, row, FAMILY, 3, 10);
+        // Create 3 more store files.
+        performMultiplePutAndFlush((HBaseAdmin) admin, table, row, FAMILY, 3, 10);
 
-          // Issue a compaction request
-          admin.compact(tableName);
+        // Issue a compaction request
+        admin.compact(tableName);
 
-          // This time, the compaction request should not happen
-          Thread.sleep(10 * 1000);
+        // This time, the compaction request should not happen
+        Thread.sleep(10 * 1000);
+        loc = locator.getRegionLocation(row, true);
+        regionName = loc.getRegionInfo().getRegionName();
+        server = connection.getAdmin(loc.getServerName());
+        int sfCount = ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size();
+        assertTrue(sfCount > 1);
+
+        // change an individual CF's config option to 2 & online schema update
+        LOG.info("hbase.hstore.compaction.min should now be 2");
+        HColumnDescriptor hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
+        hcd.setValue("hbase.hstore.compaction.min", String.valueOf(2));
+        htd.modifyFamily(hcd);
+        admin.modifyTable(tableName, htd);
+        st = admin.getAlterStatus(tableName);
+        while (null != st && st.getFirst() > 0) {
+          LOG.debug(st.getFirst() + " regions left to update");
+          Thread.sleep(40);
+          st = admin.getAlterStatus(tableName);
+        }
+        LOG.info("alter status finished");
+
+        // Issue a compaction request
+        admin.compact(tableName);
+
+        // poll wait for the compactions to happen
+        for (int i = 0; i < 10 * 1000 / 40; ++i) {
           loc = locator.getRegionLocation(row, true);
           regionName = loc.getRegionInfo().getRegionName();
-          server = connection.getAdmin(loc.getServerName());
-          int sfCount = ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size();
-          assertTrue(sfCount > 1);
-
-          // change an individual CF's config option to 2 & online schema update
-          LOG.info("hbase.hstore.compaction.min should now be 2");
-          HColumnDescriptor hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
-          hcd.setValue("hbase.hstore.compaction.min", String.valueOf(2));
-          htd.modifyFamily(hcd);
-          admin.modifyTable(tableName, htd);
-          st = admin.getAlterStatus(tableName);
-          while (null != st && st.getFirst() > 0) {
-            LOG.debug(st.getFirst() + " regions left to update");
-            Thread.sleep(40);
-            st = admin.getAlterStatus(tableName);
-          }
-          LOG.info("alter status finished");
-
-          // Issue a compaction request
-          admin.compact(tableName);
-
-          // poll wait for the compactions to happen
-          for (int i = 0; i < 10 * 1000 / 40; ++i) {
-            loc = locator.getRegionLocation(row, true);
-            regionName = loc.getRegionInfo().getRegionName();
-            try {
-              server = connection.getAdmin(loc.getServerName());
-              if (ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() < sfCount) {
-                break;
-              }
-            } catch (Exception e) {
-              LOG.debug("Waiting for region to come online: " + Bytes.toString(regionName));
+          try {
+            server = connection.getAdmin(loc.getServerName());
+            if (ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() < sfCount) {
+              break;
             }
-            Thread.sleep(40);
+          } catch (Exception e) {
+            LOG.debug("Waiting for region to come online: " + Bytes.toString(regionName));
           }
-
-          // verify the compaction took place and that we didn't just time out
-          assertTrue(ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() < sfCount);
-
-          // Finally, ensure that we can remove a custom config value after we made it
-          LOG.info("Removing CF config value");
-          LOG.info("hbase.hstore.compaction.min should now be 5");
-          hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
-          hcd.setValue("hbase.hstore.compaction.min", null);
-          htd.modifyFamily(hcd);
-          admin.modifyTable(tableName, htd);
-          st = admin.getAlterStatus(tableName);
-          while (null != st && st.getFirst() > 0) {
-            LOG.debug(st.getFirst() + " regions left to update");
-            Thread.sleep(40);
-            st = admin.getAlterStatus(tableName);
-          }
-          LOG.info("alter status finished");
-          assertNull(
-            table.getTableDescriptor().getFamily(FAMILY).getValue("hbase.hstore.compaction.min"));
+          Thread.sleep(40);
         }
+
+        // verify the compaction took place and that we didn't just time out
+        assertTrue(ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() < sfCount);
+
+        // Finally, ensure that we can remove a custom config value after we made it
+        LOG.info("Removing CF config value");
+        LOG.info("hbase.hstore.compaction.min should now be 5");
+        hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
+        hcd.setValue("hbase.hstore.compaction.min", null);
+        htd.modifyFamily(hcd);
+        admin.modifyTable(tableName, htd);
+        st = admin.getAlterStatus(tableName);
+        while (null != st && st.getFirst() > 0) {
+          LOG.debug(st.getFirst() + " regions left to update");
+          Thread.sleep(40);
+          st = admin.getAlterStatus(tableName);
+        }
+        LOG.info("alter status finished");
+        assertNull(
+          table.getTableDescriptor().getFamily(FAMILY).getValue("hbase.hstore.compaction.min"));
       }
     }
   }
 
-  @Test
+  @TestTemplate
   public void testHTableBatchWithEmptyPut() throws IOException, InterruptedException {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-      List actions = (List) new ArrayList();
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
+      List<Put> actions = new ArrayList<>();
       Object[] results = new Object[2];
       // create an empty Put
       Put put1 = new Put(ROW);
@@ -399,15 +374,15 @@ public class FromClientSide3TestBase {
 
   // Test Table.batch with large amount of mutations against the same key.
   // It used to trigger read lock's "Maximum lock count exceeded" Error.
-  @Test
+  @TestTemplate
   public void testHTableWithLargeBatch() throws IOException, InterruptedException {
     int sixtyFourK = 64 * 1024;
     List actions = new ArrayList();
     Object[] results = new Object[(sixtyFourK + 1) * 2];
 
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       for (int i = 0; i < sixtyFourK + 1; i++) {
         Put put1 = new Put(ROW);
         put1.addColumn(FAMILY, QUALIFIER, VALUE);
@@ -422,13 +397,13 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testBatchWithRowMutation() throws Exception {
     LOG.info("Starting testBatchWithRowMutation");
     byte[][] QUALIFIERS = new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b") };
-
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
 
       RowMutations arm = RowMutations
         .of(Collections.singletonList(new Put(ROW).addColumn(FAMILY, QUALIFIERS[0], VALUE)));
@@ -447,21 +422,21 @@ public class FromClientSide3TestBase {
       assertNull(r.getValue(FAMILY, QUALIFIERS[0]));
 
       // Test that we get the correct remote exception for RowMutations from batch()
-      try {
-        arm = RowMutations.of(Collections.singletonList(
+      RetriesExhaustedException e = assertThrows(RetriesExhaustedException.class, () -> {
+        RowMutations m = RowMutations.of(Collections.singletonList(
           new Put(ROW).addColumn(new byte[] { 'b', 'o', 'g', 'u', 's' }, QUALIFIERS[0], VALUE)));
-        table.batch(Arrays.asList(arm), batchResult);
-        fail("Expected RetriesExhaustedWithDetailsException with NoSuchColumnFamilyException");
-      } catch (RetriesExhaustedWithDetailsException e) {
-        String msg = e.getMessage();
-        assertTrue(msg.contains("NoSuchColumnFamilyException"));
-      }
+        table.batch(Arrays.asList(m), batchResult);
+      }, "Expected RetriesExhaustedWithDetailsException with NoSuchColumnFamilyException");
+      assertThat(e.getMessage(), containsString("NoSuchColumnFamilyException"));
     }
+
   }
 
-  @Test
+  @TestTemplate
   public void testBatchWithCheckAndMutate() throws Exception {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       byte[] row1 = Bytes.toBytes("row1");
       byte[] row2 = Bytes.toBytes("row2");
       byte[] row3 = Bytes.toBytes("row3");
@@ -565,12 +540,12 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testHTableExistsMethodSingleRegionSingleGet()
     throws IOException, InterruptedException {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       // Test with a single region table.
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, VALUE);
@@ -587,12 +562,12 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testHTableExistsMethodSingleRegionMultipleGets()
     throws IOException, InterruptedException {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, VALUE);
       table.put(put);
@@ -607,11 +582,11 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testHTableExistsBeforeGet() throws IOException, InterruptedException {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, VALUE);
       table.put(put);
@@ -627,11 +602,11 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testHTableExistsAllBeforeGet() throws IOException, InterruptedException {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       final byte[] ROW2 = Bytes.add(ROW, Bytes.toBytes("2"));
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, VALUE);
@@ -658,84 +633,12 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
-  public void testHTableExistsMethodMultipleRegionsSingleGet() throws Exception {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, 1,
-      new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255)) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-
-      Put put = new Put(ROW);
-      put.addColumn(FAMILY, QUALIFIER, VALUE);
-
-      Get get = new Get(ROW);
-
-      boolean exist = table.exists(get);
-      assertFalse(exist);
-
-      table.put(put);
-
-      exist = table.exists(get);
-      assertTrue(exist);
-    }
-  }
-
-  @Test
-  public void testHTableExistsMethodMultipleRegionsMultipleGets() throws Exception {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, 1,
-      new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255)) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-
-      Put put = new Put(ROW);
-      put.addColumn(FAMILY, QUALIFIER, VALUE);
-      table.put(put);
-
-      List<Get> gets = new ArrayList<>();
-      gets.add(new Get(ANOTHERROW));
-      gets.add(new Get(Bytes.add(ROW, new byte[] { 0x00 })));
-      gets.add(new Get(ROW));
-      gets.add(new Get(Bytes.add(ANOTHERROW, new byte[] { 0x00 })));
-
-      LOG.info("Calling exists");
-      boolean[] results = table.existsAll(gets);
-      assertFalse(results[0]);
-      assertFalse(results[1]);
-      assertTrue(results[2]);
-      assertFalse(results[3]);
-
-      // Test with the first region.
-      put = new Put(new byte[] { 0x00 });
-      put.addColumn(FAMILY, QUALIFIER, VALUE);
-      table.put(put);
-
-      gets = new ArrayList<>();
-      gets.add(new Get(new byte[] { 0x00 }));
-      gets.add(new Get(new byte[] { 0x00, 0x00 }));
-      results = table.existsAll(gets);
-      assertTrue(results[0]);
-      assertFalse(results[1]);
-
-      // Test with the last region
-      put = new Put(new byte[] { (byte) 0xff, (byte) 0xff });
-      put.addColumn(FAMILY, QUALIFIER, VALUE);
-      table.put(put);
-
-      gets = new ArrayList<>();
-      gets.add(new Get(new byte[] { (byte) 0xff }));
-      gets.add(new Get(new byte[] { (byte) 0xff, (byte) 0xff }));
-      gets.add(new Get(new byte[] { (byte) 0xff, (byte) 0xff, (byte) 0xff }));
-      results = table.existsAll(gets);
-      assertFalse(results[0]);
-      assertTrue(results[1]);
-      assertFalse(results[2]);
-    }
-  }
-
-  @Test
+  @TestTemplate
   public void testGetEmptyRow() throws Exception {
     // Create a table and put in 1 row
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       Put put = new Put(ROW_BYTES);
       put.addColumn(FAMILY, COL_QUAL, VAL_BYTES);
       table.put(put);
@@ -756,16 +659,16 @@ public class FromClientSide3TestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testConnectionDefaultUsesCodec() throws Exception {
     ClusterConnection con = (ClusterConnection) TEST_UTIL.getConnection();
     assertTrue(con.hasCellBlockSupport());
   }
 
-  @Test
+  @TestTemplate
   public void testPutWithPreBatchMutate() throws Exception {
     testPreBatchMutate(tableName, () -> {
-      try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
+      try (Connection conn = getConnection(); Table t = conn.getTable(tableName)) {
         Put put = new Put(ROW);
         put.addColumn(FAMILY, QUALIFIER, VALUE);
         t.put(put);
@@ -775,10 +678,10 @@ public class FromClientSide3TestBase {
     });
   }
 
-  @Test
+  @TestTemplate
   public void testRowMutationsWithPreBatchMutate() throws Exception {
     testPreBatchMutate(tableName, () -> {
-      try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
+      try (Connection conn = getConnection(); Table t = conn.getTable(tableName)) {
         RowMutations rm = new RowMutations(ROW, 1);
         Put put = new Put(ROW);
         put.addColumn(FAMILY, QUALIFIER, VALUE);
@@ -791,39 +694,41 @@ public class FromClientSide3TestBase {
   }
 
   private void testPreBatchMutate(TableName tableName, Runnable rn) throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addCoprocessor(WaitingForScanObserver.class.getName());
-    desc.addFamily(new HColumnDescriptor(FAMILY));
-    TEST_UTIL.getAdmin().createTable(desc);
-    // Don't use waitTableAvailable(), because the scanner will mess up the co-processor
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+      .setCoprocessor(WaitingForScanObserver.class.getName()).build();
+    try (Connection conn = getConnection(); Admin admin = conn.getAdmin()) {
+      admin.createTable(tableDescriptor);
+      // Don't use waitTableAvailable(), because the scanner will mess up the co-processor
 
-    ExecutorService service = Executors.newFixedThreadPool(2);
-    service.execute(rn);
-    final List<Cell> cells = new ArrayList<>();
-    service.execute(() -> {
-      try {
-        // waiting for update.
-        TimeUnit.SECONDS.sleep(3);
-        try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
-          Scan scan = new Scan();
-          try (ResultScanner scanner = t.getScanner(scan)) {
-            for (Result r : scanner) {
-              cells.addAll(Arrays.asList(r.rawCells()));
+      ExecutorService service = Executors.newFixedThreadPool(2);
+      service.execute(rn);
+      final List<Cell> cells = new ArrayList<>();
+      service.execute(() -> {
+        try {
+          // waiting for update.
+          TimeUnit.SECONDS.sleep(3);
+          try (Table t = conn.getTable(tableName)) {
+            Scan scan = new Scan();
+            try (ResultScanner scanner = t.getScanner(scan)) {
+              for (Result r : scanner) {
+                cells.addAll(Arrays.asList(r.rawCells()));
+              }
             }
           }
+        } catch (IOException | InterruptedException ex) {
+          throw new RuntimeException(ex);
         }
-      } catch (IOException | InterruptedException ex) {
-        throw new RuntimeException(ex);
-      }
-    });
-    service.shutdown();
-    service.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
-    assertEquals(0, cells.size(), "The write is blocking by RegionObserver#postBatchMutate"
-      + ", so the data is invisible to reader");
-    TEST_UTIL.deleteTable(tableName);
+      });
+      service.shutdown();
+      service.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+      assertEquals(0, cells.size(), "The write is blocking by RegionObserver#postBatchMutate"
+        + ", so the data is invisible to reader");
+    }
+
   }
 
-  @Test
+  @TestTemplate
   public void testLockLeakWithDelta() throws Exception, Throwable {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addCoprocessor(WaitingForMultiMutationsObserver.class.getName());
@@ -833,7 +738,7 @@ public class FromClientSide3TestBase {
     TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
 
     // new a connection for lower retry number.
-    Configuration copy = new Configuration(TEST_UTIL.getConfiguration());
+    Configuration copy = getClientConf();
     copy.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     try (Connection con = ConnectionFactory.createConnection(copy)) {
       HRegion region = (HRegion) find(tableName);
@@ -878,7 +783,7 @@ public class FromClientSide3TestBase {
     assertEquals(0, readLockCount);
   }
 
-  @Test
+  @TestTemplate
   public void testMultiRowMutations() throws Exception, Throwable {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addCoprocessor(MultiRowMutationEndpoint.class.getName());
@@ -889,7 +794,7 @@ public class FromClientSide3TestBase {
     TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
 
     // new a connection for lower retry number.
-    Configuration copy = new Configuration(TEST_UTIL.getConfiguration());
+    Configuration copy = getClientConf();
     copy.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     try (Connection con = ConnectionFactory.createConnection(copy)) {
       byte[] row = Bytes.toBytes("ROW-0");
@@ -974,10 +879,11 @@ public class FromClientSide3TestBase {
    * disobey the multi version concurrency control rules. This test case is to reproduce this
    * scenario.
    */
-  @Test
+  @TestTemplate
   public void testMVCCUsingMVCCPreAssign() throws IOException, InterruptedException {
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
-      TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+    try (Connection conn = getConnection(); Table table = conn.getTable(tableName)) {
       // put two row first to init the scanner
       Put put = new Put(Bytes.toBytes("0"));
       put.addColumn(FAMILY, Bytes.toBytes(""), Bytes.toBytes("0"));
@@ -988,78 +894,24 @@ public class FromClientSide3TestBase {
       Scan scan = new Scan();
       scan.setTimeRange(0, Long.MAX_VALUE);
       scan.setCaching(1);
-      ResultScanner scanner = table.getScanner(scan);
-      int rowNum = scanner.next() != null ? 1 : 0;
-      // the started scanner shouldn't see the rows put below
-      for (int i = 1; i < 1000; i++) {
-        put = new Put(Bytes.toBytes(String.valueOf(i)));
-        put.setDurability(Durability.ASYNC_WAL);
-        put.addColumn(FAMILY, Bytes.toBytes(""), Bytes.toBytes(i));
-        table.put(put);
-      }
-      for (Result result : scanner) {
-        rowNum++;
-      }
-      // scanner should only see two rows
-      assertEquals(2, rowNum);
-      scanner = table.getScanner(scan);
-      rowNum = 0;
-      for (Result result : scanner) {
-        rowNum++;
-      }
-      // the new scanner should see all rows
-      assertEquals(1001, rowNum);
-    }
-  }
-
-  @Test
-  public void testPutThenGetWithMultipleThreads() throws Exception {
-    final int THREAD_NUM = 20;
-    final int ROUND_NUM = 10;
-    for (int round = 0; round < ROUND_NUM; round++) {
-      ArrayList<Thread> threads = new ArrayList<>(THREAD_NUM);
-      final AtomicInteger successCnt = new AtomicInteger(0);
-      try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
-        TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-
-        for (int i = 0; i < THREAD_NUM; i++) {
-          final int index = i;
-          Thread t = new Thread(new Runnable() {
-
-            @Override
-            public void run() {
-              final byte[] row = Bytes.toBytes("row-" + index);
-              final byte[] value = Bytes.toBytes("v" + index);
-              try {
-                Put put = new Put(row);
-                put.addColumn(FAMILY, QUALIFIER, value);
-                ht.put(put);
-                Get get = new Get(row);
-                Result result = ht.get(get);
-                byte[] returnedValue = result.getValue(FAMILY, QUALIFIER);
-                if (Bytes.equals(value, returnedValue)) {
-                  successCnt.getAndIncrement();
-                } else {
-                  LOG.error("Should be equal but not, original value: " + Bytes.toString(value)
-                    + ", returned value: "
-                    + (returnedValue == null ? "null" : Bytes.toString(returnedValue)));
-                }
-              } catch (Throwable e) {
-                // do nothing
-              }
-            }
-          });
-          threads.add(t);
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        int rowNum = scanner.next() != null ? 1 : 0;
+        // the started scanner shouldn't see the rows put below
+        for (int i = 1; i < 1000; i++) {
+          put = new Put(Bytes.toBytes(String.valueOf(i)));
+          put.setDurability(Durability.ASYNC_WAL);
+          put.addColumn(FAMILY, Bytes.toBytes(""), Bytes.toBytes(i));
+          table.put(put);
         }
-        for (Thread t : threads) {
-          t.start();
-        }
-        for (Thread t : threads) {
-          t.join();
-        }
-        assertEquals(THREAD_NUM, successCnt.get(), "Not equal in round " + round);
+        rowNum += Iterables.size(scanner);
+        // scanner should only see two rows
+        assertEquals(2, rowNum);
       }
-      TEST_UTIL.deleteTable(tableName);
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        int rowNum = Iterables.size(scanner);
+        // the new scanner should see all rows
+        assertEquals(1001, rowNum);
+      }
     }
   }
 
@@ -1141,7 +993,7 @@ public class FromClientSide3TestBase {
     return value;
   }
 
-  @Test
+  @TestTemplate
   public void testScanWithBatchSizeReturnIncompleteCells()
     throws IOException, InterruptedException {
     TableDescriptor hd = TableDescriptorBuilder.newBuilder(tableName)
