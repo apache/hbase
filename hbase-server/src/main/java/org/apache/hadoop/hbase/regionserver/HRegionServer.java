@@ -1602,13 +1602,13 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     });
     final MutableFloat currentRegionColdDataRatio = new MutableFloat(0.0f);
     if (DataTieringManager.getInstance() != null) {
-      Pair<List<String>, Long> coldEntry =
-        DataTieringManager.getInstance().getRegionColdDataSize().get(regionEncodedName);
-      if (coldEntry != null) {
-        int coldSizeMB = roundSize(coldEntry.getSecond(), unitMB);
-        currentRegionColdDataRatio
-          .setValue(regionSizeMB == 0 ? 0.0f : (float) coldSizeMB / regionSizeMB);
-      }
+      DataTieringManager.getInstance().getRegionColdDataSize().computeIfPresent(regionEncodedName,
+        (k, v) -> {
+          int coldSizeMB = roundSize(v.getSecond(), unitMB);
+          currentRegionColdDataRatio
+            .setValue(regionSizeMB == 0 ? 0.0f : (float) coldSizeMB / regionSizeMB);
+          return v;
+        });
     }
 
     HDFSBlocksDistribution hdfsBd = r.getHDFSBlocksDistribution();

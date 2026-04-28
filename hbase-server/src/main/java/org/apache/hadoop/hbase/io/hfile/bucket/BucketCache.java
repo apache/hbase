@@ -2497,7 +2497,8 @@ public class BucketCache implements BlockCache, HeapSize {
         getAllCacheKeysForFile(hFileInfo.getHFileContext().getHFileName(), 0, Long.MAX_VALUE);
       int evictedBlocks = evictBlockSet(keySet);
       if (evictedBlocks > 0) {
-        LOG.info("Evicted {} blocks for file {} as it is now considered cold by DataTieringManager",
+        LOG.debug(
+          "Evicted {} blocks for file {} as it is now considered cold by DataTieringManager",
           evictedBlocks, fileName);
       }
       return Optional.of(false);
