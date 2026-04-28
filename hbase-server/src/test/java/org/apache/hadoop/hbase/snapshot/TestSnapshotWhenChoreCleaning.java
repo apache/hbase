@@ -58,7 +58,7 @@ public class TestSnapshotWhenChoreCleaning {
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Configuration CONF = TEST_UTIL.getConfiguration();
-  private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotClientRetries.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotWhenChoreCleaning.class);
   private static final TableName TABLE_NAME = TableName.valueOf("testTable");
   private static final int MAX_SPLIT_KEYS_NUM = 100;
   private static final byte[] FAMILY = Bytes.toBytes("family");

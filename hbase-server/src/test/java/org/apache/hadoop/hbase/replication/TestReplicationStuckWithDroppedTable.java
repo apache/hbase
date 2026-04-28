@@ -57,7 +57,7 @@ public class TestReplicationStuckWithDroppedTable {
     HBaseClassTestRule.forClass(TestReplicationStuckWithDroppedTable.class);
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestReplicationEditsDroppedWithDroppedTable.class);
+    LoggerFactory.getLogger(TestReplicationStuckWithDroppedTable.class);
 
   private static Configuration conf1 = HBaseConfiguration.create();
   private static Configuration conf2 = HBaseConfiguration.create();

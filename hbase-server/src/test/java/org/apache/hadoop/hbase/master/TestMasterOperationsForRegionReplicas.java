@@ -75,7 +75,8 @@ import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 @Tag(MediumTests.TAG)
 public class TestMasterOperationsForRegionReplicas {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestRegionPlacement.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestMasterOperationsForRegionReplicas.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Connection CONNECTION = null;
   private static Admin ADMIN;
