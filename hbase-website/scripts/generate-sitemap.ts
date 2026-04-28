@@ -105,7 +105,7 @@ export async function main() {
 
   sitemap.end();
 
-  const xml = (await streamToPromise(sitemap)).toString();
+  const xml = `${(await streamToPromise(sitemap)).toString().trimEnd()}\n`;
   await Promise.all([writeFile(PUBLIC_SITEMAP_PATH, xml), writeFile(BUILD_SITEMAP_PATH, xml)]);
 
   console.log(
