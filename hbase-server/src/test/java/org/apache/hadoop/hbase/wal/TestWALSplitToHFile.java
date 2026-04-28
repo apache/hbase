@@ -85,7 +85,7 @@ import org.slf4j.LoggerFactory;
 @Tag(MediumTests.TAG)
 public class TestWALSplitToHFile {
 
-  private static final Logger LOG = LoggerFactory.getLogger(AbstractTestWALReplay.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestWALSplitToHFile.class);
   static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private final EnvironmentEdge ee = EnvironmentEdgeManager.getDelegate();
   private Path rootDir = null;

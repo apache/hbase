@@ -62,7 +62,7 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 public class TestWALEventTracker {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestNamedQueueRecorder.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestWALEventTracker.class);
   private static HBaseTestingUtility TEST_UTIL;
   public static Configuration CONF;
 

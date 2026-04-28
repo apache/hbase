@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public final class MetricRegistriesLoader {
-  private static final Logger LOG = LoggerFactory.getLogger(MetricRegistries.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MetricRegistriesLoader.class);
 
   private static final String defaultClass =
     "org.apache.hadoop.hbase.metrics.impl.MetricRegistriesImpl";

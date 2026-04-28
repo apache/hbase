@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class ReusableStreamGzipCodec extends GzipCodec {
 
-  private static final Logger LOG = LoggerFactory.getLogger(Compression.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReusableStreamGzipCodec.class);
 
   /**
    * A bridge that wraps around a DeflaterOutputStream to make it a CompressionOutputStream.
