@@ -81,7 +81,7 @@ public interface MetricsRegionWrapper {
   float getCurrentRegionCacheRatio();
 
   /**
-   * Gets the current cold date % ratio for this region.
+   * Gets the current cold data % ratio for this region.
    */
   float getCurrentRegionColdDataRatio();
 
