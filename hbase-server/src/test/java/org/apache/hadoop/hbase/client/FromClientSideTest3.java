@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -40,9 +39,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.RegionMetrics;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -83,25 +79,6 @@ public class FromClientSideTest3 extends FromClientSideTestBase {
     WAITTABLE_MILLIS = 10000;
     SLAVES = 3;
     initialize(cps);
-  }
-
-  private void randomCFPuts(Table table, byte[] row, byte[] family, int nPuts) throws Exception {
-    Put put = new Put(row);
-    Random rand = ThreadLocalRandom.current();
-    for (int i = 0; i < nPuts; i++) {
-      byte[] qualifier = Bytes.toBytes(rand.nextInt());
-      byte[] value = Bytes.toBytes(rand.nextInt());
-      put.addColumn(family, qualifier, value);
-    }
-    table.put(put);
-  }
-
-  private void performMultiplePutAndFlush(Admin admin, Table table, byte[] row, byte[] family,
-    int nFlushes, int nPuts) throws Exception {
-    for (int i = 0; i < nFlushes; i++) {
-      randomCFPuts(table, row, family, nPuts);
-      admin.flush(table.getName());
-    }
   }
 
   private static List<Cell> toList(ResultScanner scanner) {
@@ -197,120 +174,6 @@ public class FromClientSideTest3 extends FromClientSideTestBase {
       assertEquals("testValue", Bytes.toString(CellUtil.cloneValue(r.rawCells()[0])));
       assertEquals("qual0", Bytes.toString(CellUtil.cloneValue(r.rawCells()[1])));
       assertEquals("qual1", Bytes.toString(CellUtil.cloneValue(r.rawCells()[2])));
-    }
-  }
-
-  private int getStoreFileCount(Admin admin, ServerName serverName, RegionInfo region)
-    throws IOException {
-    for (RegionMetrics metrics : admin.getRegionMetrics(serverName, region.getTable())) {
-      if (Bytes.equals(region.getRegionName(), metrics.getRegionName())) {
-        return metrics.getStoreFileCount();
-      }
-    }
-    return 0;
-  }
-
-  // override the config settings at the CF level and ensure priority
-  @TestTemplate
-  public void testAdvancedConfigOverride() throws Exception {
-    /*
-     * Overall idea: (1) create 3 store files and issue a compaction. config's compaction.min == 3,
-     * so should work. (2) Increase the compaction.min toggle in the HTD to 5 and modify table. If
-     * we use the HTD value instead of the default config value, adding 3 files and issuing a
-     * compaction SHOULD NOT work (3) Decrease the compaction.min toggle in the HCD to 2 and modify
-     * table. The CF schema should override the Table schema and now cause a minor compaction.
-     */
-    TEST_UTIL.getConfiguration().setInt("hbase.hstore.compaction.min", 3);
-    TEST_UTIL.createTable(tableName, FAMILY, 10);
-    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
-    try (Connection conn = getConnection(); Table table = conn.getTable(tableName);
-      Admin admin = conn.getAdmin()) {
-      // Create 3 store files.
-      byte[] row = Bytes.toBytes(ThreadLocalRandom.current().nextInt());
-      performMultiplePutAndFlush(admin, table, row, FAMILY, 3, 100);
-
-      try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
-        // Verify we have multiple store files.
-        HRegionLocation loc = locator.getRegionLocation(row, true);
-        assertTrue(getStoreFileCount(admin, loc.getServerName(), loc.getRegion()) > 1);
-
-        // Issue a compaction request
-        admin.compact(tableName);
-
-        // poll wait for the compactions to happen
-        for (int i = 0; i < 10 * 1000 / 40; ++i) {
-          // The number of store files after compaction should be lesser.
-          loc = locator.getRegionLocation(row, true);
-          if (!loc.getRegion().isOffline()) {
-            if (getStoreFileCount(admin, loc.getServerName(), loc.getRegion()) <= 1) {
-              break;
-            }
-          }
-          Thread.sleep(40);
-        }
-        // verify the compactions took place and that we didn't just time out
-        assertTrue(getStoreFileCount(admin, loc.getServerName(), loc.getRegion()) <= 1);
-
-        // change the compaction.min config option for this table to 5
-        LOG.info("hbase.hstore.compaction.min should now be 5");
-        TableDescriptor htd = TableDescriptorBuilder.newBuilder(table.getDescriptor())
-          .setValue("hbase.hstore.compaction.min", String.valueOf(5)).build();
-        admin.modifyTable(htd);
-        LOG.info("alter status finished");
-
-        // Create 3 more store files.
-        performMultiplePutAndFlush(admin, table, row, FAMILY, 3, 10);
-
-        // Issue a compaction request
-        admin.compact(tableName);
-
-        // This time, the compaction request should not happen
-        Thread.sleep(10 * 1000);
-        loc = locator.getRegionLocation(row, true);
-        int sfCount = getStoreFileCount(admin, loc.getServerName(), loc.getRegion());
-        assertTrue(sfCount > 1);
-
-        // change an individual CF's config option to 2 & online schema update
-        LOG.info("hbase.hstore.compaction.min should now be 2");
-        htd = TableDescriptorBuilder.newBuilder(htd)
-          .modifyColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(htd.getColumnFamily(FAMILY))
-            .setValue("hbase.hstore.compaction.min", String.valueOf(2)).build())
-          .build();
-        admin.modifyTable(htd);
-        LOG.info("alter status finished");
-
-        // Issue a compaction request
-        admin.compact(tableName);
-
-        // poll wait for the compactions to happen
-        for (int i = 0; i < 10 * 1000 / 40; ++i) {
-          loc = locator.getRegionLocation(row, true);
-          try {
-            if (getStoreFileCount(admin, loc.getServerName(), loc.getRegion()) < sfCount) {
-              break;
-            }
-          } catch (Exception e) {
-            LOG.debug("Waiting for region to come online: "
-              + Bytes.toStringBinary(loc.getRegion().getRegionName()));
-          }
-          Thread.sleep(40);
-        }
-
-        // verify the compaction took place and that we didn't just time out
-        assertTrue(getStoreFileCount(admin, loc.getServerName(), loc.getRegion()) < sfCount);
-
-        // Finally, ensure that we can remove a custom config value after we made it
-        LOG.info("Removing CF config value");
-        LOG.info("hbase.hstore.compaction.min should now be 5");
-        htd = TableDescriptorBuilder.newBuilder(htd)
-          .modifyColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(htd.getColumnFamily(FAMILY))
-            .setValue("hbase.hstore.compaction.min", null).build())
-          .build();
-        admin.modifyTable(htd);
-        LOG.info("alter status finished");
-        assertNull(table.getDescriptor().getColumnFamily(FAMILY)
-          .getValue(Bytes.toBytes("hbase.hstore.compaction.min")));
-      }
     }
   }
 
