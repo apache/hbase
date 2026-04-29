@@ -32,7 +32,8 @@ export default [
     route("source-repository", "routes/_landing/source-repository.tsx"),
     route("acid-semantics", "routes/_landing/acid-semantics.tsx"),
     route("news", "routes/_landing/news.tsx"),
-    route("export-control", "routes/_landing/export-control.tsx")
+    route("export-control", "routes/_landing/export-control.tsx"),
+    route("security-model", "routes/_landing/security-model.tsx")
   ]),
   // Docs
   layout("./pages/_docs/docs-layout.tsx", [route("docs/*", "routes/_docs/docs.tsx")]),
