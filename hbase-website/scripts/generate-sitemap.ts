@@ -16,7 +16,7 @@
 // limitations under the License.
 //
 
-import { access, glob, readFile, stat, writeFile } from "node:fs/promises";
+import { access, glob, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { SitemapStream, streamToPromise } from "sitemap";
@@ -38,7 +38,6 @@ const REDIRECT_PAGE_PATTERNS = [
 
 interface SitemapEntry {
   url: string;
-  lastmod: string;
 }
 
 export function normalizePath(relativePath: string): string {
@@ -81,11 +80,8 @@ export async function collectSitemapEntries(): Promise<SitemapEntry[]> {
       continue;
     }
 
-    const { mtime } = await stat(filePath);
-
     entries.push({
-      url: toSiteUrl(relativePath),
-      lastmod: mtime.toISOString()
+      url: toSiteUrl(relativePath)
     });
   }
 
