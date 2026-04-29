@@ -88,7 +88,7 @@ public class TestLogRollAbort {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestLogRollAbort.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(AbstractTestLogRolling.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestLogRollAbort.class);
   private static MiniDFSCluster dfsCluster;
   private static Admin admin;
   private static SingleProcessHBaseCluster cluster;

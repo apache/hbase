@@ -798,7 +798,7 @@ public class CanaryTool implements Tool, Canary {
   private static final long DEFAULT_TIMEOUT = 600000; // 10 mins
   private static final int MAX_THREADS_NUM = 16; // #threads to contact regions
 
-  private static final Logger LOG = LoggerFactory.getLogger(Canary.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CanaryTool.class);
 
   public static final TableName DEFAULT_WRITE_TABLE_NAME =
     TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "canary");
