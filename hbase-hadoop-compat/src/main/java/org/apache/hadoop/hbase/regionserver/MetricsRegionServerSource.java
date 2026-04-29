@@ -657,7 +657,7 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String CURRENT_REGION_COLD_DATA_RATIO = "currentRegionColdDataRatio";
 
   String CURRENT_REGION_COLD_DATA_RATIO_DESC = "The percentage of data in this region that "
-    + "is marked as cold by the configured time based priority logic. ";
+    + "is marked as cold by the configured time based priority logic.";
 
   String EXCLUDE_DATA_NODES_COUNT = "excludedDataNodesCount";
   String EXCLUDE_DATA_NODES_COUNT_DESC =
