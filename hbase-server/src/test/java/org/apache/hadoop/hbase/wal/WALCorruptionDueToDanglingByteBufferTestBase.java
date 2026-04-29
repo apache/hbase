@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
 public abstract class WALCorruptionDueToDanglingByteBufferTestBase {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestAsyncFSWALCorruptionDueToDanglingByteBuffer.class);
+    LoggerFactory.getLogger(WALCorruptionDueToDanglingByteBufferTestBase.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 

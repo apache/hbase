@@ -392,7 +392,7 @@ public class Import extends Configured implements Tool {
   public static class CellSortImporter extends TableMapper<CellWritableComparable, Cell> {
     private Map<byte[], byte[]> cfRenameMap;
     private Filter filter;
-    private static final Logger LOG = LoggerFactory.getLogger(CellImporter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CellSortImporter.class);
 
     /**
      * @param row     The current table row key.

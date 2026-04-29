@@ -47,7 +47,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 
 @InterfaceAudience.Private
 abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
-  private static final Logger LOG = LoggerFactory.getLogger(RecoveredEditsOutputSink.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractRecoveredEditsOutputSink.class);
   private final WALSplitter walSplitter;
   private final ConcurrentMap<String, Long> regionMaximumEditLogSeqNum = new ConcurrentHashMap<>();
   private static final int MAX_RENAME_RETRY_COUNT = 5;

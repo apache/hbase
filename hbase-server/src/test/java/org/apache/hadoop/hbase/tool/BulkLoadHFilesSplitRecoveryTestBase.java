@@ -86,7 +86,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHF
  */
 public class BulkLoadHFilesSplitRecoveryTestBase {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestHRegionServerBulkLoad.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(BulkLoadHFilesSplitRecoveryTestBase.class);
 
   static HBaseTestingUtility util;
   // used by secure subclass

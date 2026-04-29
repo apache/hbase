@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class HFilePreadReader extends HFileReaderImpl {
-  private static final Logger LOG = LoggerFactory.getLogger(HFileReaderImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HFilePreadReader.class);
 
   public HFilePreadReader(ReaderContext context, HFileInfo fileInfo, CacheConfig cacheConf,
     Configuration conf) throws IOException {

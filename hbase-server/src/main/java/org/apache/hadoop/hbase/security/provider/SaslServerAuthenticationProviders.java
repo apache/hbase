@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public final class SaslServerAuthenticationProviders {
   private static final Logger LOG =
-    LoggerFactory.getLogger(SaslClientAuthenticationProviders.class);
+    LoggerFactory.getLogger(SaslServerAuthenticationProviders.class);
 
   public static final String EXTRA_PROVIDERS_KEY = "hbase.server.sasl.provider.extras";
   private static final AtomicReference<SaslServerAuthenticationProviders> holder =
