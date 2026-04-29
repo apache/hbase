@@ -81,6 +81,6 @@ public class TestHFileCompressionZstd extends HFileTestBase {
     long len_2 = FS.getFileStatus(path_2).getLen();
     LOG.info("Level 1 len {}", len_1);
     LOG.info("Level 22 len {}", len_2);
-    assertTrue(len_1 > len_2, "Reconfiguraton with ZSTD_LEVEL_KEY did not seem to work");
+    assertTrue(len_1 > len_2, "Reconfiguration with ZSTD_LEVEL_KEY did not seem to work");
   }
 }
