@@ -64,7 +64,7 @@ import org.slf4j.LoggerFactory;
 @Tag(MediumTests.TAG)
 public class TestAccessController3 extends SecureTestUtil {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestAccessController.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestAccessController3.class);
   private static TableName TEST_TABLE = TableName.valueOf("testtable1");
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf;
