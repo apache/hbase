@@ -455,6 +455,48 @@ public class TestDataTieringManager {
     assertEquals(0L, (long) after.getSecond());
   }
 
+  /**
+   * Like {@link #testUpdateRegionColdDataSizeRemovesCompactedColdAddsNewHot}, but the replacement
+   * store file is still cold under TIME_RANGE rules so {@link DataTieringManager} should keep the
+   * region entry and record the new file's size.
+   */
+  @Test
+  public void testUpdateRegionColdDataSizeRemovesCompactedColdAddsNewCold() throws IOException {
+    initializeTestEnvironment();
+    dataTieringManager.getRegionColdDataSize().clear();
+
+    HStoreFile coldFile = hStoreFiles.get(3);
+    String regionName = coldFile.getPath().getParent().getParent().getName();
+    dataTieringManager.isHotData(coldFile.getFileInfo().getHFileInfo(),
+      coldFile.getFileInfo().getConf());
+
+    HRegion region = testOnlineRegions.get(regionName);
+    assertNotNull(region);
+    HStore hStore = region.getStore(Bytes.toBytes("cf2"));
+    // Region2 hot-age is 2.5 * DAY; use 4 * DAY so the new file stays cold.
+    long coldTimestamp = System.currentTimeMillis() - 4 * DAY;
+    HStoreFile newFile = createHStoreFile(hStore.getStoreContext().getFamilyStoreDirectoryPath(),
+      hStore.getReadOnlyConfiguration(), coldTimestamp, region.getRegionFileSystem());
+    newFile.initReader();
+    hStore.refreshStoreFiles();
+
+    assertFalse("new store file must be cold for this scenario",
+      dataTieringManager.isHotData(newFile.getFileInfo().getHFileInfo(), newFile.getFileInfo()
+        .getConf()));
+
+    dataTieringManager.updateRegionColdDataSize(regionName, Collections.singletonList(coldFile),
+      Collections.singletonList(newFile));
+
+    Pair<List<String>, Long> after = dataTieringManager.getRegionColdDataSize().get(regionName);
+    assertNotNull(after);
+    assertFalse("compacted cold file should no longer be tracked",
+      after.getFirst().contains(coldFile.getPath().getName()));
+    assertEquals(1, after.getFirst().size());
+    assertTrue(after.getFirst().contains(newFile.getPath().getName()));
+    long expectedNew = Bytes.toLong(newFile.getFileInfo().getHFileInfo().get(HFileInfo.FILE_SIZE));
+    assertEquals(expectedNew, (long) after.getSecond());
+  }
+
   /*
    * Verify that two cold blocks(both) are evicted when bucket reaches its capacity. The hot file
    * remains in the cache.
