@@ -256,4 +256,26 @@ public class TestStoreFileListFile {
     StoreFileList list = storeFileListFile.load(true);
     assertEquals(1, list.getStoreFileCount());
   }
+
+  @Test
+  public void testStoreFilesResetTracker() throws IOException {
+    storeFileListFile.update(StoreFileList.newBuilder()
+      .addStoreFile(StoreFileEntry.newBuilder().setName("h1").setSize(10).build()));
+
+    StoreFileListFile writer2 = create();
+    writer2.update(StoreFileList.newBuilder()
+      .addStoreFile(StoreFileEntry.newBuilder().setName("h1").setSize(10).build())
+      .addStoreFile(StoreFileEntry.newBuilder().setName("h2").setSize(10).build()));
+
+    storeFileListFile.resetWriteState();
+
+    storeFileListFile.update(StoreFileList.newBuilder()
+      .addStoreFile(StoreFileEntry.newBuilder().setName("h1").setSize(10).build())
+      .addStoreFile(StoreFileEntry.newBuilder().setName("h2").setSize(10).build())
+      .addStoreFile(StoreFileEntry.newBuilder().setName("h3").setSize(10).build()));
+
+    StoreFileListFile reader = create();
+    assertEquals(3, reader.load(true).getStoreFileCount());
+  }
+
 }
