@@ -37,7 +37,6 @@ import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
@@ -61,6 +60,8 @@ import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -275,15 +276,36 @@ public class TestRowCache {
   }
 
   @Test
-  public void testPutWithTTL() throws IOException {
-    // Put with TTL is not allowed on tables with row cache enabled, because cached rows cannot
-    // track TTL expiration
-    assertThrows(DoNotRetryIOException.class, () -> {
-      Put put = new Put("row".getBytes());
-      put.addColumn(CF1, Q1, "11".getBytes());
-      put.setTTL(1);
-      table.put(put);
-    });
+  public void testPutWithTTL() throws Exception {
+    // Cell-level TTL set via Put.setTTL is supported: the cached row is invalidated on hit when
+    // the cell has expired.
+    byte[] rowKey = "row".getBytes();
+    RowCacheKey rowCacheKey = new RowCacheKey(region, rowKey);
+
+    Put put = new Put(rowKey).addColumn(CF1, Q1, "v".getBytes());
+    put.setTTL(60_000);
+    table.put(put);
+    // Flush so that the next Get reads from HFile (memstore-only reads do not populate the cache)
+    admin.flush(tableName);
+
+    // First Get populates the cache
+    Result first = table.get(new Get(rowKey));
+    assertFalse(first.isEmpty());
+    assertNotNull(rowCache.getRow(rowCacheKey));
+
+    // Advance time beyond the cell TTL
+    ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+    edge.setValue(EnvironmentEdgeManager.currentTime() + 120_000);
+    EnvironmentEdgeManager.injectEdge(edge);
+    try {
+      // Cache hit detects expiration, evicts the row, and falls back to the read path. The
+      // storage path also filters the expired cell, so the result is empty.
+      Result second = table.get(new Get(rowKey));
+      assertTrue(second.isEmpty());
+      assertNull(rowCache.getRow(rowCacheKey));
+    } finally {
+      EnvironmentEdgeManager.reset();
+    }
   }
 
   @Test
