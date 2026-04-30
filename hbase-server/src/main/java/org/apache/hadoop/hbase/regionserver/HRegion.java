@@ -178,6 +178,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -8998,6 +8999,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         CoprocessorConfigurationUtil.updateCoprocessorListInConf(this.conf, conf,
           CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
       });
+
+    boolean newReadOnlyEnabled = ConfigurationUtil.isReadOnlyModeEnabledInConf(newConf);
+
+    if (originalIsReadOnlyEnabled && !newReadOnlyEnabled) {
+      LOG.info("Cluster Read Only mode disabled");
+      for (HStore store : stores.values()) {
+        store.getStoreEngine().getStoreFileTracker().onTransitionToActive();
+      }
+    }
   }
 
   /**
