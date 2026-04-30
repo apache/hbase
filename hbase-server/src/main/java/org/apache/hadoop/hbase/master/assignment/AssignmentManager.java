@@ -235,8 +235,7 @@ public class AssignmentManager {
 
   private final int forceRegionRetainmentRetries;
 
-  private final RegionInTransitionTracker regionInTransitionTracker =
-    new RegionInTransitionTracker();
+  private final RegionInTransitionTracker regionInTransitionTracker;
 
   public AssignmentManager(MasterServices master, MasterRegion masterRegion) {
     this(master, masterRegion, new RegionStateStore(master, masterRegion));
@@ -246,6 +245,7 @@ public class AssignmentManager {
     this.master = master;
     this.regionStateStore = stateStore;
     this.metrics = new MetricsAssignmentManager();
+    this.regionInTransitionTracker = new RegionInTransitionTracker(metrics::updateRitDuration);
     this.masterRegion = masterRegion;
 
     final Configuration conf = master.getConfiguration();
@@ -1743,7 +1743,7 @@ public class AssignmentManager {
             ritsOverThreshold = new HashMap<String, RegionState>();
           }
           ritsOverThreshold.put(state.getRegion().getEncodedName(), state);
-          totalRITsTwiceThreshold += (ritTime > (ritThreshold * 2)) ? 1 : 0;
+          totalRITsTwiceThreshold += (ritTime > (ritThreshold * 2L)) ? 1 : 0;
         }
         if (oldestRITTime < ritTime) {
           oldestRITTime = ritTime;

@@ -19,12 +19,15 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.LongConsumer;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.TableStateManager;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,16 +38,29 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class RegionInTransitionTracker {
   private static final Logger LOG = LoggerFactory.getLogger(RegionInTransitionTracker.class);
+  private static final LongConsumer NOOP_RIT_DURATION_CONSUMER = ignored -> {
+  };
 
   private final List<RegionState.State> DISABLE_TABLE_REGION_STATE =
     List.of(RegionState.State.OFFLINE, RegionState.State.CLOSED);
 
   private final List<RegionState.State> ENABLE_TABLE_REGION_STATE = List.of(RegionState.State.OPEN);
 
-  private final ConcurrentSkipListMap<RegionInfo, RegionStateNode> regionInTransition =
-    new ConcurrentSkipListMap<>(RegionInfo.COMPARATOR);
+  // Keep the live state node and the timestamp when the region first entered RIT together.
+  private final ConcurrentHashMap<RegionInfo, Pair<RegionStateNode, Long>> regionInTransition =
+    new ConcurrentHashMap<>();
 
+  private final LongConsumer ritDurationConsumer;
   private TableStateManager tableStateManager;
+
+  public RegionInTransitionTracker() {
+    this(NOOP_RIT_DURATION_CONSUMER);
+  }
+
+  public RegionInTransitionTracker(LongConsumer ritDurationConsumer) {
+    this.ritDurationConsumer =
+      ritDurationConsumer != null ? ritDurationConsumer : NOOP_RIT_DURATION_CONSUMER;
+  }
 
   public boolean isRegionInTransition(final RegionInfo regionInfo) {
     return regionInTransition.containsKey(regionInfo);
@@ -131,11 +147,18 @@ public class RegionInTransitionTracker {
   }
 
   private boolean addRegionInTransition(final RegionStateNode regionStateNode) {
-    return regionInTransition.putIfAbsent(regionStateNode.getRegionInfo(), regionStateNode) == null;
+    // Preserve the original transition timestamp already tracked on the node, which may predate
+    // when we first observe the region in the tracker during crash or startup recovery.
+    return regionInTransition.putIfAbsent(regionStateNode.getRegionInfo(),
+      Pair.newPair(regionStateNode, regionStateNode.getLastUpdate())) == null;
   }
 
   private boolean removeRegionInTransition(final RegionInfo regionInfo) {
-    return regionInTransition.remove(regionInfo) != null;
+    Pair<RegionStateNode, Long> removed = regionInTransition.remove(regionInfo);
+    if (removed != null) {
+      ritDurationConsumer.accept(EnvironmentEdgeManager.currentTime() - removed.getSecond());
+    }
+    return removed != null;
   }
 
   public void stop() {
@@ -147,7 +170,9 @@ public class RegionInTransitionTracker {
   }
 
   public List<RegionStateNode> getRegionsInTransition() {
-    return new ArrayList<>(regionInTransition.values());
+    List<RegionStateNode> regions = new ArrayList<>(regionInTransition.size());
+    regionInTransition.values().forEach(entry -> regions.add(entry.getFirst()));
+    return regions;
   }
 
   public void setTableStateManager(TableStateManager tableStateManager) {
