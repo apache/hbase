@@ -3473,15 +3473,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public void put(Put put) throws IOException {
     TraceUtil.trace(() -> {
-      // Put with TTL is not allowed on tables with row cache enabled, because cached rows cannot
-      // track TTL expiration
-      if (isRowCacheEnabled) {
-        if (put.getTTL() != Long.MAX_VALUE) {
-          throw new DoNotRetryIOException(
-            "Tables with row cache enabled do not allow setting TTL on Puts");
-        }
-      }
-
       checkReadOnly();
 
       // Do a rough check that we have resources to accept a write. The check is

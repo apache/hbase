@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
@@ -230,11 +231,23 @@ public class RowCache {
       return false;
     }
 
+    if (row.isExpired(EnvironmentEdgeManager.currentTime())) {
+      // A cell in the cached row has expired by its cell-level TTL. Drop the row from the cache
+      // and treat this as a miss so the caller falls back to the normal read path.
+      evictRow(key);
+      return false;
+    }
+
     results.addAll(row.getCells());
     return true;
   }
 
   void cache(List<Cell> results, RowCacheKey key) {
+    if (results.isEmpty()) {
+      // Nothing to cache; avoid creating an empty entry that would just be a cache hit returning
+      // an empty row.
+      return;
+    }
     // The row cache is populated only when no region level barriers remain
     regionLevelBarrierMap.computeIfAbsent(key.getEncodedRegionName(), t -> {
       // The row cache is populated only when no row level barriers remain
