@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
@@ -267,19 +268,17 @@ public class HbckRegionInfo implements KeyRange {
   public static class MetaEntry extends HRegionInfo {
     ServerName regionServer; // server hosting this region
     long modTime; // timestamp of most recent modification metadata
-    RegionInfo splitA, splitB; // split daughters
+    List<RegionInfo> splitRegions; // split daughters
 
     public MetaEntry(RegionInfo rinfo, ServerName regionServer, long modTime) {
-      this(rinfo, regionServer, modTime, null, null);
+      this(rinfo, regionServer, modTime, Collections.unmodifiableList(Arrays.asList(null, null)));
     }
 
-    public MetaEntry(RegionInfo rinfo, ServerName regionServer, long modTime, RegionInfo splitA,
-      RegionInfo splitB) {
+    public MetaEntry(RegionInfo rinfo, ServerName regionServer, long modTime, List<RegionInfo> splitRegions) {
       super(rinfo);
       this.regionServer = regionServer;
       this.modTime = modTime;
-      this.splitA = splitA;
-      this.splitB = splitB;
+      this.splitRegions = splitRegions;
     }
 
     public ServerName getRegionServer() {
