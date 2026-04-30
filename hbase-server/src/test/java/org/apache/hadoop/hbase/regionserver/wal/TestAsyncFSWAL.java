@@ -137,7 +137,7 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
       scopes.put(fam, 0);
     }
     long timestamp = EnvironmentEdgeManager.currentTime();
-    String testName = currentTest;
+    String testName = this.testName;
     AtomicInteger failedCount = new AtomicInteger(0);
     try (LogRoller roller = new LogRoller(services);
       AsyncFSWAL wal = new AsyncFSWAL(FS, null, CommonFSUtils.getWALRootDir(CONF), DIR.toString(),

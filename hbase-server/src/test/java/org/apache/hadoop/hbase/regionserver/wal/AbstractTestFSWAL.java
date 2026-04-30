@@ -108,18 +108,18 @@ public abstract class AbstractTestFSWAL {
   protected static Path DIR;
   protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  protected String currentTest;
+  protected String testName;
 
   @BeforeEach
   public void setUp(TestInfo testInfo) throws Exception {
-    currentTest = testInfo.getTestMethod().get().getName();
+    testName = testInfo.getTestMethod().get().getName();
     FileStatus[] entries = FS.listStatus(new Path("/"));
     for (FileStatus dir : entries) {
       FS.delete(dir.getPath(), true);
     }
     final Path hbaseDir = TEST_UTIL.createRootDir();
     final Path hbaseWALDir = TEST_UTIL.createWALRootDir();
-    DIR = new Path(hbaseWALDir, currentTest);
+    DIR = new Path(hbaseWALDir, testName);
     assertNotEquals(hbaseDir, hbaseWALDir);
     FS.mkdirs(DIR);
   }
@@ -394,19 +394,16 @@ public abstract class AbstractTestFSWAL {
   @Test
   public void testFailedToCreateWALIfParentRenamed()
     throws IOException, CommonFSUtils.StreamLacksCapabilityException {
-    assertThrows(IOException.class, () -> {
-      AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), currentTest,
-        HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
-      long filenum = EnvironmentEdgeManager.currentTime();
-      Path path = wal.computeFilename(filenum);
-      wal.createWriterInstance(FS, path);
-      Path parent = path.getParent();
-      path = wal.computeFilename(filenum + 1);
-      Path newPath = new Path(parent.getParent(), parent.getName() + "-splitting");
-      FS.rename(parent, newPath);
-      wal.createWriterInstance(FS, path);
-      fail("It should fail to create the new WAL");
-    });
+    AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), testName,
+      HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
+    long filenum = EnvironmentEdgeManager.currentTime();
+    Path path = wal.computeFilename(filenum);
+    wal.createWriterInstance(FS, path);
+    Path parent = path.getParent();
+    Path newPath = new Path(parent.getParent(), parent.getName() + "-splitting");
+    FS.rename(parent, newPath);
+    Path nextPath = wal.computeFilename(filenum + 1);
+    assertThrows(IOException.class, () -> wal.createWriterInstance(FS, nextPath));
   }
 
   /**
@@ -418,7 +415,6 @@ public abstract class AbstractTestFSWAL {
    */
   @Test
   public void testFlushSequenceIdIsGreaterThanAllEditsInHFile() throws IOException {
-    String testName = currentTest;
     final TableName tableName = TableName.valueOf(testName);
     final RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).build();
     final byte[] rowName = tableName.getName();
@@ -493,7 +489,6 @@ public abstract class AbstractTestFSWAL {
 
   @Test
   public void testSyncNoAppend() throws IOException {
-    String testName = currentTest;
     AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(), testName,
       CONF, null, true, null, null);
     try {
@@ -505,7 +500,6 @@ public abstract class AbstractTestFSWAL {
 
   @Test
   public void testWriteEntryCanBeNull() throws IOException {
-    String testName = currentTest;
     AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(), testName,
       CONF, null, true, null, null);
     wal.close();
@@ -537,13 +531,10 @@ public abstract class AbstractTestFSWAL {
 
   @Test
   public void testRollWriterForClosedWAL() throws IOException {
-    assertThrows(WALClosedException.class, () -> {
-      String testName = currentTest;
-      AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(), testName,
-        CONF, null, true, null, null);
-      wal.close();
-      wal.rollWriter();
-    });
+    AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(), testName,
+      CONF, null, true, null, null);
+    wal.close();
+    assertThrows(WALClosedException.class, () -> wal.rollWriter());
   }
 
   private AbstractFSWAL<?> createHoldingWAL(String testName, AtomicBoolean startHoldingForAppend,
@@ -606,7 +597,6 @@ public abstract class AbstractTestFSWAL {
   // Testcase for HBASE-23181
   @Test
   public void testUnflushedSeqIdTrackingWithAsyncWal() throws IOException, InterruptedException {
-    String testName = currentTest;
     byte[] b = Bytes.toBytes("b");
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf("table"))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(b)).build();
@@ -656,7 +646,6 @@ public abstract class AbstractTestFSWAL {
   // Testcase for HBASE-23157
   @Test
   public void testMaxFlushedSequenceIdGoBackwards() throws IOException, InterruptedException {
-    String testName = currentTest;
     byte[] a = Bytes.toBytes("a");
     byte[] b = Bytes.toBytes("b");
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf("table"))

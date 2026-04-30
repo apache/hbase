@@ -42,13 +42,13 @@ import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.params.provider.Arguments;
 
 /**
- * This is not a unit test. It is not run as part of the general unit test suite. It is for
- * comparing compaction policies. You must run it explicitly; e.g. mvn test
- * -Dtest=PerfTestCompactionPolicies
+ * This test compares compaction policy behavior with different generated store file lists and
+ * settings. It can be run explicitly; e.g. mvn test -Dtest=PerfTestCompactionPolicies
  */
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
-@HBaseParameterizedTestTemplate
+@HBaseParameterizedTestTemplate(
+    name = "{index}: policy={0}, fileGen={1}, max={2}, min={3}, " + "ratio={4}")
 public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
 
   private final RatioBasedCompactionPolicy cp;
@@ -94,10 +94,11 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
 
   /**
    * Test the perf of a CompactionPolicy with settings.
-   * @param cpClass The compaction policy to test
-   * @param inMmax  The maximum number of file to compact
-   * @param inMin   The min number of files to compact
-   * @param inRatio The ratio that files must be under to be compacted.
+   * @param cpClass      The compaction policy to test
+   * @param fileGenClass The store file list generator to test with
+   * @param inMmax       The maximum number of files to compact
+   * @param inMin        The min number of files to compact
+   * @param inRatio      The ratio that files must be under to be compacted.
    */
   public PerfTestCompactionPolicies(final Class<? extends CompactionPolicy> cpClass,
     final Class<? extends StoreFileListGenerator> fileGenClass, final int inMmax, final int inMin,
