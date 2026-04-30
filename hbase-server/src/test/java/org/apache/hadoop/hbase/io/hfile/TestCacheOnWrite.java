@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -32,12 +31,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -60,15 +60,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,13 +75,10 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * Tests {@link HFile} cache-on-write functionality for the following block types: data blocks,
  * non-root index blocks, and Bloom filter blocks.
  */
-@RunWith(Parameterized.class)
-@Category({ IOTests.class, LargeTests.class })
+@HBaseParameterizedTestTemplate(name = "{0}-{1}-{2}-{3}")
+@org.junit.jupiter.api.Tag(IOTests.TAG)
+@org.junit.jupiter.api.Tag(LargeTests.TAG)
 public class TestCacheOnWrite {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCacheOnWrite.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCacheOnWrite.class);
 
@@ -188,19 +181,18 @@ public class TestCacheOnWrite {
     return blockcaches;
   }
 
-  @Parameters
-  public static Collection<Object[]> getParameters() throws IOException {
-    List<Object[]> params = new ArrayList<>();
+  public static Stream<Arguments> parameters() throws IOException {
+    List<Arguments> params = new ArrayList<>();
     for (BlockCache blockCache : getBlockCaches()) {
       for (CacheOnWriteType cowType : CacheOnWriteType.values()) {
         for (Compression.Algorithm compress : HBaseCommonTestingUtil.COMPRESSION_ALGORITHMS) {
           for (boolean cacheCompressedData : new boolean[] { false, true }) {
-            params.add(new Object[] { cowType, compress, cacheCompressedData, blockCache });
+            params.add(Arguments.of(cowType, compress, cacheCompressedData, blockCache));
           }
         }
       }
     }
-    return params;
+    return params.stream();
   }
 
   private void clearBlockCache(BlockCache blockCache) throws InterruptedException {
@@ -228,7 +220,7 @@ public class TestCacheOnWrite {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = TEST_UTIL.getConfiguration();
     this.conf.set("dfs.datanode.data.dir.perm", "700");
@@ -245,12 +237,12 @@ public class TestCacheOnWrite {
     fs = HFileSystem.get(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException, InterruptedException {
     clearBlockCache(blockCache);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws IOException {
     TEST_UTIL.cleanupTestDir();
   }
@@ -271,7 +263,7 @@ public class TestCacheOnWrite {
     final boolean cacheBlocks = false;
     final boolean pread = false;
     HFileScanner scanner = reader.getScanner(conf, cacheBlocks, pread);
-    assertTrue(testDescription, scanner.seekTo());
+    assertTrue(scanner.seekTo(), testDescription);
 
     long offset = 0;
     EnumMap<BlockType, Integer> blockCountByType = new EnumMap<>(BlockType.class);
@@ -290,11 +282,10 @@ public class TestCacheOnWrite {
       cachedBlocksOffset.add(offset);
       cachedBlocks.put(offset, fromCache == null ? null : Pair.newPair(block, fromCache));
       boolean shouldBeCached = cowType.shouldBeCached(block.getBlockType());
-      assertTrue(
+      assertTrue(shouldBeCached == isCached,
         "shouldBeCached: " + shouldBeCached + "\n" + "isCached: " + isCached + "\n"
           + "Test description: " + testDescription + "\n" + "block: " + block + "\n"
-          + "encodingInCache: " + encodingInCache + "\n" + "blockCacheKey: " + blockCacheKey,
-        shouldBeCached == isCached);
+          + "encodingInCache: " + encodingInCache + "\n" + "blockCacheKey: " + blockCacheKey);
       if (isCached) {
         if (cacheConf.shouldCacheCompressed(fromCache.getBlockType().getCategory())) {
           if (compress != Compression.Algorithm.NONE) {
@@ -506,30 +497,30 @@ public class TestCacheOnWrite {
 
       if (cacheOnCompactAndNonBucketCache && cacheBlocksOnCompactionThreshold > 0) {
         if (cacheBlocksOnCompactionThreshold == CACHE_COMPACTION_HIGH_THRESHOLD) {
-          assertTrue(assertErrorMessage, dataBlockCached);
-          assertTrue(assertErrorMessage, bloomBlockCached);
-          assertTrue(assertErrorMessage, indexBlockCached);
+          assertTrue(dataBlockCached, assertErrorMessage);
+          assertTrue(bloomBlockCached, assertErrorMessage);
+          assertTrue(indexBlockCached, assertErrorMessage);
         } else {
-          assertFalse(assertErrorMessage, dataBlockCached);
+          assertFalse(dataBlockCached, assertErrorMessage);
 
           if (localCacheBloomBlocksValue) {
-            assertTrue(assertErrorMessage, bloomBlockCached);
+            assertTrue(bloomBlockCached, assertErrorMessage);
           } else {
-            assertFalse(assertErrorMessage, bloomBlockCached);
+            assertFalse(bloomBlockCached, assertErrorMessage);
           }
 
           if (localCacheIndexBlocksValue) {
-            assertTrue(assertErrorMessage, indexBlockCached);
+            assertTrue(indexBlockCached, assertErrorMessage);
           } else {
-            assertFalse(assertErrorMessage, indexBlockCached);
+            assertFalse(indexBlockCached, assertErrorMessage);
           }
         }
       } else {
-        assertEquals(assertErrorMessage, cacheOnCompactAndNonBucketCache, dataBlockCached);
+        assertEquals(cacheOnCompactAndNonBucketCache, dataBlockCached, assertErrorMessage);
 
         if (cacheOnCompactAndNonBucketCache) {
-          assertTrue(assertErrorMessage, bloomBlockCached);
-          assertTrue(assertErrorMessage, indexBlockCached);
+          assertTrue(bloomBlockCached, assertErrorMessage);
+          assertTrue(indexBlockCached, assertErrorMessage);
         }
       }
 
@@ -544,19 +535,19 @@ public class TestCacheOnWrite {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testStoreFileCacheOnWrite() throws IOException {
     testStoreFileCacheOnWriteInternals(false);
     testStoreFileCacheOnWriteInternals(true);
   }
 
-  @Test
+  @TestTemplate
   public void testCachingDataBlocksDuringCompaction() throws IOException, InterruptedException {
     testCachingDataBlocksDuringCompactionInternals(false, false, -1);
     testCachingDataBlocksDuringCompactionInternals(true, true, -1);
   }
 
-  @Test
+  @TestTemplate
   public void testCachingDataBlocksThresholdDuringCompaction()
     throws IOException, InterruptedException {
     testCachingDataBlocksDuringCompactionInternals(false, true, CACHE_COMPACTION_HIGH_THRESHOLD);
