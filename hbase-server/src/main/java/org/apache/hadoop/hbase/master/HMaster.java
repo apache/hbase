@@ -253,6 +253,7 @@ import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
+import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FutureUtils;
@@ -606,6 +607,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   @Override
   protected String getUseThisHostnameInstead(Configuration conf) {
     return conf.get(MASTER_HOSTNAME_KEY);
+  }
+
+  @Override
+  protected DNS.ServerType getDNSServerType() {
+    return DNS.ServerType.MASTER;
   }
 
   private void registerConfigurationObservers() {
