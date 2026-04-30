@@ -480,9 +480,8 @@ public class TestDataTieringManager {
     newFile.initReader();
     hStore.refreshStoreFiles();
 
-    assertFalse("new store file must be cold for this scenario",
-      dataTieringManager.isHotData(newFile.getFileInfo().getHFileInfo(), newFile.getFileInfo()
-        .getConf()));
+    assertFalse("new store file must be cold for this scenario", dataTieringManager
+      .isHotData(newFile.getFileInfo().getHFileInfo(), newFile.getFileInfo().getConf()));
 
     dataTieringManager.updateRegionColdDataSize(regionName, Collections.singletonList(coldFile),
       Collections.singletonList(newFile));
