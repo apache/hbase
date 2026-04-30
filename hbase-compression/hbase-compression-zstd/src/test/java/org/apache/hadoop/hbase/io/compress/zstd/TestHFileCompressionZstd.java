@@ -17,37 +17,32 @@
  */
 package org.apache.hadoop.hbase.io.compress.zstd;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.HFileTestBase;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHFileCompressionZstd extends HFileTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHFileCompressionZstd.class);
 
   private static Configuration conf;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     HFileTestBase.setUpBeforeClass();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     conf.set(Compression.ZSTD_CODEC_CLASS_KEY, ZstdCodec.class.getCanonicalName());
@@ -59,7 +54,6 @@ public class TestHFileCompressionZstd extends HFileTestBase {
   public void testWithStreamDecompression() throws Exception {
     conf.setBoolean("hbase.io.compress.zstd.allowByteBuffDecompression", false);
     Compression.Algorithm.ZSTD.reload(conf);
-
     Path path =
       new Path(TEST_UTIL.getDataTestDir(), HBaseTestingUtil.getRandomUUID().toString() + ".hfile");
     doTest(conf, path, Compression.Algorithm.ZSTD);
@@ -86,7 +80,6 @@ public class TestHFileCompressionZstd extends HFileTestBase {
     long len_2 = FS.getFileStatus(path_2).getLen();
     LOG.info("Level 1 len {}", len_1);
     LOG.info("Level 22 len {}", len_2);
-    assertTrue("Reconfiguraton with ZSTD_LEVEL_KEY did not seem to work", len_1 > len_2);
+    assertTrue(len_1 > len_2, "Reconfiguration with ZSTD_LEVEL_KEY did not seem to work");
   }
-
 }
