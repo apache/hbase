@@ -162,6 +162,7 @@ import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
+import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FutureUtils;
@@ -577,11 +578,16 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
           + UNSAFE_RS_HOSTNAME_KEY + " is used";
         throw new IOException(msg);
       } else {
-        return rpcServices.getSocketAddress().getHostName();
+        return DNS.getHostname(conf, DNS.ServerType.REGIONSERVER);
       }
     } else {
       return hostname;
     }
+  }
+
+  @Override
+  protected DNS.ServerType getDNSServerType() {
+    return DNS.ServerType.REGIONSERVER;
   }
 
   @Override
