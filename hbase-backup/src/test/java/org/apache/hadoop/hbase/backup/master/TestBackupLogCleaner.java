@@ -20,10 +20,14 @@ package org.apache.hadoop.hbase.backup.master;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +40,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.TestBackupBase;
+import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.util.BackupBoundaries;
 import org.apache.hadoop.hbase.client.Connection;
@@ -205,6 +210,103 @@ public class TestBackupLogCleaner extends TestBackupBase {
     }
   }
 
+  /**
+   * Verify that when a table is no longer in the backup set, it doesn't block WAL cleanup.
+   */
+  @Test
+  public void testRemovedBackupDoesNotPinWals() throws Exception {
+    Path backupRoot = new Path(BACKUP_ROOT_DIR, "staleRoot");
+
+    try {
+      BackupLogCleaner cleaner = new BackupLogCleaner();
+      cleaner.setConf(TEST_UTIL.getConfiguration());
+      Map<String, Object> params = new HashMap<>(1);
+      params.put(HMaster.MASTER, TEST_UTIL.getHBaseCluster().getMaster());
+      cleaner.init(params);
+
+      // Create FULL backup B1 with table1 and table2
+      String backupIdB1 =
+        backupTables(BackupType.FULL, Arrays.asList(table1, table2), backupRoot.toString());
+      assertTrue(checkSucceeded(backupIdB1));
+
+      Set<FileStatus> walFilesAfterB1 =
+        new LinkedHashSet<>(getListOfWALFiles(TEST_UTIL.getConfiguration()));
+
+      // Sanity check
+      assertFalse(walFilesAfterB1.isEmpty(), "Expected some WAL files after backup B1");
+
+      Map<TableName, Map<String, Long>> b1TableTimestamps;
+      try (BackupSystemTable systemTable = new BackupSystemTable(TEST_UTIL.getConnection())) {
+        BackupInfo b1Info = systemTable.readBackupInfo(backupIdB1);
+        assertNotNull(b1Info, "B1 should be present in backup system table");
+        b1TableTimestamps = b1Info.getTableSetTimestampMap();
+      }
+
+      // Insert data so the next backup advances WAL positions for table1
+      Connection conn = TEST_UTIL.getConnection();
+      try (Table t1 = conn.getTable(table1)) {
+        for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
+          Put p = new Put(Bytes.toBytes("stale-row-t1" + i));
+          p.addColumn(famName, qualName, Bytes.toBytes("val" + i));
+          t1.put(p);
+        }
+      }
+
+      // Create FULL backup B2 with only table1.
+      // B2's tableSetTimestampMap carries forward the old timestamp from B1 for table2,
+      // while table1 gets a fresh timestamp: { table1: ts(B2), table2: ts(B1) }
+      String backupIdB2 =
+        backupTables(BackupType.FULL, Collections.singletonList(table1), backupRoot.toString());
+      assertTrue(checkSucceeded(backupIdB2));
+
+      // Verify the carry-forward claim above by reading B2's persisted tableSetTimestampMap.
+      try (BackupSystemTable systemTable = new BackupSystemTable(TEST_UTIL.getConnection())) {
+        BackupInfo b2Info = systemTable.readBackupInfo(backupIdB2);
+        assertNotNull(b2Info, "B2 should be present in backup system table");
+        Map<TableName, Map<String, Long>> b2TableTimestamps = b2Info.getTableSetTimestampMap();
+        assertTrue(b2TableTimestamps.keySet().containsAll(Set.of(table1, table2)),
+          "B2 tableSetTimestampMap should contain both table1 and table2");
+
+        // table2 was not part of B2, so its per-server timestamps must be carried forward
+        // from B1 unchanged.
+        assertEquals(b1TableTimestamps.get(table2), b2TableTimestamps.get(table2),
+          "table2 timestamps in B2 should match B1 (carried forward unchanged)");
+
+        // table1 was part of B2, so each per-server timestamp must be strictly greater
+        // than the corresponding timestamp recorded in B1.
+        Map<String, Long> b1Table1 = b1TableTimestamps.get(table1);
+        Map<String, Long> b2Table1 = b2TableTimestamps.get(table1);
+        assertFalse(b2Table1.isEmpty(), "table1 timestamps in B2 should not be empty");
+        assertEquals(b1Table1.keySet(), b2Table1.keySet(),
+          "table1 server set should be the same in B1 and B2");
+        for (Map.Entry<String, Long> entry : b2Table1.entrySet()) {
+          Long b1Ts = b1Table1.get(entry.getKey());
+          assertTrue(entry.getValue() > b1Ts,
+            "table1 timestamp for server " + entry.getKey() + " should advance from B1 (" + b1Ts
+                                  + ") to B2 (" + entry.getValue() + ")");
+        }
+      }
+
+      Set<FileStatus> walFilesAfterB2 =
+        mergeAsSet(walFilesAfterB1, getListOfWALFiles(TEST_UTIL.getConfiguration()));
+
+      // Sanity check
+      assertFalse(walFilesAfterB2.isEmpty(), "Expected some WAL files after backup B2");
+
+      // Delete B1: since it is the only backup referencing table2, finalizeDelete will
+      // remove table2 from the incremental backup set for this root.
+      getBackupAdmin().deleteBackups(new String[] { backupIdB1 });
+
+      // table2 is no longer in the backup set, so the boundary = ts(B2) instead of
+      // min(ts(B2), ts(B1)) = ts(B1). WALs between B1 and B2 are now deletable.
+      Iterable<FileStatus> deletable = cleaner.getDeletableFiles(walFilesAfterB2);
+      assertTrue(toSet(deletable).containsAll(walFilesAfterB1),
+        "WALs after B1 should be deletable once stale tables are removed from incr set");
+    } finally {
+      TEST_UTIL.truncateTable(BackupSystemTable.getTableName(TEST_UTIL.getConfiguration())).close();
+    }
+  }
+  
   @Test
   public void testDoesNotDeleteWALsFromNewServers() throws Exception {
     Path backupRoot1 = new Path(BACKUP_ROOT_DIR, "backup1");
