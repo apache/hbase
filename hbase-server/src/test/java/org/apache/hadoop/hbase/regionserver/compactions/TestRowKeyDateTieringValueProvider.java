@@ -17,38 +17,35 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.text.SimpleDateFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestRowKeyDateTieringValueProvider {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRowKeyDateTieringValueProvider.class);
 
   private RowKeyDateTieringValueProvider provider;
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     conf = new Configuration();
     provider = new RowKeyDateTieringValueProvider();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     provider = null;
     conf = null;
@@ -65,40 +62,50 @@ public class TestRowKeyDateTieringValueProvider {
     assertEquals(Integer.valueOf(1), provider.getRowKeyRegexExtractGroup());
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInitWithMissingRegexPattern() throws Exception {
-    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyy-MM-dd");
-    provider.init(conf);
+    assertThrows(IllegalArgumentException.class, () -> {
+      conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyy-MM-dd");
+      provider.init(conf);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInitWithMissingDateFormat() throws Exception {
-    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
-    provider.init(conf);
+    assertThrows(IllegalArgumentException.class, () -> {
+      conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
+      provider.init(conf);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInitWithInvalidDateFormat() throws Exception {
-    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
-    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "invalid-format");
-    provider.init(conf);
+    assertThrows(IllegalArgumentException.class, () -> {
+      conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
+      conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "invalid-format");
+      provider.init(conf);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInitWithInvalidExtractGroup() throws Exception {
-    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
-    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyy-MM-dd");
-    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_GROUP, "-1");
-    provider.init(conf);
+    assertThrows(IllegalArgumentException.class, () -> {
+      conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
+      conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyy-MM-dd");
+      conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_GROUP, "-1");
+      provider.init(conf);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInitWithExtractGroupExceedingPatternGroups() throws Exception {
-    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
-    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyy-MM-dd");
-    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_GROUP, "2"); // Only 1 group in
-                                                                          // pattern
-    provider.init(conf);
+    assertThrows(IllegalArgumentException.class, () -> {
+      conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
+      conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyy-MM-dd");
+      conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_GROUP, "2"); // Only 1 group in
+                                                                            // pattern
+      provider.init(conf);
+    });
   }
 
   @Test
@@ -167,11 +174,13 @@ public class TestRowKeyDateTieringValueProvider {
     assertEquals(Long.MAX_VALUE, timestamp);
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testGetTieringValueWithoutInitialization() {
-    String rowKeyStr = "order_9999999999999999_date";
-    byte[] rowKey = Bytes.toBytes(rowKeyStr);
-    ExtendedCell cell = PrivateCellUtil.createFirstOnRow(rowKey);
-    provider.getTieringValue(cell);
+    assertThrows(IllegalStateException.class, () -> {
+      String rowKeyStr = "order_9999999999999999_date";
+      byte[] rowKey = Bytes.toBytes(rowKeyStr);
+      ExtendedCell cell = PrivateCellUtil.createFirstOnRow(rowKey);
+      provider.getTieringValue(cell);
+    });
   }
 }

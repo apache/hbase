@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.regionreplication;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -41,9 +41,8 @@ import java.util.stream.Stream;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.TableNameTestRule;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -56,23 +55,19 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor.FlushAction;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionReplicationSink {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionReplicationSink.class);
 
   private Configuration conf;
 
@@ -88,10 +83,10 @@ public class TestRegionReplicationSink {
 
   private RegionReplicationSink sink;
 
-  @Rule
-  public final TableNameTestRule name = new TableNameTestRule();
+  @RegisterExtension
+  public final TableNameTestExtension name = new TableNameTestExtension();
 
-  @Before
+  @BeforeEach
   public void setUp() {
     conf = HBaseConfiguration.create();
     conf.setLong(RegionReplicationSink.BATCH_COUNT_CAPACITY, 5);
@@ -105,7 +100,7 @@ public class TestRegionReplicationSink {
     sink = new RegionReplicationSink(conf, primary, td, manager, flushRequester, conn);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws InterruptedException {
     sink.stop();
     sink.waitUntilStopped();

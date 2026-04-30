@@ -17,29 +17,32 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.MockAesKeyProvider;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-@Category({ RegionServerTests.class, LargeTests.class })
-public class TestSecureWALReplay extends TestWALReplay {
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
+public class TestSecureWALReplay extends AbstractTestWALReplay {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSecureWALReplay.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = AbstractTestWALReplay.TEST_UTIL.getConfiguration();
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockAesKeyProvider.class.getName());
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
     conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
-    AbstractTestWALReplay.setUpBeforeClass();
+    TestWALReplay.setUpBeforeClass();
+  }
+
+  @Override
+  protected WAL createWAL(Configuration c, Path hbaseRootDir, String logName) throws IOException {
+    return TestWALReplay.createFSHLog(c, hbaseRootDir, logName);
   }
 }
