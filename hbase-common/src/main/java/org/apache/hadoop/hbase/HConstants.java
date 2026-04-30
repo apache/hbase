@@ -1036,6 +1036,11 @@ public final class HConstants {
   public static final boolean ROW_CACHE_EVICT_ON_CLOSE_DEFAULT = false;
 
   /**
+   * Configuration key for the row cache strategy class
+   */
+  public static final String ROW_CACHE_STRATEGY_CLASS_KEY = "row.cache.strategy.class";
+
+  /**
    * Configuration key for the memory size of the block cache
    */
   public static final String HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY = "hfile.block.cache.memory.size";

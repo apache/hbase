@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
  * Facade for row-level caching in the RegionServer.
@@ -85,8 +85,10 @@ public class RowCache {
   RowCache(Configuration conf) {
     enabledByConf =
       conf.getFloat(HConstants.ROW_CACHE_SIZE_KEY, HConstants.ROW_CACHE_SIZE_DEFAULT) > 0;
-    // Currently we only support TinyLfu implementation
-    rowCacheStrategy = new TinyLfuRowCacheStrategy(MemorySizeUtil.getRowCacheSize(conf));
+    Class<? extends RowCacheStrategy> strategyClass = conf.getClass(
+      HConstants.ROW_CACHE_STRATEGY_CLASS_KEY, TinyLfuRowCacheStrategy.class,
+      RowCacheStrategy.class);
+    rowCacheStrategy = ReflectionUtils.newInstance(strategyClass, conf);
   }
 
   <R> R mutateWithRowCacheBarrier(HRegion region, byte[] row, RowOperation<R> operation)

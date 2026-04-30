@@ -25,6 +25,8 @@ import com.github.benmanes.caffeine.cache.RemovalListener;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.atomic.LongAdder;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 @org.apache.yetus.audience.InterfaceAudience.Private
@@ -42,7 +44,11 @@ public class TinyLfuRowCacheStrategy implements RowCacheStrategy {
   // Cache.stats() does not provide eviction count for entries, so we maintain our own counter.
   private final LongAdder evictedRowCount = new LongAdder();
 
-  TinyLfuRowCacheStrategy(long maxSizeBytes) {
+  public TinyLfuRowCacheStrategy(Configuration conf) {
+    this(MemorySizeUtil.getRowCacheSize(conf));
+  }
+
+  private TinyLfuRowCacheStrategy(long maxSizeBytes) {
     if (maxSizeBytes <= 0) {
       cache = Caffeine.newBuilder().maximumSize(0).build();
       return;
