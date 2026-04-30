@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_LOCAL;
+import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_EVICT_ON_CLOSE_DEFAULT;
+import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_EVICT_ON_CLOSE_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.REGION_NAMES_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.ROW_LOCK_READ_LOCK_KEY;
@@ -145,6 +147,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcCall;
+import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerCall;
 import org.apache.hadoop.hbase.mob.MobFileCache;
@@ -946,12 +949,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.isRowCacheEnabled = checkRowCacheConfig();
   }
 
-  private boolean checkRowCacheConfig() {
+  boolean checkRowCacheConfig() {
     Boolean fromDescriptor = htableDescriptor.getRowCacheEnabled();
     // The setting from TableDescriptor has higher priority than the global configuration
     return fromDescriptor != null
       ? fromDescriptor
       : conf.getBoolean(HConstants.ROW_CACHE_ENABLED_KEY, HConstants.ROW_CACHE_ENABLED_DEFAULT);
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  void setRowCache(RowCache rowCache) {
+    this.rowCache = rowCache;
   }
 
   private void setHTableSpecificConf() {
@@ -1963,6 +1972,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       }
 
+      evictRowCache();
+
       status.setStatus("Writing region close event to WAL");
       // Always write close marker to wal even for read only table. This is not a big problem as we
       // do not write any data into the region; it is just a meta edit in the WAL file.
@@ -2001,6 +2012,22 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     } finally {
       lock.writeLock().unlock();
     }
+  }
+
+  private void evictRowCache() {
+    boolean evictOnClose = getReadOnlyConfiguration().getBoolean(ROW_CACHE_EVICT_ON_CLOSE_KEY,
+      ROW_CACHE_EVICT_ON_CLOSE_DEFAULT);
+
+    if (!evictOnClose) {
+      return;
+    }
+
+    if (!(rsServices instanceof HRegionServer regionServer)) {
+      return;
+    }
+
+    RowCache rowCache = regionServer.getRSRpcServices().getServer().getRowCache();
+    rowCache.evictRowsByRegion(this);
   }
 
   /** Wait for all current flushes and compactions of the region to complete */
@@ -3259,8 +3286,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return getScanner(scan, null);
   }
 
-  RegionScannerImpl getScannerWithResults(Get get, Scan scan, List<Cell> results)
-    throws IOException {
+  RegionScannerImpl getScannerWithResults(Get get, Scan scan, List<Cell> results,
+    RpcCallContext context) throws IOException {
     if (!rowCache.canCacheRow(get, this)) {
       return getScannerWithResults(scan, results);
     }
@@ -3268,12 +3295,23 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // Try get from row cache
     RowCacheKey key = new RowCacheKey(this, get.getRow());
     if (rowCache.tryGetFromCache(key, get, results)) {
+      addReadRequestsCount(1);
+      if (getMetrics() != null) {
+        getMetrics().updateReadRequestCount();
+      }
+
       // Cache is hit, and then no scanner is created
       return null;
     }
 
     RegionScannerImpl scanner = getScannerWithResults(scan, results);
-    rowCache.populateCache(results, key);
+
+    // When results came from memstore only, do not populate the row cache
+    boolean readFromMemStoreOnly = context.getBlockBytesScanned() < 1;
+    if (!readFromMemStoreOnly) {
+      rowCache.cache(results, key);
+    }
+
     return scanner;
   }
 
@@ -4811,7 +4849,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // checkAndMutate.
     // * coprocessor calls (see ex. BulkDeleteEndpoint).
     // So nonces are not really ever used by HBase. They could be by coprocs, and checkAnd...
-    return batchMutate(new MutationBatchOperation(this, mutations, atomic, nonceGroup, nonce));
+    if (rowCache == null) {
+      return batchMutate(new MutationBatchOperation(this, mutations, atomic, nonceGroup, nonce));
+    }
+
+    return rowCache.mutateWithRowCacheBarrier(this, Arrays.asList(mutations),
+      () -> batchMutate(new MutationBatchOperation(this, mutations, atomic, nonceGroup, nonce)));
   }
 
   @Override
@@ -4823,10 +4866,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   OperationStatus[] batchMutate(Mutation[] mutations, boolean atomic) throws IOException {
-    OperationStatus[] operationStatuses =
-      rowCache.mutateWithRowCacheBarrier(this, Arrays.asList(mutations),
-        () -> this.batchMutate(mutations, atomic, HConstants.NO_NONCE, HConstants.NO_NONCE));
-    return TraceUtil.trace(() -> operationStatuses, () -> createRegionSpan("Region.batchMutate"));
+    return TraceUtil.trace(
+      () -> batchMutate(mutations, atomic, HConstants.NO_NONCE, HConstants.NO_NONCE),
+      () -> createRegionSpan("Region.batchMutate"));
   }
 
   /**
@@ -5111,8 +5153,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   public CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate, long nonceGroup,
     long nonce) throws IOException {
-    CheckAndMutateResult checkAndMutateResult = rowCache.mutateWithRowCacheBarrier(this,
-      checkAndMutate.getRow(), () -> this.checkAndMutate(checkAndMutate, nonceGroup, nonce));
+    CheckAndMutateResult checkAndMutateResult =
+      rowCache.mutateWithRowCacheBarrier(this, checkAndMutate.getRow(),
+        () -> this.checkAndMutateInternal(checkAndMutate, nonceGroup, nonce));
+    return TraceUtil.trace(() -> checkAndMutateResult,
+      () -> createRegionSpan("Region.checkAndMutate"));
+  }
+
+  public CheckAndMutateResult checkAndMutate(List<Mutation> mutations,
+    CheckAndMutate checkAndMutate, long nonceGroup, long nonce) throws IOException {
+    CheckAndMutateResult checkAndMutateResult = rowCache.mutateWithRowCacheBarrier(this, mutations,
+      () -> this.checkAndMutateInternal(checkAndMutate, nonceGroup, nonce));
     return TraceUtil.trace(() -> checkAndMutateResult,
       () -> createRegionSpan("Region.checkAndMutate"));
   }
@@ -5312,6 +5363,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private OperationStatus mutate(Mutation mutation, boolean atomic, long nonceGroup, long nonce)
     throws IOException {
+    if (rowCache == null) {
+      return this.mutateInternal(mutation, atomic, nonceGroup, nonce);
+    }
+
     return rowCache.mutateWithRowCacheBarrier(this, mutation.getRow(),
       () -> this.mutateInternal(mutation, atomic, nonceGroup, nonce));
   }

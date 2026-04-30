@@ -31,7 +31,6 @@ declare -i missing_env=0
 declare -a required_envs=(
   # these ENV variables define the required API with Jenkinsfile_GitHub
   "ARCHIVE_PATTERN_LIST"
-  "BUILD_URL_ARTIFACTS"
   "DOCKERFILE"
   "GITHUB_PASSWORD"
   "GITHUB_USER"
@@ -39,7 +38,6 @@ declare -a required_envs=(
   "PLUGINS"
   "SET_JAVA_HOME"
   "SOURCEDIR"
-  "TESTS_FILTER"
   "YETUSDIR"
   "AUTHOR_IGNORE_LIST"
   "BLANKS_EOL_IGNORE_FILE"
@@ -52,6 +50,12 @@ for required_env in "${required_envs[@]}"; do
     missing_env=${missing_env}+1
   fi
 done
+
+# BUILD_URL_ARTIFACTS is required for Jenkins but set in personality for GitHub Actions
+if [[ "${GITHUB_ACTIONS}" != "true" ]] && [[ -z "${BUILD_URL_ARTIFACTS}" ]]; then
+  echo "[ERROR] Required environment variable 'BUILD_URL_ARTIFACTS' is not set."
+  missing_env=${missing_env}+1
+fi
 
 if [ ${missing_env} -gt 0 ]; then
   echo "[ERROR] Please set the required environment variables before invoking. If this error is " \
@@ -91,7 +95,11 @@ YETUS_ARGS+=("--console-report-file=${PATCHDIR}/console.txt")
 YETUS_ARGS+=("--html-report-file=${PATCHDIR}/report.html")
 # enable writing back to Github
 YETUS_ARGS+=("--github-token=${GITHUB_PASSWORD}")
-YETUS_ARGS+=("--github-write-comment")
+# GitHub Actions fork PRs cannot write comments (GITHUB_TOKEN has no PR write permission)
+# Jenkins can write comments via its own credentials
+if [[ "${GITHUB_ACTIONS}" != "true" ]]; then
+  YETUS_ARGS+=("--github-write-comment")
+fi
 # auto-kill any surefire stragglers during unit test runs
 YETUS_ARGS+=("--reapermode=kill")
 # set relatively high limits for ASF machines
@@ -103,7 +111,9 @@ YETUS_ARGS+=("--spotbugs-strict-precheck")
 # rsync these files back into the archive dir
 YETUS_ARGS+=("--archive-list=${ARCHIVE_PATTERN_LIST}")
 # URL for user-side presentation in reports and such to our artifacts
-YETUS_ARGS+=("--build-url-artifacts=${BUILD_URL_ARTIFACTS}")
+if [[ -n "${BUILD_URL_ARTIFACTS}" ]]; then
+  YETUS_ARGS+=("--build-url-artifacts=${BUILD_URL_ARTIFACTS}")
+fi
 # plugins to enable
 YETUS_ARGS+=("--plugins=${PLUGINS},-findbugs")
 # run in docker mode and specifically point to our
@@ -115,15 +125,17 @@ YETUS_ARGS+=("--java-home=${SET_JAVA_HOME}")
 YETUS_ARGS+=("--author-ignore-list=${AUTHOR_IGNORE_LIST}")
 YETUS_ARGS+=("--blanks-eol-ignore-file=${BLANKS_EOL_IGNORE_FILE}")
 YETUS_ARGS+=("--blanks-tabs-ignore-file=${BLANKS_TABS_IGNORE_FILE}*")
-YETUS_ARGS+=("--tests-filter=${TESTS_FILTER}")
+if [[ -n "${TESTS_FILTER}" ]]; then
+  YETUS_ARGS+=("--tests-filter=${TESTS_FILTER}")
+fi
 YETUS_ARGS+=("--personality=${SOURCEDIR}/dev-support/hbase-personality.sh")
 YETUS_ARGS+=("--quick-hadoopcheck")
 if [[ "${SKIP_ERRORPRONE}" = "true" ]]; then
   # skip error prone
   YETUS_ARGS+=("--skip-errorprone")
 fi
-# effectively treat dev-support as a custom maven module
-YETUS_ARGS+=("--skip-dirs=dev-support")
+# Exclude non-code directories from module detection to avoid triggering full builds
+YETUS_ARGS+=("--skip-dirs=dev-support,.github,bin,conf")
 # For testing with specific hadoop version. Activates corresponding profile in maven runs.
 if [[ -n "${HADOOP_PROFILE}" ]]; then
   # Master has only Hadoop3 support. We don't need to activate any profile.
@@ -155,6 +167,10 @@ if [[ -n "${SUREFIRE_SECOND_PART_FORK_COUNT}" ]]; then
 fi
 if [[ -n "${JAVA8_HOME}" ]]; then
   YETUS_ARGS+=("--java8-home=${JAVA8_HOME}")
+fi
+# Test profile for running specific test categories (e.g., runDevTests, runLargeTests-wave1)
+if [[ -n "${TEST_PROFILE}" ]]; then
+  YETUS_ARGS+=("--test-profile=${TEST_PROFILE}")
 fi
 
 echo "Launching yetus with command line:"

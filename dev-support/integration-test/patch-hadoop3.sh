@@ -1,4 +1,5 @@
-#
+#!/usr/bin/env bash
+##
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -14,26 +15,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-blessed==1.17.0
-certifi==2024.7.4
-cffi==1.13.2
-chardet==3.0.4
-cryptography==46.0.7
-defusedxml==0.6.0
-enlighten==1.4.0
-gitdb2==2.0.6
-GitPython==3.1.47
-idna==3.7
-jira==2.0.0
-oauthlib==3.1.0
-pbr==5.4.4
-pycparser==2.19
-PyJWT==2.12.0
-requests==2.33.0
-requests-oauthlib==1.3.0
-requests-toolbelt==0.9.1
-six==1.14.0
-smmap2==2.0.5
-urllib3==2.6.3
-wcwidth==0.1.8
+##
+
+hadoop_dir=$1
+
+sed -i "s/HADOOP_TOOLS_DIR=\${HADOOP_TOOLS_DIR:-\"share\/hadoop\/tools\"}/HADOOP_TOOLS_DIR=\${HADOOP_TOOLS_DIR:-\"\$HADOOP_TOOLS_HOME\/share\/hadoop\/tools\"}/g" "$hadoop_dir/libexec/hadoop-functions.sh"
+sed -i "/HADOOP_CLASSNAME=org.apache.hadoop.mapreduce.MiniHadoopClusterManager/a mockitojar=\$(echo \"\${HADOOP_TOOLS_LIB_JARS_DIR}\"\/mockito-core-[0-9]*.jar)\nhadoop_add_classpath \"\${mockitojar}\"" "$hadoop_dir/bin/mapred"
+curl https://repo1.maven.org/maven2/org/mockito/mockito-core/2.28.2/mockito-core-2.28.2.jar -o "$hadoop_dir/share/hadoop/tools/lib/mockito-core-2.28.2.jar"
