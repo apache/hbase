@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
@@ -43,13 +42,11 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,12 +55,9 @@ import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.StoreFileTrackerProtos.StoreFileEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.StoreFileTrackerProtos.StoreFileList;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestStoreFileListFile {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStoreFileListFile.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestStoreFileListFile.class);
 
@@ -73,8 +67,7 @@ public class TestStoreFileListFile {
 
   private StoreFileListFile storeFileListFile;
 
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
   private StoreFileListFile create() throws IOException {
     HRegionFileSystem hfs = mock(HRegionFileSystem.class);
@@ -84,13 +77,14 @@ public class TestStoreFileListFile {
     return new StoreFileListFile(ctx);
   }
 
-  @Before
-  public void setUp() throws IOException {
-    testDir = UTIL.getDataTestDir(name.getMethodName());
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
+    name = testInfo.getTestMethod().get().getName();
+    testDir = UTIL.getDataTestDir(name);
     storeFileListFile = create();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     UTIL.cleanupTestDir();
   }

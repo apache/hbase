@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.IOException;
 import java.util.NavigableMap;
@@ -25,7 +25,6 @@ import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -48,21 +47,17 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test many concurrent appenders to an WAL while rolling the log.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestLogRollingNoCluster {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLogRollingNoCluster.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static byte[] EMPTY_1K_ARRAY = new byte[1024];
@@ -120,7 +115,7 @@ public class TestLogRollingNoCluster {
       wals.close();
     }
     for (int i = 0; i < numThreads; i++) {
-      assertFalse("Error: " + appenders[i].getException(), appenders[i].isException());
+      assertFalse(appenders[i].isException(), "Error: " + appenders[i].getException());
     }
     TEST_UTIL.shutdownMiniDFSCluster();
   }

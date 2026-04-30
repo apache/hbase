@@ -22,21 +22,16 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionReplicationFlushRequester {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionReplicationFlushRequester.class);
 
   private Configuration conf;
 
@@ -44,7 +39,7 @@ public class TestRegionReplicationFlushRequester {
 
   private RegionReplicationFlushRequester flushRequester;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     conf = HBaseConfiguration.create();
     conf.setInt(RegionReplicationFlushRequester.MIN_INTERVAL_SECS, 1);

@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver.throttle;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
@@ -46,44 +45,38 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestFlushWithThroughputController {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFlushWithThroughputController.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestFlushWithThroughputController.class);
   private static final double EPSILON = 1.3E-6;
 
   private HBaseTestingUtil hbtu;
-  @Rule
-  public TestName testName = new TestName();
+  private String testName;
   private TableName tableName;
   private final byte[] family = Bytes.toBytes("f");
   private final byte[] qualifier = Bytes.toBytes("q");
 
-  @Before
-  public void setUp() {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    testName = testInfo.getTestMethod().get().getName();
     hbtu = new HBaseTestingUtil();
-    tableName = TableName.valueOf("Table-" + testName.getMethodName());
+    tableName = TableName.valueOf("Table-" + testName);
     hbtu.getConfiguration().set(
       FlushThroughputControllerFactory.HBASE_FLUSH_THROUGHPUT_CONTROLLER_KEY,
       PressureAwareFlushThroughputController.class.getName());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     hbtu.shutdownMiniCluster();
   }
