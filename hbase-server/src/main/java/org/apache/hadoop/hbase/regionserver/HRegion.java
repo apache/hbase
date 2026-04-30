@@ -3309,7 +3309,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // When results came from memstore only, do not populate the row cache
     boolean readFromMemStoreOnly = context.getBlockBytesScanned() < 1;
     if (!readFromMemStoreOnly) {
-      rowCache.populateCache(this, results, key);
+      rowCache.cache(results, key);
     }
 
     return scanner;
