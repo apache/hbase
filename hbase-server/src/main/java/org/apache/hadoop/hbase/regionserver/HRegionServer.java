@@ -191,6 +191,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
+import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -667,28 +668,23 @@ public class HRegionServer extends Thread
       this.stopped = false;
 
       this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
-      rpcServices = createRpcServices();
       useThisHostnameInstead = getUseThisHostnameInstead(conf);
-
-      // if use-ip is enabled, we will use ip to expose Master/RS service for client,
-      // see HBASE-27304 for details.
-      boolean useIp = conf.getBoolean(HConstants.HBASE_SERVER_USEIP_ENABLED_KEY,
-        HConstants.HBASE_SERVER_USEIP_ENABLED_DEFAULT);
-      String isaHostName =
-        useIp ? rpcServices.isa.getAddress().getHostAddress() : rpcServices.isa.getHostName();
-      String hostName =
-        StringUtils.isBlank(useThisHostnameInstead) ? isaHostName : useThisHostnameInstead;
-      serverName = ServerName.valueOf(hostName, this.rpcServices.isa.getPort(), this.startcode);
-
-      rpcControllerFactory = RpcControllerFactory.instantiate(this.conf);
-      rpcRetryingCallerFactory = RpcRetryingCallerFactory.instantiate(this.conf,
-        clusterConnection == null ? null : clusterConnection.getConnectionMetrics());
-
+      // Resolve the hostname up-front and log in before creating the RpcServer. The RpcServer
+      // constructor reads UserGroupInformation.getCurrentUser() (HBASE-28321); if the server
+      // has not logged in yet, UGI bootstraps from the ticket cache and spawns a TGT renewer
+      // for whichever principal happens to be there.
+      String hostName = resolveHostName(conf, useThisHostnameInstead);
       // login the zookeeper client principal (if using security)
       ZKAuthentication.loginClient(this.conf, HConstants.ZK_CLIENT_KEYTAB_FILE,
         HConstants.ZK_CLIENT_KERBEROS_PRINCIPAL, hostName);
       // login the server principal (if using secure Hadoop)
       login(userProvider, hostName);
+      rpcServices = createRpcServices();
+      serverName = ServerName.valueOf(hostName, this.rpcServices.isa.getPort(), this.startcode);
+
+      rpcControllerFactory = RpcControllerFactory.instantiate(this.conf);
+      rpcRetryingCallerFactory = RpcRetryingCallerFactory.instantiate(this.conf,
+        clusterConnection == null ? null : clusterConnection.getConnectionMetrics());
       // init superusers and add the server principal (if using security)
       // or process owner as default super user.
       Superusers.initialize(conf);
@@ -772,7 +768,7 @@ public class HRegionServer extends Thread
           + UNSAFE_RS_HOSTNAME_KEY + " is used";
         throw new IOException(msg);
       } else {
-        return rpcServices.isa.getHostName();
+        return DNS.getHostname(conf, DNS.ServerType.REGIONSERVER);
       }
     } else {
       return hostname;
@@ -825,6 +821,23 @@ public class HRegionServer extends Thread
     this.dataRootDir = CommonFSUtils.getRootDir(this.conf);
     this.tableDescriptors = new FSTableDescriptors(this.dataFs, this.dataRootDir,
       !canUpdateTableDescriptor(), cacheTableDescriptor());
+  }
+
+  protected DNS.ServerType getDNSServerType() {
+    return DNS.ServerType.REGIONSERVER;
+  }
+
+  private String resolveHostName(Configuration conf, String useThisHostnameInstead)
+    throws IOException {
+    if (!StringUtils.isBlank(useThisHostnameInstead)) {
+      return useThisHostnameInstead;
+    }
+    // if use-ip is enabled, we will use ip to expose Master/RS service for client,
+    // see HBASE-27304 for details.
+    boolean useIp = conf.getBoolean(HConstants.HBASE_SERVER_USEIP_ENABLED_KEY,
+      HConstants.HBASE_SERVER_USEIP_ENABLED_DEFAULT);
+    InetAddress addr = InetAddress.getByName(DNS.getHostname(conf, getDNSServerType()));
+    return useIp ? addr.getHostAddress() : addr.getHostName();
   }
 
   protected void login(UserProvider user, String host) throws IOException {
