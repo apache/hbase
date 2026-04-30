@@ -1278,6 +1278,10 @@ public class HStore
     }, () -> {
       synchronized (filesCompacting) {
         filesCompacting.removeAll(compactedFiles);
+        if (DataTieringManager.getInstance() != null) {
+          DataTieringManager.getInstance().updateRegionColdDataSize(
+            region.getRegionInfo().getEncodedName(), compactedFiles, result);
+        }
       }
     });
     // These may be null when the RS is shutting down. The space quota Chores will fix the Region
