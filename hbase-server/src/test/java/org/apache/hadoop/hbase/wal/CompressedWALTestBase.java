@@ -36,13 +36,10 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.jupiter.api.TestTemplate;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("checkstyle:innerassignment")
 public abstract class CompressedWALTestBase {
-  private static final Logger LOG = LoggerFactory.getLogger(CompressedWALTestBase.class);
 
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -71,12 +68,12 @@ public abstract class CompressedWALTestBase {
     Arrays.fill(VALUE, off, (off += 1597), (byte) 'Q');
   }
 
-  @TestTemplate
+  @Test
   public void test() throws Exception {
     testForSize(1000);
   }
 
-  @TestTemplate
+  @Test
   public void testLarge() throws Exception {
     testForSize(1024 * 1024);
   }

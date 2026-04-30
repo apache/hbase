@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.io.compress.zstd;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -42,23 +41,19 @@ import org.apache.hadoop.hbase.io.compress.DictionaryCache;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestZstdDictionarySplitMerge {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZstdDictionarySplitMerge.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     // NOTE: Don't put configuration settings in global site schema. We are testing if per
     // CF or per table schema settings are applied correctly.
@@ -70,7 +65,7 @@ public class TestZstdDictionarySplitMerge {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -78,7 +73,6 @@ public class TestZstdDictionarySplitMerge {
   @Test
   public void test() throws Exception {
     // Create the table
-
     final TableName tableName = TableName.valueOf("TestZstdDictionarySplitMerge");
     final byte[] cfName = Bytes.toBytes("info");
     final String dictionaryPath = DictionaryCache.RESOURCE_SCHEME + "zstd.test.dict";
@@ -90,17 +84,13 @@ public class TestZstdDictionarySplitMerge {
     final Admin admin = TEST_UTIL.getAdmin();
     admin.createTable(td, new byte[][] { Bytes.toBytes(1) });
     TEST_UTIL.waitTableAvailable(tableName);
-
     // Load some data
-
     Table t = ConnectionFactory.createConnection(conf).getTable(tableName);
     TEST_UTIL.loadNumericRows(t, cfName, 0, 100_000);
     admin.flush(tableName);
-    assertTrue("Dictionary was not loaded", DictionaryCache.contains(dictionaryPath));
+    assertTrue(DictionaryCache.contains(dictionaryPath), "Dictionary was not loaded");
     TEST_UTIL.verifyNumericRows(t, cfName, 0, 100_000, 0);
-
     // Test split procedure
-
     admin.split(tableName, Bytes.toBytes(50_000));
     TEST_UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
       @Override
@@ -115,9 +105,7 @@ public class TestZstdDictionarySplitMerge {
     });
     TEST_UTIL.waitUntilNoRegionsInTransition();
     TEST_UTIL.verifyNumericRows(t, cfName, 0, 100_000, 0);
-
     // Test merge procedure
-
     RegionInfo regionA = null;
     RegionInfo regionB = null;
     for (RegionInfo region : admin.getRegions(tableName)) {
@@ -142,5 +130,4 @@ public class TestZstdDictionarySplitMerge {
     }
     TEST_UTIL.verifyNumericRows(t, cfName, 0, 100_000, 0);
   }
-
 }
