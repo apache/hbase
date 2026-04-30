@@ -17,15 +17,15 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -43,34 +43,31 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test {@link HFileScanner#seekTo(Cell)} and its variants.
  */
-@Category({ IOTests.class, SmallTests.class })
-@RunWith(Parameterized.class)
+@org.junit.jupiter.api.Tag(IOTests.TAG)
+@org.junit.jupiter.api.Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: encoding={0}")
 public class TestSeekTo {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestSeekTo.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSeekTo.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final DataBlockEncoding encoding;
 
-  @Parameters
-  public static Collection<Object[]> parameters() {
-    List<Object[]> paramList = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> paramList = new ArrayList<>();
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
-      paramList.add(new Object[] { encoding });
+      paramList.add(Arguments.of(encoding));
     }
-    return paramList;
+    return paramList.stream();
   }
 
   static boolean switchKVs = false;
@@ -79,7 +76,7 @@ public class TestSeekTo {
     this.encoding = encoding;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     // reset
     switchKVs = false;
@@ -137,7 +134,7 @@ public class TestSeekTo {
     return ncTFile;
   }
 
-  @Test
+  @TestTemplate
   public void testSeekBefore() throws Exception {
     testSeekBeforeInternals(TagUsage.NO_TAG);
     testSeekBeforeInternals(TagUsage.ONLY_TAG);
@@ -195,7 +192,7 @@ public class TestSeekTo {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testSeekBeforeWithReSeekTo() throws Exception {
     testSeekBeforeWithReSeekToInternals(TagUsage.NO_TAG);
     testSeekBeforeWithReSeekToInternals(TagUsage.ONLY_TAG);
@@ -288,7 +285,7 @@ public class TestSeekTo {
     deleteTestDir(fs);
   }
 
-  @Test
+  @TestTemplate
   public void testSeekTo() throws Exception {
     testSeekToInternals(TagUsage.NO_TAG);
     testSeekToInternals(TagUsage.ONLY_TAG);
@@ -320,7 +317,7 @@ public class TestSeekTo {
     deleteTestDir(fs);
   }
 
-  @Test
+  @TestTemplate
   public void testBlockContainingKey() throws Exception {
     testBlockContainingKeyInternals(TagUsage.NO_TAG);
     testBlockContainingKeyInternals(TagUsage.ONLY_TAG);
@@ -333,7 +330,7 @@ public class TestSeekTo {
     Configuration conf = TEST_UTIL.getConfiguration();
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), true, conf);
     HFileBlockIndex.BlockIndexReader blockIndexReader = reader.getDataBlockIndexReader();
-    System.out.println(blockIndexReader.toString());
+    LOG.info(blockIndexReader.toString());
     // falls before the start of the file.
     assertEquals(-1, blockIndexReader.rootBlockContainingKey(toKV("a", tagUsage)));
     assertEquals(0, blockIndexReader.rootBlockContainingKey(toKV("c", tagUsage)));

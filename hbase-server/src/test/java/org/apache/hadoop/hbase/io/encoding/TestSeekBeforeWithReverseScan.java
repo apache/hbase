@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -39,18 +38,14 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestSeekBeforeWithReverseScan {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSeekBeforeWithReverseScan.class);
 
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
 
@@ -59,7 +54,7 @@ public class TestSeekBeforeWithReverseScan {
   private byte[] cfName = Bytes.toBytes("a");
   private byte[] cqName = Bytes.toBytes("b");
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     TableName tableName = TableName.valueOf(getClass().getSimpleName());
     HTableDescriptor htd = new HTableDescriptor(tableName);
@@ -69,7 +64,7 @@ public class TestSeekBeforeWithReverseScan {
     region = HBaseTestingUtility.createRegionAndWAL(info, path, testUtil.getConfiguration(), htd);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     HBaseTestingUtility.closeRegionAndWAL(region);
     testUtil.cleanupTestDir();

@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,7 +27,6 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -47,25 +46,18 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.junit.After;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestScannerFromBucketCache {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestScannerFromBucketCache.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestScannerFromBucketCache.class);
-  @Rule
-  public TestName name = new TestName();
 
   HRegion region = null;
   private HBaseTestingUtility test_util;
@@ -76,8 +68,8 @@ public class TestScannerFromBucketCache {
   // Test names
   private TableName tableName;
 
-  private void setUp(boolean useBucketCache) throws IOException {
-    test_util = HBaseTestingUtility.createLocalHTU();
+  private void setUp(boolean useBucketCache, TestInfo testInfo) throws IOException {
+    test_util = new HBaseTestingUtility();
     conf = test_util.getConfiguration();
     if (useBucketCache) {
       conf.setInt("hbase.bucketcache.size", 400);
@@ -86,23 +78,23 @@ public class TestScannerFromBucketCache {
       conf.setFloat("hfile.block.cache.size", 0.2f);
       conf.setFloat("hbase.regionserver.global.memstore.size", 0.1f);
     }
-    tableName = TableName.valueOf(name.getMethodName());
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     EnvironmentEdgeManagerTestHelper.reset();
     LOG.info("Cleaning test directory: " + test_util.getDataTestDir());
     test_util.cleanupTestDir();
   }
 
-  String getName() {
-    return name.getMethodName();
+  String getName(TestInfo testInfo) {
+    return testInfo.getTestMethod().get().getName();
   }
 
   @Test
-  public void testBasicScanWithLRUCache() throws IOException {
-    setUp(false);
+  public void testBasicScanWithLRUCache(TestInfo testInfo) throws IOException {
+    setUp(false, testInfo);
     byte[] row1 = Bytes.toBytes("row1");
     byte[] qf1 = Bytes.toBytes("qualifier1");
     byte[] qf2 = Bytes.toBytes("qualifier2");
@@ -113,7 +105,7 @@ public class TestScannerFromBucketCache {
     long ts3 = ts1 + 2;
 
     // Setting up region
-    String method = this.getName();
+    String method = this.getName(testInfo);
     this.region = initHRegion(tableName, method, conf, test_util, fam1);
     try {
       List<Cell> expected = insertData(row1, qf1, qf2, fam1, ts1, ts2, ts3, false);
@@ -139,8 +131,8 @@ public class TestScannerFromBucketCache {
   }
 
   @Test
-  public void testBasicScanWithOffheapBucketCache() throws IOException {
-    setUp(true);
+  public void testBasicScanWithOffheapBucketCache(TestInfo testInfo) throws IOException {
+    setUp(true, testInfo);
     byte[] row1 = Bytes.toBytes("row1offheap");
     byte[] qf1 = Bytes.toBytes("qualifier1");
     byte[] qf2 = Bytes.toBytes("qualifier2");
@@ -151,7 +143,7 @@ public class TestScannerFromBucketCache {
     long ts3 = ts1 + 2;
 
     // Setting up region
-    String method = this.getName();
+    String method = this.getName(testInfo);
     this.region = initHRegion(tableName, method, conf, test_util, fam1);
     try {
       List<Cell> expected = insertData(row1, qf1, qf2, fam1, ts1, ts2, ts3, false);
@@ -180,8 +172,8 @@ public class TestScannerFromBucketCache {
   }
 
   @Test
-  public void testBasicScanWithOffheapBucketCacheWithMBB() throws IOException {
-    setUp(true);
+  public void testBasicScanWithOffheapBucketCacheWithMBB(TestInfo testInfo) throws IOException {
+    setUp(true, testInfo);
     byte[] row1 = Bytes.toBytes("row1offheap");
     byte[] qf1 = Bytes.toBytes("qualifier1");
     byte[] qf2 = Bytes.toBytes("qualifier2");
@@ -192,7 +184,7 @@ public class TestScannerFromBucketCache {
     long ts3 = ts1 + 2;
 
     // Setting up region
-    String method = this.getName();
+    String method = this.getName(testInfo);
     this.region = initHRegion(tableName, method, conf, test_util, fam1);
     try {
       List<Cell> expected = insertData(row1, qf1, qf2, fam1, ts1, ts2, ts3, true);

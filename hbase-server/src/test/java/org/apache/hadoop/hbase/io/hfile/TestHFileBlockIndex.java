@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutput;
@@ -28,12 +28,12 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -43,8 +43,8 @@ import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -68,29 +68,23 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
 
-@RunWith(Parameterized.class)
-@Category({ IOTests.class, MediumTests.class })
+@Tag(IOTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: compr={0}")
 public class TestHFileBlockIndex {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHFileBlockIndex.class);
-
-  @Parameters
-  public static Collection<Object[]> compressionAlgorithms() {
-    return HBaseCommonTestingUtility.COMPRESSION_ALGORITHMS_PARAMETERIZED;
+  public static Stream<Arguments> parameters() {
+    return HBaseCommonTestingUtility.COMPRESSION_ALGORITHMS_PARAMETERIZED.stream()
+      .map(Arguments::of);
   }
 
   public TestHFileBlockIndex(Compression.Algorithm compr) {
@@ -126,7 +120,7 @@ public class TestHFileBlockIndex {
     assert INDEX_CHUNK_SIZES.length == UNCOMPRESSED_INDEX_SIZES.length;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     keys.clear();
     firstKeyInFile = null;
@@ -139,7 +133,7 @@ public class TestHFileBlockIndex {
     fs = HFileSystem.get(conf);
   }
 
-  @Test
+  @TestTemplate
   public void testBlockIndex() throws IOException {
     testBlockIndexInternals(false);
     clear();
@@ -177,7 +171,7 @@ public class TestHFileBlockIndex {
     outputStream.close();
   }
 
-  @Test
+  @TestTemplate
   public void testBlockIndexWithOffHeapBuffer() throws Exception {
     ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
     path = new Path(TEST_UTIL.getDataTestDir(), "block_index_testBlockIndexWithOffHeapBuffer");
@@ -220,7 +214,7 @@ public class TestHFileBlockIndex {
     assertEquals(0, counter.get());
   }
 
-  @Test
+  @TestTemplate
   public void testIntermediateIndexCacheOnWriteDoesNotLeak() throws Exception {
     Configuration localConf = new Configuration(TEST_UTIL.getConfiguration());
     localConf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
@@ -385,7 +379,7 @@ public class TestHFileBlockIndex {
 
       String keyStr = "key #" + i + ", " + Bytes.toStringBinary(key);
 
-      assertTrue("seekToDataBlock failed for " + keyStr, b != null);
+      assertTrue(b != null, "seekToDataBlock failed for " + keyStr);
 
       if (prevOffset == b.getOffset()) {
         assertEquals(++expectedHitCount, brw.hitCount);
@@ -440,7 +434,7 @@ public class TestHFileBlockIndex {
     return i * i * 37 + i * 19 + 13;
   }
 
-  @Test
+  @TestTemplate
   public void testSecondaryIndexBinarySearch() throws IOException {
     int numTotalKeys = 99;
     assertTrue(numTotalKeys % 2 == 1); // Ensure no one made this even.
@@ -539,7 +533,7 @@ public class TestHFileBlockIndex {
         referenceItem = i - 1;
       }
 
-      assertEquals(lookupFailureMsg, expectedResult, searchResult);
+      assertEquals(expectedResult, searchResult, lookupFailureMsg);
 
       // Now test we can get the offset and the on-disk-size using a
       // higher-level API function.s
@@ -552,14 +546,14 @@ public class TestHFileBlockIndex {
       } else {
         assertTrue(locateBlockResult);
         String errorMsg = "i=" + i + ", position=" + nonRootIndex.position();
-        assertEquals(errorMsg, getDummyFileOffset(referenceItem), nonRootIndex.getLong());
-        assertEquals(errorMsg, getDummyOnDiskSize(referenceItem), nonRootIndex.getInt());
+        assertEquals(getDummyFileOffset(referenceItem), nonRootIndex.getLong(), errorMsg);
+        assertEquals(getDummyOnDiskSize(referenceItem), nonRootIndex.getInt(), errorMsg);
       }
     }
 
   }
 
-  @Test
+  @TestTemplate
   public void testBlockIndexChunk() throws IOException {
     BlockIndexChunk c = new HFileBlockIndex.BlockIndexChunkImpl();
     HFileIndexBlockEncoder indexBlockEncoder = NoOpIndexBlockEncoder.INSTANCE;
@@ -595,7 +589,7 @@ public class TestHFileBlockIndex {
   }
 
   /** Checks if the HeapSize calculator is within reason */
-  @Test
+  @TestTemplate
   public void testHeapSizeForBlockIndex() throws IOException {
     Class<HFileBlockIndex.BlockIndexReader> cl = HFileBlockIndex.BlockIndexReader.class;
     long expected = ClassSize.estimateBase(cl, false);
@@ -618,7 +612,7 @@ public class TestHFileBlockIndex {
   /**
    * to check if looks good when midKey on a leaf index block boundary
    */
-  @Test
+  @TestTemplate
   public void testMidKeyOnLeafIndexBlockBoundary() throws IOException {
     Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), "hfile_for_midkey");
     int maxChunkSize = 512;
@@ -674,7 +668,7 @@ public class TestHFileBlockIndex {
    * Testing block index through the HFile writer/reader APIs. Allows to test setting index block
    * size through configuration, intermediate-level index blocks, and caching index blocks on write.
    */
-  @Test
+  @TestTemplate
   public void testHFileWriterAndReader() throws IOException {
     Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), "hfile_for_block_index");
     CacheConfig cacheConf = new CacheConfig(conf, BlockCacheFactory.createBlockCache(conf));
@@ -772,8 +766,8 @@ public class TestHFileBlockIndex {
 
           // If the first key of the block is not among the keys written, we
           // are not parsing the non-root index block format correctly.
-          assertTrue("Invalid block key from leaf-level block: " + blockKeyStr,
-            keyStrSet.contains(blockKeyStr));
+          assertTrue(keyStrSet.contains(blockKeyStr),
+            "Invalid block key from leaf-level block: " + blockKeyStr);
         }
       }
 
@@ -790,15 +784,14 @@ public class TestHFileBlockIndex {
   }
 
   private void checkSeekTo(byte[][] keys, HFileScanner scanner, int i) throws IOException {
-    assertEquals("Failed to seek to key #" + i + " (" + Bytes.toStringBinary(keys[i]) + ")", 0,
-      scanner.seekTo(KeyValueUtil.createKeyValueFromKey(keys[i])));
+    assertEquals(0, scanner.seekTo(KeyValueUtil.createKeyValueFromKey(keys[i])),
+      "Failed to seek to key #" + i + " (" + Bytes.toStringBinary(keys[i]) + ")");
   }
 
   private void assertArrayEqualsBuffer(String msgPrefix, byte[] arr, ByteBuffer buf) {
-    assertEquals(
-      msgPrefix + ": expected " + Bytes.toStringBinary(arr) + ", actual "
-        + Bytes.toStringBinary(buf),
-      0, Bytes.compareTo(arr, 0, arr.length, buf.array(), buf.arrayOffset(), buf.limit()));
+    assertEquals(0,
+      Bytes.compareTo(arr, 0, arr.length, buf.array(), buf.arrayOffset(), buf.limit()), msgPrefix
+        + ": expected " + Bytes.toStringBinary(arr) + ", actual " + Bytes.toStringBinary(buf));
   }
 
   /** Check a key/value pair after it was read by the reader */
@@ -810,12 +803,12 @@ public class TestHFileBlockIndex {
     assertArrayEqualsBuffer(msgPrefix + "Invalid value", expectedValue, valueRead);
   }
 
-  @Test
+  @TestTemplate
   public void testIntermediateLevelIndicesWithLargeKeys() throws IOException {
     testIntermediateLevelIndicesWithLargeKeys(16);
   }
 
-  @Test
+  @TestTemplate
   public void testIntermediateLevelIndicesWithLargeKeysWithMinNumEntries() throws IOException {
     // because of the large rowKeys, we will end up with a 50-level block index without sanity check
     testIntermediateLevelIndicesWithLargeKeys(2);
@@ -863,7 +856,7 @@ public class TestHFileBlockIndex {
    * This test is for HBASE-27940, which midkey metadata in root index block would always be ignored
    * by {@link BlockIndexReader#readMultiLevelIndexRoot}.
    */
-  @Test
+  @TestTemplate
   public void testMidKeyReadSuccessfullyFromRootIndexBlock() throws IOException {
     conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, 128);
     Path hfilePath =

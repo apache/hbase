@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -31,7 +33,7 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -48,26 +50,19 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Testing writing a version 3 {@link HFile} for all encoded blocks
  */
-@RunWith(Parameterized.class)
-@Category({ IOTests.class, MediumTests.class })
+@org.junit.jupiter.api.Tag(IOTests.TAG)
+@org.junit.jupiter.api.Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: useTags={0}, dataBlockEncoding={1}")
 public class TestHFileWriterV3WithDataEncoders {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHFileWriterV3WithDataEncoders.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestHFileWriterV3WithDataEncoders.class);
@@ -84,28 +79,26 @@ public class TestHFileWriterV3WithDataEncoders {
     this.dataBlockEncoding = dataBlockEncoding;
   }
 
-  @Parameterized.Parameters
-  public static Collection<Object[]> parameters() {
+  public static Stream<Arguments> parameters() {
     DataBlockEncoding[] dataBlockEncodings = DataBlockEncoding.values();
-    Object[][] params = new Object[dataBlockEncodings.length * 2 - 2][];
-    int i = 0;
+    Stream.Builder<Arguments> builder = Stream.builder();
     for (DataBlockEncoding dataBlockEncoding : dataBlockEncodings) {
       if (dataBlockEncoding == DataBlockEncoding.NONE) {
         continue;
       }
-      params[i++] = new Object[] { false, dataBlockEncoding };
-      params[i++] = new Object[] { true, dataBlockEncoding };
+      builder.add(Arguments.of(false, dataBlockEncoding));
+      builder.add(Arguments.of(true, dataBlockEncoding));
     }
-    return Arrays.asList(params);
+    return builder.build();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = TEST_UTIL.getConfiguration();
     fs = FileSystem.get(conf);
   }
 
-  @Test
+  @TestTemplate
   public void testHFileFormatV3() throws IOException {
     testHFileFormatV3Internals(useTags);
   }
@@ -117,7 +110,7 @@ public class TestHFileWriterV3WithDataEncoders {
     writeDataAndReadFromHFile(hfilePath, compressAlgo, entryCount, false, useTags);
   }
 
-  @Test
+  @TestTemplate
   public void testMidKeyInHFile() throws IOException {
     testMidKeyInHFileInternals(useTags);
   }
@@ -147,8 +140,8 @@ public class TestHFileWriterV3WithDataEncoders {
     long fileSize = fs.getFileStatus(hfilePath).getLen();
     FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis, fileSize);
 
-    Assert.assertEquals(3, trailer.getMajorVersion());
-    Assert.assertEquals(entryCount, trailer.getEntryCount());
+    assertEquals(3, trailer.getMajorVersion());
+    assertEquals(entryCount, trailer.getEntryCount());
     HFileContext meta = new HFileContextBuilder().withCompression(compressAlgo)
       .withIncludesMvcc(true).withIncludesTags(useTags).withDataBlockEncoding(dataBlockEncoding)
       .withHBaseCheckSum(true).build();
@@ -180,7 +173,7 @@ public class TestHFileWriterV3WithDataEncoders {
     hfile.initMetaAndIndex(reader);
     if (findMidKey) {
       Cell midkey = dataBlockIndexReader.midkey(reader);
-      Assert.assertNotNull("Midkey should not be null", midkey);
+      assertNotNull(midkey, "Midkey should not be null");
     }
 
     // Meta index.
@@ -213,7 +206,7 @@ public class TestHFileWriterV3WithDataEncoders {
         trailer.getLoadOnOpenDataOffset());
       HFileBlock block =
         blockReader.readBlockData(curBlockPos, -1, false, false, true).unpack(context, blockReader);
-      Assert.assertEquals(BlockType.META, block.getBlockType());
+      assertEquals(BlockType.META, block.getBlockType());
       Text t = new Text();
       ByteBuff buf = block.getBufferWithoutHeader();
       if (Writables.getWritable(buf.array(), buf.arrayOffset(), buf.limit(), t) == null) {
@@ -223,7 +216,7 @@ public class TestHFileWriterV3WithDataEncoders {
       Text expectedText = (metaCounter == 0 ? new Text("Paris")
         : metaCounter == 1 ? new Text("Moscow")
         : new Text("Washington, D.C."));
-      Assert.assertEquals(expectedText, t);
+      assertEquals(expectedText, t);
       LOG.info("Read meta block data: " + t);
       ++metaCounter;
       curBlockPos += block.getOnDiskSizeWithHeader();
@@ -244,7 +237,7 @@ public class TestHFileWriterV3WithDataEncoders {
       HFileBlockDecodingContext ctx = blockReader.getBlockDecodingContext();
       HFileBlock block =
         blockReader.readBlockData(curBlockPos, -1, false, false, true).unpack(context, blockReader);
-      Assert.assertEquals(BlockType.ENCODED_DATA, block.getBlockType());
+      assertEquals(BlockType.ENCODED_DATA, block.getBlockType());
       ByteBuff origBlock = block.getBufferReadOnly();
       int pos = block.headerSize() + DataBlockEncoding.ID_SIZE;
       origBlock.position(pos);
@@ -255,19 +248,19 @@ public class TestHFileWriterV3WithDataEncoders {
       seeker.setCurrentBuffer(buf);
       Cell res = seeker.getCell();
       KeyValue kv = keyValues.get(entriesRead);
-      Assert.assertEquals(0, CellComparatorImpl.COMPARATOR.compare(res, kv));
+      assertEquals(0, CellComparatorImpl.COMPARATOR.compare(res, kv));
       ++entriesRead;
       while (seeker.next()) {
         res = seeker.getCell();
         kv = keyValues.get(entriesRead);
-        Assert.assertEquals(0, CellComparatorImpl.COMPARATOR.compare(res, kv));
+        assertEquals(0, CellComparatorImpl.COMPARATOR.compare(res, kv));
         ++entriesRead;
       }
       ++blocksRead;
       curBlockPos += block.getOnDiskSizeWithHeader();
     }
     LOG.info("Finished reading: entries={}, blocksRead = {}", entriesRead, blocksRead);
-    Assert.assertEquals(entryCount, entriesRead);
+    assertEquals(entryCount, entriesRead);
     return curBlockPos;
   }
 

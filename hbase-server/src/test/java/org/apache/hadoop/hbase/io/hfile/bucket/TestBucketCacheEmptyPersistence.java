@@ -19,24 +19,23 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_ERROR_TOLERATION_DURATION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for HBASE-29857: BucketCache recovery should gracefully handle empty or truncated
@@ -46,12 +45,9 @@ import org.junit.experimental.categories.Category;
  * magic bytes without actual cache data. The fix adds null checks that throw IOException instead of
  * allowing NullPointerException to propagate.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
+@Tag(RegionServerTests.TAG)
 public class TestBucketCacheEmptyPersistence {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBucketCacheEmptyPersistence.class);
 
   private static final long CAPACITY_SIZE = 32 * 1024 * 1024;
   private static final int WRITE_THREADS = BucketCache.DEFAULT_WRITER_THREADS;
@@ -78,7 +74,7 @@ public class TestBucketCacheEmptyPersistence {
     try (FileOutputStream fos = new FileOutputStream(persistenceFile)) {
       fos.write(ProtobufMagic.PB_MAGIC);
     }
-    assertTrue("Persistence file should exist", persistenceFile.exists());
+    assertTrue(persistenceFile.exists(), "Persistence file should exist");
 
     int[] bucketSizes = new int[] { 8 * 1024 + 1024 };
 
@@ -88,12 +84,12 @@ public class TestBucketCacheEmptyPersistence {
         WRITE_THREADS, WRITER_QUEUE_LEN, persistencePath, DEFAULT_ERROR_TOLERATION_DURATION, conf);
 
     // Cache should initialize successfully (not hang or throw)
-    assertTrue("Cache should initialize successfully after recovering from empty file",
-      bucketCache.waitForCacheInitialization(10000));
+    assertTrue(bucketCache.waitForCacheInitialization(10000),
+      "Cache should initialize successfully after recovering from empty file");
 
     // Verify the cache was reset (backing map should be empty since file had no valid data)
-    assertEquals("Backing map should be empty after recovering from empty persistence file", 0,
-      bucketCache.backingMap.size());
+    assertEquals(0, bucketCache.backingMap.size(),
+      "Backing map should be empty after recovering from empty persistence file");
 
     // Verify the cache is usable - we can add and retrieve blocks
     CacheTestUtils.HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(8192, 1);
@@ -104,7 +100,7 @@ public class TestBucketCacheEmptyPersistence {
 
     // Verify block can be retrieved
     Cacheable retrieved = bucketCache.getBlock(blocks[0].getBlockName(), false, false, false);
-    assertNotNull("Should be able to retrieve cached block", retrieved);
+    assertNotNull(retrieved, "Should be able to retrieve cached block");
 
     bucketCache.shutdown();
     testUtil.cleanupTestDir();
@@ -131,7 +127,7 @@ public class TestBucketCacheEmptyPersistence {
     try (FileOutputStream fos = new FileOutputStream(persistenceFile)) {
       fos.write(BucketProtoUtils.PB_MAGIC_V2);
     }
-    assertTrue("Persistence file should exist", persistenceFile.exists());
+    assertTrue(persistenceFile.exists(), "Persistence file should exist");
 
     int[] bucketSizes = new int[] { 8 * 1024 + 1024 };
 
@@ -141,12 +137,12 @@ public class TestBucketCacheEmptyPersistence {
         WRITE_THREADS, WRITER_QUEUE_LEN, persistencePath, DEFAULT_ERROR_TOLERATION_DURATION, conf);
 
     // Cache should initialize successfully (not hang or throw)
-    assertTrue("Cache should initialize successfully after recovering from empty file",
-      bucketCache.waitForCacheInitialization(10000));
+    assertTrue(bucketCache.waitForCacheInitialization(10000),
+      "Cache should initialize successfully after recovering from empty file");
 
     // Verify the cache was reset (backing map should be empty since file had no valid data)
-    assertEquals("Backing map should be empty after recovering from empty persistence file", 0,
-      bucketCache.backingMap.size());
+    assertEquals(0, bucketCache.backingMap.size(),
+      "Backing map should be empty after recovering from empty persistence file");
 
     // Verify the cache is usable - we can add and retrieve blocks
     CacheTestUtils.HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(8192, 1);
@@ -157,7 +153,7 @@ public class TestBucketCacheEmptyPersistence {
 
     // Verify block can be retrieved
     Cacheable retrieved = bucketCache.getBlock(blocks[0].getBlockName(), false, false, false);
-    assertNotNull("Should be able to retrieve cached block", retrieved);
+    assertNotNull(retrieved, "Should be able to retrieve cached block");
 
     bucketCache.shutdown();
     testUtil.cleanupTestDir();
