@@ -24,7 +24,7 @@ This page was created following the [ASF recommendation for documenting project 
 
 ## Reporting Security Vulnerabilities
 
-To report an undisclosed, sensitive security vulnerability in Apache HBase, please preferentially send your report to the private mailing list [private@hbase.apache.org](mailto:private@hbase.apache.org). You may also report security vulnerabilities to the Apache Software Foundation's security team privately via email at [security@apache.org](mailto:security@apache.org). Please do not use JIRA or any public channel for security reports.
+To report an undisclosed, sensitive security vulnerability in Apache HBase, please send your report privately via email to the Apache Software Foundation's security team at [security@apache.org](mailto:security@apache.org). Please do not use JIRA or any public channel for security reports.
 
 HBase follows the [Apache Software Foundation's vulnerability handling policy](https://www.apache.org/security/).
 
@@ -85,18 +85,18 @@ The HBase server web UIs are administrative monitoring interfaces. They are desi
 
 Information exposed through the web UIs, such as software version, configuration properties, table metadata, and operational metrics, is not considered sensitive within HBase's security model because these interfaces are expected to be accessible only within the trusted network perimeter.
 
-The web UI can optionally be configured with SPNEGO authentication. See [Secure Access to HBase Web UIs](/docs/security/web-ui).
+The web UI can optionally be configured with [SPNEGO](https://hbase.apache.org/book.html#hbase.secure.spnego) or [LDAP](https://hbase.apache.org/book.html#hbase.secure.ldap.ui) authentication. Additionally, privileged servlets — including logs, server configuration, metrics, and other administrative endpoints — can be restricted to designated administrators. Both SPNEGO and LDAP support defining administrators who have exclusive access to these servlets. See [Defining Administrators with SPNEGO](https://hbase.apache.org/book.html#_defining_administrators_of_the_web_ui_with_spnego) and [Defining Administrators with LDAP](https://hbase.apache.org/book.html#_defining_administrators_of_the_web_ui_with_ldap) for details.
 
 ## What Is Considered a Vulnerability
 
-The following categories of issues are considered valid security vulnerabilities and should be reported to [private@hbase.apache.org](mailto:private@hbase.apache.org) or [security@apache.org](mailto:security.apache.org):
+The following categories of issues are considered valid security vulnerabilities and should be reported to [security@apache.org](mailto:security@apache.org):
 
 - **Authentication bypass**: Circumventing configured Kerberos/SASL authentication to gain access without valid credentials.
-- **Authorization bypass**: An authenticated user performing operations beyond their granted ACL permissions.
-- **Privilege escalation**: An authenticated user with limited permissions gaining administrative or superuser capabilities.
+- **Authorization bypass or privilege escalation**: An authenticated user performing operations beyond their granted ACL permissions, including gaining administrative or superuser capabilities.
 - **Data corruption or loss**: Unauthorized modification or deletion of data by a user who should not have write access (when ACLs are configured).
 - **Cross-user data access**: An authenticated user accessing another user's data in violation of configured ACLs or visibility labels.
 - **Remote code execution**: Achieving arbitrary code execution by an authenticated, non-administrative user when coprocessor loading is properly restricted.
+- **Credential exposure in logs**: Server logs containing authentication credentials, secrets, or other sensitive material accessible to users who should not have access to them.
 
 ## What Is NOT Considered a Vulnerability
 
@@ -107,22 +107,27 @@ The following categories of reports do not constitute security vulnerabilities i
 - **Administrative actions by authorized administrators**: Superusers and global administrators can, by design, perform any operation in the cluster. This includes loading coprocessors, modifying table schemas, and accessing all data.
 - **Access requiring operator-level cluster configuration changes**: Issues that require modifying `hbase-site.xml` or other server configuration files require host-level access, which is outside the HBase security boundary.
 - **Information disclosure via administrative interfaces on trusted networks**: Version information, configuration details, or metrics visible in the web UIs when accessed from within the trusted network.
-- **Exposure of services on untrusted networks**: Placing HBase services directly on the public internet without firewalls or VPN is an operator misconfiguration, not a vulnerability.
+- **Version discovery by unauthenticated users**: An unauthenticated user determining the deployed HBase version. Version information is not considered secret within the HBase security model.
+- **Username enumeration**: HBase relies on external authentication systems, such as Kerberos or LDAP, for identity management. Username enumeration is an authentication-layer concern and not an HBase vulnerability.
+- **Exposure of services on untrusted networks**: Placing HBase services directly on the public internet without firewalls or VPNs is an operator misconfiguration and not an HBase vulnerability.
 
 ## Security Hardening
 
-The HBase project welcomes reports about potential security hardening improvements, even when the behavior described falls outside the formal vulnerability criteria above. Such reports are valuable and will be considered for implementation as security improvements. Please use [JIRA](https://issues.apache.org/jira/browse/HBASE) for hardening suggestions (not the private security list), as these are by definition not vulnerability disclosures.
+The HBase project welcomes reports about potential security hardening improvements, even when the behavior described does not fall inside the formal vulnerability criteria above. Such reports are valuable and will be considered for implementation as security improvements. Patches are always welcome! Please use [JIRA](https://issues.apache.org/jira/browse/HBASE) for hardening suggestions, not the private security list, as these are by definition not vulnerability disclosures.
 
 Examples of welcome hardening suggestions include:
 
+- Improvements to documentation to make security expectations and configuration options clearer.
 - Improvements to default configurations that reduce risk of operator misconfiguration.
-- Better input validation that, while not exploitable in a secured deployment, improves robustness
+- Better input validation that, while not exploitable in a secured deployment, improves robustness.
+- Clearer warnings emitted at startup or in logs when security features are not configured, or are improperly configured.
+- Additional security controls that would enhance security when enabled.
 
-## Transport Security
+## Transport Encryption
 
 Transport-level encryption (TLS/SSL) for RPC, web UIs, and gateways is supported and documented but is optional in the security model. Whether transport encryption is required depends on the network environment. Within a physically secured private datacenter, operators may reasonably choose not to encrypt intra-cluster traffic. In cloud environments or across network boundaries, transport encryption should be configured. See [TLS Configuration](/docs/security/tls) for details.
 
-The decision to use or not use transport encryption is an operational choice that depends on    the deployment environment and does not affect the authentication and authorization requirements for production.
+The decision to use or not use transport encryption is an operational choice that depends on the deployment environment and does not affect the authentication and authorization requirements for production.
 
 ## Further Reading
 
