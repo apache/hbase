@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -33,7 +33,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -61,23 +60,19 @@ import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ VerySlowRegionServerTests.class, LargeTests.class })
+@Tag(VerySlowRegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestLogRolling extends AbstractTestLogRolling {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLogRolling.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestLogRolling.class);
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // TODO: testLogRollOnDatanodeDeath fails if short circuit reads are on under the hadoop2
     // profile. See HBASE-9337 for related issues.
@@ -202,8 +197,8 @@ public class TestLogRolling extends AbstractTestLogRolling {
       this.setUp();
 
       TEST_UTIL.ensureSomeRegionServersAvailable(2);
-      assertTrue("This test requires WAL file replication set to 2.",
-        fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()) == 2);
+      assertTrue(fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()) == 2,
+        "This test requires WAL file replication set to 2.");
       LOG.info("Replication=" + fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
 
       this.server = cluster.getRegionServer(0);
@@ -250,21 +245,21 @@ public class TestLogRolling extends AbstractTestLogRolling {
       }
 
       assertTrue(
-        "DataNodes " + dfsCluster.getDataNodes().size() + " default replication "
-          + fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()),
         dfsCluster.getDataNodes().size()
-            >= fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()) + 1);
+            >= fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()) + 1,
+        "DataNodes " + dfsCluster.getDataNodes().size() + " default replication "
+          + fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
 
       writeData(table, 2);
 
       long curTime = EnvironmentEdgeManager.currentTime();
       LOG.info("log.getCurrentFileName(): " + log.getCurrentFileName());
       long oldFilenum = AbstractFSWALProvider.extractFileNumFromWAL(log);
-      assertTrue("Log should have a timestamp older than now",
-        curTime > oldFilenum && oldFilenum != -1);
+      assertTrue(curTime > oldFilenum && oldFilenum != -1,
+        "Log should have a timestamp older than now");
 
-      assertTrue("The log shouldn't have rolled yet",
-        oldFilenum == AbstractFSWALProvider.extractFileNumFromWAL(log));
+      assertTrue(oldFilenum == AbstractFSWALProvider.extractFileNumFromWAL(log),
+        "The log shouldn't have rolled yet");
       final DatanodeInfo[] pipeline = log.getPipeline();
       assertTrue(pipeline.length == fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
 
@@ -284,17 +279,16 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
       // write some more log data (this should use a new hdfs_out)
       writeData(table, 3);
-      assertTrue("The log should not roll again.",
-        AbstractFSWALProvider.extractFileNumFromWAL(log) == newFilenum);
+      assertTrue(AbstractFSWALProvider.extractFileNumFromWAL(log) == newFilenum,
+        "The log should not roll again.");
       // kill another datanode in the pipeline, so the replicas will be lower than
       // the configured value 2.
       assertTrue(dfsCluster.stopDataNode(pipeline[1].getName()) != null);
 
       batchWriteAndWait(table, log, 3, false, 14000);
       int replication = log.getLogReplication();
-      assertTrue(
-        "LowReplication Roller should've been disabled, current replication=" + replication,
-        !log.isLowReplicationRollEnabled());
+      assertTrue(!log.isLowReplicationRollEnabled(),
+        "LowReplication Roller should've been disabled, current replication=" + replication);
 
       dfsCluster.startDataNodes(TEST_UTIL.getConfiguration(), 1, true, null, null);
 
@@ -303,9 +297,9 @@ public class TestLogRolling extends AbstractTestLogRolling {
       log.rollWriter(true);
       batchWriteAndWait(table, log, 13, true, 10000);
       replication = log.getLogReplication();
-      assertTrue("New log file should have the default replication instead of " + replication,
-        replication == fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
-      assertTrue("LowReplication Roller should've been enabled", log.isLowReplicationRollEnabled());
+      assertTrue(replication == fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()),
+        "New log file should have the default replication instead of " + replication);
+      assertTrue(log.isLowReplicationRollEnabled(), "LowReplication Roller should've been enabled");
     } finally {
       TEST_UTIL.getConfiguration().setLong("hbase.regionserver.hlog.check.lowreplication.interval",
         oldValue);
@@ -318,8 +312,8 @@ public class TestLogRolling extends AbstractTestLogRolling {
   @Test
   public void testLogRollOnPipelineRestart() throws Exception {
     LOG.info("Starting testLogRollOnPipelineRestart");
-    assertTrue("This test requires WAL file replication.",
-      fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()) > 1);
+    assertTrue(fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()) > 1,
+      "This test requires WAL file replication.");
     LOG.info("Replication=" + fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
     // When the hbase:meta table can be opened, the region servers are running
     Table t = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
@@ -359,11 +353,11 @@ public class TestLogRolling extends AbstractTestLogRolling {
       long curTime = EnvironmentEdgeManager.currentTime();
       LOG.info("log.getCurrentFileName()): " + AbstractFSWALProvider.getCurrentFileName(log));
       long oldFilenum = AbstractFSWALProvider.extractFileNumFromWAL(log);
-      assertTrue("Log should have a timestamp older than now",
-        curTime > oldFilenum && oldFilenum != -1);
+      assertTrue(curTime > oldFilenum && oldFilenum != -1,
+        "Log should have a timestamp older than now");
 
-      assertTrue("The log shouldn't have rolled yet",
-        oldFilenum == AbstractFSWALProvider.extractFileNumFromWAL(log));
+      assertTrue(oldFilenum == AbstractFSWALProvider.extractFileNumFromWAL(log),
+        "The log shouldn't have rolled yet");
 
       // roll all datanodes in the pipeline
       dfsCluster.restartDataNodes();
@@ -376,8 +370,8 @@ public class TestLogRolling extends AbstractTestLogRolling {
       writeData(table, 1003);
       long newFilenum = AbstractFSWALProvider.extractFileNumFromWAL(log);
 
-      assertTrue("Missing datanode should've triggered a log roll",
-        newFilenum > oldFilenum && newFilenum > curTime);
+      assertTrue(newFilenum > oldFilenum && newFilenum > curTime,
+        "Missing datanode should've triggered a log roll");
       validateData(table, 1003);
 
       writeData(table, 1004);
@@ -394,8 +388,8 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
       // force a log roll to read back and verify previously written logs
       log.rollWriter(true);
-      assertTrue("preLogRolledCalled has size of " + preLogRolledCalled.size(),
-        preLogRolledCalled.size() >= 1);
+      assertTrue(preLogRolledCalled.size() >= 1,
+        "preLogRolledCalled has size of " + preLogRolledCalled.size());
 
       // read back the data written
       Set<String> loggedRows = new HashSet<>();

@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
@@ -34,11 +34,10 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Tests for WAL write durability - hflush vs hsync
@@ -51,20 +50,20 @@ public abstract class WALDurabilityTestBase<T extends WAL> {
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private Configuration conf;
   private String dir;
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
   // Test names
   protected TableName tableName;
 
-  @Before
-  public void setUp() throws IOException {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
+    name = testInfo.getTestMethod().get().getName();
     conf = TEST_UTIL.getConfiguration();
     dir = TEST_UTIL.getDataTestDir("TestHRegion").toString();
-    tableName = TableName.valueOf(name.getMethodName());
+    tableName = TableName.valueOf(name);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     TEST_UTIL.cleanupTestDir();
   }
@@ -155,7 +154,7 @@ public abstract class WALDurabilityTestBase<T extends WAL> {
   }
 
   private String getName() {
-    return name.getMethodName();
+    return name;
   }
 
   /**

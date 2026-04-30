@@ -21,7 +21,6 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -29,10 +28,10 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
@@ -40,18 +39,21 @@ import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestAsyncWALReplay extends AbstractTestWALReplay {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncWALReplay.class);
 
   private static EventLoopGroup GROUP;
 
   private static Class<? extends Channel> CHANNEL_CLASS;
 
-  @BeforeClass
+  @BeforeAll
+  public static void setUpBeforeClass(TestInfo testInfo) throws Exception {
+    if (testInfo.getTestClass().get() == TestAsyncWALReplay.class) {
+      setUpBeforeClass();
+    }
+  }
+
   public static void setUpBeforeClass() throws Exception {
     GROUP = new NioEventLoopGroup(1,
       new ThreadFactoryBuilder().setNameFormat("TestAsyncWALReplay-pool-%d").setDaemon(true)
@@ -62,7 +64,7 @@ public class TestAsyncWALReplay extends AbstractTestWALReplay {
     AbstractTestWALReplay.setUpBeforeClass();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     AbstractTestWALReplay.tearDownAfterClass();
     GROUP.shutdownGracefully();

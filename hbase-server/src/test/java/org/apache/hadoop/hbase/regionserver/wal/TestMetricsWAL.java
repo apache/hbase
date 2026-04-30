@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -25,27 +25,26 @@ import static org.mockito.Mockito.verify;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMetricsWAL {
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricsWAL.class);
+  @BeforeEach
+  public void initTestName(TestInfo testInfo) {
+    name = testInfo.getTestMethod().get().getName();
+  }
 
   @Test
   public void testLogRollRequested() throws Exception {
@@ -79,7 +78,7 @@ public class TestMetricsWAL {
 
   @Test
   public void testSlowAppend() throws Exception {
-    String testName = name.getMethodName();
+    String testName = name;
     MetricsWALSource source = new MetricsWALSourceImpl(testName, testName, testName, testName);
     MetricsWAL metricsWAL = new MetricsWAL(source);
     TableName tableName = TableName.valueOf("foo");
@@ -138,7 +137,7 @@ public class TestMetricsWAL {
 
   @Test
   public void testLogRolls() {
-    String testName = name.getMethodName();
+    String testName = name;
     MetricsWALSource source = new MetricsWALSourceImpl(testName, testName, testName, testName);
     MetricsWAL metricsWAL = new MetricsWAL(source);
     Path path1 = new Path("path-1");

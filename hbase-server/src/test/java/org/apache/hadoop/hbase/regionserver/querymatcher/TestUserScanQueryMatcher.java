@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
@@ -39,18 +38,14 @@ import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchC
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestUserScanQueryMatcher.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestUserScanQueryMatcher.class);
 
@@ -437,8 +432,8 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     qm.setToNewRow(new KeyValue(row1, fam1, e, now, Type.DeleteColumn));
     for (int i = 0; i < n + 1; i++) {
       // Empty qualifier DCs should never trigger seek, regardless of threshold
-      assertEquals("DC at i=" + i, MatchCode.SKIP,
-        qm.match(new KeyValue(row1, fam1, e, now - i, Type.DeleteColumn)));
+      assertEquals(MatchCode.SKIP,
+        qm.match(new KeyValue(row1, fam1, e, now - i, Type.DeleteColumn)), "DC at i=" + i);
     }
     KeyValue df = new KeyValue(row1, fam1, e, now - n - 1, Type.DeleteFamily);
     KeyValue put = new KeyValue(row1, fam1, col1, now - n - 1, Type.Put, data);
@@ -493,8 +488,8 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     // All DCs have timestamps below the time range, so includeDeleteMarker is false.
     // The seek counter should still accumulate.
     for (int i = 0; i < n - 1; i++) {
-      assertEquals("DC at i=" + i, MatchCode.SKIP,
-        qm.match(new KeyValue(row1, fam1, col1, now - i, Type.DeleteColumn)));
+      assertEquals(MatchCode.SKIP,
+        qm.match(new KeyValue(row1, fam1, col1, now - i, Type.DeleteColumn)), "DC at i=" + i);
     }
     assertEquals(MatchCode.SEEK_NEXT_COL,
       qm.match(new KeyValue(row1, fam1, col1, now - n + 1, Type.DeleteColumn)));
@@ -517,11 +512,12 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     byte[] qual = familyLevel ? HConstants.EMPTY_BYTE_ARRAY : col1;
     qm.setToNewRow(new KeyValue(row1, fam1, qual, now, type));
     for (int i = 0; i < n - 1; i++) {
-      assertEquals("Mismatch at index " + i, MatchCode.SKIP,
-        qm.match(new KeyValue(row1, fam1, qual, now - i, type)));
+      assertEquals(MatchCode.SKIP, qm.match(new KeyValue(row1, fam1, qual, now - i, type)),
+        "Mismatch at index " + i);
     }
-    assertEquals("Expected SEEK_NEXT_COL at index " + (n - 1), MatchCode.SEEK_NEXT_COL,
-      qm.match(new KeyValue(row1, fam1, qual, now - n + 1, type)));
+    assertEquals(MatchCode.SEEK_NEXT_COL,
+      qm.match(new KeyValue(row1, fam1, qual, now - n + 1, type)),
+      "Expected SEEK_NEXT_COL at index " + (n - 1));
   }
 
   /** All markers should SKIP regardless of count. */
@@ -533,8 +529,8 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     byte[] qual = familyLevel ? HConstants.EMPTY_BYTE_ARRAY : col1;
     qm.setToNewRow(new KeyValue(row1, fam1, qual, now, type));
     for (int i = 0; i < count; i++) {
-      assertEquals("Mismatch at index " + i, MatchCode.SKIP,
-        qm.match(new KeyValue(row1, fam1, qual, now - i, type)));
+      assertEquals(MatchCode.SKIP, qm.match(new KeyValue(row1, fam1, qual, now - i, type)),
+        "Mismatch at index " + i);
     }
   }
 }
