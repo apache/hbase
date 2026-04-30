@@ -60,9 +60,9 @@ public class RowCache {
   /**
    * A barrier that prevents the row cache from being populated during region operations, such as
    * bulk loads. It is implemented as a counter to address issues that arise when the same region is
-   * updated concurrently.
+   * updated concurrently. Keyed by the encoded region name.
    */
-  private final Map<HRegion, AtomicInteger> regionLevelBarrierMap = new ConcurrentHashMap<>();
+  private final Map<String, AtomicInteger> regionLevelBarrierMap = new ConcurrentHashMap<>();
   /**
    * A barrier that prevents the row cache from being populated during row mutations. It is
    * implemented as a counter to address issues that arise when the same row is mutated
@@ -234,9 +234,9 @@ public class RowCache {
     return true;
   }
 
-  void populateCache(HRegion region, List<Cell> results, RowCacheKey key) {
+  void cache(List<Cell> results, RowCacheKey key) {
     // The row cache is populated only when no region level barriers remain
-    regionLevelBarrierMap.computeIfAbsent(region, t -> {
+    regionLevelBarrierMap.computeIfAbsent(key.getEncodedRegionName(), t -> {
       // The row cache is populated only when no row level barriers remain
       rowLevelBarrierMap.computeIfAbsent(key, k -> {
         try {
@@ -251,7 +251,9 @@ public class RowCache {
   }
 
   void createRegionLevelBarrier(HRegion region) {
-    regionLevelBarrierMap.computeIfAbsent(region, k -> new AtomicInteger(0)).incrementAndGet();
+    regionLevelBarrierMap
+      .computeIfAbsent(region.getRegionInfo().getEncodedName(), k -> new AtomicInteger(0))
+      .incrementAndGet();
   }
 
   void increaseRowCacheSeqNum(HRegion region) {
@@ -259,10 +261,11 @@ public class RowCache {
   }
 
   void removeRegionLevelBarrier(HRegion region) {
-    regionLevelBarrierMap.computeIfPresent(region, (k, counter) -> {
-      int remaining = counter.decrementAndGet();
-      return (remaining <= 0) ? null : counter;
-    });
+    regionLevelBarrierMap.computeIfPresent(region.getRegionInfo().getEncodedName(),
+      (k, counter) -> {
+        int remaining = counter.decrementAndGet();
+        return (remaining <= 0) ? null : counter;
+      });
   }
 
   long getHitCount() {
@@ -292,6 +295,6 @@ public class RowCache {
 
   // For testing only
   AtomicInteger getRegionLevelBarrier(HRegion region) {
-    return regionLevelBarrierMap.get(region);
+    return regionLevelBarrierMap.get(region.getRegionInfo().getEncodedName());
   }
 }
