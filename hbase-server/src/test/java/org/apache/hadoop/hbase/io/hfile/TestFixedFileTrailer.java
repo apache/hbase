@@ -18,11 +18,11 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hadoop.hbase.io.hfile.FixedFileTrailer.createComparator;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -30,38 +30,32 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.InnerStoreCellComparator;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@RunWith(Parameterized.class)
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: version={0}")
 public class TestFixedFileTrailer {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFixedFileTrailer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFixedFileTrailer.class);
   private static final int MAX_COMPARATOR_NAME_LENGTH = 128;
@@ -85,20 +79,19 @@ public class TestFixedFileTrailer {
     this.version = version;
   }
 
-  @Parameters
-  public static Collection<Object[]> getParameters() {
+  public static Stream<Arguments> parameters() {
     List<Object[]> versionsToTest = new ArrayList<>();
     for (int v = HFile.MIN_FORMAT_VERSION; v <= HFile.MAX_FORMAT_VERSION; ++v)
       versionsToTest.add(new Integer[] { v });
-    return versionsToTest;
+    return versionsToTest.stream().map(arr -> Arguments.of(arr[0]));
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     fs = FileSystem.get(util.getConfiguration());
   }
 
-  @Test
+  @TestTemplate
   public void testCreateComparator() throws IOException {
     assertEquals(InnerStoreCellComparator.class,
       createComparator("org.apache.hadoop.hbase.KeyValue$KVComparator").getClass());
@@ -126,7 +119,7 @@ public class TestFixedFileTrailer {
     assertThrows(IOException.class, () -> createComparator(""));
   }
 
-  @Test
+  @TestTemplate
   public void testTrailer() throws IOException {
     FixedFileTrailer t = new FixedFileTrailer(version, HFileReaderImpl.PBUF_TRAILER_MINOR_VERSION);
     t.setDataIndexCount(3);
@@ -183,8 +176,8 @@ public class TestFixedFileTrailer {
           String msg = ex.getMessage();
           String cleanMsg = msg.replaceAll("^(java(\\.[a-zA-Z]+)+:\\s+)?|\\s+\\(.*\\)\\s*$", "");
           // will be followed by " expected: ..."
-          assertEquals("Actual exception message is \"" + msg + "\".\nCleaned-up message",
-            "Invalid HFile version: " + invalidVersion, cleanMsg);
+          assertEquals("Invalid HFile version: " + invalidVersion, cleanMsg,
+            "Actual exception message is \"" + msg + "\".\nCleaned-up message");
           LOG.info("Got an expected exception: " + msg);
         }
       }
@@ -199,13 +192,12 @@ public class TestFixedFileTrailer {
     checkLoadedTrailer(version, t, t4);
 
     String trailerStr = t.toString();
-    assertEquals(
-      "Invalid number of fields in the string representation " + "of the trailer: " + trailerStr,
-      NUM_FIELDS_BY_VERSION[version - 2], trailerStr.split(", ").length);
+    assertEquals(NUM_FIELDS_BY_VERSION[version - 2], trailerStr.split(", ").length,
+      "Invalid number of fields in the string representation " + "of the trailer: " + trailerStr);
     assertEquals(trailerStr, t4.toString());
   }
 
-  @Test
+  @TestTemplate
   public void testTrailerForV2NonPBCompatibility() throws Exception {
     if (version == 2) {
       FixedFileTrailer t = new FixedFileTrailer(version, HFileReaderImpl.MINOR_VERSION_NO_CHECKSUM);

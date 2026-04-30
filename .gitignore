@@ -28,3 +28,4 @@ tmp
 **/.flattened-pom.xml
 .vscode/
 **/__pycache__
+.opencode

@@ -17,19 +17,19 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -41,39 +41,33 @@ import org.apache.hadoop.hbase.io.hfile.RandomKeyValueUtil;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@RunWith(Parameterized.class)
-@Category({ IOTests.class, LargeTests.class })
+@Tag(IOTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: blockSize={0}, bucketSizes={1}")
 public class TestPrefetchPersistence {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPrefetchPersistence.class);
 
-  public TestName name = new TestName();
-
-  @Parameterized.Parameters(name = "{index}: blockSize={0}, bucketSizes={1}")
   @SuppressWarnings("checkstyle:Indentation")
-  public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[][] { { 16 * 1024,
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(16 * 1024,
       new int[] { 2 * 1024 + 1024, 4 * 1024 + 1024, 8 * 1024 + 1024, 16 * 1024 + 1024,
         28 * 1024 + 1024, 32 * 1024 + 1024, 64 * 1024 + 1024, 96 * 1024 + 1024,
-        128 * 1024 + 1024 } } });
+        128 * 1024 + 1024 }));
   }
 
-  @Parameterized.Parameter(0)
-  public int constructedBlockSize;
+  final int constructedBlockSize;
+  final int[] constructedBlockSizes;
 
-  @Parameterized.Parameter(1)
-  public int[] constructedBlockSizes;
+  public TestPrefetchPersistence(int constructedBlockSize, int[] constructedBlockSizes) {
+    this.constructedBlockSize = constructedBlockSize;
+    this.constructedBlockSizes = constructedBlockSizes;
+  }
 
   private static final Logger LOG = LoggerFactory.getLogger(TestPrefetchPersistence.class);
 
@@ -95,7 +89,7 @@ public class TestPrefetchPersistence {
   final int writeThreads = BucketCache.DEFAULT_WRITER_THREADS;
   final int writerQLen = BucketCache.DEFAULT_WRITER_QUEUE_ITEMS;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
@@ -104,7 +98,7 @@ public class TestPrefetchPersistence {
     fs = HFileSystem.get(conf);
   }
 
-  @Test
+  @TestTemplate
   public void testPrefetchPersistence() throws Exception {
     bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
