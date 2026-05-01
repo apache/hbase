@@ -17,31 +17,29 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestSyncFuture {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSyncFuture.class);
-
-  @Test(expected = TimeoutIOException.class)
+  @Test
   public void testGet() throws Exception {
-    long timeout = 5000;
-    long txid = 100000;
-    SyncFuture syncFulture = new SyncFuture().reset(txid, false);
-    syncFulture.done(txid, null);
-    assertEquals(txid, syncFulture.get(timeout));
+    assertThrows(TimeoutIOException.class, () -> {
+      long timeout = 5000;
+      long txid = 100000;
+      SyncFuture syncFuture = new SyncFuture().reset(txid, false);
+      syncFuture.done(txid, null);
+      assertEquals(txid, syncFuture.get(timeout));
 
-    syncFulture.reset(txid, false).get(timeout);
+      syncFuture.reset(txid, false).get(timeout);
+    });
   }
 }

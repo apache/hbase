@@ -55,6 +55,28 @@ To disable, set the logging level back to `INFO` level.
 
 The same log settings also work on Master and for the client.
 
+## Handling Multiple SLF4J Bindings to Prevent Overridden Log Configurations
+
+If you have a local installation of Hadoop (e.g., installed via Homebrew on macOS), you may encounter a "multiple SLF4J bindings" warning when starting HBase in standalone mode using `bin/start-hbase.sh`. For example, you may see the following when starting HBase on your machine:
+
+```text
+SLF4J: Class path contains multiple SLF4J bindings.
+SLF4J: Found binding in [jar:file:/opt/homebrew/Cellar/hadoop/3.4.1/libexec/share/hadoop/common/lib/slf4j-reload4j-1.7.36.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: Found binding in [jar:file:$HOME/.m2/repository/org/apache/logging/log4j/log4j-slf4j-impl/2.25.3/log4j-slf4j-impl-2.25.3.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.
+SLF4J: Actual binding is of type [org.slf4j.impl.Reload4jLoggerFactory]
+```
+
+This is happening because the `bin/hbase` script automatically detects local Hadoop installations and adds their classpath to HBase. If your Hadoop installation uses the legacy Reload4j (or Log4j 1.2) binder, SLF4J may prioritize it over the HBase Log4j2 binder. When this happens, your `conf/log4j2.properties` file and `HBASE_ROOT_LOGGER` environment variable are completely ignored.
+
+To get around this issue, you can set `HBASE_DISABLE_HADOOP_CLASSPATH_LOOKUP` to `true`. You can modify this directly in `conf/hbase-env.sh` by uncommenting the following line:
+
+```bash
+export HBASE_DISABLE_HADOOP_CLASSPATH_LOOKUP="true"
+```
+
+Note: Setting `HBASE_DISABLE_HADOOP_CLASSPATH_LOOKUP` does not fix the issue when HBase is in distributed mode. There may be a different warning instead.
+
 ## JVM Garbage Collection Logs
 
 <Callout type="info">

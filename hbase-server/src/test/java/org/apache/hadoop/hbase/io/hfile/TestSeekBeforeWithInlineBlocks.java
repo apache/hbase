@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Random;
@@ -27,7 +27,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -40,18 +39,14 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ IOTests.class, MediumTests.class })
+@Tag(IOTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestSeekBeforeWithInlineBlocks {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSeekBeforeWithInlineBlocks.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSeekBeforeWithInlineBlocks.class);
 
@@ -166,20 +161,21 @@ public class TestSeekBeforeWithInlineBlocks {
 
   private void checkSeekBefore(ExtendedCell[] cells, HFileScanner scanner, int i)
     throws IOException {
-    assertEquals(
-      "Failed to seek to the key before #" + i + " (" + CellUtil.getCellKeyAsString(cells[i]) + ")",
-      true, scanner.seekBefore(cells[i]));
+    assertEquals(true, scanner.seekBefore(cells[i]), "Failed to seek to the key before #" + i + " ("
+      + CellUtil.getCellKeyAsString(cells[i]) + ")");
   }
 
   private void checkNoSeekBefore(ExtendedCell[] cells, HFileScanner scanner, int i)
     throws IOException {
-    assertEquals("Incorrectly succeeded in seeking to before first key ("
-      + CellUtil.getCellKeyAsString(cells[i]) + ")", false, scanner.seekBefore(cells[i]));
+    assertEquals(false, scanner.seekBefore(cells[i]),
+      "Incorrectly succeeded in seeking to before first key ("
+        + CellUtil.getCellKeyAsString(cells[i]) + ")");
   }
 
   /** Check a key/value pair after it was read by the reader */
   private void checkCell(ExtendedCell expected, ExtendedCell actual) {
-    assertTrue(String.format("Expected key %s, but was %s", CellUtil.getCellKeyAsString(expected),
-      CellUtil.getCellKeyAsString(actual)), PrivateCellUtil.equals(expected, actual));
+    assertTrue(PrivateCellUtil.equals(expected, actual),
+      String.format("Expected key %s, but was %s", CellUtil.getCellKeyAsString(expected),
+        CellUtil.getCellKeyAsString(actual)));
   }
 }

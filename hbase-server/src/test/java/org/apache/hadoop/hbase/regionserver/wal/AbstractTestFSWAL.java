@@ -19,12 +19,13 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -90,12 +91,11 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,23 +108,23 @@ public abstract class AbstractTestFSWAL {
   protected static Path DIR;
   protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @Rule
-  public final TestName currentTest = new TestName();
+  protected String testName;
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    testName = testInfo.getTestMethod().get().getName();
     FileStatus[] entries = FS.listStatus(new Path("/"));
     for (FileStatus dir : entries) {
       FS.delete(dir.getPath(), true);
     }
     final Path hbaseDir = TEST_UTIL.createRootDir();
     final Path hbaseWALDir = TEST_UTIL.createWALRootDir();
-    DIR = new Path(hbaseWALDir, currentTest.getMethodName());
+    DIR = new Path(hbaseWALDir, testName);
     assertNotEquals(hbaseDir, hbaseWALDir);
     FS.mkdirs(DIR);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // Make block sizes small.
     TEST_UTIL.getConfiguration().setInt("dfs.blocksize", 1024 * 1024);
@@ -145,7 +145,7 @@ public abstract class AbstractTestFSWAL {
     FS = TEST_UTIL.getDFSCluster().getFileSystem();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -237,14 +237,14 @@ public abstract class AbstractTestFSWAL {
       } catch (IllegalArgumentException e) {
         ex = true;
       }
-      assertTrue("Comparator doesn't complain while checking meta log files", ex);
+      assertTrue(ex, "Comparator doesn't complain while checking meta log files");
       boolean exMeta = false;
       try {
         compMeta.compare(p1WithMeta, p2);
       } catch (IllegalArgumentException e) {
         exMeta = true;
       }
-      assertTrue("Meta comparator doesn't complain while checking log files", exMeta);
+      assertTrue(exMeta, "Meta comparator doesn't complain while checking log files");
     } finally {
       if (wal1 != null) {
         wal1.close();
@@ -391,20 +391,19 @@ public abstract class AbstractTestFSWAL {
 
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testFailedToCreateWALIfParentRenamed()
     throws IOException, CommonFSUtils.StreamLacksCapabilityException {
-    AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF),
-      currentTest.getMethodName(), HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
+    AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), testName,
+      HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
     long filenum = EnvironmentEdgeManager.currentTime();
     Path path = wal.computeFilename(filenum);
     wal.createWriterInstance(FS, path);
     Path parent = path.getParent();
-    path = wal.computeFilename(filenum + 1);
     Path newPath = new Path(parent.getParent(), parent.getName() + "-splitting");
     FS.rename(parent, newPath);
-    wal.createWriterInstance(FS, path);
-    fail("It should fail to create the new WAL");
+    Path nextPath = wal.computeFilename(filenum + 1);
+    assertThrows(IOException.class, () -> wal.createWriterInstance(FS, nextPath));
   }
 
   /**
@@ -416,7 +415,6 @@ public abstract class AbstractTestFSWAL {
    */
   @Test
   public void testFlushSequenceIdIsGreaterThanAllEditsInHFile() throws IOException {
-    String testName = currentTest.getMethodName();
     final TableName tableName = TableName.valueOf(testName);
     final RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).build();
     final byte[] rowName = tableName.getName();
@@ -491,7 +489,6 @@ public abstract class AbstractTestFSWAL {
 
   @Test
   public void testSyncNoAppend() throws IOException {
-    String testName = currentTest.getMethodName();
     AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(), testName,
       CONF, null, true, null, null);
     try {
@@ -503,7 +500,6 @@ public abstract class AbstractTestFSWAL {
 
   @Test
   public void testWriteEntryCanBeNull() throws IOException {
-    String testName = currentTest.getMethodName();
     AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(), testName,
       CONF, null, true, null, null);
     wal.close();
@@ -533,13 +529,12 @@ public abstract class AbstractTestFSWAL {
     }
   }
 
-  @Test(expected = WALClosedException.class)
+  @Test
   public void testRollWriterForClosedWAL() throws IOException {
-    String testName = currentTest.getMethodName();
     AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(), testName,
       CONF, null, true, null, null);
     wal.close();
-    wal.rollWriter();
+    assertThrows(WALClosedException.class, () -> wal.rollWriter());
   }
 
   private AbstractFSWAL<?> createHoldingWAL(String testName, AtomicBoolean startHoldingForAppend,
@@ -602,7 +597,6 @@ public abstract class AbstractTestFSWAL {
   // Testcase for HBASE-23181
   @Test
   public void testUnflushedSeqIdTrackingWithAsyncWal() throws IOException, InterruptedException {
-    String testName = currentTest.getMethodName();
     byte[] b = Bytes.toBytes("b");
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf("table"))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(b)).build();
@@ -627,8 +621,8 @@ public abstract class AbstractTestFSWAL {
 
       // now check the region's unflushed seqIds.
       long seqId = getEarliestMemStoreSeqNum(wal, region.getRegionInfo().getEncodedNameAsBytes());
-      assertEquals("Found seqId for the region which is already closed", HConstants.NO_SEQNUM,
-        seqId);
+      assertEquals(HConstants.NO_SEQNUM, seqId,
+        "Found seqId for the region which is already closed");
     } finally {
       exec.shutdownNow();
       region.close();
@@ -652,7 +646,6 @@ public abstract class AbstractTestFSWAL {
   // Testcase for HBASE-23157
   @Test
   public void testMaxFlushedSequenceIdGoBackwards() throws IOException, InterruptedException {
-    String testName = currentTest.getMethodName();
     byte[] a = Bytes.toBytes("a");
     byte[] b = Bytes.toBytes("b");
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf("table"))
@@ -693,10 +686,8 @@ public abstract class AbstractTestFSWAL {
       // get the max flushed sequence id after the second flush
       long maxFlushedSeqId2 = region.getMaxFlushedSeqId();
       // make sure that the maxFlushedSequenceId does not go backwards
-      assertTrue(
-        "maxFlushedSeqId1(" + maxFlushedSeqId1
-          + ") is not greater than or equal to maxFlushedSeqId2(" + maxFlushedSeqId2 + ")",
-        maxFlushedSeqId1 <= maxFlushedSeqId2);
+      assertTrue(maxFlushedSeqId1 <= maxFlushedSeqId2, "maxFlushedSeqId1(" + maxFlushedSeqId1
+        + ") is not greater than or equal to maxFlushedSeqId2(" + maxFlushedSeqId2 + ")");
     } finally {
       exec.shutdownNow();
       region.close();

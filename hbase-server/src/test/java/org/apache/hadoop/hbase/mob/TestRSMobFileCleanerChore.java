@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.mob;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -31,7 +31,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -52,11 +51,10 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,12 +64,9 @@ import org.slf4j.LoggerFactory;
  * a period of time larger than minimum age to archive 6. Runs Mob cleaner chore 7 Verifies that
  * every old MOB file referenced from current RS was archived
  */
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestRSMobFileCleanerChore {
   private static final Logger LOG = LoggerFactory.getLogger(TestRSMobFileCleanerChore.class);
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSMobFileCleanerChore.class);
 
   private HBaseTestingUtil HTU;
 
@@ -93,7 +88,7 @@ public class TestRSMobFileCleanerChore {
   public TestRSMobFileCleanerChore() {
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     HTU = new HBaseTestingUtil();
     conf = HTU.getConfiguration();
@@ -146,7 +141,7 @@ public class TestRSMobFileCleanerChore {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     admin.disableTable(tableDescriptor.getTableName());
     admin.deleteTable(tableDescriptor.getTableName());

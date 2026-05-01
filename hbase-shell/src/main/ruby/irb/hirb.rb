@@ -72,7 +72,7 @@ module IRB
       super(omit) unless @context.last_value.nil?
     end
 
-    # Copied from https://github.com/ruby/irb/blob/v1.4.2/lib/irb.rb 
+    # Copied from https://github.com/ruby/irb/blob/v1.4.2/lib/irb.rb
     # We override the rescue Exception block so the
     # Shell::exception_handler can deal with the exceptions.
     def eval_input
@@ -186,7 +186,7 @@ module IRB
                 warn "WARN: '#{var}' is a reserved HBase command. Local variable assignment ignored."
               end
 
-              new_binding = @context.workspace.main.get_binding
+              new_binding = @context.workspace.main.to_binding
               (workspace_binding.local_variables - shadowing_vars).each do |var|
                 new_binding.local_variable_set(var, workspace_binding.local_variable_get(var))
               end
@@ -209,22 +209,19 @@ module IRB
     ##
     # Determine the loadable path for a given filename by searching through $LOAD_PATH
     #
-    # This serves a similar purpose to IRB::IrbLoader#search_file_from_ruby_path, but uses JRuby's
-    # loader, which allows us to find special paths like "uri:classloader" inside of a Jar.
+    # Uses $LOAD_PATH.resolve_feature_path, which resolves files on disk as well as
+    # entries inside jars on the classpath. Returns nil on miss.
     #
     # @param [String] filename
     # @return [String] path
     def self.path_for_load(filename)
       return File.absolute_path(filename) if File.exist? filename
 
-      # Get JRuby's LoadService from the global (singleton) instance of the runtime
-      # (org.jruby.Ruby), which allows us to use JRuby's tools for searching the load path.
-      runtime = org.jruby.Ruby.getGlobalRuntime
-      loader = runtime.getLoadService
-      search_state = loader.findFileForLoad filename
-      raise LoadError, "no such file to load -- #{filename}" if search_state.library.nil?
+      resolved = $LOAD_PATH.resolve_feature_path(filename)
+      raise LoadError, "no such file to load -- #{filename}" if resolved.nil?
 
-      search_state.loadName
+      _type, path = resolved
+      path
     end
 
     ##

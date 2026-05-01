@@ -17,22 +17,18 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ SmallTests.class })
+@Tag(SmallTests.TAG)
 public class TestIdReadWriteLockStrongRef {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIdReadWriteLockStrongRef.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestIdReadWriteLockStrongRef.class);
 
@@ -44,9 +40,9 @@ public class TestIdReadWriteLockStrongRef {
     Long offset_2 = 2L;
     ReentrantReadWriteLock offsetLock_1 = idLock.getLock(offset_1);
     ReentrantReadWriteLock offsetLock_2 = idLock.getLock(offset_1);
-    Assert.assertEquals(offsetLock_1, offsetLock_2);
+    assertEquals(offsetLock_1, offsetLock_2);
     ReentrantReadWriteLock offsetLock_3 = idLock.getLock(offset_2);
-    Assert.assertNotEquals(offsetLock_1, offsetLock_3);
+    assertNotEquals(offsetLock_1, offsetLock_3);
   }
 
 }

@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Optional;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
@@ -44,23 +43,18 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestAppendTimeRange {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAppendTimeRange.class);
-
-  @Rule
-  public TestName name = new TestName();
+  private String currentTestName;
 
   private static final HBaseTestingUtil util = new HBaseTestingUtil();
   private static final ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
@@ -73,7 +67,7 @@ public class TestAppendTimeRange {
 
   private static final byte[] VALUE = Bytes.toBytes("1");
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     util.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       MyObserver.class.getName());
@@ -84,9 +78,14 @@ public class TestAppendTimeRange {
     EnvironmentEdgeManager.injectEdge(mee);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     util.shutdownMiniCluster();
+  }
+
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    currentTestName = testInfo.getTestMethod().get().getName();
   }
 
   public static class MyObserver implements RegionCoprocessor, RegionObserver {
@@ -119,7 +118,7 @@ public class TestAppendTimeRange {
 
   @Test
   public void testHTableInterfaceMethods() throws Exception {
-    try (Table table = util.createTable(TableName.valueOf(name.getMethodName()), TEST_FAMILY)) {
+    try (Table table = util.createTable(TableName.valueOf(currentTestName), TEST_FAMILY)) {
       table.put(new Put(ROW).addColumn(TEST_FAMILY, QUAL, VALUE));
       long time = EnvironmentEdgeManager.currentTime();
       mee.setValue(time);

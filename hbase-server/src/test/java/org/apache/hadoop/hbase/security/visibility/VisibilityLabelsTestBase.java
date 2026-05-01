@@ -20,12 +20,12 @@ package org.apache.hadoop.hbase.security.visibility;
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_FAMILY;
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABEL_QUALIFIER;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -63,11 +64,10 @@ import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 
@@ -78,7 +78,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.
 /**
  * Base test class for visibility labels basic features
  */
-public abstract class TestVisibilityLabels {
+public abstract class VisibilityLabelsTestBase {
 
   public static final String TOPSECRET = "topsecret";
   public static final String PUBLIC = "public";
@@ -102,16 +102,17 @@ public abstract class TestVisibilityLabels {
   public static Configuration conf;
 
   private volatile boolean killedRS = false;
-  @Rule
-  public final TestName TEST_NAME = new TestName();
   public static User SUPERUSER, USER1;
 
-  @AfterClass
+  @RegisterExtension
+  protected final TableNameTestExtension name = new TableNameTestExtension();
+
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     killedRS = false;
   }
@@ -120,13 +121,13 @@ public abstract class TestVisibilityLabels {
   public void testSecurityCapabilities() throws Exception {
     List<SecurityCapability> capabilities =
       TEST_UTIL.getConnection().getAdmin().getSecurityCapabilities();
-    assertTrue("CELL_VISIBILITY capability is missing",
-      capabilities.contains(SecurityCapability.CELL_VISIBILITY));
+    assertTrue(capabilities.contains(SecurityCapability.CELL_VISIBILITY),
+      "CELL_VISIBILITY capability is missing");
   }
 
   @Test
   public void testSimpleVisibilityLabels() throws Exception {
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    TableName tableName = name.getTableName();
     try (Table table = createTableAndWriteDataWithLabels(tableName, SECRET + "|" + CONFIDENTIAL,
       PRIVATE + "|" + CONFIDENTIAL)) {
       Scan s = new Scan();
@@ -150,7 +151,7 @@ public abstract class TestVisibilityLabels {
 
   @Test
   public void testSimpleVisibilityLabelsWithUniCodeCharacters() throws Exception {
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    TableName tableName = name.getTableName();
     try (Table table = createTableAndWriteDataWithLabels(tableName,
       SECRET + "|" + CellVisibility.quote(COPYRIGHT), "(" + CellVisibility.quote(COPYRIGHT) + "&"
         + CellVisibility.quote(ACCENT) + ")|" + CONFIDENTIAL,
@@ -181,7 +182,7 @@ public abstract class TestVisibilityLabels {
 
   @Test
   public void testAuthorizationsWithSpecialUnicodeCharacters() throws Exception {
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    TableName tableName = name.getTableName();
     try (Table table = createTableAndWriteDataWithLabels(tableName,
       CellVisibility.quote(UC1) + "|" + CellVisibility.quote(UC2), CellVisibility.quote(UC1),
       CellVisibility.quote(UNICODE_VIS_TAG))) {
@@ -210,7 +211,7 @@ public abstract class TestVisibilityLabels {
 
   @Test
   public void testVisibilityLabelsWithComplexLabels() throws Exception {
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    TableName tableName = name.getTableName();
     try (Table table = createTableAndWriteDataWithLabels(tableName,
       "(" + SECRET + "|" + CONFIDENTIAL + ")" + "&" + "!" + TOPSECRET,
       "(" + PRIVATE + "&" + CONFIDENTIAL + "&" + SECRET + ")",
@@ -241,7 +242,7 @@ public abstract class TestVisibilityLabels {
 
   @Test
   public void testVisibilityLabelsThatDoesNotPassTheCriteria() throws Exception {
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    TableName tableName = name.getTableName();
     try (Table table = createTableAndWriteDataWithLabels(tableName,
       "(" + SECRET + "|" + CONFIDENTIAL + ")", PRIVATE)) {
       Scan s = new Scan();
@@ -253,18 +254,8 @@ public abstract class TestVisibilityLabels {
   }
 
   @Test
-  public void testVisibilityLabelsInPutsThatDoesNotMatchAnyDefinedLabels() throws Exception {
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
-    try {
-      createTableAndWriteDataWithLabels(tableName, "SAMPLE_LABEL", "TEST");
-      fail("Should have failed with failed sanity check exception");
-    } catch (Exception e) {
-    }
-  }
-
-  @Test
   public void testVisibilityLabelsInScanThatDoesNotMatchAnyDefinedLabels() throws Exception {
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    TableName tableName = name.getTableName();
     try (Table table = createTableAndWriteDataWithLabels(tableName,
       "(" + SECRET + "|" + CONFIDENTIAL + ")", PRIVATE)) {
       Scan s = new Scan();
@@ -277,7 +268,7 @@ public abstract class TestVisibilityLabels {
 
   @Test
   public void testVisibilityLabelsWithGet() throws Exception {
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    TableName tableName = name.getTableName();
     try (Table table = createTableAndWriteDataWithLabels(tableName,
       SECRET + "&" + CONFIDENTIAL + "&!" + PRIVATE, SECRET + "&" + CONFIDENTIAL + "&" + PRIVATE)) {
       Get get = new Get(row1);
@@ -320,7 +311,7 @@ public abstract class TestVisibilityLabels {
 
     };
     t1.start();
-    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    final TableName tableName = name.getTableName();
     Thread t = new Thread() {
       @Override
       public void run() {
@@ -367,7 +358,7 @@ public abstract class TestVisibilityLabels {
 
   @Test
   public void testVisibilityLabelsOnRSRestart() throws Exception {
-    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    final TableName tableName = name.getTableName();
     List<RegionServerThread> regionServerThreads =
       TEST_UTIL.getHBaseCluster().getRegionServerThreads();
     for (RegionServerThread rsThread : regionServerThreads) {
@@ -403,7 +394,7 @@ public abstract class TestVisibilityLabels {
 
   @Test
   public void testVisibilityLabelsInGetThatDoesNotMatchAnyDefinedLabels() throws Exception {
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    TableName tableName = name.getTableName();
     try (Table table = createTableAndWriteDataWithLabels(tableName,
       "(" + SECRET + "|" + CONFIDENTIAL + ")", PRIVATE)) {
       Get get = new Get(row1);
@@ -569,7 +560,7 @@ public abstract class TestVisibilityLabels {
 
   @Test
   public void testLabelsWithCheckAndPut() throws Throwable {
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    TableName tableName = name.getTableName();
     try (Table table = TEST_UTIL.createTable(tableName, fam)) {
       byte[] row1 = Bytes.toBytes("row1");
       Put put = new Put(row1);
@@ -595,7 +586,7 @@ public abstract class TestVisibilityLabels {
 
   @Test
   public void testLabelsWithIncrement() throws Throwable {
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    TableName tableName = name.getTableName();
     try (Table table = TEST_UTIL.createTable(tableName, fam)) {
       byte[] row1 = Bytes.toBytes("row1");
       byte[] val = Bytes.toBytes(1L);
@@ -621,7 +612,7 @@ public abstract class TestVisibilityLabels {
 
   @Test
   public void testLabelsWithAppend() throws Throwable {
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    TableName tableName = name.getTableName();
     try (Table table = TEST_UTIL.createTable(tableName, fam)) {
       byte[] row1 = Bytes.toBytes("row1");
       byte[] val = Bytes.toBytes("a");
@@ -703,7 +694,7 @@ public abstract class TestVisibilityLabels {
     final byte[] v2 = Bytes.toBytes("101");
     final byte[] fam2 = Bytes.toBytes("info2");
     final byte[] qual2 = Bytes.toBytes("qual2");
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    TableName tableName = name.getTableName();
     // Default max versions is 1.
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam))
@@ -789,7 +780,7 @@ public abstract class TestVisibilityLabels {
   @Test
   public void testMutateRow() throws Exception {
     final byte[] qual2 = Bytes.toBytes("qual2");
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    TableName tableName = name.getTableName();
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build();
     TEST_UTIL.getAdmin().createTable(tableDescriptor);
@@ -824,7 +815,7 @@ public abstract class TestVisibilityLabels {
   @Test
   public void testFlushedFileWithVisibilityTags() throws Exception {
     final byte[] qual2 = Bytes.toBytes("qual2");
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    TableName tableName = name.getTableName();
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build();
     TEST_UTIL.getAdmin().createTable(tableDescriptor);

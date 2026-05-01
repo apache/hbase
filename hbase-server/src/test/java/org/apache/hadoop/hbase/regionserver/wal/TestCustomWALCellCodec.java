@@ -17,25 +17,21 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test that we can create, load, setup our own custom codec
  */
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCustomWALCellCodec {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCustomWALCellCodec.class);
 
   public static class CustomWALCellCodec extends WALCellCodec {
     public Configuration conf;
@@ -59,19 +55,21 @@ public class TestCustomWALCellCodec {
     conf.setClass(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, CustomWALCellCodec.class,
       WALCellCodec.class);
     CustomWALCellCodec codec = (CustomWALCellCodec) WALCellCodec.create(conf, null, null);
-    assertEquals("Custom codec didn't get initialized with the right configuration!", conf,
-      codec.conf);
-    assertEquals("Custom codec didn't get initialized with the right compression context!", null,
-      codec.context);
+    assertEquals(conf, codec.conf,
+      "Custom codec didn't get initialized with the right configuration!");
+    assertEquals(null, codec.context,
+      "Custom codec didn't get initialized with the right compression context!");
   }
 
   /**
    * Test that a custom {@link WALCellCodec} will fail if provided an invalid code class.
    */
-  @Test(expected = RuntimeException.class)
+  @Test
   public void testCreatePreparesCodecInvalidClass() throws Exception {
-    Configuration conf = new Configuration(false);
-    conf.setStrings(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, "org.apache.hbase.wal.NoSuchClass");
-    WALCellCodec.create(conf, null, null);
+    assertThrows(RuntimeException.class, () -> {
+      Configuration conf = new Configuration(false);
+      conf.setStrings(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, "org.apache.hbase.wal.NoSuchClass");
+      WALCellCodec.create(conf, null, null);
+    });
   }
 }

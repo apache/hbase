@@ -17,15 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -51,30 +51,22 @@ import org.apache.hadoop.hbase.wal.NoEOFWALStreamReader;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * Tests for WAL write durability
  */
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: provider={0}")
 public class TestDurability {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDurability.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static FileSystem FS;
@@ -86,18 +78,19 @@ public class TestDurability {
   private static byte[] ROW = Bytes.toBytes("row");
   private static byte[] COL = Bytes.toBytes("col");
 
-  @Parameter
-  public String walProvider;
+  private final String walProvider;
 
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
-  @Parameters(name = "{index}: provider={0}")
-  public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[] { "defaultProvider" }, new Object[] { "asyncfs" });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of("defaultProvider"), Arguments.of("asyncfs"));
   }
 
-  @BeforeClass
+  public TestDurability(String walProvider) {
+    this.walProvider = walProvider;
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     CONF = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniDFSCluster(1);
@@ -108,22 +101,23 @@ public class TestDurability {
     CommonFSUtils.setRootDir(CONF, DIR);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    name = testInfo.getTestMethod().get().getName();
     CONF.set(WALFactory.WAL_PROVIDER, walProvider);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     FS.delete(DIR, true);
   }
 
-  @Test
+  @TestTemplate
   public void testDurability() throws Exception {
     WALFactory wals = new WALFactory(CONF,
       ServerName.valueOf("TestDurability", 16010, EnvironmentEdgeManager.currentTime()).toString());
@@ -181,7 +175,7 @@ public class TestDurability {
     verifyWALCount(wals, wal, 12);
   }
 
-  @Test
+  @TestTemplate
   public void testIncrement() throws Exception {
     byte[] row1 = Bytes.toBytes("row1");
     byte[] col1 = Bytes.toBytes("col1");
@@ -248,7 +242,7 @@ public class TestDurability {
    * Test when returnResults set to false in increment it should not return the result instead it
    * resturn null.
    */
-  @Test
+  @TestTemplate
   public void testIncrementWithReturnResultsSetToFalse() throws Exception {
     byte[] row1 = Bytes.toBytes("row1");
     byte[] col1 = Bytes.toBytes("col1");
@@ -282,7 +276,7 @@ public class TestDurability {
 
   // lifted from TestAtomicOperation
   private HRegion createHRegion(WALFactory wals, Durability durability) throws IOException {
-    TableName tableName = TableName.valueOf(name.getMethodName().replaceAll("[^A-Za-z0-9-_]", "_"));
+    TableName tableName = TableName.valueOf(name.replaceAll("[^A-Za-z0-9-_]", "_"));
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();

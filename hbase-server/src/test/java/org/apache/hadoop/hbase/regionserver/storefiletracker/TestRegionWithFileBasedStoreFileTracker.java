@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -36,20 +35,15 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionWithFileBasedStoreFileTracker {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionWithFileBasedStoreFileTracker.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -63,20 +57,19 @@ public class TestRegionWithFileBasedStoreFileTracker {
 
   private static final RegionInfo RI = RegionInfoBuilder.newBuilder(TD.getTableName()).build();
 
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
   private HRegion region;
 
-  @Before
-  public void setUp() throws IOException {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
+    name = testInfo.getTestMethod().get().getName();
     Configuration conf = new Configuration(UTIL.getConfiguration());
     conf.set(StoreFileTrackerFactory.TRACKER_IMPL, StoreFileTrackerFactory.Trackers.FILE.name());
-    region =
-      HBaseTestingUtil.createRegionAndWAL(RI, UTIL.getDataTestDir(name.getMethodName()), conf, TD);
+    region = HBaseTestingUtil.createRegionAndWAL(RI, UTIL.getDataTestDir(name), conf, TD);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (region != null) {
       HBaseTestingUtil.closeRegionAndWAL(region);

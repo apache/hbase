@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -36,13 +35,10 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * Make sure we always cache important block types, such as index blocks, as long as we have a block
@@ -52,13 +48,10 @@ import org.junit.runners.Parameterized.Parameters;
  * to reveal more about what is being cached whether DATA or INDEX blocks and then we could do more
  * verification in this test.
  */
-@Category({ IOTests.class, MediumTests.class })
-@RunWith(Parameterized.class)
+@Tag(IOTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: hfileVersion={0}, cfCacheEnabled={1}")
 public class TestForceCacheImportantBlocks {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestForceCacheImportantBlocks.class);
 
   private final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -84,10 +77,8 @@ public class TestForceCacheImportantBlocks {
   private final int hfileVersion;
   private final boolean cfCacheEnabled;
 
-  @Parameters
-  public static Collection<Object[]> parameters() {
-    // HFile versions
-    return Arrays.asList(new Object[] { 3, true }, new Object[] { 3, false });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(3, true), Arguments.of(3, false));
   }
 
   public TestForceCacheImportantBlocks(int hfileVersion, boolean cfCacheEnabled) {
@@ -96,12 +87,12 @@ public class TestForceCacheImportantBlocks {
     TEST_UTIL.getConfiguration().setInt(HFile.FORMAT_VERSION_KEY, hfileVersion);
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     HFile.DATABLOCK_READ_COUNT.reset();
   }
 
-  @Test
+  @TestTemplate
   public void testCacheBlocks() throws IOException {
     // Set index block size to be the same as normal block size.
     TEST_UTIL.getConfiguration().setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, BLOCK_SIZE);

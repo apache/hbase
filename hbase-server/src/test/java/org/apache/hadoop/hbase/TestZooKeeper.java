@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.List;
@@ -46,33 +46,25 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestZooKeeper {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZooKeeper.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZooKeeper.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // Test we can first start the ZK cluster by itself
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -86,19 +78,19 @@ public class TestZooKeeper {
     TEST_UTIL.startMiniDFSCluster(2);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     StartTestingClusterOption option =
       StartTestingClusterOption.builder().numMasters(2).numRegionServers(2).build();
     TEST_UTIL.startMiniHBaseCluster(option);
   }
 
-  @After
+  @AfterEach
   public void after() throws Exception {
     try {
       TEST_UTIL.getHBaseCluster().waitForActiveAndReadyMaster(10000);
@@ -116,17 +108,17 @@ public class TestZooKeeper {
   }
 
   @Test
-  public void testRegionServerSessionExpired() throws Exception {
-    LOG.info("Starting " + name.getMethodName());
+  public void testRegionServerSessionExpired(TestInfo testInfo) throws Exception {
+    LOG.info("Starting " + testInfo.getTestMethod().get().getName());
     TEST_UTIL.expireRegionServerSession(0);
-    testSanity(name.getMethodName());
+    testSanity(testInfo.getTestMethod().get().getName());
   }
 
   @Test
-  public void testMasterSessionExpired() throws Exception {
-    LOG.info("Starting " + name.getMethodName());
+  public void testMasterSessionExpired(TestInfo testInfo) throws Exception {
+    LOG.info("Starting " + testInfo.getTestMethod().get().getName());
     TEST_UTIL.expireMasterSession();
-    testSanity(name.getMethodName());
+    testSanity(testInfo.getTestMethod().get().getName());
   }
 
   /**
@@ -134,13 +126,13 @@ public class TestZooKeeper {
    * {@link #testMasterSessionExpired} because here the master znode will exist in ZK.
    */
   @Test
-  public void testMasterZKSessionRecoveryFailure() throws Exception {
-    LOG.info("Starting " + name.getMethodName());
+  public void testMasterZKSessionRecoveryFailure(TestInfo testInfo) throws Exception {
+    LOG.info("Starting " + testInfo.getTestMethod().get().getName());
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
     m.abort("Test recovery from zk session expired", new KeeperException.SessionExpiredException());
     assertTrue(m.isStopped()); // Master doesn't recover any more
-    testSanity(name.getMethodName());
+    testSanity(testInfo.getTestMethod().get().getName());
   }
 
   /**
@@ -172,7 +164,8 @@ public class TestZooKeeper {
    * calling retainAssignment.
    */
   @Test
-  public void testRegionAssignmentAfterMasterRecoveryDueToZKExpiry() throws Exception {
+  public void testRegionAssignmentAfterMasterRecoveryDueToZKExpiry(TestInfo testInfo)
+    throws Exception {
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     cluster.startRegionServer();
     cluster.waitForActiveAndReadyMaster(10000);
@@ -183,9 +176,9 @@ public class TestZooKeeper {
       byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"),
         Bytes.toBytes("c"), Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
         Bytes.toBytes("g"), Bytes.toBytes("h"), Bytes.toBytes("i"), Bytes.toBytes("j") };
-      TableDescriptor htd =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+      TableDescriptor htd = TableDescriptorBuilder
+        .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName()))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
       admin.createTable(htd, SPLIT_KEYS);
       TEST_UTIL.waitUntilNoRegionsInTransition(60000);
       m.getZooKeeper().close();
@@ -202,7 +195,7 @@ public class TestZooKeeper {
 
       // The recovered master should not call retainAssignment, as it is not a
       // clean startup.
-      assertFalse("Retain assignment should not be called", MockLoadBalancer.retainAssignCalled);
+      assertFalse(MockLoadBalancer.retainAssignCalled, "Retain assignment should not be called");
       // number of listeners should be same as the value before master aborted
       // wait for new master is initialized
       cluster.waitForActiveAndReadyMaster(120000);
@@ -244,10 +237,10 @@ public class TestZooKeeper {
    * RS goes down.
    */
   @Test
-  public void testLogSplittingAfterMasterRecoveryDueToZKExpiry() throws Exception {
+  public void testLogSplittingAfterMasterRecoveryDueToZKExpiry(TestInfo testInfo) throws Exception {
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     cluster.startRegionServer();
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     byte[] family = Bytes.toBytes("col");
     try (Admin admin = TEST_UTIL.getAdmin()) {
       byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("1"), Bytes.toBytes("2"),
@@ -278,7 +271,7 @@ public class TestZooKeeper {
           numberOfRows++;
         }
       }
-      assertEquals("Number of rows should be equal to number of puts.", numberOfPuts, numberOfRows);
+      assertEquals(numberOfPuts, numberOfRows, "Number of rows should be equal to number of puts.");
     }
   }
 

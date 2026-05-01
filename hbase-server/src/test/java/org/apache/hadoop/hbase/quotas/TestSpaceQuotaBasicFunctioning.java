@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
@@ -43,48 +42,40 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestSpaceQuotaBasicFunctioning {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSpaceQuotaBasicFunctioning.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSpaceQuotaBasicFunctioning.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final int NUM_RETRIES = 10;
 
-  @Rule
-  public TestName testName = new TestName();
   private SpaceQuotaHelperForTests helper;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     SpaceQuotaHelperForTests.updateConfigForQuotas(conf);
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void removeAllQuotas() throws Exception {
-    helper = new SpaceQuotaHelperForTests(TEST_UTIL, testName, new AtomicLong(0));
+  @BeforeEach
+  public void removeAllQuotas(TestInfo testInfo) throws Exception {
+    helper = new SpaceQuotaHelperForTests(TEST_UTIL, () -> testInfo.getTestMethod().get().getName(),
+      new AtomicLong(0));
     helper.removeAllQuotas();
   }
 
@@ -193,15 +184,14 @@ public class TestSpaceQuotaBasicFunctioning {
         Thread.sleep(2000);
       }
     }
-    assertFalse(tn + " is still enabled but it should be disabled", admin.isTableEnabled(tn));
+    assertFalse(admin.isTableEnabled(tn), tn + " is still enabled but it should be disabled");
     try {
       admin.enableTable(tn);
     } catch (AccessDeniedException e) {
       String exceptionContents = StringUtils.stringifyException(e);
       final String expectedText = "violated space quota";
-      assertTrue(
-        "Expected the exception to contain " + expectedText + ", but was: " + exceptionContents,
-        exceptionContents.contains(expectedText));
+      assertTrue(exceptionContents.contains(expectedText),
+        "Expected the exception to contain " + expectedText + ", but was: " + exceptionContents);
     }
   }
 
@@ -255,6 +245,6 @@ public class TestSpaceQuotaBasicFunctioning {
     // It should be present after retention period expired.
     final long regionSizes = quotaManager.snapshotRegionSizes().keySet().stream()
       .filter(k -> k.getTable().equals(tableName)).count();
-    Assert.assertTrue(regionSizes > 0);
+    assertTrue(regionSizes > 0);
   }
 }

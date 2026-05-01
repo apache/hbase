@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
 public abstract class WALCorruptionDueToDanglingByteBufferTestBase {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestAsyncFSWALCorruptionDueToDanglingByteBuffer.class);
+    LoggerFactory.getLogger(WALCorruptionDueToDanglingByteBufferTestBase.class);
 
   protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 

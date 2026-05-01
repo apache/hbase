@@ -17,64 +17,53 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 /**
  * Do some ops and prove that client and server can work w/o codecs; that we can pb all the time.
  * Good for third-party clients or simple scripts that want to talk direct to hbase.
  */
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestFromClientSideNoCodec {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFromClientSideNoCodec.class);
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  @RegisterExtension
+  private TableNameTestExtension name = new TableNameTestExtension();
 
-  @Rule
-  public TestName name = new TestName();
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // Turn off codec use
     TEST_UTIL.getConfiguration().set("hbase.client.default.rpc.codec", "");
     TEST_UTIL.startMiniCluster(1);
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
   public void testBasics() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = name.getTableName();
     final byte[][] fs =
       new byte[][] { Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3") };
     Table ht = TEST_UTIL.createTable(tableName, fs);
@@ -90,15 +79,15 @@ public class TestFromClientSideNoCodec {
     for (CellScanner cellScanner = r.cellScanner(); cellScanner.advance();) {
       Cell cell = cellScanner.current();
       byte[] f = fs[i++];
-      assertTrue(Bytes.toString(f), Bytes.equals(cell.getValueArray(), cell.getValueOffset(),
-        cell.getValueLength(), f, 0, f.length));
+      assertTrue(Bytes.equals(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(), f,
+        0, f.length), Bytes.toString(f));
     }
     // Check getRowOrBefore
     byte[] f = fs[0];
     Get get = new Get(row);
     get.addFamily(f);
     r = ht.get(get);
-    assertTrue(r.toString(), r.containsColumn(f, f));
+    assertTrue(r.containsColumn(f, f), r.toString());
     // Check scan.
     ResultScanner scanner = ht.getScanner(new Scan());
     int count = 0;

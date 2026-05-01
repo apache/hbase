@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -43,13 +42,11 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,45 +54,40 @@ import org.slf4j.LoggerFactory;
  * Tests for {@link FSTableDescriptors}.
  */
 // Do not support to be executed in he same JVM as other tests
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestFSTableDescriptors {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFSTableDescriptors.class);
 
   private static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestFSTableDescriptors.class);
 
-  @Rule
-  public TestName name = new TestName();
-
   private Path testDir;
 
-  @Before
-  public void setUp() {
-    testDir = UTIL.getDataTestDir(name.getMethodName());
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    testDir = UTIL.getDataTestDir(testInfo.getTestMethod().get().getName());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() {
     UTIL.cleanupTestDir();
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testRegexAgainstOldStyleTableInfo() {
     Path p = new Path(testDir, FSTableDescriptors.TABLEINFO_FILE_PREFIX);
     int i = FSTableDescriptors.getTableInfoSequenceIdAndFileLength(p).sequenceId;
     assertEquals(0, i);
     // Assert it won't eat garbage -- that it fails
-    p = new Path(testDir, "abc");
-    FSTableDescriptors.getTableInfoSequenceIdAndFileLength(p);
+    Path p2 = new Path(testDir, "abc");
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+      () -> FSTableDescriptors.getTableInfoSequenceIdAndFileLength(p2));
   }
 
   @Test
-  public void testCreateAndUpdate() throws IOException {
-    TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+  public void testCreateAndUpdate(TestInfo testInfo) throws IOException {
+    TableDescriptor htd = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName())).build();
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     FSTableDescriptors fstd = new FSTableDescriptors(fs, testDir);
     assertTrue(fstd.createTableDescriptor(htd));
@@ -103,7 +95,7 @@ public class TestFSTableDescriptors {
     Path tableInfoDir = new Path(CommonFSUtils.getTableDir(testDir, htd.getTableName()),
       FSTableDescriptors.TABLEINFO_DIR);
     FileStatus[] statuses = fs.listStatus(tableInfoDir);
-    assertEquals("statuses.length=" + statuses.length, 1, statuses.length);
+    assertEquals(1, statuses.length, "statuses.length=" + statuses.length);
     for (int i = 0; i < 10; i++) {
       fstd.update(htd);
     }
@@ -112,9 +104,9 @@ public class TestFSTableDescriptors {
   }
 
   @Test
-  public void testSequenceIdAdvancesOnTableInfo() throws IOException {
-    TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+  public void testSequenceIdAdvancesOnTableInfo(TestInfo testInfo) throws IOException {
+    TableDescriptor htd = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName())).build();
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     FSTableDescriptors fstd = new FSTableDescriptors(fs, testDir);
     Path previousPath = null;
@@ -166,22 +158,22 @@ public class TestFSTableDescriptors {
   }
 
   @Test
-  public void testRemoves() throws IOException {
+  public void testRemoves(TestInfo testInfo) throws IOException {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any detrius laying around.
     TableDescriptors htds = new FSTableDescriptors(fs, testDir);
-    TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    TableDescriptor htd = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName())).build();
     htds.update(htd);
     assertNotNull(htds.remove(htd.getTableName()));
     assertNull(htds.remove(htd.getTableName()));
   }
 
   @Test
-  public void testReadingHTDFromFS() throws IOException {
+  public void testReadingHTDFromFS(TestInfo testInfo) throws IOException {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
-    TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    TableDescriptor htd = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName())).build();
     FSTableDescriptors fstd = new FSTableDescriptors(fs, testDir);
     fstd.createTableDescriptor(htd);
     TableDescriptor td2 =
@@ -190,7 +182,7 @@ public class TestFSTableDescriptors {
   }
 
   @Test
-  public void testTableDescriptors() throws IOException, InterruptedException {
+  public void testTableDescriptors(TestInfo testInfo) throws IOException, InterruptedException {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any debris laying around.
     FSTableDescriptors htds = new FSTableDescriptors(fs, testDir) {
@@ -203,67 +195,68 @@ public class TestFSTableDescriptors {
     final int count = 10;
     // Write out table infos.
     for (int i = 0; i < count; i++) {
-      htds.createTableDescriptor(
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName() + i)).build());
+      htds.createTableDescriptor(TableDescriptorBuilder
+        .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName() + i)).build());
     }
 
     for (int i = 0; i < count; i++) {
-      assertTrue(htds.get(TableName.valueOf(name.getMethodName() + i)) != null);
+      assertTrue(htds.get(TableName.valueOf(testInfo.getTestMethod().get().getName() + i)) != null);
     }
     for (int i = 0; i < count; i++) {
-      assertTrue(htds.get(TableName.valueOf(name.getMethodName() + i)) != null);
+      assertTrue(htds.get(TableName.valueOf(testInfo.getTestMethod().get().getName() + i)) != null);
     }
     // Update the table infos
     for (int i = 0; i < count; i++) {
-      TableDescriptorBuilder builder =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName() + i));
+      TableDescriptorBuilder builder = TableDescriptorBuilder
+        .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName() + i));
       builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of("" + i));
       htds.update(builder.build());
     }
     // Wait a while so mod time we write is for sure different.
     Thread.sleep(100);
     for (int i = 0; i < count; i++) {
-      assertTrue(htds.get(TableName.valueOf(name.getMethodName() + i)) != null);
+      assertTrue(htds.get(TableName.valueOf(testInfo.getTestMethod().get().getName() + i)) != null);
     }
     for (int i = 0; i < count; i++) {
-      assertTrue(htds.get(TableName.valueOf(name.getMethodName() + i)) != null);
+      assertTrue(htds.get(TableName.valueOf(testInfo.getTestMethod().get().getName() + i)) != null);
     }
     assertEquals(count * 4, htds.invocations);
-    assertTrue("expected=" + (count * 2) + ", actual=" + htds.cachehits,
-      htds.cachehits >= (count * 2));
+    assertTrue(htds.cachehits >= (count * 2),
+      "expected=" + (count * 2) + ", actual=" + htds.cachehits);
   }
 
   @Test
-  public void testTableDescriptorsNoCache() throws IOException, InterruptedException {
+  public void testTableDescriptorsNoCache(TestInfo testInfo)
+    throws IOException, InterruptedException {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any debris laying around.
     FSTableDescriptors htds = new FSTableDescriptorsTest(fs, testDir, false);
     final int count = 10;
     // Write out table infos.
     for (int i = 0; i < count; i++) {
-      htds.createTableDescriptor(
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName() + i)).build());
+      htds.createTableDescriptor(TableDescriptorBuilder
+        .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName() + i)).build());
     }
 
     for (int i = 0; i < 2 * count; i++) {
-      assertNotNull("Expected HTD, got null instead",
-        htds.get(TableName.valueOf(name.getMethodName() + i % 2)));
+      assertNotNull(htds.get(TableName.valueOf(testInfo.getTestMethod().get().getName() + i % 2)),
+        "Expected HTD, got null instead");
     }
     // Update the table infos
     for (int i = 0; i < count; i++) {
-      TableDescriptorBuilder builder =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName() + i));
+      TableDescriptorBuilder builder = TableDescriptorBuilder
+        .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName() + i));
       builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of("" + i));
       htds.update(builder.build());
     }
     for (int i = 0; i < count; i++) {
-      assertNotNull("Expected HTD, got null instead",
-        htds.get(TableName.valueOf(name.getMethodName() + i)));
-      assertTrue("Column Family " + i + " missing", htds
-        .get(TableName.valueOf(name.getMethodName() + i)).hasColumnFamily(Bytes.toBytes("" + i)));
+      assertNotNull(htds.get(TableName.valueOf(testInfo.getTestMethod().get().getName() + i)),
+        "Expected HTD, got null instead");
+      assertTrue(htds.get(TableName.valueOf(testInfo.getTestMethod().get().getName() + i))
+        .hasColumnFamily(Bytes.toBytes("" + i)), "Column Family " + i + " missing");
     }
     assertEquals(count * 4, htds.invocations);
-    assertEquals("expected=0, actual=" + htds.cachehits, 0, htds.cachehits);
+    assertEquals(0, htds.cachehits, "expected=0, actual=" + htds.cachehits);
   }
 
   @Test
@@ -281,8 +274,9 @@ public class TestFSTableDescriptors {
     // add hbase:meta
     htds
       .createTableDescriptor(TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).build());
-    assertEquals("getAll() didn't return all TableDescriptors, expected: " + (count + 1) + " got: "
-      + htds.getAll().size(), count + 1, htds.getAll().size());
+    assertEquals(count + 1, htds.getAll().size(),
+      "getAll() didn't return all TableDescriptors, expected: " + (count + 1) + " got: "
+        + htds.getAll().size());
   }
 
   @Test
@@ -302,13 +296,15 @@ public class TestFSTableDescriptors {
       .createTableDescriptor(TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).build());
 
     int getTableDescriptorSize = htds.getAll().size();
-    assertEquals("getAll() didn't return all TableDescriptors, expected: " + (count + 1) + " got: "
-      + getTableDescriptorSize, count + 1, getTableDescriptorSize);
+    assertEquals(count + 1, getTableDescriptorSize,
+      "getAll() didn't return all TableDescriptors, expected: " + (count + 1) + " got: "
+        + getTableDescriptorSize);
 
     // get again to check whether the cache works well
     getTableDescriptorSize = htds.getAll().size();
-    assertEquals("getAll() didn't return all TableDescriptors with cache, expected: " + (count + 1)
-      + " got: " + getTableDescriptorSize, count + 1, getTableDescriptorSize);
+    assertEquals(count + 1, getTableDescriptorSize,
+      "getAll() didn't return all TableDescriptors with cache, expected: " + (count + 1) + " got: "
+        + getTableDescriptorSize);
   }
 
   @Test
@@ -341,7 +337,7 @@ public class TestFSTableDescriptors {
   }
 
   @Test
-  public void testCacheConsistency() throws IOException, InterruptedException {
+  public void testCacheConsistency(TestInfo testInfo) throws IOException, InterruptedException {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any debris laying around.
     FSTableDescriptors chtds = new FSTableDescriptorsTest(fs, testDir);
@@ -350,13 +346,14 @@ public class TestFSTableDescriptors {
     final int count = 10;
     // Write out table infos via non-cached FSTableDescriptors
     for (int i = 0; i < count; i++) {
-      nonchtds.createTableDescriptor(
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName() + i)).build());
+      nonchtds.createTableDescriptor(TableDescriptorBuilder
+        .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName() + i)).build());
     }
 
     // Calls to getAll() won't increase the cache counter, do per table.
     for (int i = 0; i < count; i++) {
-      assertTrue(chtds.get(TableName.valueOf(name.getMethodName() + i)) != null);
+      assertTrue(
+        chtds.get(TableName.valueOf(testInfo.getTestMethod().get().getName() + i)) != null);
     }
 
     assertTrue(nonchtds.getAll().size() == chtds.getAll().size());
@@ -372,9 +369,8 @@ public class TestFSTableDescriptors {
     for (Map.Entry<String, TableDescriptor> entry : chtds.getAll().entrySet()) {
       String t = (String) entry.getKey();
       TableDescriptor nchtd = entry.getValue();
-      assertTrue(
-        "expected " + htd.toString() + " got: " + chtds.get(TableName.valueOf(t)).toString(),
-        (nchtd.equals(chtds.get(TableName.valueOf(t)))));
+      assertTrue((nchtd.equals(chtds.get(TableName.valueOf(t)))),
+        "expected " + htd.toString() + " got: " + chtds.get(TableName.valueOf(t)).toString());
     }
     // this is by design, for FSTableDescriptor with cache enabled, once we have done a full scan
     // and load all the table descriptors to cache, we will not go to file system again, as the only
@@ -388,17 +384,17 @@ public class TestFSTableDescriptors {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any detrius laying around.
     TableDescriptors htds = new FSTableDescriptors(fs, testDir);
-    assertNull("There shouldn't be any HTD for this table",
-      htds.get(TableName.valueOf("NoSuchTable")));
+    assertNull(htds.get(TableName.valueOf("NoSuchTable")),
+      "There shouldn't be any HTD for this table");
   }
 
   @Test
-  public void testUpdates() throws IOException {
+  public void testUpdates(TestInfo testInfo) throws IOException {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any detrius laying around.
     TableDescriptors htds = new FSTableDescriptors(fs, testDir);
-    TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    TableDescriptor htd = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName())).build();
     htds.update(htd);
     htds.update(htd);
     htds.update(htd);
@@ -441,9 +437,10 @@ public class TestFSTableDescriptors {
   }
 
   @Test
-  public void testCreateTableDescriptorUpdatesIfExistsAlready() throws IOException {
-    TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+  public void testCreateTableDescriptorUpdatesIfExistsAlready(TestInfo testInfo)
+    throws IOException {
+    TableDescriptor htd = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName())).build();
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     FSTableDescriptors fstd = new FSTableDescriptors(fs, testDir);
     assertTrue(fstd.createTableDescriptor(htd));
@@ -456,11 +453,12 @@ public class TestFSTableDescriptors {
   }
 
   @Test
-  public void testIgnoreBrokenTableDescriptorFiles() throws IOException {
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build();
+  public void testIgnoreBrokenTableDescriptorFiles(TestInfo testInfo) throws IOException {
+    TableDescriptor htd =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName()))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build();
     TableDescriptor newHtd =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName()))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf2")).build();
     assertNotEquals(newHtd, htd);
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());

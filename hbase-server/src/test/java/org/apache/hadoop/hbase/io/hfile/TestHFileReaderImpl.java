@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
@@ -32,28 +32,23 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Test
  */
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHFileReaderImpl {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHFileReaderImpl.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -103,21 +98,21 @@ public class TestHFileReaderImpl {
       scanner.seekTo();
 
       scanner.recordBlockSize(
-        size -> assertTrue("expected non-zero block size on first request", size > 0));
+        size -> assertTrue(size > 0, "expected non-zero block size on first request"));
       scanner.recordBlockSize(
-        size -> assertEquals("expected zero block size on second request", 0, (int) size));
+        size -> assertEquals(0, (int) size, "expected zero block size on second request"));
 
       AtomicInteger blocks = new AtomicInteger(0);
       while (scanner.next()) {
         scanner.recordBlockSize(size -> {
           blocks.incrementAndGet();
           // there's only 2 cells in the second block
-          assertTrue("expected remaining block to be less than block size",
-            size < toKV("a").getLength() * 3);
+          assertTrue(size < toKV("a").getLength() * 3,
+            "expected remaining block to be less than block size");
         });
       }
 
-      assertEquals("expected only one remaining block but got " + blocks.get(), 1, blocks.get());
+      assertEquals(1, blocks.get(), "expected only one remaining block but got " + blocks.get());
     }
   }
 

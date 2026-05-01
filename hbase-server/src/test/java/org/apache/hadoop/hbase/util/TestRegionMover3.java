@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
@@ -37,32 +36,24 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MiscTests.class, LargeTests.class })
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRegionMover3 {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionMover3.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static ServerName rs0;
   private static ServerName rs1;
   private static ServerName rs2;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
@@ -72,14 +63,14 @@ public class TestRegionMover3 {
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
     int startKey = 0;
@@ -88,8 +79,8 @@ public class TestRegionMover3 {
   }
 
   @Test
-  public void testRegionUnloadWithRack() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testRegionUnloadWithRack(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
     Table table = TEST_UTIL.getConnection().getTable(tableName);
@@ -107,9 +98,9 @@ public class TestRegionMover3 {
     int numRegions1 = hRegionServer1.getNumberOfOnlineRegions();
     int numRegions2 = hRegionServer2.getNumberOfOnlineRegions();
 
-    Assert.assertTrue(numRegions0 >= 3);
-    Assert.assertTrue(numRegions1 >= 3);
-    Assert.assertTrue(numRegions2 >= 3);
+    Assertions.assertTrue(numRegions0 >= 3);
+    Assertions.assertTrue(numRegions1 >= 3);
+    Assertions.assertTrue(numRegions2 >= 3);
     int totalRegions = numRegions0 + numRegions1 + numRegions2;
 
     // source RS: rs0
@@ -136,8 +127,8 @@ public class TestRegionMover3 {
       int newNumRegions0 = hRegionServer0.getNumberOfOnlineRegions();
       int newNumRegions1 = hRegionServer1.getNumberOfOnlineRegions();
       int newNumRegions2 = hRegionServer2.getNumberOfOnlineRegions();
-      Assert.assertEquals(0, newNumRegions1);
-      Assert.assertEquals(totalRegions, newNumRegions0 + newNumRegions2);
+      Assertions.assertEquals(0, newNumRegions1);
+      Assertions.assertEquals(totalRegions, newNumRegions0 + newNumRegions2);
     }
 
     // use custom rackManager, which resolves "rack-1" for rs0 and rs1,
@@ -150,9 +141,9 @@ public class TestRegionMover3 {
       int newNumRegions0 = hRegionServer0.getNumberOfOnlineRegions();
       int newNumRegions1 = hRegionServer1.getNumberOfOnlineRegions();
       int newNumRegions2 = hRegionServer2.getNumberOfOnlineRegions();
-      Assert.assertEquals(0, newNumRegions0);
-      Assert.assertEquals(0, newNumRegions1);
-      Assert.assertEquals(totalRegions, newNumRegions2);
+      Assertions.assertEquals(0, newNumRegions0);
+      Assertions.assertEquals(0, newNumRegions1);
+      Assertions.assertEquals(totalRegions, newNumRegions2);
     }
 
   }
