@@ -127,14 +127,14 @@ public class TestWALInputFormat {
   @Test
   public void testEmptyFileIsIgnoredWhenConfigured() throws IOException, InterruptedException {
     List<InputSplit> splits = getSplitsForEmptyFile(true);
-    assertTrue("Empty file should be ignored when IGNORE_EMPTY_FILES is true", splits.isEmpty());
+    assertTrue(splits.isEmpty(), "Empty file should be ignored when IGNORE_EMPTY_FILES is true");
   }
 
   @Test
   public void testEmptyFileIsIncludedWhenNotIgnored() throws IOException, InterruptedException {
     List<InputSplit> splits = getSplitsForEmptyFile(false);
-    assertEquals("Empty file should be included when IGNORE_EMPTY_FILES is false", 1,
-      splits.size());
+    assertEquals(1, splits.size(),
+      "Empty file should be included when IGNORE_EMPTY_FILES is false");
   }
 
   private List<InputSplit> getSplitsForEmptyFile(boolean ignoreEmptyFiles)
