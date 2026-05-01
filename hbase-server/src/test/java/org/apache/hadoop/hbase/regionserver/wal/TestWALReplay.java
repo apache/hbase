@@ -28,19 +28,12 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.TestInfo;
 
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestWALReplay extends AbstractTestWALReplay {
 
   @BeforeAll
-  public static void setUpBeforeClass(TestInfo testInfo) throws Exception {
-    if (testInfo.getTestClass().get() == TestWALReplay.class) {
-      setUpBeforeClass();
-    }
-  }
-
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = AbstractTestWALReplay.TEST_UTIL.getConfiguration();
     conf.set(WALFactory.WAL_PROVIDER, "filesystem");

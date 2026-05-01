@@ -62,8 +62,6 @@ import org.junit.jupiter.api.TestInfo;
 @Tag(MediumTests.TAG)
 public class TestFSHLog extends AbstractTestFSWAL {
 
-  private static final long TEST_TIMEOUT_MS = 10000;
-
   private String name;
 
   @BeforeEach
@@ -102,9 +100,8 @@ public class TestFSHLog extends AbstractTestFSWAL {
   @Test
   public void testSyncRunnerIndexOverflow() throws IOException, NoSuchFieldException,
     SecurityException, IllegalArgumentException, IllegalAccessException {
-    final String name = this.name;
-    FS.mkdirs(new Path(CommonFSUtils.getRootDir(CONF), name));
-    FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), name,
+    FS.mkdirs(new Path(CommonFSUtils.getRootDir(CONF), this.name));
+    FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), this.name,
       HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
     log.init();
     try {
@@ -132,7 +129,6 @@ public class TestFSHLog extends AbstractTestFSWAL {
    */
   @Test
   public void testUnflushedSeqIdTracking() throws IOException, InterruptedException {
-    final String name = this.name;
     final byte[] b = Bytes.toBytes("b");
 
     final AtomicBoolean startHoldingForAppend = new AtomicBoolean(false);
@@ -140,8 +136,8 @@ public class TestFSHLog extends AbstractTestFSWAL {
     final CountDownLatch flushFinished = new CountDownLatch(1);
     final CountDownLatch putFinished = new CountDownLatch(1);
 
-    FS.mkdirs(new Path(CommonFSUtils.getRootDir(CONF), name));
-    try (FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), name,
+    FS.mkdirs(new Path(CommonFSUtils.getRootDir(CONF), this.name));
+    try (FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), this.name,
       HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null)) {
       log.init();
       log.registerWALActionsListener(new WALActionsListener() {

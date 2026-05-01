@@ -66,10 +66,8 @@ public class TestCustomWALCellCodec {
    */
   @Test
   public void testCreatePreparesCodecInvalidClass() throws Exception {
-    assertThrows(RuntimeException.class, () -> {
-      Configuration conf = new Configuration(false);
-      conf.setStrings(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, "org.apache.hbase.wal.NoSuchClass");
-      WALCellCodec.create(conf, null, null);
-    });
+    Configuration conf = new Configuration(false);
+    conf.setStrings(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, "org.apache.hbase.wal.NoSuchClass");
+    assertThrows(RuntimeException.class, () -> WALCellCodec.create(conf, null, null));
   }
 }

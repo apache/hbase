@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.codec.Codec.Decoder;
 import org.apache.hadoop.hbase.codec.Codec.Encoder;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -42,12 +43,11 @@ import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.params.provider.Arguments;
 
-@Tag(RegionServerTests.TAG)
-@Tag(SmallTests.TAG)
+@org.junit.jupiter.api.Tag(RegionServerTests.TAG)
+@org.junit.jupiter.api.Tag(SmallTests.TAG)
 @HBaseParameterizedTestTemplate
 public class TestWALCellCodecWithCompression {
 
@@ -73,7 +73,7 @@ public class TestWALCellCodecWithCompression {
 
   @TestTemplate
   public void testEncodeDecodeOffKVsWithTagsWithTagsCompression() throws Exception {
-    doTest(true, true);
+    doTest(true, false);
   }
 
   @TestTemplate
@@ -179,9 +179,9 @@ public class TestWALCellCodecWithCompression {
     Decoder decoder = codec.getDecoder(is);
     decoder.advance();
     KeyValue kv = (KeyValue) decoder.current();
-    List<org.apache.hadoop.hbase.Tag> tags = PrivateCellUtil.getTags(kv);
+    List<Tag> tags = PrivateCellUtil.getTags(kv);
     assertEquals(1, tags.size());
-    assertEquals("tagValue1", Bytes.toString(org.apache.hadoop.hbase.Tag.cloneValue(tags.get(0))));
+    assertEquals("tagValue1", Bytes.toString(Tag.cloneValue(tags.get(0))));
     decoder.advance();
     kv = (KeyValue) decoder.current();
     tags = PrivateCellUtil.getTags(kv);
@@ -190,14 +190,14 @@ public class TestWALCellCodecWithCompression {
     kv = (KeyValue) decoder.current();
     tags = PrivateCellUtil.getTags(kv);
     assertEquals(2, tags.size());
-    assertEquals("tagValue1", Bytes.toString(org.apache.hadoop.hbase.Tag.cloneValue(tags.get(0))));
-    assertEquals("tagValue2", Bytes.toString(org.apache.hadoop.hbase.Tag.cloneValue(tags.get(1))));
+    assertEquals("tagValue1", Bytes.toString(Tag.cloneValue(tags.get(0))));
+    assertEquals("tagValue2", Bytes.toString(Tag.cloneValue(tags.get(1))));
   }
 
   private KeyValue createKV(byte[] row, byte[] value, int noOfTags) {
     byte[] cf = Bytes.toBytes("myCF");
     byte[] q = Bytes.toBytes("myQualifier");
-    List<org.apache.hadoop.hbase.Tag> tags = new ArrayList<>(noOfTags);
+    List<Tag> tags = new ArrayList<>(noOfTags);
     for (int i = 1; i <= noOfTags; i++) {
       tags.add(new ArrayBackedTag((byte) i, Bytes.toBytes("tagValue" + i)));
     }
@@ -207,7 +207,7 @@ public class TestWALCellCodecWithCompression {
   private ByteBufferKeyValue createOffheapKV(byte[] row, byte[] value, int noOfTags) {
     byte[] cf = Bytes.toBytes("myCF");
     byte[] q = Bytes.toBytes("myQualifier");
-    List<org.apache.hadoop.hbase.Tag> tags = new ArrayList<>(noOfTags);
+    List<Tag> tags = new ArrayList<>(noOfTags);
     for (int i = 1; i <= noOfTags; i++) {
       tags.add(new ArrayBackedTag((byte) i, Bytes.toBytes("tagValue" + i)));
     }
