@@ -25,11 +25,12 @@
     "extract-hbase-config": "node scripts/extract-hbase-config.js",
     "extract-hbase-version": "node scripts/extract-hbase-version.js",
     "extract-all": "node scripts/extract-developers.js && node scripts/extract-hbase-config.js && node scripts/extract-hbase-version.js",
+    "generate-sitemap": "tsx scripts/generate-sitemap.ts",
     "export-pdf": "playwright test e2e-tests/export-pdf.spec.ts --project=chromium --workers=1",
     "fumadocs-init": "fumadocs-mdx",
     "copy-pdf-to-build": "cp -r public/books build/client",
-    "ci": "npm run extract-all && npm run fumadocs-init && npm run lint && npm run typecheck && npm run test:unit:run && npm run build && npx playwright install && npm run test:e2e && npm run copy-pdf-to-build",
-    "ci-skip-tests": "npm run extract-all && npm run fumadocs-init && npm run build && npx playwright install && npm run export-pdf && npm run copy-pdf-to-build"
+    "ci": "npm run extract-all && npm run fumadocs-init && npm run lint && npm run typecheck && npm run test:unit:run && npm run build && npm run generate-sitemap && npx playwright install && npm run test:e2e && npm run copy-pdf-to-build",
+    "ci-skip-tests": "npm run extract-all && npm run fumadocs-init && npm run build && npm run generate-sitemap && npx playwright install && npm run export-pdf && npm run copy-pdf-to-build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -110,6 +111,7 @@
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.6.14",
     "serve": "^14.2.6",
+    "sitemap": "^9.0.1",
     "tailwindcss": "^4.1.13",
     "tsx": "^4.21.0",
     "tw-animate-css": "1.3.3",

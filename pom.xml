@@ -2140,6 +2140,8 @@
               <exclude>**/public/old-book-static-files/hbase.css</exclude>
               <!-- http://fontawesome.io/license (Font: SIL OFL 1.1, CSS: MIT License -->
               <exclude>**/public/old-book-static-files/font-awesome.css</exclude>
+              <!-- Website SEO metadata file cannot carry an ASF license header. -->
+              <exclude>**/public/robots.txt</exclude>
               <!-- vector graphics -->
               <exclude>**/*.vm</exclude>
               <!-- apache doxia generated -->
