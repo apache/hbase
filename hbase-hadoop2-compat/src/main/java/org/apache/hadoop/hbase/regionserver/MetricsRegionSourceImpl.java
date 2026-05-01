@@ -245,6 +245,10 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
         Interns.info(regionNamePrefix + MetricsRegionServerSource.CURRENT_REGION_CACHE_RATIO,
           MetricsRegionServerSource.CURRENT_REGION_CACHE_RATIO_DESC),
         this.regionWrapper.getCurrentRegionCacheRatio());
+      mrb.addGauge(
+        Interns.info(regionNamePrefix + MetricsRegionServerSource.CURRENT_REGION_COLD_DATA_RATIO,
+          MetricsRegionServerSource.CURRENT_REGION_COLD_DATA_RATIO_DESC),
+        this.regionWrapper.getCurrentRegionColdDataRatio());
       mrb.addCounter(
         Interns.info(regionNamePrefix + MetricsRegionSource.COMPACTIONS_COMPLETED_COUNT,
           MetricsRegionSource.COMPACTIONS_COMPLETED_DESC),

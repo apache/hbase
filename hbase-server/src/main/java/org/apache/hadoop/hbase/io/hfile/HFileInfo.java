@@ -78,6 +78,8 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
   static final byte[] KEY_OF_BIGGEST_CELL = Bytes.toBytes(RESERVED_PREFIX + "KEY_OF_BIGGEST_CELL");
   static final byte[] LEN_OF_BIGGEST_CELL = Bytes.toBytes(RESERVED_PREFIX + "LEN_OF_BIGGEST_CELL");
   public static final byte[] MAX_TAGS_LEN = Bytes.toBytes(RESERVED_PREFIX + "MAX_TAGS_LEN");
+  public static final byte[] FILE_SIZE = Bytes.toBytes(RESERVED_PREFIX + "FILE_SIZE");
+  public static final byte[] FILE_PATH = Bytes.toBytes(RESERVED_PREFIX + "FILE_PATH");
   private final SortedMap<byte[], byte[]> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   /**
@@ -397,6 +399,9 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
       }
       // close the block reader
       context.getInputStreamWrapper().unbuffer();
+
+      put(FILE_SIZE, Bytes.toBytes(context.getFileSize()));
+      put(FILE_PATH, Bytes.toBytes(context.getFilePath().toString()));
     } catch (Throwable t) {
       IOUtils.closeQuietly(context.getInputStreamWrapper(),
         e -> LOG.warn("failed to close input stream wrapper", e));

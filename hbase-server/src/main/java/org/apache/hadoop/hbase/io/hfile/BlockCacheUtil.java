@@ -295,7 +295,7 @@ public class BlockCacheUtil {
   public static HFileContext cloneContext(HFileContext context) {
     HFileContext newContext = new HFileContextBuilder().withBlockSize(context.getBlocksize())
       .withBytesPerCheckSum(0).withChecksumType(ChecksumType.NULL) // no checksums in cached data
-      .withCompression(context.getCompression())
+      .withCompression(context.getCompression()).withHFileName(context.getHFileName())
       .withDataBlockEncoding(context.getDataBlockEncoding())
       .withHBaseCheckSum(context.isUseHBaseChecksum()).withCompressTags(context.isCompressTags())
       .withIncludesMvcc(context.isIncludesMvcc()).withIncludesTags(context.isIncludesTags())
