@@ -75,7 +75,7 @@ Reports about unauthenticated access through gateways that have not been configu
 ## Coprocessors
 
 Coprocessors are a powerful extension mechanism that allows custom code to execute within HBase server processes. Loading a coprocessor is equivalent to granting full server-level access. Coprocessor code runs in the same JVM as the HBase server process with the same privileges. This is by design. Coprocessors are intended for trusted server-side extensions.
-Operators control which coprocessors are loaded through server-side configuration (`hbase.coprocessor.region.classes`, `hbase.coprocessor.master.classes`, `hbase.coprocessor.regionserver.classes`) and/or through table descriptors. The [CoprocessorWhitelistMasterObserver](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/security/access/CoprocessorWhitelistMasterObserver.html) can be used to restrict which coprocessor JARs may be loaded.
+Operators control which coprocessors are loaded through server-side configuration (`hbase.coprocessor.region.classes`, `hbase.coprocessor.master.classes`, `hbase.coprocessor.regionserver.classes`) and/or through table descriptors. The `CoprocessorWhitelistMasterObserver` can be used to restrict which coprocessor JARs may be loaded.
 
 When authorization is configured, only users with appropriate permissions can modify table descriptors, and therefore only authorized users can affect coprocessor loading via table schema changes. The ability to load coprocessors via table descriptors is a feature. When access to table schema modification is restricted by ACLs, as it must be in production, this is not a vulnerability.
 
@@ -85,7 +85,7 @@ The HBase server web UIs are administrative monitoring interfaces. They are desi
 
 Information exposed through the web UIs, such as software version, configuration properties, table metadata, and operational metrics, is not considered sensitive within HBase's security model because these interfaces are expected to be accessible only within the trusted network perimeter.
 
-The web UI can optionally be configured with [SPNEGO](https://hbase.apache.org/book.html#hbase.secure.spnego) or [LDAP](https://hbase.apache.org/book.html#hbase.secure.ldap.ui) authentication. Additionally, privileged servlets — including logs, server configuration, metrics, and other administrative endpoints — can be restricted to designated administrators. Both SPNEGO and LDAP support defining administrators who have exclusive access to these servlets. See [Defining Administrators with SPNEGO](https://hbase.apache.org/book.html#_defining_administrators_of_the_web_ui_with_spnego) and [Defining Administrators with LDAP](https://hbase.apache.org/book.html#_defining_administrators_of_the_web_ui_with_ldap) for details.
+The web UI can optionally be configured with [SPNEGO](/docs/security/web-ui#using-spnego-for-kerberos-authentication-with-web-uis) or [LDAP](/docs/security/web-ui#using-ldap-authentication-with-web-uis) authentication. Additionally, privileged servlets — including logs, server configuration, metrics, and other administrative endpoints — can be restricted to designated administrators. Both SPNEGO and LDAP support defining administrators who have exclusive access to these servlets. See [Defining Administrators with SPNEGO](/docs/security/web-ui#defining-administrators-of-the-web-ui-with-spnego) and [Defining Administrators with LDAP](/docs/security/web-ui#defining-administrators-of-the-web-ui-with-ldap) for details.
 
 ## What Is Considered a Vulnerability
 
@@ -107,7 +107,7 @@ The following categories of reports do not constitute security vulnerabilities i
 - **Administrative actions by authorized administrators**: Superusers and global administrators can, by design, perform any operation in the cluster. This includes loading coprocessors, modifying table schemas, and accessing all data.
 - **Access requiring operator-level cluster configuration changes**: Issues that require modifying `hbase-site.xml` or other server configuration files require host-level access, which is outside the HBase security boundary.
 - **Information disclosure via administrative interfaces on trusted networks**: Version information, configuration details, or metrics visible in the web UIs when accessed from within the trusted network.
-- **Version discovery by unauthenticated users**: An unauthenticated user determining the deployed HBase version. Version information is not considered secret within the HBase security model.
+- **Version discovery by unauthenticated users**: Version information is not considered secret within the HBase security model.
 - **Username enumeration**: HBase relies on external authentication systems, such as Kerberos or LDAP, for identity management. Username enumeration is an authentication-layer concern and not an HBase vulnerability.
 - **Exposure of services on untrusted networks**: Placing HBase services directly on the public internet without firewalls or VPNs is an operator misconfiguration and not an HBase vulnerability.
 
