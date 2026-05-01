@@ -71,7 +71,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import javax.management.MalformedObjectNameException;
 import javax.servlet.http.HttpServlet;
@@ -129,9 +128,7 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
-import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.DecommissionedHostRejectedException;
@@ -1528,7 +1525,6 @@ public class HRegionServer extends Thread
         });
       });
     });
-
     serverLoad.setReportStartTime(reportStartTime);
     serverLoad.setReportEndTime(reportEndTime);
     if (this.infoServer != null) {
@@ -1846,15 +1842,6 @@ public class HRegionServer extends Thread
     }
   }
 
-  private void computeIfPersistentBucketCache(Consumer<BucketCache> computation) {
-    if (blockCache instanceof CombinedBlockCache) {
-      BlockCache l2 = ((CombinedBlockCache) blockCache).getSecondLevelCache();
-      if (l2 instanceof BucketCache && ((BucketCache) l2).isCachePersistent()) {
-        computation.accept((BucketCache) l2);
-      }
-    }
-  }
-
   /**
    * @param r               Region to get RegionLoad for.
    * @param regionLoadBldr  the RegionLoad.Builder, can be null
@@ -1920,6 +1907,16 @@ public class HRegionServer extends Thread
         }
       });
     });
+    final MutableFloat currentRegionColdDataRatio = new MutableFloat(0.0f);
+    if (DataTieringManager.getInstance() != null) {
+      DataTieringManager.getInstance().getRegionColdDataSize().computeIfPresent(regionEncodedName,
+        (k, v) -> {
+          int coldSizeMB = roundSize(v.getSecond(), unitMB);
+          currentRegionColdDataRatio
+            .setValue(regionSizeMB == 0 ? 0.0f : (float) coldSizeMB / regionSizeMB);
+          return v;
+        });
+    }
 
     HDFSBlocksDistribution hdfsBd = r.getHDFSBlocksDistribution();
     float dataLocality = hdfsBd.getBlockLocalityIndex(serverName.getHostname());
@@ -1951,7 +1948,8 @@ public class HRegionServer extends Thread
       .setBlocksLocalWithSsdWeight(blocksLocalWithSsdWeight).setBlocksTotalWeight(blocksTotalWeight)
       .setCompactionState(ProtobufUtil.createCompactionStateForRegionLoad(r.getCompactionState()))
       .setLastMajorCompactionTs(r.getOldestHfileTs(true)).setRegionSizeMB(regionSizeMB)
-      .setCurrentRegionCachedRatio(currentRegionCachedRatio.floatValue());
+      .setCurrentRegionCachedRatio(currentRegionCachedRatio.floatValue())
+      .setCurrentRegionColdDataRatio(currentRegionColdDataRatio.floatValue());
     r.setCompleteSequenceId(regionLoadBldr);
     return regionLoadBldr.build();
   }
@@ -3630,6 +3628,10 @@ public class HRegionServer extends Thread
   @Override
   public boolean removeRegion(final HRegion r, ServerName destination) {
     HRegion toReturn = this.onlineRegions.remove(r.getRegionInfo().getEncodedName());
+    if (DataTieringManager.getInstance() != null) {
+      DataTieringManager.getInstance().getRegionColdDataSize()
+        .remove(r.getRegionInfo().getEncodedName());
+    }
     metricsRegionServerImpl.requestsCountCache.remove(r.getRegionInfo().getEncodedName());
     if (destination != null) {
       long closeSeqNum = r.getMaxFlushedSeqId();
