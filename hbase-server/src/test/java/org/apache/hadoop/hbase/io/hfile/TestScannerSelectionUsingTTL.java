@@ -17,16 +17,16 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -43,25 +43,19 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test the optimization that does not scan files where all timestamps are expired.
  */
-@RunWith(Parameterized.class)
-@Category({ IOTests.class, LargeTests.class })
+@HBaseParameterizedTestTemplate(name = "numFreshFiles={0}")
+@Tag(IOTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestScannerSelectionUsingTTL {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestScannerSelectionUsingTTL.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestScannerSelectionUsingTTL.class);
 
@@ -79,13 +73,12 @@ public class TestScannerSelectionUsingTTL {
 
   public final int numFreshFiles, totalNumFiles;
 
-  @Parameters
-  public static Collection<Object[]> parameters() {
-    List<Object[]> params = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     for (int numFreshFiles = 1; numFreshFiles <= 3; ++numFreshFiles) {
-      params.add(new Object[] { numFreshFiles });
+      params.add(Arguments.of(numFreshFiles));
     }
-    return params;
+    return params.stream();
   }
 
   public TestScannerSelectionUsingTTL(int numFreshFiles) {
@@ -93,7 +86,7 @@ public class TestScannerSelectionUsingTTL {
     this.totalNumFiles = numFreshFiles + NUM_EXPIRED_FILES;
   }
 
-  @Test
+  @TestTemplate
   public void testScannerSelection() throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean("hbase.store.delete.expired.storefile", false);

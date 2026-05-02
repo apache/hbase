@@ -17,18 +17,18 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -42,26 +42,19 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * Test the optimization that does not scan files where all key ranges are excluded.
  */
-@RunWith(Parameterized.class)
-@Category({ IOTests.class, SmallTests.class })
+@HBaseParameterizedTestTemplate(name = "{0}")
+@org.junit.jupiter.api.Tag(IOTests.TAG)
+@org.junit.jupiter.api.Tag(SmallTests.TAG)
 public class TestScannerSelectionUsingKeyRange {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestScannerSelectionUsingKeyRange.class);
-
-  private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static TableName TABLE = TableName.valueOf("myTable");
   private static String FAMILY = "myCF";
   private static byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);
@@ -78,13 +71,12 @@ public class TestScannerSelectionUsingKeyRange {
   private BloomType bloomType;
   private int expectedCount;
 
-  @Parameters
-  public static Collection<Object[]> parameters() {
-    List<Object[]> params = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     for (Object type : TYPE_COUNT.keySet()) {
-      params.add(new Object[] { type, TYPE_COUNT.get(type) });
+      params.add(Arguments.of(type, TYPE_COUNT.get(type)));
     }
-    return params;
+    return params.stream();
   }
 
   public TestScannerSelectionUsingKeyRange(Object type, Object count) {
@@ -92,12 +84,12 @@ public class TestScannerSelectionUsingKeyRange {
     expectedCount = (Integer) count;
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.cleanupTestDir();
   }
 
-  @Test
+  @TestTemplate
   public void testScannerSelection() throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt("hbase.hstore.compactionThreshold", 10000);

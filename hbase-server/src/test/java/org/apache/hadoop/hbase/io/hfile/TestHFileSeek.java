@@ -26,20 +26,19 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RandomDistribution;
 import org.apache.hadoop.io.BytesWritable;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,15 +58,12 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
  * Remove after tfile is committed and use the tfile version of this class instead.
  * </p>
  */
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHFileSeek {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHFileSeek.class);
-
-  private static final byte[] CF = "f1".getBytes();
-  private static final byte[] QUAL = "q1".getBytes();
+  private static final byte[] CF = Bytes.toBytes("f1");
+  private static final byte[] QUAL = Bytes.toBytes("q1");
   private static final boolean USE_PREAD = true;
   private MyOptions options;
   private Configuration conf;
@@ -80,7 +76,7 @@ public class TestHFileSeek {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileSeek.class);
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     if (options == null) {
       options = new MyOptions(new String[0]);
@@ -107,7 +103,7 @@ public class TestHFileSeek {
     kvGen = new KVGenerator(rng, true, keyLenGen, valLenGen, wordLenGen, options.dictSize);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     try {
       fs.close();
@@ -162,10 +158,10 @@ public class TestHFileSeek {
     double duration = (double) timer.read() / 1000; // in us.
     long fsize = fs.getFileStatus(path).getLen();
 
-    System.out.printf("time: %s...uncompressed: %.2fMB...raw thrpt: %.2fMB/s\n", timer.toString(),
-      (double) totalBytes / 1024 / 1024, totalBytes / duration);
-    System.out.printf("time: %s...file size: %.2fMB...disk thrpt: %.2fMB/s\n", timer.toString(),
-      (double) fsize / 1024 / 1024, fsize / duration);
+    LOG.info(String.format("time: %s...uncompressed: %.2fMB...raw thrpt: %.2fMB/s\n",
+      timer.toString(), (double) totalBytes / 1024 / 1024, totalBytes / duration));
+    LOG.info(String.format("time: %s...file size: %.2fMB...disk thrpt: %.2fMB/s\n",
+      timer.toString(), (double) fsize / 1024 / 1024, fsize / duration));
   }
 
   public void seekTFile() throws IOException {
@@ -194,9 +190,9 @@ public class TestHFileSeek {
       }
     }
     timer.stop();
-    System.out.printf("time: %s...avg seek: %s...%d hit...%d miss...avg I/O size: %.2fKB\n",
+    LOG.info(String.format("time: %s...avg seek: %s...%d hit...%d miss...avg I/O size: %.2fKB\n",
       timer.toString(), NanoTimer.nanoTimeToString(timer.read() / options.seekCount),
-      options.seekCount - miss, miss, (double) totalBytes / 1024 / (options.seekCount - miss));
+      options.seekCount - miss, miss, (double) totalBytes / 1024 / (options.seekCount - miss)));
 
   }
 

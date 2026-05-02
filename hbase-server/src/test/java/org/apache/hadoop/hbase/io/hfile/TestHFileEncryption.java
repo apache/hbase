@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -51,19 +50,15 @@ import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RedundantKVGenerator;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHFileEncryption {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHFileEncryption.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileEncryption.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -71,7 +66,7 @@ public class TestHFileEncryption {
   private static FileSystem fs;
   private static Encryption.Context cryptoContext;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     // Disable block cache in this test.
@@ -240,11 +235,11 @@ public class TestHFileEncryption {
           FixedFileTrailer trailer = reader.getTrailer();
           assertNotNull(trailer.getEncryptionKey());
           scanner = reader.getScanner(conf, false, false);
-          assertTrue("Initial seekTo failed", scanner.seekTo());
+          assertTrue(scanner.seekTo(), "Initial seekTo failed");
           do {
             Cell kv = scanner.getCell();
-            assertTrue("Read back an unexpected or invalid KV",
-              testKvs.contains(KeyValueUtil.ensureKeyValue(kv)));
+            assertTrue(testKvs.contains(KeyValueUtil.ensureKeyValue(kv)),
+              "Read back an unexpected or invalid KV");
             i++;
           } while (scanner.next());
         } finally {
@@ -252,7 +247,7 @@ public class TestHFileEncryption {
           scanner.close();
         }
 
-        assertEquals("Did not read back as many KVs as written", i, testKvs.size());
+        assertEquals(i, testKvs.size(), "Did not read back as many KVs as written");
 
         // Test random seeks with pread
         LOG.info("Random seeking with " + fileContext);
@@ -260,10 +255,10 @@ public class TestHFileEncryption {
         reader = HFile.createReader(fs, path, cacheConf, true, conf);
         try {
           scanner = reader.getScanner(conf, false, true);
-          assertTrue("Initial seekTo failed", scanner.seekTo());
+          assertTrue(scanner.seekTo(), "Initial seekTo failed");
           for (i = 0; i < 100; i++) {
             KeyValue kv = testKvs.get(rand.nextInt(testKvs.size()));
-            assertEquals("Unable to find KV as expected: " + kv, 0, scanner.seekTo(kv));
+            assertEquals(0, scanner.seekTo(kv), "Unable to find KV as expected: " + kv);
           }
         } finally {
           scanner.close();

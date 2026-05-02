@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BACKING_MAP_PERSISTENCE_CHUNK_SIZE;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_ERROR_TOLERATION_DURATION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -33,54 +33,47 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
-import java.util.Arrays;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * Basic test for check file's integrity before start BucketCache in fileIOEngine
  */
-@RunWith(Parameterized.class)
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
+@Tag(RegionServerTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: blockSize={0}, bucketSizes={1}")
 public class TestVerifyBucketCacheFile {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVerifyBucketCacheFile.class);
 
-  @Parameterized.Parameters(name = "{index}: blockSize={0}, bucketSizes={1}")
-  public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[][] { { 8192, null },
-      { 16 * 1024,
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(8192, null),
+      Arguments.of(16 * 1024,
         new int[] { 2 * 1024 + 1024, 4 * 1024 + 1024, 8 * 1024 + 1024, 16 * 1024 + 1024,
           28 * 1024 + 1024, 32 * 1024 + 1024, 64 * 1024 + 1024, 96 * 1024 + 1024,
-          128 * 1024 + 1024 } } });
+          128 * 1024 + 1024 }));
   }
 
-  @Rule
-  public TestName name = new TestName();
+  private final int constructedBlockSize;
+  private final int[] constructedBlockSizes;
 
-  @Parameterized.Parameter(0)
-  public int constructedBlockSize;
-
-  @Parameterized.Parameter(1)
-  public int[] constructedBlockSizes;
+  public TestVerifyBucketCacheFile(int constructedBlockSize, int[] constructedBlockSizes) {
+    this.constructedBlockSize = constructedBlockSize;
+    this.constructedBlockSizes = constructedBlockSizes;
+  }
 
   final long capacitySize = 32 * 1024 * 1024;
   final int writeThreads = BucketCache.DEFAULT_WRITER_THREADS;
@@ -96,7 +89,7 @@ public class TestVerifyBucketCacheFile {
    * cache file and persistence file would be deleted before BucketCache start normally.
    * @throws Exception the exception
    */
-  @Test
+  @TestTemplate
   public void testRetrieveFromFile() throws Exception {
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     Path testDir = TEST_UTIL.getDataTestDir();
@@ -108,9 +101,9 @@ public class TestVerifyBucketCacheFile {
     BucketCache bucketCache = null;
     BucketCache recoveredBucketCache = null;
     try {
-      bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
-        constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence" + name.getMethodName());
+      bucketCache =
+        new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
+          constructedBlockSizes, writeThreads, writerQLen, testDir + "/bucket.persistence");
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       long usedSize = bucketCache.getAllocator().getUsedSize();
       assertEquals(0, usedSize);
@@ -126,9 +119,9 @@ public class TestVerifyBucketCacheFile {
       // 1.persist cache to file
       bucketCache.shutdown();
       // restore cache from file
-      bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
-        constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence" + name.getMethodName());
+      bucketCache =
+        new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
+          constructedBlockSizes, writeThreads, writerQLen, testDir + "/bucket.persistence");
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       assertEquals(usedSize, bucketCache.getAllocator().getUsedSize());
       // persist cache to file
@@ -139,9 +132,9 @@ public class TestVerifyBucketCacheFile {
         FileSystems.getDefault().getPath(testDir.toString(), "bucket.cache");
       assertTrue(Files.deleteIfExists(cacheFile));
       // can't restore cache from file
-      recoveredBucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
-        constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence" + name.getMethodName());
+      recoveredBucketCache =
+        new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
+          constructedBlockSizes, writeThreads, writerQLen, testDir + "/bucket.persistence");
       assertTrue(recoveredBucketCache.waitForCacheInitialization(10000));
       waitPersistentCacheValidation(conf, recoveredBucketCache);
       assertEquals(0, recoveredBucketCache.getAllocator().getUsedSize());
@@ -157,14 +150,13 @@ public class TestVerifyBucketCacheFile {
       recoveredBucketCache.shutdown();
 
       // 3.delete backingMap persistence file
-      final java.nio.file.Path mapFile = FileSystems.getDefault().getPath(testDir.toString(),
-        "bucket.persistence" + name.getMethodName());
+      final java.nio.file.Path mapFile =
+        FileSystems.getDefault().getPath(testDir.toString(), "bucket.persistence");
       assertTrue(Files.deleteIfExists(mapFile));
       // can't restore cache from file
       bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence" + name.getMethodName(), DEFAULT_ERROR_TOLERATION_DURATION,
-        conf);
+        testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       waitPersistentCacheValidation(conf, bucketCache);
       assertEquals(0, bucketCache.getAllocator().getUsedSize());
@@ -180,15 +172,14 @@ public class TestVerifyBucketCacheFile {
     TEST_UTIL.cleanupTestDir();
   }
 
-  @Test
+  @TestTemplate
   public void testRetrieveFromFileAfterDelete() throws Exception {
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     Path testDir = TEST_UTIL.getDataTestDir();
     TEST_UTIL.getTestFileSystem().mkdirs(testDir);
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setLong(CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY, 300);
-    String mapFileName =
-      testDir + "/bucket.persistence" + name.getMethodName() + EnvironmentEdgeManager.currentTime();
+    String mapFileName = testDir + "/bucket.persistence" + EnvironmentEdgeManager.currentTime();
     BucketCache bucketCache = null;
     try {
       bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
@@ -233,7 +224,7 @@ public class TestVerifyBucketCacheFile {
    * persistence file would be deleted before BucketCache start normally.
    * @throws Exception the exception
    */
-  @Test
+  @TestTemplate
   public void testModifiedBucketCacheFileData() throws Exception {
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     Path testDir = TEST_UTIL.getDataTestDir();
@@ -246,8 +237,7 @@ public class TestVerifyBucketCacheFile {
     try {
       bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence" + name.getMethodName(), DEFAULT_ERROR_TOLERATION_DURATION,
-        conf);
+        testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       long usedSize = bucketCache.getAllocator().getUsedSize();
       assertEquals(0, usedSize);
@@ -272,8 +262,7 @@ public class TestVerifyBucketCacheFile {
       // can't restore cache from file
       bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence" + name.getMethodName(), DEFAULT_ERROR_TOLERATION_DURATION,
-        conf);
+        testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       waitPersistentCacheValidation(conf, bucketCache);
       assertEquals(0, bucketCache.getAllocator().getUsedSize());
@@ -300,7 +289,7 @@ public class TestVerifyBucketCacheFile {
    * recoverable from the cache.
    * @throws Exception the exception
    */
-  @Test
+  @TestTemplate
   public void testModifiedBucketCacheFileTime() throws Exception {
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     Path testDir = TEST_UTIL.getDataTestDir();
@@ -312,8 +301,7 @@ public class TestVerifyBucketCacheFile {
     try {
       bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence" + name.getMethodName(), DEFAULT_ERROR_TOLERATION_DURATION,
-        conf);
+        testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       long usedSize = bucketCache.getAllocator().getUsedSize();
       assertEquals(0, usedSize);
@@ -338,8 +326,7 @@ public class TestVerifyBucketCacheFile {
       // can't restore cache from file
       bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence" + name.getMethodName(), DEFAULT_ERROR_TOLERATION_DURATION,
-        conf);
+        testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       waitPersistentCacheValidation(conf, bucketCache);
       assertEquals(usedSize, bucketCache.getAllocator().getUsedSize());
@@ -360,7 +347,7 @@ public class TestVerifyBucketCacheFile {
    * corruption.
    * @throws Exception the exception
    */
-  @Test
+  @TestTemplate
   public void testBucketCacheRecovery() throws Exception {
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     Path testDir = TEST_UTIL.getDataTestDir();
@@ -368,8 +355,7 @@ public class TestVerifyBucketCacheFile {
     Configuration conf = HBaseConfiguration.create();
     // Disables the persister thread by setting its interval to MAX_VALUE
     conf.setLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, Long.MAX_VALUE);
-    String mapFileName =
-      testDir + "/bucket.persistence" + EnvironmentEdgeManager.currentTime() + name.getMethodName();
+    String mapFileName = testDir + "/bucket.persistence" + EnvironmentEdgeManager.currentTime();
     BucketCache bucketCache = null;
     BucketCache newBucketCache = null;
     try {
@@ -420,18 +406,18 @@ public class TestVerifyBucketCacheFile {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testSingleChunk() throws Exception {
     testChunkedBackingMapRecovery(5, 5);
   }
 
-  @Test
+  @TestTemplate
   public void testCompletelyFilledChunks() throws Exception {
     // Test where the all the chunks are complete with chunkSize entries
     testChunkedBackingMapRecovery(5, 10);
   }
 
-  @Test
+  @TestTemplate
   public void testPartiallyFilledChunks() throws Exception {
     // Test where the last chunk is not completely filled.
     testChunkedBackingMapRecovery(5, 13);
@@ -444,8 +430,7 @@ public class TestVerifyBucketCacheFile {
     Configuration conf = HBaseConfiguration.create();
     conf.setLong(BACKING_MAP_PERSISTENCE_CHUNK_SIZE, chunkSize);
 
-    String mapFileName =
-      testDir + "/bucket.persistence" + EnvironmentEdgeManager.currentTime() + name.getMethodName();
+    String mapFileName = testDir + "/bucket.persistence" + EnvironmentEdgeManager.currentTime();
     BucketCache bucketCache = null;
     BucketCache newBucketCache = null;
     try {

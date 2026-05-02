@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +29,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
@@ -46,30 +48,20 @@ import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestBytesReadFromFs {
   private static final int NUM_KEYS = 100000;
   private static final int BLOOM_BLOCK_SIZE = 512;
   private static final int INDEX_CHUNK_SIZE = 512;
   private static final int DATA_BLOCK_SIZE = 4096;
   private static final int ROW_PREFIX_LENGTH_IN_BLOOM_FILTER = 42;
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBytesReadFromFs.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBytesReadFromFs.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -81,7 +73,7 @@ public class TestBytesReadFromFs {
   private List<byte[]> keyList = new ArrayList<>();
   private Path path;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = TEST_UTIL.getConfiguration();
     conf.setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, ROW_PREFIX_LENGTH_IN_BLOOM_FILTER);
@@ -129,7 +121,7 @@ public class TestBytesReadFromFs {
         KeyValue keyValue = keyValues.get(0);
         readBloomFilters(path, bloomType, null, keyValue);
       } else {
-        Assert.assertEquals(ROW_PREFIX_LENGTH_IN_BLOOM_FILTER, keyList.get(0).length);
+        assertEquals(ROW_PREFIX_LENGTH_IN_BLOOM_FILTER, keyList.get(0).length);
         byte[] key = keyList.get(0);
         readBloomFilters(path, bloomType, key, null);
       }
@@ -238,15 +230,14 @@ public class TestBytesReadFromFs {
 
     reader.close();
 
-    Assert.assertEquals(isScanMetricsEnabled,
-      ThreadLocalServerSideScanMetrics.isScanMetricsEnabled());
+    assertEquals(isScanMetricsEnabled, ThreadLocalServerSideScanMetrics.isScanMetricsEnabled());
     bytesRead = isScanMetricsEnabled ? bytesRead : 0;
-    Assert.assertEquals(bytesRead, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
-    Assert.assertEquals(blockLevelsRead, trailer.getNumDataIndexLevels() + 1);
-    Assert.assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
+    assertEquals(bytesRead, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
+    assertEquals(blockLevelsRead, trailer.getNumDataIndexLevels() + 1);
+    assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
     // At every index level we read one index block and finally read data block
     long blockReadOpsCount = isScanMetricsEnabled ? blockLevelsRead : 0;
-    Assert.assertEquals(blockReadOpsCount,
+    assertEquals(blockReadOpsCount,
       ThreadLocalServerSideScanMetrics.getBlockReadOpsCountAndReset());
   }
 
@@ -262,9 +253,9 @@ public class TestBytesReadFromFs {
     // Read HFile trailer
     HFileInfo hfile = new HFileInfo(readerContext, conf);
     FixedFileTrailer trailer = hfile.getTrailer();
-    Assert.assertEquals(trailer.getTrailerSize(),
+    assertEquals(trailer.getTrailerSize(),
       ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
-    Assert.assertEquals(1, ThreadLocalServerSideScanMetrics.getBlockReadOpsCountAndReset());
+    assertEquals(1, ThreadLocalServerSideScanMetrics.getBlockReadOpsCountAndReset());
 
     CacheConfig cacheConfig = new CacheConfig(conf);
     HFile.Reader reader = new HFilePreadReader(readerContext, hfile, cacheConfig, conf);
@@ -301,8 +292,8 @@ public class TestBytesReadFromFs {
 
     reader.close();
 
-    Assert.assertEquals(hasBloomFilters, bloomFilterIndexesRead);
-    Assert.assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
+    assertEquals(hasBloomFilters, bloomFilterIndexesRead);
+    assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
   }
 
   private boolean readEachBlockInLoadOnOpenDataSection(HFileBlock block, boolean readNextHeader)
@@ -317,14 +308,14 @@ public class TestBytesReadFromFs {
       readNextHeader = true;
     }
     block.release();
-    Assert.assertEquals(bytesRead, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
-    Assert.assertEquals(1, ThreadLocalServerSideScanMetrics.getBlockReadOpsCountAndReset());
+    assertEquals(bytesRead, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
+    assertEquals(1, ThreadLocalServerSideScanMetrics.getBlockReadOpsCountAndReset());
     return readNextHeader;
   }
 
   private void readBloomFilters(Path path, BloomType bt, byte[] key, KeyValue keyValue)
     throws IOException {
-    Assert.assertTrue(keyValue == null || key == null);
+    assertTrue(keyValue == null || key == null);
 
     // Assert that the bloom filter index was read and it's size is accounted in bytes read from
     // fs
@@ -344,7 +335,7 @@ public class TestBytesReadFromFs {
 
     StoreFileReader reader = sf.getReader();
     BloomFilter bloomFilter = reader.getGeneralBloomFilter();
-    Assert.assertTrue(bloomFilter instanceof CompoundBloomFilter);
+    assertTrue(bloomFilter instanceof CompoundBloomFilter);
     CompoundBloomFilter cbf = (CompoundBloomFilter) bloomFilter;
 
     // Get the bloom filter index reader
@@ -366,14 +357,14 @@ public class TestBytesReadFromFs {
       bytesRead += HFileBlock.headerSize(true);
     }
     // Asser that the block read is a bloom block
-    Assert.assertEquals(bloomBlock.getBlockType(), BlockType.BLOOM_CHUNK);
+    assertEquals(bloomBlock.getBlockType(), BlockType.BLOOM_CHUNK);
     bloomBlock.release();
 
     // Close the reader
     reader.close(true);
 
-    Assert.assertEquals(bytesRead, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
-    Assert.assertEquals(1, ThreadLocalServerSideScanMetrics.getBlockReadOpsCountAndReset());
+    assertEquals(bytesRead, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
+    assertEquals(1, ThreadLocalServerSideScanMetrics.getBlockReadOpsCountAndReset());
   }
 
   private void writeBloomFilters(Path path, BloomType bt, int bloomBlockByteSize)
@@ -385,8 +376,8 @@ public class TestBytesReadFromFs {
       .withCompression(Compression.Algorithm.NONE).build();
     StoreFileWriter w = new StoreFileWriter.Builder(conf, cacheConf, fs).withFileContext(meta)
       .withBloomType(bt).withFilePath(path).build();
-    Assert.assertTrue(w.hasGeneralBloom());
-    Assert.assertTrue(w.getGeneralBloomWriter() instanceof CompoundBloomFilterWriter);
+    assertTrue(w.hasGeneralBloom());
+    assertTrue(w.getGeneralBloomWriter() instanceof CompoundBloomFilterWriter);
     CompoundBloomFilterWriter cbbf = (CompoundBloomFilterWriter) w.getGeneralBloomWriter();
     byte[] cf = Bytes.toBytes("cf");
     byte[] cq = Bytes.toBytes("cq");
@@ -400,7 +391,7 @@ public class TestBytesReadFromFs {
       keyList.add(keyBytes);
       keyValues.add(keyValue);
     }
-    Assert.assertEquals(keyList.size(), cbbf.getKeyCount());
+    assertEquals(keyList.size(), cbbf.getKeyCount());
     w.close();
   }
 

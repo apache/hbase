@@ -53,6 +53,10 @@ public class HBaseParameterizedParameterResolver implements ParameterResolver {
       // test with wrapper type, otherwise it will always return false
       return Primitives.wrap(expectedType).isAssignableFrom(value.getClass());
     }
+    // non-primitive type can accept null value
+    if (value == null) {
+      return true;
+    }
     return expectedType.isAssignableFrom(value.getClass());
   }
 
