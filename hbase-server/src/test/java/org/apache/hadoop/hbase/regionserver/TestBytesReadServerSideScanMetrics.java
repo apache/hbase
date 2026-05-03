@@ -78,10 +78,11 @@ import org.slf4j.LoggerFactory;
 @Tag(IOTests.TAG)
 @Tag(LargeTests.TAG)
 public class TestBytesReadServerSideScanMetrics {
-  private String name;
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestBytesReadServerSideScanMetrics.class);
+
+  private String name;
 
   private HBaseTestingUtil UTIL;
 

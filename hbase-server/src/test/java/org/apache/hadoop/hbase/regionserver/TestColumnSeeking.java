@@ -54,6 +54,7 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestColumnSeeking {
+
   private String name;
 
   @BeforeEach

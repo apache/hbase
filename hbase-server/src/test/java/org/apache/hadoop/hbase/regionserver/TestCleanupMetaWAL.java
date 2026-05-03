@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 
 @Tag(MediumTests.TAG)
 public class TestCleanupMetaWAL {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestCleanupMetaWAL.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
