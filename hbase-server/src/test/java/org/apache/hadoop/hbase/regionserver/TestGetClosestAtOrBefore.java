@@ -63,6 +63,7 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestGetClosestAtOrBefore {
+
   private String testName;
 
   @BeforeEach

@@ -51,6 +51,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 public class TestCompactionPolicy {
+
   private final static Logger LOG = LoggerFactory.getLogger(TestCompactionPolicy.class);
   protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 

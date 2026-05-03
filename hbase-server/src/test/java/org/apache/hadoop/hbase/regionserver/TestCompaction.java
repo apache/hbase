@@ -109,6 +109,7 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(LargeTests.TAG)
 public class TestCompaction {
+
   private String name;
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();

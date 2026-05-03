@@ -39,6 +39,7 @@ import org.junit.jupiter.api.TestInfo;
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestFlushRegionEntry {
+
   private String name;
 
   @BeforeEach
