@@ -50,7 +50,7 @@ public class TestCleanupMetaWAL {
 
   @AfterAll
   public static void after() throws Exception {
-    TEST_UTIL.shutdownMiniZKCluster();
+    TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
