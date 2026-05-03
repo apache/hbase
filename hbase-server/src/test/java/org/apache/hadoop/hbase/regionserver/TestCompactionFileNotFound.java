@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -34,13 +34,11 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,12 +47,8 @@ import org.slf4j.LoggerFactory;
  * after a compaction but before the compacted files are archived. At this state we test for a split
  * and compaction
  */
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestCompactionFileNotFound {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompactionFileNotFound.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCompactionFileNotFound.class);
   private static final HBaseTestingUtil util = new HBaseTestingUtil();
@@ -74,19 +68,19 @@ public class TestCompactionFileNotFound {
 
   private Table table;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     Configuration conf = util.getConfiguration();
     conf.setInt("hbase.hfile.compaction.discharger.interval", Integer.MAX_VALUE);
     util.startMiniCluster(3);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     util.shutdownMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void after() throws Exception {
     try {
       if (table != null) {
@@ -193,9 +187,9 @@ public class TestCompactionFileNotFound {
       } catch (IOException e) {
         LOG.error("Got an exception during compaction", e);
         if (e instanceof FileNotFoundException) {
-          Assert.fail("Got a FNFE during compaction");
+          fail("Got a FNFE during compaction");
         } else {
-          Assert.fail();
+          fail();
         }
       }
     } finally {

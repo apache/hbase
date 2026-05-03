@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -59,11 +58,11 @@ import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,12 +70,9 @@ import org.slf4j.LoggerFactory;
 /**
  * compacted memstore test case
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCompactingMemStore extends TestDefaultMemStore {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompactingMemStore.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCompactingMemStore.class);
   protected static ChunkCreator chunkCreator;
@@ -84,19 +80,20 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   protected RegionServicesForStores regionServicesForStores;
   protected HStore store;
 
-  @After
-  public void tearDown() throws Exception {
-    chunkCreator.clearChunksInPool();
-    super.tearDown();
-  }
-
   @Override
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    this.name = testInfo.getTestMethod().get().getName();
     compactingSetUp();
     this.memstore = new MyCompactingMemStore(HBaseConfiguration.create(),
       CellComparator.getInstance(), store, regionServicesForStores, MemoryCompactionPolicy.EAGER);
     ((CompactingMemStore) memstore).setIndexType(CompactingMemStore.IndexType.ARRAY_MAP);
+  }
+
+  @AfterEach
+  public void tearDown() throws Exception {
+    chunkCreator.clearChunksInPool();
+    super.tearDown();
   }
 
   protected void compactingSetUp() throws Exception {
@@ -203,7 +200,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     for (int i = 0; i < snapshotCount; i++) {
       addRows(this.memstore);
       runSnapshot(this.memstore, true);
-      assertEquals("History not being cleared", 0, this.memstore.getSnapshot().getCellsCount());
+      assertEquals(0, this.memstore.getSnapshot().getCellsCount(), "History not being cleared");
     }
   }
 
@@ -248,9 +245,9 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
           int rowId = startRowId + i;
           Cell left = results.get(0);
           byte[] row1 = Bytes.toBytes(rowId);
-          assertTrue("Row name",
-            CellComparator.getInstance().compareRows(left, row1, 0, row1.length) == 0);
-          assertEquals("Count of columns", QUALIFIER_COUNT, results.size());
+          assertTrue(CellComparator.getInstance().compareRows(left, row1, 0, row1.length) == 0,
+            "Row name");
+          assertEquals(QUALIFIER_COUNT, results.size(), "Count of columns");
           List<Cell> row = new ArrayList<>();
           for (Cell kv : results) {
             row.add(kv);
@@ -384,13 +381,13 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     MemStoreSnapshot snapshot = hmc.snapshot();
     if (useForce) {
       // Make some assertions about what just happened.
-      assertTrue("History size has not increased", oldHistorySize < snapshot.getDataSize());
+      assertTrue(oldHistorySize < snapshot.getDataSize(), "History size has not increased");
       long t = hmc.timeOfOldestEdit();
-      assertTrue("Time of oldest edit is not Long.MAX_VALUE", t == Long.MAX_VALUE);
+      assertTrue(t == Long.MAX_VALUE, "Time of oldest edit is not Long.MAX_VALUE");
       hmc.clearSnapshot(snapshot.getId());
     } else {
       long t = hmc.timeOfOldestEdit();
-      assertTrue("Time of oldest edit didn't remain the same", t == prevTimeStamp);
+      assertTrue(t == prevTimeStamp, "Time of oldest edit didn't remain the same");
     }
     return prevTimeStamp;
   }
@@ -399,12 +396,12 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     int i = 0;
     for (Cell kv : kvs) {
       byte[] expectedColname = makeQualifier(rowIndex, i++);
-      assertTrue("Column name", CellUtil.matchingQualifier(kv, expectedColname));
+      assertTrue(CellUtil.matchingQualifier(kv, expectedColname), "Column name");
       // Value is column name as bytes. Usually result is
       // 100 bytes in size at least. This is the default size
       // for BytesWriteable. For comparison, convert bytes to
       // String and trim to remove trailing null bytes.
-      assertTrue("Content", CellUtil.matchingValue(kv, expectedColname));
+      assertTrue(CellUtil.matchingValue(kv, expectedColname), "Content");
     }
   }
 
