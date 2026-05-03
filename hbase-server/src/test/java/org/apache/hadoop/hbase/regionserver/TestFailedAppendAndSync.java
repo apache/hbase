@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeast;
@@ -34,7 +34,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
@@ -51,13 +50,11 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.exceptions.verification.WantedButNotInvoked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,16 +62,11 @@ import org.slf4j.LoggerFactory;
 /**
  * Testing sync/append failures. Copied from TestHRegion.
  */
-@Category({ SmallTests.class })
+@Tag(SmallTests.TAG)
 public class TestFailedAppendAndSync {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFailedAppendAndSync.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestFailedAppendAndSync.class);
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
   private static final String COLUMN_FAMILY = "MyCF";
   private static final byte[] COLUMN_FAMILY_BYTES = Bytes.toBytes(COLUMN_FAMILY);
@@ -88,18 +80,19 @@ public class TestFailedAppendAndSync {
   // Test names
   protected TableName tableName;
 
-  @Before
-  public void setup() throws IOException {
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws IOException {
+    this.name = testInfo.getTestMethod().get().getName();
     TEST_UTIL = new HBaseTestingUtil();
     CONF = TEST_UTIL.getConfiguration();
     // Disable block cache.
     CONF.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
     CONF.setLong(AbstractFSWAL.WAL_SYNC_TIMEOUT_MS, 10000);
     dir = TEST_UTIL.getDataTestDir("TestHRegion").toString();
-    tableName = TableName.valueOf(name.getMethodName());
+    tableName = TableName.valueOf(name);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     EnvironmentEdgeManagerTestHelper.reset();
     LOG.info("Cleaning test directory: " + TEST_UTIL.getDataTestDir());
@@ -107,7 +100,7 @@ public class TestFailedAppendAndSync {
   }
 
   String getName() {
-    return name.getMethodName();
+    return name;
   }
 
   // Dodgy WAL. Will throw exceptions when flags set.
@@ -302,9 +295,9 @@ public class TestFailedAppendAndSync {
         }
       }
       if (dodgyWAL != null) dodgyWAL.close();
-      assertTrue("The regionserver should have thrown an exception", threwOnBoth);
-      assertTrue("The regionserver should have thrown an exception", threwOnAppend);
-      assertTrue("The regionserver should have thrown an exception", threwOnSync);
+      assertTrue(threwOnBoth, "The regionserver should have thrown an exception");
+      assertTrue(threwOnAppend, "The regionserver should have thrown an exception");
+      assertTrue(threwOnSync, "The regionserver should have thrown an exception");
     }
   }
 

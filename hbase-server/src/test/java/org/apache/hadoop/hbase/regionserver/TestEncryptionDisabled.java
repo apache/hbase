@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -31,29 +33,20 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestEncryptionDisabled {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestEncryptionDisabled.class);
-
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf = TEST_UTIL.getConfiguration();
   private static TableDescriptorBuilder tdb;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     conf.setInt("hfile.format.version", 3);
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockAesKeyProvider.class.getName());
@@ -65,7 +58,7 @@ public class TestEncryptionDisabled {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -83,9 +76,9 @@ public class TestEncryptionDisabled {
     tdb.setColumnFamily(columnFamilyDescriptorBuilder.build());
 
     // Create the test table, we expect to get back an exception
-    exception.expect(DoNotRetryIOException.class);
-    exception.expectMessage("encryption is disabled on the cluster");
-    TEST_UTIL.getAdmin().createTable(tdb.build());
+    DoNotRetryIOException exception = assertThrows(DoNotRetryIOException.class,
+      () -> TEST_UTIL.getAdmin().createTable(tdb.build()));
+    assertTrue(exception.getMessage().contains("encryption is disabled on the cluster"));
   }
 
   @Test

@@ -25,7 +25,6 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
@@ -38,9 +37,10 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
@@ -53,8 +53,7 @@ public class TestChangeStoreFileTracker {
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
-  @RegisterExtension
-  public final TableNameTestExtension tableName = new TableNameTestExtension();
+  private TableName tableName;
 
   @BeforeAll
   public static void setUp() throws Exception {
@@ -66,10 +65,15 @@ public class TestChangeStoreFileTracker {
     UTIL.shutdownMiniCluster();
   }
 
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
+  }
+
   @Test
   public void testCreateError() throws IOException {
     assertThrows(DoNotRetryIOException.class, () -> {
-      TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName.getTableName())
+      TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family"))
         .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
           StoreFileTrackerFactory.Trackers.MIGRATION.name())
@@ -84,7 +88,7 @@ public class TestChangeStoreFileTracker {
   @Test
   public void testModifyError1() throws IOException {
     assertThrows(DoNotRetryIOException.class, () -> {
-      TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName.getTableName())
+      TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
       UTIL.getAdmin().createTable(td);
       TableDescriptor newTd =
@@ -97,7 +101,7 @@ public class TestChangeStoreFileTracker {
   @Test
   public void testModifyError2() throws IOException {
     assertThrows(DoNotRetryIOException.class, () -> {
-      TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName.getTableName())
+      TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
       UTIL.getAdmin().createTable(td);
       TableDescriptor newTd = TableDescriptorBuilder.newBuilder(td)
@@ -114,7 +118,7 @@ public class TestChangeStoreFileTracker {
   @Test
   public void testModifyError3() throws IOException {
     assertThrows(DoNotRetryIOException.class, () -> {
-      TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName.getTableName())
+      TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
       UTIL.getAdmin().createTable(td);
       TableDescriptor newTd = TableDescriptorBuilder.newBuilder(td)
@@ -131,7 +135,7 @@ public class TestChangeStoreFileTracker {
 
   // return the TableDescriptor for creating table
   private TableDescriptor createTableAndChangeToMigrationTracker() throws IOException {
-    TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName.getTableName())
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
     UTIL.getAdmin().createTable(td);
     TableDescriptor newTd = TableDescriptorBuilder.newBuilder(td)
@@ -189,10 +193,10 @@ public class TestChangeStoreFileTracker {
   @Test
   public void testModifyError7() throws IOException {
     assertThrows(DoNotRetryIOException.class, () -> {
-      TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName.getTableName())
+      TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
       UTIL.getAdmin().createTable(td);
-      TableDescriptor newTd = TableDescriptorBuilder.newBuilder(tableName.getTableName())
+      TableDescriptor newTd = TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family"))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("family1"))
           .setConfiguration(StoreFileTrackerFactory.TRACKER_IMPL,
@@ -207,7 +211,7 @@ public class TestChangeStoreFileTracker {
   @Test
   public void testModifyError8() throws IOException {
     assertThrows(IOException.class, () -> {
-      TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName.getTableName())
+      TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
       UTIL.getAdmin().createTable(td);
       TableDescriptor newTd =
@@ -219,7 +223,7 @@ public class TestChangeStoreFileTracker {
 
   @Test
   public void testModifyError9() throws IOException {
-    TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName.getTableName())
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
     UTIL.getAdmin().createTable(td);
     UTIL.getAdmin().disableTable(td.getTableName());
@@ -246,7 +250,7 @@ public class TestChangeStoreFileTracker {
 
   @Test
   public void testModify() throws IOException {
-    TableName tn = tableName.getTableName();
+    TableName tn = tableName;
     byte[] row = Bytes.toBytes("row");
     byte[] family = Bytes.toBytes("family");
     byte[] qualifier = Bytes.toBytes("qualifier");

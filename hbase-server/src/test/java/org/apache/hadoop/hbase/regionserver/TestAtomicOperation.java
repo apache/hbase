@@ -19,10 +19,10 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.fam2;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,7 +38,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
@@ -70,29 +69,23 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Testing of HRegion.incrementColumnValue, HRegion.increment, and HRegion.append
  */
-@Category({ VerySlowRegionServerTests.class, LargeTests.class }) // Starts 100 threads
+@Tag(VerySlowRegionServerTests.TAG)
+@Tag(LargeTests.TAG) // Starts 100 threads
 public class TestAtomicOperation {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAtomicOperation.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestAtomicOperation.class);
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
   HRegion region = null;
   private HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -107,12 +100,13 @@ public class TestAtomicOperation {
   static final byte[] row = Bytes.toBytes("rowA");
   static final byte[] row2 = Bytes.toBytes("rowB");
 
-  @Before
-  public void setup() {
-    tableName = Bytes.toBytes(name.getMethodName());
+  @BeforeEach
+  public void setup(TestInfo testInfo) {
+    this.name = testInfo.getTestMethod().get().getName();
+    tableName = Bytes.toBytes(name);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException {
     if (region != null) {
       CacheConfig cacheConfig = region.getStores().get(0).getCacheConfig();
@@ -133,11 +127,11 @@ public class TestAtomicOperation {
 
   /**
    * Test basic append operation. More tests in
-   * @see org.apache.hadoop.hbase.client.TestFromClientSide#testAppend()
+   * {@link org.apache.hadoop.hbase.client.FromClientSideTest5#testAppend()}.
    */
   @Test
   public void testAppend() throws IOException {
-    initHRegion(tableName, name.getMethodName(), fam1);
+    initHRegion(tableName, name, fam1);
     String v1 =
       "Ultimate Answer to the Ultimate Question of Life," + " The Universe, and Everything";
     String v2 = " is... 42.";
@@ -157,7 +151,7 @@ public class TestAtomicOperation {
   @Test
   public void testAppendWithMultipleFamilies() throws IOException {
     final byte[] fam3 = Bytes.toBytes("colfamily31");
-    initHRegion(tableName, name.getMethodName(), fam1, fam2, fam3);
+    initHRegion(tableName, name, fam1, fam2, fam3);
     String v1 = "Appended";
     String v2 = "Value";
 
@@ -166,8 +160,8 @@ public class TestAtomicOperation {
     a.addColumn(fam1, qual1, Bytes.toBytes(v1));
     a.addColumn(fam2, qual2, Bytes.toBytes(v2));
     Result result = region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE);
-    assertTrue("Expected an empty result but result contains " + result.size() + " keys",
-      result.isEmpty());
+    assertTrue(result.isEmpty(),
+      "Expected an empty result but result contains " + result.size() + " keys");
 
     a = new Append(row);
     a.addColumn(fam2, qual2, Bytes.toBytes(v1));
@@ -182,10 +176,10 @@ public class TestAtomicOperation {
     byte[] actualValue3 = result.getValue(fam3, qual3);
     byte[] actualValue4 = result.getValue(fam1, qual2);
 
-    assertNotNull("Value1 should bot be null", actualValue1);
-    assertNotNull("Value2 should bot be null", actualValue2);
-    assertNotNull("Value3 should bot be null", actualValue3);
-    assertNotNull("Value4 should bot be null", actualValue4);
+    assertNotNull(actualValue1, "Value1 should bot be null");
+    assertNotNull(actualValue2, "Value2 should bot be null");
+    assertNotNull(actualValue3, "Value3 should bot be null");
+    assertNotNull(actualValue4, "Value4 should bot be null");
     assertEquals(0, Bytes.compareTo(Bytes.toBytes(v1 + v2), actualValue1));
     assertEquals(0, Bytes.compareTo(Bytes.toBytes(v2 + v1), actualValue2));
     assertEquals(0, Bytes.compareTo(Bytes.toBytes(v2), actualValue3));
@@ -194,7 +188,7 @@ public class TestAtomicOperation {
 
   @Test
   public void testAppendWithNonExistingFamily() throws IOException {
-    initHRegion(tableName, name.getMethodName(), fam1);
+    initHRegion(tableName, name, fam1);
     final String v1 = "Value";
     final Append a = new Append(row);
     a.addColumn(fam1, qual1, Bytes.toBytes(v1));
@@ -212,7 +206,7 @@ public class TestAtomicOperation {
 
   @Test
   public void testIncrementWithNonExistingFamily() throws IOException {
-    initHRegion(tableName, name.getMethodName(), fam1);
+    initHRegion(tableName, name, fam1);
     final Increment inc = new Increment(row);
     inc.addColumn(fam1, qual1, 1);
     inc.addColumn(fam2, qual2, 1);
@@ -237,7 +231,7 @@ public class TestAtomicOperation {
     boolean fast = true;
     LOG.info("Starting test testIncrementMultiThreads");
     // run a with mixed column families (1 and 3 versions)
-    initHRegion(tableName, name.getMethodName(), new int[] { 1, 3 }, fam1, fam2);
+    initHRegion(tableName, name, new int[] { 1, 3 }, fam1, fam2);
 
     // Create 100 threads, each will increment by its own quantity. All 100 threads update the
     // same row over two column families.
@@ -343,8 +337,8 @@ public class TestAtomicOperation {
               Bytes.toLong(result.getValue(fam1, qual2)));
             long fam1Increment = Bytes.toLong(result.getValue(fam1, qual1)) * 3;
             long fam2Increment = Bytes.toLong(result.getValue(fam2, qual3));
-            assertEquals("fam1=" + fam1Increment + ", fam2=" + fam2Increment, fam1Increment,
-              fam2Increment);
+            assertEquals(fam1Increment, fam2Increment,
+              "fam1=" + fam1Increment + ", fam2=" + fam2Increment);
           }
         } catch (IOException e) {
           e.printStackTrace();
@@ -357,7 +351,7 @@ public class TestAtomicOperation {
   public void testAppendMultiThreads() throws IOException {
     LOG.info("Starting test testAppendMultiThreads");
     // run a with mixed column families (1 and 3 versions)
-    initHRegion(tableName, name.getMethodName(), new int[] { 1, 3 }, fam1, fam2);
+    initHRegion(tableName, name, new int[] { 1, 3 }, fam1, fam2);
 
     int numThreads = 100;
     int opsPerThread = 100;
@@ -421,7 +415,7 @@ public class TestAtomicOperation {
   @Test
   public void testRowMutationMultiThreads() throws IOException {
     LOG.info("Starting test testRowMutationMultiThreads");
-    initHRegion(tableName, name.getMethodName(), fam1);
+    initHRegion(tableName, name, fam1);
 
     // create 10 threads, each will alternate between adding and
     // removing a column
@@ -512,7 +506,7 @@ public class TestAtomicOperation {
   public void testMultiRowMutationMultiThreads() throws IOException {
 
     LOG.info("Starting test testMultiRowMutationMultiThreads");
-    initHRegion(tableName, name.getMethodName(), fam1);
+    initHRegion(tableName, name, fam1);
 
     // create 10 threads, each will alternate between adding and
     // removing a column
@@ -639,7 +633,7 @@ public class TestAtomicOperation {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setClass(HConstants.REGION_IMPL, MockHRegion.class, HeapSize.class);
     TableDescriptorBuilder tableDescriptorBuilder =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name));
     ColumnFamilyDescriptor columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family)).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);

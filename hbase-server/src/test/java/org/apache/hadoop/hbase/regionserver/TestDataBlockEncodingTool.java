@@ -22,11 +22,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
@@ -34,20 +32,16 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test DataBlockEncodingTool.
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestDataBlockEncodingTool {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDataBlockEncodingTool.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final String ROOT_DIR =
@@ -56,7 +50,7 @@ public class TestDataBlockEncodingTool {
   private static FileSystem fs;
   private static StoreFileWriter sfw;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     fs = TEST_UTIL.getTestFileSystem();
   }
@@ -88,15 +82,17 @@ public class TestDataBlockEncodingTool {
           if (useTags) {
             if (allTags) {
               // Write cells with tags to HFile.
-              Tag[] tags = new Tag[] { new ArrayBackedTag((byte) 0, Bytes.toString(b)),
-                new ArrayBackedTag((byte) 0, Bytes.toString(b)) };
+              org.apache.hadoop.hbase.Tag[] tags =
+                new org.apache.hadoop.hbase.Tag[] { new ArrayBackedTag((byte) 0, Bytes.toString(b)),
+                  new ArrayBackedTag((byte) 0, Bytes.toString(b)) };
               kv = new KeyValue(b, FAMILY, QUALIFIER, now, b, tags);
             } else {
               // Write half cells with tags and half without tags to HFile.
               if ((e - 'a') % 2 == 0) {
                 kv = new KeyValue(b, FAMILY, QUALIFIER, now, b);
               } else {
-                Tag[] tags = new Tag[] { new ArrayBackedTag((byte) 0, Bytes.toString(b)),
+                org.apache.hadoop.hbase.Tag[] tags = new org.apache.hadoop.hbase.Tag[] {
+                  new ArrayBackedTag((byte) 0, Bytes.toString(b)),
                   new ArrayBackedTag((byte) 0, Bytes.toString(b)) };
                 kv = new KeyValue(b, FAMILY, QUALIFIER, now, b, tags);
               }

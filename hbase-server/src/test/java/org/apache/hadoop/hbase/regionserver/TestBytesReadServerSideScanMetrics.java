@@ -17,6 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -29,7 +36,6 @@ import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -62,25 +68,17 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ IOTests.class, LargeTests.class })
+@Tag(IOTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestBytesReadServerSideScanMetrics {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBytesReadServerSideScanMetrics.class);
-
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestBytesReadServerSideScanMetrics.class);
@@ -99,8 +97,9 @@ public class TestBytesReadServerSideScanMetrics {
 
   private Configuration conf;
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    this.name = testInfo.getTestMethod().get().getName();
     UTIL = new HBaseTestingUtil();
     conf = UTIL.getConfiguration();
     conf.setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, 0);
@@ -112,7 +111,7 @@ public class TestBytesReadServerSideScanMetrics {
     conf.setInt(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0);
     UTIL.startMiniCluster();
     try {
-      TableName tableName = TableName.valueOf(name.getMethodName());
+      TableName tableName = TableName.valueOf(name);
       createTable(tableName, false, BloomType.NONE);
       writeData(tableName, true);
       Scan scan = new Scan();
@@ -125,8 +124,8 @@ public class TestBytesReadServerSideScanMetrics {
         for (Result r : scanner) {
           rowCount++;
         }
-        Assert.assertEquals(2, rowCount);
-        Assert.assertNull(scanner.getScanMetrics());
+        assertEquals(2, rowCount);
+        assertNull(scanner.getScanMetrics());
       }
     } finally {
       UTIL.shutdownMiniCluster();
@@ -138,7 +137,7 @@ public class TestBytesReadServerSideScanMetrics {
     conf.setInt(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0);
     UTIL.startMiniCluster();
     try {
-      TableName tableName = TableName.valueOf(name.getMethodName());
+      TableName tableName = TableName.valueOf(name);
       createTable(tableName, false, BloomType.ROW);
       writeData(tableName, true);
       ScanMetrics scanMetrics = readDataAndGetScanMetrics(tableName, true);
@@ -148,8 +147,8 @@ public class TestBytesReadServerSideScanMetrics {
       KeyValue keyValue = new KeyValue(ROW2, CF, CQ, PrivateConstants.OLDEST_TIMESTAMP, VALUE);
       assertBytesReadFromFs(tableName, scanMetrics.bytesReadFromFs.get(), keyValue,
         scanMetrics.blockReadOpsCount.get());
-      Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
-      Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
+      assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
+      assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
     } finally {
       UTIL.shutdownMiniCluster();
     }
@@ -162,7 +161,7 @@ public class TestBytesReadServerSideScanMetrics {
     conf.setBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, true);
     UTIL.startMiniCluster();
     try {
-      TableName tableName = TableName.valueOf(name.getMethodName());
+      TableName tableName = TableName.valueOf(name);
       createTable(tableName, false, BloomType.NONE);
       writeData(tableName, true);
       HRegionServer server = UTIL.getMiniHBaseCluster().getRegionServer(0);
@@ -172,15 +171,15 @@ public class TestBytesReadServerSideScanMetrics {
       ScanMetrics scanMetrics = readDataAndGetScanMetrics(tableName, true);
       long tasksCompletedAfterRead = executor.getCompletedTaskCount();
       // Assert both of the HFiles were read using parallel seek executor
-      Assert.assertEquals(2, tasksCompletedAfterRead - tasksCompletedBeforeRead);
+      assertEquals(2, tasksCompletedAfterRead - tasksCompletedBeforeRead);
 
       // Use oldest timestamp to make sure the fake key is not less than the first key in
       // the file containing key: row2
       KeyValue keyValue = new KeyValue(ROW2, CF, CQ, PrivateConstants.OLDEST_TIMESTAMP, VALUE);
       assertBytesReadFromFs(tableName, scanMetrics.bytesReadFromFs.get(), keyValue,
         scanMetrics.blockReadOpsCount.get());
-      Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
-      Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
+      assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
+      assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
     } finally {
       UTIL.shutdownMiniCluster();
     }
@@ -190,21 +189,21 @@ public class TestBytesReadServerSideScanMetrics {
   public void testBytesReadFromBlockCache() throws Exception {
     UTIL.startMiniCluster();
     try {
-      TableName tableName = TableName.valueOf(name.getMethodName());
+      TableName tableName = TableName.valueOf(name);
       createTable(tableName, true, BloomType.NONE);
       HRegionServer server = UTIL.getMiniHBaseCluster().getRegionServer(0);
       LruBlockCache blockCache = (LruBlockCache) server.getBlockCache().get();
 
       // Assert that acceptable size of LRU block cache is greater than 1MB
-      Assert.assertTrue(blockCache.acceptableSize() > 1024 * 1024);
+      assertTrue(blockCache.acceptableSize() > 1024 * 1024);
       writeData(tableName, true);
       readDataAndGetScanMetrics(tableName, false);
       KeyValue keyValue = new KeyValue(ROW2, CF, CQ, PrivateConstants.OLDEST_TIMESTAMP, VALUE);
       assertBlockCacheWarmUp(tableName, keyValue);
       ScanMetrics scanMetrics = readDataAndGetScanMetrics(tableName, true);
-      Assert.assertEquals(0, scanMetrics.bytesReadFromFs.get());
+      assertEquals(0, scanMetrics.bytesReadFromFs.get());
       assertBytesReadFromBlockCache(tableName, scanMetrics.bytesReadFromBlockCache.get(), keyValue);
-      Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
+      assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
     } finally {
       UTIL.shutdownMiniCluster();
     }
@@ -214,7 +213,7 @@ public class TestBytesReadServerSideScanMetrics {
   public void testBytesReadFromMemstore() throws Exception {
     UTIL.startMiniCluster();
     try {
-      TableName tableName = TableName.valueOf(name.getMethodName());
+      TableName tableName = TableName.valueOf(name);
       createTable(tableName, false, BloomType.NONE);
       writeData(tableName, false);
       ScanMetrics scanMetrics = readDataAndGetScanMetrics(tableName, true);
@@ -224,7 +223,7 @@ public class TestBytesReadServerSideScanMetrics {
       for (HRegion region : regions) {
         HStore store = region.getStore(CF);
         // Assert no HFile is there
-        Assert.assertEquals(0, store.getStorefiles().size());
+        assertEquals(0, store.getStorefiles().size());
       }
 
       KeyValue keyValue = new KeyValue(ROW2, CF, CQ, HConstants.LATEST_TIMESTAMP, VALUE);
@@ -233,9 +232,9 @@ public class TestBytesReadServerSideScanMetrics {
       // there are no more cells in the row. We don't count key values read on SegmentScanner
       // instance creation.
       int totalKeyValueSize = 2 * singleKeyValueSize;
-      Assert.assertEquals(0, scanMetrics.bytesReadFromFs.get());
-      Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
-      Assert.assertEquals(totalKeyValueSize, scanMetrics.bytesReadFromMemstore.get());
+      assertEquals(0, scanMetrics.bytesReadFromFs.get());
+      assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
+      assertEquals(totalKeyValueSize, scanMetrics.bytesReadFromMemstore.get());
     } finally {
       UTIL.shutdownMiniCluster();
     }
@@ -249,7 +248,7 @@ public class TestBytesReadServerSideScanMetrics {
     configuration.put(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, "3");
     UTIL.startMiniCluster();
     try {
-      TableName tableName = TableName.valueOf(name.getMethodName());
+      TableName tableName = TableName.valueOf(name);
       createTable(tableName, true, BloomType.ROW, configuration);
       writeData(tableName, true);
       Scan scan = new Scan();
@@ -263,23 +262,23 @@ public class TestBytesReadServerSideScanMetrics {
       try (Table table = UTIL.getConnection().getTable(tableName);
         ResultScanner scanner = table.getScanner(scan)) {
         int rowCount = 0;
-        Assert.assertFalse(StoreScanner.hasSwitchedToStreamRead());
+        assertFalse(StoreScanner.hasSwitchedToStreamRead());
         for (Result r : scanner) {
           rowCount++;
         }
-        Assert.assertTrue(StoreScanner.hasSwitchedToStreamRead());
-        Assert.assertEquals(2, rowCount);
+        assertTrue(StoreScanner.hasSwitchedToStreamRead());
+        assertEquals(2, rowCount);
         scanMetrics = scanner.getScanMetrics();
       }
       int bytesReadFromFs = getBytesReadFromFsForNonGetScan(tableName, scanMetrics, 2);
-      Assert.assertEquals(bytesReadFromFs, scanMetrics.bytesReadFromFs.get());
-      Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
-      Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
+      assertEquals(bytesReadFromFs, scanMetrics.bytesReadFromFs.get());
+      assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
+      assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
       // There are 2 HFiles so, 1 read op per HFile was done by actual scan to read data block.
       // No bloom blocks will be read as this is non Get scan and only bloom filter type is ROW.
-      Assert.assertEquals(2, scanMetrics.blockReadOpsCount.get());
+      assertEquals(2, scanMetrics.blockReadOpsCount.get());
       // With scan caching set to 1 and 2 rows being scanned, 2 RPC calls will be needed.
-      Assert.assertEquals(2, scanMetrics.countOfRPCcalls.get());
+      assertEquals(2, scanMetrics.countOfRPCcalls.get());
     } finally {
       UTIL.shutdownMiniCluster();
     }
@@ -289,7 +288,7 @@ public class TestBytesReadServerSideScanMetrics {
   public void testBytesReadWhenFlushHappenedInTheMiddleOfScan() throws Exception {
     UTIL.startMiniCluster();
     try {
-      TableName tableName = TableName.valueOf(name.getMethodName());
+      TableName tableName = TableName.valueOf(name);
       createTable(tableName, true, BloomType.ROW);
       writeData(tableName, false);
       Scan scan = new Scan();
@@ -309,28 +308,28 @@ public class TestBytesReadServerSideScanMetrics {
         for (Result r : scanner) {
           rowCount++;
         }
-        Assert.assertEquals(2, rowCount);
+        assertEquals(2, rowCount);
         scanMetrics = scanner.getScanMetrics();
       }
 
       // Only 1 HFile will be created and it will have only one data block.
       int bytesReadFromFs = getBytesReadFromFsForNonGetScan(tableName, scanMetrics, 1);
-      Assert.assertEquals(bytesReadFromFs, scanMetrics.bytesReadFromFs.get());
+      assertEquals(bytesReadFromFs, scanMetrics.bytesReadFromFs.get());
 
-      Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
+      assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
 
       // Flush happens after first row is returned from server but before second row is returned.
       // So, 2 cells will be read from memstore i.e. the cell for the first row and the next cell
       // at which scanning will stop. Per row we have 1 cell.
       int bytesReadFromMemstore =
         Segment.getCellLength(new KeyValue(ROW2, CF, CQ, HConstants.LATEST_TIMESTAMP, VALUE));
-      Assert.assertEquals(2 * bytesReadFromMemstore, scanMetrics.bytesReadFromMemstore.get());
+      assertEquals(2 * bytesReadFromMemstore, scanMetrics.bytesReadFromMemstore.get());
 
       // There will be 1 read op to read the only data block present in the HFile.
-      Assert.assertEquals(1, scanMetrics.blockReadOpsCount.get());
+      assertEquals(1, scanMetrics.blockReadOpsCount.get());
 
       // More than 1 RPC call should be there
-      Assert.assertEquals(3, scanMetrics.countOfRPCcalls.get());
+      assertEquals(3, scanMetrics.countOfRPCcalls.get());
     } finally {
       UTIL.shutdownMiniCluster();
     }
@@ -340,7 +339,7 @@ public class TestBytesReadServerSideScanMetrics {
   public void testBytesReadInReverseScan() throws Exception {
     UTIL.startMiniCluster();
     try {
-      TableName tableName = TableName.valueOf(name.getMethodName());
+      TableName tableName = TableName.valueOf(name);
       createTable(tableName, true, BloomType.ROW);
       writeData(tableName, true);
       Scan scan = new Scan();
@@ -357,14 +356,14 @@ public class TestBytesReadServerSideScanMetrics {
         for (Result r : scanner) {
           rowCount++;
         }
-        Assert.assertEquals(2, rowCount);
+        assertEquals(2, rowCount);
         scanMetrics = scanner.getScanMetrics();
         System.out.println("Scan metrics: " + scanMetrics.toString());
       }
 
       // 1 data block per HFile was read.
       int bytesReadFromFs = getBytesReadFromFsForNonGetScan(tableName, scanMetrics, 2);
-      Assert.assertEquals(bytesReadFromFs, scanMetrics.bytesReadFromFs.get());
+      assertEquals(bytesReadFromFs, scanMetrics.bytesReadFromFs.get());
 
       // For the HFile containing both the rows, the data block will be read from block cache when
       // KeyValueHeap.next() will be called to read the second row.
@@ -373,14 +372,14 @@ public class TestBytesReadServerSideScanMetrics {
       // kvNext will be null and call to StoreFileScanner.seekToPreviousRow() will be made. As the
       // curBlock of HFileScanner is null so, StoreFileScanner.seekToPreviousRow() will load data
       // block from BlockCache. So, 1 data block will be read from block cache.
-      Assert.assertEquals(bytesReadFromFs / 2, scanMetrics.bytesReadFromBlockCache.get());
-      Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
+      assertEquals(bytesReadFromFs / 2, scanMetrics.bytesReadFromBlockCache.get());
+      assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
 
       // 1 read op per HFile was done by actual scan to read data block.
-      Assert.assertEquals(2, scanMetrics.blockReadOpsCount.get());
+      assertEquals(2, scanMetrics.blockReadOpsCount.get());
 
       // 2 RPC calls will be there
-      Assert.assertEquals(2, scanMetrics.countOfRPCcalls.get());
+      assertEquals(2, scanMetrics.countOfRPCcalls.get());
     } finally {
       UTIL.shutdownMiniCluster();
     }
@@ -390,7 +389,7 @@ public class TestBytesReadServerSideScanMetrics {
   public void testBytesReadWithLazySeek() throws Exception {
     UTIL.startMiniCluster();
     try {
-      TableName tableName = TableName.valueOf(name.getMethodName());
+      TableName tableName = TableName.valueOf(name);
       createTable(tableName, true, BloomType.NONE);
       writeData(tableName, true);
       try (Table table = UTIL.getConnection().getTable(tableName)) {
@@ -411,21 +410,21 @@ public class TestBytesReadServerSideScanMetrics {
           int rowCount = 0;
           for (Result r : scanner) {
             rowCount++;
-            Assert.assertArrayEquals(newValue, r.getValue(CF, CQ));
+            assertArrayEquals(newValue, r.getValue(CF, CQ));
           }
-          Assert.assertEquals(1, rowCount);
+          assertEquals(1, rowCount);
           scanMetrics = scanner.getScanMetrics();
         }
         // No real seek should be done on the HFile.
-        Assert.assertEquals(0, scanMetrics.bytesReadFromFs.get());
-        Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
-        Assert.assertEquals(0, scanMetrics.blockReadOpsCount.get());
+        assertEquals(0, scanMetrics.bytesReadFromFs.get());
+        assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
+        assertEquals(0, scanMetrics.blockReadOpsCount.get());
 
         // The cell should be coming purely from memstore.
         int cellSize =
           Segment.getCellLength(new KeyValue(ROW2, CF, CQ, HConstants.LATEST_TIMESTAMP, newValue));
-        Assert.assertEquals(cellSize, scanMetrics.bytesReadFromMemstore.get());
-        Assert.assertEquals(1, scanMetrics.countOfRPCcalls.get());
+        assertEquals(cellSize, scanMetrics.bytesReadFromMemstore.get());
+        assertEquals(1, scanMetrics.countOfRPCcalls.get());
       }
     } finally {
       UTIL.shutdownMiniCluster();
@@ -443,7 +442,7 @@ public class TestBytesReadServerSideScanMetrics {
     configuration.put(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, Integer.toString(64 * 1024));
     UTIL.startMiniCluster();
     try {
-      TableName tableName = TableName.valueOf(name.getMethodName());
+      TableName tableName = TableName.valueOf(name);
       // Set the block size to 4 bytes to get 1 row per data block in HFile.
       createTable(tableName, true, BloomType.NONE, 4, configuration);
       try (Table table = UTIL.getConnection().getTable(tableName)) {
@@ -461,18 +460,18 @@ public class TestBytesReadServerSideScanMetrics {
           for (Result r : scanner) {
             rowCount++;
           }
-          Assert.assertEquals(2, rowCount);
+          assertEquals(2, rowCount);
           scanMetrics = scanner.getScanMetrics();
         }
 
         // Assert that rows were read from only memstore and involved 2 RPC calls.
         int cellSize =
           Segment.getCellLength(new KeyValue(ROW2, CF, CQ, HConstants.LATEST_TIMESTAMP, VALUE));
-        Assert.assertEquals(0, scanMetrics.bytesReadFromFs.get());
-        Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
-        Assert.assertEquals(0, scanMetrics.blockReadOpsCount.get());
-        Assert.assertEquals(2, scanMetrics.countOfRPCcalls.get());
-        Assert.assertEquals(3 * cellSize, scanMetrics.bytesReadFromMemstore.get());
+        assertEquals(0, scanMetrics.bytesReadFromFs.get());
+        assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
+        assertEquals(0, scanMetrics.blockReadOpsCount.get());
+        assertEquals(2, scanMetrics.countOfRPCcalls.get());
+        assertEquals(3 * cellSize, scanMetrics.bytesReadFromMemstore.get());
 
         // Flush the table and make sure that the rows are read from HFiles.
         flushAndWaitUntilFlushed(tableName, false);
@@ -483,17 +482,17 @@ public class TestBytesReadServerSideScanMetrics {
           for (Result r : scanner) {
             rowCount++;
           }
-          Assert.assertEquals(2, rowCount);
+          assertEquals(2, rowCount);
           scanMetrics = scanner.getScanMetrics();
         }
 
         // Assert that rows were read from HFiles and involved 2 RPC calls.
         int bytesReadFromFs = getBytesReadToReadConsecutiveDataBlocks(tableName, 1, 3, true);
-        Assert.assertEquals(bytesReadFromFs, scanMetrics.bytesReadFromFs.get());
-        Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
-        Assert.assertEquals(3, scanMetrics.blockReadOpsCount.get());
-        Assert.assertEquals(2, scanMetrics.countOfRPCcalls.get());
-        Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
+        assertEquals(bytesReadFromFs, scanMetrics.bytesReadFromFs.get());
+        assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
+        assertEquals(3, scanMetrics.blockReadOpsCount.get());
+        assertEquals(2, scanMetrics.countOfRPCcalls.get());
+        assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
 
         // Make sure that rows are read from Blockcache now.
         scan = createScanToReadOneRowAtATimeFromServer(ROW2, ROW3);
@@ -503,18 +502,18 @@ public class TestBytesReadServerSideScanMetrics {
           for (Result r : scanner) {
             rowCount++;
           }
-          Assert.assertEquals(2, rowCount);
+          assertEquals(2, rowCount);
           scanMetrics = scanner.getScanMetrics();
         }
 
         // Assert that rows were read from Blockcache and involved 2 RPC calls.
         int bytesReadFromBlockCache =
           getBytesReadToReadConsecutiveDataBlocks(tableName, 1, 3, false);
-        Assert.assertEquals(bytesReadFromBlockCache, scanMetrics.bytesReadFromBlockCache.get());
-        Assert.assertEquals(0, scanMetrics.bytesReadFromFs.get());
-        Assert.assertEquals(0, scanMetrics.blockReadOpsCount.get());
-        Assert.assertEquals(2, scanMetrics.countOfRPCcalls.get());
-        Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
+        assertEquals(bytesReadFromBlockCache, scanMetrics.bytesReadFromBlockCache.get());
+        assertEquals(0, scanMetrics.bytesReadFromFs.get());
+        assertEquals(0, scanMetrics.blockReadOpsCount.get());
+        assertEquals(2, scanMetrics.countOfRPCcalls.get());
+        assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
       }
     } finally {
       UTIL.shutdownMiniCluster();
@@ -537,7 +536,7 @@ public class TestBytesReadServerSideScanMetrics {
     }
     UTIL.flush(tableName);
     List<HRegion> regions = UTIL.getMiniHBaseCluster().getRegions(tableName);
-    Assert.assertEquals(1, regions.size());
+    assertEquals(1, regions.size());
     HRegion region = regions.get(0);
     HStore store = region.getStore(CF);
     // In milliseconds
@@ -554,17 +553,17 @@ public class TestBytesReadServerSideScanMetrics {
         throw new Exception("Store files not flushed after " + maxWaitTime + "ms");
       }
     }
-    Assert.assertEquals(1, store.getStorefiles().size());
+    assertEquals(1, store.getStorefiles().size());
   }
 
   private int getBytesReadToReadConsecutiveDataBlocks(TableName tableName,
     int expectedStoreFileCount, int expectedDataBlockCount, boolean isReadFromFs) throws Exception {
     List<HRegion> regions = UTIL.getMiniHBaseCluster().getRegions(tableName);
-    Assert.assertEquals(1, regions.size());
+    assertEquals(1, regions.size());
     HRegion region = regions.get(0);
     HStore store = region.getStore(CF);
     Collection<HStoreFile> storeFiles = store.getStorefiles();
-    Assert.assertEquals(expectedStoreFileCount, storeFiles.size());
+    assertEquals(expectedStoreFileCount, storeFiles.size());
     int bytesReadFromFs = 0;
     for (HStoreFile storeFile : storeFiles) {
       StoreFileReader reader = storeFile.getReader();
@@ -590,12 +589,12 @@ public class TestBytesReadServerSideScanMetrics {
           bytesReadFromFs += block.headerSize();
           readNextBlock = true;
         }
-        Assert.assertTrue(block.getBlockType().isData());
+        assertTrue(block.getBlockType().isData());
       }
       blockIterator.freeBlocks();
       // No intermediate or leaf index blocks are expected.
-      Assert.assertEquals(1, dataIndexLevels);
-      Assert.assertEquals(expectedDataBlockCount, blockCount);
+      assertEquals(1, dataIndexLevels);
+      assertEquals(expectedDataBlockCount, blockCount);
     }
     return bytesReadFromFs;
   }
@@ -603,11 +602,11 @@ public class TestBytesReadServerSideScanMetrics {
   private int getBytesReadFromFsForNonGetScan(TableName tableName, ScanMetrics scanMetrics,
     int expectedStoreFileCount) throws Exception {
     List<HRegion> regions = UTIL.getMiniHBaseCluster().getRegions(tableName);
-    Assert.assertEquals(1, regions.size());
+    assertEquals(1, regions.size());
     HRegion region = regions.get(0);
     HStore store = region.getStore(CF);
     Collection<HStoreFile> storeFiles = store.getStorefiles();
-    Assert.assertEquals(expectedStoreFileCount, storeFiles.size());
+    assertEquals(expectedStoreFileCount, storeFiles.size());
     int bytesReadFromFs = 0;
     for (HStoreFile storeFile : storeFiles) {
       StoreFileReader reader = storeFile.getReader();
@@ -618,7 +617,7 @@ public class TestBytesReadServerSideScanMetrics {
       // Read the first block of the HFile. First block is always expected to be a DATA block and
       // the HFile is expected to have only one DATA block.
       HFileBlock block = blockReader.readBlockData(0, -1, true, true, true);
-      Assert.assertTrue(block.getBlockType().isData());
+      assertTrue(block.getBlockType().isData());
       bytesReadFromFs += block.getOnDiskSizeWithHeader();
       if (block.getNextBlockOnDiskSize() > 0) {
         bytesReadFromFs += block.headerSize();
@@ -626,7 +625,7 @@ public class TestBytesReadServerSideScanMetrics {
       block.release();
       // Each of the HFiles is expected to have only root index but no intermediate or leaf index
       // blocks.
-      Assert.assertEquals(1, dataIndexLevels);
+      assertEquals(1, dataIndexLevels);
     }
     return bytesReadFromFs;
   }
@@ -645,7 +644,7 @@ public class TestBytesReadServerSideScanMetrics {
       for (Result r : scanner) {
         rowCount++;
       }
-      Assert.assertEquals(1, rowCount);
+      assertEquals(1, rowCount);
       scanMetrics = scanner.getScanMetrics();
     }
     if (isScanMetricsEnabled) {
@@ -708,19 +707,19 @@ public class TestBytesReadServerSideScanMetrics {
   private void assertBytesReadFromFs(TableName tableName, long actualBytesReadFromFs,
     KeyValue keyValue, long actualReadOps) throws Exception {
     List<HRegion> regions = UTIL.getMiniHBaseCluster().getRegions(tableName);
-    Assert.assertEquals(1, regions.size());
+    assertEquals(1, regions.size());
     MutableInt totalExpectedBytesReadFromFs = new MutableInt(0);
     MutableInt totalExpectedReadOps = new MutableInt(0);
     for (HRegion region : regions) {
-      Assert.assertNull(region.getBlockCache());
+      assertNull(region.getBlockCache());
       HStore store = region.getStore(CF);
       Collection<HStoreFile> storeFiles = store.getStorefiles();
-      Assert.assertEquals(2, storeFiles.size());
+      assertEquals(2, storeFiles.size());
       for (HStoreFile storeFile : storeFiles) {
         StoreFileReader reader = storeFile.getReader();
         HFile.Reader hfileReader = reader.getHFileReader();
         BloomFilter bloomFilter = reader.getGeneralBloomFilter();
-        Assert.assertTrue(bloomFilter == null || bloomFilter instanceof CompoundBloomFilter);
+        assertTrue(bloomFilter == null || bloomFilter instanceof CompoundBloomFilter);
         CompoundBloomFilter cbf = bloomFilter == null ? null : (CompoundBloomFilter) bloomFilter;
         Consumer<HFileBlock> bytesReadFunction = new Consumer<HFileBlock>() {
           @Override
@@ -735,8 +734,8 @@ public class TestBytesReadServerSideScanMetrics {
         readHFile(hfileReader, cbf, keyValue, bytesReadFunction);
       }
     }
-    Assert.assertEquals(totalExpectedBytesReadFromFs.longValue(), actualBytesReadFromFs);
-    Assert.assertEquals(totalExpectedReadOps.longValue(), actualReadOps);
+    assertEquals(totalExpectedBytesReadFromFs.longValue(), actualBytesReadFromFs);
+    assertEquals(totalExpectedReadOps.longValue(), actualReadOps);
   }
 
   private void readHFile(HFile.Reader hfileReader, CompoundBloomFilter cbf, KeyValue keyValue,
@@ -761,7 +760,7 @@ public class TestBytesReadServerSideScanMetrics {
         bloomBlock.getUncompressedSizeWithoutHeader(), cbf.getHash(), cbf.getHashCount());
       bytesReadFunction.accept(bloomBlock);
       // Asser that the block read is a bloom block
-      Assert.assertEquals(bloomBlock.getBlockType(), BlockType.BLOOM_CHUNK);
+      assertEquals(bloomBlock.getBlockType(), BlockType.BLOOM_CHUNK);
       bloomBlock.release();
       if (!fileContainsKey) {
         // Key is not in th file, so we don't need to read the data block
@@ -810,24 +809,24 @@ public class TestBytesReadServerSideScanMetrics {
     block.release();
     blockIter.freeBlocks();
 
-    Assert.assertEquals(blockLevelsRead, trailer.getNumDataIndexLevels() + 1);
+    assertEquals(blockLevelsRead, trailer.getNumDataIndexLevels() + 1);
   }
 
   private void assertBytesReadFromBlockCache(TableName tableName,
     long actualBytesReadFromBlockCache, KeyValue keyValue) throws Exception {
     List<HRegion> regions = UTIL.getMiniHBaseCluster().getRegions(tableName);
-    Assert.assertEquals(1, regions.size());
+    assertEquals(1, regions.size());
     MutableInt totalExpectedBytesReadFromBlockCache = new MutableInt(0);
     for (HRegion region : regions) {
-      Assert.assertNotNull(region.getBlockCache());
+      assertNotNull(region.getBlockCache());
       HStore store = region.getStore(CF);
       Collection<HStoreFile> storeFiles = store.getStorefiles();
-      Assert.assertEquals(2, storeFiles.size());
+      assertEquals(2, storeFiles.size());
       for (HStoreFile storeFile : storeFiles) {
         StoreFileReader reader = storeFile.getReader();
         HFile.Reader hfileReader = reader.getHFileReader();
         BloomFilter bloomFilter = reader.getGeneralBloomFilter();
-        Assert.assertTrue(bloomFilter == null || bloomFilter instanceof CompoundBloomFilter);
+        assertTrue(bloomFilter == null || bloomFilter instanceof CompoundBloomFilter);
         CompoundBloomFilter cbf = bloomFilter == null ? null : (CompoundBloomFilter) bloomFilter;
         Consumer<HFileBlock> bytesReadFunction = new Consumer<HFileBlock>() {
           @Override
@@ -841,23 +840,22 @@ public class TestBytesReadServerSideScanMetrics {
         readHFile(hfileReader, cbf, keyValue, bytesReadFunction);
       }
     }
-    Assert.assertEquals(totalExpectedBytesReadFromBlockCache.longValue(),
-      actualBytesReadFromBlockCache);
+    assertEquals(totalExpectedBytesReadFromBlockCache.longValue(), actualBytesReadFromBlockCache);
   }
 
   private void assertBlockCacheWarmUp(TableName tableName, KeyValue keyValue) throws Exception {
     List<HRegion> regions = UTIL.getMiniHBaseCluster().getRegions(tableName);
-    Assert.assertEquals(1, regions.size());
+    assertEquals(1, regions.size());
     for (HRegion region : regions) {
-      Assert.assertNotNull(region.getBlockCache());
+      assertNotNull(region.getBlockCache());
       HStore store = region.getStore(CF);
       Collection<HStoreFile> storeFiles = store.getStorefiles();
-      Assert.assertEquals(2, storeFiles.size());
+      assertEquals(2, storeFiles.size());
       for (HStoreFile storeFile : storeFiles) {
         StoreFileReader reader = storeFile.getReader();
         HFile.Reader hfileReader = reader.getHFileReader();
         BloomFilter bloomFilter = reader.getGeneralBloomFilter();
-        Assert.assertTrue(bloomFilter == null || bloomFilter instanceof CompoundBloomFilter);
+        assertTrue(bloomFilter == null || bloomFilter instanceof CompoundBloomFilter);
         CompoundBloomFilter cbf = bloomFilter == null ? null : (CompoundBloomFilter) bloomFilter;
         Consumer<HFileBlock> bytesReadFunction = new Consumer<HFileBlock>() {
           @Override
@@ -878,9 +876,9 @@ public class TestBytesReadServerSideScanMetrics {
     Path path = hfileReader.getPath();
     BlockCacheKey key = new BlockCacheKey(path, block.getOffset(), true, block.getBlockType());
     HFileBlock cachedBlock = (HFileBlock) blockCache.getBlock(key, true, false, true);
-    Assert.assertNotNull(cachedBlock);
-    Assert.assertEquals(block.getOnDiskSizeWithHeader(), cachedBlock.getOnDiskSizeWithHeader());
-    Assert.assertEquals(block.getNextBlockOnDiskSize(), cachedBlock.getNextBlockOnDiskSize());
+    assertNotNull(cachedBlock);
+    assertEquals(block.getOnDiskSizeWithHeader(), cachedBlock.getOnDiskSizeWithHeader());
+    assertEquals(block.getNextBlockOnDiskSize(), cachedBlock.getNextBlockOnDiskSize());
     cachedBlock.release();
   }
 

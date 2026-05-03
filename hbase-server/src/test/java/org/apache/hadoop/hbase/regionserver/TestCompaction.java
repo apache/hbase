@@ -29,11 +29,11 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -61,7 +61,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -92,15 +91,13 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.After;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -109,15 +106,11 @@ import org.slf4j.LoggerFactory;
 /**
  * Test compaction framework and common functions
  */
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestCompaction {
+  private String name;
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompaction.class);
-
-  @Rule
-  public TestName name = new TestName();
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   protected Configuration conf = UTIL.getConfiguration();
 
@@ -149,10 +142,11 @@ public class TestCompaction {
       (byte) (thirdRowBytes[START_KEY_BYTES.length - 1] + 2);
   }
 
-  @Before
-  public void setUp() throws Exception {
-    TableDescriptorBuilder builder = UTIL.createModifyableTableDescriptor(name.getMethodName());
-    if (name.getMethodName().equals("testCompactionSeqId")) {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    this.name = testInfo.getTestMethod().get().getName();
+    TableDescriptorBuilder builder = UTIL.createModifyableTableDescriptor(name);
+    if (name.equals("testCompactionSeqId")) {
       UTIL.getConfiguration().set("hbase.hstore.compaction.kv.max", "10");
       UTIL.getConfiguration().set(DefaultStoreEngine.DEFAULT_COMPACTOR_CLASS_KEY,
         DummyCompactor.class.getName());
@@ -161,8 +155,8 @@ public class TestCompaction {
       builder.setColumnFamily(familyDescriptor);
     }
     if (
-      name.getMethodName().equals("testCompactionWithCorruptBlock")
-        || name.getMethodName().equals("generateHFileForCorruptBlockTest")
+      name.equals("testCompactionWithCorruptBlock")
+        || name.equals("generateHFileForCorruptBlockTest")
     ) {
       UTIL.getConfiguration().setBoolean("hbase.hstore.validate.read_fully", true);
       ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY)
@@ -173,7 +167,7 @@ public class TestCompaction {
     this.r = UTIL.createLocalHRegion(tableDescriptor, null, null);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     WAL wal = r.getWAL();
     this.r.close();
@@ -395,7 +389,7 @@ public class TestCompaction {
    * be hand-edited to corrupt the first data block (zero out the GZip magic bytes at offset 33)
    * before being placed into the test resources directory.
    */
-  @Ignore("Not a test; utility for regenerating testCompactionWithCorruptBlock resource file")
+  @Disabled("Not a test; utility for regenerating testCompactionWithCorruptBlock resource file")
   @Test
   public void generateHFileForCorruptBlockTest() throws Exception {
     createStoreFile(r, Bytes.toString(FAMILY));
@@ -534,10 +528,11 @@ public class TestCompaction {
       long postCompletedCount = metricsWrapper.getNumCompactionsCompleted();
       long postFailedCount = metricsWrapper.getNumCompactionsFailed();
 
-      assertTrue("Completed count should have increased (pre=" + preCompletedCount + ", post="
-        + postCompletedCount + ")", postCompletedCount > preCompletedCount);
-      assertTrue("Failed count should have increased (pre=" + preFailedCount + ", post="
-        + postFailedCount + ")", postFailedCount > preFailedCount);
+      assertTrue(postCompletedCount > preCompletedCount,
+        "Completed count should have increased (pre=" + preCompletedCount + ", post="
+          + postCompletedCount + ")");
+      assertTrue(postFailedCount > preFailedCount, "Failed count should have increased (pre="
+        + preFailedCount + ", post=" + postFailedCount + ")");
     }
   }
 
@@ -563,9 +558,8 @@ public class TestCompaction {
     assertFalse(thread.isCompactionsEnabled());
     int longCompactions = thread.getLongCompactions().getActiveCount();
     int shortCompactions = thread.getShortCompactions().getActiveCount();
-    assertEquals(
-      "longCompactions=" + longCompactions + "," + "shortCompactions=" + shortCompactions, 0,
-      longCompactions + shortCompactions);
+    assertEquals(0, longCompactions + shortCompactions,
+      "longCompactions=" + longCompactions + "," + "shortCompactions=" + shortCompactions);
     thread.switchCompaction(true);
     assertTrue(thread.isCompactionsEnabled());
     // Make sure no compactions have run.
@@ -747,7 +741,7 @@ public class TestCompaction {
             this.wait();
           }
         } catch (InterruptedException e) {
-          Assume.assumeNoException(e);
+          Assumptions.abort(e.getMessage());
         }
         return new ArrayList<>();
       }
