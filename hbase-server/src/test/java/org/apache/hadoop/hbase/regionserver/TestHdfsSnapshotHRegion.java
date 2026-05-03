@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import java.io.IOException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -31,19 +32,14 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestHdfsSnapshotHRegion {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHdfsSnapshotHRegion.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final String SNAPSHOT_NAME = "foo_snapshot";
@@ -53,7 +49,7 @@ public class TestHdfsSnapshotHRegion {
   private DFSClient client;
   private String baseDir;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration c = TEST_UTIL.getConfiguration();
     c.setBoolean("dfs.support.append", true);
@@ -69,7 +65,7 @@ public class TestHdfsSnapshotHRegion {
     client.allowSnapshot(baseDir);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     client.deleteSnapshot(baseDir, SNAPSHOT_NAME);
     TEST_UTIL.shutdownMiniCluster();
@@ -82,7 +78,7 @@ public class TestHdfsSnapshotHRegion {
       .getAllRegionLocations().stream().findFirst().get().getRegion();
     Path tableDir = CommonFSUtils.getTableDir(new Path(snapshotDir), TABLE_NAME);
     HRegion snapshottedRegion = openSnapshotRegion(firstRegion, tableDir);
-    Assert.assertNotNull(snapshottedRegion);
+    assertNotNull(snapshottedRegion);
     snapshottedRegion.close();
   }
 
@@ -105,7 +101,7 @@ public class TestHdfsSnapshotHRegion {
     // everything should still open just fine
     HRegion snapshottedRegion =
       openSnapshotRegion(firstRegion, CommonFSUtils.getTableDir(new Path(snapshotDir), TABLE_NAME));
-    Assert.assertNotNull(snapshottedRegion); // no errors and the region should open
+    assertNotNull(snapshottedRegion); // no errors and the region should open
     snapshottedRegion.close();
   }
 

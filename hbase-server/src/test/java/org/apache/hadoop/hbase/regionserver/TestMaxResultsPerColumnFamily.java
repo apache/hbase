@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -33,20 +32,15 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestMaxResultsPerColumnFamily {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMaxResultsPerColumnFamily.class);
 
   private static final byte[][] FAMILIES = { Bytes.toBytes("1"), Bytes.toBytes("2") };
 
@@ -55,22 +49,26 @@ public class TestMaxResultsPerColumnFamily {
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Rule
-  public TestName name = new TestName();
+  private String name;
+
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    this.name = testInfo.getTestMethod().get().getName();
+  }
 
   @Test
   public void testSetMaxResultsPerColumnFamilySimple() throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(name);
     Admin admin = UTIL.getAdmin();
     ColumnFamilyDescriptorBuilder cfBuilder0 =
       ColumnFamilyDescriptorBuilder.newBuilder(FAMILIES[0]);

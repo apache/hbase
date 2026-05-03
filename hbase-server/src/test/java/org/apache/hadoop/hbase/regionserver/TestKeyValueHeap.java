@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,22 +31,17 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestKeyValueHeap {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestKeyValueHeap.class);
 
   private byte[] row1 = Bytes.toBytes("row1");
   private byte[] fam1 = Bytes.toBytes("fam1");
@@ -130,8 +125,8 @@ public class TestKeyValueHeap {
 
       List<Cell> actual = Arrays.asList(kvh.peek());
 
-      assertEquals("Expected = " + Arrays.toString(expected.toArray()) + "\n Actual = "
-        + Arrays.toString(actual.toArray()), expected, actual);
+      assertEquals(expected, actual, "Expected = " + Arrays.toString(expected.toArray())
+        + "\n Actual = " + Arrays.toString(actual.toArray()));
     }
   }
 
@@ -242,8 +237,8 @@ public class TestKeyValueHeap {
 
     // Verify that before closing, files are not returned
     Set<Path> filesReadBeforeClose = keyValueHeap.getFilesRead();
-    assertTrue("Should return empty set before closing heap", filesReadBeforeClose.isEmpty());
-    assertEquals("Should have 0 files before closing", 0, filesReadBeforeClose.size());
+    assertTrue(filesReadBeforeClose.isEmpty(), "Should return empty set before closing heap");
+    assertEquals(0, filesReadBeforeClose.size(), "Should have 0 files before closing");
 
     // Now close the heap
     keyValueHeap.close();
@@ -251,16 +246,16 @@ public class TestKeyValueHeap {
     // After closing, should return all files from file-based scanners only
     // Non-file-based scanners (like memstore) should not contribute files
     Set<Path> filesReadAfterClose = keyValueHeap.getFilesRead();
-    assertEquals("Should return set with 3 file paths after closing (excluding non-file scanner)",
-      3, filesReadAfterClose.size());
-    assertTrue("Should contain file1", filesReadAfterClose.contains(file1));
-    assertTrue("Should contain file2", filesReadAfterClose.contains(file2));
-    assertTrue("Should contain file3", filesReadAfterClose.contains(file3));
+    assertEquals(3, filesReadAfterClose.size(),
+      "Should return set with 3 file paths after closing (excluding non-file scanner)");
+    assertTrue(filesReadAfterClose.contains(file1), "Should contain file1");
+    assertTrue(filesReadAfterClose.contains(file2), "Should contain file2");
+    assertTrue(filesReadAfterClose.contains(file3), "Should contain file3");
 
     // Verify that non-file-based scanner doesn't contribute any files
     // (memStoreScanner.getFilesRead() should return empty set)
     Set<Path> memStoreFiles = memStoreScanner.getFilesRead();
-    assertTrue("Non-file-based scanner should return empty set", memStoreFiles.isEmpty());
+    assertTrue(memStoreFiles.isEmpty(), "Non-file-based scanner should return empty set");
   }
 
   private static class TestScanner extends CollectionBackedScanner {

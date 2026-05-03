@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
@@ -43,11 +42,10 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,18 +53,18 @@ import org.slf4j.LoggerFactory;
  * Tests that need to spin up a cluster testing an {@link HRegion}. Use {@link TestHRegion} if you
  * don't need a cluster, if you can test w/ a standalone {@link HRegion}.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestHRegionOnCluster {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHRegionOnCluster.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHRegionOnCluster.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private String name;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    this.name = testInfo.getTestMethod().get().getName();
+  }
 
   @Test
   public void testDataCorrectnessReplayingRecoveredEdits() throws Exception {
@@ -75,7 +73,7 @@ public class TestHRegionOnCluster {
     TEST_UTIL.startMiniCluster(NUM_RS);
 
     try {
-      final TableName tableName = TableName.valueOf(name.getMethodName());
+      final TableName tableName = TableName.valueOf(name);
       final byte[] FAMILY = Bytes.toBytes("family");
       SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       HMaster master = cluster.getMaster();
