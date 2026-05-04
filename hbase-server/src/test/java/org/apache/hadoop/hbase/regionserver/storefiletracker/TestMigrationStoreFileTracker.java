@@ -19,15 +19,16 @@ package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -45,29 +46,21 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: src={0}, dst={1}")
 public class TestMigrationStoreFileTracker {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMigrationStoreFileTracker.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -81,14 +74,17 @@ public class TestMigrationStoreFileTracker {
 
   private static final RegionInfo RI = RegionInfoBuilder.newBuilder(TD.getTableName()).build();
 
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
-  @Parameter(0)
-  public StoreFileTrackerFactory.Trackers srcImpl;
+  private final StoreFileTrackerFactory.Trackers srcImpl;
 
-  @Parameter(1)
-  public StoreFileTrackerFactory.Trackers dstImpl;
+  private final StoreFileTrackerFactory.Trackers dstImpl;
+
+  public TestMigrationStoreFileTracker(StoreFileTrackerFactory.Trackers srcImpl,
+    StoreFileTrackerFactory.Trackers dstImpl) {
+    this.srcImpl = srcImpl;
+    this.dstImpl = dstImpl;
+  }
 
   private HRegion region;
 
@@ -96,9 +92,8 @@ public class TestMigrationStoreFileTracker {
 
   private WAL wal;
 
-  @Parameters(name = "{index}: src={0}, dst={1}")
-  public static List<Object[]> params() {
-    List<Object[]> params = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     for (StoreFileTrackerFactory.Trackers src : StoreFileTrackerFactory.Trackers.values()) {
       for (StoreFileTrackerFactory.Trackers dst : StoreFileTrackerFactory.Trackers.values()) {
         if (
@@ -110,28 +105,29 @@ public class TestMigrationStoreFileTracker {
         if (src.equals(dst)) {
           continue;
         }
-        params.add(new Object[] { src, dst });
+        params.add(Arguments.of(src, dst));
       }
     }
-    return params;
+    return params.stream();
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() {
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
       MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
   }
 
-  @Before
-  public void setUp() throws IOException {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
+    name = testInfo.getTestMethod().get().getName();
     Configuration conf = UTIL.getConfiguration();
     conf.set(MigrationStoreFileTracker.SRC_IMPL, srcImpl.name().toLowerCase());
     conf.set(MigrationStoreFileTracker.DST_IMPL, dstImpl.name().toLowerCase());
-    rootDir = UTIL.getDataTestDir(name.getMethodName().replaceAll("[=:\\[ ]", "_"));
+    rootDir = UTIL.getDataTestDir(name.replaceAll("[=:\\[ ]", "_"));
     wal = HBaseTestingUtil.createWal(conf, rootDir, RI);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (region != null) {
       region.close();
@@ -181,7 +177,7 @@ public class TestMigrationStoreFileTracker {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testMigration() throws IOException {
     region = createRegion(srcImpl.clazz.asSubclass(StoreFileTrackerBase.class));
     putData(0, 100);

@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
@@ -106,13 +106,11 @@ import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.apache.hadoop.hdfs.DFSInputStream;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -134,10 +132,8 @@ public abstract class AbstractTestWALReplay {
   private Configuration conf;
   private WALFactory wals;
 
-  @Rule
-  public final TestName currentTest = new TestName();
+  private String currentTest;
 
-  @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     // The below config supported by 0.20-append and CDH3b2
@@ -148,29 +144,29 @@ public abstract class AbstractTestWALReplay {
     CommonFSUtils.setRootDir(conf, hbaseRootDir);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    currentTest = testInfo.getTestMethod().get().getName();
     this.conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
     this.fs = TEST_UTIL.getDFSCluster().getFileSystem();
     this.hbaseRootDir = CommonFSUtils.getRootDir(this.conf);
     this.oldLogDir = new Path(this.hbaseRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     String serverName = ServerName
-      .valueOf(currentTest.getMethodName() + "-manual", 16010, EnvironmentEdgeManager.currentTime())
-      .toString();
+      .valueOf(currentTest + "-manual", 16010, EnvironmentEdgeManager.currentTime()).toString();
     this.logName = AbstractFSWALProvider.getWALDirectoryName(serverName);
     this.logDir = new Path(this.hbaseRootDir, logName);
     if (TEST_UTIL.getDFSCluster().getFileSystem().exists(this.hbaseRootDir)) {
       TEST_UTIL.getDFSCluster().getFileSystem().delete(this.hbaseRootDir, true);
     }
-    this.wals = new WALFactory(conf, currentTest.getMethodName());
+    this.wals = new WALFactory(conf, currentTest);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     this.wals.close();
     TEST_UTIL.getDFSCluster().getFileSystem().delete(this.hbaseRootDir, true);
@@ -217,8 +213,8 @@ public abstract class AbstractTestWALReplay {
     // move region to another regionserver
     Region destRegion = regions.get(0);
     int originServerNum = hbaseCluster.getServerWith(destRegion.getRegionInfo().getRegionName());
-    assertTrue("Please start more than 1 regionserver",
-      hbaseCluster.getRegionServerThreads().size() > 1);
+    assertTrue(hbaseCluster.getRegionServerThreads().size() > 1,
+      "Please start more than 1 regionserver");
     int destServerNum = 0;
     while (destServerNum == originServerNum) {
       destServerNum++;
@@ -257,8 +253,8 @@ public abstract class AbstractTestWALReplay {
     // see what we get
     Result result = htable.get(new Get(Bytes.toBytes("r1")));
     if (result != null) {
-      assertTrue("Row is deleted, but we get" + result.toString(),
-        (result == null) || result.isEmpty());
+      assertTrue((result == null) || result.isEmpty(),
+        "Row is deleted, but we get" + result.toString());
     }
     resultScanner.close();
   }
@@ -807,7 +803,7 @@ public abstract class AbstractTestWALReplay {
           long writePoint = mvcc.getWritePoint();
 
           // We flushed during init.
-          assertTrue("Flushcount=" + flushcount.get(), flushcount.get() > 0);
+          assertTrue(flushcount.get() > 0, "Flushcount=" + flushcount.get());
           assertTrue((seqid - 1) == writePoint);
 
           Get get = new Get(rowName);
@@ -826,7 +822,7 @@ public abstract class AbstractTestWALReplay {
   @Test
   // the following test is for HBASE-6065
   public void testSequentialEditLogSeqNum() throws IOException {
-    final TableName tableName = TableName.valueOf(currentTest.getMethodName());
+    final TableName tableName = TableName.valueOf(currentTest);
     final RegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = CommonFSUtils.getWALTableDir(conf, tableName);
     deleteDir(basedir);
@@ -874,9 +870,8 @@ public abstract class AbstractTestWALReplay {
       editCount = Integer.parseInt(fileStatus.getPath().getName());
     }
     // The sequence number should be same
-    assertEquals(
-      "The sequence number of the recoverd.edits and the current edit seq should be same",
-      lastestSeqNumber, editCount);
+    assertEquals(lastestSeqNumber, editCount,
+      "The sequence number of the recoverd.edits and the current edit seq should be same");
   }
 
   /**
@@ -1163,7 +1158,7 @@ public abstract class AbstractTestWALReplay {
     List<Path> splits =
       WALSplitter.split(hbaseRootDir, logDir, oldLogDir, FileSystem.get(c), c, wals);
     // Split should generate only 1 file since there's only 1 region
-    assertEquals("splits=" + splits, 1, splits.size());
+    assertEquals(1, splits.size(), "splits=" + splits);
     // Make sure the file exists
     assertTrue(fs.exists(splits.get(0)));
     LOG.info("Split file=" + splits.get(0));
