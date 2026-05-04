@@ -32,14 +32,11 @@ public class TestSyncFuture {
 
   @Test
   public void testGet() throws Exception {
-    assertThrows(TimeoutIOException.class, () -> {
-      long timeout = 5000;
-      long txid = 100000;
-      SyncFuture syncFuture = new SyncFuture().reset(txid, false);
-      syncFuture.done(txid, null);
-      assertEquals(txid, syncFuture.get(timeout));
-
-      syncFuture.reset(txid, false).get(timeout);
-    });
+    long timeout = 5000;
+    long txid = 100000;
+    SyncFuture syncFuture = new SyncFuture().reset(txid, false);
+    syncFuture.done(txid, null);
+    assertEquals(txid, syncFuture.get(timeout));
+    assertThrows(TimeoutIOException.class, () -> syncFuture.reset(txid, false).get(timeout));
   }
 }

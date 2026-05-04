@@ -42,10 +42,8 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.TestServerHttpUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 
 /**
  * Tests for the region server status page and its template.
@@ -59,13 +57,6 @@ public class TestRSStatusPage {
   private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   public static final String TEST_TABLE_NAME_1 = "TEST_TABLE_1";
   public static final String TEST_TABLE_NAME_2 = "TEST_TABLE_2";
-
-  private String name;
-
-  @BeforeEach
-  public void initTestName(TestInfo testInfo) {
-    name = testInfo.getTestMethod().get().getName();
-  }
 
   @BeforeAll
   public static void beforeClass() throws Exception {
