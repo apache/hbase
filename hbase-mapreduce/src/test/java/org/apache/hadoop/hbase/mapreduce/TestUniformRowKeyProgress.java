@@ -27,9 +27,9 @@ import org.junit.jupiter.api.Test;
 
 @Tag(MapReduceTests.TAG)
 @Tag(SmallTests.TAG)
-public class TestByteBasedRowKeyProgress {
+public class TestUniformRowKeyProgress {
   private static RowKeyProgress create(byte[] start, byte[] stop) {
-    RowKeyProgress p = new ByteBasedRowKeyProgress();
+    RowKeyProgress p = new UniformRowKeyProgress();
     p.setStartStopRows(start, stop);
     return p;
   }

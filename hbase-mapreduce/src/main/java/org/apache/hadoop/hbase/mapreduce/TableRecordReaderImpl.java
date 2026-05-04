@@ -164,7 +164,7 @@ public class TableRecordReaderImpl {
     }
     Configuration conf = context.getConfiguration();
     Class<? extends RowKeyProgress> progressClass = conf.getClass(RowKeyProgress.PROGRESS_CLASS_KEY,
-      ByteBasedRowKeyProgress.class, RowKeyProgress.class);
+      UniformRowKeyProgress.class, RowKeyProgress.class);
     rowKeyProgress = ReflectionUtils.newInstance(progressClass, conf);
     rowKeyProgress.setStartStopRows(startRow, stopRow);
   }

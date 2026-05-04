@@ -17,46 +17,35 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * {@link RowKeyProgress} implementation for tables whose row keys start with a hex-encoded prefix
- * (e.g. MD5 hashes like {@code "a3f2b1..."}). Only the hex prefix is used for progress estimation;
- * bytes beyond the prefix length are ignored.
- * <p>
- * The prefix length is configurable via {@link #PREFIX_LENGTH_KEY} and defaults to
- * {@link #DEFAULT_PREFIX_LENGTH}.
- * <p>
- * Configure via:
- *
- * <pre>
- * conf.setClass("hbase.mapreduce.rowkey.progress.class", HexPrefixRowKeyProgress.class,
- *   RowKeyProgress.class);
- * conf.setInt("hbase.mapreduce.rowkey.progress.hex.prefix.length", 8);
- * </pre>
+ * {@link RowKeyProgress} implementation for hex-encoded row keys (e.g. MD5/SHA prefixes). Non-hex
+ * bytes contribute zero.
  */
 @InterfaceAudience.Public
-public class HexPrefixRowKeyProgress extends Configured implements RowKeyProgress {
-  public static final String PREFIX_LENGTH_KEY =
-    "hbase.mapreduce.rowkey.progress.hex.prefix.length";
-  public static final int DEFAULT_PREFIX_LENGTH = 4;
+public class HexStringRowKeyProgress implements RowKeyProgress {
+  /**
+   * Cap on hex characters interpreted. A {@code double} mantissa carries ~53 bits (~13 hex chars);
+   * reading more adds no information and risks precision loss.
+   */
+  private static final int MAX_PREFIX_LENGTH = 13;
 
-  private int prefixLength = DEFAULT_PREFIX_LENGTH;
+  /**
+   * Hex characters past the start/stop divergence point to include for resolution. 4 hex chars = 65
+   * 536 buckets, finer than any progress bar can display.
+   */
+  private static final int RESOLUTION_PADDING = 4;
+
+  private int prefixLength;
   private double start;
   private double stop;
 
   @Override
-  public void setConf(Configuration conf) {
-    super.setConf(conf);
-    if (conf != null) {
-      this.prefixLength = conf.getInt(PREFIX_LENGTH_KEY, DEFAULT_PREFIX_LENGTH);
-    }
-  }
-
-  @Override
   public void setStartStopRows(byte[] startRow, byte[] stopRow) {
+    int common = commonPrefixLength(startRow, stopRow);
+    this.prefixLength = Math.min(common + RESOLUTION_PADDING, MAX_PREFIX_LENGTH);
     this.start = hexPrefixToDouble(startRow);
     this.stop = hexPrefixToDouble(stopRow);
   }
@@ -69,6 +58,13 @@ public class HexPrefixRowKeyProgress extends Configured implements RowKeyProgres
     double current = hexPrefixToDouble(currentRow);
     float progress = (float) ((current - start) / (stop - start));
     return Math.min(1.0f, Math.max(0.0f, progress));
+  }
+
+  private static int commonPrefixLength(byte[] a, byte[] b) {
+    if (a == null || b == null) {
+      return 0;
+    }
+    return Bytes.findCommonPrefix(a, b, a.length, b.length, 0, 0);
   }
 
   private double hexPrefixToDouble(byte[] row) {

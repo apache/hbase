@@ -25,7 +25,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * of the key space.
  */
 @InterfaceAudience.Public
-public class ByteBasedRowKeyProgress implements RowKeyProgress {
+public class UniformRowKeyProgress implements RowKeyProgress {
   private static final int BYTES_FOR_PROGRESS = Double.BYTES;
 
   private double start;
