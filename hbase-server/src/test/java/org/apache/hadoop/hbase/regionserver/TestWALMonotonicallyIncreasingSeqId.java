@@ -17,17 +17,18 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -48,18 +49,13 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALStreamReader;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,14 +70,10 @@ import org.slf4j.LoggerFactory;
  * This case use two thread to put and increment at the same time in a single region. Then check the
  * seqid in WAL. If seqid is wal is not monotonically increasing, this case will fail
  */
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: wal={0}")
 public class TestWALMonotonicallyIncreasingSeqId {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALMonotonicallyIncreasingSeqId.class);
-
   private final Logger LOG = LoggerFactory.getLogger(getClass());
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Path testDir = TEST_UTIL.getDataTestDir("TestWALMonotonicallyIncreasingSeqId");
@@ -90,15 +82,16 @@ public class TestWALMonotonicallyIncreasingSeqId {
   private Configuration walConf;
   private HRegion region;
 
-  @Parameter
   public String walProvider;
 
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
-  @Parameters(name = "{index}: wal={0}")
-  public static List<Object[]> data() {
-    return Arrays.asList(new Object[] { "asyncfs" }, new Object[] { "filesystem" });
+  public TestWALMonotonicallyIncreasingSeqId(String walProvider) {
+    this.walProvider = walProvider;
+  }
+
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of("asyncfs"), Arguments.of("filesystem"));
   }
 
   private TableDescriptor getTableDesc(TableName tableName, byte[]... families) {
@@ -184,22 +177,27 @@ public class TestWALMonotonicallyIncreasingSeqId {
     }
   }
 
-  @Before
-  public void setUp() throws IOException {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
+    this.name = testInfo.getTestMethod().get().getName();
     byte[][] families = new byte[][] { Bytes.toBytes("cf") };
-    TableDescriptor htd = getTableDesc(
-      TableName.valueOf(name.getMethodName().replaceAll("[^0-9A-Za-z_]", "_")), families);
+    TableDescriptor htd =
+      getTableDesc(TableName.valueOf(name.replaceAll("[^0-9A-Za-z_]", "_")), families);
     region = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 0);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (region != null) {
       region.close();
     }
+    if (wals != null) {
+      wals.close();
+      wals = null;
+    }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws IOException {
     TEST_UTIL.cleanupTestDir();
   }
@@ -212,7 +210,7 @@ public class TestWALMonotonicallyIncreasingSeqId {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testWALMonotonicallyIncreasingSeqId() throws Exception {
     List<Thread> putThreads = new ArrayList<>();
     for (int i = 0; i < 1; i++) {

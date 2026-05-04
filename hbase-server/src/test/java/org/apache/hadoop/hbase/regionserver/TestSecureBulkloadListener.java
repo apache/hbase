@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
@@ -25,7 +30,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -35,29 +39,22 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TemporaryFolder;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Tests for failedBulkLoad logic to make sure staged files are returned to their original location
  * if the bulkload have failed.
  */
-@Category({ MiscTests.class, LargeTests.class })
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSecureBulkloadListener {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSecureBulkloadListener.class);
-
-  @ClassRule
-  public static TemporaryFolder testFolder = new TemporaryFolder();
+  @TempDir
+  public static File testFolder;
   private Configuration conf;
   private MiniDFSCluster cluster;
   private HBaseTestingUtil htu;
@@ -70,11 +67,11 @@ public class TestSecureBulkloadListener {
   private static final String STAGING_DIR = "staging";
   private static final String CUSTOM_STAGING_DIR = "customStaging";
 
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    this.name = testInfo.getTestMethod().get().getName();
     Bytes.random(randomBytes);
     htu = new HBaseTestingUtil();
     htu.getConfiguration().setInt("dfs.blocksize", 1024);// For the test with multiple blocks
@@ -87,15 +84,14 @@ public class TestSecureBulkloadListener {
     dfs = (DistributedFileSystem) FileSystem.get(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDownAfterClass() throws Exception {
     htu.shutdownMiniCluster();
   }
 
   @Test
   public void testMovingStagedFile() throws Exception {
-    Path stagingDirPath =
-      new Path(dfs.getWorkingDirectory(), new Path(name.getMethodName(), STAGING_DIR));
+    Path stagingDirPath = new Path(dfs.getWorkingDirectory(), new Path(name, STAGING_DIR));
     if (!dfs.exists(stagingDirPath)) {
       dfs.mkdirs(stagingDirPath);
     }
@@ -105,7 +101,7 @@ public class TestSecureBulkloadListener {
     // creating file to load
     String srcFile = createHFileForFamilies(FAMILY);
     Path srcPath = new Path(srcFile);
-    Assert.assertTrue(dfs.exists(srcPath));
+    assertTrue(dfs.exists(srcPath));
 
     Path stagedFamily = new Path(stagingDirPath, new Path(Bytes.toString(FAMILY)));
     if (!dfs.exists(stagedFamily)) {
@@ -115,19 +111,18 @@ public class TestSecureBulkloadListener {
     // moving file to staging
     String stagedFile = listener.prepareBulkLoad(FAMILY, srcFile, false, null);
     Path stagedPath = new Path(stagedFile);
-    Assert.assertTrue(dfs.exists(stagedPath));
-    Assert.assertFalse(dfs.exists(srcPath));
+    assertTrue(dfs.exists(stagedPath));
+    assertFalse(dfs.exists(srcPath));
 
     // moving files back to original location after a failed bulkload
     listener.failedBulkLoad(FAMILY, stagedFile);
-    Assert.assertFalse(dfs.exists(stagedPath));
-    Assert.assertTrue(dfs.exists(srcPath));
+    assertFalse(dfs.exists(stagedPath));
+    assertTrue(dfs.exists(srcPath));
   }
 
   @Test
   public void testMovingStagedFileWithCustomStageDir() throws Exception {
-    Path stagingDirPath =
-      new Path(dfs.getWorkingDirectory(), new Path(name.getMethodName(), STAGING_DIR));
+    Path stagingDirPath = new Path(dfs.getWorkingDirectory(), new Path(name, STAGING_DIR));
     if (!dfs.exists(stagingDirPath)) {
       dfs.mkdirs(stagingDirPath);
     }
@@ -137,7 +132,7 @@ public class TestSecureBulkloadListener {
     // creating file to load
     String srcFile = createHFileForFamilies(FAMILY);
     Path srcPath = new Path(srcFile);
-    Assert.assertTrue(dfs.exists(srcPath));
+    assertTrue(dfs.exists(srcPath));
 
     Path stagedFamily = new Path(stagingDirPath, new Path(Bytes.toString(FAMILY)));
     if (!dfs.exists(stagedFamily)) {
@@ -145,7 +140,7 @@ public class TestSecureBulkloadListener {
     }
 
     Path customStagingDirPath =
-      new Path(dfs.getWorkingDirectory(), new Path(name.getMethodName(), CUSTOM_STAGING_DIR));
+      new Path(dfs.getWorkingDirectory(), new Path(name, CUSTOM_STAGING_DIR));
     Path customStagedFamily = new Path(customStagingDirPath, new Path(Bytes.toString(FAMILY)));
     if (!dfs.exists(customStagedFamily)) {
       dfs.mkdirs(customStagedFamily);
@@ -155,19 +150,18 @@ public class TestSecureBulkloadListener {
     String stagedFile =
       listener.prepareBulkLoad(FAMILY, srcFile, false, customStagingDirPath.toString());
     Path stagedPath = new Path(stagedFile);
-    Assert.assertTrue(dfs.exists(stagedPath));
-    Assert.assertFalse(dfs.exists(srcPath));
+    assertTrue(dfs.exists(stagedPath));
+    assertFalse(dfs.exists(srcPath));
 
     // moving files back to original location after a failed bulkload
     listener.failedBulkLoad(FAMILY, stagedFile);
-    Assert.assertFalse(dfs.exists(stagedPath));
-    Assert.assertTrue(dfs.exists(srcPath));
+    assertFalse(dfs.exists(stagedPath));
+    assertTrue(dfs.exists(srcPath));
   }
 
   @Test
   public void testCopiedStagedFile() throws Exception {
-    Path stagingDirPath =
-      new Path(dfs.getWorkingDirectory(), new Path(name.getMethodName(), STAGING_DIR));
+    Path stagingDirPath = new Path(dfs.getWorkingDirectory(), new Path(name, STAGING_DIR));
     if (!dfs.exists(stagingDirPath)) {
       dfs.mkdirs(stagingDirPath);
     }
@@ -177,7 +171,7 @@ public class TestSecureBulkloadListener {
     // creating file to load
     String srcFile = createHFileForFamilies(FAMILY);
     Path srcPath = new Path(srcFile);
-    Assert.assertTrue(dfs.exists(srcPath));
+    assertTrue(dfs.exists(srcPath));
 
     Path stagedFamily = new Path(stagingDirPath, new Path(Bytes.toString(FAMILY)));
     if (!dfs.exists(stagedFamily)) {
@@ -187,19 +181,18 @@ public class TestSecureBulkloadListener {
     // copying file to staging
     String stagedFile = listener.prepareBulkLoad(FAMILY, srcFile, true, null);
     Path stagedPath = new Path(stagedFile);
-    Assert.assertTrue(dfs.exists(stagedPath));
-    Assert.assertTrue(dfs.exists(srcPath));
+    assertTrue(dfs.exists(stagedPath));
+    assertTrue(dfs.exists(srcPath));
 
     // should do nothing because the original file was copied to staging
     listener.failedBulkLoad(FAMILY, stagedFile);
-    Assert.assertTrue(dfs.exists(stagedPath));
-    Assert.assertTrue(dfs.exists(srcPath));
+    assertTrue(dfs.exists(stagedPath));
+    assertTrue(dfs.exists(srcPath));
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testDeletedStagedFile() throws Exception {
-    Path stagingDirPath =
-      new Path(dfs.getWorkingDirectory(), new Path(name.getMethodName(), STAGING_DIR));
+    Path stagingDirPath = new Path(dfs.getWorkingDirectory(), new Path(name, STAGING_DIR));
     if (!dfs.exists(stagingDirPath)) {
       dfs.mkdirs(stagingDirPath);
     }
@@ -209,7 +202,7 @@ public class TestSecureBulkloadListener {
     // creating file to load
     String srcFile = createHFileForFamilies(FAMILY);
     Path srcPath = new Path(srcFile);
-    Assert.assertTrue(dfs.exists(srcPath));
+    assertTrue(dfs.exists(srcPath));
 
     Path stagedFamily = new Path(stagingDirPath, new Path(Bytes.toString(FAMILY)));
     if (!dfs.exists(stagedFamily)) {
@@ -219,19 +212,18 @@ public class TestSecureBulkloadListener {
     // moving file to staging
     String stagedFile = listener.prepareBulkLoad(FAMILY, srcFile, false, null);
     Path stagedPath = new Path(stagedFile);
-    Assert.assertTrue(dfs.exists(stagedPath));
-    Assert.assertFalse(dfs.exists(srcPath));
+    assertTrue(dfs.exists(stagedPath));
+    assertFalse(dfs.exists(srcPath));
 
     dfs.delete(stagedPath, false);
 
     // moving files back to original location after a failed bulkload
-    listener.failedBulkLoad(FAMILY, stagedFile);
+    assertThrows(IOException.class, () -> listener.failedBulkLoad(FAMILY, stagedFile));
   }
 
   private String createHFileForFamilies(byte[] family) throws IOException {
     HFile.WriterFactory hFileFactory = HFile.getWriterFactoryNoCache(conf);
-    Path testDir =
-      new Path(dfs.getWorkingDirectory(), new Path(name.getMethodName(), Bytes.toString(family)));
+    Path testDir = new Path(dfs.getWorkingDirectory(), new Path(name, Bytes.toString(family)));
     if (!dfs.exists(testDir)) {
       dfs.mkdirs(testDir);
     }

@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.BULKLOAD_TIME_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAX_SEQ_ID_KEY;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.util.List;
@@ -27,7 +29,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -49,28 +50,26 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestScannerWithBulkload {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestScannerWithBulkload.class);
-
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
-  @BeforeClass
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    this.name = testInfo.getTestMethod().get().getName();
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(1);
   }
@@ -85,7 +84,7 @@ public class TestScannerWithBulkload {
 
   @Test
   public void testBulkLoad() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name);
     long l = EnvironmentEdgeManager.currentTime();
     Admin admin = TEST_UTIL.getAdmin();
     createTable(admin, tableName);
@@ -117,7 +116,7 @@ public class TestScannerWithBulkload {
             _c.getQualifierLength()));
           System.out
             .println(Bytes.toString(_c.getValueArray(), _c.getValueOffset(), _c.getValueLength()));
-          Assert.assertEquals("version3",
+          assertEquals("version3",
             Bytes.toString(_c.getValueArray(), _c.getValueOffset(), _c.getValueLength()));
         }
       }
@@ -139,7 +138,7 @@ public class TestScannerWithBulkload {
             _c.getQualifierLength()));
           System.out
             .println(Bytes.toString(_c.getValueArray(), _c.getValueOffset(), _c.getValueLength()));
-          Assert.assertEquals(expctedVal,
+          assertEquals(expctedVal,
             Bytes.toString(_c.getValueArray(), _c.getValueOffset(), _c.getValueLength()));
         }
       }
@@ -157,7 +156,7 @@ public class TestScannerWithBulkload {
     fs.mkdirs(hfilePath);
     Path path = new Path(pathStr);
     HFile.WriterFactory wf = HFile.getWriterFactoryNoCache(TEST_UTIL.getConfiguration());
-    Assert.assertNotNull(wf);
+    assertNotNull(wf);
     HFileContext context = new HFileContextBuilder().build();
     HFile.Writer writer = wf.withPath(fs, path).withFileContext(context).create();
     KeyValue kv = new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l,
@@ -207,9 +206,9 @@ public class TestScannerWithBulkload {
     ResultScanner scanner = table.getScanner(scan);
     Result result = scanner.next();
     List<Cell> cells = result.getColumnCells(Bytes.toBytes("col"), Bytes.toBytes("q"));
-    Assert.assertEquals(1, cells.size());
+    assertEquals(1, cells.size());
     Cell _c = cells.get(0);
-    Assert.assertEquals("version1",
+    assertEquals("version1",
       Bytes.toString(_c.getValueArray(), _c.getValueOffset(), _c.getValueLength()));
     scanner.close();
     return table;
@@ -217,7 +216,7 @@ public class TestScannerWithBulkload {
 
   @Test
   public void testBulkLoadWithParallelScan() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name);
     final long l = EnvironmentEdgeManager.currentTime();
     final Admin admin = TEST_UTIL.getAdmin();
     createTable(admin, tableName);
@@ -259,7 +258,7 @@ public class TestScannerWithBulkload {
 
   @Test
   public void testBulkLoadNativeHFile() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name);
     long l = EnvironmentEdgeManager.currentTime();
     Admin admin = TEST_UTIL.getAdmin();
     createTable(admin, tableName);
@@ -293,7 +292,7 @@ public class TestScannerWithBulkload {
             _c.getQualifierLength()));
           System.out
             .println(Bytes.toString(_c.getValueArray(), _c.getValueOffset(), _c.getValueLength()));
-          Assert.assertEquals("version3",
+          assertEquals("version3",
             Bytes.toString(_c.getValueArray(), _c.getValueOffset(), _c.getValueLength()));
         }
       }
@@ -309,7 +308,7 @@ public class TestScannerWithBulkload {
     return scan;
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }

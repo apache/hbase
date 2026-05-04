@@ -17,20 +17,23 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
@@ -54,27 +57,20 @@ import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: useFileBasedSFT={0}")
 public class TestSecureBulkLoadManager {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSecureBulkLoadManager.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestSecureBulkLoadManager.class);
 
   private static TableName TABLE = TableName.valueOf(Bytes.toBytes("TestSecureBulkLoadManager"));
@@ -99,13 +95,11 @@ public class TestSecureBulkLoadManager {
     this.useFileBasedSFT = useFileBasedSFT;
   }
 
-  @Parameterized.Parameters
-  public static Collection<Boolean> data() {
-    Boolean[] data = { false, true };
-    return Arrays.asList(data);
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(false), Arguments.of(true));
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     if (useFileBasedSFT) {
       conf.set(StoreFileTrackerFactory.TRACKER_IMPL,
@@ -116,7 +110,7 @@ public class TestSecureBulkLoadManager {
     testUtil.startMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     testUtil.shutdownMiniCluster();
     testUtil.cleanupTestDir();
@@ -132,7 +126,7 @@ public class TestSecureBulkLoadManager {
    * finishes earlier when the other bulkload still needs its FileSystems, checks that both
    * bulkloads succeed.
    */
-  @Test
+  @TestTemplate
   public void testForRaceCondition() throws Exception {
     Consumer<HRegion> fsCreatedListener = new Consumer<HRegion>() {
       @Override
@@ -184,17 +178,17 @@ public class TestSecureBulkLoadManager {
     laterBulkload.start();
     Threads.shutdown(ealierBulkload);
     Threads.shutdown(laterBulkload);
-    Assert.assertNull(t1Exception.get());
-    Assert.assertNull(t2Exception.get());
+    assertNull(t1Exception.get());
+    assertNull(t2Exception.get());
 
     /// check bulkload ok
     Get get1 = new Get(key1);
     Get get3 = new Get(key3);
     Table t = testUtil.getConnection().getTable(TABLE);
     Result r = t.get(get1);
-    Assert.assertArrayEquals(r.getValue(FAMILY, COLUMN), value1);
+    assertArrayEquals(r.getValue(FAMILY, COLUMN), value1);
     r = t.get(get3);
-    Assert.assertArrayEquals(r.getValue(FAMILY, COLUMN), value3);
+    assertArrayEquals(r.getValue(FAMILY, COLUMN), value3);
 
   }
 
@@ -226,7 +220,7 @@ public class TestSecureBulkLoadManager {
     };
     try {
       h.bulkLoad(TABLE, dir);
-      Assert.fail("MyExceptionToAvoidRetry is expected");
+      fail("MyExceptionToAvoidRetry is expected");
     } catch (MyExceptionToAvoidRetry e) { // expected
     }
   }

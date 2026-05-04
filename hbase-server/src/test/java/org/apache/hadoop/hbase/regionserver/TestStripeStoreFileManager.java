@@ -18,11 +18,11 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_KEY;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,7 +35,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -43,20 +42,15 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestStripeStoreFileManager {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStripeStoreFileManager.class);
-
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Path BASEDIR =
     TEST_UTIL.getDataTestDir(TestStripeStoreFileManager.class.getSimpleName());
@@ -73,7 +67,7 @@ public class TestStripeStoreFileManager {
   private static final KeyValue KV_C = new KeyValue(KEY_C, 0L);
   private static final KeyValue KV_D = new KeyValue(KEY_D, 0L);
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     if (!fs.mkdirs(CFDIR)) {
@@ -81,7 +75,7 @@ public class TestStripeStoreFileManager {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     if (fs.exists(CFDIR) && !fs.delete(CFDIR, true)) {

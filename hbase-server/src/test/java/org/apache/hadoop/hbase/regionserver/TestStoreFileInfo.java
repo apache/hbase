@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -39,20 +38,15 @@ import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerForTest;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test HStoreFile
  */
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestStoreFileInfo {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStoreFileInfo.class);
-
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   /**
@@ -64,21 +58,21 @@ public class TestStoreFileInfo {
       "MyTable_02-400=abc012-def345", "MyTable_02-400.200=abc012-def345",
       "MyTable_02=abc012-def345_SeqId_1_", "MyTable_02=abc012-def345_SeqId_20_" };
     for (String name : legalHFileLink) {
-      assertTrue("should be a valid link: " + name, HFileLink.isHFileLink(name));
-      assertTrue("should be a valid StoreFile" + name, StoreFileInfo.validateStoreFileName(name));
-      assertFalse("should not be a valid reference: " + name, StoreFileInfo.isReference(name));
+      assertTrue(HFileLink.isHFileLink(name), "should be a valid link: " + name);
+      assertTrue(StoreFileInfo.validateStoreFileName(name), "should be a valid StoreFile" + name);
+      assertFalse(StoreFileInfo.isReference(name), "should not be a valid reference: " + name);
 
       String refName = name + ".6789";
-      assertTrue("should be a valid link reference: " + refName,
-        StoreFileInfo.isReference(refName));
-      assertTrue("should be a valid StoreFile" + refName,
-        StoreFileInfo.validateStoreFileName(refName));
+      assertTrue(StoreFileInfo.isReference(refName),
+        "should be a valid link reference: " + refName);
+      assertTrue(StoreFileInfo.validateStoreFileName(refName),
+        "should be a valid StoreFile" + refName);
     }
 
     String[] illegalHFileLink = { ".MyTable_02=abc012-def345", "-MyTable_02.300=abc012-def345",
       "MyTable_02-400=abc0_12-def345", "MyTable_02-400.200=abc012-def345...." };
     for (String name : illegalHFileLink) {
-      assertFalse("should not be a valid link: " + name, HFileLink.isHFileLink(name));
+      assertFalse(HFileLink.isHFileLink(name), "should not be a valid link: " + name);
     }
   }
 

@@ -19,12 +19,12 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.KeyValueTestUtil.create;
 import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.scanFixture;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -74,27 +73,27 @@ import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 // Can't be small as it plays with EnvironmentEdgeManager
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestStoreScanner {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStoreScanner.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestStoreScanner.class);
-  @Rule
-  public TestName name = new TestName();
+  private String name;
+
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    this.name = testInfo.getTestMethod().get().getName();
+  }
+
   private static final String CF_STR = "cf";
   private static final byte[] CF = Bytes.toBytes(CF_STR);
   static Configuration CONF = HBaseConfiguration.create();
@@ -374,8 +373,8 @@ public class TestStoreScanner {
       assertEquals(2, results.size());
       assertTrue(CellUtil.matchingColumn(results.get(0), CELL_WITH_VERSIONS[0]));
       assertTrue(CellUtil.matchingColumn(results.get(1), CELL_WITH_VERSIONS[2]));
-      assertTrue("Optimize should do some optimizations",
-        scannerNoOptimize.optimization.get() == 0);
+      assertTrue(scannerNoOptimize.optimization.get() == 0,
+        "Optimize should do some optimizations");
     }
 
     get.setFilter(new ColumnCountGetFilter(2));
@@ -388,7 +387,7 @@ public class TestStoreScanner {
       assertEquals(2, results.size());
       assertTrue(CellUtil.matchingColumn(results.get(0), CELL_WITH_VERSIONS[0]));
       assertTrue(CellUtil.matchingColumn(results.get(1), CELL_WITH_VERSIONS[2]));
-      assertTrue("Optimize should do some optimizations", scanner.optimization.get() > 0);
+      assertTrue(scanner.optimization.get() > 0, "Optimize should do some optimizations");
     }
   }
 
@@ -469,7 +468,7 @@ public class TestStoreScanner {
         assertTrue(Bytes.equals(ONE, 0, ONE.length, cell.getQualifierArray(),
           cell.getQualifierOffset(), cell.getQualifierLength()));
       }
-      assertTrue("Optimize should do some optimizations", scanner.optimization.get() > 0);
+      assertTrue(scanner.optimization.get() > 0, "Optimize should do some optimizations");
     }
   }
 
@@ -494,9 +493,9 @@ public class TestStoreScanner {
       // Should be one result only.
       assertEquals(2, results.size());
       // And we should have gone through optimize twice only.
-      assertEquals("First qcode is SEEK_NEXT_COL and second INCLUDE_AND_SEEK_NEXT_ROW", 3,
-        scanner.count.get());
-      assertEquals("Memstore Read count should be", 1, scanner.memstoreOnlyReads);
+      assertEquals(3, scanner.count.get(),
+        "First qcode is SEEK_NEXT_COL and second INCLUDE_AND_SEEK_NEXT_ROW");
+      assertEquals(1, scanner.memstoreOnlyReads, "Memstore Read count should be");
     }
   }
 
@@ -522,8 +521,8 @@ public class TestStoreScanner {
       // Should be one result only.
       assertEquals(1, results.size());
       // And we should have gone through optimize twice only.
-      assertEquals("First qcode is SEEK_NEXT_COL and second INCLUDE_AND_SEEK_NEXT_ROW", 2,
-        scanner.count.get());
+      assertEquals(2, scanner.count.get(),
+        "First qcode is SEEK_NEXT_COL and second INCLUDE_AND_SEEK_NEXT_ROW");
     }
   }
 
@@ -922,7 +921,7 @@ public class TestStoreScanner {
   }
 
   @Test
-  @Ignore("this fails, since we don't handle deletions, etc, in peek")
+  @Disabled("this fails, since we don't handle deletions, etc, in peek")
   public void testPeek() throws Exception {
     KeyValue[] kvs = new KeyValue[] { create("R1", "cf", "a", 1, KeyValue.Type.Put, "dont-care"),
       create("R1", "cf", "a", 1, KeyValue.Type.Delete, "dont-care"), };
@@ -1113,13 +1112,12 @@ public class TestStoreScanner {
     // Setup: test util, conf, fs, cache, region fs, and HFile context.
     HBaseTestingUtil testUtil = new HBaseTestingUtil();
     Configuration conf = testUtil.getConfiguration();
-    Path testDir = testUtil.getDataTestDir(name.getMethodName() + "_directory");
+    Path testDir = testUtil.getDataTestDir(name + "_directory");
     FileSystem fs = testDir.getFileSystem(conf);
     CacheConfig cacheConf = new CacheConfig(conf);
     final String TEST_FAMILY = "cf";
 
-    final RegionInfo hri =
-      RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    final RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(name)).build();
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
       new Path(testDir, hri.getTable().getNameAsString()), hri);
     HFileContext hFileContext = new HFileContextBuilder().withBlockSize(8 * 1024).build();
@@ -1228,13 +1226,13 @@ public class TestStoreScanner {
     // After close: all 5 files must be tracked (in-range, out-of-range, and TTL-expired).
     Set<Path> filesRead = storeScanner.getFilesRead();
 
-    assertTrue("File 1 (in range) should be tracked", filesRead.contains(filePaths.get(0)));
-    assertTrue("File 2 (in range) should be tracked", filesRead.contains(filePaths.get(1)));
-    assertTrue("File 3 (out of key range) should be tracked", filesRead.contains(filePaths.get(2)));
-    assertTrue("File 4 (before start row) should be tracked", filesRead.contains(filePaths.get(3)));
-    assertTrue("File 5 (expired TTL, filtered after read) should be tracked",
-      filesRead.contains(filePaths.get(4)));
-    assertEquals("Should have all 5 files read", 5, filesRead.size());
+    assertTrue(filesRead.contains(filePaths.get(0)), "File 1 (in range) should be tracked");
+    assertTrue(filesRead.contains(filePaths.get(1)), "File 2 (in range) should be tracked");
+    assertTrue(filesRead.contains(filePaths.get(2)), "File 3 (out of key range) should be tracked");
+    assertTrue(filesRead.contains(filePaths.get(3)), "File 4 (before start row) should be tracked");
+    assertTrue(filesRead.contains(filePaths.get(4)),
+      "File 5 (expired TTL, filtered after read) should be tracked");
+    assertEquals(5, filesRead.size(), "Should have all 5 files read");
   }
 
   /**
@@ -1288,7 +1286,7 @@ public class TestStoreScanner {
     }
 
     // Verify that exception was thrown
-    assertNotNull("Should have thrown IOException during initialization", caughtException);
+    assertNotNull(caughtException, "Should have thrown IOException during initialization");
 
     // Verify that store methods were called (cleanup happened in catch block)
     Mockito.verify(mockStore, Mockito.times(1)).addChangedReaderObserver(Mockito.any());
