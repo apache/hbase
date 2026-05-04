@@ -761,8 +761,9 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   /**
    * Fast-path alternative to {@link #nextRow} used when the filter has provided a seek hint via
    * {@link org.apache.hadoop.hbase.filter.Filter#getHintForRejectedRow(Cell)}. Instead of iterating
-   * through every cell in the rejected row one-by-one, this method issues a single
-   * {@code requestSeek} to jump directly to the filter's suggested position.
+   * through every cell in the rejected row one-by-one, this method issues a single seek to jump
+   * directly to the filter's suggested position ({@code requestSeek} for forward scans,
+   * {@code backwardSeek} for reversed scans).
    * <p>
    * The skipping-row mode flag is set around the seek so that block-level size tracking continues
    * to function (consistent with {@link #nextRow}), and the filter state is reset afterwards so the
@@ -782,14 +783,19 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
 
     int difference = comparator.compare(hint, curRowCell);
     if ((!reversed && difference > 0) || (reversed && difference < 0)) {
-      // Enable skipping-row mode so block-size accounting is consistent with nextRow().
       scannerContext.setSkippingRow(true);
-      this.storeHeap.requestSeek(hint, true, true);
+      if (reversed) {
+        // ReversedKeyValueHeap does not support requestSeek; use backwardSeek
+        // to position at-or-before the hint within the target row.
+        // seekToPreviousRow would skip past the hint row entirely.
+        this.storeHeap.backwardSeek(hint);
+      } else {
+        this.storeHeap.requestSeek(hint, true, true);
+      }
       scannerContext.setSkippingRow(false);
 
       resetFilters();
 
-      // Notify coprocessors, identical to the epilogue in nextRow().
       return this.region.getCoprocessorHost() == null
         || this.region.getCoprocessorHost().postScannerFilterRow(this, curRowCell);
     }

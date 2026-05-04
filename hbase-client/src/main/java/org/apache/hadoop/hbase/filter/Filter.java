@@ -30,6 +30,10 @@ import org.apache.yetus.audience.InterfaceAudience;
  * <li>{@link #reset()} : reset the filter state before filtering a new row.</li>
  * <li>{@link #filterAllRemaining()}: true means row scan is over; false means keep going.</li>
  * <li>{@link #filterRowKey(Cell)}: true means drop this row; false means include.</li>
+ * <li>{@link #getHintForRejectedRow(Cell)}: if {@code filterRowKey} returned true, optionally
+ * provide a seek hint to skip past the rejected row efficiently.</li>
+ * <li>{@link #getSkipHint(Cell)}: when a cell is structurally skipped (time-range, column, or
+ * version gate) before {@code filterCell} is reached, optionally provide a seek hint.</li>
  * <li>{@link #filterCell(Cell)}: decides whether to include or exclude this Cell. See
  * {@link ReturnCode}.</li>
  * <li>{@link #transformCell(Cell)}: if the Cell is included, let the filter transform the Cell.

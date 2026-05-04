@@ -117,26 +117,22 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
 
   @Override
   public ExtendedCell getNextKeyHint(ExtendedCell cell) throws IOException {
-    // A structural short-circuit in matchColumn (time-range, column, or version gate) may have
-    // stored a hint via resolveSkipHint() before returning SEEK_NEXT_USING_HINT. Drain and return
-    // it first; it takes priority because it was produced for the exact cell that triggered the
-    // seek code, without ever calling filterCell.
     if (pendingSkipHint != null) {
       ExtendedCell hint = pendingSkipHint;
       pendingSkipHint = null;
       return hint;
     }
-    // Normal path: filterCell returned SEEK_NEXT_USING_HINT — delegate to the filter.
     if (filter == null) {
       return null;
-    }
-    Cell hint = filter.getNextCellHint(cell);
-    if (hint == null || hint instanceof ExtendedCell) {
-      return (ExtendedCell) hint;
     } else {
-      throw new DoNotRetryIOException("Incorrect filter implementation, "
-        + "the Cell returned by getNextKeyHint is not an ExtendedCell. Filter class: "
-        + filter.getClass().getName());
+      Cell hint = filter.getNextCellHint(cell);
+      if (hint == null || hint instanceof ExtendedCell) {
+        return (ExtendedCell) hint;
+      } else {
+        throw new DoNotRetryIOException("Incorrect filter implementation, "
+          + "the Cell returned by getNextKeyHint is not an ExtendedCell. Filter class: "
+          + filter.getClass().getName());
+      }
     }
   }
 
@@ -146,24 +142,24 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     if (curColCell != null) {
       this.curColCell = KeyValueUtil.toNewKeyCell(this.curColCell);
     }
+    if (pendingSkipHint != null) {
+      this.pendingSkipHint = KeyValueUtil.toNewKeyCell(this.pendingSkipHint);
+    }
   }
 
+  // At each structural short-circuit below (time-range, column-exclusion, version-exhaustion),
+  // the filter is consulted via resolveSkipHint() before falling back to the default skip/seek
+  // code. This lets filters provide a forward seek target even when filterCell is never called.
   protected final MatchCode matchColumn(ExtendedCell cell, long timestamp, byte typeByte)
     throws IOException {
     int tsCmp = tr.compare(timestamp);
     if (tsCmp > 0) {
-      // Cell is newer than the scan's time-range upper bound. Give the filter one last chance to
-      // provide a seek hint before we fall back to a plain cell-level SKIP. This addresses
-      // HBASE-29974 Path 2: time-range gate fires before filterCell is reached.
       if (resolveSkipHint(cell)) {
         return MatchCode.SEEK_NEXT_USING_HINT;
       }
       return MatchCode.SKIP;
     }
     if (tsCmp < 0) {
-      // Cell is older than the scan's time-range lower bound. Give the filter a chance to provide
-      // a seek hint before we defer to the column tracker's next-row/next-column suggestion.
-      // Addresses HBASE-29974 Path 2: time-range gate fires before filterCell is reached.
       if (resolveSkipHint(cell)) {
         return MatchCode.SEEK_NEXT_USING_HINT;
       }
@@ -172,8 +168,6 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     // STEP 1: Check if the column is part of the requested columns
     MatchCode matchCode = columns.checkColumn(cell, typeByte);
     if (matchCode != MatchCode.INCLUDE) {
-      // Column is excluded by the scan's column set. Give the filter a chance to provide a
-      // seek hint before the column-tracker's suggestion is used. Addresses HBASE-29974 Path 3.
       if (resolveSkipHint(cell)) {
         return MatchCode.SEEK_NEXT_USING_HINT;
       }
@@ -186,15 +180,11 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     matchCode = columns.checkVersions(cell, timestamp, typeByte, false);
     switch (matchCode) {
       case SKIP:
-        // Version limit reached; skip this cell. Give the filter a hint opportunity before
-        // falling back to SKIP. Addresses HBASE-29974 Path 3: version gate fires before filterCell.
         if (resolveSkipHint(cell)) {
           return MatchCode.SEEK_NEXT_USING_HINT;
         }
         return MatchCode.SKIP;
       case SEEK_NEXT_COL:
-        // Version limit reached; advance to the next column. Give the filter a hint opportunity
-        // before falling back to SEEK_NEXT_COL. Addresses HBASE-29974 Path 3.
         if (resolveSkipHint(cell)) {
           return MatchCode.SEEK_NEXT_USING_HINT;
         }
@@ -241,7 +231,15 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
         "Incorrect filter implementation: the Cell returned by getSkipHint "
           + "is not an ExtendedCell. Filter class: " + filter.getClass().getName());
     }
-    pendingSkipHint = (ExtendedCell) raw;
+    ExtendedCell hint = (ExtendedCell) raw;
+    // Only accept the hint if it advances past the current cell. A backward or
+    // no-op hint would cause the scanner to re-visit the same cell, degrading
+    // to a tight re-match loop. This mirrors the guard in StoreScanner's
+    // SEEK_NEXT_USING_HINT handler (see StoreScanner line ~790).
+    if (rowComparator.compare(hint, cell) <= 0) {
+      return false;
+    }
+    pendingSkipHint = hint;
     return true;
   }
 

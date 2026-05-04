@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -50,21 +51,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-/**
- * Integration tests for HBASE-29974 Path 1: {@link Filter#getHintForRejectedRow(Cell)} allows the
- * scan pipeline to seek directly past rejected rows instead of iterating through every cell in each
- * rejected row one-by-one via {@code nextRow()}.
- * <p>
- * Each test verifies two properties simultaneously:
- * <ol>
- * <li><b>Correctness</b> — the scan returns exactly the rows that are not rejected by
- * {@link Filter#filterRowKey(Cell)}, regardless of whether the hint path or the legacy
- * cell-iteration path is used.</li>
- * <li><b>Efficiency</b> — when a filter provides a hint that jumps over all N rejected rows in one
- * seek, {@code getHintForRejectedRow} is called exactly once (not N times), proving that the
- * scanner did not fall back to cell-by-cell iteration for the skipped rows.</li>
- * </ol>
- */
 @Category({ FilterTests.class, MediumTests.class })
 public class TestFilterHintForRejectedRow {
 
@@ -75,6 +61,7 @@ public class TestFilterHintForRejectedRow {
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final byte[] FAMILY = Bytes.toBytes("f");
+  private static final byte[] FAMILY2 = Bytes.toBytes("g");
   private static final int CELLS_PER_ROW = 10;
   private static final byte[] VALUE = Bytes.toBytes("value");
 
@@ -87,7 +74,8 @@ public class TestFilterHintForRejectedRow {
   public void setUp() throws Exception {
     TableDescriptor tableDescriptor =
       TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY2)).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     this.region = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
       TEST_UTIL.getConfiguration(), tableDescriptor);
@@ -98,18 +86,6 @@ public class TestFilterHintForRejectedRow {
     HBaseTestingUtil.closeRegionAndWAL(this.region);
   }
 
-  // -------------------------------------------------------------------------
-  // Helper
-  // -------------------------------------------------------------------------
-
-  /**
-   * Writes {@code count} rows into the test region. Row keys are formatted as {@code "row-XX"}
-   * (zero-padded to two digits) and each row contains {@link #CELLS_PER_ROW} cells with qualifier
-   * {@code "q-NN"}.
-   * @param prefix string prefix used for both row keys and qualifier names
-   * @param count  number of rows to write
-   * @throws IOException if any put fails
-   */
   private void writeRows(String prefix, int count) throws IOException {
     for (int i = 0; i < count; i++) {
       byte[] row = Bytes.toBytes(String.format("%s-%02d", prefix, i));
@@ -123,30 +99,38 @@ public class TestFilterHintForRejectedRow {
     this.region.flush(true);
   }
 
-  // -------------------------------------------------------------------------
-  // Tests
-  // -------------------------------------------------------------------------
+  private void writeRowsMultiFamily(String prefix, int count) throws IOException {
+    for (int i = 0; i < count; i++) {
+      byte[] row = Bytes.toBytes(String.format("%s-%02d", prefix, i));
+      Put p = new Put(row);
+      p.setDurability(Durability.SKIP_WAL);
+      for (int j = 0; j < CELLS_PER_ROW; j++) {
+        byte[] qual = Bytes.toBytes(String.format("q-%02d", j));
+        p.addColumn(FAMILY, qual, VALUE);
+        p.addColumn(FAMILY2, qual, VALUE);
+      }
+      this.region.put(p);
+    }
+    this.region.flush(true);
+  }
 
-  /**
-   * HBASE-29974 Path 1 — single-batch seek hint.
-   * <p>
-   * The filter rejects the first 5 rows ({@code "row-00"} through {@code "row-04"}) via
-   * {@link Filter#filterRowKey(Cell)} and, for every rejected row, returns a hint pointing directly
-   * to {@code "row-05"} via {@link Filter#getHintForRejectedRow(Cell)}.
-   * <p>
-   * Expected behaviour:
-   * <ul>
-   * <li>The scanner seeks directly to {@code "row-05"} after the very first rejection, bypassing
-   * cells in rows {@code "row-01"} through {@code "row-04"} entirely.</li>
-   * <li>{@code getHintForRejectedRow} is called exactly once (not five times), confirming no
-   * cell-by-cell iteration occurred for the skipped rows.</li>
-   * <li>Rows {@code "row-05"} through {@code "row-09"} are returned with all their cells
-   * intact.</li>
-   * </ul>
-   */
+  private List<Cell> scanAll(Scan scan) throws IOException {
+    List<Cell> results = new ArrayList<>();
+    try (RegionScanner scanner = region.getScanner(scan)) {
+      List<Cell> rowCells = new ArrayList<>();
+      boolean hasMore;
+      do {
+        hasMore = scanner.next(rowCells);
+        results.addAll(rowCells);
+        rowCells.clear();
+      } while (hasMore);
+    }
+    return results;
+  }
+
   @Test
-  public void testHintJumpsOverAllRejectedRowsInOneSingleSeek() throws IOException {
-    final String prefix = "hint-single";
+  public void testHintAndNoHintReturnSameCellsOnSameData() throws IOException {
+    final String prefix = "row";
     final int rejectedCount = 5;
     final int acceptedCount = 5;
     writeRows(prefix, rejectedCount + acceptedCount);
@@ -157,16 +141,10 @@ public class TestFilterHintForRejectedRow {
     FilterBase hintFilter = new FilterBase() {
       @Override
       public boolean filterRowKey(Cell cell) {
-        // Reject any row whose key is lexicographically less than acceptedStartRow.
         return Bytes.compareTo(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
           acceptedStartRow, 0, acceptedStartRow.length) < 0;
       }
 
-      /**
-       * Returns a hint pointing directly to the first accepted row, regardless of which rejected
-       * row triggered this call. Because the hint bypasses all remaining rejected rows in one seek,
-       * this method should be invoked exactly once for the whole scan.
-       */
       @Override
       public Cell getHintForRejectedRow(Cell firstRowCell) {
         hintCallCount.incrementAndGet();
@@ -174,53 +152,6 @@ public class TestFilterHintForRejectedRow {
       }
     };
 
-    List<Cell> results = new ArrayList<>();
-    try (RegionScanner scanner =
-      region.getScanner(new Scan().addFamily(FAMILY).setFilter(hintFilter))) {
-      List<Cell> rowCells = new ArrayList<>();
-      boolean hasMore;
-      do {
-        hasMore = scanner.next(rowCells);
-        results.addAll(rowCells);
-        rowCells.clear();
-      } while (hasMore);
-    }
-
-    // ----- Correctness assertions -----
-    assertEquals("Scan must return exactly the cells from the " + acceptedCount + " accepted rows",
-      acceptedCount * CELLS_PER_ROW, results.size());
-    for (Cell c : results) {
-      assertTrue("Every returned cell must belong to the accepted row range",
-        Bytes.compareTo(c.getRowArray(), c.getRowOffset(), c.getRowLength(), acceptedStartRow, 0,
-          acceptedStartRow.length) >= 0);
-    }
-
-    // ----- Efficiency assertion -----
-    // The hint jumps over all 5 rejected rows in one seek, so the filter should be asked for
-    // a hint exactly once — not once per rejected row.
-    assertEquals(
-      "getHintForRejectedRow must be called exactly once: the hint skips all rejected rows", 1,
-      hintCallCount.get());
-  }
-
-  /**
-   * HBASE-29974 Path 1 — backward compatibility: null hint falls through to {@code nextRow()}.
-   * <p>
-   * When {@link Filter#getHintForRejectedRow(Cell)} returns {@code null} (the default from
-   * {@link FilterBase}), the scanner must fall back to the existing cell-by-cell {@code nextRow()}
-   * behaviour and still return the correct results. This test acts as a regression guard to confirm
-   * that the null-hint path does not alter observable scan results.
-   */
-  @Test
-  public void testNullHintFallsThroughToLegacyNextRowBehaviour() throws IOException {
-    final String prefix = "hint-null";
-    final int rejectedCount = 3;
-    final int acceptedCount = 3;
-    writeRows(prefix, rejectedCount + acceptedCount);
-
-    final byte[] acceptedStartRow = Bytes.toBytes(String.format("%s-%02d", prefix, rejectedCount));
-
-    // This filter rejects rows but does NOT override getHintForRejectedRow (returns null).
     FilterBase noHintFilter = new FilterBase() {
       @Override
       public boolean filterRowKey(Cell cell) {
@@ -229,46 +160,32 @@ public class TestFilterHintForRejectedRow {
       }
     };
 
-    List<Cell> results = new ArrayList<>();
-    try (RegionScanner scanner =
-      region.getScanner(new Scan().addFamily(FAMILY).setFilter(noHintFilter))) {
-      List<Cell> rowCells = new ArrayList<>();
-      boolean hasMore;
-      do {
-        hasMore = scanner.next(rowCells);
-        results.addAll(rowCells);
-        rowCells.clear();
-      } while (hasMore);
-    }
+    List<Cell> hintResults = scanAll(new Scan().addFamily(FAMILY).setFilter(hintFilter));
+    List<Cell> noHintResults = scanAll(new Scan().addFamily(FAMILY).setFilter(noHintFilter));
 
-    assertEquals("Null-hint path must still return the correct cells from the accepted rows",
-      acceptedCount * CELLS_PER_ROW, results.size());
-    for (Cell c : results) {
-      assertTrue("Every returned cell must belong to the accepted row range",
-        Bytes.compareTo(c.getRowArray(), c.getRowOffset(), c.getRowLength(), acceptedStartRow, 0,
-          acceptedStartRow.length) >= 0);
+    assertEquals("Both paths must return the same number of cells", noHintResults.size(),
+      hintResults.size());
+    for (int i = 0; i < hintResults.size(); i++) {
+      assertTrue("Cell mismatch at index " + i,
+        CellUtil.equals(hintResults.get(i), noHintResults.get(i)));
     }
+    assertEquals(acceptedCount * CELLS_PER_ROW, hintResults.size());
+    assertEquals(
+      "getHintForRejectedRow must be called exactly once: the hint skips all rejected rows", 1,
+      hintCallCount.get());
   }
 
-  /**
-   * HBASE-29974 Path 1 — hint pointing beyond the last row terminates the scan cleanly.
-   * <p>
-   * If the filter's {@link Filter#getHintForRejectedRow(Cell)} returns a position that is past the
-   * end of the table (beyond all written rows), the scan must complete without returning any
-   * results and without throwing an exception.
-   */
   @Test
   public void testHintBeyondLastRowTerminatesScanGracefully() throws IOException {
     final String prefix = "hint-beyond";
     writeRows(prefix, 5);
 
-    // The hint points past "zzz", which is lexicographically after all "hint-beyond-XX" rows.
     final byte[] beyondAllRows = Bytes.toBytes("zzz-beyond-table-end");
 
     FilterBase beyondHintFilter = new FilterBase() {
       @Override
       public boolean filterRowKey(Cell cell) {
-        return true; // reject every row
+        return true;
       }
 
       @Override
@@ -277,30 +194,11 @@ public class TestFilterHintForRejectedRow {
       }
     };
 
-    List<Cell> results = new ArrayList<>();
-    try (RegionScanner scanner =
-      region.getScanner(new Scan().addFamily(FAMILY).setFilter(beyondHintFilter))) {
-      List<Cell> rowCells = new ArrayList<>();
-      boolean hasMore;
-      do {
-        hasMore = scanner.next(rowCells);
-        results.addAll(rowCells);
-        rowCells.clear();
-      } while (hasMore);
-    }
-
+    List<Cell> results = scanAll(new Scan().addFamily(FAMILY).setFilter(beyondHintFilter));
     assertTrue("When the hint is past the last row, no cells should be returned",
       results.isEmpty());
   }
 
-  /**
-   * HBASE-29974 Path 1 — hint for every rejected row (per-row hint stepping).
-   * <p>
-   * When the filter provides a hint that advances only one row at a time (i.e. it always points to
-   * the immediate next row key), {@code getHintForRejectedRow} is called once per rejected row.
-   * This verifies that the hint mechanism works correctly in the incremental-step case, not just
-   * the bulk-jump case.
-   */
   @Test
   public void testPerRowHintCalledOncePerRejectedRow() throws IOException {
     final String prefix = "hint-perrow";
@@ -318,44 +216,313 @@ public class TestFilterHintForRejectedRow {
           acceptedStartRow, 0, acceptedStartRow.length) < 0;
       }
 
-      /**
-       * Returns a hint pointing to the cell immediately after the current one (one row at a time).
-       * This causes the scanner to seek per-row, so this method is called once for each rejected
-       * row.
-       */
       @Override
       public Cell getHintForRejectedRow(Cell firstRowCell) {
         hintCallCount.incrementAndGet();
-        // Create a key that is one step past the current row key.
         return PrivateCellUtil.createFirstOnNextRow(firstRowCell);
       }
     };
 
-    List<Cell> results = new ArrayList<>();
-    try (RegionScanner scanner =
-      region.getScanner(new Scan().addFamily(FAMILY).setFilter(perRowHintFilter))) {
-      List<Cell> rowCells = new ArrayList<>();
-      boolean hasMore;
-      do {
-        hasMore = scanner.next(rowCells);
-        results.addAll(rowCells);
-        rowCells.clear();
-      } while (hasMore);
-    }
+    List<Cell> results = scanAll(new Scan().addFamily(FAMILY).setFilter(perRowHintFilter));
 
-    // ----- Correctness -----
-    assertEquals("Scan must return exactly the cells from the " + acceptedCount + " accepted rows",
-      acceptedCount * CELLS_PER_ROW, results.size());
+    assertEquals(acceptedCount * CELLS_PER_ROW, results.size());
     for (Cell c : results) {
       assertTrue("Every returned cell must belong to the accepted row range",
         Bytes.compareTo(c.getRowArray(), c.getRowOffset(), c.getRowLength(), acceptedStartRow, 0,
           acceptedStartRow.length) >= 0);
     }
-
-    // ----- Hint call count -----
-    // One call per rejected row: each per-row hint advances the scanner by exactly one row.
     assertEquals(
       "getHintForRejectedRow must be called once per rejected row in the per-row hint strategy",
       rejectedCount, hintCallCount.get());
+  }
+
+  @Test
+  public void testReversedScanWithHint() throws IOException {
+    final String prefix = "row";
+    final int totalRows = 10;
+    writeRows(prefix, totalRows);
+
+    // Accept rows 00-04 (lower half), reject rows 05-09 (upper half).
+    // In a reversed scan, the scanner starts at row-09 and moves backward.
+    final byte[] rejectThreshold = Bytes.toBytes(String.format("%s-%02d", prefix, 5));
+    final byte[] hintTarget = Bytes.toBytes(String.format("%s-%02d", prefix, 4));
+    final AtomicInteger hintCallCount = new AtomicInteger(0);
+
+    FilterBase hintFilter = new FilterBase() {
+      @Override
+      public boolean filterRowKey(Cell cell) {
+        return Bytes.compareTo(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+          rejectThreshold, 0, rejectThreshold.length) >= 0;
+      }
+
+      @Override
+      public Cell getHintForRejectedRow(Cell firstRowCell) {
+        hintCallCount.incrementAndGet();
+        // In reversed scan, hint must point backward (to a smaller row key).
+        return PrivateCellUtil.createFirstOnRow(hintTarget);
+      }
+    };
+
+    FilterBase noHintFilter = new FilterBase() {
+      @Override
+      public boolean filterRowKey(Cell cell) {
+        return Bytes.compareTo(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+          rejectThreshold, 0, rejectThreshold.length) >= 0;
+      }
+    };
+
+    Scan reversedHintScan = new Scan().addFamily(FAMILY).setReversed(true).setFilter(hintFilter);
+    Scan reversedNoHintScan =
+      new Scan().addFamily(FAMILY).setReversed(true).setFilter(noHintFilter);
+
+    List<Cell> hintResults = scanAll(reversedHintScan);
+    List<Cell> noHintResults = scanAll(reversedNoHintScan);
+
+    assertEquals("Both paths must return the same number of cells", noHintResults.size(),
+      hintResults.size());
+    for (int i = 0; i < hintResults.size(); i++) {
+      assertTrue("Cell mismatch at index " + i,
+        CellUtil.equals(hintResults.get(i), noHintResults.get(i)));
+    }
+    assertEquals(5 * CELLS_PER_ROW, hintResults.size());
+    assertEquals("getHintForRejectedRow must be called exactly once for reversed scan", 1,
+      hintCallCount.get());
+  }
+
+  @Test
+  public void testGetSkipHintWithTimeRangeIntegration() throws IOException {
+    final long insideTs = 2000;
+    final long outsideTs = 500;
+    final int rowCount = 5;
+
+    for (int i = 0; i < rowCount; i++) {
+      byte[] row = Bytes.toBytes(String.format("skiprow-%02d", i));
+      Put p = new Put(row);
+      p.setDurability(Durability.SKIP_WAL);
+      p.addColumn(FAMILY, Bytes.toBytes("q"), insideTs, VALUE);
+      p.addColumn(FAMILY, Bytes.toBytes("q"), outsideTs, VALUE);
+      region.put(p);
+    }
+    region.flush(true);
+
+    final AtomicInteger skipHintCalls = new AtomicInteger(0);
+
+    FilterBase skipHintFilter = new FilterBase() {
+      @Override
+      public Cell getSkipHint(Cell skippedCell) {
+        skipHintCalls.incrementAndGet();
+        return PrivateCellUtil.createFirstOnNextRow(skippedCell);
+      }
+    };
+
+    Scan hintScan = new Scan().addFamily(FAMILY).setTimeRange(1000, 3000).setFilter(skipHintFilter);
+    Scan noHintScan = new Scan().addFamily(FAMILY).setTimeRange(1000, 3000);
+
+    List<Cell> hintResults = scanAll(hintScan);
+    List<Cell> noHintResults = scanAll(noHintScan);
+
+    assertEquals("Both paths must return the same number of cells", noHintResults.size(),
+      hintResults.size());
+    for (int i = 0; i < hintResults.size(); i++) {
+      assertTrue("Cell mismatch at index " + i,
+        CellUtil.equals(hintResults.get(i), noHintResults.get(i)));
+    }
+    assertEquals(rowCount, hintResults.size());
+  }
+
+  @Test
+  public void testBackwardHintFallsBackToNextRow() throws IOException {
+    final String prefix = "row";
+    writeRows(prefix, 5);
+
+    final byte[] row00 = Bytes.toBytes(String.format("%s-%02d", prefix, 0));
+    final byte[] acceptedStartRow = Bytes.toBytes(String.format("%s-%02d", prefix, 2));
+
+    FilterBase backwardHintFilter = new FilterBase() {
+      @Override
+      public boolean filterRowKey(Cell cell) {
+        return Bytes.compareTo(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+          acceptedStartRow, 0, acceptedStartRow.length) < 0;
+      }
+
+      @Override
+      public Cell getHintForRejectedRow(Cell firstRowCell) {
+        return PrivateCellUtil.createFirstOnRow(row00);
+      }
+    };
+
+    FilterBase noHintFilter = new FilterBase() {
+      @Override
+      public boolean filterRowKey(Cell cell) {
+        return Bytes.compareTo(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+          acceptedStartRow, 0, acceptedStartRow.length) < 0;
+      }
+    };
+
+    List<Cell> hintResults = scanAll(new Scan().addFamily(FAMILY).setFilter(backwardHintFilter));
+    List<Cell> noHintResults = scanAll(new Scan().addFamily(FAMILY).setFilter(noHintFilter));
+
+    assertEquals("Backward hint must produce same results as no-hint path", noHintResults.size(),
+      hintResults.size());
+    for (int i = 0; i < hintResults.size(); i++) {
+      assertTrue("Cell mismatch at index " + i,
+        CellUtil.equals(hintResults.get(i), noHintResults.get(i)));
+    }
+  }
+
+  @Test
+  public void testSameRowHintFallsBackToNextRow() throws IOException {
+    final String prefix = "row";
+    writeRows(prefix, 5);
+
+    final byte[] acceptedStartRow = Bytes.toBytes(String.format("%s-%02d", prefix, 2));
+    final AtomicInteger hintCallCount = new AtomicInteger(0);
+
+    FilterBase sameRowHintFilter = new FilterBase() {
+      @Override
+      public boolean filterRowKey(Cell cell) {
+        return Bytes.compareTo(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+          acceptedStartRow, 0, acceptedStartRow.length) < 0;
+      }
+
+      @Override
+      public Cell getHintForRejectedRow(Cell firstRowCell) {
+        hintCallCount.incrementAndGet();
+        return PrivateCellUtil.createFirstOnRow(CellUtil.cloneRow(firstRowCell));
+      }
+    };
+
+    FilterBase noHintFilter = new FilterBase() {
+      @Override
+      public boolean filterRowKey(Cell cell) {
+        return Bytes.compareTo(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+          acceptedStartRow, 0, acceptedStartRow.length) < 0;
+      }
+    };
+
+    List<Cell> hintResults = scanAll(new Scan().addFamily(FAMILY).setFilter(sameRowHintFilter));
+    List<Cell> noHintResults = scanAll(new Scan().addFamily(FAMILY).setFilter(noHintFilter));
+
+    assertEquals("Same-row hint must produce same results as no-hint path", noHintResults.size(),
+      hintResults.size());
+    for (int i = 0; i < hintResults.size(); i++) {
+      assertTrue("Cell mismatch at index " + i,
+        CellUtil.equals(hintResults.get(i), noHintResults.get(i)));
+    }
+    assertEquals(3 * CELLS_PER_ROW, hintResults.size());
+  }
+
+  @Test
+  public void testCoprocessorHookCalledOncePerHintedRejection() throws IOException {
+    final String prefix = "row";
+    final int rejectedCount = 3;
+    final int acceptedCount = 3;
+    writeRows(prefix, rejectedCount + acceptedCount);
+
+    final byte[] acceptedStartRow = Bytes.toBytes(String.format("%s-%02d", prefix, rejectedCount));
+    final AtomicInteger hintCallCount = new AtomicInteger(0);
+
+    FilterBase hintFilter = new FilterBase() {
+      @Override
+      public boolean filterRowKey(Cell cell) {
+        return Bytes.compareTo(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+          acceptedStartRow, 0, acceptedStartRow.length) < 0;
+      }
+
+      @Override
+      public Cell getHintForRejectedRow(Cell firstRowCell) {
+        hintCallCount.incrementAndGet();
+        return PrivateCellUtil.createFirstOnRow(acceptedStartRow);
+      }
+    };
+
+    List<Cell> results = scanAll(new Scan().addFamily(FAMILY).setFilter(hintFilter));
+
+    assertEquals(1, hintCallCount.get());
+    assertEquals(acceptedCount * CELLS_PER_ROW, results.size());
+  }
+
+  @Test
+  public void testMultiFamilyScanWithHint() throws IOException {
+    final String prefix = "row";
+    final int rejectedCount = 3;
+    final int acceptedCount = 3;
+    writeRowsMultiFamily(prefix, rejectedCount + acceptedCount);
+
+    final byte[] acceptedStartRow = Bytes.toBytes(String.format("%s-%02d", prefix, rejectedCount));
+    final AtomicInteger hintCallCount = new AtomicInteger(0);
+
+    FilterBase hintFilter = new FilterBase() {
+      @Override
+      public boolean filterRowKey(Cell cell) {
+        return Bytes.compareTo(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+          acceptedStartRow, 0, acceptedStartRow.length) < 0;
+      }
+
+      @Override
+      public Cell getHintForRejectedRow(Cell firstRowCell) {
+        hintCallCount.incrementAndGet();
+        return PrivateCellUtil.createFirstOnRow(acceptedStartRow);
+      }
+    };
+
+    FilterBase noHintFilter = new FilterBase() {
+      @Override
+      public boolean filterRowKey(Cell cell) {
+        return Bytes.compareTo(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+          acceptedStartRow, 0, acceptedStartRow.length) < 0;
+      }
+    };
+
+    // Scan both families.
+    Scan hintScan = new Scan().addFamily(FAMILY).addFamily(FAMILY2).setFilter(hintFilter);
+    Scan noHintScan = new Scan().addFamily(FAMILY).addFamily(FAMILY2).setFilter(noHintFilter);
+
+    List<Cell> hintResults = scanAll(hintScan);
+    List<Cell> noHintResults = scanAll(noHintScan);
+
+    assertEquals("Both paths must return the same number of cells", noHintResults.size(),
+      hintResults.size());
+    for (int i = 0; i < hintResults.size(); i++) {
+      assertTrue("Cell mismatch at index " + i,
+        CellUtil.equals(hintResults.get(i), noHintResults.get(i)));
+    }
+    assertEquals(2 * CELLS_PER_ROW * acceptedCount, hintResults.size());
+    assertEquals(1, hintCallCount.get());
+  }
+
+  @Test
+  public void testDataCorrectnessVsUnfilteredScan() throws IOException {
+    final String prefix = "row";
+    final int totalRows = 8;
+    writeRows(prefix, totalRows);
+
+    final byte[] acceptedStartRow = Bytes.toBytes(String.format("%s-%02d", prefix, 3));
+
+    FilterBase hintFilter = new FilterBase() {
+      @Override
+      public boolean filterRowKey(Cell cell) {
+        return Bytes.compareTo(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+          acceptedStartRow, 0, acceptedStartRow.length) < 0;
+      }
+
+      @Override
+      public Cell getHintForRejectedRow(Cell firstRowCell) {
+        return PrivateCellUtil.createFirstOnRow(acceptedStartRow);
+      }
+    };
+
+    List<Cell> filteredResults = scanAll(new Scan().addFamily(FAMILY).setFilter(hintFilter));
+
+    // Unfiltered scan starting at acceptedStartRow — should return the exact same cells.
+    Scan unfilteredScan = new Scan().addFamily(FAMILY).withStartRow(acceptedStartRow);
+    List<Cell> unfilteredResults = scanAll(unfilteredScan);
+
+    assertEquals("Filtered and unfiltered scans must return same cell count",
+      unfilteredResults.size(), filteredResults.size());
+    for (int i = 0; i < filteredResults.size(); i++) {
+      assertTrue("Cell mismatch at index " + i,
+        CellUtil.equals(filteredResults.get(i), unfilteredResults.get(i)));
+    }
   }
 }

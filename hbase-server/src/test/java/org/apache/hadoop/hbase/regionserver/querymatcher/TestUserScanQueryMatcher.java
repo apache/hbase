@@ -296,13 +296,6 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     }
   }
 
-  /**
-   * A filter whose {@link #getSkipHint(Cell)} always returns a fixed {@link ExtendedCell} target,
-   * simulating a range-driven filter (e.g. {@code MultiRowRangeFilter}) that knows the next
-   * interesting position without inspecting the skipped cell. The filter's
-   * {@link #filterCell(Cell)} is intentionally left as the default include-all so that it does not
-   * interfere with tests that need cells to reach that method.
-   */
   private static class FixedSkipHintFilter extends FilterBase {
     final ExtendedCell hint;
 
@@ -419,27 +412,13 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     assertArrayEquals(nextCell.getQualifierArray(), col4);
   }
 
-  // -----------------------------------------------------------------------
-  // Tests for HBASE-29974: Filter#getSkipHint consulted at matchColumn
-  // structural short-circuits (time-range, column, and version gates).
-  // -----------------------------------------------------------------------
-
-  /**
-   * HBASE-29974 Path 2 — time-range upper-bound gate (tsCmp &gt; 0).
-   * <p>
-   * When a cell's timestamp is newer than the scan's time-range maximum ({@code ts >= maxTs}), the
-   * original code returns {@link MatchCode#SKIP} without ever calling {@code filterCell}. With the
-   * fix, the matcher must first ask the filter for a skip hint. If the filter returns a non-null
-   * hint, {@link MatchCode#SEEK_NEXT_USING_HINT} must be returned and
-   * {@link UserScanQueryMatcher#getNextKeyHint} must return that hint.
-   */
+  /** Verify that getSkipHint is consulted when a cell is newer than the time-range upper bound. */
   @Test
   public void testSkipHintConsultedForCellNewerThanTimeRange() throws IOException {
     long now = EnvironmentEdgeManager.currentTime();
     long minTs = now - 2000;
     long maxTs = now - 1000;
 
-    // The hint points to a cell in the middle of the valid time range so the scanner can resume.
     KeyValue hintCell = new KeyValue(row2, fam2, col1, now - 1500, data);
     Scan timeRangeScan = new Scan().addFamily(fam2).setTimeRange(minTs, maxTs)
       .setFilter(new FixedSkipHintFilter(hintCell));
@@ -450,27 +429,16 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
         0, rowComparator, false),
       null, 0, now2, null);
 
-    // ts=now2 >= maxTs, so tsCmp > 0: time-range gate fires before filterCell (Path 2).
+    // ts=now2 >= maxTs, so tsCmp > 0: time-range gate fires before filterCell.
     KeyValue tooNew = new KeyValue(row1, fam2, col1, now2, data);
     qm.setToNewRow(tooNew);
 
-    assertEquals("Filter hint must promote SKIP to SEEK_NEXT_USING_HINT",
-      MatchCode.SEEK_NEXT_USING_HINT, qm.match(tooNew));
-    assertEquals("getNextKeyHint must return the pending skip hint", hintCell,
-      qm.getNextKeyHint(tooNew));
-    // pendingSkipHint is consumed on the first getNextKeyHint call; subsequent calls fall through
-    // to FilterBase#getNextCellHint which returns null.
-    assertNull("pendingSkipHint must be cleared after being drained", qm.getNextKeyHint(tooNew));
+    assertEquals(MatchCode.SEEK_NEXT_USING_HINT, qm.match(tooNew));
+    assertEquals(hintCell, qm.getNextKeyHint(tooNew));
+    assertNull(qm.getNextKeyHint(tooNew));
   }
 
-  /**
-   * HBASE-29974 Path 2 — time-range lower-bound gate (tsCmp &lt; 0).
-   * <p>
-   * When a cell's timestamp is older than the scan's time-range minimum ({@code ts < minTs}), the
-   * original code returns the column-tracker's next-row-or-next-column suggestion without
-   * consulting the filter. With the fix, the matcher must first ask the filter for a skip hint, and
-   * prefer it over the column-tracker's answer when non-null.
-   */
+  /** Verify that getSkipHint is consulted when a cell is older than the time-range lower bound. */
   @Test
   public void testSkipHintConsultedForCellOlderThanTimeRange() throws IOException {
     long now = EnvironmentEdgeManager.currentTime();
@@ -486,31 +454,22 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
         0, rowComparator, false),
       null, 0, now, null);
 
-    // ts = now-1000 < minTs (now-500), so tsCmp < 0: time-range gate fires (Path 2).
+    // ts = now-1000 < minTs (now-500), so tsCmp < 0: time-range gate fires.
     KeyValue tooOld = new KeyValue(row1, fam2, col1, now - 1000, data);
     qm.setToNewRow(tooOld);
 
-    assertEquals("Filter hint must promote column-tracker result to SEEK_NEXT_USING_HINT",
-      MatchCode.SEEK_NEXT_USING_HINT, qm.match(tooOld));
-    assertEquals("getNextKeyHint must return the pending skip hint", hintCell,
-      qm.getNextKeyHint(tooOld));
-    assertNull("pendingSkipHint must be cleared after being drained", qm.getNextKeyHint(tooOld));
+    assertEquals(MatchCode.SEEK_NEXT_USING_HINT, qm.match(tooOld));
+    assertEquals(hintCell, qm.getNextKeyHint(tooOld));
+    assertNull(qm.getNextKeyHint(tooOld));
   }
 
-  /**
-   * HBASE-29974 Path 2 — time-range gate, null hint falls through.
-   * <p>
-   * When the filter's {@link org.apache.hadoop.hbase.filter.Filter#getSkipHint(Cell)} returns
-   * {@code null}, the matcher must fall back to the original structural skip code (SKIP or the
-   * column-tracker result) with no regression.
-   */
+  /** Verify that a null getSkipHint falls back to the original SKIP match code. */
   @Test
   public void testNullSkipHintFallsThroughToOriginalCodeOnTimeRangeGate() throws IOException {
     long now = EnvironmentEdgeManager.currentTime();
     long minTs = now - 2000;
     long maxTs = now - 1000;
 
-    // AlwaysIncludeFilter does not override getSkipHint(), so it returns null.
     Scan timeRangeScan =
       new Scan().addFamily(fam2).setTimeRange(minTs, maxTs).setFilter(new AlwaysIncludeFilter());
 
@@ -523,19 +482,10 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     KeyValue tooNew = new KeyValue(row1, fam2, col1, now2, data);
     qm.setToNewRow(tooNew);
 
-    // With a null hint the gate must still return the original SKIP code.
-    assertEquals("Null getSkipHint must not change the original SKIP match code", MatchCode.SKIP,
-      qm.match(tooNew));
+    assertEquals(MatchCode.SKIP, qm.match(tooNew));
   }
 
-  /**
-   * HBASE-29974 Path 3 — column-exclusion gate ({@code checkColumn() != INCLUDE}).
-   * <p>
-   * When an explicit-column scan encounters a qualifier not in its requested set, the column
-   * tracker returns a skip/seek code before {@code filterCell} is ever reached. With the fix, the
-   * matcher must consult {@code getSkipHint} first, and return
-   * {@link MatchCode#SEEK_NEXT_USING_HINT} when a non-null hint is available.
-   */
+  /** Verify that getSkipHint is consulted when a column is excluded by the scan's column set. */
   @Test
   public void testSkipHintConsultedForExcludedColumn() throws IOException {
     long now = EnvironmentEdgeManager.currentTime();
@@ -553,28 +503,17 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     KeyValue excludedCol = new KeyValue(row1, fam2, col1, 1, data);
     qm.setToNewRow(excludedCol);
 
-    assertEquals("Filter hint must promote column-exclusion result to SEEK_NEXT_USING_HINT",
-      MatchCode.SEEK_NEXT_USING_HINT, qm.match(excludedCol));
-    assertEquals("getNextKeyHint must return the pending skip hint", hintCell,
-      qm.getNextKeyHint(excludedCol));
-    assertNull("pendingSkipHint must be cleared after being drained",
-      qm.getNextKeyHint(excludedCol));
+    assertEquals(MatchCode.SEEK_NEXT_USING_HINT, qm.match(excludedCol));
+    assertEquals(hintCell, qm.getNextKeyHint(excludedCol));
+    assertNull(qm.getNextKeyHint(excludedCol));
   }
 
-  /**
-   * HBASE-29974 Path 3 — version-exhaustion gate ({@code checkVersions()} returns
-   * {@link MatchCode#SEEK_NEXT_COL}).
-   * <p>
-   * When the column tracker has already seen the maximum number of versions for a qualifier, it
-   * returns SKIP or SEEK_NEXT_COL for subsequent versions, again bypassing {@code filterCell}. With
-   * the fix, the matcher must consult {@code getSkipHint} at that point.
-   */
+  /** Verify that getSkipHint is consulted when the version limit is exhausted. */
   @Test
   public void testSkipHintConsultedOnVersionExhaustion() throws IOException {
     long now = EnvironmentEdgeManager.currentTime();
 
     KeyValue hintCell = new KeyValue(row2, fam2, col1, now, data);
-    // ScanInfo maxVersions=1: column tracker allows exactly 1 version per qualifier.
     Scan scanWithFilter = new Scan().addFamily(fam2).setFilter(new FixedSkipHintFilter(hintCell));
 
     UserScanQueryMatcher qm = UserScanQueryMatcher.create(scanWithFilter,
@@ -582,39 +521,24 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
         0, rowComparator, false),
       null, now - ttl, now, null);
 
-    // First version of col1: passes all gates and reaches filterCell.
     KeyValue version1 = new KeyValue(row1, fam2, col1, now - 10, data);
     qm.setToNewRow(version1);
-    MatchCode firstCode = qm.match(version1);
-    assertEquals("First version must be included", MatchCode.INCLUDE, firstCode);
+    assertEquals(MatchCode.INCLUDE, qm.match(version1));
 
-    // Second version of col1: checkVersions returns SEEK_NEXT_COL (version limit exceeded).
-    // The filter hint must be consulted and SEEK_NEXT_USING_HINT returned.
+    // Second version: version limit exceeded, checkVersions returns SEEK_NEXT_COL.
     KeyValue version2 = new KeyValue(row1, fam2, col1, now - 20, data);
-    assertEquals("Filter hint must promote version-exhaustion result to SEEK_NEXT_USING_HINT",
-      MatchCode.SEEK_NEXT_USING_HINT, qm.match(version2));
-    assertEquals("getNextKeyHint must return the pending skip hint from version gate", hintCell,
-      qm.getNextKeyHint(version2));
-    assertNull("pendingSkipHint must be cleared after being drained", qm.getNextKeyHint(version2));
+    assertEquals(MatchCode.SEEK_NEXT_USING_HINT, qm.match(version2));
+    assertEquals(hintCell, qm.getNextKeyHint(version2));
+    assertNull(qm.getNextKeyHint(version2));
   }
 
-  /**
-   * HBASE-29974 — {@code pendingSkipHint} must not interfere with the normal
-   * {@code filterCell → SEEK_NEXT_USING_HINT → getNextCellHint} path.
-   * <p>
-   * If a cell passes all structural gates and reaches {@code filterCell}, which then returns
-   * {@link ReturnCode#SEEK_NEXT_USING_HINT}, the existing {@link Filter#getNextCellHint(Cell)}
-   * mechanism must still be used (not {@code getSkipHint}), and {@code pendingSkipHint} must remain
-   * null so it does not contaminate the result.
-   */
+  /** Verify that the normal filterCell/getNextCellHint path is unaffected by pendingSkipHint. */
   @Test
   public void testNormalFilterCellHintPathUnaffectedBySkipHintChange() throws IOException {
     long now = EnvironmentEdgeManager.currentTime();
 
     final KeyValue filterHintCell = new KeyValue(row2, fam2, col1, now, data);
 
-    // A filter that returns SEEK_NEXT_USING_HINT from filterCell and provides a hint through
-    // getNextCellHint, while NOT overriding getSkipHint (returns null by default).
     FilterBase seekFilter = new FilterBase() {
       @Override
       public ReturnCode filterCell(Cell c) {
@@ -637,12 +561,8 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     KeyValue cell = new KeyValue(row1, fam2, col1, now - 10, data);
     qm.setToNewRow(cell);
 
-    assertEquals("filterCell path must still return SEEK_NEXT_USING_HINT",
-      MatchCode.SEEK_NEXT_USING_HINT, qm.match(cell));
-    // pendingSkipHint was never set (getSkipHint returned null), so getNextKeyHint must
-    // delegate to filter.getNextCellHint().
-    assertEquals("getNextKeyHint must delegate to getNextCellHint when no skip hint is pending",
-      filterHintCell, qm.getNextKeyHint(cell));
+    assertEquals(MatchCode.SEEK_NEXT_USING_HINT, qm.match(cell));
+    assertEquals(filterHintCell, qm.getNextKeyHint(cell));
   }
 
   /**
