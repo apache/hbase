@@ -57,55 +57,45 @@ public class TestRowKeyDateTieringValueProvider {
     conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyy-MM-dd");
     conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_GROUP, "1");
     provider.init(conf);
-    assertEquals(provider.getRowKeyPattern().pattern(), "(\\d{4}-\\d{2}-\\d{2})");
-    assertEquals(provider.getDateFormat().toPattern(), "yyyy-MM-dd");
+    assertEquals("(\\d{4}-\\d{2}-\\d{2})", provider.getRowKeyPattern().pattern());
+    assertEquals("yyyy-MM-dd", provider.getDateFormat().toPattern());
     assertEquals(Integer.valueOf(1), provider.getRowKeyRegexExtractGroup());
   }
 
   @Test
-  public void testInitWithMissingRegexPattern() throws Exception {
-    assertThrows(IllegalArgumentException.class, () -> {
-      conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyy-MM-dd");
-      provider.init(conf);
-    });
+  public void testInitWithMissingRegexPattern() {
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyy-MM-dd");
+    assertThrows(IllegalArgumentException.class, () -> provider.init(conf));
   }
 
   @Test
-  public void testInitWithMissingDateFormat() throws Exception {
-    assertThrows(IllegalArgumentException.class, () -> {
-      conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
-      provider.init(conf);
-    });
+  public void testInitWithMissingDateFormat() {
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
+    assertThrows(IllegalArgumentException.class, () -> provider.init(conf));
   }
 
   @Test
-  public void testInitWithInvalidDateFormat() throws Exception {
-    assertThrows(IllegalArgumentException.class, () -> {
-      conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
-      conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "invalid-format");
-      provider.init(conf);
-    });
+  public void testInitWithInvalidDateFormat() {
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "invalid-format");
+    assertThrows(IllegalArgumentException.class, () -> provider.init(conf));
   }
 
   @Test
-  public void testInitWithInvalidExtractGroup() throws Exception {
-    assertThrows(IllegalArgumentException.class, () -> {
-      conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
-      conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyy-MM-dd");
-      conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_GROUP, "-1");
-      provider.init(conf);
-    });
+  public void testInitWithInvalidExtractGroup() {
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyy-MM-dd");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_GROUP, "-1");
+    assertThrows(IllegalArgumentException.class, () -> provider.init(conf));
   }
 
   @Test
-  public void testInitWithExtractGroupExceedingPatternGroups() throws Exception {
-    assertThrows(IllegalArgumentException.class, () -> {
-      conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
-      conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyy-MM-dd");
-      conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_GROUP, "2"); // Only 1 group in
-                                                                            // pattern
-      provider.init(conf);
-    });
+  public void testInitWithExtractGroupExceedingPatternGroups() {
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN, "(\\d{4}-\\d{2}-\\d{2})");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_FORMAT, "yyyy-MM-dd");
+    conf.set(RowKeyDateTieringValueProvider.TIERING_KEY_DATE_GROUP, "2"); // Only 1 group in
+    // pattern
+    assertThrows(IllegalArgumentException.class, () -> provider.init(conf));
   }
 
   @Test
@@ -176,11 +166,9 @@ public class TestRowKeyDateTieringValueProvider {
 
   @Test
   public void testGetTieringValueWithoutInitialization() {
-    assertThrows(IllegalStateException.class, () -> {
-      String rowKeyStr = "order_9999999999999999_date";
-      byte[] rowKey = Bytes.toBytes(rowKeyStr);
-      ExtendedCell cell = PrivateCellUtil.createFirstOnRow(rowKey);
-      provider.getTieringValue(cell);
-    });
+    String rowKeyStr = "order_9999999999999999_date";
+    byte[] rowKey = Bytes.toBytes(rowKeyStr);
+    ExtendedCell cell = PrivateCellUtil.createFirstOnRow(rowKey);
+    assertThrows(IllegalStateException.class, () -> provider.getTieringValue(cell));
   }
 }

@@ -78,8 +78,7 @@ public class TestMetricsWAL {
 
   @Test
   public void testSlowAppend() throws Exception {
-    String testName = name;
-    MetricsWALSource source = new MetricsWALSourceImpl(testName, testName, testName, testName);
+    MetricsWALSource source = new MetricsWALSourceImpl(name, name, name, name);
     MetricsWAL metricsWAL = new MetricsWAL(source);
     TableName tableName = TableName.valueOf("foo");
     WALKey walKey = new WALKeyImpl(null, tableName, -1);
@@ -137,8 +136,7 @@ public class TestMetricsWAL {
 
   @Test
   public void testLogRolls() {
-    String testName = name;
-    MetricsWALSource source = new MetricsWALSourceImpl(testName, testName, testName, testName);
+    MetricsWALSource source = new MetricsWALSourceImpl(name, name, name, name);
     MetricsWAL metricsWAL = new MetricsWAL(source);
     Path path1 = new Path("path-1");
     int count = 1;

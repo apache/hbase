@@ -44,13 +44,13 @@ public class TestAsyncProtobufLog extends AbstractTestProtobufLog {
   public static void setUpBeforeClass() throws Exception {
     EVENT_LOOP_GROUP = new NioEventLoopGroup();
     CHANNEL_CLASS = NioSocketChannel.class;
-    AbstractTestProtobufLog.setUpBeforeClass();
   }
 
   @AfterAll
   public static void tearDownAfterClass() throws Exception {
-    AbstractTestProtobufLog.tearDownAfterClass();
-    EVENT_LOOP_GROUP.shutdownGracefully().syncUninterruptibly();
+    if (EVENT_LOOP_GROUP != null) {
+      EVENT_LOOP_GROUP.shutdownGracefully().syncUninterruptibly();
+    }
   }
 
   @Override

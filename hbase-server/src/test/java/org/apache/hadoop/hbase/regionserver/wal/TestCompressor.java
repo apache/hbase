@@ -56,9 +56,8 @@ public class TestCompressor {
 
   @Test
   public void testNegativeToShort() {
-    assertThrows(IllegalArgumentException.class, () -> {
-      Compressor.toShort((byte) 0xff, (byte) 0xff);
-    });
+    assertThrows(IllegalArgumentException.class,
+      () -> Compressor.toShort((byte) 0xff, (byte) 0xff));
   }
 
   @Test
