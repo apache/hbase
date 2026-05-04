@@ -48,7 +48,9 @@ public final class ClientModeStrategy implements ModeStrategy {
       new FieldInfo(Field.REQUEST_COUNT_PER_SECOND, 10, true),
       new FieldInfo(Field.READ_REQUEST_COUNT_PER_SECOND, 10, true),
       new FieldInfo(Field.WRITE_REQUEST_COUNT_PER_SECOND, 10, true),
-      new FieldInfo(Field.FILTERED_READ_REQUEST_COUNT_PER_SECOND, 10, true));
+      new FieldInfo(Field.FILTERED_READ_REQUEST_COUNT_PER_SECOND, 10, true),
+      new FieldInfo(Field.HOST_ADDRESS, 0, true), new FieldInfo(Field.USER_NAME, 0, true),
+      new FieldInfo(Field.CLIENT_VERSION, 0, true), new FieldInfo(Field.SERVICE_NAME, 0, true));
   private final Map<String, RequestCountPerSecond> requestCountPerSecondMap = new HashMap<>();
 
   ClientModeStrategy() {
@@ -145,6 +147,10 @@ public final class ClientModeStrategy implements ModeStrategy {
       requestCountPerSecond.getWriteRequestCountPerSecond());
     builder.put(Field.FILTERED_READ_REQUEST_COUNT_PER_SECOND,
       requestCountPerSecond.getFilteredReadRequestCountPerSecond());
+    builder.put(Field.HOST_ADDRESS, clientMetrics.getHostAddress());
+    builder.put(Field.USER_NAME, clientMetrics.getUserName());
+    builder.put(Field.CLIENT_VERSION, clientMetrics.getClientVersion());
+    builder.put(Field.SERVICE_NAME, clientMetrics.getServiceName());
     builder.put(Field.USER, user);
     return builder.build();
   }

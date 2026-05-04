@@ -58,7 +58,11 @@ public enum Field {
   MAX_HEAP_SIZE("MHEAP", "Max Heap Size", false, false, FieldValueType.SIZE),
   CLIENT_COUNT("#CLIENT", "Client Count", false, false, FieldValueType.INTEGER),
   USER_COUNT("#USER", "User Count", false, false, FieldValueType.INTEGER),
-  CLIENT("CLIENT", "Client Hostname", true, true, FieldValueType.STRING);
+  CLIENT("CLIENT", "Client Hostname", true, true, FieldValueType.STRING),
+  HOST_ADDRESS("HADDR", "Client Host Address", true, true, FieldValueType.STRING),
+  CLIENT_VERSION("CVER", "Client Version", true, true, FieldValueType.STRING),
+  USER_NAME("USER", "User Name", true, true, FieldValueType.STRING),
+  SERVICE_NAME("SVC", "Service Name", true, true, FieldValueType.STRING);
 
   private final String header;
   private final String description;

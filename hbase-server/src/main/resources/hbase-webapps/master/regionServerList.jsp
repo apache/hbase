@@ -63,6 +63,9 @@
     <li class="nav-item">
       <a class="nav-link" href="#tab_replicationStats" data-bs-toggle="tab" role="tab">Replications</a>
     </li>
+    <li class="nav-item">
+      <a class="nav-link" href="#tab_clientConnectionsStats" data-bs-toggle="tab" role="tab">ClientConnections</a>
+    </li>
   </ul>
   <div class="tab-content">
     <% request.setAttribute("serverNames", serverNames); %>
@@ -83,6 +86,9 @@
     </div>
     <div class="tab-pane" id="tab_replicationStats" role="tabpanel">
       <jsp:include page="regionServerListReplicationStats.jsp" />
+    </div>
+    <div class="tab-pane" id="tab_clientConnectionsStats" role="tabpanel">
+      <jsp:include page="regionServerListClientConnectionsStats.jsp" />
     </div>
   </div>
 </div>

@@ -36,7 +36,9 @@ public final class UserMetricsBuilder {
     userLoad.getClientMetricsList().stream()
       .map(clientMetrics -> new ClientMetricsImpl(clientMetrics.getHostName(),
         clientMetrics.getReadRequestsCount(), clientMetrics.getWriteRequestsCount(),
-        clientMetrics.getFilteredRequestsCount()))
+        clientMetrics.getFilteredRequestsCount(), clientMetrics.getHostAddress(),
+        clientMetrics.getUserName(), clientMetrics.getServiceName(),
+        clientMetrics.getClientVersion()))
       .forEach(builder::addClientMetris);
     return builder.build();
   }
@@ -49,7 +51,10 @@ public final class UserMetricsBuilder {
         .setHostName(clientMetrics.getHostName())
         .setWriteRequestsCount(clientMetrics.getWriteRequestsCount())
         .setReadRequestsCount(clientMetrics.getReadRequestsCount())
-        .setFilteredRequestsCount(clientMetrics.getFilteredReadRequestsCount()).build())
+        .setFilteredRequestsCount(clientMetrics.getFilteredReadRequestsCount())
+        .setHostAddress(clientMetrics.getHostAddress()).setUserName(clientMetrics.getUserName())
+        .setServiceName(clientMetrics.getServiceName())
+        .setClientVersion(clientMetrics.getClientVersion()).build())
       .forEach(builder::addClientMetrics);
     return builder.build();
   }
@@ -79,13 +84,27 @@ public final class UserMetricsBuilder {
     private final String hostName;
     private final long readRequestCount;
     private final long writeRequestCount;
+    private final String hostAddress;
+    private final String userName;
+    private final String serviceName;
+    private final String clientVersion;
 
     public ClientMetricsImpl(String hostName, long readRequest, long writeRequest,
       long filteredReadRequestsCount) {
+      this(hostName, readRequest, writeRequest, filteredReadRequestsCount, null, null, null, null);
+    }
+
+    public ClientMetricsImpl(String hostName, long readRequest, long writeRequest,
+      long filteredReadRequestsCount, String hostAddress, String userName, String serviceName,
+      String clientVersion) {
       this.hostName = hostName;
       this.readRequestCount = readRequest;
       this.writeRequestCount = writeRequest;
       this.filteredReadRequestsCount = filteredReadRequestsCount;
+      this.hostAddress = hostAddress != null ? hostAddress : "Unknown";
+      this.userName = userName != null ? userName : "Unknown";
+      this.serviceName = serviceName != null ? serviceName : "Unknown";
+      this.clientVersion = clientVersion != null ? clientVersion : "Unknown";
     }
 
     @Override
@@ -106,6 +125,26 @@ public final class UserMetricsBuilder {
     @Override
     public long getFilteredReadRequestsCount() {
       return filteredReadRequestsCount;
+    }
+
+    @Override
+    public String getHostAddress() {
+      return hostAddress;
+    }
+
+    @Override
+    public String getUserName() {
+      return userName;
+    }
+
+    @Override
+    public String getServiceName() {
+      return serviceName;
+    }
+
+    @Override
+    public String getClientVersion() {
+      return clientVersion;
     }
   }
 
