@@ -73,7 +73,7 @@ public class TestWALCellCodecWithCompression {
 
   @TestTemplate
   public void testEncodeDecodeOffKVsWithTagsWithTagsCompression() throws Exception {
-    doTest(true, false);
+    doTest(true, true);
   }
 
   @TestTemplate
