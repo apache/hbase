@@ -133,4 +133,7 @@ public interface MetricsTableWrapperAggregate {
 
   /** Returns number of row reads from file and memstore per store for this table */
   Map<String, Long> getMixedRowReadsCount(String table);
+
+  /** Returns store file size per store (column family) for this table */
+  Map<String, Long> getStoreFileSizePerStore(String table);
 }
