@@ -787,11 +787,31 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           case SEEK_NEXT_USING_HINT:
             ExtendedCell nextKV = matcher.getNextKeyHint(cell);
             if (nextKV != null) {
-              int difference = comparator.compare(nextKV, cell);
+              // HBASE-28902: InnerStoreCellComparator compares families by length only,
+              // so cross-CF hints produce wrong ordering.
+              //
+              // * Use compareFamilies (a final method that does byte comparison) to detect them.
+              //
+              // * When the hint targets a different CF, this store has no data for it,
+              // so skip the rest of this row. We can't use seekAsDirection since KeyValueHeap
+              // also uses InnerStoreCellComparator.
+              //
+              // * Empty-family hints (e.g. MultiRowRangeFilter) fall through to the normal path
+              // where row comparison dominates.
+              int familyCmp =
+                nextKV.getFamilyLength() > 0 && comparator.compareRows(nextKV, cell) == 0
+                  ? comparator.compareFamilies(nextKV, cell)
+                  : 0;
+              int difference = familyCmp != 0 ? familyCmp : comparator.compare(nextKV, cell);
               if (
                 ((!scan.isReversed() && difference > 0) || (scan.isReversed() && difference < 0))
               ) {
-                seekAsDirection(nextKV);
+                if (familyCmp != 0) {
+                  matcher.clearCurrentRow();
+                  seekOrSkipToNextRow(cell);
+                } else {
+                  seekAsDirection(nextKV);
+                }
                 NextState stateAfterSeekByHint = needToReturn();
                 if (stateAfterSeekByHint != null) {
                   return scannerContext.setScannerState(stateAfterSeekByHint).hasMoreValues();
