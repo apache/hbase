@@ -21,7 +21,7 @@ name: Yetus General Check
 
 "on":
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 permissions: {}
 
@@ -58,7 +58,8 @@ jobs:
           restore-keys: |
             hbase-m2-
 
-      - name: Download Yetus
+      - name: Download Yetus (pinned release)
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'test-yetus-prerelease') }}
         run: |
           mkdir -p yetus
           cd yetus
@@ -69,6 +70,38 @@ jobs:
             yetus/${{ env.YETUS_VERSION }}/apache-yetus-${{ env.YETUS_VERSION }}-bin.tar.gz
           tar --strip-components=1 -xzf apache-yetus-${{ env.YETUS_VERSION }}-bin.tar.gz
           rm apache-yetus-${{ env.YETUS_VERSION }}-bin.tar.gz
+
+      - name: Set up JDK 21 (prerelease, build-only)
+        if: ${{ contains(github.event.pull_request.labels.*.name, 'test-yetus-prerelease') }}
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Checkout apache/yetus@HEAD (prerelease)
+        if: ${{ contains(github.event.pull_request.labels.*.name, 'test-yetus-prerelease') }}
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: apache/yetus
+          path: yetus-src
+          persist-credentials: false
+
+      - name: Build Yetus from source (prerelease)
+        if: ${{ contains(github.event.pull_request.labels.*.name, 'test-yetus-prerelease') }}
+        run: |
+          set -euo pipefail
+          YETUS_SHA="$(git -C yetus-src rev-parse HEAD)"
+          {
+            echo "## Yetus prerelease build"
+            echo ""
+            echo "- Source: \`apache/yetus@${YETUS_SHA}\`"
+            echo "- Triggered by \`test-yetus-prerelease\` label on this PR"
+          } >> "${GITHUB_STEP_SUMMARY}"
+          (cd yetus-src && mvn -B -DskipTests install)
+          mkdir -p yetus
+          tar --strip-components=1 \
+            -xzf yetus-src/yetus-dist/target/artifacts/apache-yetus-*-bin.tar.gz \
+            -C yetus
 
       - name: Run Yetus General Check
         env:
