@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,7 +26,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -38,13 +37,11 @@ import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,27 +54,23 @@ import org.slf4j.LoggerFactory;
  * increments across two column families all on one row and the increments are connected to prove
  * atomicity on row.
  */
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestRegionIncrement {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionIncrement.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionIncrement.class);
-  @Rule
-  public TestName name = new TestName();
+
+  private String name;
   private static HBaseTestingUtil TEST_UTIL;
   private final static byte[] INCREMENT_BYTES = Bytes.toBytes("increment");
   private static final int THREAD_COUNT = 10;
   private static final int INCREMENT_COUNT = 10000;
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
+    name = testInfo.getTestMethod().get().getName();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.cleanupTestDir();
   }
@@ -99,7 +92,7 @@ public class TestRegionIncrement {
 
   @Test
   public void testMVCCCausingMisRead() throws IOException {
-    final HRegion region = getRegion(TEST_UTIL.getConfiguration(), this.name.getMethodName());
+    final HRegion region = getRegion(TEST_UTIL.getConfiguration(), this.name);
     try {
       // ADD TEST HERE!!
     } finally {
@@ -177,7 +170,7 @@ public class TestRegionIncrement {
   @Test
   public void testUnContendedSingleCellIncrement() throws IOException, InterruptedException {
     final HRegion region = getRegion(TEST_UTIL.getConfiguration(),
-      TestIncrementsFromClientSide.filterStringSoTableNameSafe(this.name.getMethodName()));
+      TestIncrementsFromClientSide.filterStringSoTableNameSafe(this.name));
     long startTime = EnvironmentEdgeManager.currentTime();
     try {
       SingleCellIncrementer[] threads = new SingleCellIncrementer[THREAD_COUNT];
@@ -204,8 +197,7 @@ public class TestRegionIncrement {
       assertEquals(INCREMENT_COUNT * THREAD_COUNT, total);
     } finally {
       closeRegion(region);
-      LOG.info(this.name.getMethodName() + " " + (EnvironmentEdgeManager.currentTime() - startTime)
-        + "ms");
+      LOG.info(this.name + " " + (EnvironmentEdgeManager.currentTime() - startTime) + "ms");
     }
   }
 
@@ -215,7 +207,7 @@ public class TestRegionIncrement {
   @Test
   public void testContendedAcrossCellsIncrement() throws IOException, InterruptedException {
     final HRegion region = getRegion(TEST_UTIL.getConfiguration(),
-      TestIncrementsFromClientSide.filterStringSoTableNameSafe(this.name.getMethodName()));
+      TestIncrementsFromClientSide.filterStringSoTableNameSafe(this.name));
     long startTime = EnvironmentEdgeManager.currentTime();
     try {
       CrossRowCellIncrementer[] threads = new CrossRowCellIncrementer[THREAD_COUNT];
@@ -239,8 +231,7 @@ public class TestRegionIncrement {
       assertEquals(INCREMENT_COUNT * THREAD_COUNT, total);
     } finally {
       closeRegion(region);
-      LOG.info(this.name.getMethodName() + " " + (EnvironmentEdgeManager.currentTime() - startTime)
-        + "ms");
+      LOG.info(this.name + " " + (EnvironmentEdgeManager.currentTime() - startTime) + "ms");
     }
   }
 }

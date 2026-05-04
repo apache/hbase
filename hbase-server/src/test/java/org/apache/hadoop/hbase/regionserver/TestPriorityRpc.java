@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -34,9 +33,8 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
@@ -51,13 +49,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
 /**
  * Tests that verify certain RPCs get a higher QoS.
  */
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestPriorityRpc {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPriorityRpc.class);
-
   private static Configuration CONF = HBaseConfiguration.create();
 
   @Test
@@ -130,7 +124,7 @@ public class TestPriorityRpc {
 
     RSAnnotationReadingPriorityFunction qosFunc = new RSAnnotationReadingPriorityFunction(mockRpc);
     final int qos = qosFunc.getPriority(header, scanRequest, createSomeUser());
-    assertEquals(Integer.toString(qos), qos, HConstants.NORMAL_QOS);
+    assertEquals(HConstants.NORMAL_QOS, qos, Integer.toString(qos));
 
     // build a scan request with scannerID
     scanBuilder = ScanRequest.newBuilder();

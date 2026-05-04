@@ -18,7 +18,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
@@ -29,7 +30,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -43,27 +43,21 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.apache.hadoop.metrics2.MetricsExecutor;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestOpenRegionFailedMemoryLeak {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestOpenRegionFailedMemoryLeak.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestOpenRegionFailedMemoryLeak.class);
 
   private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @BeforeClass
+  @BeforeAll
   public static void startCluster() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
 
@@ -71,7 +65,7 @@ public class TestOpenRegionFailedMemoryLeak {
     conf.setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     EnvironmentEdgeManagerTestHelper.reset();
     LOG.info("Cleaning test directory: " + TEST_UTIL.getDataTestDir());
@@ -108,12 +102,12 @@ public class TestOpenRegionFailedMemoryLeak {
         field.setAccessible(true);
         BlockingQueue<Runnable> workQueue = (BlockingQueue<Runnable>) field.get(executor);
         // there are still two task not cancel, can not cause to memory lack
-        Assert.assertTrue("ScheduledExecutor#workQueue should equals 2, now is " + workQueue.size()
-          + ", please check region is close", 2 == workQueue.size());
+        assertTrue(2 == workQueue.size(), "ScheduledExecutor#workQueue should equals 2, now is "
+          + workQueue.size() + " please check region is close");
         found = true;
       }
     }
-    Assert.assertTrue("can not find workQueue, test failed", found);
+    assertTrue(found, "can not find workQueue, test failed");
   }
 
 }

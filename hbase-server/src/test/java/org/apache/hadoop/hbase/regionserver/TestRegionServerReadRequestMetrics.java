@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -31,7 +31,6 @@ import java.util.Optional;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
@@ -60,23 +59,17 @@ import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Ignore // Depends on Master being able to host regions. Needs fixing.
-@Category(MediumTests.class)
+@Disabled // Depends on Master being able to host regions. Needs fixing.
+@Tag(MediumTests.TAG)
 public class TestRegionServerReadRequestMetrics {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerReadRequestMetrics.class);
-
   private static final Logger LOG =
     LoggerFactory.getLogger(TestRegionServerReadRequestMetrics.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -106,7 +99,7 @@ public class TestRegionServerReadRequestMetrics {
   private static Map<Metric, Long> requestsMap = new HashMap<>();
   private static Map<Metric, Long> requestsMapPrev = new HashMap<>();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpOnce() throws Exception {
     TEST_UTIL.startMiniCluster();
     admin = TEST_UTIL.getAdmin();
@@ -115,7 +108,7 @@ public class TestRegionServerReadRequestMetrics {
     table = createTable();
     putData();
     List<RegionInfo> regions = admin.getRegions(TABLE_NAME);
-    assertEquals("Table " + TABLE_NAME + " should have 1 region", 1, regions.size());
+    assertEquals(1, regions.size(), "Table " + TABLE_NAME + " should have 1 region");
     regionInfo = regions.get(0);
 
     for (Metric metric : Metric.values()) {
@@ -246,7 +239,7 @@ public class TestRegionServerReadRequestMetrics {
     table.put(put);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownOnce() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -319,7 +312,7 @@ public class TestRegionServerReadRequestMetrics {
     testReadRequests(resultCount, 1, 0);
   }
 
-  @Ignore // HBASE-19785
+  @Disabled // HBASE-19785
   @Test
   public void testReadRequestsCountWithFilter() throws Exception {
     int resultCount;
@@ -366,7 +359,7 @@ public class TestRegionServerReadRequestMetrics {
     // testReadRequests(resultCount, 0, 1);
   }
 
-  @Ignore // HBASE-19785
+  @Disabled // HBASE-19785
   @Test
   public void testReadRequestsCountWithDeletedRow() throws Exception {
     try {
@@ -404,7 +397,7 @@ public class TestRegionServerReadRequestMetrics {
     }
   }
 
-  @Ignore // See HBASE-19785
+  @Disabled // See HBASE-19785
   @Test
   public void testReadRequestsWithCoprocessor() throws Exception {
     TableName tableName = TableName.valueOf("testReadRequestsWithCoprocessor");
@@ -416,7 +409,7 @@ public class TestRegionServerReadRequestMetrics {
     try {
       TEST_UTIL.waitTableAvailable(tableName);
       List<RegionInfo> regionInfos = admin.getRegions(tableName);
-      assertEquals("Table " + TABLE_NAME + " should have 1 region", 1, regionInfos.size());
+      assertEquals(1, regionInfos.size(), "Table " + TABLE_NAME + " should have 1 region");
       boolean success = true;
       int i = 0;
       for (; i < MAX_TRY; i++) {

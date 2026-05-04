@@ -18,13 +18,12 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
@@ -41,34 +40,27 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Testing of multiPut in parallel.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestParallelPut {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestParallelPut.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestParallelPut.class);
-  @Rule
-  public TestName name = new TestName();
 
   private HRegion region = null;
   private static HBaseTestingUtil HBTU = new HBaseTestingUtil();
   private static final int THREADS100 = 100;
+  private String name;
 
   // Test names
   static byte[] tableName;
@@ -80,7 +72,7 @@ public class TestParallelPut {
   static final byte[] row = Bytes.toBytes("rowA");
   static final byte[] row2 = Bytes.toBytes("rowB");
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() {
     // Make sure enough handlers.
     HBTU.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, THREADS100);
@@ -89,12 +81,13 @@ public class TestParallelPut {
   /**
    * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()
    */
-  @Before
-  public void setUp() throws Exception {
-    tableName = Bytes.toBytes(name.getMethodName());
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    name = testInfo.getTestMethod().get().getName();
+    tableName = Bytes.toBytes(name);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     EnvironmentEdgeManagerTestHelper.reset();
     if (region != null) {
@@ -103,7 +96,7 @@ public class TestParallelPut {
   }
 
   public String getName() {
-    return name.getMethodName();
+    return name;
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -228,7 +221,7 @@ public class TestParallelPut {
           assertEquals(OperationStatusCode.SUCCESS, ret[0].getOperationStatusCode());
           assertGet(this.region, rowkey, fam1, qual1, value);
         } catch (IOException e) {
-          assertTrue("Thread id " + threadNumber + " operation " + i + " failed.", false);
+          assertTrue(false, "Thread id " + threadNumber + " operation " + i + " failed.");
         }
       }
     }

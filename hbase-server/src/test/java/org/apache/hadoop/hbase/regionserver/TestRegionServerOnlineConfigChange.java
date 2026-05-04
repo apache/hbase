@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.JMXListener;
@@ -44,12 +43,11 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,13 +56,8 @@ import org.slf4j.LoggerFactory;
  * add tests for important configurations which will be changed online.
  */
 
-@Category({ MediumTests.class })
+@Tag(MediumTests.TAG)
 public class TestRegionServerOnlineConfigChange {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerOnlineConfigChange.class);
-
   private static final Logger LOG =
     LoggerFactory.getLogger(TestRegionServerOnlineConfigChange.class.getName());
   private static final long WAIT_TIMEOUT = TimeUnit.MINUTES.toMillis(2);
@@ -83,7 +76,7 @@ public class TestRegionServerOnlineConfigChange {
   private final static byte[] COLUMN_FAMILY1 = Bytes.toBytes(columnFamily1Str);
   private final static long MAX_FILE_SIZE = 20 * 1024 * 1024L;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf = hbaseTestingUtility.getConfiguration();
     hbaseTestingUtility.startMiniCluster(2);
@@ -92,12 +85,12 @@ public class TestRegionServerOnlineConfigChange {
       new byte[][] { COLUMN_FAMILY1 }, conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     hbaseTestingUtility.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     try (RegionLocator locator = hbaseTestingUtility.getConnection().getRegionLocator(TABLE1)) {
       RegionInfo firstHRI = locator.getAllRegionLocations().get(0).getRegion();
@@ -235,8 +228,8 @@ public class TestRegionServerOnlineConfigChange {
   public void removeClosedRegionFromConfigurationManager() throws Exception {
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
       Admin admin = connection.getAdmin();
-      assertTrue("The open region doesn't register as a ConfigurationObserver",
-        rs1.getConfigurationManager().containsObserver(r1));
+      assertTrue(rs1.getConfigurationManager().containsObserver(r1),
+        "The open region doesn't register as a ConfigurationObserver");
       admin.move(r1name);
       hbaseTestingUtility.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
         @Override
@@ -244,8 +237,8 @@ public class TestRegionServerOnlineConfigChange {
           return rs1.getOnlineRegion(r1name) == null;
         }
       });
-      assertFalse("The closed region is not removed from ConfigurationManager",
-        rs1.getConfigurationManager().containsObserver(r1));
+      assertFalse(rs1.getConfigurationManager().containsObserver(r1),
+        "The closed region is not removed from ConfigurationManager");
       admin.move(r1name, rs1.getServerName());
       hbaseTestingUtility.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
         @Override

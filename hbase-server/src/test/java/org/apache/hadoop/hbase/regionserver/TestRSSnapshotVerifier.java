@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
@@ -36,25 +37,20 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.RegionSplitter;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRSSnapshotVerifier {
   private static final Logger LOG = LoggerFactory.getLogger(TestRSSnapshotVerifier.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSSnapshotVerifier.class);
-
   private HBaseTestingUtil TEST_UTIL;
   private final TableName tableName = TableName.valueOf("TestRSSnapshotVerifier");
   private final byte[] cf = Bytes.toBytes("cf");
@@ -63,7 +59,7 @@ public class TestRSSnapshotVerifier {
   private SnapshotProtos.SnapshotDescription snapshotProto =
     ProtobufUtil.createHBaseProtosSnapshotDesc(snapshot);
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
     TEST_UTIL.startMiniCluster(3);
@@ -97,7 +93,7 @@ public class TestRSSnapshotVerifier {
     manifest.consolidate();
   }
 
-  @Test(expected = org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException.class)
+  @Test
   public void testVerifyStoreFile() throws Exception {
     RSSnapshotVerifier verifier =
       TEST_UTIL.getHBaseCluster().getRegionServer(0).getRsSnapshotVerifier();
@@ -106,10 +102,11 @@ public class TestRSSnapshotVerifier {
     Path filePath = new ArrayList<>(region.getStore(cf).getStorefiles()).get(0).getPath();
     TEST_UTIL.getDFSCluster().getFileSystem().delete(filePath, true);
     LOG.info("delete store file {}", filePath);
-    verifier.verifyRegion(snapshotProto, region.getRegionInfo());
+    assertThrows(org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException.class,
+      () -> verifier.verifyRegion(snapshotProto, region.getRegionInfo()));
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }

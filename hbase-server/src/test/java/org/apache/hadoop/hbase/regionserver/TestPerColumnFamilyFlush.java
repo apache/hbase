@@ -17,17 +17,16 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -55,9 +54,8 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,13 +64,9 @@ import org.apache.hbase.thirdparty.com.google.common.hash.Hashing;
 /**
  * This test verifies the correctness of the Per Column Family flushing strategy
  */
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestPerColumnFamilyFlush {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPerColumnFamilyFlush.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestPerColumnFamilyFlush.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -122,11 +116,11 @@ public class TestPerColumnFamilyFlush {
     byte[] family = FAMILIES[familyNum - 1];
     byte[] qf = Bytes.toBytes("q" + familyNum);
     byte[] val = Bytes.toBytes("val" + familyNum + "-" + putNum);
-    assertNotNull(("Missing Put#" + putNum + " for CF# " + familyNum), r.getFamilyMap(family));
-    assertNotNull(("Missing Put#" + putNum + " for CF# " + familyNum),
-      r.getFamilyMap(family).get(qf));
-    assertTrue(("Incorrect value for Put#" + putNum + " for CF# " + familyNum),
-      Arrays.equals(r.getFamilyMap(family).get(qf), val));
+    assertNotNull(r.getFamilyMap(family), "Missing Put#" + putNum + " for CF# " + familyNum);
+    assertNotNull(r.getFamilyMap(family).get(qf),
+      "Missing Put#" + putNum + " for CF# " + familyNum);
+    assertTrue(Arrays.equals(r.getFamilyMap(family).get(qf), val),
+      "Incorrect value for Put#" + putNum + " for CF# " + familyNum);
   }
 
   @Test
@@ -369,7 +363,7 @@ public class TestPerColumnFamilyFlush {
 
       Pair<HRegion, HRegionServer> desiredRegionAndServer = getRegionWithName(TABLENAME);
       HRegion desiredRegion = desiredRegionAndServer.getFirst();
-      assertTrue("Could not find a region which hosts the new region.", desiredRegion != null);
+      assertTrue(desiredRegion != null, "Could not find a region which hosts the new region.");
 
       // Flush the region selectively.
       desiredRegion.flush(false);
@@ -463,7 +457,7 @@ public class TestPerColumnFamilyFlush {
       Table table = TEST_UTIL.createTable(tableName, FAMILIES);
       Pair<HRegion, HRegionServer> desiredRegionAndServer = getRegionWithName(tableName);
       final HRegion desiredRegion = desiredRegionAndServer.getFirst();
-      assertTrue("Could not find a region which hosts the new region.", desiredRegion != null);
+      assertTrue(desiredRegion != null, "Could not find a region which hosts the new region.");
       LOG.info("Writing to region=" + desiredRegion);
 
       // Add one row for both CFs.

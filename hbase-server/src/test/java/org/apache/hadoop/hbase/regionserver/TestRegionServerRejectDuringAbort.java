@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -53,21 +52,16 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionServerRejectDuringAbort {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerRejectDuringAbort.class);
-
   private static final Logger LOG =
     LoggerFactory.getLogger(TestRegionServerRejectDuringAbort.class);
 
@@ -83,7 +77,7 @@ public class TestRegionServerRejectDuringAbort {
 
   private static volatile boolean shouldThrowTooBig = false;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     // Will schedule a abort timeout task after SLEEP_TIME_WHEN_CLOSE_REGION ms
     UTIL.getConfiguration().set("hbase.ipc.server.callqueue.type", "pluggable");
@@ -114,7 +108,7 @@ public class TestRegionServerRejectDuringAbort {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -143,8 +137,8 @@ public class TestRegionServerRejectDuringAbort {
       }
     }
 
-    assertNotNull("couldn't find a server without meta, but with test table regions",
-      serverWithoutMeta);
+    assertNotNull(serverWithoutMeta,
+      "couldn't find a server without meta, but with test table regions");
 
     Thread writer = new Thread(getWriterThreadRunnable(serverWithoutMeta.getServerName()));
     writer.setDaemon(true);

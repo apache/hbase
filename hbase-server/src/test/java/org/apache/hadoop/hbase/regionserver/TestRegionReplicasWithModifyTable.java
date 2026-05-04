@@ -17,67 +17,63 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
+@ParameterizedClass(name = "{index}: disableBeforeModifying={0}")
+@MethodSource("parameters")
 public class TestRegionReplicasWithModifyTable {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionReplicasWithModifyTable.class);
-
   private static final int NB_SERVERS = 3;
 
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private static final byte[] f = HConstants.CATALOG_FAMILY;
 
   @Parameter
-  public boolean disableBeforeModifying;
+  private boolean disableBeforeModifying;
 
-  @Rule
-  public TableNameTestRule name = new TableNameTestRule();
+  private TableName tableName;
 
-  @Parameters
-  public static List<Object[]> params() {
-    return Arrays.asList(new Object[] { true }, new Object[] { false });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(true), Arguments.of(false));
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void before() throws Exception {
     HTU.startMiniCluster(NB_SERVERS);
   }
 
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
+  }
+
   private void enableReplicationByModification(boolean withReplica, int initialReplicaCount,
     int enableReplicaCount, int splitCount) throws IOException, InterruptedException {
-    TableName tableName = name.getTableName();
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     if (withReplica) {
       builder.setRegionReplication(initialReplicaCount);
@@ -113,20 +109,19 @@ public class TestRegionReplicasWithModifyTable {
     return split.split(numRegions);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     HTU.shutdownMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
-    TableName tableName = name.getTableName();
     HTU.getAdmin().disableTable(tableName);
     HTU.getAdmin().deleteTable(tableName);
   }
 
   private void assertTotalRegions(int expected) {
-    int actual = HTU.getHBaseCluster().getRegions(name.getTableName()).size();
+    int actual = HTU.getHBaseCluster().getRegions(tableName).size();
     assertEquals(expected, actual);
   }
 
