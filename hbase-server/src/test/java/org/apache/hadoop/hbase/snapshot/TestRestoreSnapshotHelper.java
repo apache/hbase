@@ -26,22 +26,26 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -61,6 +65,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.HFileTestUtil;
+import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -73,6 +79,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
 /**
  * Test the restore/clone operation from a file-system point of view.
@@ -283,6 +290,61 @@ public class TestRestoreSnapshotHelper {
     createAndAssertSnapshot(tableName, snapshotThree);
   }
 
+  @Test
+  public void testRestoreSnapshotAfterSplitWithCompactionsDisabled() throws Exception {
+    rootDir = TEST_UTIL.getDefaultRootDirPath();
+    CommonFSUtils.setRootDir(conf, rootDir);
+    fs = rootDir.getFileSystem(conf);
+    TableName tableName = TableName.valueOf("testRestoreSnapshotAfterSplitWithCompactionsDisabled");
+    Path restoreDir = new Path("/hbase/.tmp-snapshot/restore-after-split");
+    byte[] cf = Bytes.toBytes("A");
+    byte[] q = Bytes.toBytes("q");
+    byte[] splitPoint = Bytes.toBytes("m");
+    String snapshotName = tableName.getNameAsString() + "-snapshot";
+
+    Table table = TEST_UTIL.createTable(tableName, cf);
+    Path bulkLoadDir = TEST_UTIL.getDataTestDir("bulkload-" + tableName.getNameAsString());
+    Path familyDir = new Path(bulkLoadDir, Bytes.toString(cf));
+    fs.mkdirs(familyDir);
+    HFileTestUtil.createHFile(conf, fs, new Path(familyDir, "hfile"), cf, q, Bytes.toBytes("a"),
+      Bytes.toBytes("z"), 10000);
+    int loaded = new BulkLoadHFilesTool(conf)
+      .run(new String[] { bulkLoadDir.toString(), tableName.getNameAsString() });
+    assertEquals(0, loaded);
+    RegionInfo parentRegion = TEST_UTIL.getAdmin().getRegions(tableName).get(0);
+
+    flipCompactions(false);
+    try {
+      TEST_UTIL.getAdmin().split(tableName, splitPoint);
+      TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getAdmin().getRegions(tableName).size() == 2);
+
+      List<RegionInfo> splitChildren =
+        TEST_UTIL.getAdmin().getRegions(tableName).stream().filter(r -> !r.isSplitParent())
+          .collect(Collectors.toList());
+      assertEquals(2, splitChildren.size());
+      assertTrue(hasSplitReferenceOrLinkArtifact(tableName, splitChildren, cf),
+        "expected split children to carry split reference or link artifacts");
+
+      Result parentResult = MetaTableAccessor.getRegionResult(TEST_UTIL.getConnection(), parentRegion);
+      assertFalse(parentResult.isEmpty(), "expected split parent region to remain in meta");
+      RegionInfo splitParent = CatalogFamilyFormat.getRegionInfo(parentResult);
+      assertTrue(splitParent != null && splitParent.isSplitParent(),
+        "expected parent region to be marked as a split parent");
+      assertTrue(splitParent.isOffline(), "expected split parent region to be offline");
+
+      createAndAssertSnapshot(tableName, snapshotName);
+      assertEquals(splitChildren.size(), countSnapshotManifestStoreFiles(snapshotName),
+        "unexpected number of store files in snapshot manifest");
+      final RestoreSnapshotHelper.RestoreMetaChanges meta =
+        RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName);
+      assertEquals(2, meta.getRegionsToAdd().size());
+      assertEquals(2, countRegionDirsInRestoreDir(restoreDir, tableName));
+    } finally {
+      flipCompactions(true);
+      table.close();
+    }
+  }
+
   private void createAndAssertSnapshot(TableName tableName, String snapshotName)
     throws SnapshotCreationException, IllegalArgumentException, IOException {
     org.apache.hadoop.hbase.client.SnapshotDescription snapshotDescOne =
@@ -322,6 +384,59 @@ public class TestRestoreSnapshotHelper {
 
   private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
     return TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
+  }
+
+  private boolean hasSplitReferenceOrLinkArtifact(TableName tableName, List<RegionInfo> regions,
+    byte[] cfName)
+    throws IOException {
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, tableName);
+    for (RegionInfo regionInfo : regions) {
+      Path familyDir = HRegionFileSystem.getStoreHomedir(tableDir, regionInfo, cfName);
+      if (!fs.exists(familyDir)) {
+        continue;
+      }
+      RemoteIterator<LocatedFileStatus> regionFiles = fs.listLocatedStatus(familyDir);
+      while (regionFiles.hasNext()) {
+        LocatedFileStatus fileStatus = regionFiles.next();
+        String name = fileStatus.getPath().getName();
+        if (HFileLink.isHFileLink(name)) {
+          return true;
+        }
+        if (StoreFileInfo.isReference(name)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private int countSnapshotManifestStoreFiles(String snapshotName) throws IOException {
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
+    SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+    SnapshotManifest snapshotManifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshotDesc);
+    int count = 0;
+    for (SnapshotRegionManifest regionManifest : snapshotManifest.getRegionManifests()) {
+      for (SnapshotRegionManifest.FamilyFiles familyFiles : regionManifest.getFamilyFilesList()) {
+        count += familyFiles.getStoreFilesCount();
+      }
+    }
+    return count;
+  }
+
+  private int countRegionDirsInRestoreDir(Path restoreDir, TableName tableName) throws IOException {
+    Path tableDir = CommonFSUtils.getTableDir(restoreDir, tableName);
+    if (!fs.exists(tableDir)) {
+      return 0;
+    }
+    int count = 0;
+    RemoteIterator<LocatedFileStatus> regionDirs = fs.listLocatedStatus(tableDir);
+    while (regionDirs.hasNext()) {
+      LocatedFileStatus status = regionDirs.next();
+      if (status.isDirectory() && RegionInfo.isEncodedRegionName(Bytes.toBytes(status.getPath().getName()))) {
+        count++;
+      }
+    }
+    return count;
   }
 
   protected void createTableAndSnapshot(TableName tableName, String snapshotName)

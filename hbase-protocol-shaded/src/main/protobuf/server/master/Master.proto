@@ -1390,6 +1390,23 @@ message FixMetaRequest {}
 
 message FixMetaResponse {}
 
+enum RepairFsftRegionMode {
+  REPAIR_FSFT_REGION_MODE_DISK_ONLY = 1;
+  REPAIR_FSFT_REGION_MODE_LINEAGE_ASSISTED = 2;
+}
+
+message RepairFsftRegionRequest {
+  required RegionSpecifier region = 1;
+  required bytes family = 2;
+  required RepairFsftRegionMode mode = 3;
+  optional bool dry_run = 4 [default = false];
+}
+
+message RepairFsftRegionResponse {
+  // pid of the submitted RepairFsftRegionProcedure. Caller polls getProcedureResult.
+  required uint64 proc_id = 1;
+}
+
 message RestoreBackupSystemTableRequest {
   required string snapshot_name = 1;
 }
@@ -1445,4 +1462,15 @@ service HbckService {
   /** Schedule a fix meta run. */
   rpc FixMeta(FixMetaRequest)
     returns(FixMetaResponse);
+
+  /**
+   * Submit a RepairFsftRegionProcedure that closes a region as ABNORMALLY_CLOSED, rebuilds its
+   * FILE store-file tracker manifest (.filelist) for the given family, and reopens it.
+   * Refuses master:store (use the offline `hbase sft --repair` CLI for that case).
+   * Refuses lineage-assisted mode when the target is hbase:meta.
+   * Skips rpcPreCheck so it can run during stuck-init when the cause is meta corruption,
+   * matching the Assigns/Unassigns/BypassProcedure pattern.
+   */
+  rpc RepairFsftRegion(RepairFsftRegionRequest)
+    returns(RepairFsftRegionResponse);
 }

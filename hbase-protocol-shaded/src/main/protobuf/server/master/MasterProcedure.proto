@@ -864,3 +864,39 @@ message LogRollRemoteProcedureResult {
   optional ServerName server_name = 1;
   optional uint64 last_highest_wal_filenum = 2;
 }
+
+// ----- RepairFsftRegionProcedure -----
+//
+// Online repair flow for a corrupted FILE store-file-tracker manifest. Runs as a chained
+// state machine: ABNORMALLY_CLOSED -> compute new manifest -> write -> reopen as child TRSP.
+// Used for user-table regions and hbase:meta. Not used for master:store (the procedure store
+// itself is master:store; framework cannot help when its own backing region is corrupt).
+
+enum RepairFsftRegionState {
+  REPAIR_FSFT_ENSURE_REGION_ABNORMALLY_CLOSED = 1;
+  REPAIR_FSFT_COMPUTE_NEW_MANIFEST = 2;
+  REPAIR_FSFT_WRITE_NEW_MANIFEST = 3;
+  REPAIR_FSFT_SCHEDULE_REOPEN = 4;
+  REPAIR_FSFT_WAIT_FOR_REOPEN = 5;
+}
+
+enum RepairFsftMode {
+  REPAIR_FSFT_MODE_DISK_ONLY = 1;
+  REPAIR_FSFT_MODE_LINEAGE_ASSISTED = 2;
+}
+
+message RepairFsftRegionStateData {
+  required RegionInfo region_info = 1;
+  required bytes family = 2;
+  required RepairFsftMode mode = 3;
+  optional bool dry_run = 4 [default = false];
+
+  // Populated after COMPUTE state, consumed by WRITE state. Optional so that an in-flight
+  // procedure that crashed before COMPUTE persists no manifest data.
+  repeated bytes computed_store_file_name = 5;
+  optional int64 max_seq_id_seen = 6;
+
+  // Set when the WRITE state completes; lets resume short-circuit if it crashes between
+  // WRITE and SCHEDULE_REOPEN.
+  optional int64 written_seq_id = 7;
+}
