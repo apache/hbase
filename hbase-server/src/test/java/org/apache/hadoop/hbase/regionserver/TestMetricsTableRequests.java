@@ -34,12 +34,18 @@ import org.apache.hadoop.hbase.metrics.impl.HistogramImpl;
 import org.apache.hadoop.hbase.regionserver.metrics.MetricsTableRequests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestMetricsTableRequests {
+
+  @AfterEach
+  public void tearDown() {
+    MetricRegistries.global().clear();
+  }
 
   @Test
   public void testMetricsTableLatencies() {

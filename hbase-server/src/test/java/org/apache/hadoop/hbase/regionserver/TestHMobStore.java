@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -77,14 +78,13 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Tag(MediumTests.TAG)
+@org.junit.jupiter.api.Tag(MediumTests.TAG)
 public class TestHMobStore {
 
   public static final Logger LOG = LoggerFactory.getLogger(TestHMobStore.class);
@@ -192,7 +192,7 @@ public class TestHMobStore {
 
     String targetPathName = MobUtils.formatDate(currentDate);
     byte[] referenceValue = Bytes.toBytes(targetPathName + Path.SEPARATOR + mobFilePath.getName());
-    org.apache.hadoop.hbase.Tag tableNameTag =
+    Tag tableNameTag =
       new ArrayBackedTag(TagType.MOB_TABLE_NAME_TAG_TYPE, store.getTableName().getName());
     KeyValue kv1 = new KeyValue(row, family, qf1, Long.MAX_VALUE, referenceValue);
     KeyValue kv2 = new KeyValue(row, family, qf2, Long.MAX_VALUE, referenceValue);

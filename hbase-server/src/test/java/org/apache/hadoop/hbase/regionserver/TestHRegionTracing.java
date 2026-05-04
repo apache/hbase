@@ -23,7 +23,6 @@ import io.opentelemetry.sdk.testing.junit5.OpenTelemetryExtension;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestExtension;
@@ -44,15 +43,12 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-
-import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
@@ -74,8 +70,6 @@ public class TestHRegionTracing {
   @RegisterExtension
   public final TableNameTestExtension tableNameRule = new TableNameTestExtension();
 
-  private WAL wal;
-
   private HRegion region;
 
   @AfterAll
@@ -85,24 +79,19 @@ public class TestHRegionTracing {
 
   @BeforeEach
   public void setUp() throws Throwable {
+    traceRule.clearSpans();
     TableName tableName = tableNameRule.getTableName();
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
       MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
-    wal = HBaseTestingUtil.createWal(UTIL.getConfiguration(),
-      new Path(UTIL.getDataTestDir(), tableName.getNameAsString()), null);
-    region = HRegion.createHRegion(info, UTIL.getDataTestDir(), UTIL.getConfiguration(), desc, wal);
     region = UTIL.createLocalHRegion(info, desc);
   }
 
   @AfterEach
   public void tearDown() throws IOException {
-    if (region != null) {
-      region.close();
-    }
-    Closeables.close(wal, true);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   private void assertSpan(String spanName) {

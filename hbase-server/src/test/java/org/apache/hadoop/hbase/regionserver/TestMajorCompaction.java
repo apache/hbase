@@ -87,6 +87,7 @@ public class TestMajorCompaction {
   protected Configuration conf = UTIL.getConfiguration();
 
   private String name;
+  private final String compType;
 
   private HRegion r = null;
   private TableDescriptor htd = null;
@@ -100,6 +101,7 @@ public class TestMajorCompaction {
   /** constructor */
   public TestMajorCompaction(String compType) {
     super();
+    this.compType = compType;
     // Set cache flush size to 1MB
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
     conf.setInt(HConstants.HREGION_MEMSTORE_BLOCK_MULTIPLIER, 100);
@@ -117,10 +119,10 @@ public class TestMajorCompaction {
   @BeforeEach
   public void setUp(TestInfo testInfo) throws Exception {
     this.name = testInfo.getTestMethod().get().getName();
-    this.htd =
-      UTIL.createTableDescriptor(TableName.valueOf(name.replace('[', 'i').replace(']', 'i')),
-        ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-        ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
+    this.htd = UTIL.createTableDescriptor(
+      TableName.valueOf((name + "-" + compType).replace('[', 'i').replace(']', 'i')),
+      ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     this.r = UTIL.createLocalHRegion(htd, null, null);
   }
 
