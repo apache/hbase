@@ -160,4 +160,11 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
     map.put("table#info", 3L);
     return map;
   }
+
+  @Override
+  public Map<String, Long> getStoreFileSizePerStore(String table) {
+    Map<String, Long> map = new HashMap<String, Long>();
+    map.put("table#info", 2000L);
+    return map;
+  }
 }

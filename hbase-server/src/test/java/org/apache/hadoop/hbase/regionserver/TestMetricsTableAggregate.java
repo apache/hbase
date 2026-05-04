@@ -109,6 +109,13 @@ public class TestMetricsTableAggregate {
   }
 
   @Test
+  public void testPerStoreFileSize() {
+    String perCfPre =
+      "Namespace_default_table_" + tableName + "_columnfamily_info_metric_storeFileSize";
+    HELPER.assertGauge(perCfPre, 2000, agg);
+  }
+
+  @Test
   public void testFlush() {
     rsm.updateFlush(tableName, 1, 2, 3);
     HELPER.assertCounter(pre + "flushTime_num_ops", 1, agg);
