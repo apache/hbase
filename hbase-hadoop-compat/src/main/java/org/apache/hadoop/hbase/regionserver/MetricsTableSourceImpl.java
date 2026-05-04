@@ -368,6 +368,8 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
           MetricsRegionSource.ROW_READS_ONLY_ON_MEMSTORE_DESC);
         addGauge(mrb, tableWrapperAgg.getMixedRowReadsCount(tableName.getNameAsString()),
           MetricsRegionSource.MIXED_ROW_READS, MetricsRegionSource.MIXED_ROW_READS_ON_STORE_DESC);
+        addGauge(mrb, tableWrapperAgg.getStoreFileSizePerStore(tableName.getNameAsString()),
+          MetricsRegionServerSource.STOREFILE_SIZE, MetricsRegionServerSource.STOREFILE_SIZE_DESC);
       }
     }
   }
