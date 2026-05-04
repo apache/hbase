@@ -33,6 +33,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
@@ -69,6 +70,7 @@ import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.janitor.MetaFixer;
@@ -76,6 +78,7 @@ import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedureRunnable;
+import org.apache.hadoop.hbase.master.procedure.RepairFsftRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.RestoreBackupSystemTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.replication.AbstractPeerNoLockProcedure;
@@ -206,6 +209,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockH
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureResponse;
@@ -323,6 +327,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineReg
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RegionSpecifierAndState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RepairFsftRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RepairFsftRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReopenTableRegionsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReopenTableRegionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
@@ -2895,6 +2901,96 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
+  }
+
+  /**
+   * Submit a {@link RepairFsftRegionProcedure} that closes a region as
+   * {@code ABNORMALLY_CLOSED}, rebuilds its FILE store-file-tracker manifest
+   * ({@code .filelist}) for the given family, and reopens it.
+   * <p>
+   * Skips {@link #rpcPreCheck} (only requires the {@link ProcedureExecutor} to be up) so it
+   * can run during stuck-init when meta corruption is the cause — same pattern as
+   * {@link #assigns} / {@link #unassigns} / {@link #bypassProcedure}.
+   * <p>
+   * Refuses {@code master:store} (use the offline {@code hbase sft --repair} CLI for that
+   * case) and refuses {@code lineage-assisted} mode against {@code hbase:meta} (no parent
+   * row lookup possible — meta is what we'd be querying).
+   */
+  @Override
+  public RepairFsftRegionResponse repairFsftRegion(RpcController controller,
+    RepairFsftRegionRequest request) throws ServiceException {
+    checkMasterProcedureExecutor();
+    final RegionInfo region = getRegionInfo(request.getRegion());
+    if (region == null) {
+      throw new ServiceException(
+        "Unknown region for RepairFsftRegion: " + request.getRegion());
+    }
+    if (TableName.isMetaTableName(region.getTable())
+      && request.getMode() == MasterProtos.RepairFsftRegionMode.REPAIR_FSFT_REGION_MODE_LINEAGE_ASSISTED) {
+      throw new ServiceException("lineage-assisted mode is not supported for hbase:meta");
+    }
+    // master:store is the procedure store; we cannot help its corrupt manifest from inside
+    // the master procedure framework. Operator must use the offline CLI.
+    if ("master:store".equals(region.getTable().getNameAsString())) {
+      throw new ServiceException(
+        "master:store cannot be repaired via RepairFsftRegion; stop the master and use"
+          + " 'hbase sft --repair --master-store-offline' instead.");
+    }
+    final byte[] family = request.getFamily().toByteArray();
+    final boolean dryRun = request.getDryRun();
+    final MasterProcedureProtos.RepairFsftMode mode;
+    switch (request.getMode()) {
+      case REPAIR_FSFT_REGION_MODE_DISK_ONLY:
+        mode = MasterProcedureProtos.RepairFsftMode.REPAIR_FSFT_MODE_DISK_ONLY;
+        break;
+      case REPAIR_FSFT_REGION_MODE_LINEAGE_ASSISTED:
+        mode = MasterProcedureProtos.RepairFsftMode.REPAIR_FSFT_MODE_LINEAGE_ASSISTED;
+        break;
+      default:
+        throw new ServiceException("Unknown RepairFsftRegionMode: " + request.getMode());
+    }
+    LOG.info("{} repairFsftRegion region={}, family={}, mode={}, dryRun={}",
+      server.getClientIdAuditPrefix(), region.getRegionNameAsString(),
+      Bytes.toStringBinary(family), mode, dryRun);
+    final ProcedureExecutor<MasterProcedureEnv> pe = server.getMasterProcedureExecutor();
+    // The common reason an operator reaches for this tool is that a region open is wedged on a
+    // RegionServer: a TransitRegionStateProcedure (TRSP) is stuck holding the region's scheduler
+    // lock for the life of the procedure. Our RepairFsftRegionProcedure extends the same region
+    // procedure base, so it could never acquire that lock and would queue behind the stuck TRSP
+    // forever. Bypass the in-flight TRSP here, on the RPC handler thread (which does NOT hold the
+    // region lock), so the lock is freed before we submit. Skip on dry-run -- a diagnostic run
+    // should not disturb in-flight assignment. recursive=true is required because a stuck open has
+    // a live OpenRegionProcedure child, and non-recursive bypass skips procedures with children.
+    if (!dryRun) {
+      RegionStateNode rsn =
+        server.getAssignmentManager().getRegionStates().getRegionStateNode(region);
+      if (rsn != null) {
+        rsn.lock();
+        long stuckPid;
+        try {
+          TransitRegionStateProcedure stuck = rsn.getProcedure();
+          stuckPid = stuck != null ? stuck.getProcId() : Procedure.NO_PROC_ID;
+        } finally {
+          rsn.unlock();
+        }
+        if (stuckPid != Procedure.NO_PROC_ID) {
+          LOG.info("{} bypassing in-flight TRSP pid={} for region {} before FSFT repair",
+            server.getClientIdAuditPrefix(), stuckPid, region.getRegionNameAsString());
+          try {
+            pe.bypassProcedure(Collections.singletonList(stuckPid),
+              TimeUnit.SECONDS.toMillis(30), true, true);
+          } catch (IOException e) {
+            throw new ServiceException("Failed to bypass in-flight procedure pid=" + stuckPid
+              + " for region " + region.getRegionNameAsString()
+              + "; bypass it manually with 'hbck2 bypass' and retry repair.", e);
+          }
+        }
+      }
+    }
+    RepairFsftRegionProcedure proc =
+      new RepairFsftRegionProcedure(pe.getEnvironment(), region, family, mode, dryRun);
+    long pid = pe.submitProcedure(proc);
+    return RepairFsftRegionResponse.newBuilder().setProcId(pid).build();
   }
 
   @Override
