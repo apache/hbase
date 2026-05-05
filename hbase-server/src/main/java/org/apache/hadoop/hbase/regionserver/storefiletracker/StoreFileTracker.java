@@ -160,4 +160,8 @@ public interface StoreFileTracker {
    * @return the store context.
    */
   StoreContext getStoreContext();
+
+  default void onTransitionToActive() {
+    // no op by default
+  }
 }
