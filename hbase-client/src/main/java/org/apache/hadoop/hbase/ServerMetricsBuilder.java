@@ -64,7 +64,7 @@ public final class ServerMetricsBuilder {
 
   public static ServerMetrics toServerMetrics(ServerName serverName, int versionNumber,
     String version, ClusterStatusProtos.ServerLoad serverLoadPB) {
-    return ServerMetricsBuilder.newBuilder(serverName)
+    ServerMetricsBuilder builder = ServerMetricsBuilder.newBuilder(serverName)
       .setRequestCountPerSecond(serverLoadPB.getNumberOfRequests())
       .setRequestCount(serverLoadPB.getTotalNumberOfRequests())
       .setInfoServerPort(serverLoadPB.getInfoServerPort())
@@ -88,7 +88,10 @@ public final class ServerMetricsBuilder {
       .setRegionCachedInfo(serverLoadPB.getRegionCachedInfoMap())
       .setReportTimestamp(serverLoadPB.getReportEndTime())
       .setLastReportTimestamp(serverLoadPB.getReportStartTime()).setVersionNumber(versionNumber)
-      .setVersion(version).build();
+      .setVersion(version)
+      .setCacheFreeSize(serverLoadPB.hasCacheFreeSize() ? serverLoadPB.getCacheFreeSize() : 0L)
+      .setRegionColdDataInfo(serverLoadPB.getRegionColdData());
+    return builder.build();
   }
 
   public static List<HBaseProtos.Coprocessor> toCoprocessor(Collection<String> names) {
@@ -118,6 +121,7 @@ public final class ServerMetricsBuilder {
     if (metrics.getReplicationLoadSink() != null) {
       builder.setReplLoadSink(ProtobufUtil.toReplicationLoadSink(metrics.getReplicationLoadSink()));
     }
+    builder.setCacheFreeSize(metrics.getCacheFreeSize());
     return builder.build();
   }
 
@@ -145,6 +149,8 @@ public final class ServerMetricsBuilder {
   private long lastReportTimestamp = 0;
   private final List<ServerTask> tasks = new ArrayList<>();
   private Map<String, Integer> regionCachedInfo = new HashMap<>();
+  private long cacheFreeSize;
+  private Map<String, Integer> regionColdDataInfo;
 
   private ServerMetricsBuilder(ServerName serverName) {
     this.serverName = serverName;
@@ -240,11 +246,21 @@ public final class ServerMetricsBuilder {
     return this;
   }
 
+  public ServerMetricsBuilder setCacheFreeSize(long blockCacheFreeSize) {
+    this.cacheFreeSize = blockCacheFreeSize;
+    return this;
+  }
+
+  public ServerMetricsBuilder setRegionColdDataInfo(Map<String, Integer> regionColdDataInfo) {
+    this.regionColdDataInfo = regionColdDataInfo;
+    return this;
+  }
+
   public ServerMetrics build() {
     return new ServerMetricsImpl(serverName, versionNumber, version, requestCountPerSecond,
       requestCount, readRequestCount, writeRequestCount, usedHeapSize, maxHeapSize, infoServerPort,
       sources, sink, regionStatus, coprocessorNames, reportTimestamp, lastReportTimestamp,
-      userMetrics, tasks, regionCachedInfo);
+      userMetrics, tasks, regionCachedInfo, cacheFreeSize, regionColdDataInfo);
   }
 
   private static class ServerMetricsImpl implements ServerMetrics {
@@ -268,6 +284,8 @@ public final class ServerMetricsBuilder {
     private final Map<byte[], UserMetrics> userMetrics;
     private final List<ServerTask> tasks;
     private final Map<String, Integer> regionCachedInfo;
+    private final long cacheFreeSize;
+    private final Map<String, Integer> regionColdDataInfo;
 
     ServerMetricsImpl(ServerName serverName, int versionNumber, String version,
       long requestCountPerSecond, long requestCount, long readRequestsCount,
@@ -275,7 +293,8 @@ public final class ServerMetricsBuilder {
       List<ReplicationLoadSource> sources, ReplicationLoadSink sink,
       Map<byte[], RegionMetrics> regionStatus, Set<String> coprocessorNames, long reportTimestamp,
       long lastReportTimestamp, Map<byte[], UserMetrics> userMetrics, List<ServerTask> tasks,
-      Map<String, Integer> regionCachedInfo) {
+      Map<String, Integer> regionCachedInfo, long cacheFreeSize,
+      Map<String, Integer> regionColdDataInfo) {
       this.serverName = Preconditions.checkNotNull(serverName);
       this.versionNumber = versionNumber;
       this.version = version;
@@ -295,6 +314,8 @@ public final class ServerMetricsBuilder {
       this.lastReportTimestamp = lastReportTimestamp;
       this.tasks = tasks;
       this.regionCachedInfo = regionCachedInfo;
+      this.cacheFreeSize = cacheFreeSize;
+      this.regionColdDataInfo = regionColdDataInfo;
     }
 
     @Override
@@ -400,6 +421,16 @@ public final class ServerMetricsBuilder {
     @Override
     public Map<String, Integer> getRegionCachedInfo() {
       return Collections.unmodifiableMap(regionCachedInfo);
+    }
+
+    @Override
+    public long getCacheFreeSize() {
+      return cacheFreeSize;
+    }
+
+    @Override
+    public Map<String, Integer> getRegionColdDataSize() {
+      return Collections.unmodifiableMap(regionColdDataInfo);
     }
 
     @Override

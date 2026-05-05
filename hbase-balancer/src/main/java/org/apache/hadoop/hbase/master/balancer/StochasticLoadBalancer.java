@@ -321,13 +321,18 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     if ((this.localityCost != null) || (this.rackLocalityCost != null)) {
       finder = this.regionFinder;
     }
-    BalancerClusterState cluster =
-      new BalancerClusterState(loadOfOneTable, loads, finder, rackManager);
+    BalancerClusterState cluster = createState(loadOfOneTable, loads, finder, rackManager);
 
     initCosts(cluster);
     curOverallCost = computeCost(cluster, Double.MAX_VALUE);
     System.arraycopy(tempFunctionCosts, 0, curFunctionCosts, 0, curFunctionCosts.length);
     updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
+  }
+
+  protected BalancerClusterState createState(Map<ServerName, List<RegionInfo>> clusterState,
+    Map<String, Deque<BalancerRegionLoad>> loads, RegionHDFSBlockLocationFinder finder,
+    RackManager rackManager) {
+    return new BalancerClusterState(clusterState, loads, finder, rackManager);
   }
 
   @Override
@@ -577,8 +582,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // The clusterState that is given to this method contains the state
     // of all the regions in the table(s) (that's true today)
     // Keep track of servers to iterate through them.
-    BalancerClusterState cluster = new BalancerClusterState(loadOfOneTable, loads, finder,
-      rackManager, regionCacheRatioOnOldServerMap);
+    BalancerClusterState cluster = createState(loadOfOneTable, loads, finder, rackManager);
 
     long startTime = EnvironmentEdgeManager.currentTime();
     cluster.setStopRequestedAt(startTime + maxRunningTime);
