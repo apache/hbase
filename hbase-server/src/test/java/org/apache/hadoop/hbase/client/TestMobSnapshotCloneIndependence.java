@@ -32,7 +32,7 @@ import org.junit.jupiter.api.Tag;
  */
 @Tag(LargeTests.TAG)
 @Tag(ClientTests.TAG)
-public class TestMobSnapshotCloneIndependence extends TestSnapshotCloneIndependence {
+public class TestMobSnapshotCloneIndependence extends SnapshotCloneIndependenceTestBase {
 
   @BeforeAll
   public static void setupCluster() throws Exception {
@@ -41,7 +41,7 @@ public class TestMobSnapshotCloneIndependence extends TestSnapshotCloneIndepende
   }
 
   protected static void setupConf(Configuration conf) {
-    TestSnapshotCloneIndependence.setupConf(conf);
+    SnapshotCloneIndependenceTestBase.setupConf(conf);
     conf.setInt(MobConstants.MOB_FILE_CACHE_SIZE_KEY, 0);
   }
 

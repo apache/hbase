@@ -27,6 +27,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -39,15 +40,16 @@ public class TestRawAsyncScanCursor extends AbstractTestScanCursor {
 
   @BeforeAll
   public static void setUpBeforeClass() throws Exception {
-    AbstractTestScanCursor.setUpBeforeClass();
+    AbstractTestScanCursor.startCluster();
     CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
 
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     if (CONN != null) {
       CONN.close();
     }
-    AbstractTestScanCursor.tearDownAfterClass();
+    stopCluster();
   }
 
   private void doTest(boolean reversed)

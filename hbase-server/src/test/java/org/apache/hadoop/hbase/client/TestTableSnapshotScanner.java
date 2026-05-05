@@ -59,12 +59,11 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,8 +82,7 @@ public class TestTableSnapshotScanner {
   private Path rootDir;
   private boolean clusterUp;
 
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
   public static void blockUntilSplitFinished(HBaseTestingUtil util, TableName tableName,
     int expectedRegionSize) throws Exception {
@@ -97,8 +95,9 @@ public class TestTableSnapshotScanner {
     }
   }
 
-  @Before
-  public void setupCluster() throws Exception {
+  @BeforeEach
+  public void setupCluster(TestInfo testInfo) throws Exception {
+    methodName = testInfo.getTestMethod().get().getName();
     setupConf(UTIL.getConfiguration());
     StartTestingClusterOption option =
       StartTestingClusterOption.builder().numRegionServers(NUM_REGION_SERVERS)
@@ -109,7 +108,7 @@ public class TestTableSnapshotScanner {
     fs = rootDir.getFileSystem(UTIL.getConfiguration());
   }
 
-  @After
+  @AfterEach
   public void tearDownCluster() throws Exception {
     if (clusterUp) {
       UTIL.shutdownMiniCluster();
@@ -207,7 +206,7 @@ public class TestTableSnapshotScanner {
 
   @Test
   public void testScanLimit() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     final String snapshotName = tableName + "Snapshot";
     TableSnapshotScanner scanner = null;
     try {
@@ -251,8 +250,8 @@ public class TestTableSnapshotScanner {
 
   private ScanMetrics createTableSnapshotScannerAndGetScanMetrics(boolean enableScanMetrics,
     boolean enableScanMetricsByRegion, byte[] endKey) throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName() + "_TABLE");
-    String snapshotName = name.getMethodName() + "_SNAPSHOT";
+    TableName tableName = TableName.valueOf(methodName + "_TABLE");
+    String snapshotName = methodName + "_SNAPSHOT";
     try {
       createTableAndSnapshot(UTIL, tableName, snapshotName, 50);
       Path restoreDir = UTIL.getDataTestDirOnTestFS(snapshotName);
@@ -563,7 +562,7 @@ public class TestTableSnapshotScanner {
 
   @Test
   public void testDeleteTableWithMergedRegions() throws Exception {
-    final TableName tableName = TableName.valueOf(this.name.getMethodName());
+    final TableName tableName = TableName.valueOf(this.methodName);
     String snapshotName = tableName.getNameAsString() + "_snapshot";
     Configuration conf = UTIL.getConfiguration();
     try (Admin admin = UTIL.getConnection().getAdmin()) {
