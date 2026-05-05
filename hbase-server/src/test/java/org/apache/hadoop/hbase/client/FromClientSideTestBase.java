@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtil.countRows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -146,7 +146,7 @@ public class FromClientSideTestBase {
       ht.delete(delete);
       count++;
     }
-    assertEquals("Did not perform correct number of deletes", 3, count);
+    assertEquals(3, count, "Did not perform correct number of deletes");
   }
 
   protected int getNumberOfRows(String keyPrefix, String value, Table ht) throws Exception {
@@ -332,47 +332,42 @@ public class FromClientSideTestBase {
   }
 
   protected void assertKey(Cell key, byte[] row, byte[] family, byte[] qualifier, byte[] value) {
-    assertTrue("Expected row [" + Bytes.toString(row) + "] " + "Got row ["
-      + Bytes.toString(CellUtil.cloneRow(key)) + "]", equals(row, CellUtil.cloneRow(key)));
-    assertTrue(
+    assertTrue(equals(row, CellUtil.cloneRow(key)), "Expected row [" + Bytes.toString(row) + "] "
+      + "Got row [" + Bytes.toString(CellUtil.cloneRow(key)) + "]");
+    assertTrue(equals(family, CellUtil.cloneFamily(key)),
       "Expected family [" + Bytes.toString(family) + "] " + "Got family ["
-        + Bytes.toString(CellUtil.cloneFamily(key)) + "]",
-      equals(family, CellUtil.cloneFamily(key)));
-    assertTrue(
+        + Bytes.toString(CellUtil.cloneFamily(key)) + "]");
+    assertTrue(equals(qualifier, CellUtil.cloneQualifier(key)),
       "Expected qualifier [" + Bytes.toString(qualifier) + "] " + "Got qualifier ["
-        + Bytes.toString(CellUtil.cloneQualifier(key)) + "]",
-      equals(qualifier, CellUtil.cloneQualifier(key)));
-    assertTrue("Expected value [" + Bytes.toString(value) + "] " + "Got value ["
-      + Bytes.toString(CellUtil.cloneValue(key)) + "]", equals(value, CellUtil.cloneValue(key)));
+        + Bytes.toString(CellUtil.cloneQualifier(key)) + "]");
+    assertTrue(equals(value, CellUtil.cloneValue(key)), "Expected value [" + Bytes.toString(value)
+      + "] " + "Got value [" + Bytes.toString(CellUtil.cloneValue(key)) + "]");
   }
 
   static void assertIncrementKey(Cell key, byte[] row, byte[] family, byte[] qualifier,
     long value) {
-    assertTrue("Expected row [" + Bytes.toString(row) + "] " + "Got row ["
-      + Bytes.toString(CellUtil.cloneRow(key)) + "]", equals(row, CellUtil.cloneRow(key)));
-    assertTrue(
+    assertTrue(equals(row, CellUtil.cloneRow(key)), "Expected row [" + Bytes.toString(row) + "] "
+      + "Got row [" + Bytes.toString(CellUtil.cloneRow(key)) + "]");
+    assertTrue(equals(family, CellUtil.cloneFamily(key)),
       "Expected family [" + Bytes.toString(family) + "] " + "Got family ["
-        + Bytes.toString(CellUtil.cloneFamily(key)) + "]",
-      equals(family, CellUtil.cloneFamily(key)));
-    assertTrue(
+        + Bytes.toString(CellUtil.cloneFamily(key)) + "]");
+    assertTrue(equals(qualifier, CellUtil.cloneQualifier(key)),
       "Expected qualifier [" + Bytes.toString(qualifier) + "] " + "Got qualifier ["
-        + Bytes.toString(CellUtil.cloneQualifier(key)) + "]",
-      equals(qualifier, CellUtil.cloneQualifier(key)));
-    assertEquals("Expected value [" + value + "] " + "Got value ["
-      + Bytes.toLong(CellUtil.cloneValue(key)) + "]", Bytes.toLong(CellUtil.cloneValue(key)),
-      value);
+        + Bytes.toString(CellUtil.cloneQualifier(key)) + "]");
+    assertEquals(Bytes.toLong(CellUtil.cloneValue(key)), value, "Expected value [" + value + "] "
+      + "Got value [" + Bytes.toLong(CellUtil.cloneValue(key)) + "]");
   }
 
   protected void assertNumKeys(Result result, int n) throws Exception {
-    assertEquals("Expected " + n + " keys but got " + result.size(), result.size(), n);
+    assertEquals(result.size(), n, "Expected " + n + " keys but got " + result.size());
   }
 
   protected void assertNResult(Result result, byte[] row, byte[][] families, byte[][] qualifiers,
     byte[][] values, int[][] idxs) {
-    assertTrue("Expected row [" + Bytes.toString(row) + "] " + "Got row ["
-      + Bytes.toString(result.getRow()) + "]", equals(row, result.getRow()));
-    assertEquals("Expected " + idxs.length + " keys but result contains " + result.size(),
-      result.size(), idxs.length);
+    assertTrue(equals(row, result.getRow()), "Expected row [" + Bytes.toString(row) + "] "
+      + "Got row [" + Bytes.toString(result.getRow()) + "]");
+    assertEquals(result.size(), idxs.length,
+      "Expected " + idxs.length + " keys but result contains " + result.size());
 
     Cell[] keys = result.rawCells();
 
@@ -385,19 +380,19 @@ public class FromClientSideTestBase {
       byte[] famb = CellUtil.cloneFamily(key);
       byte[] qualb = CellUtil.cloneQualifier(key);
       byte[] valb = CellUtil.cloneValue(key);
-      assertTrue("(" + i + ") Expected family [" + Bytes.toString(family) + "] " + "Got family ["
-        + Bytes.toString(famb) + "]", equals(family, famb));
-      assertTrue("(" + i + ") Expected qualifier [" + Bytes.toString(qualifier) + "] "
-        + "Got qualifier [" + Bytes.toString(qualb) + "]", equals(qualifier, qualb));
-      assertTrue("(" + i + ") Expected value [" + Bytes.toString(value) + "] " + "Got value ["
-        + Bytes.toString(valb) + "]", equals(value, valb));
+      assertTrue(equals(family, famb), "(" + i + ") Expected family [" + Bytes.toString(family)
+        + "] " + "Got family [" + Bytes.toString(famb) + "]");
+      assertTrue(equals(qualifier, qualb), "(" + i + ") Expected qualifier ["
+        + Bytes.toString(qualifier) + "] " + "Got qualifier [" + Bytes.toString(qualb) + "]");
+      assertTrue(equals(value, valb), "(" + i + ") Expected value [" + Bytes.toString(value) + "] "
+        + "Got value [" + Bytes.toString(valb) + "]");
     }
   }
 
   protected void assertNResult(Result result, byte[] row, byte[] family, byte[] qualifier,
     long[] stamps, byte[][] values, int start, int end) {
-    assertTrue("Expected row [" + Bytes.toString(row) + "] " + "Got row ["
-      + Bytes.toString(result.getRow()) + "]", equals(row, result.getRow()));
+    assertTrue(equals(row, result.getRow()), "Expected row [" + Bytes.toString(row) + "] "
+      + "Got row [" + Bytes.toString(result.getRow()) + "]");
     int expectedResults = end - start + 1;
     assertEquals(expectedResults, result.size());
 
@@ -408,16 +403,17 @@ public class FromClientSideTestBase {
       long ts = stamps[end - i];
       Cell key = keys[i];
 
-      assertTrue("(" + i + ") Expected family [" + Bytes.toString(family) + "] " + "Got family ["
-        + Bytes.toString(CellUtil.cloneFamily(key)) + "]", CellUtil.matchingFamily(key, family));
-      assertTrue(
+      assertTrue(CellUtil.matchingFamily(key, family),
+        "(" + i + ") Expected family [" + Bytes.toString(family) + "] " + "Got family ["
+          + Bytes.toString(CellUtil.cloneFamily(key)) + "]");
+      assertTrue(CellUtil.matchingQualifier(key, qualifier),
         "(" + i + ") Expected qualifier [" + Bytes.toString(qualifier) + "] " + "Got qualifier ["
-          + Bytes.toString(CellUtil.cloneQualifier(key)) + "]",
-        CellUtil.matchingQualifier(key, qualifier));
-      assertEquals("Expected ts [" + ts + "] " + "Got ts [" + key.getTimestamp() + "]", ts,
-        key.getTimestamp());
-      assertTrue("(" + i + ") Expected value [" + Bytes.toString(value) + "] " + "Got value ["
-        + Bytes.toString(CellUtil.cloneValue(key)) + "]", CellUtil.matchingValue(key, value));
+          + Bytes.toString(CellUtil.cloneQualifier(key)) + "]");
+      assertEquals(ts, key.getTimestamp(),
+        "Expected ts [" + ts + "] " + "Got ts [" + key.getTimestamp() + "]");
+      assertTrue(CellUtil.matchingValue(key, value),
+        "(" + i + ") Expected value [" + Bytes.toString(value) + "] " + "Got value ["
+          + Bytes.toString(CellUtil.cloneValue(key)) + "]");
     }
   }
 
@@ -427,91 +423,89 @@ public class FromClientSideTestBase {
    */
   protected void assertDoubleResult(Result result, byte[] row, byte[] familyA, byte[] qualifierA,
     byte[] valueA, byte[] familyB, byte[] qualifierB, byte[] valueB) {
-    assertTrue("Expected row [" + Bytes.toString(row) + "] " + "Got row ["
-      + Bytes.toString(result.getRow()) + "]", equals(row, result.getRow()));
-    assertEquals("Expected two keys but result contains " + result.size(), 2, result.size());
+    assertTrue(equals(row, result.getRow()), "Expected row [" + Bytes.toString(row) + "] "
+      + "Got row [" + Bytes.toString(result.getRow()) + "]");
+    assertEquals(2, result.size(), "Expected two keys but result contains " + result.size());
     Cell[] kv = result.rawCells();
     Cell kvA = kv[0];
-    assertTrue(
+    assertTrue(equals(familyA, CellUtil.cloneFamily(kvA)),
       "(A) Expected family [" + Bytes.toString(familyA) + "] " + "Got family ["
-        + Bytes.toString(CellUtil.cloneFamily(kvA)) + "]",
-      equals(familyA, CellUtil.cloneFamily(kvA)));
-    assertTrue(
+        + Bytes.toString(CellUtil.cloneFamily(kvA)) + "]");
+    assertTrue(equals(qualifierA, CellUtil.cloneQualifier(kvA)),
       "(A) Expected qualifier [" + Bytes.toString(qualifierA) + "] " + "Got qualifier ["
-        + Bytes.toString(CellUtil.cloneQualifier(kvA)) + "]",
-      equals(qualifierA, CellUtil.cloneQualifier(kvA)));
-    assertTrue("(A) Expected value [" + Bytes.toString(valueA) + "] " + "Got value ["
-      + Bytes.toString(CellUtil.cloneValue(kvA)) + "]", equals(valueA, CellUtil.cloneValue(kvA)));
+        + Bytes.toString(CellUtil.cloneQualifier(kvA)) + "]");
+    assertTrue(equals(valueA, CellUtil.cloneValue(kvA)),
+      "(A) Expected value [" + Bytes.toString(valueA) + "] " + "Got value ["
+        + Bytes.toString(CellUtil.cloneValue(kvA)) + "]");
     Cell kvB = kv[1];
-    assertTrue(
+    assertTrue(equals(familyB, CellUtil.cloneFamily(kvB)),
       "(B) Expected family [" + Bytes.toString(familyB) + "] " + "Got family ["
-        + Bytes.toString(CellUtil.cloneFamily(kvB)) + "]",
-      equals(familyB, CellUtil.cloneFamily(kvB)));
-    assertTrue(
+        + Bytes.toString(CellUtil.cloneFamily(kvB)) + "]");
+    assertTrue(equals(qualifierB, CellUtil.cloneQualifier(kvB)),
       "(B) Expected qualifier [" + Bytes.toString(qualifierB) + "] " + "Got qualifier ["
-        + Bytes.toString(CellUtil.cloneQualifier(kvB)) + "]",
-      equals(qualifierB, CellUtil.cloneQualifier(kvB)));
-    assertTrue("(B) Expected value [" + Bytes.toString(valueB) + "] " + "Got value ["
-      + Bytes.toString(CellUtil.cloneValue(kvB)) + "]", equals(valueB, CellUtil.cloneValue(kvB)));
+        + Bytes.toString(CellUtil.cloneQualifier(kvB)) + "]");
+    assertTrue(equals(valueB, CellUtil.cloneValue(kvB)),
+      "(B) Expected value [" + Bytes.toString(valueB) + "] " + "Got value ["
+        + Bytes.toString(CellUtil.cloneValue(kvB)) + "]");
   }
 
   protected void assertSingleResult(Result result, byte[] row, byte[] family, byte[] qualifier,
     byte[] value) {
-    assertTrue("Expected row [" + Bytes.toString(row) + "] " + "Got row ["
-      + Bytes.toString(result.getRow()) + "]", equals(row, result.getRow()));
-    assertEquals("Expected a single key but result contains " + result.size(), 1, result.size());
+    assertTrue(equals(row, result.getRow()), "Expected row [" + Bytes.toString(row) + "] "
+      + "Got row [" + Bytes.toString(result.getRow()) + "]");
+    assertEquals(1, result.size(), "Expected a single key but result contains " + result.size());
     Cell kv = result.rawCells()[0];
-    assertTrue("Expected family [" + Bytes.toString(family) + "] " + "Got family ["
-      + Bytes.toString(CellUtil.cloneFamily(kv)) + "]", equals(family, CellUtil.cloneFamily(kv)));
-    assertTrue(
+    assertTrue(equals(family, CellUtil.cloneFamily(kv)),
+      "Expected family [" + Bytes.toString(family) + "] " + "Got family ["
+        + Bytes.toString(CellUtil.cloneFamily(kv)) + "]");
+    assertTrue(equals(qualifier, CellUtil.cloneQualifier(kv)),
       "Expected qualifier [" + Bytes.toString(qualifier) + "] " + "Got qualifier ["
-        + Bytes.toString(CellUtil.cloneQualifier(kv)) + "]",
-      equals(qualifier, CellUtil.cloneQualifier(kv)));
-    assertTrue("Expected value [" + Bytes.toString(value) + "] " + "Got value ["
-      + Bytes.toString(CellUtil.cloneValue(kv)) + "]", equals(value, CellUtil.cloneValue(kv)));
+        + Bytes.toString(CellUtil.cloneQualifier(kv)) + "]");
+    assertTrue(equals(value, CellUtil.cloneValue(kv)), "Expected value [" + Bytes.toString(value)
+      + "] " + "Got value [" + Bytes.toString(CellUtil.cloneValue(kv)) + "]");
   }
 
   protected void assertSingleResult(Result result, byte[] row, byte[] family, byte[] qualifier,
     long value) {
-    assertTrue("Expected row [" + Bytes.toString(row) + "] " + "Got row ["
-      + Bytes.toString(result.getRow()) + "]", equals(row, result.getRow()));
-    assertEquals("Expected a single key but result contains " + result.size(), 1, result.size());
+    assertTrue(equals(row, result.getRow()), "Expected row [" + Bytes.toString(row) + "] "
+      + "Got row [" + Bytes.toString(result.getRow()) + "]");
+    assertEquals(1, result.size(), "Expected a single key but result contains " + result.size());
     Cell kv = result.rawCells()[0];
-    assertTrue("Expected family [" + Bytes.toString(family) + "] " + "Got family ["
-      + Bytes.toString(CellUtil.cloneFamily(kv)) + "]", equals(family, CellUtil.cloneFamily(kv)));
-    assertTrue(
+    assertTrue(equals(family, CellUtil.cloneFamily(kv)),
+      "Expected family [" + Bytes.toString(family) + "] " + "Got family ["
+        + Bytes.toString(CellUtil.cloneFamily(kv)) + "]");
+    assertTrue(equals(qualifier, CellUtil.cloneQualifier(kv)),
       "Expected qualifier [" + Bytes.toString(qualifier) + "] " + "Got qualifier ["
-        + Bytes.toString(CellUtil.cloneQualifier(kv)) + "]",
-      equals(qualifier, CellUtil.cloneQualifier(kv)));
-    assertEquals("Expected value [" + value + "] " + "Got value ["
-      + Bytes.toLong(CellUtil.cloneValue(kv)) + "]", value, Bytes.toLong(CellUtil.cloneValue(kv)));
+        + Bytes.toString(CellUtil.cloneQualifier(kv)) + "]");
+    assertEquals(value, Bytes.toLong(CellUtil.cloneValue(kv)), "Expected value [" + value + "] "
+      + "Got value [" + Bytes.toLong(CellUtil.cloneValue(kv)) + "]");
   }
 
   protected void assertSingleResult(Result result, byte[] row, byte[] family, byte[] qualifier,
     long ts, byte[] value) {
-    assertTrue("Expected row [" + Bytes.toString(row) + "] " + "Got row ["
-      + Bytes.toString(result.getRow()) + "]", equals(row, result.getRow()));
-    assertEquals("Expected a single key but result contains " + result.size(), 1, result.size());
+    assertTrue(equals(row, result.getRow()), "Expected row [" + Bytes.toString(row) + "] "
+      + "Got row [" + Bytes.toString(result.getRow()) + "]");
+    assertEquals(1, result.size(), "Expected a single key but result contains " + result.size());
     Cell kv = result.rawCells()[0];
-    assertTrue("Expected family [" + Bytes.toString(family) + "] " + "Got family ["
-      + Bytes.toString(CellUtil.cloneFamily(kv)) + "]", equals(family, CellUtil.cloneFamily(kv)));
-    assertTrue(
+    assertTrue(equals(family, CellUtil.cloneFamily(kv)),
+      "Expected family [" + Bytes.toString(family) + "] " + "Got family ["
+        + Bytes.toString(CellUtil.cloneFamily(kv)) + "]");
+    assertTrue(equals(qualifier, CellUtil.cloneQualifier(kv)),
       "Expected qualifier [" + Bytes.toString(qualifier) + "] " + "Got qualifier ["
-        + Bytes.toString(CellUtil.cloneQualifier(kv)) + "]",
-      equals(qualifier, CellUtil.cloneQualifier(kv)));
-    assertEquals("Expected ts [" + ts + "] " + "Got ts [" + kv.getTimestamp() + "]", ts,
-      kv.getTimestamp());
-    assertTrue("Expected value [" + Bytes.toString(value) + "] " + "Got value ["
-      + Bytes.toString(CellUtil.cloneValue(kv)) + "]", equals(value, CellUtil.cloneValue(kv)));
+        + Bytes.toString(CellUtil.cloneQualifier(kv)) + "]");
+    assertEquals(ts, kv.getTimestamp(),
+      "Expected ts [" + ts + "] " + "Got ts [" + kv.getTimestamp() + "]");
+    assertTrue(equals(value, CellUtil.cloneValue(kv)), "Expected value [" + Bytes.toString(value)
+      + "] " + "Got value [" + Bytes.toString(CellUtil.cloneValue(kv)) + "]");
   }
 
   protected void assertEmptyResult(Result result) throws Exception {
-    assertTrue("expected an empty result but result contains " + result.size() + " keys",
-      result.isEmpty());
+    assertTrue(result.isEmpty(),
+      "expected an empty result but result contains " + result.size() + " keys");
   }
 
   protected void assertNullResult(Result result) throws Exception {
-    assertNull("expected null result but received a non-null result", result);
+    assertNull(result, "expected null result but received a non-null result");
   }
 
   protected void getVersionRangeAndVerifyGreaterThan(Table ht, byte[] row, byte[] family,

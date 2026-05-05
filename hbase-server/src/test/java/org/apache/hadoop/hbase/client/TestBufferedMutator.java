@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
@@ -28,28 +28,23 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestBufferedMutator {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBufferedMutator.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -61,23 +56,23 @@ public class TestBufferedMutator {
 
   private static byte[] VALUE = new byte[1024];
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(1);
     ThreadLocalRandom.current().nextBytes(VALUE);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUpBeforeTest() throws IOException {
     TEST_UTIL.createTable(TABLE_NAME, CF);
   }
 
-  @After
+  @AfterEach
   public void tearDownAfterTest() throws IOException {
     TEST_UTIL.deleteTable(TABLE_NAME);
   }

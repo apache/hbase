@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -30,21 +29,17 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 // Categorized as a large test so not run as part of general 'test' suite (which is small
 // and mediums). This test fails if networking is odd -- say if you are connected to a
 // VPN... See HBASE-23850
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestAsyncTableRSCrashPublish {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableRSCrashPublish.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -52,7 +47,7 @@ public class TestAsyncTableRSCrashPublish {
 
   private static byte[] FAMILY = Bytes.toBytes("family");
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     UTIL.getConfiguration().setBoolean(HConstants.STATUS_PUBLISHED, true);
     /*
@@ -72,7 +67,7 @@ public class TestAsyncTableRSCrashPublish {
     UTIL.waitTableAvailable(TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }

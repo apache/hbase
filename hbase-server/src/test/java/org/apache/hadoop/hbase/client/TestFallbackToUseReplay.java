@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -32,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
@@ -42,11 +41,10 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
@@ -58,12 +56,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminServic
  * Make sure we could fallback to use replay method if replicateToReplica method is not present,
  * i.e, we are connecting an old region server.
  */
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestFallbackToUseReplay {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFallbackToUseReplay.class);
 
   private static Configuration CONF = HBaseConfiguration.create();
 
@@ -76,7 +71,7 @@ public class TestFallbackToUseReplay {
 
   private static AtomicBoolean REPLAY_CALLED = new AtomicBoolean(false);
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws IOException {
     CONF.setInt(AsyncConnectionConfiguration.START_LOG_ERRORS_AFTER_COUNT_KEY, 0);
     AsyncRegionLocator locator = mock(AsyncRegionLocator.class);
@@ -116,7 +111,7 @@ public class TestFallbackToUseReplay {
       Collections.emptyList());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws IOException {
     Closeables.close(CONN, true);
   }

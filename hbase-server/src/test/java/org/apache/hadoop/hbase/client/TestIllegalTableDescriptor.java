@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -27,7 +27,6 @@ import static org.mockito.Mockito.verify;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -38,37 +37,33 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestIllegalTableDescriptor {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIllegalTableDescriptor.class);
-
   // NOTE: Increment tests were moved to their own class, TestIncrementsFromClientSide.
-  private static final Logger LOGGER;
+  private static final Logger LOGGER = mock(Logger.class);
 
   protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
 
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
-  static {
-    LOGGER = mock(Logger.class);
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    methodName = testInfo.getTestMethod().get().getName();
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // replacing HMaster.LOG with our mock logger for verifying logging
     Field field = TableDescriptorChecker.class.getDeclaredField("LOG");
@@ -79,7 +74,7 @@ public class TestIllegalTableDescriptor {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -87,7 +82,7 @@ public class TestIllegalTableDescriptor {
   @Test
   public void testIllegalTableDescriptor() throws Exception {
     TableDescriptorBuilder builder =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(methodName));
     ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
 
     // create table with 0 families
@@ -194,7 +189,7 @@ public class TestIllegalTableDescriptor {
   public void testIllegalTableDescriptorWithDataTiering() throws IOException {
     // table level configuration changes
     TableDescriptorBuilder builder =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(methodName));
     ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
     builder.setColumnFamily(cfBuilder.build());
 
@@ -213,7 +208,7 @@ public class TestIllegalTableDescriptor {
     checkTableIsIllegal(builder.build());
 
     // column family level configuration changes
-    builder = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    builder = TableDescriptorBuilder.newBuilder(TableName.valueOf(methodName));
     cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
 
     // First scenario: DataTieringType set to TIME_RANGE without DateTieredStoreEngine

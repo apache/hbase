@@ -19,16 +19,15 @@ package org.apache.hadoop.hbase.client;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -36,14 +35,12 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestAdmin4 extends TestAdminBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestAdmin4.class);
 
   // For HBASE-24208
   @Test
@@ -63,8 +60,9 @@ public class TestAdmin4 extends TestAdminBase {
     // Stop decommissioned region server and verify it is removed from draining znode
     ServerName serverName = serversToDecommission.get(0);
     ADMIN.stopRegionServer(serverName.getHostname() + ":" + serverName.getPort());
-    assertNotEquals("RS not removed from decommissioned list", -1,
-      TEST_UTIL.waitFor(10000, () -> ADMIN.listDecommissionedRegionServers().isEmpty()));
+    assertNotEquals(-1,
+      TEST_UTIL.waitFor(10000, () -> ADMIN.listDecommissionedRegionServers().isEmpty()),
+      "RS not removed from decommissioned list");
     ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
     assertEquals(-1, ZKUtil.checkExists(zkw,
       ZNodePaths.joinZNode(zkw.getZNodePaths().drainingZNode, serverName.getServerName())));

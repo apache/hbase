@@ -19,14 +19,13 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_META_READ_RPC_TIMEOUT_KEY;
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_META_SCANNER_TIMEOUT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -39,13 +38,11 @@ import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,12 +52,9 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 
-@Category({ ClientTests.class, LargeTests.class })
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestClientScannerTimeouts {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClientScannerTimeouts.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClientScannerTimeouts.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -83,10 +77,7 @@ public class TestClientScannerTimeouts {
   private static Table table;
   private static AsyncTable<AdvancedScanResultConsumer> asyncTable;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     // Don't report so often so easier to see other rpcs
@@ -104,17 +95,17 @@ public class TestClientScannerTimeouts {
     CONN = ASYNC_CONN.toConnection();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     CONN.close();
     ASYNC_CONN.close();
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  public void setup(boolean isSystemTable) throws IOException {
+  public void setup(boolean isSystemTable, TestInfo testInfo) throws IOException {
     RSRpcServicesWithScanTimeout.reset();
 
-    String nameAsString = name.getMethodName();
+    String nameAsString = testInfo.getTestMethod().get().getName();
     if (isSystemTable) {
       nameAsString = NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR + ":" + nameAsString;
     }
@@ -136,14 +127,13 @@ public class TestClientScannerTimeouts {
   }
 
   private void expectRow(byte[] expected, Result result) {
-    assertTrue("Expected row: " + Bytes.toString(expected),
-      Bytes.equals(expected, result.getRow()));
+    assertTrue(Bytes.equals(expected, result.getRow()),
+      "Expected row: " + Bytes.toString(expected));
   }
 
   private void expectNumTries(int expected) {
-    assertEquals(
-      "Expected tryNumber=" + expected + ", actual=" + RSRpcServicesWithScanTimeout.tryNumber,
-      expected, RSRpcServicesWithScanTimeout.tryNumber);
+    assertEquals(expected, RSRpcServicesWithScanTimeout.tryNumber,
+      "Expected tryNumber=" + expected + ", actual=" + RSRpcServicesWithScanTimeout.tryNumber);
     // reset for next
     RSRpcServicesWithScanTimeout.tryNumber = 0;
   }
@@ -156,16 +146,16 @@ public class TestClientScannerTimeouts {
    * that we can test the retry logic appropriately.
    */
   @Test
-  public void testRetryOutOfOrderScannerNextException() throws IOException {
-    expectRetryOutOfOrderScannerNext(this::getScanner);
+  public void testRetryOutOfOrderScannerNextException(TestInfo testInfo) throws IOException {
+    expectRetryOutOfOrderScannerNext(this::getScanner, testInfo);
   }
 
   /**
    * AsyncTable version of above
    */
   @Test
-  public void testRetryOutOfOrderScannerNextExceptionAsync() throws IOException {
-    expectRetryOutOfOrderScannerNext(this::getAsyncScanner);
+  public void testRetryOutOfOrderScannerNextExceptionAsync(TestInfo testInfo) throws IOException {
+    expectRetryOutOfOrderScannerNext(this::getAsyncScanner, testInfo);
   }
 
   /**
@@ -173,8 +163,8 @@ public class TestClientScannerTimeouts {
    * scans.
    */
   @Test
-  public void testNormalScanTimeoutOnNext() throws IOException {
-    setup(false);
+  public void testNormalScanTimeoutOnNext(TestInfo testInfo) throws IOException {
+    setup(false, testInfo);
     expectTimeoutOnNext(scanTimeout, this::getScanner);
   }
 
@@ -182,8 +172,8 @@ public class TestClientScannerTimeouts {
    * AsyncTable version of above
    */
   @Test
-  public void testNormalScanTimeoutOnNextAsync() throws IOException {
-    setup(false);
+  public void testNormalScanTimeoutOnNextAsync(TestInfo testInfo) throws IOException {
+    setup(false, testInfo);
     expectTimeoutOnNext(scanTimeout, this::getAsyncScanner);
   }
 
@@ -192,8 +182,8 @@ public class TestClientScannerTimeouts {
    * meta scans
    */
   @Test
-  public void testNormalScanTimeoutOnOpenScanner() throws IOException {
-    setup(false);
+  public void testNormalScanTimeoutOnOpenScanner(TestInfo testInfo) throws IOException {
+    setup(false, testInfo);
     expectTimeoutOnOpenScanner(rpcTimeout, this::getScanner);
   }
 
@@ -201,8 +191,8 @@ public class TestClientScannerTimeouts {
    * AsyncTable version of above
    */
   @Test
-  public void testNormalScanTimeoutOnOpenScannerAsync() throws IOException {
-    setup(false);
+  public void testNormalScanTimeoutOnOpenScannerAsync(TestInfo testInfo) throws IOException {
+    setup(false, testInfo);
     expectTimeoutOnOpenScanner(rpcTimeout, this::getAsyncScanner);
   }
 
@@ -211,8 +201,8 @@ public class TestClientScannerTimeouts {
    * next() calls in meta scans
    */
   @Test
-  public void testMetaScanTimeoutOnNext() throws IOException {
-    setup(true);
+  public void testMetaScanTimeoutOnNext(TestInfo testInfo) throws IOException {
+    setup(true, testInfo);
     expectTimeoutOnNext(metaScanTimeout, this::getScanner);
   }
 
@@ -220,8 +210,8 @@ public class TestClientScannerTimeouts {
    * AsyncTable version of above
    */
   @Test
-  public void testMetaScanTimeoutOnNextAsync() throws IOException {
-    setup(true);
+  public void testMetaScanTimeoutOnNextAsync(TestInfo testInfo) throws IOException {
+    setup(true, testInfo);
     expectTimeoutOnNext(metaScanTimeout, this::getAsyncScanner);
   }
 
@@ -230,8 +220,8 @@ public class TestClientScannerTimeouts {
    * openScanner() calls for meta scans
    */
   @Test
-  public void testMetaScanTimeoutOnOpenScanner() throws IOException {
-    setup(true);
+  public void testMetaScanTimeoutOnOpenScanner(TestInfo testInfo) throws IOException {
+    setup(true, testInfo);
     expectTimeoutOnOpenScanner(metaScanTimeout, this::getScanner);
   }
 
@@ -239,14 +229,14 @@ public class TestClientScannerTimeouts {
    * AsyncTable version of above
    */
   @Test
-  public void testMetaScanTimeoutOnOpenScannerAsync() throws IOException {
-    setup(true);
+  public void testMetaScanTimeoutOnOpenScannerAsync(TestInfo testInfo) throws IOException {
+    setup(true, testInfo);
     expectTimeoutOnOpenScanner(metaScanTimeout, this::getAsyncScanner);
   }
 
-  private void expectRetryOutOfOrderScannerNext(Supplier<ResultScanner> scannerSupplier)
-    throws IOException {
-    setup(false);
+  private void expectRetryOutOfOrderScannerNext(Supplier<ResultScanner> scannerSupplier,
+    TestInfo testInfo) throws IOException {
+    setup(false, testInfo);
     RSRpcServicesWithScanTimeout.seqNoToThrowOn = 1;
 
     LOG.info(
@@ -297,8 +287,8 @@ public class TestClientScannerTimeouts {
 
     // ensure we verified all rows. this along with the expectRow check above
     // proves that we didn't miss any rows.
-    assertEquals("Expected to exhaust expectedResults array length=" + expectedResults.length
-      + ", actual index=" + i, expectedResults.length, i);
+    assertEquals(expectedResults.length, i, "Expected to exhaust expectedResults array length="
+      + expectedResults.length + ", actual index=" + i);
 
     // expect all but the first row (which came from initial openScanner) to have thrown an error
     expectNumTries(expectedResults.length - 1);
@@ -326,7 +316,7 @@ public class TestClientScannerTimeouts {
       scanner.next();
       fail("Expected CallTimeoutException");
     } catch (RetriesExhaustedException e) {
-      assertTrue("Expected CallTimeoutException", e.getCause() instanceof CallTimeoutException);
+      assertTrue(e.getCause() instanceof CallTimeoutException, "Expected CallTimeoutException");
     }
     expectTimeout(start, timeout);
   }
@@ -341,15 +331,15 @@ public class TestClientScannerTimeouts {
       scannerSupplier.get().next();
       fail("Expected CallTimeoutException");
     } catch (RetriesExhaustedException e) {
-      assertTrue("Expected CallTimeoutException, but was " + e.getCause(),
-        e.getCause() instanceof CallTimeoutException);
+      assertTrue(e.getCause() instanceof CallTimeoutException,
+        "Expected CallTimeoutException, but was " + e.getCause());
     }
     expectTimeout(start, timeout);
   }
 
   private void expectTimeout(long start, int timeout) {
     long duration = System.nanoTime() - start;
-    assertTrue("Expected duration >= " + timeout + ", but was " + duration, duration >= timeout);
+    assertTrue(duration >= timeout, "Expected duration >= " + timeout + ", but was " + duration);
   }
 
   private ResultScanner getScanner() {

@@ -21,35 +21,30 @@ import static org.apache.hadoop.hbase.util.FutureUtils.get;
 
 import java.io.IOException;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestAsyncTableRegionLocator extends AbstractTestRegionLocator {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableRegionLocator.class);
 
   private static AsyncConnection CONN;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     startClusterAndCreateTable();
     CONN = ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     Closeables.close(CONN, true);
     UTIL.shutdownMiniCluster();

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -25,21 +25,17 @@ import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,54 +44,33 @@ import org.slf4j.LoggerFactory;
  * APIs. Sets up the HBase mini cluster once at start. Each creates a table named for the method and
  * does its stuff against that.
  */
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestMultipleTimestamps {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultipleTimestamps.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMultipleTimestamps.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @BeforeClass
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    methodName = testInfo.getTestMethod().get().getName();
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @Before
-  public void setUp() throws Exception {
-    // Nothing to do.
-  }
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @After
-  public void tearDown() throws Exception {
-    // Nothing to do.
-  }
-
   @Test
   public void testReseeksWithOneColumnMiltipleTimestamp() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     byte[] FAMILY = Bytes.toBytes("event_log");
     byte[][] FAMILIES = new byte[][] { FAMILY };
 
@@ -134,8 +109,8 @@ public class TestMultipleTimestamps {
 
   @Test
   public void testReseeksWithMultipleColumnOneTimestamp() throws IOException {
-    LOG.info(name.getMethodName());
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    LOG.info(methodName);
+    final TableName tableName = TableName.valueOf(methodName);
     byte[] FAMILY = Bytes.toBytes("event_log");
     byte[][] FAMILIES = new byte[][] { FAMILY };
 
@@ -172,9 +147,9 @@ public class TestMultipleTimestamps {
 
   @Test
   public void testReseeksWithMultipleColumnMultipleTimestamp() throws IOException {
-    LOG.info(name.getMethodName());
+    LOG.info(methodName);
 
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     byte[] FAMILY = Bytes.toBytes("event_log");
     byte[][] FAMILIES = new byte[][] { FAMILY };
 
@@ -225,8 +200,8 @@ public class TestMultipleTimestamps {
 
   @Test
   public void testReseeksWithMultipleFiles() throws IOException {
-    LOG.info(name.getMethodName());
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    LOG.info(methodName);
+    final TableName tableName = TableName.valueOf(methodName);
     byte[] FAMILY = Bytes.toBytes("event_log");
     byte[][] FAMILIES = new byte[][] { FAMILY };
 
@@ -292,9 +267,9 @@ public class TestMultipleTimestamps {
   }
 
   public void testWithVersionDeletes(boolean flushTables) throws IOException {
-    LOG.info(name.getMethodName() + "_" + (flushTables ? "flush" : "noflush"));
+    LOG.info(methodName + "_" + (flushTables ? "flush" : "noflush"));
     final TableName tableName =
-      TableName.valueOf(name.getMethodName() + "_" + (flushTables ? "flush" : "noflush"));
+      TableName.valueOf(methodName + "_" + (flushTables ? "flush" : "noflush"));
     byte[] FAMILY = Bytes.toBytes("event_log");
     byte[][] FAMILIES = new byte[][] { FAMILY };
 
@@ -324,9 +299,9 @@ public class TestMultipleTimestamps {
 
   @Test
   public void testWithMultipleVersionDeletes() throws IOException {
-    LOG.info(name.getMethodName());
+    LOG.info(methodName);
 
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     byte[] FAMILY = Bytes.toBytes("event_log");
     byte[][] FAMILIES = new byte[][] { FAMILY };
 
@@ -351,7 +326,7 @@ public class TestMultipleTimestamps {
 
   @Test
   public void testWithColumnDeletes() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     byte[] FAMILY = Bytes.toBytes("event_log");
     byte[][] FAMILIES = new byte[][] { FAMILY };
 
@@ -376,7 +351,7 @@ public class TestMultipleTimestamps {
 
   @Test
   public void testWithFamilyDeletes() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     byte[] FAMILY = Bytes.toBytes("event_log");
     byte[][] FAMILIES = new byte[][] { FAMILY };
 
@@ -416,7 +391,7 @@ public class TestMultipleTimestamps {
     assertEquals("Column qualifier mismatch while checking: " + ctx, "column:" + colIdx,
       Bytes.toString(CellUtil.cloneQualifier(kv)));
 
-    assertEquals("Timestamp mismatch while checking: " + ctx, ts, kv.getTimestamp());
+    assertEquals(ts, kv.getTimestamp(), "Timestamp mismatch while checking: " + ctx);
 
     assertEquals("Value mismatch while checking: " + ctx, "value-version-" + ts,
       Bytes.toString(CellUtil.cloneValue(kv)));

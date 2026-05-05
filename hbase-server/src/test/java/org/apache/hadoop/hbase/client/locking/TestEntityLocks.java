@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.client.locking;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
@@ -32,7 +32,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.client.PerClientRandomNonceGenerator;
@@ -40,10 +39,9 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -58,12 +56,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestEntityLocks {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestEntityLocks.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestEntityLocks.class);
 
@@ -90,7 +85,7 @@ public class TestEntityLocks {
     return new LockServiceClient(conf, master, PerClientRandomNonceGenerator.get());
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     admin = getAdmin();
     lockReqArgCaptor = ArgumentCaptor.forClass(LockRequest.class);

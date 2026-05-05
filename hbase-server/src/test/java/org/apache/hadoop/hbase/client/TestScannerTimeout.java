@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -29,24 +28,20 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test various scanner timeout issues.
  */
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestScannerTimeout {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestScannerTimeout.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -63,7 +58,7 @@ public class TestScannerTimeout {
   /**
    * @throws java.lang.Exception
    */
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration c = TEST_UTIL.getConfiguration();
     c.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, SCANNER_TIMEOUT);
@@ -82,7 +77,7 @@ public class TestScannerTimeout {
   /**
    * @throws java.lang.Exception
    */
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -90,7 +85,7 @@ public class TestScannerTimeout {
   /**
    * @throws java.lang.Exception
    */
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     TEST_UTIL.ensureSomeNonStoppedRegionServersAvailable(2);
   }

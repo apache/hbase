@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.List;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -34,33 +36,24 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test to verify that the cloned table is independent of the table from which it was cloned
  */
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestSnapshotCloneIndependence {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotCloneIndependence.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotCloneIndependence.class);
-
-  @Rule
-  public TestName testName = new TestName();
 
   protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -82,7 +75,7 @@ public class TestSnapshotCloneIndependence {
   /**
    * Setup the config for the cluster and start it
    */
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_RS);
@@ -115,13 +108,13 @@ public class TestSnapshotCloneIndependence {
     conf.setInt("hbase.master.hfilecleaner.ttl", CLEANER_INTERVAL);
   }
 
-  @Before
-  public void setup() throws Exception {
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws Exception {
     fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
     rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
 
     admin = UTIL.getAdmin();
-    originalTableName = TableName.valueOf("test" + testName.getMethodName());
+    originalTableName = TableName.valueOf("test" + testInfo.getTestMethod().get().getName());
     cloneTableName = TableName.valueOf("test-clone-" + originalTableName);
     snapshotNameAsString = "snapshot_" + originalTableName;
     snapshotName = snapshotNameAsString;
@@ -132,7 +125,7 @@ public class TestSnapshotCloneIndependence {
     System.out.println("Original table has: " + countOriginalTable + " rows");
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     UTIL.deleteTable(originalTableName);
     UTIL.deleteTable(cloneTableName);
@@ -140,7 +133,7 @@ public class TestSnapshotCloneIndependence {
     SnapshotTestingUtils.deleteArchiveDirectory(UTIL);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
     try {
       UTIL.shutdownMiniCluster();
@@ -260,9 +253,8 @@ public class TestSnapshotCloneIndependence {
     try (Table clonedTable = UTIL.getConnection().getTable(cloneTableName)) {
       final int clonedTableRowCount = countRows(clonedTable);
 
-      Assert.assertEquals(
-        "The line counts of original and cloned tables do not match after clone. ",
-        countOriginalTable, clonedTableRowCount);
+      assertEquals(countOriginalTable, clonedTableRowCount,
+        "The line counts of original and cloned tables do not match after clone. ");
 
       // Attempt to add data to the test
       Put p = new Put(Bytes.toBytes("new-row-" + EnvironmentEdgeManager.currentTime()));
@@ -270,22 +262,20 @@ public class TestSnapshotCloneIndependence {
       originalTable.put(p);
 
       // Verify that the new row is not in the restored table
-      Assert.assertEquals("The row count of the original table was not modified by the put",
-        countOriginalTable + 1, countRows(originalTable));
-      Assert.assertEquals(
-        "The row count of the cloned table changed as a result of addition to the original",
-        clonedTableRowCount, countRows(clonedTable));
+      assertEquals(countOriginalTable + 1, countRows(originalTable),
+        "The row count of the original table was not modified by the put");
+      assertEquals(clonedTableRowCount, countRows(clonedTable),
+        "The row count of the cloned table changed as a result of addition to the original");
 
       Put p2 = new Put(Bytes.toBytes("new-row-" + EnvironmentEdgeManager.currentTime()));
       p2.addColumn(TEST_FAM, Bytes.toBytes("someQualifier"), Bytes.toBytes("someString"));
       clonedTable.put(p2);
 
       // Verify that the row is not added to the original table.
-      Assert.assertEquals(
-        "The row count of the original table was modified by the put to the clone",
-        countOriginalTable + 1, countRows(originalTable));
-      Assert.assertEquals("The row count of the cloned table was not modified by the put",
-        clonedTableRowCount + 1, countRows(clonedTable));
+      assertEquals(countOriginalTable + 1, countRows(originalTable),
+        "The row count of the original table was modified by the put to the clone");
+      assertEquals(clonedTableRowCount + 1, countRows(clonedTable),
+        "The row count of the cloned table was not modified by the put");
     }
   }
 
@@ -299,9 +289,8 @@ public class TestSnapshotCloneIndependence {
 
     final int originalRegionCount = originalTableHRegions.size();
     final int cloneTableRegionCount = admin.getRegions(cloneTableName).size();
-    Assert.assertEquals(
-      "The number of regions in the cloned table is different than in the original table.",
-      originalRegionCount, cloneTableRegionCount);
+    assertEquals(originalRegionCount, cloneTableRegionCount,
+      "The number of regions in the cloned table is different than in the original table.");
 
     // Split a region on the parent table
     admin.splitRegionAsync(originalTableHRegions.get(0).getRegionName()).get();
@@ -309,9 +298,8 @@ public class TestSnapshotCloneIndependence {
 
     // Verify that the cloned table region is not split
     final int cloneTableRegionCount2 = admin.getRegions(cloneTableName).size();
-    Assert.assertEquals(
-      "The number of regions in the cloned table changed though none of its regions were split.",
-      cloneTableRegionCount, cloneTableRegionCount2);
+    assertEquals(cloneTableRegionCount, cloneTableRegionCount2,
+      "The number of regions in the cloned table changed though none of its regions were split.");
   }
 
   /**
@@ -335,15 +323,15 @@ public class TestSnapshotCloneIndependence {
     TableDescriptor originalTableDescriptor = originalTable.getDescriptor();
     TableDescriptor clonedTableDescriptor = admin.getDescriptor(cloneTableName);
 
-    Assert.assertTrue("The original family was not found. There is something wrong. ",
-      originalTableDescriptor.hasColumnFamily(TEST_FAM));
-    Assert.assertTrue("The original family was not found in the clone. There is something wrong. ",
-      clonedTableDescriptor.hasColumnFamily(TEST_FAM));
+    assertTrue(originalTableDescriptor.hasColumnFamily(TEST_FAM),
+      "The original family was not found. There is something wrong. ");
+    assertTrue(clonedTableDescriptor.hasColumnFamily(TEST_FAM),
+      "The original family was not found in the clone. There is something wrong. ");
 
-    Assert.assertTrue("The new family was not found. ",
-      originalTableDescriptor.hasColumnFamily(TEST_FAM_2));
-    Assert.assertTrue("The new family was not found. ",
-      !clonedTableDescriptor.hasColumnFamily(TEST_FAM_2));
+    assertTrue(originalTableDescriptor.hasColumnFamily(TEST_FAM_2),
+      "The new family was not found. ");
+    assertTrue(!clonedTableDescriptor.hasColumnFamily(TEST_FAM_2),
+      "The new family was not found. ");
   }
 
   /**
@@ -367,7 +355,7 @@ public class TestSnapshotCloneIndependence {
         // Verify that all regions of both tables are readable
         final int origTableRowCount = countRows(original);
         final int clonedTableRowCount = countRows(clonedTable);
-        Assert.assertEquals(origTableRowCount, clonedTableRowCount);
+        assertEquals(origTableRowCount, clonedTableRowCount);
       }
     }
   }

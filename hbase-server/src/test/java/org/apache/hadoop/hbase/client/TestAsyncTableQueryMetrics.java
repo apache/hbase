@@ -17,11 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.MetricsRegionServer;
@@ -31,21 +34,16 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestAsyncTableQueryMetrics {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableQueryMetrics.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -63,7 +61,7 @@ public class TestAsyncTableQueryMetrics {
 
   private static AsyncConnection CONN;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(3);
     // Create 3 rows in the table, with rowkeys starting with "zzz*" so that
@@ -76,7 +74,7 @@ public class TestAsyncTableQueryMetrics {
     CONN.getAdmin().flush(TABLE_NAME).join();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     Closeables.close(CONN, true);
     UTIL.shutdownMiniCluster();
@@ -91,8 +89,8 @@ public class TestAsyncTableQueryMetrics {
     long bbs = getClusterBlockBytesScanned();
     Result result = CONN.getTable(TABLE_NAME).get(g1).get();
     bbs += result.getMetrics().getBlockBytesScanned();
-    Assert.assertNotNull(result.getMetrics());
-    Assert.assertEquals(getClusterBlockBytesScanned(), bbs);
+    assertNotNull(result.getMetrics());
+    assertEquals(getClusterBlockBytesScanned(), bbs);
 
     // Test multigets
     Get g2 = new Get(ROW_2);
@@ -105,11 +103,11 @@ public class TestAsyncTableQueryMetrics {
 
     for (CompletableFuture<Result> future : futures) {
       result = future.join();
-      Assert.assertNotNull(result.getMetrics());
+      assertNotNull(result.getMetrics());
       bbs += result.getMetrics().getBlockBytesScanned();
     }
 
-    Assert.assertEquals(getClusterBlockBytesScanned(), bbs);
+    assertEquals(getClusterBlockBytesScanned(), bbs);
   }
 
   @Test
@@ -118,13 +116,13 @@ public class TestAsyncTableQueryMetrics {
     Get g1 = new Get(ROW_1);
 
     Result result = CONN.getTable(TABLE_NAME).get(g1).get();
-    Assert.assertNull(result.getMetrics());
+    assertNull(result.getMetrics());
 
     // Test multigets
     Get g2 = new Get(ROW_2);
     Get g3 = new Get(ROW_3);
     List<CompletableFuture<Result>> futures = CONN.getTable(TABLE_NAME).get(List.of(g1, g2, g3));
-    futures.forEach(f -> Assert.assertNull(f.join().getMetrics()));
+    futures.forEach(f -> assertNull(f.join().getMetrics()));
 
   }
 
@@ -136,9 +134,9 @@ public class TestAsyncTableQueryMetrics {
     long bbs = getClusterBlockBytesScanned();
     try (ResultScanner scanner = CONN.getTable(TABLE_NAME).getScanner(scan)) {
       for (Result result : scanner) {
-        Assert.assertNotNull(result.getMetrics());
+        assertNotNull(result.getMetrics());
         bbs += result.getMetrics().getBlockBytesScanned();
-        Assert.assertEquals(getClusterBlockBytesScanned(), bbs);
+        assertEquals(getClusterBlockBytesScanned(), bbs);
       }
     }
   }
@@ -149,7 +147,7 @@ public class TestAsyncTableQueryMetrics {
 
     try (ResultScanner scanner = CONN.getTable(TABLE_NAME).getScanner(scan)) {
       for (Result result : scanner) {
-        Assert.assertNull(result.getMetrics());
+        assertNull(result.getMetrics());
       }
     }
   }
@@ -163,8 +161,8 @@ public class TestAsyncTableQueryMetrics {
     CheckAndMutateResult result = CONN.getTable(TABLE_NAME).checkAndMutate(cam).join();
     QueryMetrics metrics = result.getMetrics();
 
-    Assert.assertNotNull(metrics);
-    Assert.assertEquals(getClusterBlockBytesScanned(), bbs + metrics.getBlockBytesScanned());
+    assertNotNull(metrics);
+    assertEquals(getClusterBlockBytesScanned(), bbs + metrics.getBlockBytesScanned());
 
     bbs = getClusterBlockBytesScanned();
     List<CheckAndMutate> batch = new ArrayList<>();
@@ -177,7 +175,7 @@ public class TestAsyncTableQueryMetrics {
     List<Object> res = CONN.getTable(TABLE_NAME).batchAll(batch).join();
     long totalBbs = res.stream()
       .mapToLong(r -> ((CheckAndMutateResult) r).getMetrics().getBlockBytesScanned()).sum();
-    Assert.assertEquals(getClusterBlockBytesScanned(), bbs + totalBbs);
+    assertEquals(getClusterBlockBytesScanned(), bbs + totalBbs);
 
     bbs = getClusterBlockBytesScanned();
 
@@ -187,7 +185,7 @@ public class TestAsyncTableQueryMetrics {
 
     totalBbs = futures.stream().map(CompletableFuture::join)
       .mapToLong(r -> ((CheckAndMutateResult) r).getMetrics().getBlockBytesScanned()).sum();
-    Assert.assertEquals(getClusterBlockBytesScanned(), bbs + totalBbs);
+    assertEquals(getClusterBlockBytesScanned(), bbs + totalBbs);
   }
 
   @Test
@@ -198,7 +196,7 @@ public class TestAsyncTableQueryMetrics {
     CheckAndMutateResult result = CONN.getTable(TABLE_NAME).checkAndMutate(cam).join();
     QueryMetrics metrics = result.getMetrics();
 
-    Assert.assertNull(metrics);
+    assertNull(metrics);
 
     List<CheckAndMutate> batch = new ArrayList<>();
     batch.add(cam);
@@ -209,7 +207,7 @@ public class TestAsyncTableQueryMetrics {
 
     List<Object> res = CONN.getTable(TABLE_NAME).batchAll(batch).join();
     for (Object r : res) {
-      Assert.assertNull(((CheckAndMutateResult) r).getMetrics());
+      assertNull(((CheckAndMutateResult) r).getMetrics());
     }
 
     // flush to force fetch from disk
@@ -218,7 +216,7 @@ public class TestAsyncTableQueryMetrics {
 
     for (CompletableFuture<Object> future : futures) {
       Object r = future.join();
-      Assert.assertNull(((CheckAndMutateResult) r).getMetrics());
+      assertNull(((CheckAndMutateResult) r).getMetrics());
     }
   }
 

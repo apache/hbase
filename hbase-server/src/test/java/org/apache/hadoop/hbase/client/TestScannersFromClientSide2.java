@@ -17,40 +17,34 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * Testcase for newly added feature in HBASE-17143, such as startRow and stopRow
  * inclusive/exclusive, limit for rows, etc.
  */
-@RunWith(Parameterized.class)
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: batch={0}, smallResultSize={1}, allowPartial={2}")
 public class TestScannersFromClientSide2 {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestScannersFromClientSide2.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -62,30 +56,32 @@ public class TestScannersFromClientSide2 {
 
   private static byte[] CQ2 = Bytes.toBytes("cq2");
 
-  @Parameter(0)
-  public boolean batch;
+  private final boolean batch;
 
-  @Parameter(1)
-  public boolean smallResultSize;
+  private final boolean smallResultSize;
 
-  @Parameter(2)
-  public boolean allowPartial;
+  private final boolean allowPartial;
 
-  @Parameters(name = "{index}: batch={0}, smallResultSize={1}, allowPartial={2}")
-  public static List<Object[]> params() {
-    List<Object[]> params = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     boolean[] values = new boolean[] { false, true };
     for (int i = 0; i < 2; i++) {
       for (int j = 0; j < 2; j++) {
         for (int k = 0; k < 2; k++) {
-          params.add(new Object[] { values[i], values[j], values[k] });
+          params.add(Arguments.of(values[i], values[j], values[k]));
         }
       }
     }
-    return params;
+    return params.stream();
   }
 
-  @BeforeClass
+  public TestScannersFromClientSide2(boolean batch, boolean smallResultSize, boolean allowPartial) {
+    this.batch = batch;
+    this.smallResultSize = smallResultSize;
+    this.allowPartial = allowPartial;
+  }
+
+  @BeforeAll
   public static void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(3);
     byte[][] splitKeys = new byte[8][];
@@ -102,7 +98,7 @@ public class TestScannersFromClientSide2 {
     table.put(puts);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -141,7 +137,7 @@ public class TestScannersFromClientSide2 {
   private List<Result> assertAndCreateCompleteResults(List<Result> results) throws IOException {
     if ((!batch && !allowPartial) || (allowPartial && !batch && !smallResultSize)) {
       for (Result result : results) {
-        assertFalse("Should not have partial result", result.mayHaveMoreCellsInRow());
+        assertFalse(result.mayHaveMoreCellsInRow(), "Should not have partial result");
       }
       return results;
     }
@@ -149,7 +145,7 @@ public class TestScannersFromClientSide2 {
     List<Result> partialResults = new ArrayList<>();
     for (Result result : results) {
       if (!result.mayHaveMoreCellsInRow()) {
-        assertFalse("Should have partial result", partialResults.isEmpty());
+        assertFalse(partialResults.isEmpty(), "Should have partial result");
         partialResults.add(result);
         completeResults.add(Result.createCompleteResult(partialResults));
         partialResults.clear();
@@ -157,7 +153,7 @@ public class TestScannersFromClientSide2 {
         partialResults.add(result);
       }
     }
-    assertTrue("Should not have orphan partial result", partialResults.isEmpty());
+    assertTrue(partialResults.isEmpty(), "Should not have orphan partial result");
     return completeResults;
   }
 
@@ -203,7 +199,7 @@ public class TestScannersFromClientSide2 {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testScanWithLimit() throws Exception {
     testScan(1, true, 998, false, 900); // from first region to last region
     testScan(123, true, 345, true, 100);
@@ -213,7 +209,7 @@ public class TestScannersFromClientSide2 {
 
   }
 
-  @Test
+  @TestTemplate
   public void testScanWithLimitGreaterThanActualCount() throws Exception {
     testScan(1, true, 998, false, 1000); // from first region to last region
     testScan(123, true, 345, true, 200);
@@ -222,7 +218,7 @@ public class TestScannersFromClientSide2 {
     testScan(456, false, 678, false, 200);
   }
 
-  @Test
+  @TestTemplate
   public void testReversedScanWithLimit() throws Exception {
     testReversedScan(998, true, 1, false, 900); // from last region to first region
     testReversedScan(543, true, 321, true, 100);
@@ -231,7 +227,7 @@ public class TestScannersFromClientSide2 {
     testReversedScan(876, false, 654, false, 100);
   }
 
-  @Test
+  @TestTemplate
   public void testReversedScanWithLimitGreaterThanActualCount() throws Exception {
     testReversedScan(998, true, 1, false, 1000); // from last region to first region
     testReversedScan(543, true, 321, true, 200);
@@ -240,7 +236,7 @@ public class TestScannersFromClientSide2 {
     testReversedScan(876, false, 654, false, 200);
   }
 
-  @Test
+  @TestTemplate
   public void testStartRowStopRowInclusive() throws Exception {
     testScan(1, true, 998, false, -1); // from first region to last region
     testScan(123, true, 345, true, -1);
@@ -249,7 +245,7 @@ public class TestScannersFromClientSide2 {
     testScan(456, false, 678, false, -1);
   }
 
-  @Test
+  @TestTemplate
   public void testReversedStartRowStopRowInclusive() throws Exception {
     testReversedScan(998, true, 1, false, -1); // from last region to first region
     testReversedScan(543, true, 321, true, -1);

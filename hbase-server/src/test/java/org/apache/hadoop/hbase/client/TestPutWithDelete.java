@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -27,50 +26,35 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestPutWithDelete {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPutWithDelete.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @Rule
-  public TestName name = new TestName();
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void testHbasePutDeleteCell() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testHbasePutDeleteCell(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     final byte[] rowKey = Bytes.toBytes("12345");
     final byte[] family = Bytes.toBytes("cf");
-    Table table = TEST_UTIL.createTable(tableName, family);
-    TEST_UTIL.waitTableAvailable(tableName.getName(), 5000);
-    try {
+    try (Table table = TEST_UTIL.createTable(tableName, family)) {
+      TEST_UTIL.waitTableAvailable(tableName.getName(), 5000);
       // put one row
       Put put = new Put(rowKey);
       put.addColumn(family, Bytes.toBytes("A"), Bytes.toBytes("a"));
@@ -81,14 +65,14 @@ public class TestPutWithDelete {
       // get row back and assert the values
       Get get = new Get(rowKey);
       Result result = table.get(get);
-      assertTrue("Column A value should be a",
-        Bytes.toString(result.getValue(family, Bytes.toBytes("A"))).equals("a"));
-      assertTrue("Column B value should be b",
-        Bytes.toString(result.getValue(family, Bytes.toBytes("B"))).equals("b"));
-      assertTrue("Column C value should be c",
-        Bytes.toString(result.getValue(family, Bytes.toBytes("C"))).equals("c"));
-      assertTrue("Column D value should be d",
-        Bytes.toString(result.getValue(family, Bytes.toBytes("D"))).equals("d"));
+      assertTrue(Bytes.toString(result.getValue(family, Bytes.toBytes("A"))).equals("a"),
+        "Column A value should be a");
+      assertTrue(Bytes.toString(result.getValue(family, Bytes.toBytes("B"))).equals("b"),
+        "Column B value should be b");
+      assertTrue(Bytes.toString(result.getValue(family, Bytes.toBytes("C"))).equals("c"),
+        "Column C value should be c");
+      assertTrue(Bytes.toString(result.getValue(family, Bytes.toBytes("D"))).equals("d"),
+        "Column D value should be d");
       // put the same row again with C column deleted
       put = new Put(rowKey);
       put.addColumn(family, Bytes.toBytes("A"), Bytes.toBytes("a1"));
@@ -101,15 +85,13 @@ public class TestPutWithDelete {
       // get row back and assert the values
       get = new Get(rowKey);
       result = table.get(get);
-      assertTrue("Column A value should be a1",
-        Bytes.toString(result.getValue(family, Bytes.toBytes("A"))).equals("a1"));
-      assertTrue("Column B value should be b1",
-        Bytes.toString(result.getValue(family, Bytes.toBytes("B"))).equals("b1"));
-      assertTrue("Column C should not exist", result.getValue(family, Bytes.toBytes("C")) == null);
-      assertTrue("Column D value should be d1",
-        Bytes.toString(result.getValue(family, Bytes.toBytes("D"))).equals("d1"));
-    } finally {
-      table.close();
+      assertTrue(Bytes.toString(result.getValue(family, Bytes.toBytes("A"))).equals("a1"),
+        "Column A value should be a1");
+      assertTrue(Bytes.toString(result.getValue(family, Bytes.toBytes("B"))).equals("b1"),
+        "Column B value should be b1");
+      assertTrue(result.getValue(family, Bytes.toBytes("C")) == null, "Column C should not exist");
+      assertTrue(Bytes.toString(result.getValue(family, Bytes.toBytes("D"))).equals("d1"),
+        "Column D value should be d1");
     }
   }
 }

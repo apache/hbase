@@ -17,29 +17,26 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestPreadReversedScanner {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPreadReversedScanner.class);
 
   public static final Logger LOG = LoggerFactory.getLogger(TestPreadReversedScanner.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -49,7 +46,7 @@ public class TestPreadReversedScanner {
 
   private static Table htable = null;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(1);
 
@@ -63,12 +60,12 @@ public class TestPreadReversedScanner {
     htable = TEST_UTIL.createTable(TABLE_NAME, COLUMN_FAMILY, splitKeys);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     TEST_UTIL.truncateTable(TABLE_NAME);
   }
@@ -107,11 +104,11 @@ public class TestPreadReversedScanner {
     Result r;
     int value = rowCount;
     while ((r = scanner.next()) != null) {
-      Assert.assertArrayEquals(r.getValue(COLUMN_FAMILY, null), Bytes.toBytes(--value));
-      Assert.assertArrayEquals(r.getRow(), Bytes.toBytes(inputRowKeys[value]));
+      assertArrayEquals(r.getValue(COLUMN_FAMILY, null), Bytes.toBytes(--value));
+      assertArrayEquals(r.getRow(), Bytes.toBytes(inputRowKeys[value]));
     }
 
-    Assert.assertEquals(0, value);
+    assertEquals(0, value);
   }
 
   /**
@@ -136,10 +133,10 @@ public class TestPreadReversedScanner {
     Result r;
     int count = 1;
     while ((r = scanner.next()) != null) {
-      Assert.assertArrayEquals(r.getValue(COLUMN_FAMILY, null), Bytes.toBytes(0));
-      Assert.assertArrayEquals(r.getRow(), new byte[] { (char) 0x00 });
-      Assert.assertTrue(--count >= 0);
+      assertArrayEquals(r.getValue(COLUMN_FAMILY, null), Bytes.toBytes(0));
+      assertArrayEquals(r.getRow(), new byte[] { (char) 0x00 });
+      assertTrue(--count >= 0);
     }
-    Assert.assertEquals(0, count);
+    assertEquals(0, count);
   }
 }

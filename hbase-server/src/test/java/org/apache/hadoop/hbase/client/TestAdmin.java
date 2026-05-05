@@ -19,13 +19,13 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtil.countRows;
 import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,7 +33,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
@@ -47,17 +46,14 @@ import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFac
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestAdmin extends TestAdminBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestAdmin.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAdmin.class);
 
@@ -75,23 +71,23 @@ public class TestAdmin extends TestAdminBase {
   public void testCreateTable() throws IOException {
     List<TableDescriptor> tables = ADMIN.listTableDescriptors();
     int numTables = tables.size();
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
     tables = ADMIN.listTableDescriptors();
     assertEquals(numTables + 1, tables.size());
-    assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster().getMaster()
-      .getTableStateManager().isTableState(tableName, TableState.State.ENABLED));
+    assertTrue(TEST_UTIL.getHBaseCluster().getMaster().getTableStateManager()
+      .isTableState(tableName, TableState.State.ENABLED), "Table must be enabled.");
     assertEquals(TableState.State.ENABLED, getStateFromMeta(tableName));
   }
 
   @Test
   public void testTruncateTable() throws IOException {
-    testTruncateTable(TableName.valueOf(name.getMethodName()), false);
+    testTruncateTable(TableName.valueOf(methodName), false);
   }
 
   @Test
   public void testTruncateTablePreservingSplits() throws IOException {
-    testTruncateTable(TableName.valueOf(name.getMethodName()), true);
+    testTruncateTable(TableName.valueOf(methodName), true);
   }
 
   private void testTruncateTable(final TableName tableName, boolean preserveSplits)
@@ -128,13 +124,13 @@ public class TestAdmin extends TestAdminBase {
 
   @Test
   public void testCreateTableNumberOfRegions() throws IOException, InterruptedException {
-    TableName table = TableName.valueOf(name.getMethodName());
+    TableName table = TableName.valueOf(methodName);
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY);
     ADMIN.createTable(TableDescriptorBuilder.newBuilder(table).setColumnFamily(cfd).build());
     List<HRegionLocation> regions;
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(table)) {
       regions = l.getAllRegionLocations();
-      assertEquals("Table should have only 1 region", 1, regions.size());
+      assertEquals(1, regions.size(), "Table should have only 1 region");
     }
 
     TableName table2 = TableName.valueOf(table.getNameAsString() + "_2");
@@ -142,7 +138,7 @@ public class TestAdmin extends TestAdminBase {
       new byte[][] { new byte[] { 42 } });
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(table2)) {
       regions = l.getAllRegionLocations();
-      assertEquals("Table should have only 2 region", 2, regions.size());
+      assertEquals(2, regions.size(), "Table should have only 2 region");
     }
 
     TableName table3 = TableName.valueOf(table.getNameAsString() + "_3");
@@ -150,7 +146,7 @@ public class TestAdmin extends TestAdminBase {
       Bytes.toBytes("a"), Bytes.toBytes("z"), 3);
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(table3)) {
       regions = l.getAllRegionLocations();
-      assertEquals("Table should have only 3 region", 3, regions.size());
+      assertEquals(3, regions.size(), "Table should have only 3 region");
     }
 
     TableName table4 = TableName.valueOf(table.getNameAsString() + "_4");
@@ -167,13 +163,13 @@ public class TestAdmin extends TestAdminBase {
       new byte[] { 1 }, new byte[] { 127 }, 16);
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(table5)) {
       regions = l.getAllRegionLocations();
-      assertEquals("Table should have 16 region", 16, regions.size());
+      assertEquals(16, regions.size(), "Table should have 16 region");
     }
   }
 
   @Test
   public void testCreateTableWithRegions() throws IOException, InterruptedException {
-    TableName table = TableName.valueOf(name.getMethodName());
+    TableName table = TableName.valueOf(methodName);
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY);
     byte[][] splitKeys = { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 }, new byte[] { 3, 3, 3 },
       new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
@@ -184,7 +180,7 @@ public class TestAdmin extends TestAdminBase {
       splitKeys);
 
     boolean tableAvailable = ADMIN.isTableAvailable(table);
-    assertTrue("Table should be created with splitKyes + 1 rows in META", tableAvailable);
+    assertTrue(tableAvailable, "Table should be created with splitKyes + 1 rows in META");
 
     List<HRegionLocation> regions;
     Iterator<HRegionLocation> hris;
@@ -192,9 +188,8 @@ public class TestAdmin extends TestAdminBase {
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(table)) {
       regions = l.getAllRegionLocations();
 
-      assertEquals(
-        "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
-        expectedRegions, regions.size());
+      assertEquals(expectedRegions, regions.size(),
+        "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size());
       System.err.println("Found " + regions.size() + " regions");
 
       hris = regions.iterator();
@@ -249,9 +244,8 @@ public class TestAdmin extends TestAdminBase {
 
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(table2)) {
       regions = l.getAllRegionLocations();
-      assertEquals(
-        "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
-        expectedRegions, regions.size());
+      assertEquals(expectedRegions, regions.size(),
+        "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size());
       System.err.println("Found " + regions.size() + " regions");
 
       hris = regions.iterator();
@@ -302,9 +296,8 @@ public class TestAdmin extends TestAdminBase {
 
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(table3)) {
       regions = l.getAllRegionLocations();
-      assertEquals(
-        "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
-        expectedRegions, regions.size());
+      assertEquals(expectedRegions, regions.size(),
+        "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size());
       System.err.println("Found " + regions.size() + " regions");
 
       verifyRoundRobinDistribution(l, expectedRegions);
@@ -318,8 +311,8 @@ public class TestAdmin extends TestAdminBase {
     try {
       ADMIN.createTable(TableDescriptorBuilder.newBuilder(table4).setColumnFamily(cfd).build(),
         splitKeys);
-      assertTrue("Should not be able to create this table because of " + "duplicate split keys",
-        false);
+      assertTrue(false,
+        "Should not be able to create this table because of " + "duplicate split keys");
     } catch (IllegalArgumentException iae) {
       // Expected
     }
@@ -327,7 +320,7 @@ public class TestAdmin extends TestAdminBase {
 
   @Test
   public void testCreateTableWithOnlyEmptyStartRow() throws IOException {
-    final byte[] tableName = Bytes.toBytes(name.getMethodName());
+    final byte[] tableName = Bytes.toBytes(methodName);
     byte[][] splitKeys = new byte[1][];
     splitKeys[0] = HConstants.EMPTY_BYTE_ARRAY;
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
@@ -341,7 +334,7 @@ public class TestAdmin extends TestAdminBase {
 
   @Test
   public void testCreateTableWithEmptyRowInTheSplitKeys() throws IOException {
-    final byte[] tableName = Bytes.toBytes(name.getMethodName());
+    final byte[] tableName = Bytes.toBytes(methodName);
     byte[][] splitKeys = new byte[3][];
     splitKeys[0] = Bytes.toBytes("region1");
     splitKeys[1] = HConstants.EMPTY_BYTE_ARRAY;
@@ -374,21 +367,21 @@ public class TestAdmin extends TestAdminBase {
     int min = (int) Math.floor(average);
     int max = (int) Math.ceil(average);
     for (List<RegionInfo> regionList : server2Regions.values()) {
-      assertTrue("numRS=" + numRS + ", min=" + min + ", max=" + max + ", size=" + regionList.size(),
-        regionList.size() == min || regionList.size() == max);
+      assertTrue(regionList.size() == min || regionList.size() == max,
+        "numRS=" + numRS + ", min=" + min + ", max=" + max + ", size=" + regionList.size());
     }
   }
 
   @Test
   public void testCloneTableSchema() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     final TableName newTableName = TableName.valueOf(tableName.getNameAsString() + "_new");
     testCloneTableSchema(tableName, newTableName, false);
   }
 
   @Test
   public void testCloneTableSchemaPreservingSplits() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     final TableName newTableName = TableName.valueOf(tableName.getNameAsString() + "_new");
     testCloneTableSchema(tableName, newTableName, true);
   }
@@ -415,8 +408,8 @@ public class TestAdmin extends TestAdminBase {
     ADMIN.createTable(tableDesc, splitKeys);
 
     assertEquals(NUM_REGIONS, TEST_UTIL.getHBaseCluster().getRegions(tableName).size());
-    assertTrue("Table should be created with splitKyes + 1 rows in META",
-      ADMIN.isTableAvailable(tableName));
+    assertTrue(ADMIN.isTableAvailable(tableName),
+      "Table should be created with splitKyes + 1 rows in META");
 
     // clone & Verify
     ADMIN.cloneTableSchema(tableName, newTableName, preserveSplits);
@@ -433,8 +426,8 @@ public class TestAdmin extends TestAdminBase {
 
     if (preserveSplits) {
       assertEquals(NUM_REGIONS, TEST_UTIL.getHBaseCluster().getRegions(newTableName).size());
-      assertTrue("New table should be created with splitKyes + 1 rows in META",
-        ADMIN.isTableAvailable(newTableName));
+      assertTrue(ADMIN.isTableAvailable(newTableName),
+        "New table should be created with splitKyes + 1 rows in META");
     } else {
       assertEquals(1, TEST_UTIL.getHBaseCluster().getRegions(newTableName).size());
     }
@@ -442,7 +435,7 @@ public class TestAdmin extends TestAdminBase {
 
   @Test
   public void testCloneTableSchemaWithNonExistentSourceTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     final TableName newTableName = TableName.valueOf(tableName.getNameAsString() + "_new");
     // test for non-existent source table
     try {
@@ -455,7 +448,7 @@ public class TestAdmin extends TestAdminBase {
 
   @Test
   public void testCloneTableSchemaWithExistentDestinationTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     final TableName newTableName = TableName.valueOf(tableName.getNameAsString() + "_new");
     byte[] FAMILY_0 = Bytes.toBytes("cf0");
     TEST_UTIL.createTable(tableName, FAMILY_0);
@@ -471,7 +464,7 @@ public class TestAdmin extends TestAdminBase {
 
   @Test
   public void testModifyTableOnTableWithRegionReplicas() throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(methodName);
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(Bytes.toBytes("cf")))
       .setRegionReplication(5).build();
@@ -492,7 +485,7 @@ public class TestAdmin extends TestAdminBase {
    */
   @Test
   public void testOnlineChangeTableSchema() throws IOException, InterruptedException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     List<TableDescriptor> tables = ADMIN.listTableDescriptors();
     int numTables = tables.size();
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
@@ -558,7 +551,7 @@ public class TestAdmin extends TestAdminBase {
 
   @Test
   public void testUnknownServers() throws Exception {
-    TableName table = TableName.valueOf(name.getMethodName());
+    TableName table = TableName.valueOf(methodName);
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY);
     ADMIN.createTable(TableDescriptorBuilder.newBuilder(table).setColumnFamily(cfd).build());
     final List<RegionInfo> regions = ADMIN.getRegions(table);
