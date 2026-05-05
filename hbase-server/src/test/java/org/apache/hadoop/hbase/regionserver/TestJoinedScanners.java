@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
@@ -43,13 +44,12 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,12 +64,9 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
  * Test performance improvement of joined scanners optimization:
  * https://issues.apache.org/jira/browse/HBASE-5416
  */
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestJoinedScanners {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestJoinedScanners.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestJoinedScanners.class);
 
@@ -84,11 +81,9 @@ public class TestJoinedScanners {
   private static DataBlockEncoding blockEncoding = DataBlockEncoding.FAST_DIFF;
   private static int selectionRatio = 30;
   private static int valueWidth = 128 * 1024;
+  private String name;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     final int DEFAULT_BLOCK_SIZE = 1024 * 1024;
     TEST_UTIL.getConfiguration().setLong("dfs.blocksize", DEFAULT_BLOCK_SIZE);
@@ -102,16 +97,21 @@ public class TestJoinedScanners {
     TEST_UTIL.startMiniCluster(option);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    this.name = testInfo.getTestMethod().get().getName();
   }
 
   @Test
   public void testJoinedScanners() throws Exception {
     byte[][] families = { cf_essential, cf_joined };
 
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name);
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (byte[] family : families) {
       ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(family)
@@ -231,10 +231,10 @@ public class TestJoinedScanners {
     test.testJoinedScanners();
   }
 
-  @Test(expected = DoNotRetryIOException.class)
+  @Test
   public void testWithReverseScan() throws Exception {
     try (Connection con = TEST_UTIL.getConnection(); Admin admin = con.getAdmin()) {
-      TableName tableName = TableName.valueOf(name.getMethodName());
+      TableName tableName = TableName.valueOf(name);
 
       TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf1"))
@@ -254,7 +254,7 @@ public class TestJoinedScanners {
 
         try (ResultScanner scanner = table.getScanner(scan)) {
           // DoNotRetryIOException should occur
-          scanner.next();
+          assertThrows(DoNotRetryIOException.class, scanner::next);
         }
       }
     }

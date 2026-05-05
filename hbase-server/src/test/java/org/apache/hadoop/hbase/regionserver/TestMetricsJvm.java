@@ -17,17 +17,16 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static junit.framework.TestCase.assertFalse;
-import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
@@ -38,22 +37,19 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MetricsTests.class, SmallTests.class })
+@Tag(MetricsTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMetricsJvm {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricsJvm.class);
 
   private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static Configuration conf;
 
-  @BeforeClass
+  @BeforeAll
   public static void before() throws Exception {
     conf = UTIL.getConfiguration();
     // The master info server does not run in tests by default.
@@ -62,7 +58,7 @@ public class TestMetricsJvm {
     UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void after() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -102,12 +98,12 @@ public class TestMetricsJvm {
   private void assertReFind(String re, String value) {
     Pattern p = Pattern.compile(re);
     Matcher m = p.matcher(value);
-    assertTrue("'" + p + "' does not match " + value, m.find());
+    assertTrue(m.find(), "'" + p + "' does not match " + value);
   }
 
   private void assertNotFind(String re, String value) {
     Pattern p = Pattern.compile(re);
     Matcher m = p.matcher(value);
-    assertFalse("'" + p + "' should not match " + value, m.find());
+    assertFalse(m.find(), "'" + p + "' should not match " + value);
   }
 }

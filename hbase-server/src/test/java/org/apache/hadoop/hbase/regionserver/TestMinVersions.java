@@ -18,15 +18,14 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtil.COLUMNS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.TableName;
@@ -44,22 +43,17 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Test Minimum Versions feature (HBASE-4071).
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMinVersions {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMinVersions.class);
 
   HBaseTestingUtil hbu = new HBaseTestingUtil();
   private final byte[] T0 = Bytes.toBytes("0");
@@ -70,21 +64,24 @@ public class TestMinVersions {
   private final byte[] T5 = Bytes.toBytes("5");
 
   private final byte[] c0 = COLUMNS[0];
-
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
   /**
    * Verify behavior of getClosestBefore(...)
    */
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    this.name = testInfo.getTestMethod().get().getName();
+  }
+
   @Test
   public void testGetClosestBefore() throws Exception {
 
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(c0).setMinVersions(1)
       .setMaxVersions(1000).setTimeToLive(1).setKeepDeletedCells(KeepDeletedCells.FALSE).build();
 
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setColumnFamily(cfd).build();
+    TableDescriptor htd =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name)).setColumnFamily(cfd).build();
     HRegion region = hbu.createLocalHRegion(htd, null, null);
     try {
 
@@ -136,8 +133,8 @@ public class TestMinVersions {
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(c0).setMinVersions(3)
       .setMaxVersions(1000).setTimeToLive(1).setKeepDeletedCells(KeepDeletedCells.FALSE).build();
 
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setColumnFamily(cfd).build();
+    TableDescriptor htd =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name)).setColumnFamily(cfd).build();
 
     HRegion region = hbu.createLocalHRegion(htd, null, null);
     // 2s in the past
@@ -195,8 +192,8 @@ public class TestMinVersions {
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(c0).setMinVersions(3)
       .setMaxVersions(1000).setTimeToLive(1).setKeepDeletedCells(KeepDeletedCells.FALSE).build();
 
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setColumnFamily(cfd).build();
+    TableDescriptor htd =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name)).setColumnFamily(cfd).build();
 
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
@@ -258,8 +255,8 @@ public class TestMinVersions {
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(c0).setMinVersions(2)
       .setMaxVersions(1000).setTimeToLive(1).setKeepDeletedCells(KeepDeletedCells.FALSE).build();
 
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setColumnFamily(cfd).build();
+    TableDescriptor htd =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name)).setColumnFamily(cfd).build();
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     // 2s in the past
@@ -337,8 +334,8 @@ public class TestMinVersions {
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(c0).setMinVersions(2)
       .setMaxVersions(1000).setTimeToLive(1).setKeepDeletedCells(KeepDeletedCells.FALSE).build();
 
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setColumnFamily(cfd).build();
+    TableDescriptor htd =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name)).setColumnFamily(cfd).build();
     HRegion region = hbu.createLocalHRegion(htd, null, null);
     try {
 
@@ -438,8 +435,8 @@ public class TestMinVersions {
     cfdList.add(cfd);
     cfdList.add(cfd2);
 
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setColumnFamilies(cfdList).build();
+    TableDescriptor htd =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name)).setColumnFamilies(cfdList).build();
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     // 2s in the past
@@ -525,8 +522,8 @@ public class TestMinVersions {
 
   private void verifyVersionedCellKeyValues(int ttl, ColumnFamilyDescriptor cfd)
     throws IOException {
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setColumnFamily(cfd).build();
+    TableDescriptor htd =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name)).setColumnFamily(cfd).build();
 
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
@@ -551,9 +548,9 @@ public class TestMinVersions {
 
       region.flush(true);
       region.compact(true);
-      Assert.assertEquals(startTS, EnvironmentEdgeManager.currentTime());
+      assertEquals(startTS, EnvironmentEdgeManager.currentTime());
       long expiredTime = EnvironmentEdgeManager.currentTime() - ts - 4;
-      Assert.assertTrue("TTL for T1 has expired", expiredTime < (ttl * 1000));
+      assertTrue(expiredTime < (ttl * 1000), "TTL for T1 has expired");
       // check that nothing was purged yet
       verifyBeforeCompaction(region, ts);
 
@@ -593,13 +590,13 @@ public class TestMinVersions {
     get.readAllVersions();
     get.setTimestamp(ts - 3);
     result = region.get(get);
-    Assert.assertEquals(result.getColumnCells(c0, c0).size(), 0);
+    assertEquals(result.getColumnCells(c0, c0).size(), 0);
 
     get = new Get(T1);
     get.readAllVersions();
     get.setTimeRange(0, ts - 2);
     result = region.get(get);
-    Assert.assertEquals(result.getColumnCells(c0, c0).size(), 0);
+    assertEquals(result.getColumnCells(c0, c0).size(), 0);
   }
 
   private void verifyBeforeCompaction(HRegion region, long ts) throws IOException {
@@ -659,8 +656,8 @@ public class TestMinVersions {
     for (int i = 0; i < vals.length; i++) {
       String expected = Bytes.toString(vals[i]);
       String actual = Bytes.toString(CellUtil.cloneValue(kvs.get(i)));
-      assertTrue(expected + " was expected but doesn't match " + actual,
-        CellUtil.matchingValue(kvs.get(i), vals[i]));
+      assertTrue(CellUtil.matchingValue(kvs.get(i), vals[i]),
+        expected + " was expected but doesn't match " + actual);
     }
   }
 

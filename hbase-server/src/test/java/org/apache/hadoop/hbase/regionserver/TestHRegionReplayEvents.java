@@ -20,12 +20,12 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.regionserver.TestHRegion.assertGet;
 import static org.apache.hadoop.hbase.regionserver.TestHRegion.putData;
 import static org.apache.hadoop.hbase.regionserver.TestHRegion.verifyData;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -85,15 +84,13 @@ import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitUtil.MutationReplay;
 import org.apache.hadoop.hbase.wal.WALStreamReader;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -117,16 +114,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescript
  * region replicas
  */
 @SuppressWarnings("deprecation")
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestHRegionReplayEvents {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHRegionReplayEvents.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestHRegionReplayEvents.class);
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
   private static HBaseTestingUtil TEST_UTIL;
 
@@ -152,28 +144,29 @@ public class TestHRegionReplayEvents {
   private WAL walPrimary, walSecondary;
   private WALStreamReader reader;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
     TEST_UTIL.startMiniDFSCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     LOG.info("Cleaning test directory: " + TEST_UTIL.getDataTestDir());
     TEST_UTIL.cleanupTestDir();
     TEST_UTIL.shutdownMiniDFSCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    this.name = testInfo.getTestMethod().get().getName();
     CONF = TEST_UTIL.getConfiguration();
     dir = TEST_UTIL.getDataTestDir("TestHRegionReplayEvents").toString();
-    method = name.getMethodName();
-    tableName = Bytes.toBytes(name.getMethodName());
+    method = name;
+    tableName = Bytes.toBytes(name);
     rootDir = new Path(dir + method);
     TEST_UTIL.getConfiguration().set(HConstants.HBASE_DIR, rootDir.toString());
-    method = name.getMethodName();
+    method = name;
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TableName.valueOf(method));
     for (byte[] family : families) {
       builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
@@ -218,7 +211,7 @@ public class TestHRegionReplayEvents {
     reader = null;
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (reader != null) {
       reader.close();
@@ -235,7 +228,7 @@ public class TestHRegionReplayEvents {
   }
 
   String getName() {
-    return name.getMethodName();
+    return name;
   }
 
   // Some of the test cases are as follows:
@@ -1116,7 +1109,7 @@ public class TestHRegionReplayEvents {
   public void testSeqIdsFromReplay() throws IOException {
     // test the case where seqId's coming from replayed WALEdits are made persisted with their
     // original seqIds and they are made visible through mvcc read point upon replay
-    String method = name.getMethodName();
+    String method = name;
     byte[] tableName = Bytes.toBytes(method);
     byte[] family = Bytes.toBytes("family");
 
@@ -1557,7 +1550,7 @@ public class TestHRegionReplayEvents {
         storeFileNames.remove(sf.getPath().getName());
       }
     }
-    assertTrue("Found some store file isn't loaded:" + storeFileNames, storeFileNames.isEmpty());
+    assertTrue(storeFileNames.isEmpty(), "Found some store file isn't loaded:" + storeFileNames);
 
     LOG.info("-- Verifying edits from secondary");
     for (byte[] family : families) {

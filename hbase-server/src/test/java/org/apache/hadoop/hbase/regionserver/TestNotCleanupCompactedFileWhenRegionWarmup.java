@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -37,24 +36,20 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ LargeTests.class, RegionServerTests.class })
+@Tag(LargeTests.TAG)
+@Tag(RegionServerTests.TAG)
 public class TestNotCleanupCompactedFileWhenRegionWarmup {
   private static final Logger LOG =
     LoggerFactory.getLogger(TestNotCleanupCompactedFileWhenRegionWarmup.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNotCleanupCompactedFileWhenRegionWarmup.class);
 
   private static HBaseTestingUtil TEST_UTIL;
   private static Admin admin;
@@ -66,7 +61,7 @@ public class TestNotCleanupCompactedFileWhenRegionWarmup {
   private static byte[] QUALIFIER = Bytes.toBytes("cq");
   private static byte[] VALUE = Bytes.toBytes("value");
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
     // Set the scanner lease to 20min, so the scanner can't be closed by RegionServer
@@ -80,12 +75,12 @@ public class TestNotCleanupCompactedFileWhenRegionWarmup {
     admin = TEST_UTIL.getAdmin();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TABLE_NAME);
     builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
@@ -94,7 +89,7 @@ public class TestNotCleanupCompactedFileWhenRegionWarmup {
     table = TEST_UTIL.getConnection().getTable(TABLE_NAME);
   }
 
-  @After
+  @AfterEach
   public void after() throws Exception {
     admin.disableTable(TABLE_NAME);
     admin.deleteTable(TABLE_NAME);
@@ -110,7 +105,7 @@ public class TestNotCleanupCompactedFileWhenRegionWarmup {
         regions.addAll(rs.getRegions(TABLE_NAME));
       }
     }
-    assertEquals("Table should only have one region", 1, regions.size());
+    assertEquals(1, regions.size(), "Table should only have one region");
     HRegion region = regions.get(0);
     HStore store = region.getStore(FAMILY);
 

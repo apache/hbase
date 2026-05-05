@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.metrics.MetricRegistries;
 import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.regionserver.metrics.MetricsTableRequests;
@@ -33,22 +32,18 @@ import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.JvmPauseMonitor;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit test version of rs metrics tests.
  */
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMetricsRegionServer {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricsRegionServer.class);
 
   public static MetricsAssertHelper HELPER =
     CompatibilityFactory.getInstance(MetricsAssertHelper.class);
@@ -57,19 +52,19 @@ public class TestMetricsRegionServer {
   private MetricsRegionServer rsm;
   private MetricsRegionServerSource serverSource;
 
-  @BeforeClass
+  @BeforeAll
   public static void classSetUp() {
     HELPER.init();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     wrapper = new MetricsRegionServerWrapperStub();
     rsm = new MetricsRegionServer(wrapper, new Configuration(false), null);
     serverSource = rsm.getMetricsSource();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     // Clean up global registries after each test to avoid interference
     MetricRegistries.global().clear();
@@ -160,9 +155,9 @@ public class TestMetricsRegionServer {
 
   @Test
   public void testConstuctor() {
-    assertNotNull("There should be a hadoop1/hadoop2 metrics source", rsm.getMetricsSource());
-    assertNotNull("The RegionServerMetricsWrapper should be accessable",
-      rsm.getRegionServerWrapper());
+    assertNotNull(rsm.getMetricsSource(), "There should be a hadoop1/hadoop2 metrics source");
+    assertNotNull(rsm.getRegionServerWrapper(),
+      "The RegionServerMetricsWrapper should be accessable");
   }
 
   @Test

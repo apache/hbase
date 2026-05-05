@@ -17,17 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
+import io.opentelemetry.sdk.testing.junit5.OpenTelemetryExtension;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -45,23 +43,16 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
-
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestHRegionTracing {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHRegionTracing.class);
 
   private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -73,41 +64,34 @@ public class TestHRegionTracing {
 
   private static byte[] VALUE = Bytes.toBytes("value");
 
-  @Rule
-  public final OpenTelemetryRule traceRule = OpenTelemetryRule.create();
+  @RegisterExtension
+  public static final OpenTelemetryExtension traceRule = OpenTelemetryExtension.create();
 
-  @Rule
-  public final TableNameTestRule tableNameRule = new TableNameTestRule();
-
-  private WAL wal;
+  @RegisterExtension
+  public final TableNameTestExtension tableNameRule = new TableNameTestExtension();
 
   private HRegion region;
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws IOException {
     UTIL.cleanupTestDir();
   }
 
-  @Before
-  public void setUp() throws IOException {
+  @BeforeEach
+  public void setUp() throws Throwable {
+    traceRule.clearSpans();
     TableName tableName = tableNameRule.getTableName();
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
       MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
-    wal = HBaseTestingUtil.createWal(UTIL.getConfiguration(),
-      new Path(UTIL.getDataTestDir(), tableName.getNameAsString()), null);
-    region = HRegion.createHRegion(info, UTIL.getDataTestDir(), UTIL.getConfiguration(), desc, wal);
     region = UTIL.createLocalHRegion(info, desc);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
-    if (region != null) {
-      region.close();
-    }
-    Closeables.close(wal, true);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   private void assertSpan(String spanName) {

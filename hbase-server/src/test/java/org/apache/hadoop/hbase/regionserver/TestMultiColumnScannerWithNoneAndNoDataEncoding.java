@@ -17,31 +17,30 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.Collection;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * Test case for Compression.Algorithm.NONE and no use data block encoding.
  * @see org.apache.hadoop.hbase.regionserver.TestMultiColumnScanner
  */
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: algo={0}, bloomType={1}, dataBlockEncoding={2}")
 public class TestMultiColumnScannerWithNoneAndNoDataEncoding extends TestMultiColumnScanner {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultiColumnScannerWithNoneAndNoDataEncoding.class);
+  public TestMultiColumnScannerWithNoneAndNoDataEncoding(Algorithm comprAlgo, BloomType bloomType,
+    DataBlockEncoding dataBlockEncoding) {
+    super(comprAlgo, bloomType, dataBlockEncoding);
+  }
 
-  @Parameters
-  public static Collection<Object[]> parameters() {
+  public static Stream<Arguments> parameters() {
     return TestMultiColumnScanner.generateParams(Algorithm.NONE, false);
   }
 }
