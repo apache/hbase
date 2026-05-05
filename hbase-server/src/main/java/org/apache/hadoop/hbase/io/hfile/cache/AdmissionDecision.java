@@ -55,7 +55,8 @@ public final class AdmissionDecision {
   }
 
   /**
-   * Returns a rejection decision. * @return reject decision
+   * Returns a rejection decision. 
+   * @return reject decision
    */
   public static AdmissionDecision reject() {
     return REJECT;
