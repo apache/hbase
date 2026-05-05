@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,6 +27,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -38,12 +38,9 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.junit.AfterClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
@@ -65,25 +62,24 @@ public abstract class AbstractTestAsyncTableRegionReplicasRead {
 
   protected static AsyncConnection ASYNC_CONN;
 
-  @Rule
-  public TestName testName = new TestName();
+  protected Supplier<AsyncTable<?>> getTable;
 
-  @Parameter
-  public Supplier<AsyncTable<?>> getTable;
+  public static Stream<Arguments> parameters() {
+    return Stream.of(
+      Arguments.of((Supplier<AsyncTable<?>>) AbstractTestAsyncTableRegionReplicasRead::getRawTable),
+      Arguments.of((Supplier<AsyncTable<?>>) AbstractTestAsyncTableRegionReplicasRead::getTable));
+  }
 
-  private static AsyncTable<?> getRawTable() {
+  protected AbstractTestAsyncTableRegionReplicasRead(Supplier<AsyncTable<?>> getTable) {
+    this.getTable = getTable;
+  }
+
+  protected static AsyncTable<?> getRawTable() {
     return ASYNC_CONN.getTable(TABLE_NAME);
   }
 
-  private static AsyncTable<?> getTable() {
+  protected static AsyncTable<?> getTable() {
     return ASYNC_CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool());
-  }
-
-  @Parameters
-  public static List<Object[]> params() {
-    return Arrays.asList(
-      new Supplier<?>[] { AbstractTestAsyncTableRegionReplicasRead::getRawTable },
-      new Supplier<?>[] { AbstractTestAsyncTableRegionReplicasRead::getTable });
   }
 
   protected static volatile boolean FAIL_PRIMARY_GET = false;
@@ -151,7 +147,7 @@ public abstract class AbstractTestAsyncTableRegionReplicasRead {
     TEST_UTIL.waitFor(30000, () -> allReplicasHaveRow(row));
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     Closeables.close(ASYNC_CONN, true);
     TEST_UTIL.shutdownMiniCluster();
@@ -171,7 +167,7 @@ public abstract class AbstractTestAsyncTableRegionReplicasRead {
   // replicaId = -1 means do not set replica
   protected abstract void readAndCheck(AsyncTable<?> table, int replicaId) throws Exception;
 
-  @Test
+  @TestTemplate
   public void testNoReplicaRead() throws Exception {
     FAIL_PRIMARY_GET = false;
     REPLICA_ID_TO_COUNT.clear();
@@ -183,7 +179,7 @@ public abstract class AbstractTestAsyncTableRegionReplicasRead {
     assertEquals(0, getSecondaryGetCount());
   }
 
-  @Test
+  @TestTemplate
   public void testReplicaRead() throws Exception {
     // fail the primary get request
     FAIL_PRIMARY_GET = true;
@@ -198,7 +194,7 @@ public abstract class AbstractTestAsyncTableRegionReplicasRead {
     assertEquals(count, getPrimaryGetCount());
   }
 
-  @Test
+  @TestTemplate
   public void testReadSpecificReplica() throws Exception {
     FAIL_PRIMARY_GET = false;
     REPLICA_ID_TO_COUNT.clear();

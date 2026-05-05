@@ -17,18 +17,30 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "[{index}]: manifestVersion = {0}")
 public class TestSnapshotTemporaryDirectoryWithRegionReplicas
-  extends TestSnapshotTemporaryDirectory {
+  extends SnapshotTemporaryDirectoryTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotTemporaryDirectoryWithRegionReplicas.class);
+  public TestSnapshotTemporaryDirectoryWithRegionReplicas(int manifestVersion) {
+    super(manifestVersion);
+  }
+
+  /**
+   * Setup the config for the cluster
+   * @throws Exception on failure
+   */
+  @BeforeAll
+  public static void setupCluster() throws Exception {
+    setupConf(UTIL.getConfiguration());
+    UTIL.startMiniCluster(NUM_RS);
+    admin = UTIL.getAdmin();
+  }
 
   @Override
   protected int getNumReplicas() {

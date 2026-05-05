@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -31,7 +34,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -41,23 +43,21 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
 import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector.Level;
 
@@ -67,12 +67,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.
 /**
  * This class is for testing {@link Connection}.
  */
-@Category({ LargeTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestConnection {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestConnection.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestConnection.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -80,11 +77,9 @@ public class TestConnection {
   private static final byte[] FAM_NAM = Bytes.toBytes("f");
   private static final byte[] ROW = Bytes.toBytes("bbb");
   private static final int RPC_RETRY = 5;
+  private String methodName;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     ResourceLeakDetector.setLevel(Level.PARANOID);
     TEST_UTIL.getConfiguration().setBoolean(HConstants.STATUS_PUBLISHED, true);
@@ -96,13 +91,18 @@ public class TestConnection {
 
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @After
-  public void tearDown() throws IOException {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    this.methodName = testInfo.getTestMethod().get().getName();
+  }
+
+  @AfterEach
+  public void tearDown(TestInfo testInfo) throws IOException {
     TEST_UTIL.getAdmin().balancerSwitch(true, true);
   }
 
@@ -112,11 +112,11 @@ public class TestConnection {
    */
   @Test
   public void testAdminFactory() throws IOException {
-    Connection con1 = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-    Admin admin = con1.getAdmin();
-    assertTrue(admin.getConnection() == con1);
-    assertTrue(admin.getConfiguration() == TEST_UTIL.getConfiguration());
-    con1.close();
+    try (Connection con1 = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+      Admin admin = con1.getAdmin()) {
+      assertSame(admin.getConnection(), con1);
+      assertSame(admin.getConfiguration(), TEST_UTIL.getConfiguration());
+    }
   }
 
   /**
@@ -217,7 +217,7 @@ public class TestConnection {
     });
     table.close();
     connection.close();
-    Assert.assertTrue("Unexpected exception is " + failed.get(), failed.get() == null);
+    assertNull(failed.get(), "Unexpected exception is " + failed.get());
   }
 
   /**
@@ -225,7 +225,7 @@ public class TestConnection {
    */
   @Test
   public void testConnectionIdle() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
     int idleTime = 20000;
     boolean previousBalance = TEST_UTIL.getAdmin().balancerSwitch(false, true);
@@ -334,7 +334,7 @@ public class TestConnection {
   public void testLocateRegionsWithRegionReplicas() throws IOException {
     int regionReplication = 3;
     byte[] family = Bytes.toBytes("cf");
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(methodName);
 
     // Create a table with region replicas
     TableDescriptorBuilder builder =
@@ -361,10 +361,10 @@ public class TestConnection {
     }
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testClosedConnection() throws ServiceException, Throwable {
+  @Test
+  public void testClosedConnection() throws Throwable {
     byte[] family = Bytes.toBytes("cf");
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(methodName);
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName)
       .setCoprocessor(MultiRowMutationEndpoint.class.getName())
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
@@ -377,17 +377,19 @@ public class TestConnection {
     } finally {
       conn.close();
     }
-    Batch.Call<MultiRowMutationService, MutateRowsResponse> callable = service -> {
-      throw new RuntimeException("Should not arrive here");
-    };
-    conn.getTable(tableName).coprocessorService(MultiRowMutationService.class,
-      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, callable);
+    assertThrows(DoNotRetryIOException.class, () -> {
+      Batch.Call<MultiRowMutationService, MutateRowsResponse> callable = service -> {
+        throw new RuntimeException("Should not arrive here");
+      };
+      conn.getTable(tableName).coprocessorService(MultiRowMutationService.class,
+        HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, callable);
+    });
   }
 
   // There is no assertion, but you need to confirm that there is no resource leak output from netty
   @Test
   public void testCancelConnectionMemoryLeak() throws IOException, InterruptedException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(methodName);
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
     try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());

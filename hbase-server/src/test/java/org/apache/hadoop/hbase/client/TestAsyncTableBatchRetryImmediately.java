@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -32,18 +31,14 @@ import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestAsyncTableBatchRetryImmediately {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableBatchRetryImmediately.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -61,7 +56,7 @@ public class TestAsyncTableBatchRetryImmediately {
 
   private static String LOG_LEVEL;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     // disable the debug log to avoid flooding the output
     LOG_LEVEL = Log4jUtils.getEffectiveLevel(AsyncRegionLocatorHelper.class.getName());
@@ -78,7 +73,7 @@ public class TestAsyncTableBatchRetryImmediately {
     CONN = ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if (LOG_LEVEL != null) {
       Log4jUtils.setLogLevel(AsyncRegionLocatorHelper.class.getName(), LOG_LEVEL);

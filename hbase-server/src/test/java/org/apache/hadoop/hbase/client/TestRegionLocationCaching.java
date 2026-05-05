@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -34,18 +33,14 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ClientTests.class, LargeTests.class })
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRegionLocationCaching {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionLocationCaching.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static int SLAVES = 1;
@@ -53,14 +48,14 @@ public class TestRegionLocationCaching {
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
   private static byte[] QUALIFIER = Bytes.toBytes("testQualifier");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(SLAVES);
     TEST_UTIL.createTable(TABLE_NAME, new byte[][] { FAMILY });
     TEST_UTIL.waitUntilAllRegionsAssigned(TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -110,7 +105,7 @@ public class TestRegionLocationCaching {
     for (int count = 0; count < 50; count++) {
       int number = ((AsyncConnectionImpl) conn.toAsyncConnection()).getLocator()
         .getNumberOfCachedRegionLocations(tableName);
-      assertNotEquals("Expected non-zero number of cached region locations", 0, number);
+      assertNotEquals(0, number, "Expected non-zero number of cached region locations");
       Thread.sleep(100);
     }
   }
@@ -125,7 +120,7 @@ public class TestRegionLocationCaching {
     for (int count = 0; count < 50; count++) {
       int number = ((AsyncConnectionImpl) conn.toAsyncConnection()).getLocator()
         .getNumberOfCachedRegionLocations(tableName);
-      assertEquals("Expected zero number of cached region locations", 0, number);
+      assertEquals(0, number, "Expected zero number of cached region locations");
       Thread.sleep(100);
     }
   }
@@ -142,7 +137,7 @@ public class TestRegionLocationCaching {
     int nbTry = 0;
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       do {
-        assertTrue("Failed to get row after " + nbTry + " tries", nbTry < 50);
+        assertTrue(nbTry < 50, "Failed to get row after " + nbTry + " tries");
         nbTry++;
         Thread.sleep(100);
         r = table.get(get);

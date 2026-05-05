@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -44,13 +43,12 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,26 +61,24 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 /**
  * The purpose of this test is to ensure whether rs deals with the malformed cells correctly.
  */
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestMalformedCellFromClient {
   private static final Logger LOG = LoggerFactory.getLogger(TestMalformedCellFromClient.class);
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMalformedCellFromClient.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] FAMILY = Bytes.toBytes("testFamily");
   private static final int CELL_SIZE = 100;
   private static final TableName TABLE_NAME = TableName.valueOf("TestMalformedCellFromClient");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // disable the retry
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TABLE_NAME)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
@@ -90,14 +86,14 @@ public class TestMalformedCellFromClient {
     TEST_UTIL.getConnection().getAdmin().createTable(desc);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     for (TableDescriptor htd : TEST_UTIL.getAdmin().listTableDescriptors()) {
       TEST_UTIL.deleteTable(htd.getTableName());
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -282,7 +278,7 @@ public class TestMalformedCellFromClient {
     } catch (RetriesExhaustedException e) {
       Throwable error = e.getCause();
       for (;;) {
-        assertNotNull("Can not find a DoNotRetryIOException on stack trace", error);
+        assertNotNull(error, "Can not find a DoNotRetryIOException on stack trace");
         if (error instanceof DoNotRetryIOException) {
           break;
         }
@@ -318,7 +314,7 @@ public class TestMalformedCellFromClient {
     } catch (RetriesExhaustedException e) {
       Throwable error = e.getCause();
       for (;;) {
-        assertNotNull("Can not find a DoNotRetryIOException on stack trace", error);
+        assertNotNull(error, "Can not find a DoNotRetryIOException on stack trace");
         if (error instanceof DoNotRetryIOException) {
           break;
         }

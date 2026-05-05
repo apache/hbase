@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -32,8 +32,8 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 public abstract class AbstractTestRegionLocator {
 
@@ -66,7 +66,7 @@ public abstract class AbstractTestRegionLocator {
     UTIL.getAdmin().balancerSwitch(false, true);
   }
 
-  @After
+  @AfterEach
   public void tearDownAfterTest() throws IOException {
     clearCache(TABLE_NAME);
     clearCache(TableName.META_TABLE_NAME);

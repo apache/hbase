@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -27,19 +27,19 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
-import org.junit.AfterClass;
-import org.junit.Rule;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Base class for testing the scenarios where replicas are enabled for the meta table.
  */
-public class MetaWithReplicasTestBase {
+public abstract class MetaWithReplicasTestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(MetaWithReplicasTestBase.class);
 
@@ -47,8 +47,8 @@ public class MetaWithReplicasTestBase {
 
   protected static final int REGIONSERVERS_COUNT = 3;
 
-  @Rule
-  public TableNameTestRule name = new TableNameTestRule();
+  @RegisterExtension
+  protected TableNameTestExtension name = new TableNameTestExtension();
 
   protected static void startCluster() throws Exception {
     TEST_UTIL.getConfiguration().setInt("zookeeper.session.timeout", 30000);
@@ -78,7 +78,7 @@ public class MetaWithReplicasTestBase {
     // to fail ... sometimes.
     if (sns.size() == 1) {
       int count = TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size();
-      assertTrue("count=" + count, count == REGIONSERVERS_COUNT);
+      assertTrue(count == REGIONSERVERS_COUNT, "count=" + count);
       LOG.warn("All hbase:meta replicas are on the one server; moving hbase:meta: " + sns);
       int metaServerIndex = TEST_UTIL.getHBaseCluster().getServerWithMeta();
       int newServerIndex = metaServerIndex;
@@ -99,7 +99,7 @@ public class MetaWithReplicasTestBase {
     LOG.debug("All meta replicas assigned");
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }

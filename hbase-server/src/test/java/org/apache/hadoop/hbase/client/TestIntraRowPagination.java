@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
@@ -29,19 +28,15 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test scan/get offset and limit settings within one row through HRegion API.
  */
-@Category({ SmallTests.class, ClientTests.class })
+@Tag(SmallTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestIntraRowPagination {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIntraRowPagination.class);
 
   private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 

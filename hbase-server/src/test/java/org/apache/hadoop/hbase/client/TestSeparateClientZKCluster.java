@@ -17,20 +17,19 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -39,17 +38,17 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestSeparateClientZKCluster {
   private static final Logger LOG = LoggerFactory.getLogger(TestSeparateClientZKCluster.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -64,14 +63,10 @@ public class TestSeparateClientZKCluster {
   private final byte[] value = Bytes.toBytes("v1");
   private final byte[] newVal = Bytes.toBytes("v2");
 
-  @Rule
-  public TableNameTestRule name = new TableNameTestRule();
+  @RegisterExtension
+  private TableNameTestExtension name = new TableNameTestExtension();
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSeparateClientZKCluster.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void beforeAllTests() throws Exception {
     int clientZkPort = 21828;
     clientZkCluster = new MiniZooKeeperCluster(TEST_UTIL.getConfiguration());
@@ -93,14 +88,14 @@ public class TestSeparateClientZKCluster {
     TEST_UTIL.startMiniCluster(option);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterAllTests() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
     clientZkCluster.shutdown();
     FileUtils.deleteDirectory(clientZkDir);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
       waitForNewMasterUpAndAddressSynced(admin);

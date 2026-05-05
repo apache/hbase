@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
@@ -30,11 +29,10 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcControllerImpl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
@@ -48,12 +46,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRespon
  * Testcase to make sure that we do not close scanners if ScanRequest.numberOfRows is zero. See
  * HBASE-18042 for more details.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestScanWithoutFetchingData {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestScanWithoutFetchingData.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -71,7 +66,7 @@ public class TestScanWithoutFetchingData {
 
   private static ClientProtos.ClientService.Interface STUB;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(1);
     try (Table table = UTIL.createTable(TABLE_NAME, CF)) {
@@ -85,7 +80,7 @@ public class TestScanWithoutFetchingData {
     STUB = CONN.getRegionServerStub(UTIL.getHBaseCluster().getRegionServer(0).getServerName());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }

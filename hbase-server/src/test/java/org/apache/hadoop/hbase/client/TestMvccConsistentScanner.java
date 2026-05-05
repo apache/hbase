@@ -17,33 +17,27 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestMvccConsistentScanner {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMvccConsistentScanner.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -56,26 +50,24 @@ public class TestMvccConsistentScanner {
   private static final byte[] CQ2 = Bytes.toBytes("cq2");
 
   private static final byte[] CQ3 = Bytes.toBytes("cq3");
-  @Rule
-  public TestName testName = new TestName();
 
   private TableName tableName;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     UTIL.startMiniCluster(2);
     CONN = ConnectionFactory.createConnection(UTIL.getConfiguration());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     CONN.close();
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws IOException, InterruptedException {
-    tableName = TableName.valueOf(testName.getMethodName().replaceAll("[^0-9a-zA-Z]", "_"));
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException, InterruptedException {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     UTIL.createTable(tableName, CF);
     UTIL.waitTableAvailable(tableName);
   }

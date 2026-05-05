@@ -17,18 +17,31 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-@Category({ LargeTests.class, ClientTests.class })
-public class TestSnapshotFromClientWithRegionReplicas extends TestSnapshotFromClient {
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: tracker={0}")
+public class TestSnapshotFromClientWithRegionReplicas extends SnapshotFromClientTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotFromClientWithRegionReplicas.class);
+  public TestSnapshotFromClientWithRegionReplicas(StoreFileTrackerFactory.Trackers trackerImpl) {
+    super(trackerImpl);
+  }
+
+  /**
+   * Setup the config for the cluster
+   * @throws Exception on failure
+   */
+  @BeforeAll
+  public static void setupCluster() throws Exception {
+    setupConf(UTIL.getConfiguration());
+    UTIL.startMiniCluster(NUM_RS);
+  }
 
   @Override
   protected int getNumReplicas() {

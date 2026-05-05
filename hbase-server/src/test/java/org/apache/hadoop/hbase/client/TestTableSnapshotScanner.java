@@ -19,6 +19,11 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.REGIONS_SCANNED_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -31,7 +36,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
@@ -55,23 +59,17 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestTableSnapshotScanner {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableSnapshotScanner.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTableSnapshotScanner.class);
   private final HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -84,8 +82,7 @@ public class TestTableSnapshotScanner {
   private Path rootDir;
   private boolean clusterUp;
 
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
   public static void blockUntilSplitFinished(HBaseTestingUtil util, TableName tableName,
     int expectedRegionSize) throws Exception {
@@ -98,8 +95,9 @@ public class TestTableSnapshotScanner {
     }
   }
 
-  @Before
-  public void setupCluster() throws Exception {
+  @BeforeEach
+  public void setupCluster(TestInfo testInfo) throws Exception {
+    methodName = testInfo.getTestMethod().get().getName();
     setupConf(UTIL.getConfiguration());
     StartTestingClusterOption option =
       StartTestingClusterOption.builder().numRegionServers(NUM_REGION_SERVERS)
@@ -110,7 +108,7 @@ public class TestTableSnapshotScanner {
     fs = rootDir.getFileSystem(UTIL.getConfiguration());
   }
 
-  @After
+  @AfterEach
   public void tearDownCluster() throws Exception {
     if (clusterUp) {
       UTIL.shutdownMiniCluster();
@@ -208,7 +206,7 @@ public class TestTableSnapshotScanner {
 
   @Test
   public void testScanLimit() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     final String snapshotName = tableName + "Snapshot";
     TableSnapshotScanner scanner = null;
     try {
@@ -225,7 +223,7 @@ public class TestTableSnapshotScanner {
         }
         count++;
       }
-      Assert.assertEquals(100, count);
+      assertEquals(100, count);
     } finally {
       if (scanner != null) {
         scanner.close();
@@ -252,8 +250,8 @@ public class TestTableSnapshotScanner {
 
   private ScanMetrics createTableSnapshotScannerAndGetScanMetrics(boolean enableScanMetrics,
     boolean enableScanMetricsByRegion, byte[] endKey) throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName() + "_TABLE");
-    String snapshotName = name.getMethodName() + "_SNAPSHOT";
+    TableName tableName = TableName.valueOf(methodName + "_TABLE");
+    String snapshotName = methodName + "_SNAPSHOT";
     try {
       createTableAndSnapshot(UTIL, tableName, snapshotName, 50);
       Path restoreDir = UTIL.getDataTestDirOnTestFS(snapshotName);
@@ -275,13 +273,13 @@ public class TestTableSnapshotScanner {
   @Test
   public void testScanMetricsDisabled() throws Exception {
     ScanMetrics scanMetrics = createTableSnapshotScannerAndGetScanMetrics(false, false, yyy);
-    Assert.assertNull(scanMetrics);
+    assertNull(scanMetrics);
   }
 
   @Test
   public void testScanMetricsWithScanMetricsByRegionDisabled() throws Exception {
     ScanMetrics scanMetrics = createTableSnapshotScannerAndGetScanMetrics(true, false, yyy);
-    Assert.assertNotNull(scanMetrics);
+    assertNotNull(scanMetrics);
     int rowsScanned = 0;
     for (byte[] row : HBaseTestingUtil.ROWS) {
       if (Bytes.compareTo(row, bbb) >= 0 && Bytes.compareTo(row, yyy) < 0) {
@@ -289,7 +287,7 @@ public class TestTableSnapshotScanner {
       }
     }
     Map<String, Long> metricsMap = scanMetrics.getMetricsMap();
-    Assert.assertEquals(rowsScanned, (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
+    assertEquals(rowsScanned, (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
   }
 
   @Test
@@ -297,34 +295,34 @@ public class TestTableSnapshotScanner {
     // Scan single row with row key bbb
     byte[] bbc = Bytes.toBytes("bbc");
     ScanMetrics scanMetrics = createTableSnapshotScannerAndGetScanMetrics(true, true, bbc);
-    Assert.assertNotNull(scanMetrics);
+    assertNotNull(scanMetrics);
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
       scanMetrics.collectMetricsByRegion();
-    Assert.assertEquals(1, scanMetricsByRegion.size());
+    assertEquals(1, scanMetricsByRegion.size());
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
       .entrySet()) {
       ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
       Map<String, Long> metricsMap = entry.getValue();
-      Assert.assertNull(scanMetricsRegionInfo.getServerName());
-      Assert.assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
-      Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
-      Assert.assertEquals(1, (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
+      assertNull(scanMetricsRegionInfo.getServerName());
+      assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
+      assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
+      assertEquals(1, (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
     }
   }
 
   @Test
   public void testScanMetricsByRegionForMultiRegion() throws Exception {
     ScanMetrics scanMetrics = createTableSnapshotScannerAndGetScanMetrics(true, true, yyy);
-    Assert.assertNotNull(scanMetrics);
+    assertNotNull(scanMetrics);
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
       scanMetrics.collectMetricsByRegion();
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
       .entrySet()) {
       ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
       Map<String, Long> metricsMap = entry.getValue();
-      Assert.assertNull(scanMetricsRegionInfo.getServerName());
-      Assert.assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
-      Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
+      assertNull(scanMetricsRegionInfo.getServerName());
+      assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
+      assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
     }
   }
 
@@ -425,14 +423,14 @@ public class TestTableSnapshotScanner {
       Cell cell = scanner.current();
 
       // assert that all Cells in the Result have the same key
-      Assert.assertEquals(0, Bytes.compareTo(row, 0, row.length, cell.getRowArray(),
-        cell.getRowOffset(), cell.getRowLength()));
+      assertEquals(0, Bytes.compareTo(row, 0, row.length, cell.getRowArray(), cell.getRowOffset(),
+        cell.getRowLength()));
     }
 
     for (int j = 0; j < FAMILIES.length; j++) {
       byte[] actual = result.getValue(FAMILIES[j], FAMILIES[j]);
-      Assert.assertArrayEquals("Row in snapshot does not match, expected:" + Bytes.toString(row)
-        + " ,actual:" + Bytes.toString(actual), row, actual);
+      assertArrayEquals(row, actual, "Row in snapshot does not match, expected:"
+        + Bytes.toString(row) + " ,actual:" + Bytes.toString(actual));
     }
   }
 
@@ -449,7 +447,7 @@ public class TestTableSnapshotScanner {
       // create table with 3 regions
       Table table = UTIL.createTable(tableName, FAMILIES, 1, bbb, yyy, 3);
       List<RegionInfo> regions = admin.getRegions(tableName);
-      Assert.assertEquals(3, regions.size());
+      assertEquals(3, regions.size());
       RegionInfo region0 = regions.get(0);
       RegionInfo region1 = regions.get(1);
       RegionInfo region2 = regions.get(2);
@@ -489,7 +487,7 @@ public class TestTableSnapshotScanner {
           : mergedRegions.get(0);
       // snapshot
       admin.snapshot(snapshotName, tableName);
-      Assert.assertEquals(1, admin.listSnapshots().size());
+      assertEquals(1, admin.listSnapshots().size());
       // major compact
       admin.compactionSwitch(true, serverList);
       admin.majorCompactRegion(mergedRegion.getRegionName());
@@ -558,13 +556,13 @@ public class TestTableSnapshotScanner {
       }
     } catch (Exception e) {
       LOG.error("scan snapshot error", e);
-      Assert.fail("Should not throw Exception: " + e.getMessage());
+      fail("Should not throw Exception: " + e.getMessage());
     }
   }
 
   @Test
   public void testDeleteTableWithMergedRegions() throws Exception {
-    final TableName tableName = TableName.valueOf(this.name.getMethodName());
+    final TableName tableName = TableName.valueOf(this.methodName);
     String snapshotName = tableName.getNameAsString() + "_snapshot";
     Configuration conf = UTIL.getConfiguration();
     try (Admin admin = UTIL.getConnection().getAdmin()) {
@@ -574,14 +572,14 @@ public class TestTableSnapshotScanner {
       // create table
       Table table = UTIL.createTable(tableName, FAMILIES, 1, bbb, yyy, 3);
       List<RegionInfo> regions = admin.getRegions(tableName);
-      Assert.assertEquals(3, regions.size());
+      assertEquals(3, regions.size());
       // write some data
       UTIL.loadTable(table, FAMILIES);
       // merge region
       admin.mergeRegionsAsync(new byte[][] { regions.get(0).getEncodedNameAsBytes(),
         regions.get(1).getEncodedNameAsBytes() }, false).get();
       regions = admin.getRegions(tableName);
-      Assert.assertEquals(2, regions.size());
+      assertEquals(2, regions.size());
       // snapshot
       admin.snapshot(snapshotName, tableName);
       // verify snapshot

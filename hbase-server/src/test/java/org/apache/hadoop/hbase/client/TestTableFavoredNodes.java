@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.PRIMARY;
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.SECONDARY;
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.TERTIARY;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -52,26 +51,21 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestTableFavoredNodes {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableFavoredNodes.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTableFavoredNodes.class);
 
@@ -82,12 +76,15 @@ public class TestTableFavoredNodes {
   private Admin admin;
 
   private final byte[][] splitKeys = new byte[][] { Bytes.toBytes(1), Bytes.toBytes(9) };
-  private final int NUM_REGIONS = splitKeys.length + 1;
 
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
-  @BeforeClass
+  @BeforeEach
+  public void setupMethodName(TestInfo testInfo) {
+    this.methodName = testInfo.getTestMethod().get().getName();
+  }
+
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     // Setting FavoredNodeBalancer will enable favored nodes
@@ -99,13 +96,13 @@ public class TestTableFavoredNodes {
     TEST_UTIL.getMiniHBaseCluster().waitForActiveAndReadyMaster(WAIT_TIMEOUT);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
     TEST_UTIL.cleanupTestDir();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     fnm = TEST_UTIL.getMiniHBaseCluster().getMaster().getFavoredNodesManager();
     admin = TEST_UTIL.getAdmin();
@@ -118,7 +115,7 @@ public class TestTableFavoredNodes {
    */
   @Test
   public void testCreateTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     TEST_UTIL.createTable(tableName, Bytes.toBytes("f"), splitKeys);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 
@@ -137,7 +134,7 @@ public class TestTableFavoredNodes {
    */
   @Test
   public void testTruncateTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     TEST_UTIL.createTable(tableName, Bytes.toBytes("f"), splitKeys);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 
@@ -162,7 +159,7 @@ public class TestTableFavoredNodes {
    */
   @Test
   public void testSplitTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     Table t = TEST_UTIL.createTable(tableName, Bytes.toBytes("f"), splitKeys);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
     final int numberOfRegions = admin.getRegions(t.getName()).size();
@@ -173,7 +170,7 @@ public class TestTableFavoredNodes {
     RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
     RegionInfo parent = locator.getRegionLocation(splitPoint).getRegion();
     List<ServerName> parentFN = fnm.getFavoredNodes(parent);
-    assertNotNull("FN should not be null for region: " + parent, parentFN);
+    assertNotNull(parentFN, "FN should not be null for region: " + parent);
 
     LOG.info("SPLITTING TABLE");
     admin.split(tableName, splitPoint);
@@ -194,15 +191,15 @@ public class TestTableFavoredNodes {
     checkIfDaughterInherits2FN(parentFN, daughter1FN);
     checkIfDaughterInherits2FN(parentFN, daughter2FN);
 
-    assertEquals("Daughter's PRIMARY FN should be PRIMARY of parent",
-      parentFN.get(PRIMARY.ordinal()), daughter1FN.get(PRIMARY.ordinal()));
-    assertEquals("Daughter's SECONDARY FN should be SECONDARY of parent",
-      parentFN.get(SECONDARY.ordinal()), daughter1FN.get(SECONDARY.ordinal()));
+    assertEquals(parentFN.get(PRIMARY.ordinal()), daughter1FN.get(PRIMARY.ordinal()),
+      "Daughter's PRIMARY FN should be PRIMARY of parent");
+    assertEquals(parentFN.get(SECONDARY.ordinal()), daughter1FN.get(SECONDARY.ordinal()),
+      "Daughter's SECONDARY FN should be SECONDARY of parent");
 
-    assertEquals("Daughter's PRIMARY FN should be PRIMARY of parent",
-      parentFN.get(PRIMARY.ordinal()), daughter2FN.get(PRIMARY.ordinal()));
-    assertEquals("Daughter's SECONDARY FN should be TERTIARY of parent",
-      parentFN.get(TERTIARY.ordinal()), daughter2FN.get(SECONDARY.ordinal()));
+    assertEquals(parentFN.get(PRIMARY.ordinal()), daughter2FN.get(PRIMARY.ordinal()),
+      "Daughter's PRIMARY FN should be PRIMARY of parent");
+    assertEquals(parentFN.get(TERTIARY.ordinal()), daughter2FN.get(SECONDARY.ordinal()),
+      "Daughter's SECONDARY FN should be TERTIARY of parent");
 
     // Major compact table and run catalog janitor. Parent's FN should be removed
     TEST_UTIL.getMiniHBaseCluster().compact(tableName, true);
@@ -211,7 +208,7 @@ public class TestTableFavoredNodes {
     ProcedureTestingUtility
       .waitAllProcedures(TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor());
     // assertEquals("Parent region should have been cleaned", 1, admin.runCatalogScan());
-    assertNull("Parent FN should be null", fnm.getFavoredNodes(parent));
+    assertNull(fnm.getFavoredNodes(parent), "Parent FN should be null");
 
     List<RegionInfo> regions = admin.getRegions(tableName);
     // Split and Table Disable interfere with each other around region replicas
@@ -228,7 +225,7 @@ public class TestTableFavoredNodes {
    */
   @Test
   public void testMergeTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     TEST_UTIL.createTable(tableName, Bytes.toBytes("f"), splitKeys);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 
@@ -255,17 +252,17 @@ public class TestTableFavoredNodes {
     RegionInfo mergedRegion = locator.getRegionLocation(HConstants.EMPTY_START_ROW).getRegion();
     List<ServerName> mergedFN = fnm.getFavoredNodes(mergedRegion);
 
-    assertArrayEquals("Merged region doesn't match regionA's FN", regionAFN.toArray(),
-      mergedFN.toArray());
+    assertArrayEquals(regionAFN.toArray(), mergedFN.toArray(),
+      "Merged region doesn't match regionA's FN");
 
     // Major compact table and run catalog janitor. Parent FN should be removed
     TEST_UTIL.getMiniHBaseCluster().compact(tableName, true);
-    assertEquals("Merge parents should have been cleaned", 1, admin.runCatalogJanitor());
+    assertEquals(1, admin.runCatalogJanitor(), "Merge parents should have been cleaned");
     // Catalog cleanup is async. Wait on procedure to finish up.
     ProcedureTestingUtility
       .waitAllProcedures(TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor());
-    assertNull("Parent FN should be null", fnm.getFavoredNodes(regionA));
-    assertNull("Parent FN should be null", fnm.getFavoredNodes(regionB));
+    assertNull(fnm.getFavoredNodes(regionA), "Parent FN should be null");
+    assertNull(fnm.getFavoredNodes(regionB), "Parent FN should be null");
 
     List<RegionInfo> regions = admin.getRegions(tableName);
 
@@ -277,7 +274,7 @@ public class TestTableFavoredNodes {
   private void checkNoFNForDeletedTable(List<RegionInfo> regions) {
     for (RegionInfo region : regions) {
       LOG.info("Testing if FN data for " + region);
-      assertNull("FN not null for deleted table's region: " + region, fnm.getFavoredNodes(region));
+      assertNull(fnm.getFavoredNodes(region), "FN not null for deleted table's region: " + region);
     }
   }
 
@@ -305,33 +302,31 @@ public class TestTableFavoredNodes {
       List<ServerName> fnList = fnm.getFavoredNodes(regionInfo);
 
       // 1. Does each region have favored node?
-      assertNotNull("Favored nodes should not be null for region:" + regionInfo, fnList);
+      assertNotNull(fnList, "Favored nodes should not be null for region:" + regionInfo);
 
       // 2. Do we have the right number of favored nodes? Is start code -1?
-      assertEquals("Incorrect favored nodes for region:" + regionInfo + " fnlist: " + fnList,
-        FavoredNodeAssignmentHelper.FAVORED_NODES_NUM, fnList.size());
+      assertEquals(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM, fnList.size(),
+        "Incorrect favored nodes for region:" + regionInfo + " fnlist: " + fnList);
       for (ServerName sn : fnList) {
-        assertEquals("FN should not have startCode, fnlist:" + fnList, -1, sn.getStartcode());
+        assertEquals(-1, sn.getStartCode(), "FN should not have startCode, fnlist:" + fnList);
       }
 
       // 3. Check if the regionServers have all the FN updated and in sync with Master
       HRegionServer regionServer = snRSMap.get(regionLocation.getServerName());
-      assertNotNull("RS should not be null for regionLocation: " + regionLocation, regionServer);
+      assertNotNull(regionServer, "RS should not be null for regionLocation: " + regionLocation);
 
       InetSocketAddress[] rsFavNodes =
         regionServer.getFavoredNodesForRegion(regionInfo.getEncodedName());
-      assertNotNull(
-        "RS " + regionLocation.getServerName() + " does not have FN for region: " + regionInfo,
-        rsFavNodes);
-      assertEquals(
+      assertNotNull(rsFavNodes,
+        "RS " + regionLocation.getServerName() + " does not have FN for region: " + regionInfo);
+      assertEquals(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM, rsFavNodes.length,
         "Incorrect FN for region:" + regionInfo.getEncodedName() + " on server:"
-          + regionLocation.getServerName(),
-        FavoredNodeAssignmentHelper.FAVORED_NODES_NUM, rsFavNodes.length);
+          + regionLocation.getServerName());
 
       // 4. Does DN port match all FN node list?
       for (ServerName sn : fnm.getFavoredNodesWithDNPort(regionInfo)) {
-        assertEquals("FN should not have startCode, fnlist:" + fnList, -1, sn.getStartcode());
-        assertEquals("FN port should belong to DN port, fnlist:" + fnList, dnPort, sn.getPort());
+        assertEquals(-1, sn.getStartCode(), "FN should not have startCode, fnlist:" + fnList);
+        assertEquals(dnPort, sn.getPort(), "FN port should belong to DN port, fnlist:" + fnList);
       }
     }
   }
@@ -341,7 +336,7 @@ public class TestTableFavoredNodes {
    */
   @Test
   public void testSystemTables() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     TEST_UTIL.createTable(tableName, Bytes.toBytes("f"), splitKeys);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 
@@ -352,7 +347,7 @@ public class TestTableFavoredNodes {
       .listTableNamesByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
       List<RegionInfo> regions = admin.getRegions(sysTable);
       for (RegionInfo region : regions) {
-        assertNull("FN should be null for sys region", fnm.getFavoredNodes(region));
+        assertNull(fnm.getFavoredNodes(region), "FN should be null for sys region");
       }
     }
 
@@ -372,9 +367,8 @@ public class TestTableFavoredNodes {
      * the balancer chooses might still belong to the parent in which case favoredNodes size would
      * be 0.
      */
-    assertTrue(
-      "Daughter FN:" + daughterFN + " should have inherited 2 FN from parent FN:" + parentFN,
-      favoredNodes.size() <= 1);
+    assertTrue(favoredNodes.size() <= 1,
+      "Daughter FN:" + daughterFN + " should have inherited 2 FN from parent FN:" + parentFN);
   }
 
   private void waitUntilTableRegionCountReached(final TableName tableName, final int numRegions)

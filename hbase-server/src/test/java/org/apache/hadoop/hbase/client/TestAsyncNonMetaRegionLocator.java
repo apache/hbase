@@ -23,23 +23,23 @@ import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
 import static org.apache.hadoop.hbase.client.RegionReplicaTestHelper.testLocator;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CatalogReplicaMode;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -56,27 +56,21 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ MediumTests.class, ClientTests.class })
-@RunWith(Parameterized.class)
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestAsyncNonMetaRegionLocator {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncNonMetaRegionLocator.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -91,10 +85,13 @@ public class TestAsyncNonMetaRegionLocator {
   private AsyncConnectionImpl conn;
   private AsyncNonMetaRegionLocator locator;
 
-  @Parameter
-  public CatalogReplicaMode metaReplicaMode;
+  private final CatalogReplicaMode metaReplicaMode;
 
-  @BeforeClass
+  public TestAsyncNonMetaRegionLocator(CatalogReplicaMode metaReplicaMode) {
+    this.metaReplicaMode = metaReplicaMode;
+  }
+
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     // Enable hbase:meta replication.
@@ -117,12 +114,12 @@ public class TestAsyncNonMetaRegionLocator {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUpBeforeTest() throws InterruptedException, ExecutionException, IOException {
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     // Enable meta replica LoadBalance mode for this connection.
@@ -134,7 +131,7 @@ public class TestAsyncNonMetaRegionLocator {
     locator = new AsyncNonMetaRegionLocator(conn, AsyncConnectionImpl.RETRY_TIMER);
   }
 
-  @After
+  @AfterEach
   public void tearDownAfterTest() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
     if (admin.tableExists(TABLE_NAME)) {
@@ -146,10 +143,9 @@ public class TestAsyncNonMetaRegionLocator {
     Closeables.close(conn, true);
   }
 
-  @Parameterized.Parameters
-  public static Collection<Object[]> paramAbstractTestRegionLocatoreters() {
-    return Arrays
-      .asList(new Object[][] { { CatalogReplicaMode.NONE }, { CatalogReplicaMode.LOAD_BALANCE } });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(CatalogReplicaMode.NONE),
+      Arguments.of(CatalogReplicaMode.LOAD_BALANCE));
   }
 
   private void createSingleRegionTable() throws IOException, InterruptedException {
@@ -164,7 +160,7 @@ public class TestAsyncNonMetaRegionLocator {
       .thenApply(RegionLocations::getDefaultRegionLocation);
   }
 
-  @Test
+  @TestTemplate
   public void testNoTable() throws InterruptedException {
     for (RegionLocateType locateType : RegionLocateType.values()) {
       try {
@@ -175,7 +171,7 @@ public class TestAsyncNonMetaRegionLocator {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testDisableTable() throws IOException, InterruptedException {
     createSingleRegionTable();
     TEST_UTIL.getAdmin().disableTable(TABLE_NAME);
@@ -197,7 +193,7 @@ public class TestAsyncNonMetaRegionLocator {
     assertEquals(serverName, loc.getServerName());
   }
 
-  @Test
+  @TestTemplate
   public void testSingleRegionTable() throws IOException, InterruptedException, ExecutionException {
     createSingleRegionTable();
     ServerName serverName = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME).getServerName();
@@ -243,7 +239,7 @@ public class TestAsyncNonMetaRegionLocator {
     return serverNames;
   }
 
-  @Test
+  @TestTemplate
   public void testMultiRegionTable() throws IOException, InterruptedException {
     createMultiRegionTable();
     byte[][] startKeys = getStartKeys();
@@ -283,7 +279,7 @@ public class TestAsyncNonMetaRegionLocator {
       }));
   }
 
-  @Test
+  @TestTemplate
   public void testRegionMove() throws IOException, InterruptedException, ExecutionException {
     createSingleRegionTable();
     ServerName serverName = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME).getServerName();
@@ -314,7 +310,7 @@ public class TestAsyncNonMetaRegionLocator {
 
   // usually locate after will return the same result, so we add a test to make it return different
   // result.
-  @Test
+  @TestTemplate
   public void testLocateAfter() throws IOException, InterruptedException, ExecutionException {
     byte[] row = Bytes.toBytes("1");
     byte[] splitKey = Arrays.copyOf(row, 2);
@@ -339,7 +335,7 @@ public class TestAsyncNonMetaRegionLocator {
   }
 
   // For HBASE-17402
-  @Test
+  @TestTemplate
   public void testConcurrentLocate() throws IOException, InterruptedException, ExecutionException {
     createMultiRegionTable();
     byte[][] startKeys = getStartKeys();
@@ -358,7 +354,7 @@ public class TestAsyncNonMetaRegionLocator {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testReload() throws Exception {
     createSingleRegionTable();
     ServerName serverName = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME).getServerName();
@@ -416,7 +412,7 @@ public class TestAsyncNonMetaRegionLocator {
   }
 
   // Testcase for HBASE-20822
-  @Test
+  @TestTemplate
   public void testLocateBeforeLastRegion()
     throws IOException, InterruptedException, ExecutionException {
     createMultiRegionTable();
@@ -427,7 +423,7 @@ public class TestAsyncNonMetaRegionLocator {
     assertArrayEquals(loc.getRegion().getEndKey(), EMPTY_END_ROW);
   }
 
-  @Test
+  @TestTemplate
   public void testRegionReplicas() throws Exception {
     TEST_UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(TABLE_NAME)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).setRegionReplication(3).build());
@@ -450,7 +446,7 @@ public class TestAsyncNonMetaRegionLocator {
   }
 
   // Testcase for HBASE-21961
-  @Test
+  @TestTemplate
   public void testLocateBeforeInOnlyRegion() throws IOException, InterruptedException {
     createSingleRegionTable();
     HRegionLocation loc =
@@ -460,7 +456,7 @@ public class TestAsyncNonMetaRegionLocator {
     assertArrayEquals(loc.getRegion().getEndKey(), EMPTY_END_ROW);
   }
 
-  @Test
+  @TestTemplate
   public void testConcurrentUpdateCachedLocationOnError() throws Exception {
     createSingleRegionTable();
     HRegionLocation loc =
@@ -469,7 +465,7 @@ public class TestAsyncNonMetaRegionLocator {
       .forEach(i -> locator.updateCachedLocationOnError(loc, new NotServingRegionException()));
   }
 
-  @Test
+  @TestTemplate
   public void testCacheLocationWhenGetAllLocations() throws Exception {
     createMultiRegionTable();
     AsyncConnectionImpl conn = (AsyncConnectionImpl) ConnectionFactory
@@ -481,7 +477,7 @@ public class TestAsyncNonMetaRegionLocator {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testDoNotCacheLocationWithNullServerNameWhenGetAllLocations() throws Exception {
     createMultiRegionTable();
     AsyncConnectionImpl conn = (AsyncConnectionImpl) ConnectionFactory

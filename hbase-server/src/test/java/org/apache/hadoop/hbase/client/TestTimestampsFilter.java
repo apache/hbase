@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,7 +26,6 @@ import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -34,44 +33,37 @@ import org.apache.hadoop.hbase.filter.TimestampsFilter;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Run tests related to {@link TimestampsFilter} using HBase client APIs. Sets up the HBase mini
  * cluster once at start. Each creates a table named for the method and does its stuff against that.
  */
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestTimestampsFilter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTimestampsFilter.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @BeforeClass
+  @BeforeEach
+  public void setUpMethodName(TestInfo testInfo) {
+    this.methodName = testInfo.getTestMethod().get().getName();
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -79,7 +71,7 @@ public class TestTimestampsFilter {
   /**
    * @throws java.lang.Exception
    */
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     // Nothing to do.
   }
@@ -87,7 +79,7 @@ public class TestTimestampsFilter {
   /**
    * @throws java.lang.Exception
    */
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     // Nothing to do.
   }
@@ -99,7 +91,7 @@ public class TestTimestampsFilter {
    */
   @Test
   public void testTimestampsFilter() throws Exception {
-    final byte[] TABLE = Bytes.toBytes(name.getMethodName());
+    final byte[] TABLE = Bytes.toBytes(methodName);
     byte[] FAMILY = Bytes.toBytes("event_log");
     byte[][] FAMILIES = new byte[][] { FAMILY };
     Cell kvs[];
@@ -154,12 +146,12 @@ public class TestTimestampsFilter {
     // Scan rows 0..4. For each row, get all its columns, but only
     // those versions of the columns with the specified timestamps.
     Result[] results = scanNVersions(ht, FAMILY, 0, 4, Arrays.asList(6L, 106L, 306L));
-    assertEquals("# of rows returned from scan", 5, results.length);
+    assertEquals(5, results.length, "# of rows returned from scan");
     for (int rowIdx = 0; rowIdx < 5; rowIdx++) {
       kvs = results[rowIdx].rawCells();
       // each row should have 5 columns.
       // And we have requested 3 versions for each.
-      assertEquals("Number of KeyValues in result for row:" + rowIdx, 3 * 5, kvs.length);
+      assertEquals(3 * 5, kvs.length, "Number of KeyValues in result for row:" + rowIdx);
       for (int colIdx = 0; colIdx < 5; colIdx++) {
         int offset = colIdx * 3;
         checkOneCell(kvs[offset + 0], FAMILY, rowIdx, colIdx, 306);
@@ -172,7 +164,7 @@ public class TestTimestampsFilter {
 
   @Test
   public void testMultiColumns() throws Exception {
-    final byte[] TABLE = Bytes.toBytes(name.getMethodName());
+    final byte[] TABLE = Bytes.toBytes(methodName);
     byte[] FAMILY = Bytes.toBytes("event_log");
     byte[][] FAMILIES = new byte[][] { FAMILY };
 
@@ -229,8 +221,7 @@ public class TestTimestampsFilter {
   }
 
   private void testWithVersionDeletes(boolean flushTables) throws IOException {
-    final byte[] TABLE =
-      Bytes.toBytes(name.getMethodName() + "_" + (flushTables ? "flush" : "noflush"));
+    final byte[] TABLE = Bytes.toBytes(methodName + "_" + (flushTables ? "flush" : "noflush"));
     byte[] FAMILY = Bytes.toBytes("event_log");
     byte[][] FAMILIES = new byte[][] { FAMILY };
 
@@ -291,19 +282,19 @@ public class TestTimestampsFilter {
 
     String ctx = "rowIdx=" + rowIdx + "; colIdx=" + colIdx + "; ts=" + ts;
 
-    assertEquals("Row mismatch which checking: " + ctx, "row:" + rowIdx,
-      Bytes.toString(CellUtil.cloneRow(kv)));
+    assertEquals("row:" + rowIdx, Bytes.toString(CellUtil.cloneRow(kv)),
+      "Row mismatch which checking: " + ctx);
 
-    assertEquals("ColumnFamily mismatch while checking: " + ctx, Bytes.toString(cf),
-      Bytes.toString(CellUtil.cloneFamily(kv)));
+    assertEquals(Bytes.toString(cf), Bytes.toString(CellUtil.cloneFamily(kv)),
+      "ColumnFamily mismatch while checking: " + ctx);
 
-    assertEquals("Column qualifier mismatch while checking: " + ctx, "column:" + colIdx,
-      Bytes.toString(CellUtil.cloneQualifier(kv)));
+    assertEquals("column:" + colIdx, Bytes.toString(CellUtil.cloneQualifier(kv)),
+      "Column qualifier mismatch while checking: " + ctx);
 
-    assertEquals("Timestamp mismatch while checking: " + ctx, ts, kv.getTimestamp());
+    assertEquals(ts, kv.getTimestamp(), "Timestamp mismatch while checking: " + ctx);
 
-    assertEquals("Value mismatch while checking: " + ctx, "value-version-" + ts,
-      Bytes.toString(CellUtil.cloneValue(kv)));
+    assertEquals("value-version-" + ts, Bytes.toString(CellUtil.cloneValue(kv)),
+      "Value mismatch while checking: " + ctx);
   }
 
   /**
