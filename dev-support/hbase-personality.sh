@@ -290,6 +290,124 @@ function personality_modules
   done
 }
 
+# This is a workaround to fix the author check until YETUS-1266 is released.
+# TODO: Remove these monkey-patches when we upgrade to a Yetus version with YETUS-1266!
+
+## @description  Check the patchfile for @author tags (patch mode), with AUTHOR_IGNORE_LIST support
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @return       0 on success
+## @return       1 on failure
+## @param        patchfile
+function author_patchfile
+{
+  declare patchfile=$1
+  # shellcheck disable=SC2155
+  declare -r appname=$(basename "${BASH_SOURCE-$0}")
+  declare i
+
+  if [[ "${BUILDMODE}" != patch ]]; then
+    return
+  fi
+
+  big_console_header "Checking for @author tags: ${BUILDMODE}"
+
+  start_clock
+
+  for i in "${CHANGED_FILES[@]}"; do
+    if [[ ${i} =~ ${appname} ]]; then
+      echo "Skipping @author checks as ${appname} has been patched."
+      add_vote_table_v2 0 @author "" "Skipping @author checks as ${appname} has been patched."
+      return 0
+    fi
+  done
+
+  if [[ -z "${AUTHOR_IGNORE_LIST[0]}" ]]; then
+    "${GREP}" -i -n '^[^-].*@author' "${patchfile}" >> "${PATCH_DIR}/${AUTHOR_LOGNAME}"
+  else
+    local ignore_csv=""
+    for i in "${AUTHOR_IGNORE_LIST[@]}"; do
+      if [[ -n "${ignore_csv}" ]]; then
+        ignore_csv="${ignore_csv},"
+      fi
+      ignore_csv="${ignore_csv}${i}"
+    done
+
+    # Filter the patchfile: skip diff sections belonging to ignored files
+    "${AWK}" -v ignore_list="${ignore_csv}" '
+    BEGIN {
+      n = split(ignore_list, files, ",")
+      skip = 0
+    }
+    /^diff --git / {
+      skip = 0
+      for (i = 1; i <= n; i++) {
+        if (index($0, files[i]) > 0) {
+          skip = 1
+          break
+        }
+      }
+    }
+    !skip { print }
+    ' "${patchfile}" > "${PATCH_DIR}/author-filtered-patch.txt"
+
+    "${GREP}" -i -n '^[^-].*@author' "${PATCH_DIR}/author-filtered-patch.txt" \
+      >> "${PATCH_DIR}/${AUTHOR_LOGNAME}"
+  fi
+
+  author_generic
+}
+
+## @description  Check the current directory for @author tags (full/nightly mode)
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @return       0 on success
+## @return       1 on failure
+function author_postcompile
+{
+  # shellcheck disable=SC2155
+  declare -r appname=$(basename "${BASH_SOURCE-$0}")
+  declare -a globalignore
+
+  if [[ "${BUILDMODE}" != full ]]; then
+    return
+  fi
+
+  big_console_header "Checking for @author tags: ${BUILDMODE}"
+
+  start_clock
+
+  if [[ -f "${PATCH_DIR}/excluded.txt" ]]; then
+    globalignore=("${GREP}" "-v" "-f" "${PATCH_DIR}/excluded.txt")
+  else
+    globalignore=("cat")
+  fi
+
+  "${GIT}" grep -n -I --extended-regexp -i -e '^[^-].*@author' \
+    | "${GREP}" -v "${appname}" \
+    | "${globalignore[@]}" \
+    >> "${PATCH_DIR}/author-tags-git.txt"
+
+  if [[ -z "${AUTHOR_IGNORE_LIST[0]}" ]]; then
+    cp -p "${PATCH_DIR}/author-tags-git.txt" "${PATCH_DIR}/${AUTHOR_LOGNAME}"
+  else
+    for i in "${AUTHOR_IGNORE_LIST[@]}"; do
+      printf "%s\n" "${i}"
+    done \
+      | "${SED}" 's/[][\\.^$*+?{}()|]/\\&/g' \
+      | "${SED}" 's/^/^/' \
+      > "${PATCH_DIR}/author-tags-filter.txt"
+    "${GREP}" -v -E \
+      -f "${PATCH_DIR}/author-tags-filter.txt" \
+      "${PATCH_DIR}/author-tags-git.txt" \
+      > "${PATCH_DIR}/${AUTHOR_LOGNAME}"
+  fi
+
+  author_generic
+}
+
 ## @description places where we override the built in assumptions about what tests to run
 ## @audience    private
 ## @stability   evolving

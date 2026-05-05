@@ -135,7 +135,7 @@ pipeline {
           SKIP_ERRORPRONE = true
           OUTPUT_DIR_RELATIVE = "output-jdk17-hadoop3-backwards-${HADOOP3_VERSION}"
           OUTPUT_DIR = "${WORKSPACE}/${OUTPUT_DIR_RELATIVE}"
-          AUTHOR_IGNORE_LIST = 'src/main/asciidoc/_chapters/developer.adoc'
+          AUTHOR_IGNORE_LIST = 'hbase-website/app/pages/_docs/docs/_mdx/(multi-page)/building-and-developing/developer-guidelines.mdx,hbase-website/public/book.html'
           BLANKS_EOL_IGNORE_FILE = 'dev-support/blanks-eol-ignore.txt'
           BLANKS_TABS_IGNORE_FILE = 'dev-support/blanks-tabs-ignore.txt'
           // output from surefire; sadly the archive function in yetus only works on file names.
