@@ -212,24 +212,38 @@ public class TestIllegalTableDescriptor {
       "org.apache.hadoop.hbase.regionserver.DefaultStoreEngine");
     checkTableIsIllegal(builder.build());
 
-    // column family level configuration changes
-    builder = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
-    cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
+    // column family level configuration changes — exercised via both
+    // ColumnFamilyDescriptorBuilder#setConfiguration (configuration map) and
+    // ColumnFamilyDescriptorBuilder#setValue (values map) so that
+    // TableDescriptorChecker is exercised against both underlying storage maps.
+    for (boolean viaSetValue : new boolean[] { false, true }) {
+      builder = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+      cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
 
-    // First scenario: DataTieringType set to TIME_RANGE without DateTieredStoreEngine
-    cfBuilder.setConfiguration(DataTieringManager.DATATIERING_KEY,
-      DataTieringType.TIME_RANGE.name());
-    checkTableIsIllegal(builder.setColumnFamily(cfBuilder.build()).build());
+      // First scenario: DataTieringType set to TIME_RANGE without DateTieredStoreEngine
+      setCfKey(cfBuilder, viaSetValue, DataTieringManager.DATATIERING_KEY,
+        DataTieringType.TIME_RANGE.name());
+      checkTableIsIllegal(builder.setColumnFamily(cfBuilder.build()).build());
 
-    // Second scenario: DataTieringType set to TIME_RANGE with DateTieredStoreEngine
-    cfBuilder.setConfiguration(StoreEngine.STORE_ENGINE_CLASS_KEY,
-      "org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine");
-    checkTableIsLegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+      // Second scenario: DataTieringType set to TIME_RANGE with DateTieredStoreEngine
+      setCfKey(cfBuilder, viaSetValue, StoreEngine.STORE_ENGINE_CLASS_KEY,
+        "org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine");
+      checkTableIsLegal(builder.modifyColumnFamily(cfBuilder.build()).build());
 
-    // Third scenario: Disabling DateTieredStoreEngine while Time Range DataTiering is active
-    cfBuilder.setConfiguration(StoreEngine.STORE_ENGINE_CLASS_KEY,
-      "org.apache.hadoop.hbase.regionserver.DefaultStoreEngine");
-    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+      // Third scenario: Disabling DateTieredStoreEngine while Time Range DataTiering is active
+      setCfKey(cfBuilder, viaSetValue, StoreEngine.STORE_ENGINE_CLASS_KEY,
+        "org.apache.hadoop.hbase.regionserver.DefaultStoreEngine");
+      checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+    }
+  }
+
+  private static void setCfKey(ColumnFamilyDescriptorBuilder cfb, boolean viaSetValue, String key,
+    String value) {
+    if (viaSetValue) {
+      cfb.setValue(key, value);
+    } else {
+      cfb.setConfiguration(key, value);
+    }
   }
 
   private void checkTableIsLegal(TableDescriptor tableDescriptor) throws IOException {
