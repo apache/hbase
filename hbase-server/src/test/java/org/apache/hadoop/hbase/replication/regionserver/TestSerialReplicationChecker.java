@@ -300,4 +300,23 @@ public class TestSerialReplicationChecker {
     updatePushedSeqId(region, 99);
     assertTrue(checker.canPush(createEntry(region, 100), cell));
   }
+
+  @Test
+  public void testCanPushEqualsToBarrierHBase29499() throws IOException, ReplicationException {
+    // Tests for bug HBASE-29499
+    RegionInfo region = RegionInfoBuilder.newBuilder(tableName).build();
+    Cell cell = createCell(region);
+    // Example 1
+    addStateAndBarrier(region, RegionState.State.OPEN, 2, 5, 6);
+    updatePushedSeqId(region, 4);
+    assertTrue(checker.canPush(createEntry(region, 6), cell));
+    // Example 2
+    addStateAndBarrier(region, RegionState.State.OPEN, 9, 17, 25, 28, 31, 34, 38, 39);
+    updatePushedSeqId(region, 37);
+    assertTrue(checker.canPush(createEntry(region, 39), cell));
+    // Example 3
+    addStateAndBarrier(region, RegionState.State.OPEN, 649436971, 650974464, 650990494);
+    updatePushedSeqId(region, 650974462);
+    assertTrue(checker.canPush(createEntry(region, 650974464), cell));
+  }
 }
