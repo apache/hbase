@@ -204,6 +204,6 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     String fn = path.getName();
     return fn.startsWith(WALProcedureStore.LOG_PREFIX)
       || fn.endsWith(MasterRegionFactory.ARCHIVED_WAL_SUFFIX)
-      || path.toString().contains("/%s/".formatted(MasterRegionFactory.MASTER_STORE_DIR));
+      || path.toString().contains("/%s/".formatted(MasterRegionFactory.MASTER_REGION_DIR_NAME));
   }
 }

@@ -1375,6 +1375,11 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public Long refreshMeta() throws IOException {
+    throw new NotImplementedException("refreshMeta not supported in ThriftAdmin");
+  }
+
+  @Override
   public boolean replicationPeerModificationSwitch(boolean on, boolean drainProcedures)
     throws IOException {
     throw new NotImplementedException(
@@ -1385,5 +1390,20 @@ public class ThriftAdmin implements Admin {
   public boolean isReplicationPeerModificationEnabled() throws IOException {
     throw new NotImplementedException(
       "isReplicationPeerModificationEnabled not supported in ThriftAdmin");
+  }
+
+  @Override
+  public Long refreshHFiles(final TableName tableName) throws IOException {
+    throw new NotImplementedException("refreshHFiles not supported in ThriftAdmin");
+  }
+
+  @Override
+  public Long refreshHFiles(final String namespace) throws IOException {
+    throw new NotImplementedException("refreshHFiles not supported in ThriftAdmin");
+  }
+
+  @Override
+  public Long refreshHFiles() throws IOException {
+    throw new NotImplementedException("refreshHFiles not supported in ThriftAdmin");
   }
 }

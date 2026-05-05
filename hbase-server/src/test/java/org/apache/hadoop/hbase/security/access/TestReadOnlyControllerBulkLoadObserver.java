@@ -1,0 +1,70 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hbase.security.access;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+
+import org.apache.hadoop.hbase.WriteAttemptedOnReadOnlyClusterException;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+
+// Tests methods of BulkLoad Observer which are implemented in ReadOnlyController,
+// by mocking the coprocessor environment and dependencies
+@Tag(SecurityTests.TAG)
+@Tag(SmallTests.TAG)
+public class TestReadOnlyControllerBulkLoadObserver {
+
+  BulkLoadReadOnlyController bulkLoadReadOnlyController;
+
+  // Region Server Coprocessor mocking variables
+  ObserverContext<RegionCoprocessorEnvironment> ctx;
+
+  @BeforeEach
+  public void setup() throws Exception {
+    bulkLoadReadOnlyController = new BulkLoadReadOnlyController();
+
+    // mocking variables initialization
+    ctx = mock(ObserverContext.class);
+  }
+
+  @AfterEach
+  public void tearDown() throws Exception {
+
+  }
+
+  @Test
+  public void testPrePrepareBulkLoadReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      bulkLoadReadOnlyController.prePrepareBulkLoad(ctx);
+    });
+  }
+
+  @Test
+  public void testPreCleanupBulkLoadReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      bulkLoadReadOnlyController.preCleanupBulkLoad(ctx);
+    });
+  }
+}

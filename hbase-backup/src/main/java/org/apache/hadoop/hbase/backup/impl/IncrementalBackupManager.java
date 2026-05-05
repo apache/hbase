@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
@@ -156,7 +157,7 @@ public class IncrementalBackupManager extends BackupManager {
         LOG.debug("currentLogFile: " + log.getPath().toString());
         if (AbstractFSWALProvider.isMetaFile(log.getPath())) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Skip hbase:meta log file: " + log.getPath().getName());
+            LOG.debug("Skip {} log file: {}", TableName.META_TABLE_NAME, log.getPath().getName());
           }
           continue;
         }

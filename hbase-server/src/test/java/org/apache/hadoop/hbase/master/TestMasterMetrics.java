@@ -17,21 +17,40 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionStatesCount;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.zookeeper.KeeperException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -56,6 +75,7 @@ public class TestMasterMetrics {
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterMetrics.class);
   private static final MetricsAssertHelper metricsHelper =
     CompatibilityFactory.getInstance(MetricsAssertHelper.class);
+  private static final String COLUMN_FAMILY = "cf";
 
   private static SingleProcessHBaseCluster cluster;
   private static HMaster master;
@@ -183,8 +203,189 @@ public class TestMasterMetrics {
   }
 
   @Test
-  public void testDefaultMasterProcMetrics() throws Exception {
+  public void testDefaultMasterProcMetrics() {
     MetricsMasterProcSource masterSource = master.getMasterMetrics().getMetricsProcSource();
     metricsHelper.assertGauge("numMasterWALs", master.getNumWALFiles(), masterSource);
+  }
+
+  // Verifies a foreign meta table does not show up in the table regions state
+  @Test
+  public void testClusterMetricsSkippingForeignMetaTable() throws Exception {
+    TableName replicaMetaTable = TableName.valueOf("hbase", "meta_replica");
+    TableDescriptor replicaMetaDescriptor = TableDescriptorBuilder.newBuilder(replicaMetaTable)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("info")).build();
+    master.getTableDescriptors().update(replicaMetaDescriptor, true);
+    try {
+      Map<TableName, RegionStatesCount> tableRegionStatesCount = getTableRegionStatesCount();
+
+      assertFalse(tableRegionStatesCount.containsKey(replicaMetaTable),
+        "Foreign meta table should not be present");
+      assertTrue(tableRegionStatesCount.containsKey(TableName.META_TABLE_NAME),
+        "Local meta should be present");
+
+    } finally {
+      master.getTableDescriptors().remove(replicaMetaTable);
+    }
+  }
+
+  // This test adds foreign file descriptors to the cluster's table descriptor cache. It then
+  // verifies the foreign tables do not show up in the table regions state.
+  @Test
+  public void testClusterMetricsSkippingCachedForeignTables() throws Exception {
+    List<TableName> allTables = new ArrayList<>();
+
+    // These tables, including the cluster's meta table, should not be foreign to the cluster.
+    // The cluster should be able to find their state.
+    allTables.add(TableName.META_TABLE_NAME);
+    List<TableName> familiarTables = new ArrayList<>();
+    familiarTables.add(TableName.valueOf(null, "familiarTable1"));
+    familiarTables.add(TableName.valueOf("", "familiarTable2"));
+    familiarTables.add(TableName.valueOf("default", "familiarTable3"));
+    familiarTables.add(TableName.valueOf("familiarNamespace", "familiarTable4"));
+    familiarTables.add(TableName.valueOf("familiarNamespace", "familiarTable5"));
+
+    // Create these "familiar" tables so their state can be found
+    TEST_UTIL.getAdmin().createNamespace(NamespaceDescriptor.create("familiarNamespace").build());
+    for (TableName familiarTable : familiarTables) {
+      TEST_UTIL.createTable(familiarTable, COLUMN_FAMILY);
+      allTables.add(familiarTable);
+    }
+
+    // hbase:meta is a familiar table that was created automatically
+    familiarTables.add(TableName.META_TABLE_NAME);
+
+    // These tables should be foreign to the cluster.
+    // The cluster should not be able to find their state.
+    allTables.add(TableName.valueOf("hbase", "meta_replica"));
+    allTables.add(TableName.valueOf(null, "defaultNamespaceTable1"));
+    allTables.add(TableName.valueOf("", "defaultNamespaceTable2"));
+    allTables.add(TableName.valueOf("default", "defaultNamespaceTable3"));
+    allTables.add(TableName.valueOf("customNamespace", "customNamespaceTable1"));
+    allTables.add(TableName.valueOf("customNamespace", "customNamespaceTable2"));
+    allTables.add(TableName.valueOf("anotherNamespace", "anotherNamespaceTable"));
+    allTables.add(TableName.valueOf("sharedNamespace", "sharedNamespaceTable1"));
+    allTables.add(TableName.valueOf("sharedNamespace", "sharedNamespaceTable2"));
+
+    // Update master's table descriptors to have all tables
+    TableDescriptor foreignTableDescriptor;
+    for (TableName tableName : allTables) {
+      foreignTableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(COLUMN_FAMILY)).build();
+      master.getTableDescriptors().update(foreignTableDescriptor, true);
+    }
+
+    // The state of the meta table and the familiar tables we created should exist.
+    // The other tables' state should not exist.
+    for (TableName tableName : allTables) {
+      try {
+        Map<TableName, RegionStatesCount> tableRegionStatesCount = getTableRegionStatesCount();
+
+        if (
+          tableName.equals(TableName.META_TABLE_NAME)
+            || tableName.getQualifierAsString().startsWith("familiar")
+        ) {
+          assertTrue(tableRegionStatesCount.containsKey(tableName),
+            "Expected this table's state to exist: " + tableName);
+        } else {
+          assertFalse(tableRegionStatesCount.containsKey(tableName),
+            "This foreign table's state should not exist: " + tableName);
+        }
+      } finally {
+        if (!TableName.META_TABLE_NAME.equals(tableName) && familiarTables.contains(tableName)) {
+          LOG.debug("Deleting table: {}", tableName);
+          TEST_UTIL.deleteTable(tableName);
+        } else if (!familiarTables.contains(tableName)) {
+          LOG.debug("Removing table descriptor for foreign table: {}", tableName);
+          master.getTableDescriptors().remove(tableName);
+        }
+      }
+    }
+  }
+
+  // This test creates foreign file descriptors on the filesystem in addition to updating the
+  // table descriptor cache. It then verifies the foreign tables do not show up in the
+  // table regions state.
+  @Test
+  public void testClusterMetricsSkippingForeignTablesOnFileSystem() throws IOException {
+    List<TableName> familiarTables = new ArrayList<>();
+    List<TableName> foreignTables = new ArrayList<>();
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    Path testDir = TEST_UTIL.getDataTestDirOnTestFS();
+    LOG.info("The test dir is: {}", testDir);
+
+    // Create tables whose state are familiar to this cluster
+    familiarTables.add(TableName.valueOf("testTable1"));
+    familiarTables.add(TableName.valueOf("testTable2"));
+    TEST_UTIL.getAdmin().createNamespace(NamespaceDescriptor.create("myNamespace").build());
+    familiarTables.add(TableName.valueOf("myNamespace", "tableWithNamespace1"));
+    for (TableName tableName : familiarTables) {
+      TEST_UTIL.createTable(tableName, COLUMN_FAMILY);
+    }
+
+    // hbase:meta is a familiar table that was created automatically
+    familiarTables.add(TableName.META_TABLE_NAME);
+
+    // There should now be 4 tables, including hbase:meta
+    Map<String, TableDescriptor> tableDescriptorMap = master.getTableDescriptors().getAll();
+    assertEquals(4, tableDescriptorMap.size());
+    for (TableName tableName : familiarTables) {
+      assertTrue(
+        tableDescriptorMap
+          .containsKey(tableName.getNamespaceAsString() + ":" + tableName.getQualifierAsString()),
+        "Expected table descriptor map to contain table: " + tableName);
+    }
+
+    createTableDescriptorOnFileSystem("hbase", "meta_replica", foreignTables);
+    createTableDescriptorOnFileSystem("default", "foreignTable1", foreignTables);
+    createTableDescriptorOnFileSystem("customForeignNs", "customForeignNsTable1", foreignTables);
+
+    // Verify the table descriptors were created on the filesystem
+    for (TableName tableName : foreignTables) {
+      Path tableDescPath = new Path(testDir,
+        "data" + Path.SEPARATOR + tableName.getNamespaceAsString() + Path.SEPARATOR
+          + tableName.getQualifierAsString() + Path.SEPARATOR + FSTableDescriptors.TABLEINFO_DIR);
+      assertTrue(fs.exists(tableDescPath),
+        "Expected table descriptor directory to exist: " + tableDescPath);
+    }
+
+    Map<TableName, RegionStatesCount> tableRegionStatesCount = getTableRegionStatesCount();
+
+    // The foreign tables should not be in the table state
+    assertEquals(4, tableRegionStatesCount.size());
+    for (TableName tableName : familiarTables) {
+      assertTrue(tableRegionStatesCount.containsKey(tableName),
+        "Expected table regions state count to contain: " + tableName);
+      // Delete unneeded tables
+      if (!TableName.META_TABLE_NAME.equals(tableName)) {
+        LOG.debug("Deleting table: {}", tableName);
+        TEST_UTIL.deleteTable(tableName);
+      }
+    }
+    for (TableName tableName : foreignTables) {
+      assertFalse(tableRegionStatesCount.containsKey(tableName),
+        "Expected table regions state count to NOT contain: " + tableName);
+      // Remove unneeded table descriptors
+      LOG.debug("Removing table descriptor for foreign table: {}", tableName);
+      master.getTableDescriptors().remove(tableName);
+    }
+  }
+
+  private Map<TableName, RegionStatesCount> getTableRegionStatesCount()
+    throws InterruptedIOException {
+    ClusterMetrics metrics = master.getClusterMetricsWithoutCoprocessor(
+      EnumSet.of(ClusterMetrics.Option.TABLE_TO_REGIONS_COUNT));
+    return metrics.getTableRegionStatesCount();
+  }
+
+  private void createTableDescriptorOnFileSystem(String namespace, String qualifier,
+    List<TableName> tableNameList) throws IOException {
+    // Create a table descriptor on the filesystem that uses the provided namespace
+    TableName tableName = TableName.valueOf(namespace, qualifier);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(COLUMN_FAMILY)).build();
+    // Create the table descriptor on the filesystem and update the file descriptor cache
+    master.getTableDescriptors().update(tableDescriptor, false);
+
+    tableNameList.add(tableName);
   }
 }

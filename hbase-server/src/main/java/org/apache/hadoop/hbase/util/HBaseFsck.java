@@ -660,17 +660,19 @@ public class HBaseFsck extends Configured implements Closeable {
     reportUnknownServers();
     // Check if hbase:meta is found only once and in the right place
     if (!checkMetaRegion()) {
-      String errorMsg = "hbase:meta table is not consistent. ";
+      String errorMsg = TableName.META_TABLE_NAME + " table is not consistent. ";
       if (shouldFixAssignments()) {
-        errorMsg += "HBCK will try fixing it. Rerun once hbase:meta is back to consistent state.";
+        errorMsg += "HBCK will try fixing it. Rerun once " + TableName.META_TABLE_NAME + " is back "
+          + "to consistent state.";
       } else {
-        errorMsg += "Run HBCK with proper fix options to fix hbase:meta inconsistency.";
+        errorMsg += "Run HBCK with proper fix options to fix " + TableName.META_TABLE_NAME
+          + " inconsistency.";
       }
       errors.reportError(errorMsg + " Exiting...");
       return -2;
     }
     // Not going with further consistency check for tables when hbase:meta itself is not consistent.
-    LOG.info("Loading regionsinfo from the hbase:meta table");
+    LOG.info("Loading regionsinfo from the {} table", TableName.META_TABLE_NAME);
     boolean success = loadMetaEntries();
     if (!success) return -1;
 
@@ -1219,7 +1221,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * TODO -- need to add tests for this.
    */
   private void reportEmptyMetaCells() {
-    errors.print("Number of empty REGIONINFO_QUALIFIER rows in hbase:meta: "
+    errors.print("Number of empty REGIONINFO_QUALIFIER rows in " + TableName.META_TABLE_NAME + ": "
       + emptyRegionInfoQualifiers.size());
     if (details) {
       for (Result r : emptyRegionInfoQualifiers) {
@@ -1371,7 +1373,7 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   public void fixEmptyMetaCells() throws IOException {
     if (shouldFixEmptyMetaCells() && !emptyRegionInfoQualifiers.isEmpty()) {
-      LOG.info("Trying to fix empty REGIONINFO_QUALIFIER hbase:meta rows.");
+      LOG.info("Trying to fix empty REGIONINFO_QUALIFIER {} rows.", TableName.META_TABLE_NAME);
       for (Result region : emptyRegionInfoQualifiers) {
         deleteMetaRegion(region.getRow());
         errors.getErrorList().remove(ERROR_CODE.EMPTY_META_CELL);
@@ -2019,9 +2021,11 @@ public class HBaseFsck extends Configured implements Closeable {
       }
       RegionInfo hri = h.getRegion();
       if (hri == null) {
-        LOG.warn("Unable to close region " + hi.getRegionNameAsString()
-          + " because hbase:meta had invalid or missing " + HConstants.CATALOG_FAMILY_STR + ":"
-          + Bytes.toString(HConstants.REGIONINFO_QUALIFIER) + " qualifier value.");
+        LOG.warn(
+          "Unable to close region " + hi.getRegionNameAsString()
+            + " because {} had invalid or missing " + HConstants.CATALOG_FAMILY_STR + ":"
+            + Bytes.toString(HConstants.REGIONINFO_QUALIFIER) + " qualifier value.",
+          TableName.META_TABLE_NAME);
         continue;
       }
       // close the region -- close files and remove assignment
@@ -2140,8 +2144,9 @@ public class HBaseFsck extends Configured implements Closeable {
       assert false : "Entry for region with no data";
     } else if (!inMeta && !inHdfs && isDeployed) {
       errors.reportError(ERROR_CODE.NOT_IN_META_HDFS,
-        "Region " + descriptiveName + ", key=" + key + ", not on HDFS or in hbase:meta but "
-          + "deployed on " + Joiner.on(", ").join(hbi.getDeployedOn()));
+        "Region " + descriptiveName + ", key=" + key + ", not on HDFS or in "
+          + TableName.META_TABLE_NAME + " but " + "deployed on "
+          + Joiner.on(", ").join(hbi.getDeployedOn()));
       if (shouldFixAssignments()) {
         undeployRegions(hbi);
       }
@@ -2155,8 +2160,9 @@ public class HBaseFsck extends Configured implements Closeable {
           + " got merge recently, its file(s) will be cleaned by CatalogJanitor later");
         return;
       }
-      errors.reportError(ERROR_CODE.NOT_IN_META_OR_DEPLOYED, "Region " + descriptiveName
-        + " on HDFS, but not listed in hbase:meta " + "or deployed on any region server");
+      errors.reportError(ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
+        "Region " + descriptiveName + " on HDFS, but not listed in " + TableName.META_TABLE_NAME
+          + " or deployed on any region server");
       // restore region consistency of an adopted orphan
       if (shouldFixMeta()) {
         if (!hbi.isHdfsRegioninfoPresent()) {
@@ -2196,7 +2202,7 @@ public class HBaseFsck extends Configured implements Closeable {
             }
           }
         }
-        LOG.info("Patching hbase:meta with .regioninfo: " + hbi.getHdfsHRI());
+        LOG.info("Patching {} with .regioninfo: " + hbi.getHdfsHRI(), TableName.META_TABLE_NAME);
         int numReplicas = admin.getDescriptor(hbi.getTableName()).getRegionReplication();
         HBaseFsckRepair.fixMetaHoleOnlineAndAddReplicas(getConf(), hbi.getHdfsHRI(),
           admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().keySet(),
@@ -2224,7 +2230,8 @@ public class HBaseFsck extends Configured implements Closeable {
           return;
         }
 
-        LOG.info("Patching hbase:meta with with .regioninfo: " + hbi.getHdfsHRI());
+        LOG.info("Patching {} with with .regioninfo: " + hbi.getHdfsHRI(),
+          TableName.META_TABLE_NAME);
         int numReplicas = admin.getDescriptor(hbi.getTableName()).getRegionReplication();
         HBaseFsckRepair.fixMetaHoleOnlineAndAddReplicas(getConf(), hbi.getHdfsHRI(),
           admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().keySet(),
@@ -2301,9 +2308,9 @@ public class HBaseFsck extends Configured implements Closeable {
       }
     } else if (inMeta && inHdfs && isMultiplyDeployed) {
       errors.reportError(ERROR_CODE.MULTI_DEPLOYED,
-        "Region " + descriptiveName + " is listed in hbase:meta on region server "
-          + hbi.getMetaEntry().regionServer + " but is multiply assigned to region servers "
-          + Joiner.on(", ").join(hbi.getDeployedOn()));
+        "Region " + descriptiveName + " is listed in " + TableName.META_TABLE_NAME
+          + " on region server " + hbi.getMetaEntry().regionServer + " but is multiply assigned"
+          + " to region servers " + Joiner.on(", ").join(hbi.getDeployedOn()));
       // If we are trying to fix the errors
       if (shouldFixAssignments()) {
         errors.print("Trying to fix assignment error...");
@@ -2313,8 +2320,8 @@ public class HBaseFsck extends Configured implements Closeable {
       }
     } else if (inMeta && inHdfs && isDeployed && !deploymentMatchesMeta) {
       errors.reportError(ERROR_CODE.SERVER_DOES_NOT_MATCH_META,
-        "Region " + descriptiveName + " listed in hbase:meta on region server "
-          + hbi.getMetaEntry().regionServer + " but found on region server "
+        "Region " + descriptiveName + " listed in " + TableName.META_TABLE_NAME
+          + " on region server " + hbi.getMetaEntry().regionServer + " but found on region server "
           + hbi.getDeployedOn().get(0));
       // If we are trying to fix the errors
       if (shouldFixAssignments()) {
@@ -2614,11 +2621,12 @@ public class HBaseFsck extends Configured implements Closeable {
         if (servers.isEmpty()) {
           assignMetaReplica(i);
         } else if (servers.size() > 1) {
-          errors.reportError(ERROR_CODE.MULTI_META_REGION, "hbase:meta, replicaId "
-            + metaHbckRegionInfo.getReplicaId() + " is found on more than one region.");
+          errors.reportError(ERROR_CODE.MULTI_META_REGION,
+            TableName.META_TABLE_NAME + ", replicaId " + metaHbckRegionInfo.getReplicaId()
+              + " is found on more than one region.");
           if (shouldFixAssignments()) {
-            errors.print("Trying to fix a problem with hbase:meta, replicaId "
-              + metaHbckRegionInfo.getReplicaId() + "..");
+            errors.print("Trying to fix a problem with " + TableName.META_TABLE_NAME
+              + ", replicaId " + metaHbckRegionInfo.getReplicaId() + "..");
             setShouldRerun();
             // try fix it (treat is a dupe assignment)
             HBaseFsckRepair.fixMultiAssignment(connection,
@@ -2631,11 +2639,11 @@ public class HBaseFsck extends Configured implements Closeable {
     for (Map.Entry<Integer, HbckRegionInfo> entry : metaRegions.entrySet()) {
       noProblem = false;
       errors.reportError(ERROR_CODE.SHOULD_NOT_BE_DEPLOYED,
-        "hbase:meta replicas are deployed in excess. Configured " + metaReplication + ", deployed "
-          + metaRegions.size());
+        TableName.META_TABLE_NAME + " replicas are deployed in excess. Configured "
+          + metaReplication + ", deployed " + metaRegions.size());
       if (shouldFixAssignments()) {
-        errors.print(
-          "Trying to undeploy excess replica, replicaId: " + entry.getKey() + " of hbase:meta..");
+        errors.print("Trying to undeploy excess replica, replicaId: " + entry.getKey() + " of "
+          + TableName.META_TABLE_NAME + "..");
         setShouldRerun();
         unassignMetaReplica(entry.getValue());
       }
@@ -2655,9 +2663,9 @@ public class HBaseFsck extends Configured implements Closeable {
   private void assignMetaReplica(int replicaId)
     throws IOException, KeeperException, InterruptedException {
     errors.reportError(ERROR_CODE.NO_META_REGION,
-      "hbase:meta, replicaId " + replicaId + " is not found on any region.");
+      TableName.META_TABLE_NAME + ", replicaId " + replicaId + " is not found on any region.");
     if (shouldFixAssignments()) {
-      errors.print("Trying to fix a problem with hbase:meta..");
+      errors.print("Trying to fix a problem with " + TableName.META_TABLE_NAME + "..");
       setShouldRerun();
       // try to fix it (treat it as unassigned region)
       RegionInfo h = RegionReplicaUtil
@@ -2693,7 +2701,7 @@ public class HBaseFsck extends Configured implements Closeable {
           if (rl == null) {
             emptyRegionInfoQualifiers.add(result);
             errors.reportError(ERROR_CODE.EMPTY_META_CELL,
-              "Empty REGIONINFO_QUALIFIER found in hbase:meta");
+              "Empty REGIONINFO_QUALIFIER found in " + TableName.META_TABLE_NAME);
             return true;
           }
           ServerName sn = null;
@@ -2703,7 +2711,7 @@ public class HBaseFsck extends Configured implements Closeable {
           ) {
             emptyRegionInfoQualifiers.add(result);
             errors.reportError(ERROR_CODE.EMPTY_META_CELL,
-              "Empty REGIONINFO_QUALIFIER found in hbase:meta");
+              "Empty REGIONINFO_QUALIFIER found in " + TableName.META_TABLE_NAME);
             return true;
           }
           RegionInfo hri = rl.getRegionLocation(RegionInfo.DEFAULT_REPLICA_ID).getRegion();
@@ -2731,7 +2739,8 @@ public class HBaseFsck extends Configured implements Closeable {
             } else if (previous.getMetaEntry() == null) {
               previous.setMetaEntry(m);
             } else {
-              throw new IOException("Two entries in hbase:meta are same " + previous);
+              throw new IOException(
+                "Two entries in " + TableName.META_TABLE_NAME + " are same " + previous);
             }
           }
           List<RegionInfo> mergeParents = CatalogFamilyFormat.getMergeRegions(result.rawCells());

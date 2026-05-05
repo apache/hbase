@@ -939,6 +939,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       : this.htableDescriptor.getDurability();
 
     decorateRegionConfiguration(conf);
+
+    CoprocessorConfigurationUtil.syncReadOnlyConfigurations(this.conf,
+      CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
+
     if (rsServices != null) {
       this.rsAccounting = this.rsServices.getRegionServerAccounting();
       // don't initialize coprocessors if not running within a regionserver
@@ -8509,7 +8513,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     ServiceDescriptor serviceDesc = instance.getDescriptorForType();
     String serviceName = CoprocessorRpcUtils.getServiceName(serviceDesc);
     if (coprocessorServiceHandlers.containsKey(serviceName)) {
-      LOG.error("Coprocessor service {} already registered, rejecting request from {} in region {}",
+      LOG.warn("Coprocessor service {} already registered, rejecting request from {} in region {}",
         serviceName, instance, this);
       return false;
     }
@@ -8980,18 +8984,20 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * {@inheritDoc}
    */
   @Override
-  public void onConfigurationChange(Configuration conf) {
-    this.storeHotnessProtector.update(conf);
-    // update coprocessorHost if the configuration has changed.
-    if (
-      CoprocessorConfigurationUtil.checkConfigurationChange(this.coprocessorHost, conf,
-        CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY)
-    ) {
-      LOG.info("Update the system coprocessors because the configuration has changed");
-      decorateRegionConfiguration(conf);
-      this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
-    }
+  public void onConfigurationChange(Configuration newConf) {
+    this.storeHotnessProtector.update(newConf);
+
+    boolean originalIsReadOnlyEnabled = CoprocessorConfigurationUtil
+      .areReadOnlyCoprocessorsLoaded(this.conf, CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
+
+    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(newConf, originalIsReadOnlyEnabled,
+      this.coprocessorHost, CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, false, this.toString(),
+      conf -> {
+        decorateRegionConfiguration(conf);
+        this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
+        CoprocessorConfigurationUtil.updateCoprocessorListInConf(this.conf, conf,
+          CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
+      });
   }
 
   /**
@@ -9134,5 +9140,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       allowedOnPath = ".*/src/test/.*")
   boolean isReadsEnabled() {
     return this.writestate.readsEnabled;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public ConfigurationManager getConfigurationManager() {
+    return configurationManager;
   }
 }

@@ -51,7 +51,8 @@ public interface TableProcedureInterface {
     REGION_GC,
     MERGED_REGIONS_GC/* region operations */,
     REGION_TRUNCATE,
-    RESTORE_BACKUP_SYSTEM_TABLE
+    RESTORE_BACKUP_SYSTEM_TABLE,
+    REFRESH_HFILES,
   }
 
   /** Returns the name of the table the procedure is operating on */

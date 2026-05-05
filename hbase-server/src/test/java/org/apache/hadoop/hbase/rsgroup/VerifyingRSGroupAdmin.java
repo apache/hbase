@@ -1011,4 +1011,23 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     return admin.isReplicationPeerModificationEnabled();
   }
 
+  @Override
+  public Long refreshMeta() throws IOException {
+    return admin.refreshMeta();
+  }
+
+  @Override
+  public Long refreshHFiles(final TableName tableName) throws IOException {
+    return admin.refreshHFiles(tableName);
+  }
+
+  @Override
+  public Long refreshHFiles(final String namespace) throws IOException {
+    return admin.refreshHFiles(namespace);
+  }
+
+  @Override
+  public Long refreshHFiles() throws IOException {
+    return admin.refreshHFiles();
+  }
 }

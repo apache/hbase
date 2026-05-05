@@ -315,6 +315,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   private LeaseManager leaseManager;
 
   private volatile boolean dataFsOk;
+  private volatile boolean isGlobalReadOnlyEnabled;
 
   static final String ABORT_TIMEOUT = "hbase.regionserver.abort.timeout";
   // Default abort timeout is 1200 seconds for safe
@@ -828,6 +829,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     try {
       if (!isStopped() && !isAborted()) {
         installShutdownHook();
+
+        CoprocessorConfigurationUtil.syncReadOnlyConfigurations(conf,
+          CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
+
         // Initialize the RegionServerCoprocessorHost now that our ephemeral
         // node was created, in case any coprocessors want to use ZooKeeper
         this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
@@ -1976,6 +1981,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     final int logRollThreads = conf.getInt("hbase.regionserver.executor.log.roll.threads", 1);
     executorService.startExecutorService(executorService.new ExecutorConfig()
       .setExecutorType(ExecutorType.RS_LOG_ROLL).setCorePoolSize(logRollThreads));
+    final int rsRefreshHFilesThreads =
+      conf.getInt("hbase.regionserver.executor.refresh.hfiles.threads", 3);
+    executorService.startExecutorService(executorService.new ExecutorConfig()
+      .setExecutorType(ExecutorType.RS_REFRESH_HFILES).setCorePoolSize(rsRefreshHFilesThreads));
 
     Threads.setDaemonThreadRunning(this.walRoller, getName() + ".logRoller",
       uncaughtExceptionHandler);
@@ -3481,14 +3490,16 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       LOG.warn("Failed to initialize SuperUsers on reloading of the configuration");
     }
 
-    // update region server coprocessor if the configuration has changed.
-    if (
-      CoprocessorConfigurationUtil.checkConfigurationChange(this.rsHost, newConf,
-        CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY)
-    ) {
-      LOG.info("Update region server coprocessors because the configuration has changed");
-      this.rsHost = new RegionServerCoprocessorHost(this, newConf);
-    }
+    boolean originalIsReadOnlyEnabled = CoprocessorConfigurationUtil
+      .areReadOnlyCoprocessorsLoaded(this.conf, CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
+
+    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(newConf, originalIsReadOnlyEnabled,
+      this.rsHost, CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, false, this.toString(),
+      conf -> {
+        this.rsHost = new RegionServerCoprocessorHost(this, conf);
+        CoprocessorConfigurationUtil.updateCoprocessorListInConf(this.conf, conf,
+          CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
+      });
   }
 
   @Override

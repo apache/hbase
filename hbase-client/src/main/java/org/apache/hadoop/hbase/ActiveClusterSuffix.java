@@ -1,0 +1,142 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hbase;
+
+import java.io.IOException;
+import java.util.Objects;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ActiveClusterSuffixProtos;
+
+/**
+ * The read-replica cluster id for this cluster. It is serialized to the filesystem and up into
+ * zookeeper. This is a container for the id. Also knows how to serialize and deserialize the
+ * cluster id.
+ */
+@InterfaceAudience.Private
+public class ActiveClusterSuffix implements ClusterIdFile {
+  private final String clusterId;
+  private final String suffix;
+
+  public static class Parser implements ClusterIdFileParser<ActiveClusterSuffix> {
+
+    @Override
+    public String getFileName() {
+      return HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME;
+    }
+
+    /**
+     * Parse the serialized representation of the {@link ActiveClusterSuffix}
+     * @param bytes A pb serialized {@link ActiveClusterSuffix} instance with pb magic prefix
+     * @return An instance of {@link ActiveClusterSuffix} made from <code>bytes</code>
+     * @see #toByteArray()
+     */
+    @Override
+    public ActiveClusterSuffix parseFrom(byte[] bytes) throws DeserializationException {
+      if (ProtobufUtil.isPBMagicPrefix(bytes)) {
+        int pblen = ProtobufUtil.lengthOfPBMagic();
+        ActiveClusterSuffixProtos.ActiveClusterSuffix.Builder builder =
+          ActiveClusterSuffixProtos.ActiveClusterSuffix.newBuilder();
+        ActiveClusterSuffixProtos.ActiveClusterSuffix cs = null;
+        try {
+          ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
+          cs = builder.build();
+        } catch (IOException e) {
+          throw new DeserializationException(e);
+        }
+        return convert(cs);
+      } else {
+        // Presume it was written out this way, the old way.
+        return new ActiveClusterSuffix(Bytes.toString(bytes));
+      }
+    }
+
+    @Override
+    public ActiveClusterSuffix readString(String input) {
+      return new ActiveClusterSuffix(input);
+    }
+  }
+
+  public ActiveClusterSuffix(final String clusterId, final String suffix) {
+    this.clusterId = clusterId;
+    this.suffix = suffix;
+  }
+
+  public ActiveClusterSuffix(final String input) {
+    String[] parts = input.split(":", 2);
+    this.clusterId = parts[0];
+    if (parts.length > 1) {
+      this.suffix = parts[1];
+    } else {
+      this.suffix = "";
+    }
+  }
+
+  public static ActiveClusterSuffix parseFrom(byte[] bytes) throws DeserializationException {
+    return new Parser().parseFrom(bytes);
+  }
+
+  public static ActiveClusterSuffix fromConfig(Configuration conf, ClusterId clusterId) {
+    return new ActiveClusterSuffix(clusterId.toString(), conf
+      .get(HConstants.HBASE_META_TABLE_SUFFIX, HConstants.HBASE_META_TABLE_SUFFIX_DEFAULT_VALUE));
+  }
+
+  /** Returns The active cluster suffix serialized using pb w/ pb magic prefix */
+  public byte[] toByteArray() {
+    return ProtobufUtil.prependPBMagic(convert().toByteArray());
+  }
+
+  /** Returns A pb instance to represent this instance. */
+  public ActiveClusterSuffixProtos.ActiveClusterSuffix convert() {
+    return ActiveClusterSuffixProtos.ActiveClusterSuffix.newBuilder().setClusterId(clusterId)
+      .setSuffix(suffix).build();
+  }
+
+  /** Returns A {@link ActiveClusterSuffix} made from the passed in <code>cs</code> */
+  public static ActiveClusterSuffix
+    convert(final ActiveClusterSuffixProtos.ActiveClusterSuffix cs) {
+    return new ActiveClusterSuffix(cs.getClusterId(), cs.getSuffix());
+  }
+
+  /**
+   * @see java.lang.Object#toString()
+   */
+  @Override
+  public String toString() {
+    return String.format("%s:%s", this.clusterId,
+      Strings.isNullOrEmpty(this.suffix) ? "<blank>" : this.suffix);
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o == null || getClass() != o.getClass()) return false;
+    ActiveClusterSuffix that = (ActiveClusterSuffix) o;
+    return Objects.equals(clusterId, that.clusterId) && Objects.equals(suffix, that.suffix);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(clusterId, suffix);
+  }
+}
