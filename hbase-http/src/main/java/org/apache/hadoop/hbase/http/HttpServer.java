@@ -871,8 +871,8 @@ public class HttpServer implements FilterContainer {
     } else {
       addUnprivilegedServlet("conf", "/conf", ConfServlet.class);
     }
-    final String asyncProfilerHome = ProfileServlet.getAsyncProfilerHome();
-    if (asyncProfilerHome != null && !asyncProfilerHome.trim().isEmpty()) {
+
+    if (ProfileServlet.isAvailable()) {
       addPrivilegedServlet("prof", "/prof", ProfileServlet.class);
       Path tmpDir = Paths.get(ProfileServlet.OUTPUT_DIR);
       if (Files.notExists(tmpDir)) {
@@ -884,8 +884,8 @@ public class HttpServer implements FilterContainer {
       genCtx.setDisplayName("prof-output-hbase");
     } else {
       addUnprivilegedServlet("prof", "/prof", ProfileServlet.DisabledServlet.class);
-      LOG.info("ASYNC_PROFILER_HOME environment variable and async.profiler.home system property "
-        + "not specified. Disabling /prof endpoint.");
+      LOG.info("async-profiler not available (no library on classpath and ASYNC_PROFILER_HOME "
+        + "not set). Disabling /prof endpoint.");
     }
 
     /* register metrics servlets */

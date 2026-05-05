@@ -232,6 +232,12 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <dependency>
+      <groupId>tools.profiler</groupId>
+      <artifactId>async-profiler</artifactId>
+      <version>${async-profiler.version}</version>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 
   <build>
@@ -320,6 +326,16 @@
     <!-- General Resources -->
   </build>
   <profiles>
+    <profile>
+      <id>async-profiler</id>
+      <dependencies>
+        <dependency>
+          <groupId>tools.profiler</groupId>
+          <artifactId>async-profiler</artifactId>
+          <version>${async-profiler.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
     <profile>
       <id>build-with-jdk11</id>
       <activation>
