@@ -112,4 +112,19 @@ public interface ServerMetrics {
    *         rounded to MB
    */
   Map<String, Integer> getRegionCachedInfo();
+
+  /**
+   * The available cache space on this region server (bytes), if reported in the server load.
+   */
+  default long getCacheFreeSize() {
+    return 0L;
+  }
+
+  /**
+   * Returns the region cold data information for the regions hosted on this server. Here, cold data
+   * refers only to region data that is classified as cold by the DataTieringManager according to
+   * the configured priority logic. These data should be kept out of block cache.
+   * @return map of region encoded name and its total cold data size, rounded to MB
+   */
+  Map<String, Integer> getRegionColdDataSize();
 }

@@ -332,6 +332,17 @@ message ServerLoad {
    * The metrics for region cached on this region server
    */
   map<string, uint32> regionCachedInfo = 16;
+
+  /**
+* Unallocated block cache capacity on this RegionServer, in bytes.
+* Used by the master for cache-aware load balancing (optional).
+*/
+  optional uint64 cacheFreeSize = 17;
+
+  /**
+ * The metrics for total region cold data size
+ */
+  map<string, uint32> regionColdData = 18;
 }
 
 message LiveServerInfo {
