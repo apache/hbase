@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,15 +43,15 @@ import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFor
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 public class TestCompactionPolicy {
+
   private final static Logger LOG = LoggerFactory.getLogger(TestCompactionPolicy.class);
   protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -66,7 +69,7 @@ public class TestCompactionPolicy {
   private FSHLog hlog;
   private HRegion region;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     config();
     initialize();
@@ -120,7 +123,7 @@ public class TestCompactionPolicy {
     fs.createNewFile(TEST_FILE);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     IOException ex = null;
     try {
@@ -206,9 +209,9 @@ public class TestCompactionPolicy {
         .selectCompaction(candidates, new ArrayList<>(), false, isOffPeak, forcemajor);
     List<HStoreFile> actual = new ArrayList<>(result.getFiles());
     if (isOffPeak && !forcemajor) {
-      Assert.assertTrue(result.isOffPeak());
+      assertTrue(result.isOffPeak());
     }
-    Assert.assertEquals(Arrays.toString(expected), Arrays.toString(getSizes(actual)));
+    assertEquals(Arrays.toString(expected), Arrays.toString(getSizes(actual)));
     store.forceMajor = false;
   }
 }

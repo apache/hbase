@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -62,15 +61,12 @@ import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,16 +75,12 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /** memstore test case */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestDefaultMemStore {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDefaultMemStore.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestDefaultMemStore.class);
-  @Rule
-  public TestName name = new TestName();
+
   protected AbstractMemStore memstore;
   protected static final int ROW_COUNT = 10;
   protected static final int SCAN_ROW_COUNT = 25000;
@@ -96,13 +88,11 @@ public class TestDefaultMemStore {
   protected static final byte[] FAMILY = Bytes.toBytes("column");
   protected MultiVersionConcurrencyControl mvcc;
   protected ChunkCreator chunkCreator;
+  protected String name;
 
-  private String getName() {
-    return this.name.getMethodName();
-  }
-
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    this.name = testInfo.getTestMethod().get().getName();
     internalSetUp();
     // no pool
     this.chunkCreator = ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0,
@@ -110,12 +100,12 @@ public class TestDefaultMemStore {
     this.memstore = new DefaultMemStore();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     this.memstore.close();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() throws Exception {
     ChunkCreator.getInstance().clearChunkIds();
   }
@@ -126,7 +116,7 @@ public class TestDefaultMemStore {
 
   @Test
   public void testPutSameKey() {
-    byte[] bytes = Bytes.toBytes(getName());
+    byte[] bytes = Bytes.toBytes(this.name);
     KeyValue kv = new KeyValue(bytes, bytes, bytes, bytes);
     this.memstore.add(kv, null);
     byte[] other = Bytes.toBytes("somethingelse");
@@ -134,12 +124,12 @@ public class TestDefaultMemStore {
     this.memstore.add(samekey, null);
     Cell found = this.memstore.getActive().first();
     assertEquals(1, this.memstore.getActive().getCellsCount());
-    assertTrue(Bytes.toString(found.getValueArray()), CellUtil.matchingValue(samekey, found));
+    assertTrue(CellUtil.matchingValue(samekey, found), Bytes.toString(found.getValueArray()));
   }
 
   @Test
   public void testPutSameCell() {
-    byte[] bytes = Bytes.toBytes(getName());
+    byte[] bytes = Bytes.toBytes(this.name);
     KeyValue kv = new KeyValue(bytes, bytes, bytes, bytes);
     MemStoreSizing sizeChangeForFirstCell = new NonThreadSafeMemStoreSizing();
     this.memstore.add(kv, sizeChangeForFirstCell);
@@ -228,7 +218,7 @@ public class TestDefaultMemStore {
         // Assert the stuff is coming out in right order.
         assertTrue(CellUtil.matchingRows(result.get(0), Bytes.toBytes(count)));
         // Row count is same as column count.
-        assertEquals("count=" + count + ", result=" + result, rowCount, result.size());
+        assertEquals(rowCount, result.size(), "count=" + count + ", result=" + result);
         count++;
         if (count == snapshotIndex) {
           MemStoreSnapshot snapshot = this.memstore.snapshot();
@@ -320,9 +310,8 @@ public class TestDefaultMemStore {
       returned.add(next);
     }
 
-    assertTrue(
-      "Got:\n" + Joiner.on("\n").join(returned) + "\nExpected:\n" + Joiner.on("\n").join(expected),
-      Iterables.elementsEqual(Arrays.asList(expected), returned));
+    assertTrue(Iterables.elementsEqual(Arrays.asList(expected), returned),
+      "Got:\n" + Joiner.on("\n").join(returned) + "\nExpected:\n" + Joiner.on("\n").join(expected));
     assertNull(scanner.peek());
   }
 
@@ -393,7 +382,7 @@ public class TestDefaultMemStore {
   public void testBytesReadFromMemstore() throws IOException {
     ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(true);
     long totalCellSize = getBytesReadFromMemstore();
-    Assert.assertEquals(totalCellSize,
+    assertEquals(totalCellSize,
       ThreadLocalServerSideScanMetrics.getBytesReadFromMemstoreAndReset());
   }
 
@@ -401,7 +390,7 @@ public class TestDefaultMemStore {
   public void testBytesReadFromMemstoreWithScanMetricsDisabled() throws IOException {
     ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(false);
     getBytesReadFromMemstore();
-    Assert.assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromMemstoreAndReset());
+    assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromMemstoreAndReset());
   }
 
   /**
@@ -550,8 +539,8 @@ public class TestDefaultMemStore {
         s.seek(kv);
 
         Cell ret = s.next();
-        assertNotNull("Didnt find own write at all", ret);
-        assertEquals("Didnt read own writes", kv.getTimestamp(), ret.getTimestamp());
+        assertNotNull(ret, "Didnt find own write at all");
+        assertEquals(kv.getTimestamp(), ret.getTimestamp(), "Didnt read own writes");
       }
     }
   }
@@ -587,7 +576,7 @@ public class TestDefaultMemStore {
     for (int i = 0; i < snapshotCount; i++) {
       addRows(this.memstore);
       runSnapshot(this.memstore);
-      assertEquals("History not being cleared", 0, this.memstore.getSnapshot().getCellsCount());
+      assertEquals(0, this.memstore.getSnapshot().getCellsCount(), "History not being cleared");
     }
   }
 
@@ -607,8 +596,8 @@ public class TestDefaultMemStore {
     m.add(key1, null);
     m.add(key2, null);
 
-    assertTrue("Expected memstore to hold 3 values, actually has " + m.getActive().getCellsCount(),
-      m.getActive().getCellsCount() == 3);
+    assertTrue(m.getActive().getCellsCount() == 3,
+      "Expected memstore to hold 3 values, actually has " + m.getActive().getCellsCount());
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -651,9 +640,9 @@ public class TestDefaultMemStore {
           int rowId = startRowId + i;
           Cell left = results.get(0);
           byte[] row1 = Bytes.toBytes(rowId);
-          assertTrue("Row name",
-            CellComparatorImpl.COMPARATOR.compareRows(left, row1, 0, row1.length) == 0);
-          assertEquals("Count of columns", QUALIFIER_COUNT, results.size());
+          assertTrue(CellComparatorImpl.COMPARATOR.compareRows(left, row1, 0, row1.length) == 0,
+            "Row name");
+          assertEquals(QUALIFIER_COUNT, results.size(), "Count of columns");
           List<Cell> row = new ArrayList<>();
           for (Cell kv : results) {
             row.add(kv);
@@ -1004,9 +993,9 @@ public class TestDefaultMemStore {
     HRegion meta = HRegion.createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, testDir, conf,
       tds.get(TableName.META_TABLE_NAME), wFactory.getWAL(RegionInfoBuilder.FIRST_META_REGIONINFO));
     // parameterized tests add [#] suffix get rid of [ and ].
-    TableDescriptor desc = TableDescriptorBuilder
-      .newBuilder(TableName.valueOf(name.getMethodName().replaceAll("[\\[\\]]", "_")))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("foo")).build();
+    TableDescriptor desc =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.replaceAll("[\\[\\]]", "_")))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("foo")).build();
     RegionInfo hri = RegionInfoBuilder.newBuilder(desc.getTableName())
       .setStartKey(Bytes.toBytes("row_0200")).setEndKey(Bytes.toBytes("row_0300")).build();
     HRegion r = HRegion.createHRegion(hri, testDir, conf, desc, wFactory.getWAL(hri));
@@ -1083,10 +1072,10 @@ public class TestDefaultMemStore {
     int oldHistorySize = hmc.getSnapshot().getCellsCount();
     MemStoreSnapshot snapshot = hmc.snapshot();
     // Make some assertions about what just happened.
-    assertTrue("History size has not increased",
-      oldHistorySize < hmc.getSnapshot().getCellsCount());
+    assertTrue(oldHistorySize < hmc.getSnapshot().getCellsCount(),
+      "History size has not increased");
     long t = memstore.timeOfOldestEdit();
-    assertTrue("Time of oldest edit is not Long.MAX_VALUE", t == Long.MAX_VALUE);
+    assertTrue(t == Long.MAX_VALUE, "Time of oldest edit is not Long.MAX_VALUE");
     hmc.clearSnapshot(snapshot.getId());
     return t;
   }
@@ -1095,12 +1084,12 @@ public class TestDefaultMemStore {
     int i = 0;
     for (Cell kv : kvs) {
       byte[] expectedColname = makeQualifier(rowIndex, i++);
-      assertTrue("Column name", CellUtil.matchingQualifier(kv, expectedColname));
+      assertTrue(CellUtil.matchingQualifier(kv, expectedColname), "Column name");
       // Value is column name as bytes. Usually result is
       // 100 bytes in size at least. This is the default size
       // for BytesWriteable. For comparison, convert bytes to
       // String and trim to remove trailing null bytes.
-      assertTrue("Content", CellUtil.matchingValue(kv, expectedColname));
+      assertTrue(CellUtil.matchingValue(kv, expectedColname), "Content");
     }
   }
 

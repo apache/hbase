@@ -20,22 +20,18 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.regionserver.compactions.ExponentialCompactionWindowFactory;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestDateTieredCompactionPolicyHeterogeneousStorage
   extends AbstractTestDateTieredCompactionPolicy {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDateTieredCompactionPolicyHeterogeneousStorage.class);
   public static final String HOT_WINDOW_SP = "ALL_SSD";
   public static final String WARM_WINDOW_SP = "ONE_SSD";
   public static final String COLD_WINDOW_SP = "HOT";

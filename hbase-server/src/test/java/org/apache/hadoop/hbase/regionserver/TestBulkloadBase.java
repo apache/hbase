@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import java.io.File;
@@ -27,9 +27,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -54,21 +54,18 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
-@RunWith(Parameterized.class)
 public class TestBulkloadBase {
-  @ClassRule
-  public static TemporaryFolder testFolder = new TemporaryFolder();
+
+  @TempDir
+  public static File testFolder;
   private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected final WAL log = mock(WAL.class);
   protected final Configuration conf = HBaseConfiguration.create();
@@ -78,22 +75,19 @@ public class TestBulkloadBase {
   protected final byte[] family3 = Bytes.toBytes("family3");
 
   protected Boolean useFileBasedSFT;
-
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
   public TestBulkloadBase(boolean useFileBasedSFT) {
     this.useFileBasedSFT = useFileBasedSFT;
   }
 
-  @Parameterized.Parameters
-  public static Collection<Boolean> data() {
-    Boolean[] data = { false, true };
-    return Arrays.asList(data);
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(false), Arguments.of(true));
   }
 
-  @Before
-  public void before() throws IOException {
+  @BeforeEach
+  public void before(TestInfo testInfo) throws IOException {
+    this.name = testInfo.getTestMethod().get().getName();
     Bytes.random(randomBytes);
     if (useFileBasedSFT) {
       conf.set(StoreFileTrackerFactory.TRACKER_IMPL,
@@ -129,14 +123,13 @@ public class TestBulkloadBase {
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
       MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     // TODO We need a way to do this without creating files
-    return HRegion.createHRegion(hRegionInfo, new Path(testFolder.newFolder().toURI()), conf,
-      builder.build(), log);
+    return HRegion.createHRegion(hRegionInfo,
+      new Path(new File(testFolder, generateUniqueName(null)).toURI()), conf, builder.build(), log);
 
   }
 
   protected HRegion testRegionWithFamilies(byte[]... families) throws IOException {
-    TableName tableName =
-      TableName.valueOf(name.getMethodName().substring(0, name.getMethodName().indexOf("[")));
+    TableName tableName = TableName.valueOf(name);
     return testRegionWithFamiliesAndSpecifiedTableName(tableName, families);
   }
 
@@ -155,7 +148,7 @@ public class TestBulkloadBase {
   private String createHFileForFamilies(byte[] family) throws IOException {
     HFile.WriterFactory hFileFactory = HFile.getWriterFactoryNoCache(conf);
     // TODO We need a way to do this without creating files
-    File hFileLocation = testFolder.newFile(generateUniqueName(null));
+    File hFileLocation = new File(testFolder, generateUniqueName(null));
     FSDataOutputStream out = new FSDataOutputStream(new FileOutputStream(hFileLocation), null);
     try {
       hFileFactory.withOutputStream(out);
@@ -174,7 +167,7 @@ public class TestBulkloadBase {
     return hFileLocation.getAbsoluteFile().getAbsolutePath();
   }
 
-  private static String generateUniqueName(final String suffix) {
+  protected static String generateUniqueName(final String suffix) {
     String name = UUID.randomUUID().toString().replaceAll("-", "");
     if (suffix != null) name += suffix;
     return name;

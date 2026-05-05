@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTOR_CLASS_KEY;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -25,7 +27,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue.KeyOnlyKeyValue;
@@ -39,16 +40,15 @@ import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCompactorMemLeak {
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -57,15 +57,14 @@ public class TestCompactorMemLeak {
   private static final byte[] FAMILY = Bytes.toBytes("f");
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
   private static final byte[] VALUE = Bytes.toBytes("value");
+  private String name;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    this.name = testInfo.getTestMethod().get().getName();
+  }
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompactorMemLeak.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     IS_LAST_CELL_ON_HEAP.set(false);
     // Must use the ByteBuffAllocator here
@@ -80,7 +79,7 @@ public class TestCompactorMemLeak {
     UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     IS_LAST_CELL_ON_HEAP.set(false);
     UTIL.shutdownMiniCluster();
@@ -89,16 +88,16 @@ public class TestCompactorMemLeak {
   private void assertMajorCompactionOK(TableName tableName) {
     List<HRegion> regions = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer()
       .getRegions(tableName);
-    Assert.assertEquals(regions.size(), 1);
+    assertEquals(regions.size(), 1);
     HRegion region = regions.get(0);
-    Assert.assertEquals(region.getStores().size(), 1);
+    assertEquals(region.getStores().size(), 1);
     HStore store = region.getStore(FAMILY);
-    Assert.assertEquals(store.getStorefilesCount(), 1);
+    assertEquals(store.getStorefilesCount(), 1);
   }
 
   @Test
   public void testMemLeak() throws IOException, InterruptedException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(name);
     Table table = UTIL.createTable(tableName, FAMILY);
 
     // Put and Flush #1
@@ -117,7 +116,7 @@ public class TestCompactorMemLeak {
     assertMajorCompactionOK(tableName);
 
     // The last cell before Compactor#commitWriter must be an heap one.
-    Assert.assertTrue(IS_LAST_CELL_ON_HEAP.get());
+    assertTrue(IS_LAST_CELL_ON_HEAP.get());
   }
 
   public static class MyCompactor extends DefaultCompactor {

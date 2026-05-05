@@ -17,10 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -39,35 +44,32 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestDeleteMobTable {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDeleteMobTable.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static byte[] FAMILY = Bytes.toBytes("family");
   private final static byte[] QF = Bytes.toBytes("qualifier");
+  private String name;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    this.name = testInfo.getTestMethod().get().getName();
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -112,7 +114,7 @@ public class TestDeleteMobTable {
 
   @Test
   public void testDeleteMobTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name);
     TableDescriptor tableDescriptor = createTableDescriptor(tableName, true);
     ColumnFamilyDescriptor familyDescriptor = tableDescriptor.getColumnFamily(FAMILY);
 
@@ -120,49 +122,49 @@ public class TestDeleteMobTable {
     Table table = createTableWithOneFile(tableDescriptor);
     try {
       // the mob file exists
-      Assert.assertEquals(1, countMobFiles(tableName, familyDescriptor.getNameAsString()));
-      Assert.assertEquals(0, countArchiveMobFiles(tableName, familyDescriptor.getNameAsString()));
+      assertEquals(1, countMobFiles(tableName, familyDescriptor.getNameAsString()));
+      assertEquals(0, countArchiveMobFiles(tableName, familyDescriptor.getNameAsString()));
       fileName = assertHasOneMobRow(table, tableName, familyDescriptor.getNameAsString());
-      Assert.assertFalse(mobArchiveExist(tableName, familyDescriptor.getNameAsString(), fileName));
-      Assert.assertTrue(mobTableDirExist(tableName));
+      assertFalse(mobArchiveExist(tableName, familyDescriptor.getNameAsString(), fileName));
+      assertTrue(mobTableDirExist(tableName));
     } finally {
       table.close();
       TEST_UTIL.deleteTable(tableName);
     }
 
-    Assert.assertFalse(TEST_UTIL.getAdmin().tableExists(tableName));
-    Assert.assertEquals(0, countMobFiles(tableName, familyDescriptor.getNameAsString()));
-    Assert.assertEquals(1, countArchiveMobFiles(tableName, familyDescriptor.getNameAsString()));
-    Assert.assertTrue(mobArchiveExist(tableName, familyDescriptor.getNameAsString(), fileName));
-    Assert.assertFalse(mobTableDirExist(tableName));
+    assertFalse(TEST_UTIL.getAdmin().tableExists(tableName));
+    assertEquals(0, countMobFiles(tableName, familyDescriptor.getNameAsString()));
+    assertEquals(1, countArchiveMobFiles(tableName, familyDescriptor.getNameAsString()));
+    assertTrue(mobArchiveExist(tableName, familyDescriptor.getNameAsString(), fileName));
+    assertFalse(mobTableDirExist(tableName));
   }
 
   @Test
   public void testDeleteNonMobTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name);
     TableDescriptor htd = createTableDescriptor(tableName, false);
     ColumnFamilyDescriptor hcd = htd.getColumnFamily(FAMILY);
 
     Table table = createTableWithOneFile(htd);
     try {
       // the mob file doesn't exist
-      Assert.assertEquals(0, countMobFiles(tableName, hcd.getNameAsString()));
-      Assert.assertEquals(0, countArchiveMobFiles(tableName, hcd.getNameAsString()));
-      Assert.assertFalse(mobTableDirExist(tableName));
+      assertEquals(0, countMobFiles(tableName, hcd.getNameAsString()));
+      assertEquals(0, countArchiveMobFiles(tableName, hcd.getNameAsString()));
+      assertFalse(mobTableDirExist(tableName));
     } finally {
       table.close();
       TEST_UTIL.deleteTable(tableName);
     }
 
-    Assert.assertFalse(TEST_UTIL.getAdmin().tableExists(tableName));
-    Assert.assertEquals(0, countMobFiles(tableName, hcd.getNameAsString()));
-    Assert.assertEquals(0, countArchiveMobFiles(tableName, hcd.getNameAsString()));
-    Assert.assertFalse(mobTableDirExist(tableName));
+    assertFalse(TEST_UTIL.getAdmin().tableExists(tableName));
+    assertEquals(0, countMobFiles(tableName, hcd.getNameAsString()));
+    assertEquals(0, countArchiveMobFiles(tableName, hcd.getNameAsString()));
+    assertFalse(mobTableDirExist(tableName));
   }
 
   @Test
   public void testMobFamilyDelete() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name);
     TableDescriptor tableDescriptor = createTableDescriptor(tableName, true);
     ColumnFamilyDescriptor familyDescriptor = tableDescriptor.getColumnFamily(FAMILY);
     tableDescriptor = TableDescriptorBuilder.newBuilder(tableDescriptor)
@@ -171,18 +173,18 @@ public class TestDeleteMobTable {
     Table table = createTableWithOneFile(tableDescriptor);
     try {
       // the mob file exists
-      Assert.assertEquals(1, countMobFiles(tableName, familyDescriptor.getNameAsString()));
-      Assert.assertEquals(0, countArchiveMobFiles(tableName, familyDescriptor.getNameAsString()));
+      assertEquals(1, countMobFiles(tableName, familyDescriptor.getNameAsString()));
+      assertEquals(0, countArchiveMobFiles(tableName, familyDescriptor.getNameAsString()));
       String fileName = assertHasOneMobRow(table, tableName, familyDescriptor.getNameAsString());
-      Assert.assertFalse(mobArchiveExist(tableName, familyDescriptor.getNameAsString(), fileName));
-      Assert.assertTrue(mobTableDirExist(tableName));
+      assertFalse(mobArchiveExist(tableName, familyDescriptor.getNameAsString(), fileName));
+      assertTrue(mobTableDirExist(tableName));
 
       TEST_UTIL.getAdmin().deleteColumnFamily(tableName, FAMILY);
 
-      Assert.assertEquals(0, countMobFiles(tableName, familyDescriptor.getNameAsString()));
-      Assert.assertEquals(1, countArchiveMobFiles(tableName, familyDescriptor.getNameAsString()));
-      Assert.assertTrue(mobArchiveExist(tableName, familyDescriptor.getNameAsString(), fileName));
-      Assert.assertFalse(mobColumnFamilyDirExist(tableName, familyDescriptor.getNameAsString()));
+      assertEquals(0, countMobFiles(tableName, familyDescriptor.getNameAsString()));
+      assertEquals(1, countArchiveMobFiles(tableName, familyDescriptor.getNameAsString()));
+      assertTrue(mobArchiveExist(tableName, familyDescriptor.getNameAsString(), fileName));
+      assertFalse(mobColumnFamilyDirExist(tableName, familyDescriptor.getNameAsString()));
     } finally {
       table.close();
       TEST_UTIL.deleteTable(tableName);
@@ -235,14 +237,14 @@ public class TestDeleteMobTable {
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
     ResultScanner rs = table.getScanner(scan);
     Result r = rs.next();
-    Assert.assertNotNull(r);
+    assertNotNull(r);
     String fileName = MobUtils.getMobFileName(r.getColumnLatestCell(FAMILY, QF));
     Path filePath =
       new Path(MobUtils.getMobFamilyPath(TEST_UTIL.getConfiguration(), tn, familyName), fileName);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    Assert.assertTrue(fs.exists(filePath));
+    assertTrue(fs.exists(filePath));
     r = rs.next();
-    Assert.assertNull(r);
+    assertNull(r);
     return fileName;
   }
 }
