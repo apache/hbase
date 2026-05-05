@@ -17,34 +17,29 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ SmallTests.class, ClientTests.class })
+@Tag(SmallTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestMultiActionMetricsFromClient {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultiActionMetricsFromClient.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final TableName TABLE_NAME = TableName.valueOf("test_table");
   private static final byte[] FAMILY = Bytes.toBytes("fam1");
   private static final byte[] QUALIFIER = Bytes.toBytes("qual");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.getHBaseCluster().waitForActiveAndReadyMaster();
@@ -52,7 +47,7 @@ public class TestMultiActionMetricsFromClient {
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }

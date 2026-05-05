@@ -17,34 +17,32 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestScanAttributes {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestScanAttributes.class);
 
   @Test
   public void testCoEnableAndCoDisableScanMetricsAndScanMetricsByRegion() {
     Scan scan = new Scan();
-    Assert.assertFalse(scan.isScanMetricsEnabled());
-    Assert.assertFalse(scan.isScanMetricsByRegionEnabled());
+    assertFalse(scan.isScanMetricsEnabled());
+    assertFalse(scan.isScanMetricsByRegionEnabled());
 
     // Assert enabling scan metrics by region enables scan metrics also
     scan.setEnableScanMetricsByRegion(true);
-    Assert.assertTrue(scan.isScanMetricsEnabled());
-    Assert.assertTrue(scan.isScanMetricsByRegionEnabled());
+    assertTrue(scan.isScanMetricsEnabled());
+    assertTrue(scan.isScanMetricsByRegionEnabled());
 
     // Assert disabling scan metrics disables scan metrics by region
     scan.setScanMetricsEnabled(false);
-    Assert.assertFalse(scan.isScanMetricsEnabled());
-    Assert.assertFalse(scan.isScanMetricsByRegionEnabled());
+    assertFalse(scan.isScanMetricsEnabled());
+    assertFalse(scan.isScanMetricsByRegionEnabled());
   }
 }

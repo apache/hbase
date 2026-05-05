@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -33,9 +33,10 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -58,18 +59,12 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,21 +74,15 @@ import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
  * Class to test HBaseHbck. Spins up the minicluster once at test start and then takes it down
  * afterward. Add any testing of HBaseHbck functionality here.
  */
-@RunWith(Parameterized.class)
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: async={0}")
 public class TestHbck {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestHbck.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHbck.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @Rule
-  public TestName name = new TestName();
-
-  @SuppressWarnings("checkstyle:VisibilityModifier")
-  @Parameter
-  public boolean async;
+  private final boolean async;
 
   private static final TableName TABLE_NAME = TableName.valueOf(TestHbck.class.getSimpleName());
 
@@ -101,9 +90,12 @@ public class TestHbck {
 
   private static AsyncConnection ASYNC_CONN;
 
-  @Parameters(name = "{index}: async={0}")
-  public static List<Object[]> params() {
-    return Arrays.asList(new Object[] { false }, new Object[] { true });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(false), Arguments.of(true));
+  }
+
+  public TestHbck(boolean async) {
+    this.async = async;
   }
 
   private Hbck getHbck() throws Exception {
@@ -114,7 +106,7 @@ public class TestHbck {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
     TEST_UTIL.createMultiRegionTable(TABLE_NAME, 3, new byte[][] { Bytes.toBytes("family1") });
@@ -128,13 +120,13 @@ public class TestHbck {
       TEST_UTIL.getHBaseCluster().getMaster().getConfiguration());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     Closeables.close(ASYNC_CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     TEST_UTIL.ensureSomeRegionServersAvailable(3);
   }
@@ -163,7 +155,7 @@ public class TestHbck {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testBypassProcedure() throws Exception {
     // SuspendProcedure
     final SuspendProcedure proc = new SuspendProcedure();
@@ -173,12 +165,12 @@ public class TestHbck {
     // bypass the procedure
     List<Long> pids = Arrays.<Long> asList(procId);
     List<Boolean> results = getHbck().bypassProcedure(pids, 30000, false, false);
-    assertTrue("Failed to by pass procedure!", results.get(0));
+    assertTrue(results.get(0), "Failed to by pass procedure!");
     TEST_UTIL.waitFor(5000, () -> proc.isSuccess() && proc.isBypass());
     LOG.info("{} finished", proc);
   }
 
-  @Test
+  @TestTemplate
   public void testSetTableStateInMeta() throws Exception {
     Hbck hbck = getHbck();
     // set table state to DISABLED
@@ -187,11 +179,11 @@ public class TestHbck {
     // will be DISABLED
     TableState prevState =
       hbck.setTableStateInMeta(new TableState(TABLE_NAME, TableState.State.ENABLED));
-    assertTrue("Incorrect previous state! expected=DISABLED, found=" + prevState.getState(),
-      prevState.isDisabled());
+    assertTrue(prevState.isDisabled(),
+      "Incorrect previous state! expected=DISABLED, found=" + prevState.getState());
   }
 
-  @Test
+  @TestTemplate
   public void testSetRegionStateInMeta() throws Exception {
     Hbck hbck = getHbck();
     Admin admin = TEST_UTIL.getAdmin();
@@ -213,14 +205,14 @@ public class TestHbck {
       Map<String, RegionState.State> result = hbck.setRegionStateInMeta(requestStates);
       result.forEach((k, v) -> {
         RegionState.State beforeState = beforeStates.get(k);
-        assertEquals("response state should match before state; " + k, beforeState, v);
+        assertEquals(beforeState, v, "response state should match before state; " + k);
       });
       regions.forEach(r -> {
         RegionState afterState = am.getRegionStates().getRegionState(r.getEncodedName());
         RegionState.State expectedState = requestStates.get(r.getEncodedName());
         LOG.debug("After test: {}, {}", r, afterState);
-        assertEquals("state in AM should match requested state ; " + r, expectedState,
-          afterState.getState());
+        assertEquals(expectedState, afterState.getState(),
+          "state in AM should match requested state ; " + r);
       });
       return null;
     };
@@ -229,7 +221,7 @@ public class TestHbck {
     hbck.setRegionStateInMeta(beforeStates);
   }
 
-  @Test
+  @TestTemplate
   public void testAssigns() throws Exception {
     Hbck hbck = getHbck();
     final AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
@@ -274,7 +266,7 @@ public class TestHbck {
         RegionState rs = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
           .getRegionStates().getRegionState(ri.getEncodedName());
         LOG.info("RS: {}", rs.toString());
-        assertTrue(rs.toString(), rs.isClosed());
+        assertTrue(rs.isClosed(), rs.toString());
       }
       pids =
         hbck.assigns(regions.stream().map(RegionInfo::getEncodedName).collect(Collectors.toList()));
@@ -290,7 +282,7 @@ public class TestHbck {
         RegionState rs = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
           .getRegionStates().getRegionState(ri.getEncodedName());
         LOG.info("RS: {}", rs.toString());
-        assertTrue(rs.toString(), rs.isOpened());
+        assertTrue(rs.isOpened(), rs.toString());
       }
       // Rerun the assign with override. Should fail for all Regions since they already assigned
       pids = hbck.assigns(
@@ -307,7 +299,7 @@ public class TestHbck {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testScheduleSCP() throws Exception {
     HRegionServer testRs = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME);
     try (final Table t = TEST_UTIL.getConnection().getTable(TABLE_NAME)) {
@@ -326,7 +318,7 @@ public class TestHbck {
     waitOnPids(pids);
   }
 
-  @Test
+  @TestTemplate
   public void testRunHbckChore() throws Exception {
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     HbckChore hbckChore = master.getHbckChore();

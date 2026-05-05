@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
@@ -26,7 +29,6 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -39,21 +41,16 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestClientOperationInterrupt {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClientOperationInterrupt.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClientOperationInterrupt.class);
 
@@ -77,7 +74,7 @@ public class TestClientOperationInterrupt {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf = HBaseConfiguration.create();
     conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
@@ -156,9 +153,9 @@ public class TestClientOperationInterrupt {
       Threads.sleep(10);
     }
 
-    Assert.assertFalse(Thread.currentThread().isInterrupted());
-    Assert.assertTrue(" noEx: " + noEx.get() + ", badEx=" + badEx.get() + ", noInt=" + noInt.get(),
-      noEx.get() == expectedNoExNum && badEx.get() == 0);
+    assertFalse(Thread.currentThread().isInterrupted());
+    assertTrue(noEx.get() == expectedNoExNum && badEx.get() == 0,
+      " noEx: " + noEx.get() + ", badEx=" + badEx.get() + ", noInt=" + noInt.get());
 
     // The problem here is that we need the server to free its handlers to handle all operations
     while (done.get() != nbThread) {
@@ -167,10 +164,10 @@ public class TestClientOperationInterrupt {
 
     Table ht = util.getConnection().getTable(tableName);
     Result r = ht.get(new Get(row1));
-    Assert.assertFalse(r.isEmpty());
+    assertFalse(r.isEmpty());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     util.shutdownMiniCluster();
   }

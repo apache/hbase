@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -39,19 +39,15 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FutureUtils;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestAsyncTableUseMetaReplicas {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableUseMetaReplicas.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -87,7 +83,7 @@ public class TestAsyncTableUseMetaReplicas {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     conf.setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 1000);
@@ -107,12 +103,12 @@ public class TestAsyncTableUseMetaReplicas {
     Thread.sleep(2000);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDownAfterTest() {
     // make sure we do not mess up cleanup code.
     FAIL_PRIMARY_SCAN = false;
@@ -131,10 +127,10 @@ public class TestAsyncTableUseMetaReplicas {
     }
   }
 
-  @Test(expected = RetriesExhaustedException.class)
+  @Test
   public void testNotUseMetaReplicas()
     throws IOException, InterruptedException, ExecutionException {
-    testRead(false);
+    assertThrows(RetriesExhaustedException.class, () -> testRead(false));
   }
 
   @Test

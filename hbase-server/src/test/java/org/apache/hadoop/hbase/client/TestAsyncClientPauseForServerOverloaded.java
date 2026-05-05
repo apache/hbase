@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.AsyncConnectionConfiguration.HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,7 +33,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -49,23 +48,19 @@ import org.apache.hadoop.hbase.regionserver.SimpleRpcSchedulerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestAsyncClientPauseForServerOverloaded {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncClientPauseForServerOverloaded.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -149,7 +144,7 @@ public class TestAsyncClientPauseForServerOverloaded {
 
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setLong(HConstants.HBASE_CLIENT_PAUSE, 10);
     UTIL.getConfiguration().set("hbase.ipc.server.callqueue.type", "pluggable");
@@ -164,13 +159,13 @@ public class TestAsyncClientPauseForServerOverloaded {
     CONN = ConnectionFactory.createAsyncConnection(conf).get();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     Closeables.close(CONN, true);
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUpBeforeTest() throws IOException {
     try (Table table = UTIL.createTable(TABLE_NAME, FAMILY)) {
       for (int i = 0; i < 100; i++) {
@@ -180,7 +175,7 @@ public class TestAsyncClientPauseForServerOverloaded {
     MODE = FailMode.CALL_QUEUE_TOO_BIG;
   }
 
-  @After
+  @AfterEach
   public void tearDownAfterTest() throws IOException {
     for (FailMode mode : FailMode.values()) {
       mode.invoked.clear();

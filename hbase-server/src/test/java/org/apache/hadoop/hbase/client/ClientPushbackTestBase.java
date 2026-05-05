@@ -18,10 +18,10 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
@@ -39,9 +39,9 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,7 +58,7 @@ public abstract class ClientPushbackTestBase {
   private static final byte[] qualifier = Bytes.toBytes("q");
   private static final long flushSizeBytes = 512;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     // enable backpressure
@@ -77,7 +77,7 @@ public abstract class ClientPushbackTestBase {
     UTIL.createTable(tableName, family);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupCluster() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -112,11 +112,11 @@ public abstract class ClientPushbackTestBase {
 
     // get the stats for the region hosting our table
     ClientBackoffPolicy backoffPolicy = getBackoffPolicy();
-    assertTrue("Backoff policy is not correctly configured",
-      backoffPolicy instanceof ExponentialClientBackoffPolicy);
+    assertTrue(backoffPolicy instanceof ExponentialClientBackoffPolicy,
+      "Backoff policy is not correctly configured");
 
     ServerStatisticTracker stats = getStatisticsTracker();
-    assertNotNull("No stats configured for the client!", stats);
+    assertNotNull(stats, "No stats configured for the client!");
     // get the names so we can query the stats
     ServerName server = rs.getServerName();
     byte[] regionName = region.getRegionInfo().getRegionName();
@@ -124,11 +124,11 @@ public abstract class ClientPushbackTestBase {
     // check to see we found some load on the memstore
     ServerStatistics serverStats = stats.getStats(server);
     ServerStatistics.RegionStatistics regionStats = serverStats.getStatsForRegion(regionName);
-    assertEquals("We did not find some load on the memstore", load,
-      regionStats.getMemStoreLoadPercent());
+    assertEquals(load, regionStats.getMemStoreLoadPercent(),
+      "We did not find some load on the memstore");
     // check that the load reported produces a nonzero delay
     long backoffTime = backoffPolicy.getBackoffTime(server, regionName, serverStats);
-    assertNotEquals("Reported load does not produce a backoff", 0, backoffTime);
+    assertNotEquals(0, backoffTime, "Reported load does not produce a backoff");
     LOG.debug("Backoff calculated for " + region.getRegionInfo().getRegionNameAsString() + " @ "
       + server + " is " + backoffTime);
 
@@ -153,12 +153,12 @@ public abstract class ClientPushbackTestBase {
 
     assertEquals(1, runnerStats.delayRunners.getCount());
     assertEquals(1, runnerStats.normalRunners.getCount());
-    assertEquals("", runnerStats.delayIntevalHist.getSnapshot().getMean(), (double) backoffTime,
-      0.1);
+    assertEquals(runnerStats.delayIntevalHist.getSnapshot().getMean(), (double) backoffTime, 0.1,
+      "");
 
     latch.await(backoffTime * 2, TimeUnit.MILLISECONDS);
-    assertNotEquals("AsyncProcess did not submit the work time", 0, endTime.get());
-    assertTrue("AsyncProcess did not delay long enough", endTime.get() - startTime >= backoffTime);
+    assertNotEquals(0, endTime.get(), "AsyncProcess did not submit the work time");
+    assertTrue(endTime.get() - startTime >= backoffTime, "AsyncProcess did not delay long enough");
   }
 
   @Test
@@ -173,7 +173,7 @@ public abstract class ClientPushbackTestBase {
     mutateRow(mutations);
 
     ServerStatisticTracker stats = getStatisticsTracker();
-    assertNotNull("No stats configured for the client!", stats);
+    assertNotNull(stats, "No stats configured for the client!");
     // get the names so we can query the stats
     ServerName server = rs.getServerName();
     byte[] regionName = region.getRegionInfo().getRegionName();

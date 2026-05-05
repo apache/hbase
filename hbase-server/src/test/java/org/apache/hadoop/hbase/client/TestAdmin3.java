@@ -18,19 +18,18 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
@@ -45,17 +44,14 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestAdmin3 extends TestAdminBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestAdmin3.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAdmin3.class);
 
@@ -64,7 +60,7 @@ public class TestAdmin3 extends TestAdminBase {
     final byte[] row = Bytes.toBytes("row");
     final byte[] qualifier = Bytes.toBytes("qualifier");
     final byte[] value = Bytes.toBytes("value");
-    final TableName table = TableName.valueOf(name.getMethodName());
+    final TableName table = TableName.valueOf(methodName);
     Table ht = TEST_UTIL.createTable(table, HConstants.CATALOG_FAMILY);
     Put put = new Put(row);
     put.addColumn(HConstants.CATALOG_FAMILY, qualifier, value);
@@ -74,8 +70,8 @@ public class TestAdmin3 extends TestAdminBase {
     ht.get(get);
 
     ADMIN.disableTable(ht.getName());
-    assertTrue("Table must be disabled.", TEST_UTIL.getHBaseCluster().getMaster()
-      .getTableStateManager().isTableState(ht.getName(), TableState.State.DISABLED));
+    assertTrue(TEST_UTIL.getHBaseCluster().getMaster().getTableStateManager()
+      .isTableState(ht.getName(), TableState.State.DISABLED), "Table must be disabled.");
     assertEquals(TableState.State.DISABLED, getStateFromMeta(table));
 
     // Test that table is disabled
@@ -101,8 +97,8 @@ public class TestAdmin3 extends TestAdminBase {
     }
     assertTrue(ok);
     ADMIN.enableTable(table);
-    assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster().getMaster()
-      .getTableStateManager().isTableState(ht.getName(), TableState.State.ENABLED));
+    assertTrue(TEST_UTIL.getHBaseCluster().getMaster().getTableStateManager()
+      .isTableState(ht.getName(), TableState.State.ENABLED), "Table must be enabled.");
     assertEquals(TableState.State.ENABLED, getStateFromMeta(table));
 
     // Test that table is enabled
@@ -120,8 +116,8 @@ public class TestAdmin3 extends TestAdminBase {
     final byte[] row = Bytes.toBytes("row");
     final byte[] qualifier = Bytes.toBytes("qualifier");
     final byte[] value = Bytes.toBytes("value");
-    final TableName table1 = TableName.valueOf(name.getMethodName() + "1");
-    final TableName table2 = TableName.valueOf(name.getMethodName() + "2");
+    final TableName table1 = TableName.valueOf(methodName + "1");
+    final TableName table2 = TableName.valueOf(methodName + "2");
     Table ht1 = TEST_UTIL.createTable(table1, HConstants.CATALOG_FAMILY);
     Table ht2 = TEST_UTIL.createTable(table2, HConstants.CATALOG_FAMILY);
     Put put = new Put(row);
@@ -182,7 +178,7 @@ public class TestAdmin3 extends TestAdminBase {
    */
   @Test
   public void testEnableTableRetainAssignment() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     byte[][] splitKeys = { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 }, new byte[] { 3, 3, 3 },
       new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
       new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 } };
@@ -194,9 +190,8 @@ public class TestAdmin3 extends TestAdminBase {
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       List<HRegionLocation> regions = l.getAllRegionLocations();
 
-      assertEquals(
-        "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
-        expectedRegions, regions.size());
+      assertEquals(expectedRegions, regions.size(),
+        "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size());
       // Disable table.
       ADMIN.disableTable(tableName);
       // Enable table, use retain assignment to assign regions.
@@ -211,9 +206,9 @@ public class TestAdmin3 extends TestAdminBase {
 
   @Test
   public void testEnableDisableAddColumnDeleteColumn() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
-    while (!ADMIN.isTableEnabled(TableName.valueOf(name.getMethodName()))) {
+    while (!ADMIN.isTableEnabled(TableName.valueOf(methodName))) {
       Thread.sleep(10);
     }
     ADMIN.disableTable(tableName);
@@ -236,7 +231,7 @@ public class TestAdmin3 extends TestAdminBase {
 
   @Test
   public void testGetTableDescriptor() throws IOException {
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(methodName))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1"))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam2"))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam3")).build();
@@ -256,7 +251,7 @@ public class TestAdmin3 extends TestAdminBase {
    */
   @Test
   public void testReadOnlyTableModify() throws IOException, InterruptedException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
 
     // Make table read only
@@ -276,9 +271,9 @@ public class TestAdmin3 extends TestAdminBase {
 
   @Test
   public void testDeleteLastColumnFamily() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
-    while (!ADMIN.isTableEnabled(TableName.valueOf(name.getMethodName()))) {
+    while (!ADMIN.isTableEnabled(TableName.valueOf(methodName))) {
       Thread.sleep(10);
     }
 
@@ -370,7 +365,7 @@ public class TestAdmin3 extends TestAdminBase {
     // Now make it so at least the table exists and then do tests against a
     // nonexistent column family -- see if we get right exceptions.
     final TableName tableName =
-      TableName.valueOf(name.getMethodName() + EnvironmentEdgeManager.currentTime());
+      TableName.valueOf(methodName + EnvironmentEdgeManager.currentTime());
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build();
     ADMIN.createTable(htd);
@@ -381,8 +376,8 @@ public class TestAdmin3 extends TestAdminBase {
       } catch (IOException e) {
         exception = e;
       }
-      assertTrue("found=" + exception.getClass().getName(),
-        exception instanceof InvalidFamilyOperationException);
+      assertTrue(exception instanceof InvalidFamilyOperationException,
+        "found=" + exception.getClass().getName());
 
       exception = null;
       try {
@@ -390,8 +385,8 @@ public class TestAdmin3 extends TestAdminBase {
       } catch (IOException e) {
         exception = e;
       }
-      assertTrue("found=" + exception.getClass().getName(),
-        exception instanceof InvalidFamilyOperationException);
+      assertTrue(exception instanceof InvalidFamilyOperationException,
+        "found=" + exception.getClass().getName());
     } finally {
       ADMIN.disableTable(tableName);
       ADMIN.deleteTable(tableName);
@@ -416,7 +411,7 @@ public class TestAdmin3 extends TestAdminBase {
 
   @Test
   public void testModifyTableStoreFileTracker() throws IOException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(methodName);
     byte[] family = Bytes.toBytes("info");
     byte[] qual = Bytes.toBytes("q");
     byte[] row = Bytes.toBytes(0);
@@ -472,7 +467,7 @@ public class TestAdmin3 extends TestAdminBase {
 
   @Test
   public void testModifyColumnFamilyStoreFileTracker() throws IOException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(methodName);
     byte[] family = Bytes.toBytes("info");
     byte[] qual = Bytes.toBytes("q");
     byte[] row = Bytes.toBytes(0);
@@ -523,7 +518,7 @@ public class TestAdmin3 extends TestAdminBase {
 
   @Test
   public void testModifyStoreFileTrackerError() throws IOException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(methodName);
     byte[] family = Bytes.toBytes("info");
     TEST_UTIL.createTable(tableName, family).close();
 
