@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2.MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,10 +33,13 @@ import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -42,6 +47,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
@@ -82,28 +88,38 @@ import org.mockito.stubbing.Answer;
 @Tag(LargeTests.TAG)
 public class TestWALPlayer {
 
+  private static final byte[] FAMILY = Bytes.toBytes("family");
+  private static final byte[] COLUMN1 = Bytes.toBytes("c1");
+  private static final byte[] COLUMN2 = Bytes.toBytes("c2");
+  private static final byte[] ROW = Bytes.toBytes("row");
+
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static SingleProcessHBaseCluster cluster;
   private static Path rootDir;
   private static Path walRootDir;
-  private static FileSystem fs;
+  private static FileSystem localFs;
   private static FileSystem logFs;
   private static Configuration conf;
+  private static FileSystem hdfs;
+  private static String bulkLoadOutputDir;
 
   @BeforeAll
   public static void beforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     rootDir = TEST_UTIL.createRootDir();
     walRootDir = TEST_UTIL.createWALRootDir();
-    fs = CommonFSUtils.getRootDirFileSystem(conf);
+    localFs = CommonFSUtils.getRootDirFileSystem(conf);
     logFs = CommonFSUtils.getWALFileSystem(conf);
     cluster = TEST_UTIL.startMiniCluster();
+    hdfs = TEST_UTIL.getTestFileSystem();
+    bulkLoadOutputDir = new Path(new Path(TEST_UTIL.getConfiguration().get("fs.defaultFS")),
+      Path.SEPARATOR + "bulkLoadOutput").toString();
   }
 
   @AfterAll
   public static void afterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
-    fs.delete(rootDir, true);
+    localFs.delete(rootDir, true);
     logFs.delete(walRootDir, true);
   }
 
@@ -231,11 +247,8 @@ public class TestWALPlayer {
     Table t1 = TEST_UTIL.createTable(tableName1, FAMILY);
     Table t2 = TEST_UTIL.createTable(tableName2, FAMILY);
 
-    // put a row into the first table
-    Put p = new Put(ROW);
-    p.addColumn(FAMILY, COLUMN1, COLUMN1);
-    p.addColumn(FAMILY, COLUMN2, COLUMN2);
-    t1.put(p);
+    putRowIntoTable(t1);
+
     // delete one column
     Delete d = new Delete(ROW);
     d.addColumns(FAMILY, COLUMN1);
@@ -368,4 +381,175 @@ public class TestWALPlayer {
     void run() throws Exception;
   }
 
+  @Test
+  public void testIgnoreEmptyWALFiles() throws Exception {
+    Path inputDir = createEmptyWALFile("empty-wal-dir");
+    FileSystem dfs = TEST_UTIL.getDFSCluster().getFileSystem();
+    Path emptyWAL = new Path(inputDir, "empty.wal");
+
+    assertTrue(dfs.exists(emptyWAL), "Empty WAL file should exist");
+    assertEquals(0, dfs.getFileStatus(emptyWAL).getLen(), "WAL file should be 0 bytes");
+
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.setBoolean(WALPlayer.IGNORE_EMPTY_FILES, true);
+
+    int exitCode = ToolRunner.run(conf, new WALPlayer(conf), new String[] { inputDir.toString() });
+    assertEquals(0, exitCode, "WALPlayer should exit cleanly even with empty files");
+  }
+
+  @Test
+  public void testFailOnEmptyWALFilesWhenNotIgnored() throws Exception {
+    Path inputDir = createEmptyWALFile("fail-empty-wal-dir");
+    FileSystem dfs = TEST_UTIL.getDFSCluster().getFileSystem();
+    Path emptyWAL = new Path(inputDir, "empty.wal");
+
+    assertTrue(dfs.exists(emptyWAL), "Empty WAL file should exist");
+    assertEquals(0, dfs.getFileStatus(emptyWAL).getLen(), "WAL file should be 0 bytes");
+
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.setBoolean(WALPlayer.IGNORE_EMPTY_FILES, false);
+
+    int exitCode = ToolRunner.run(conf, new WALPlayer(conf), new String[] { inputDir.toString() });
+    assertNotEquals(0, exitCode, "WALPlayer should fail on empty files when not ignored");
+  }
+
+  /**
+   * Verifies the HFile output format for WALPlayer has the following directory structure when
+   * {@value HFileOutputFormat2#MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY} is set to true:<br>
+   * <br>
+   * .../BULK_OUTPUT_CONF_KEY/namespace/tableName/columnFamily
+   */
+  @Test
+  public void testWALPlayerMultiTableHFileOutputFormat(TestInfo testInfo) throws Exception {
+    String namespace = "ns_" + testInfo.getTestMethod().get().getName();
+    TEST_UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(namespace).build());
+    final TableName tableName1 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "1");
+    final TableName tableName2 =
+      TableName.valueOf(namespace, testInfo.getTestMethod().get().getName() + "2");
+    Table t1 = TEST_UTIL.createTable(tableName1, FAMILY);
+    Table t2 = TEST_UTIL.createTable(tableName2, FAMILY);
+
+    putRowIntoTable(t1);
+    putRowIntoTable(t2);
+
+    Configuration multiTableOutputConf = new Configuration(conf);
+    setConfSimilarToIncrementalBackupWALToHFilesMethod(testInfo, multiTableOutputConf);
+
+    // We are testing this config variable's effect on HFile output for the WALPlayer
+    multiTableOutputConf.setBoolean(MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY, true);
+
+    WALPlayer player = new WALPlayer(multiTableOutputConf);
+    String walInputDir = new Path(cluster.getMaster().getMasterFileSystem().getWALRootDir(),
+      HConstants.HREGION_LOGDIR_NAME).toString();
+    String tables = tableName1.getNameAsString() + "," + tableName2.getNameAsString();
+
+    ToolRunner.run(multiTableOutputConf, player, new String[] { walInputDir, tables });
+
+    assertMultiTableOutputFormatDirStructure(tableName1, "default");
+    assertMultiTableOutputFormatDirStructure(tableName2, namespace);
+
+    hdfs.delete(new Path(bulkLoadOutputDir), true);
+  }
+
+  /**
+   * Verifies the HFile output format for WALPlayer has the following directory structure when
+   * {@value HFileOutputFormat2#MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY} is set to false:<br>
+   * <br>
+   * .../BULK_OUTPUT_CONF_KEY/columnFamily <br>
+   * <br>
+   * Also verifies an exception occurs when the WALPlayer is run on multiple tables at once while
+   * hbase.mapreduce.use.multi.table.hfileoutputformat is set to false.
+   */
+  @Test
+  public void testWALPlayerSingleTableHFileOutputFormat(TestInfo testInfo) throws Exception {
+    String namespace = "ns_" + testInfo.getTestMethod().get().getName();
+    TEST_UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(namespace).build());
+    final TableName tableName1 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "1");
+    final TableName tableName2 =
+      TableName.valueOf(namespace, testInfo.getTestMethod().get().getName() + "2");
+    Table t1 = TEST_UTIL.createTable(tableName1, FAMILY);
+    Table t2 = TEST_UTIL.createTable(tableName2, FAMILY);
+
+    putRowIntoTable(t1);
+    putRowIntoTable(t2);
+
+    String bulkLoadOutputDir = new Path(new Path(TEST_UTIL.getConfiguration().get("fs.defaultFS")),
+      Path.SEPARATOR + "bulkLoadOutput").toString();
+
+    Configuration singleTableOutputConf = new Configuration(conf);
+    setConfSimilarToIncrementalBackupWALToHFilesMethod(testInfo, singleTableOutputConf);
+
+    // We are testing this config variable's effect on HFile output for the WALPlayer
+    singleTableOutputConf.setBoolean(MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY, false);
+
+    WALPlayer player = new WALPlayer(singleTableOutputConf);
+
+    String walInputDir = new Path(cluster.getMaster().getMasterFileSystem().getWALRootDir(),
+      HConstants.HREGION_LOGDIR_NAME).toString();
+    String tables = tableName1.getNameAsString() + "," + tableName2.getNameAsString();
+
+    // Expecting a failure here since we are running WALPlayer on multiple tables even though the
+    // multi-table HFile output format is disabled
+    try {
+      ToolRunner.run(singleTableOutputConf, player, new String[] { walInputDir, tables });
+      fail("Expected a failure to occur due to using WALPlayer with multiple tables while having "
+        + MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY + " set to false");
+    } catch (IOException e) {
+      String expectedMsg = "Expected table names list to have only one table since "
+        + MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY + " is set to false. Got the following "
+        + "list of tables instead: [testWALPlayerSingleTableHFileOutputFormat1, " + namespace
+        + ":testWALPlayerSingleTableHFileOutputFormat2]";
+      assertTrue(e.getMessage().contains(expectedMsg));
+    }
+
+    // Successfully run WALPlayer on just one table while having multi-table HFile output format
+    // disabled
+    ToolRunner.run(singleTableOutputConf, player,
+      new String[] { walInputDir, tableName1.getNameAsString() });
+
+    Path bulkLoadOutputDirForTable = new Path(bulkLoadOutputDir, "family");
+    assertTrue(hdfs.exists(bulkLoadOutputDirForTable),
+      "Expected path to exist: " + bulkLoadOutputDirForTable);
+
+    hdfs.delete(new Path(bulkLoadOutputDir), true);
+  }
+
+  private void putRowIntoTable(Table table) throws IOException {
+    Put p = new Put(ROW);
+    p.addColumn(FAMILY, COLUMN1, COLUMN1);
+    p.addColumn(FAMILY, COLUMN2, COLUMN2);
+    table.put(p);
+  }
+
+  private Path createEmptyWALFile(String walDir) throws IOException {
+    FileSystem dfs = TEST_UTIL.getDFSCluster().getFileSystem();
+    Path inputDir = new Path("/" + walDir);
+    dfs.mkdirs(inputDir);
+
+    Path emptyWAL = new Path(inputDir, "empty.wal");
+    FSDataOutputStream out = dfs.create(emptyWAL);
+    out.close(); // Explicitly closing the stream
+
+    return inputDir;
+  }
+
+  private void setConfSimilarToIncrementalBackupWALToHFilesMethod(TestInfo testInfo,
+    Configuration conf) {
+    conf.set(WALPlayer.BULK_OUTPUT_CONF_KEY, bulkLoadOutputDir);
+    conf.set(WALPlayer.INPUT_FILES_SEPARATOR_KEY, ";");
+    conf.setBoolean(WALPlayer.MULTI_TABLES_SUPPORT, true);
+    conf.set("mapreduce.job.name",
+      testInfo.getTestMethod().get().getName() + "-" + System.currentTimeMillis());
+    conf.setBoolean(HFileOutputFormat2.DISK_BASED_SORTING_ENABLED_KEY, true);
+  }
+
+  private void assertMultiTableOutputFormatDirStructure(TableName tableName, String namespace)
+    throws IOException {
+    Path qualifierAndFamilyDir =
+      new Path(tableName.getQualifierAsString(), new String(FAMILY, StandardCharsets.UTF_8));
+    Path namespaceQualifierFamilyDir = new Path(namespace, qualifierAndFamilyDir);
+    Path bulkLoadOutputDirForTable = new Path(bulkLoadOutputDir, namespaceQualifierFamilyDir);
+    assertTrue(hdfs.exists(bulkLoadOutputDirForTable),
+      "Expected path to exist: " + bulkLoadOutputDirForTable);
+  }
 }

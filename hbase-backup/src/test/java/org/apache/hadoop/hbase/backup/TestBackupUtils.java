@@ -18,11 +18,17 @@
 package org.apache.hadoop.hbase.backup;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.security.PrivilegedAction;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.TimeZone;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,6 +42,7 @@ import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -48,6 +55,15 @@ public class TestBackupUtils {
 
   protected static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected static Configuration conf = TEST_UTIL.getConfiguration();
+
+  private static FileSystem dummyFs;
+  private static Path backupRootDir;
+
+  @BeforeAll
+  public static void setUp() throws IOException {
+    dummyFs = TEST_UTIL.getTestFileSystem();
+    backupRootDir = TEST_UTIL.getDataTestDirOnTestFS("backupUT");
+  }
 
   @Test
   public void testGetBulkOutputDir() {
@@ -112,6 +128,97 @@ public class TestBackupUtils {
       assertEquals(host + Addressing.HOSTNAME_PORT_SEPARATOR + port,
         BackupUtils.parseHostFromOldLog(testOldWalWithRegionGroupingPath));
     }
+  }
 
+  // Ensure getValidWalDirs() uses UTC timestamps regardless of what time zone the test is run in.
+  @Test
+  public void testGetValidWalDirForAllTimeZonesSingleDay() throws IOException {
+    // This UTC test time is a time when it is still "yesterday" in other time zones (such as PST)
+    List<String> walDateDirs = List.of("2026-01-23");
+    Path walDir = new Path(backupRootDir, "WALs");
+
+    // 10-minute window in UTC between start and end time
+    long startTime = Instant.parse("2026-01-23T01:00:00Z").toEpochMilli();
+    long endTime = startTime + (10 * 60 * 1000);
+
+    testGetValidWalDirs(startTime, endTime, walDir, walDateDirs, 1, walDateDirs);
+  }
+
+  // Ensure getValidWalDirs() works as expected for time ranges across multiple days for all time
+  // zones
+  @Test
+  public void testGetValidWalDirsForAllTimeZonesMultiDay() throws IOException {
+    List<String> walDateDirs = List.of("2025-12-30", "2025-12-31", "2026-01-01", "2026-01-02");
+    List<String> expectedValidWalDirs = List.of("2025-12-31", "2026-01-01");
+    Path walDir = new Path(backupRootDir, "WALs");
+
+    // 10-minute window in UTC between start and end time that spans over two days
+    long startTime = Instant.parse("2025-12-31T23:55:00Z").toEpochMilli();
+    long endTime = Instant.parse("2026-01-01T00:05:00Z").toEpochMilli();
+
+    testGetValidWalDirs(startTime, endTime, walDir, walDateDirs, 2, expectedValidWalDirs);
+  }
+
+  @Test
+  public void testGetValidWalDirExactlyMidnightUTC() throws IOException {
+    List<String> walDateDirs = List.of("2026-01-23");
+    Path walDir = new Path(backupRootDir, "WALs");
+    // This instant is UTC
+    long startAndEndTime = Instant.parse("2026-01-23T00:00:00.000Z").toEpochMilli();
+
+    testGetValidWalDirs(startAndEndTime, startAndEndTime, walDir, walDateDirs, 1, walDateDirs);
+  }
+
+  @Test
+  public void testGetValidWalDirOneMsBeforeMidnightUTC() throws IOException {
+    List<String> walDateDirs = List.of("2026-01-23");
+    Path walDir = new Path(backupRootDir, "WALs");
+    // This instant is UTC
+    long startAndEndTime = Instant.parse("2026-01-23T23:59:59.999Z").toEpochMilli();
+
+    testGetValidWalDirs(startAndEndTime, startAndEndTime, walDir, walDateDirs, 1, walDateDirs);
+  }
+
+  protected void testGetValidWalDirs(long startTime, long endTime, Path walDir,
+    List<String> availableWalDateDirs, int numExpectedValidWalDirs,
+    List<String> expectedValidWalDirs) throws IOException {
+    TimeZone defaultTimeZone = TimeZone.getDefault();
+    try {
+      // This UTC test time is a time when it is still "yesterday" in other time zones (such as PST)
+      for (String dirName : availableWalDateDirs) {
+        dummyFs.mkdirs(new Path(walDir, dirName));
+      }
+
+      // Ensure we can get valid WAL dirs regardless of the test environment's time zone
+      for (String timeZone : ZoneId.getAvailableZoneIds()) {
+        // Force test environment to use specified time zone
+        TimeZone.setDefault(TimeZone.getTimeZone(timeZone));
+
+        List<String> validWalDirs = BackupUtils.getValidWalDirs(TEST_UTIL.getConfiguration(),
+          backupRootDir, startTime, endTime);
+
+        // Verify the correct number of valid WAL dirs was found
+        assertEquals(numExpectedValidWalDirs, validWalDirs.size(),
+          "The number of valid WAL dirs should be " + numExpectedValidWalDirs + " for time zone "
+            + timeZone);
+
+        // Verify the list of valid WAL dirs is as expected
+        for (String dirName : expectedValidWalDirs) {
+          assertTrue(validWalDirs.stream().anyMatch(path -> path.endsWith("/" + dirName)),
+            "Expected " + dirName + " to be a valid WAL dir");
+        }
+
+        // Verify the list of valid WAL dirs does not contain anything expected to be invalid
+        List<String> expectedInvalidWalDirs = new ArrayList<>(availableWalDateDirs);
+        expectedInvalidWalDirs.removeAll(expectedValidWalDirs);
+        for (String dirName : expectedInvalidWalDirs) {
+          assertFalse(validWalDirs.contains(dirName),
+            "Expected " + dirName + " to NOT be a valid WAL dir");
+        }
+      }
+    } finally {
+      TimeZone.setDefault(defaultTimeZone);
+      dummyFs.delete(walDir, true);
+    }
   }
 }

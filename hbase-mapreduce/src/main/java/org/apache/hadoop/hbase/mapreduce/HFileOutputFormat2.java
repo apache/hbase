@@ -161,8 +161,9 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
     "hbase.bulkload.locality.sensitive.enabled";
   private static final boolean DEFAULT_LOCALITY_SENSITIVE = true;
   static final String OUTPUT_TABLE_NAME_CONF_KEY = "hbase.mapreduce.hfileoutputformat.table.name";
-  static final String MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY =
+  public static final String MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY =
     "hbase.mapreduce.use.multi.table.hfileoutputformat";
+  public static final boolean MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_DEFAULT = true;
 
   /**
    * ExtendedCell and ExtendedCellSerialization are InterfaceAudience.Private. We expose this config

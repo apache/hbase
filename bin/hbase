@@ -102,6 +102,7 @@ show_usage() {
   echo "  version          Print the version"
   echo "  backup           Backup tables for recovery"
   echo "  restore          Restore tables from existing backup image"
+  echo "  pitr             Restore tables to a specific point in time using backup and WAL replay"
   echo "  completebulkload Run BulkLoadHFiles tool"
   echo "  regionsplitter   Run RegionSplitter tool"
   echo "  rowcounter       Run RowCounter tool"
@@ -625,6 +626,22 @@ elif [ "$COMMAND" = "backup" ] ; then
   fi
 elif [ "$COMMAND" = "restore" ] ; then
   CLASS='org.apache.hadoop.hbase.backup.RestoreDriver'
+  if [ -n "${shaded_jar}" ] ; then
+    for f in "${HBASE_HOME}"/lib/hbase-backup*.jar; do
+      if [ -f "${f}" ]; then
+        CLASSPATH="${CLASSPATH}:${f}"
+        break
+      fi
+    done
+    for f in "${HBASE_HOME}"/lib/commons-lang3*.jar; do
+      if [ -f "${f}" ]; then
+        CLASSPATH="${CLASSPATH}:${f}"
+        break
+      fi
+    done
+  fi
+elif [ "$COMMAND" = "pitr" ] ; then
+  CLASS='org.apache.hadoop.hbase.backup.PointInTimeRestoreDriver'
   if [ -n "${shaded_jar}" ] ; then
     for f in "${HBASE_HOME}"/lib/hbase-backup*.jar; do
       if [ -f "${f}" ]; then
