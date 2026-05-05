@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobStoreEngine;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -111,6 +112,11 @@ public class HMobStore extends HStore {
     this.homePath = MobUtils.getMobHome(conf);
     this.mobFamilyPath =
       MobUtils.getMobFamilyPath(conf, this.getTableName(), getColumnFamilyName());
+    FileSystem fs = this.getFileSystem();
+    if (!fs.exists(mobFamilyPath)) {
+      fs.mkdirs(mobFamilyPath);
+    }
+    CommonFSUtils.setStoragePolicy(fs, mobFamilyPath, this.policyName);
     List<Path> locations = new ArrayList<>(2);
     locations.add(mobFamilyPath);
     TableName tn = region.getTableDescriptor().getTableName();
