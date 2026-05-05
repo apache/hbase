@@ -835,6 +835,24 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
   }
 
   /**
+   * Returns the ServerRpcConnection for the current RPC request or not present if no connection is
+   * available. This allows access to connection-level information such as the client's IP address,
+   * authentication details, codec configuration, etc.
+   * <p>
+   * This method should only be called from within an RPC handler thread context.
+   * @return the current ServerRpcConnection, or Optional.empty() if called outside of an RPC
+   *         context
+   */
+  public static Optional<ServerRpcConnection> getCurrentServerRpcConnection() {
+    Optional<RpcCall> call = getCurrentCall();
+    if (call.isPresent() && call.get() instanceof ServerCall) {
+      ServerCall<?> serverCall = (ServerCall<?>) call.get();
+      return Optional.ofNullable(serverCall.getConnection());
+    }
+    return Optional.empty();
+  }
+
+  /**
    * @param serviceName Some arbitrary string that represents a 'service'.
    * @param services    Available service instances
    * @return Matching BlockingServiceAndInterface pair

@@ -96,7 +96,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.TracingProtos.RPCTInfo;
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "VO_VOLATILE_INCREMENT",
     justification = "False positive according to http://sourceforge.net/p/findbugs/bugs/1032/")
 @InterfaceAudience.Private
-abstract class ServerRpcConnection implements Closeable {
+public abstract class ServerRpcConnection implements Closeable {
 
   private static final TextMapGetter<RPCTInfo> getter = new RPCTInfoGetter();
 
@@ -113,6 +113,9 @@ abstract class ServerRpcConnection implements Closeable {
   protected InetAddress addr;
   protected ConnectionHeader connectionHeader;
   protected Map<String, byte[]> connectionAttributes;
+
+  // The local address of this server-side connection (the RegionServer's own IP).
+  protected String localHostAddress;
 
   /**
    * Codec the client asked use.
@@ -158,6 +161,10 @@ abstract class ServerRpcConnection implements Closeable {
 
   public int getRemotePort() {
     return remotePort;
+  }
+
+  public String getLocalHostAddress() {
+    return localHostAddress;
   }
 
   public VersionInfo getVersionInfo() {
@@ -485,6 +492,10 @@ abstract class ServerRpcConnection implements Closeable {
     }
     RpcServer.AUDITLOG.info("Connection from {}:{}, version={}, sasl={}, ugi={}, service={}",
       this.hostAddress, this.remotePort, version, this.useSasl, this.ugi, serviceName);
+  }
+
+  public ConnectionHeader getConnectionHeader() {
+    return connectionHeader;
   }
 
   /**

@@ -69,9 +69,18 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
     final LongAdder readRequestsCount = new LongAdder();
     final LongAdder writeRequestsCount = new LongAdder();
     final LongAdder filteredRequestsCount = new LongAdder();
+    private final String hostAddress;
+    private final String userName;
+    private final String clientVersion;
+    private final String serviceName;
 
-    public ClientMetricsImpl(String hostName) {
+    public ClientMetricsImpl(String hostName, String hostAddress, String userName,
+      String clientVersion, String serviceName) {
       this.hostName = hostName;
+      this.hostAddress = hostAddress != null ? hostAddress : "Unknown";
+      this.userName = userName != null ? userName : "Unknown";
+      this.clientVersion = clientVersion != null ? clientVersion : "Unknown";
+      this.serviceName = serviceName != null ? serviceName : "Unknown";
     }
 
     @Override
@@ -108,6 +117,26 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
     @Override
     public long getFilteredReadRequests() {
       return filteredRequestsCount.sum();
+    }
+
+    @Override
+    public String getHostAddress() {
+      return hostAddress;
+    }
+
+    @Override
+    public String getUserName() {
+      return userName;
+    }
+
+    @Override
+    public String getClientVersion() {
+      return clientVersion;
+    }
+
+    @Override
+    public String getServiceName() {
+      return serviceName;
     }
   }
 
@@ -278,12 +307,13 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
   }
 
   @Override
-  public ClientMetrics getOrCreateMetricsClient(String client) {
+  public ClientMetrics getOrCreateMetricsClient(String client, String hostAddress, String userName,
+    String clientVersion, String serviceName) {
     ClientMetrics source = clientMetricsMap.get(client);
     if (source != null) {
       return source;
     }
-    source = new ClientMetricsImpl(client);
+    source = new ClientMetricsImpl(client, hostAddress, userName, clientVersion, serviceName);
     ClientMetrics prev = clientMetricsMap.putIfAbsent(client, source);
     if (prev != null) {
       return prev;
