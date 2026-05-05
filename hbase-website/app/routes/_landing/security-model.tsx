@@ -24,7 +24,8 @@ export function meta({}: Route.MetaArgs) {
     { title: "Security Model - Apache HBase" },
     {
       name: "description",
-      content: "Apache HBase security model: assumptions, trust boundaries, and what constitutes a valid security vulnerability report."
+      content:
+        "Apache HBase security model: assumptions, trust boundaries, and what constitutes a valid security vulnerability report."
     }
   ];
 }
